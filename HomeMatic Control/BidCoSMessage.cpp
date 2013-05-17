@@ -6,7 +6,7 @@ BidCoSMessage::BidCoSMessage()
 
 BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, void (HomeMaticDevice::*messageHandler)(int32_t, BidCoSPacket*)) : _messageType(messageType), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
 {
-    _direction = DIRECTIONIN;
+    _direction = DIRECTIONINN;
 }
 
 BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, int32_t accessPairing, void (HomeMaticDevice::*messageHandler)(int32_t, BidCoSPacket*)) : _messageType(messageType), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
