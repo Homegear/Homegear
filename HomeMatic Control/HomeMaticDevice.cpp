@@ -106,12 +106,30 @@ HomeMaticDevice::~HomeMaticDevice()
 std::string HomeMaticDevice::serialize()
 {
 	std::ostringstream stringstream;
+	stringstream << std::hex;
 	stringstream << _deviceType << ";";
 	stringstream << _address << ";";
 	stringstream << _serialNumber << ";";
 	stringstream << _firmwareVersion << ";";
 	stringstream << _centralAddress << ";";
-
+	stringstream << _messageCounter.size() << ";";
+	for(std::unordered_map<int32_t, int32_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
+	{
+		stringstream << i->first << ";";
+		stringstream << i->second << ";";
+	}
+	stringstream << _config.size() << ";";
+	for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
+	{
+		stringstream << i->first << ";"; //List index
+		stringstream << i->second.size() << ";";
+		for(std::map<int32_t, int32_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+		{
+			stringstream << j->first << ";";
+			stringstream << j->second << ";";
+		}
+	}
+	stringstream << std::dec;
 }
 
 std::string HomeMaticDevice::serialNumber()
