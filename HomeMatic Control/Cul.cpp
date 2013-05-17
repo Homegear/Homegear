@@ -287,13 +287,6 @@ void Cul::stopListening()
 
 void Cul::callCallback(std::string packetHex)
 {
-#if DEBUG_LEVEL==5
-	if(packetHex == "S\r\n")
-	{
-        cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Packet sent." << endl;
-        return;
-	}
-#endif
 	if(packetHex.length() < 21) return; //21 is minimal packet length (=10 Byte + CUL "A")
 	BidCoSPacket* packet = new BidCoSPacket(packetHex); //To avoid copying the packet two times, we pass a pointer to the packet.
 	try

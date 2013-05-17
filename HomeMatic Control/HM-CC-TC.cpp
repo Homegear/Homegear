@@ -286,6 +286,9 @@ void HM_CC_TC::handleSetValveState(int32_t messageCounter, BidCoSPacket* packet)
 	try
 	{
 		_newValveState = packet->payload()->at(0);
+#if DEBUG_LEVEL==5
+		cout << "New valve state: " << _newValveState << endl;
+#endif
 		sendOK(messageCounter, packet->senderAddress());
 	}
 	catch(const std::exception& ex)
@@ -300,7 +303,12 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet)
 
     uint8_t channel = packet->payload()->at(0);
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
-    if(channel == 2) _peers[address].deviceType = HMCCVD;
+    if(channel == 2) {
+    	_peers[address].deviceType = HMCCVD;
+#if DEBUG_LEVEL==5
+    	cout << "Added HM-CC-VD with address 0x" << std::hex << address << std::dev << endl;
+#endif
+    }
 }
 
 void HM_CC_TC::handleSetPoint(int32_t messageCounter, BidCoSPacket* packet)
@@ -359,6 +367,7 @@ void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, BidCoSPacket* p
 			cout << "0x" << std::setw(6) << std::hex << _address;
 			cout << ": Config of device 0x" << std::setw(6) << packet->senderAddress() << " at index " << std::setw(2) << (int32_t)(packet->payload()->at(i)) << " set to " << std::setw(2) << (int32_t)(packet->payload()->at(i + 1)) << std::dec << endl;
 		}
+		sendOK(messageCounter, packet->senderAddress());
 	}
 	catch(const std::exception& ex)
 	{
