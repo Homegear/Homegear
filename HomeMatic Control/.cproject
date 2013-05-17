@@ -26,7 +26,9 @@
 								<option id="gnu.cpp.compiler.exe.debug.option.optimization.level.1540526373" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.debug.option.debugging.level.1150146997" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.other.other.1509453187" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -std=c++11" valueType="string"/>
-								<option id="gnu.cpp.compiler.option.preprocessor.def.1253473654" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols"/>
+								<option id="gnu.cpp.compiler.option.preprocessor.def.1253473654" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="DEBUG_LEVEL=5"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1073675196" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1788255390" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
@@ -78,7 +80,7 @@
 								<option id="gnu.cpp.compiler.exe.release.option.optimization.level.497774449" name="Optimization Level" superClass="gnu.cpp.compiler.exe.release.option.optimization.level" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.exe.release.option.debugging.level.890164393" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.other.other.464026870" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -std=c++11" valueType="string"/>
-								<option id="gnu.cpp.compiler.option.preprocessor.def.443197908" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
+								<option id="gnu.cpp.compiler.option.preprocessor.def.443197908" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="DEBUG_LEVEL=5"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.852683577" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
@@ -90,7 +92,7 @@
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.release.1753164793" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.release"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.953419484" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.release">
-								<option id="gnu.cpp.link.option.libs.262535735" superClass="gnu.cpp.link.option.libs" valueType="libs">
+								<option id="gnu.cpp.link.option.libs.262535735" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="sqlite3"/>
 									<listOptionValue builtIn="false" value="ncurses"/>
@@ -129,10 +131,10 @@
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.636457886;cdt.managedbuild.config.gnu.exe.release.636457886.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1893626820;cdt.managedbuild.tool.gnu.cpp.compiler.input.852683577">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.275614584;cdt.managedbuild.config.gnu.exe.debug.275614584.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1796046322;cdt.managedbuild.tool.gnu.cpp.compiler.input.1073675196">
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.636457886;cdt.managedbuild.config.gnu.exe.release.636457886.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.1061484532;cdt.managedbuild.tool.gnu.c.compiler.input.2012490794">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.636457886;cdt.managedbuild.config.gnu.exe.release.636457886.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.1061484532;cdt.managedbuild.tool.gnu.c.compiler.input.2012490794">
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.275614584;cdt.managedbuild.config.gnu.exe.debug.275614584.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.1796046322;cdt.managedbuild.tool.gnu.cpp.compiler.input.1073675196">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.275614584;cdt.managedbuild.config.gnu.exe.debug.275614584.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1788255390;cdt.managedbuild.tool.gnu.c.compiler.input.1181581060">

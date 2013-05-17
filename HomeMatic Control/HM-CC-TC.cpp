@@ -192,6 +192,9 @@ void HM_CC_TC::sendDutyCyclePacket()
 {
 	int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	int32_t address = getNextDutyCycleDeviceAddress();
+#if DEBUG_LEVEL==5
+	cout << "Next HM-CC-VD is 0x" << std::hex << address << std::dec << endl;
+#endif
 	if(address < 1) return;
 	std::vector<uint8_t> payload;
 	payload.push_back(getAdjustmentCommand());
@@ -235,7 +238,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 		{
 			j = _peers.begin();
 		}
-		while(i < (signed)_peers.size())
+		while(i <= (signed)_peers.size())
 		{
 			j++;
 			if(j == _peers.end())
@@ -362,7 +365,8 @@ void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, BidCoSPacket* p
 	{
 		HomeMaticDevice::handleConfigParamResponse(messageCounter, packet);
 
-		for(int i = 1; i < (signed)packet->payload()->size() - 2; i+=2)
+		_currentList = packet->payload()->at(6);
+		for(int i = 7; i < (signed)packet->payload()->size() - 2; i+=2)
 		{
 			_peers[packet->senderAddress()].config[packet->payload()->at(i)] = packet->payload()->at(i + 1);
 			cout << "0x" << std::setw(6) << std::hex << _address;
