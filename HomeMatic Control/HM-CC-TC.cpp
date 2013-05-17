@@ -224,7 +224,7 @@ int32_t HM_CC_TC::getAdjustmentCommand()
 
 int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 {
-	_peersMutex.lock(); //I already had the problem that _peers was accessed while I unpaired the device from the central
+	_peersMutex.lock(); //I already had the problem that _peers was accessed while a peer was being deleted from it
 	try
 	{
 		if(_peers.size() == 0)
@@ -238,7 +238,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 		{
 			j = _peers.begin();
 		}
-		while(i <= (signed)_peers.size())
+		while(i <= (signed)_peers.size()) //<= because it might be there is only one HM-CC-VD
 		{
 			j++;
 			if(j == _peers.end())
@@ -248,10 +248,10 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 			if(j->second.deviceType == HMCCVD)
 			{
 				_currentDutyCycleDeviceAddress = j->first;
+				_peersMutex.unlock();
 				return j->first;
 			}
 		}
-		return -1; //No HMCCVD
 	}
 	catch(const std::exception& ex)
 	{
