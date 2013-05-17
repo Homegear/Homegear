@@ -201,7 +201,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
         fd_set writeFileDescriptor;
         if(printSending)
         {
-            cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << data.substr(2) << endl;
+            cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << data.substr(2, data.size() - 4) << endl;
         }
         _sendMutex.lock();
         FD_ZERO(&writeFileDescriptor);
