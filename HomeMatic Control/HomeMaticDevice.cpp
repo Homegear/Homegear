@@ -381,6 +381,7 @@ void HomeMaticDevice::handleConfigWriteIndex(int32_t messageCounter, BidCoSPacke
     {
         newBidCoSQueue(BidCoSQueueType::UNPAIRING);
         _bidCoSQueue->peer = _peers[packet->senderAddress()];
+        _bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x08), std::pair<int32_t, int32_t>(0x02, 0x02), std::pair<int32_t, int32_t>(0x03, 0x00) }));
         _bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x06) }));
     }
 	for(int i = 2; i < (signed)packet->payload()->size(); i+=2)
