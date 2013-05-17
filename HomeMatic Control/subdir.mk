@@ -8,7 +8,6 @@ CPP_SRCS += \
 ./BidCoSMessages.cpp \
 ./BidCoSPacket.cpp \
 ./BidCoSQueue.cpp \
-./BidCoSQueueEntry.cpp \
 ./Cul.cpp \
 ./Database.cpp \
 ./Exception.cpp \
@@ -26,7 +25,6 @@ OBJS += \
 ./BidCoSMessages.o \
 ./BidCoSPacket.o \
 ./BidCoSQueue.o \
-./BidCoSQueueEntry.o \
 ./Cul.o \
 ./Database.o \
 ./Exception.o \
@@ -44,7 +42,6 @@ CPP_DEPS += \
 ./BidCoSMessages.d \
 ./BidCoSPacket.d \
 ./BidCoSQueue.d \
-./BidCoSQueueEntry.d \
 ./Cul.d \
 ./Database.d \
 ./Exception.d \
