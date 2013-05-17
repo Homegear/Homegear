@@ -35,9 +35,8 @@ class HomeMaticDevice
         int32_t deviceType();
 
         HomeMaticDevice();
-        /** Default constructor */
+        HomeMaticDevice(std::string serializedObject);
         HomeMaticDevice(Cul* cul, std::string serialNumber, int32_t address);
-        /** Default destructor */
         virtual ~HomeMaticDevice();
         virtual void packetReceived(BidCoSPacket*);
 
@@ -52,6 +51,7 @@ class HomeMaticDevice
         virtual BidCoSPacket* getReceivedPacket() { return &_receivedPacket; }
         virtual std::unordered_map<int32_t, int32_t>* getMessageCounter() { return &_messageCounter; }
         virtual int32_t calculateCycleLength();
+        virtual std::string serialize();
 
         virtual void handleAck(int32_t messageCounter, BidCoSPacket* packet) {}
         virtual void handlePairingRequest(int32_t messageCounter, BidCoSPacket*);

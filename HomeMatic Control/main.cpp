@@ -1,6 +1,9 @@
 using namespace std;
 
 #include <ncurses.h>
+#include <execinfo.h>
+#include <signal.h>
+#include <stdlib.h>
 
 #include "Cul.h"
 #include "HM-RC-Sec3-B.h"
@@ -10,10 +13,21 @@ using namespace std;
 #include "HomeMaticDevice.h"
 #include "Database.h"
 
+void exceptionHandler(int32_t signal) {
+  void *stackTrace[10];
+  size_t length = backtrace(stackTrace, 10);
+
+  cerr << "Error: Signal " << signal << ":" << endl;
+  backtrace_symbols_fd(stackTrace, length, 2);
+  exit(1);
+}
+
 int main()
 {
     try
     {
+    	signal(SIGSEGV, exceptionHandler);
+
         /*int row,col;
         WINDOW* mainWindow = initscr();
 

@@ -4,6 +4,10 @@ HomeMaticDevice::HomeMaticDevice()
 {
 }
 
+HomeMaticDevice::HomeMaticDevice(std::string serializedObject)
+{
+}
+
 HomeMaticDevice::HomeMaticDevice(Cul* cul, std::string serialNumber, int32_t address) : _address(address), _serialNumber(serialNumber)
 {
 	try
@@ -97,6 +101,17 @@ HomeMaticDevice::~HomeMaticDevice()
 		_resetQueueThread.join();
 	}
     delete(_messages);
+}
+
+std::string HomeMaticDevice::serialize()
+{
+	std::ostringstream stringstream;
+	stringstream << _deviceType << ";";
+	stringstream << _address << ";";
+	stringstream << _serialNumber << ";";
+	stringstream << _firmwareVersion << ";";
+	stringstream << _centralAddress << ";";
+
 }
 
 std::string HomeMaticDevice::serialNumber()
@@ -332,9 +347,9 @@ void HomeMaticDevice::newBidCoSQueue(BidCoSQueueType queueType)
 		_resetQueueThread.join();
 	}
 	_stopResetQueueThread = false;
+	_bidCoSQueue = auto_ptr<BidCoSQueue>(new BidCoSQueue(_cul, queueType));
 	_resetQueueThread = std::thread(&HomeMaticDevice::resetQueue, this);
 	_resetQueueThread.detach();
-	_bidCoSQueue = auto_ptr<BidCoSQueue>(new BidCoSQueue(_cul, queueType));
 }
 
 void HomeMaticDevice::resetQueue()

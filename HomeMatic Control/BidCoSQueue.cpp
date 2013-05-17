@@ -12,10 +12,10 @@ BidCoSQueue::~BidCoSQueue()
 {
 	try
 	{
+		_stopResendThread = true;
 		_resendThreadMutex.lock();
 		if(_resendThread.get() != nullptr && _resendThread->joinable())
 		{
-			_stopResendThread = true;
 			_resendThread->join();
 		}
 	}
