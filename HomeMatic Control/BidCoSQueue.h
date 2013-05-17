@@ -57,7 +57,7 @@ class BidCoSQueue
         bool isEmpty() { return _queue.empty(); }
         void resend();
         void startResendThread();
-        void send();
+        void send(BidCoSPacket packet);
 
         BidCoSQueue();
 

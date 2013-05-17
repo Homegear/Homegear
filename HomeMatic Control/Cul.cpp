@@ -20,7 +20,7 @@ void Cul::removeHomeMaticDevice(HomeMaticDevice* device)
     _homeMaticDevices.remove(device);
 }
 
-void Cul::sendPacket(BidCoSPacket& packet)
+void Cul::sendPacket(BidCoSPacket* packet)
 {
 	try
 	{
@@ -32,9 +32,21 @@ void Cul::sendPacket(BidCoSPacket& packet)
 		}
 		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _culDevice));
 
-		writeToDevice("As" + packet.hexString() + "\r\n", true);
+		writeToDevice("As" + packet->hexString() + "\r\n", true);
 
 		if(deviceWasClosed) closeDevice();
+	}
+	catch(const std::exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+	}
+}
+
+void Cul::sendPacket(BidCoSPacket& packet)
+{
+	try
+	{
+		sendPacket(&packet);
 	}
 	catch(const std::exception& ex)
 	{

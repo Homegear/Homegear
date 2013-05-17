@@ -191,7 +191,7 @@ void HM_CC_TC::sendDutyCyclePacket()
 {
 	int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	int32_t address = getNextDutyCycleDeviceAddress();
-	if(_address == -1) return;
+	if(address < 1) return;
 	std::vector<uint8_t> payload;
 	payload.push_back(getAdjustmentCommand());
 	payload.push_back(_newValveState);

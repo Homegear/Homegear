@@ -149,10 +149,10 @@ bool BidCoSMessage::checkAccess(BidCoSPacket* packet, BidCoSQueue* queue)
 		if(access == NOACCESS) return false;
 		if(queue != nullptr && !queue->isEmpty())
 		{
-			if(!typeIsEqual((BidCoSMessage*)queue->front()))
+			if(queue->front()->getType() == QueueEntryType::PACKET || (queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())))
 			{
 				queue->pop(); //Popping takes place here to be able to process resent messages.
-				if(!queue->isEmpty() && !typeIsEqual((BidCoSMessage*)queue->front())) return false;
+				if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())) return false;
 			}
 		}
 		if(access & FULLACCESS) return true;

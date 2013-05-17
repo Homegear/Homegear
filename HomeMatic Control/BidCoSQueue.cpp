@@ -44,7 +44,7 @@ void BidCoSQueue::resend()
 			{
 				std::thread send;
 				if(_queue.front().getType() == QueueEntryType::MESSAGE) send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage(), _queue.front().getMessage()->getDevice()->getReceivedPacket());
-				else send = std::thread(&BidCoSQueue::send, this);
+				else send = std::thread(&BidCoSQueue::send, this, *_queue.front().getPacket());
 				send.detach();
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread
 				if(resendCounter < 1) //This actually means that the message will be sent three times all together if there is no response
@@ -70,13 +70,17 @@ void BidCoSQueue::push(const BidCoSPacket& packet)
 	{
 		BidCoSQueueEntry entry;
 		entry.setPacket(packet);
-		_queue.push(entry);
-		if(_queue.size() == 1)
+		if(_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN))
 		{
+			_queue.push(entry);
 			resendCounter = 0;
-			std::thread send(&BidCoSQueue::send, this);
+			std::thread send(&BidCoSQueue::send, this, *entry.getPacket());
 			send.detach();
 			startResendThread();
+		}
+		else
+		{
+			_queue.push(entry);
 		}
 	}
 	catch(const std::exception& ex)
@@ -92,13 +96,17 @@ void BidCoSQueue::push(BidCoSMessage* message)
 		if(message == nullptr) return;
 		BidCoSQueueEntry entry;
 		entry.setMessage(message);
-		_queue.push(entry);
-		if(entry.getMessage()->getDirection() == DIRECTIONOUT && _queue.size() == 1)
+		if(entry.getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 		{
+			_queue.push(entry);
 			resendCounter = 0;
 			std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message, message->getDevice()->getReceivedPacket());
 			send.detach();
 			startResendThread();
+		}
+		else
+		{
+			_queue.push(entry);
 		}
 	}
 	catch(const std::exception& ex)
@@ -107,11 +115,11 @@ void BidCoSQueue::push(BidCoSMessage* message)
 	}
 }
 
-void BidCoSQueue::send()
+void BidCoSQueue::send(BidCoSPacket packet)
 {
 	try
 	{
-		_cul->sendPacket(*(_queue.front().getPacket()));
+		_cul->sendPacket(packet);
 	}
 	catch(const std::exception& ex)
 	{
@@ -159,7 +167,7 @@ void BidCoSQueue::pop()
 			resendCounter = 0;
 			std::thread send;
 			if(_queue.front().getType() == QueueEntryType::MESSAGE) send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage(), _queue.front().getMessage()->getDevice()->getReceivedPacket());
-			else send = std::thread(&BidCoSQueue::send, this);
+			else send = std::thread(&BidCoSQueue::send, this, *_queue.front().getPacket());
 			send.detach();
 			_queueMutex.unlock(); //Has to be unlocked before startResendThread()
 			startResendThread();

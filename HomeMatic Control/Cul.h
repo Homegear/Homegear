@@ -36,6 +36,7 @@ class Cul
         void addHomeMaticDevice(HomeMaticDevice*);
         void removeHomeMaticDevice(HomeMaticDevice*);
         void sendPacket(BidCoSPacket& packet);
+        void sendPacket(BidCoSPacket* packet);
     protected:
     private:
         std::list<HomeMaticDevice*> _homeMaticDevices;

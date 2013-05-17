@@ -361,6 +361,7 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, BidCoSPacket* pa
 			peer.deviceType = HMRCV50;
 			peer.messageCounter = 0x00; //Unknown at this point
 			_bidCoSQueue->peer = peer;
+			_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x05) }));
 			_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x08), std::pair<int32_t, int32_t>(0x02, 0x02), std::pair<int32_t, int32_t>(0x03, 0x01) }));
 			_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x06) }));
 			_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x04) }));
@@ -477,7 +478,12 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 	if(_config[_currentList].size() >= 8)
 	{
 		newBidCoSQueue(BidCoSQueueType::DEFAULT);
+		//Actually destinationAddress should always be in _peers at this point
 		if(_peers.find(destinationAddress) != _peers.end()) _bidCoSQueue->peer = _peers[destinationAddress];
+
+		//Add request config packet in case the request is being repeated
+		_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x04) }));
+
 		std::vector<uint8_t> payload;
 		std::map<int32_t, int32_t>::const_iterator i = _config[_currentList].begin();
 		while(true)
