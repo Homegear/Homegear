@@ -303,7 +303,8 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet)
 
     uint8_t channel = packet->payload()->at(0);
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
-    if(channel == 2) {
+    if(channel == 2)
+    {
     	_peers[address].deviceType = HMCCVD;
 #if DEBUG_LEVEL==5
     	cout << "Added HM-CC-VD with address 0x" << std::hex << address << std::dev << endl;
