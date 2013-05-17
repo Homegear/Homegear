@@ -66,7 +66,8 @@ class HomeMaticDevice
         virtual void handleConfigEnd(int32_t messageCounter, BidCoSPacket*);
         virtual void handleConfigPeerDelete(int32_t messageCounter, BidCoSPacket*);
         virtual void handleWakeUp(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleSetPoint(int32_t messageCounter, BidCoSPacket*) {};
+        virtual void handleSetPoint(int32_t messageCounter, BidCoSPacket*) {}
+        virtual void handleSetValveState(int32_t messageCounter, BidCoSPacket*) {}
 
         virtual void sendPairingRequest();
         virtual void sendDirectedPairingRequest(int32_t messageCounter, int32_t controlByte, BidCoSPacket * packet);

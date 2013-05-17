@@ -97,6 +97,7 @@ void HM_CC_TC::setUpBidCoSMessages()
     _messages->add(BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse));
     _messages->add(BidCoSMessage(0x11, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleSetPoint));
     _messages->add(BidCoSMessage(0x12, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleWakeUp));
+    _messages->add(BidCoSMessage(0xDD, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleSetValveState));
 }
 
 HM_CC_TC::~HM_CC_TC()
@@ -278,6 +279,28 @@ Peer HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceType
 void HM_CC_TC::reset()
 {
     HomeMaticDevice::reset();
+}
+
+void HM_CC_TC::handleSetValveState(int32_t messageCounter, BidCoSPacket* packet)
+{
+	try
+	{
+		_newValveState = packet->payload()->at(0);
+		sendOK(messageCounter, packet->senderAddress());
+	}
+	catch(const std::exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+	}
+}
+
+void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet)
+{
+    HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
+
+    uint8_t channel = packet->payload()->at(0);
+    int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
+    if(channel == 2) _peers[address].deviceType = HMCCVD;
 }
 
 void HM_CC_TC::handleSetPoint(int32_t messageCounter, BidCoSPacket* packet)

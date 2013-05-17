@@ -25,6 +25,8 @@ class HM_CC_TC : public HomeMaticDevice
         void handleConfigParamResponse(int32_t messageCounter, BidCoSPacket* packet);
         void handleAck(int32_t messageCounter, BidCoSPacket* packet);
         void handleSetPoint(int32_t messageCounter, BidCoSPacket* packet);
+        void handleSetValveState(int32_t messageCounter, BidCoSPacket* packet);
+        void handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet);
     protected:
         virtual void setUpBidCoSMessages();
     private:
