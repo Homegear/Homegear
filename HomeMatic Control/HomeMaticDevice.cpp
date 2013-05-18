@@ -6,6 +6,70 @@ HomeMaticDevice::HomeMaticDevice()
 
 HomeMaticDevice::HomeMaticDevice(std::string serializedObject)
 {
+	std::istringstream stringstream(serializedObject);
+	std::string entry;
+	int32_t i = 0;
+	while(std::getline(stringstream, entry, ';'))
+	{
+		switch(i)
+		{
+		case 0:
+			_deviceType = std::stoi(entry, 0, 16);
+			break;
+		case 1:
+			_address = std::stoi(entry, 0, 16);
+			break;
+		case 2:
+			_serialNumber = entry;
+			break;
+		case 3:
+			_firmwareVersion = std::stoi(entry, 0, 16);
+			break;
+		case 4:
+			_centralAddress = std::stoi(entry, 0, 16);
+			break;
+		case 5:
+			std::istringstream stringstream2(entry);
+			std::string entry2;
+			int32_t key;
+			int32_t j = 0;
+			while(std::getline(stringstream2, entry2, ','))
+			{
+				if(j % 2 == 0) key = std::stoi(entry2, 0, 16);
+				else _messageCounter[key] = std::stoi(entry2, 0, 16);
+				j++;
+			}
+			break;
+		case 6:
+			std::istringstream stringstream2(entry);
+			std::string entry2;
+			int32_t key;
+			int32_t key2;
+			int32_t j = 0;
+			int32_t size = 0;
+			while(std::getline(stringstream2, entry2, ','))
+			{
+				if(j < size)
+				{
+					if(j % 2 == 0) key2 = std::stoi(entry2, 0, 16);
+					else _config[key][key2] = std::stoi(entry2, 0, 16);
+					j++;
+				}
+				else if(size == -1)
+				{
+					size = std::stoi(entry2, 0, 16);
+				}
+				else
+				{
+					key = std::stoi(entry2, 0, 16);
+					size = -1;
+					j = 0;
+				}
+			}
+			break;
+		}
+		i++;
+	}
 }
 
 HomeMaticDevice::HomeMaticDevice(Cul* cul, std::string serialNumber, int32_t address) : _address(address), _serialNumber(serialNumber)
@@ -112,24 +176,23 @@ std::string HomeMaticDevice::serialize()
 	stringstream << _serialNumber << ";";
 	stringstream << _firmwareVersion << ";";
 	stringstream << _centralAddress << ";";
-	stringstream << _messageCounter.size() << ";";
 	for(std::unordered_map<int32_t, int32_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
 	{
-		stringstream << i->first << ";";
-		stringstream << i->second << ";";
+		stringstream << i->first << ",";
+		stringstream << i->second << ",";
 	}
-	stringstream << _config.size() << ";";
 	for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
 	{
-		stringstream << i->first << ";"; //List index
-		stringstream << i->second.size() << ";";
+		stringstream << i->first << ","; //List index
+		stringstream << i->second.size() << ",";
 		for(std::map<int32_t, int32_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 		{
-			stringstream << j->first << ";";
-			stringstream << j->second << ";";
+			stringstream << j->first << ",";
+			stringstream << j->second << ",";
 		}
 	}
 	stringstream << std::dec;
+	return stringstream.str();
 }
 
 std::string HomeMaticDevice::serialNumber()
