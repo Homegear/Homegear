@@ -14,10 +14,10 @@ class Cul;
 class GD {
 public:
 	static std::string startUpPath;
-	static std::vector<HomeMaticDevice> devices;
+	static std::vector<HomeMaticDevice>* devices;
 	static Database* db;
 	static Cul* cul;
-	virtual ~GD() { delete db; }
+	virtual ~GD() { delete devices; delete db; }
 private:
 	//Non public constructor
 	GD();

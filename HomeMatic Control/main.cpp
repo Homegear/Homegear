@@ -135,13 +135,14 @@ int main()
             			std::string serialNumber = input;
             			cout << "Please enter a device type: ";
 						int32_t deviceType = getHexInput();
+						HM_CC_TC tc(serialNumber, address);
 						switch(deviceType)
 						{
 						case 0x39:
-							GD::devices.push_back(HM_CC_TC(serialNumber, address));
+							GD::devices->push_back((HomeMaticDevice)tc);
 							break;
 						case 0x3A:
-							GD::devices.push_back(HM_CC_VD(serialNumber, address));
+							//GD::devices->push_back(HM_CC_VD(serialNumber, address));
 							break;
 						default:
 							cout << "Unknown device type." << endl;
@@ -154,7 +155,7 @@ int main()
             	cout << "Device address: ";
             	int32_t address = getHexInput();
             	currentDevice = nullptr;
-            	for(std::vector<HomeMaticDevice>::iterator i = GD::devices.begin(); i != GD::devices.end(); ++i)
+            	for(std::vector<HomeMaticDevice>::iterator i = GD::devices->begin(); i != GD::devices->end(); ++i)
 				{
 					if(i->getAddress() == address)
 					{
