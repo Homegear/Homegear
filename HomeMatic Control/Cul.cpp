@@ -275,6 +275,7 @@ void Cul::stopListening()
 		_stopCallbackThread = false;
 		if(_fileDescriptor != -1)
 		{
+			writeToDevice("X21\r\n", false);
 			writeToDevice("Ar\r\n", false);
 			closeDevice();
 		}
