@@ -4,20 +4,18 @@
 #include <vector>
 #include <string>
 
-#include "HomeMaticDevice.h"
 #include "Cul.h"
 #include "Database.h"
 
-class HomeMaticDevice;
 class Cul;
 
 class GD {
 public:
 	static std::string startUpPath;
-	static std::vector<HomeMaticDevice>* devices;
+	static std::vector<void*> devices;
 	static Database* db;
 	static Cul* cul;
-	virtual ~GD() { delete devices; delete db; }
+	virtual ~GD() { delete db; }
 private:
 	//Non public constructor
 	GD();

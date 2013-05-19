@@ -10,4 +10,4 @@
 std::string GD::startUpPath = "";
 Database* GD::db = nullptr;
 Cul* GD::cul = nullptr;
-std::vector<HomeMaticDevice>* GD::devices = new std::vector<HomeMaticDevice>();
+std::vector<void*> GD::devices;
