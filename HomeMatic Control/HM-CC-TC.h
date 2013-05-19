@@ -15,7 +15,8 @@ class HM_CC_TC : public HomeMaticDevice
 {
     public:
         HM_CC_TC();
-        HM_CC_TC(Cul*, std::string, int32_t);
+        HM_CC_TC(std::string serializedObject);
+        HM_CC_TC(std::string, int32_t);
         /** Default destructor */
         virtual ~HM_CC_TC();
 
@@ -27,6 +28,7 @@ class HM_CC_TC : public HomeMaticDevice
         void handleSetPoint(int32_t messageCounter, BidCoSPacket* packet);
         void handleSetValveState(int32_t messageCounter, BidCoSPacket* packet);
         void handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet);
+        std::string serialize();
     protected:
         virtual void setUpBidCoSMessages();
     private:

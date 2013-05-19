@@ -15,7 +15,7 @@ class HM_CC_VD : public HomeMaticDevice
     public:
         HM_CC_VD();
         /** Default constructor */
-        HM_CC_VD(Cul*, std::string, int32_t);
+        HM_CC_VD(std::string, int32_t);
         /** Default destructor */
         virtual ~HM_CC_VD();
         void setValveDriveBlocked(bool);

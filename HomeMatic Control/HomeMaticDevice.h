@@ -7,6 +7,7 @@
 #include "BidCoSPacket.h"
 #include "BidCoSMessage.h"
 #include "BidCoSMessages.h"
+#include "GD.h"
 
 
 #include <string>
@@ -36,7 +37,7 @@ class HomeMaticDevice
 
         HomeMaticDevice();
         HomeMaticDevice(std::string serializedObject);
-        HomeMaticDevice(Cul* cul, std::string serialNumber, int32_t address);
+        HomeMaticDevice(std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
         virtual void packetReceived(BidCoSPacket*);
 
@@ -81,7 +82,6 @@ class HomeMaticDevice
         virtual void sendDutyCycleResponse(int32_t destinationAddress);
         virtual void sendRequestConfig(int32_t messageCounter, int32_t controlByte, BidCoSPacket* packet) {}
     protected:
-        Cul* _cul;
         int32_t _address;
         std::string _serialNumber;
         int32_t _firmwareVersion;
@@ -115,6 +115,7 @@ class HomeMaticDevice
         virtual void setUpConfig();
         virtual void newBidCoSQueue(BidCoSQueueType queueType);
         virtual void resetQueue();
+        virtual void unserializeMap(std::unordered_map<int32_t, int32_t>* map, std::string serializedData);
 
         virtual void reset();
     private:

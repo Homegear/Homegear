@@ -1,5 +1,6 @@
 using namespace std;
 
+#include <algorithm>
 #include <ncurses.h>
 #include <execinfo.h>
 #include <signal.h>
@@ -12,6 +13,7 @@ using namespace std;
 #include "HM-CC-TC.h"
 #include "HomeMaticDevice.h"
 #include "Database.h"
+#include "GD.h"
 
 void exceptionHandler(int32_t signal) {
   void *stackTrace[10];
@@ -20,6 +22,24 @@ void exceptionHandler(int32_t signal) {
   cerr << "Error: Signal " << signal << ":" << endl;
   backtrace_symbols_fd(stackTrace, length, 2);
   exit(1);
+}
+
+int32_t getIntInput()
+{
+	std::string input;
+	cin >> input;
+	int32_t intInput = -1;
+	try	{ intInput = std::stoi(input); } catch(...) {}
+    return intInput;
+}
+
+int32_t getHexInput()
+{
+	std::string input;
+	cin >> input;
+	int32_t intInput = -1;
+	try	{ intInput = std::stoi(input, 0, 16); } catch(...) {}
+    return intInput;
 }
 
 int main()
@@ -47,19 +67,24 @@ int main()
         //delscreen for all screens!!!
         return 0;*/
 
-        Database* database = new Database("/tmp/db.sql");
-        database->executeCommand("CREATE TABLE IF NOT EXISTS bla (blupp TEXT)");
-        database->executeCommand("INSERT INTO bla VALUES('Hallo')");
-        std::vector<std::vector<DataColumn>> rows = database->executeCommand("SELECT * FROM bla");
+    	HomeMaticDevice* currentDevice = nullptr;
+
+    	char path[1024];
+    	getcwd(path, 1024);
+    	GD::startUpPath = std::string(path);
+    	GD::db = new Database(GD::startUpPath + "/db.sql");
+        GD::db->executeCommand("CREATE TABLE IF NOT EXISTS devices (address INTEGER, serializedObject TEXT, lastDutyCycle INTEGER)");
+        //GD::db->executeCommand("INSERT INTO bla VALUES('Hallo')");
+        //std::vector<std::vector<DataColumn>> rows = GD::db->executeCommand("SELECT * FROM bla");
         //cout << rows[0][0].textValue << endl;
 
-        Cul* cul = new Cul("/dev/ttyACM0");
+        GD::cul = new Cul("/dev/ttyACM0");
         //HM_RC_Sec3_B* rc = new HM_RC_Sec3_B(cul, "RC_Sathya1", 0x1DDD0F, 0, 0, 0);
-        HM_SD* sd = new HM_SD(cul);
-        HM_CC_VD* vd1 = new HM_CC_VD(cul, "VD_Sathya1", 0x3A0001);
-        HM_CC_VD* vd2 = new HM_CC_VD(cul, "VVD0000002", 0x3A0002);
-        HM_CC_VD* vd3 = new HM_CC_VD(cul, "VVD0000003", 0x3A0003);
-        HM_CC_TC* tc = new HM_CC_TC(cul, "VTC0000001", 0x390001);
+        HM_SD* sd = new HM_SD();
+        HM_CC_VD* vd1 = new HM_CC_VD("VD_Sathya1", 0x3A0001);
+        HM_CC_VD* vd2 = new HM_CC_VD("VVD0000002", 0x3A0002);
+        HM_CC_VD* vd3 = new HM_CC_VD("VVD0000003", 0x3A0003);
+        HM_CC_TC* tc = new HM_CC_TC("VTC0000001", 0x390001);
 
         //sd->addFilter(FilterType::SenderAddress, 0x1E53E7);
         //sd->addFilter(FilterType::DestinationAddress, 0x1E53E7);
@@ -84,7 +109,7 @@ int main()
         sd->addFilter(FilterType::DestinationAddress, 0x1F454D);*/
         //sd->addOverwriteResponse("A0111C69431F454D0201000000", "A0021F454D1C69430400000000000002", 80);
         //sd->addBlockResponse("A0031C69431F454D", 50);
-        cul->startListening();
+        GD::cul->startListening();
 
         std::string input = "";
         while(input != "q")
@@ -94,12 +119,51 @@ int main()
             {
                 //Help
             }
-            if(input.substr(0, 1) == "s")
+            if(input == "a")
             {
-            	int32_t valveState;
-                stringstream(input.substr(1)) >> valveState;
-                tc->setValveState(valveState);
-                cout << "Valve state set to: " << (valveState * 100) / 256 << "%." << endl;
+            	cout << "Please enter a 3 byte address for the device in hexadecimal format (e. g. 3A0001): ";
+            	cin >> input;
+            	int32_t address = getHexInput();
+            	if(address < 1 || address > 0xFFFFFF) cout << "Address not valid." << endl;
+            	else
+            	{
+            		cout << "Please enter a serial number (length 10, e. g. VVD0000001): ";
+            		cin >> input;
+            		if(input.size() != 10) cout << "Serial number has wrong length." << endl;
+            		else
+            		{
+            			std::string serialNumber = input;
+            			cout << "Please enter a device type: ";
+						int32_t deviceType = getHexInput();
+						switch(deviceType)
+						{
+						case 0x39:
+							GD::devices.push_back(HM_CC_TC(serialNumber, address));
+							break;
+						case 0x3A:
+							GD::devices.push_back(HM_CC_VD(serialNumber, address));
+							break;
+						default:
+							cout << "Unknown device type." << endl;
+						}
+            		}
+            	}
+            }
+            if(input == "s")
+            {
+            	cout << "Device address: ";
+            	int32_t address = getHexInput();
+            	currentDevice = nullptr;
+            	for(std::vector<HomeMaticDevice>::iterator i = GD::devices.begin(); i != GD::devices.end(); ++i)
+				{
+					if(i->getAddress() == address)
+					{
+						currentDevice = &(*i);
+						break;
+					}
+				}
+            	if(currentDevice == nullptr) cout << "Device not found." << endl;
+            	else cout << "Device selected." << endl;
             }
             if(input == "p1")
             {

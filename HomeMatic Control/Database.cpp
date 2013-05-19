@@ -2,6 +2,7 @@
 
 Database::Database(std::string databasePath)
 {
+	if(databasePath.size() == 0) return;
     openDatabase(databasePath);
 }
 

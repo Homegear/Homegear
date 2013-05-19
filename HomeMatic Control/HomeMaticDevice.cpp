@@ -9,6 +9,10 @@ HomeMaticDevice::HomeMaticDevice(std::string serializedObject)
 	std::istringstream stringstream(serializedObject);
 	std::string entry;
 	int32_t i = 0;
+
+	std::string entry2;
+	int32_t key;
+	int32_t j = 0;
 	while(std::getline(stringstream, entry, ';'))
 	{
 		switch(i)
@@ -29,25 +33,14 @@ HomeMaticDevice::HomeMaticDevice(std::string serializedObject)
 			_centralAddress = std::stoi(entry, 0, 16);
 			break;
 		case 5:
-			std::istringstream stringstream2(entry);
-			std::string entry2;
-			int32_t key;
-			int32_t j = 0;
-			while(std::getline(stringstream2, entry2, ','))
-			{
-				if(j % 2 == 0) key = std::stoi(entry2, 0, 16);
-				else _messageCounter[key] = std::stoi(entry2, 0, 16);
-				j++;
-			}
+			unserializeMap(&_messageCounter, entry);
 			break;
 		case 6:
-			std::istringstream stringstream2(entry);
-			std::string entry2;
-			int32_t key;
+			std::istringstream stringstream3(entry);
 			int32_t key2;
-			int32_t j = 0;
+			j = 0;
 			int32_t size = 0;
-			while(std::getline(stringstream2, entry2, ','))
+			while(std::getline(stringstream3, entry2, ','))
 			{
 				if(j < size)
 				{
@@ -72,12 +65,25 @@ HomeMaticDevice::HomeMaticDevice(std::string serializedObject)
 	}
 }
 
-HomeMaticDevice::HomeMaticDevice(Cul* cul, std::string serialNumber, int32_t address) : _address(address), _serialNumber(serialNumber)
+void HomeMaticDevice::unserializeMap(std::unordered_map<int32_t, int32_t>* map, std::string serializedData)
+{
+	std::istringstream stringstream(serializedData);
+	int32_t i = 0;
+	int32_t key = 0;
+	std::string entry;
+	while(std::getline(stringstream, entry, ','))
+	{
+		if(i % 2 == 0) key = std::stoi(entry, 0, 16);
+		else (*map)[key] = std::stoi(entry, 0, 16);
+		i++;
+	}
+}
+
+HomeMaticDevice::HomeMaticDevice(std::string serialNumber, int32_t address) : _address(address), _serialNumber(serialNumber)
 {
 	try
 	{
-		_cul = cul;
-		_cul->addHomeMaticDevice(this);
+		GD::cul->addHomeMaticDevice(this);
 
 		_messages = new BidCoSMessages();
 
@@ -158,7 +164,7 @@ void HomeMaticDevice::setUpBidCoSMessages()
 
 HomeMaticDevice::~HomeMaticDevice()
 {
-    _cul->removeHomeMaticDevice(this);
+    GD::cul->removeHomeMaticDevice(this);
     if(_resetQueueThread.joinable())
 	{
 		_stopResetQueueThread = true;
@@ -428,7 +434,7 @@ void HomeMaticDevice::newBidCoSQueue(BidCoSQueueType queueType)
 		_resetQueueThread.join();
 	}
 	_stopResetQueueThread = false;
-	_bidCoSQueue = auto_ptr<BidCoSQueue>(new BidCoSQueue(_cul, queueType));
+	_bidCoSQueue = auto_ptr<BidCoSQueue>(new BidCoSQueue(GD::cul, queueType));
 	_resetQueueThread = std::thread(&HomeMaticDevice::resetQueue, this);
 	_resetQueueThread.detach();
 }
@@ -507,7 +513,7 @@ void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAd
     payload.push_back(0x00);
     payload.push_back(0x00);
     BidCoSPacket packet(messageCounter, 0x80, 0x10, _address, destinationAddress, payload);
-    _cul->sendPacket(packet);
+    GD::cul->sendPacket(packet);
 }
 
 void HomeMaticDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
@@ -517,7 +523,7 @@ void HomeMaticDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
 		std::vector<uint8_t> payload;
 		payload.push_back(0x00);
 		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
-		_cul->sendPacket(ok);
+		GD::cul->sendPacket(ok);
 	}
 	catch(const std::exception& ex)
 	{
@@ -532,7 +538,7 @@ void HomeMaticDevice::sendOKWithPayload(int32_t messageCounter, int32_t destinat
 		uint8_t controlByte = 0x80;
 		if(isWakeMeUpPacket) controlByte &= 0x02;
 		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
-		_cul->sendPacket(ok);
+		GD::cul->sendPacket(ok);
 	}
 	catch(const std::exception& ex)
 	{
@@ -547,7 +553,7 @@ void HomeMaticDevice::sendNOK(int32_t messageCounter, int32_t destinationAddress
 		std::vector<uint8_t> payload;
 		payload.push_back(0x80);
 		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
-		_cul->sendPacket(ok);
+		GD::cul->sendPacket(ok);
 	}
 	catch(const std::exception& ex)
 	{
@@ -562,7 +568,7 @@ void HomeMaticDevice::sendNOKTargetInvalid(int32_t messageCounter, int32_t desti
 		std::vector<uint8_t> payload;
 		payload.push_back(0x84);
 		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
-		_cul->sendPacket(ok);
+		GD::cul->sendPacket(ok);
 	}
 	catch(const std::exception& ex)
 	{
@@ -618,7 +624,7 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 		payload.push_back(0); //I think the packet always ends with two zero bytes
 		payload.push_back(0);
 		BidCoSPacket config(messageCounter, 0x80, 0x10, _address, destinationAddress, payload);
-		_cul->sendPacket(config);
+		GD::cul->sendPacket(config);
 	}
 }
 
@@ -640,7 +646,7 @@ void HomeMaticDevice::sendPairingRequest()
 		payload.push_back(_lastPairingByte);
 		BidCoSPacket pairingRequest(_messageCounter[0], 0x84, 0x00, _address, 0x00, payload);
 		_messageCounter[0]++;
-		_cul->sendPacket(pairingRequest);
+		GD::cul->sendPacket(pairingRequest);
 	}
 	catch(const std::exception& ex)
 	{
@@ -667,7 +673,8 @@ void HomeMaticDevice::sendDirectedPairingRequest(int32_t messageCounter, int32_t
 		payload.push_back(_deviceTypeChannels[deviceType]);
 		payload.push_back(0x00);
 		BidCoSPacket pairingRequest(messageCounter, 0xA0, 0x00, _address, packet->senderAddress(), payload);
-		_cul->sendPacket(pairingRequest);
+		GD::cul
+		->sendPacket(pairingRequest);
 	}
 	catch(const std::exception& ex)
 	{

@@ -1,6 +1,6 @@
 #include "HM-CC-VD.h"
 
-HM_CC_VD::HM_CC_VD(Cul* cul, std::string serialNumber, int32_t address) : HomeMaticDevice(cul, serialNumber, address)
+HM_CC_VD::HM_CC_VD(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
 {
     _deviceType = 0x3A;
     _firmwareVersion = 0x20;
@@ -101,7 +101,7 @@ void HM_CC_VD::sendConfigParamsType2(int32_t messageCounter, int32_t destination
     payload.push_back(0x00);
     payload.push_back(0x00);
     BidCoSPacket config(messageCounter, 0x80, 0x10, _address, destinationAddress, payload);
-    _cul->sendPacket(config);
+    GD::cul->sendPacket(config);
 }
 
 Peer HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)

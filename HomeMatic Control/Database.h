@@ -28,9 +28,8 @@ class DataColumn
 class Database
 {
     public:
-        /** Default constructor */
+		Database();
         Database(std::string databasePath);
-        /** Default destructor */
         virtual ~Database();
         std::vector<std::vector<DataColumn>> executeCommand(std::string command);
         std::vector<std::vector<DataColumn>> executeCommand(std::string command, std::vector<DataColumn> dataToEscape);

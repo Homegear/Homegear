@@ -1,6 +1,6 @@
 #include "HM-SD.h"
 
-HM_SD::HM_SD(Cul* cul) : HomeMaticDevice(cul, "0000000000", 0)
+HM_SD::HM_SD() : HomeMaticDevice("0000000000", 0)
 {
 
 }
@@ -48,7 +48,7 @@ void HM_SD::packetReceived(BidCoSPacket* packet)
             packet.import("A" + lengthHex + packetHex.substr(2, 2) + i->response + "\r\n");
             std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
             cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response: " << '\n';
-            _cul->sendPacket(packet);
+            GD::cul->sendPacket(packet);
         }
     }
     for(std::list<HM_SD_BlockResponse>::const_iterator i = _responsesToBlock.begin(); i != _responsesToBlock.end(); ++i)
@@ -66,7 +66,7 @@ void HM_SD::packetReceived(BidCoSPacket* packet)
             BidCoSPacket packet(_messageCounter[0], 0x84, 0xF0, _address, 0, payload);
             for(int i = 0; i < 100; i++)
             {
-                _cul->sendPacket(_receivedPacket);
+                GD::cul->sendPacket(_receivedPacket);
             }
             std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
             cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Blocked response to: " << i->packetPartToCapture << '\n';

@@ -10,7 +10,7 @@ class HM_RC_Sec3_B : public HomeMaticDevice
 {
     public:
         /** Default constructor */
-        HM_RC_Sec3_B(Cul*, std::string, int32_t, unsigned char, unsigned char, unsigned char);
+        HM_RC_Sec3_B(std::string, int32_t, unsigned char, unsigned char, unsigned char);
         /** Default destructor */
         virtual ~HM_RC_Sec3_B();
         void packetReceived(BidCoSPacket*);

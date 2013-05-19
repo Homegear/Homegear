@@ -33,9 +33,7 @@ class HM_SD_BlockResponse
 class HM_SD : public HomeMaticDevice
 {
     public:
-        /** Default constructor */
-        HM_SD(Cul*);
-        /** Default destructor */
+        HM_SD();
         virtual ~HM_SD();
         void packetReceived(BidCoSPacket*);
         void addFilter(FilterType, int32_t);

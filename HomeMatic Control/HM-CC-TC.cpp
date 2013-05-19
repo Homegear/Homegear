@@ -1,6 +1,6 @@
 #include "HM-CC-TC.h"
 
-HM_CC_TC::HM_CC_TC(Cul* cul, std::string serialNumber, int32_t address) : HomeMaticDevice(cul, serialNumber, address)
+HM_CC_TC::HM_CC_TC(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
 {
     _deviceType = 0x39;
     _firmwareVersion = 0x21;
@@ -13,6 +13,40 @@ HM_CC_TC::HM_CC_TC(Cul* cul, std::string serialNumber, int32_t address) : HomeMa
     setUpBidCoSMessages();
     setUpConfig();
     startDutyCycle();
+}
+
+HM_CC_TC::HM_CC_TC(std::string serializedObject) : HomeMaticDevice(serializedObject.substr(serializedObject.find_first_of("|")))
+{
+	serializedObject = serializedObject.substr(0, serializedObject.find_first_of("|"));
+
+	std::istringstream stringstream(serializedObject);
+	std::string entry;
+	int32_t i = 0;
+	while(std::getline(stringstream, entry, ';'))
+	{
+		switch(i)
+		{
+		case 0:
+			_currentDutyCycleDeviceAddress = std::stoi(entry, 0, 16);
+			break;
+		case 1:
+			_temperature = std::stoi(entry, 0, 16);
+			break;
+		case 2:
+			_setPointTemperature = std::stoi(entry, 0, 16);
+			break;
+		case 3:
+			_humidity = std::stoi(entry, 0, 16);
+			break;
+		case 4:
+			_valveState = std::stoi(entry, 0, 16);
+			break;
+		case 5:
+			_newValveState = std::stoi(entry, 0, 16);
+			break;
+		}
+		i++;
+	}
 }
 
 void HM_CC_TC::setUpConfig()
@@ -106,6 +140,21 @@ HM_CC_TC::~HM_CC_TC()
 	if(_dutyCycleThread != nullptr && _dutyCycleThread->joinable())	_dutyCycleThread->join();
 }
 
+std::string HM_CC_TC::serialize()
+{
+	std::string serializedObject = HomeMaticDevice::serialize();
+	std::ostringstream stringstream;
+	stringstream << std::hex;
+	stringstream << _currentDutyCycleDeviceAddress << ";";
+	stringstream << _temperature << ";";
+	stringstream << _setPointTemperature << ";";
+	stringstream << _humidity << ";";
+	stringstream << _valveState << ";";
+	stringstream << _newValveState << "|"; //The "|" seperates the base class from the inherited class part
+	stringstream << std::dec;
+	return stringstream.str() + serializedObject;
+}
+
 void HM_CC_TC::startDutyCycle()
 {
 	_dutyCycleThread = new std::thread(&HM_CC_TC::dutyCycleThread, this);
@@ -118,7 +167,7 @@ void HM_CC_TC::dutyCycleThread()
 	int64_t nextDutyCycleEvent = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	int64_t timePassed;
 	int64_t cycleTime;
-	int64_t delay = 17; //I measured on the HM-CC-VD 17 to 20ms.
+	int64_t delay = 0; //TODO sathyaRemove if no problems
 	while(!_stopDutyCycleThread)
 	{
 		lastDutyCycleEvent = nextDutyCycleEvent;
@@ -185,7 +234,7 @@ void HM_CC_TC::sendDutyCycleBroadcast()
 	payload.push_back(_temperature & 0xFF);
 	payload.push_back(_humidity);
 	BidCoSPacket packet(_messageCounter[1], 0x86, 0x70, _address, 0, payload);
-	_cul->sendPacket(packet);
+	GD::cul->sendPacket(packet);
 }
 
 void HM_CC_TC::sendDutyCyclePacket()
@@ -200,7 +249,7 @@ void HM_CC_TC::sendDutyCyclePacket()
 	payload.push_back(getAdjustmentCommand());
 	payload.push_back(_newValveState);
 	BidCoSPacket packet(_messageCounter[1], 0xA2, 0x58, _address, address, payload);
-	_cul->sendPacket(packet);
+	GD::cul->sendPacket(packet);
 	_valveState = _newValveState;
 	int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - timePoint;
 	cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << endl;
@@ -394,7 +443,7 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, Bi
 		payload.push_back(0);
 		payload.push_back(0x05);
 		BidCoSPacket requestConfig(messageCounter, 0xA0, 0x01, _address, packet->senderAddress(), payload);
-		_cul->sendPacket(requestConfig);
+		GD::cul->sendPacket(requestConfig);
 	}
 	catch(const std::exception& ex)
 	{
