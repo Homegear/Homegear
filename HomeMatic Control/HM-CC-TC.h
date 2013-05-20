@@ -1,9 +1,6 @@
 #ifndef HM_CC_TC_H
 #define HM_CC_TC_H
 
-
-using namespace std;
-
 #include <thread>
 
 #include "HomeMaticDevice.h"
@@ -13,14 +10,12 @@ using namespace std;
 //TODO Pairing by serial
 //TODO Was wird beim Batterien einlegen gesendet?
 //TODO Lässt sich beim Pairing über die Zentrale irgendwie der Gerätetyp ermitteln?
-//TODO Pakete drei Mal versenden
 class HM_CC_TC : public HomeMaticDevice
 {
     public:
         HM_CC_TC();
         HM_CC_TC(std::string serializedObject);
         HM_CC_TC(std::string, int32_t);
-        /** Default destructor */
         virtual ~HM_CC_TC();
 
         void setValveState(int32_t valveState) { _newValveState = valveState; }
@@ -34,6 +29,7 @@ class HM_CC_TC : public HomeMaticDevice
         std::string serialize();
     protected:
         virtual void setUpBidCoSMessages();
+        virtual void init();
     private:
         int32_t _currentDutyCycleDeviceAddress = -1;
         int32_t _temperature = 213;

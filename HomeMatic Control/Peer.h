@@ -5,7 +5,7 @@
 #include <sstream>
 #include <unordered_map>
 
-enum HMDeviceTypes { HMUNKNOWN = 0xFFFFFFFF, HMRCV50 = 0x0000, HMCCTC = 0x0039, HMCCVD = 0x003A };
+enum HMDeviceTypes { HMUNKNOWN = 0xFFFFFFFF, HMSD = 0xFFFFFFFE, HMRCV50 = 0x0000, HMCCTC = 0x0039, HMCCVD = 0x003A };
 
 class Peer
 {

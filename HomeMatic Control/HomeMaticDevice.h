@@ -46,13 +46,15 @@ class HomeMaticDevice
         virtual bool isInPairingMode() { return _pairing; }
         virtual int32_t getCentralAddress();
         virtual std::unordered_map<int32_t, Peer>* getPeers();
-        virtual int32_t getAddress();
         virtual BidCoSQueue* getBidCoSQueue() { return _bidCoSQueue.get(); }
         virtual BidCoSMessage* getLastReceivedMessage() { return _lastReceivedMessage; }
         virtual BidCoSPacket* getReceivedPacket() { return &_receivedPacket; }
         virtual std::unordered_map<int32_t, int32_t>* getMessageCounter() { return &_messageCounter; }
         virtual int32_t calculateCycleLength();
+        virtual int64_t lastDutyCycleEvent() { return _lastDutyCycleEvent; }
         virtual std::string serialize();
+        virtual int32_t getHexInput();
+        virtual void handleCLICommand(std::string command);
 
         virtual void handleAck(int32_t messageCounter, BidCoSPacket* packet) {}
         virtual void handlePairingRequest(int32_t messageCounter, BidCoSPacket*);
@@ -105,12 +107,14 @@ class HomeMaticDevice
         BidCoSMessage* _lastReceivedMessage;
         BidCoSPacket _receivedPacket;
         std::mutex _receivedPacketMutex;
-        BidCoSMessages* _messages;
+        BidCoSMessages* _messages = nullptr;
+        int64_t _lastDutyCycleEvent = 0;
 
         bool _lowBattery = false;
 
         virtual Peer createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
 
+        virtual void init();
         virtual void setUpBidCoSMessages();
         virtual void setUpConfig();
         virtual void newBidCoSQueue(BidCoSQueueType queueType);

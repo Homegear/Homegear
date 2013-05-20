@@ -36,7 +36,6 @@ enum class BidCoSQueueType { EMPTY, DEFAULT, PAIRING, PAIRINGCENTRAL, UNPAIRING 
 class BidCoSQueue
 {
     protected:
-		Cul* _cul;
         std::queue<BidCoSQueueEntry> _queue;
         std::mutex _queueMutex;
         BidCoSQueueType _queueType;
@@ -61,7 +60,7 @@ class BidCoSQueue
 
         BidCoSQueue();
 
-        BidCoSQueue(Cul* cul, BidCoSQueueType queueType);
+        BidCoSQueue(BidCoSQueueType queueType);
 
         virtual ~BidCoSQueue();
 };

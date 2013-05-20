@@ -8,6 +8,5 @@
 #include "GD.h"
 
 std::string GD::startUpPath = "";
-Database* GD::db = nullptr;
-Cul* GD::cul = nullptr;
-std::vector<void*> GD::devices;
+HomeMaticDevices GD::devices;
+int32_t GD::debugLevel = 3;

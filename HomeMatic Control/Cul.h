@@ -27,9 +27,9 @@ class HomeMaticDevice;
 class Cul
 {
     public:
-        /** Default constructor */
-        Cul(std::string);
-        /** Default destructor */
+        Cul();
+        Cul(std::string culDevice);
+        void init(std::string culDevice);
         virtual ~Cul();
         void startListening();
         void stopListening();
@@ -40,7 +40,7 @@ class Cul
     protected:
     private:
         std::list<HomeMaticDevice*> _homeMaticDevices;
-        int _fileDescriptor;
+        int32_t _fileDescriptor = -1;
         std::string _culDevice;
         std::thread _listenThread;
         std::thread _callbackThread;

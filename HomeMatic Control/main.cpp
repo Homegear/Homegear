@@ -29,7 +29,7 @@ int32_t getIntInput()
 	std::string input;
 	cin >> input;
 	int32_t intInput = -1;
-	try	{ intInput = std::stoi(input); } catch(...) {}
+	try	{ intInput = std::stol(input); } catch(...) {}
     return intInput;
 }
 
@@ -38,7 +38,7 @@ int32_t getHexInput()
 	std::string input;
 	cin >> input;
 	int32_t intInput = -1;
-	try	{ intInput = std::stoi(input, 0, 16); } catch(...) {}
+	try	{ intInput = std::stol(input, 0, 16); } catch(...) {}
     return intInput;
 }
 
@@ -72,28 +72,20 @@ int main()
     	char path[1024];
     	getcwd(path, 1024);
     	GD::startUpPath = std::string(path);
-    	GD::db = new Database(GD::startUpPath + "/db.sql");
-        GD::db->executeCommand("CREATE TABLE IF NOT EXISTS devices (address INTEGER, serializedObject TEXT, lastDutyCycle INTEGER)");
-        //GD::db->executeCommand("INSERT INTO bla VALUES('Hallo')");
-        //std::vector<std::vector<DataColumn>> rows = GD::db->executeCommand("SELECT * FROM bla");
-        //cout << rows[0][0].textValue << endl;
+    	GD::db.init(GD::startUpPath + "/db.sql");
 
-        GD::cul = new Cul("/dev/ttyACM0");
-        //HM_RC_Sec3_B* rc = new HM_RC_Sec3_B(cul, "RC_Sathya1", 0x1DDD0F, 0, 0, 0);
-        HM_SD* sd = new HM_SD();
-        HM_CC_VD* vd1 = new HM_CC_VD("VD_Sathya1", 0x3A0001);
-        HM_CC_VD* vd2 = new HM_CC_VD("VVD0000002", 0x3A0002);
-        HM_CC_VD* vd3 = new HM_CC_VD("VVD0000003", 0x3A0003);
-        HM_CC_TC* tc = new HM_CC_TC("VTC0000001", 0x390001);
+        GD::cul.init("/dev/ttyACM0");
+        GD::cul.startListening();
+        GD::devices.load(); //Don't load before database is open!
 
         //sd->addFilter(FilterType::SenderAddress, 0x1E53E7);
         //sd->addFilter(FilterType::DestinationAddress, 0x1E53E7);
 
-        sd->addFilter(FilterType::SenderAddress, 0x390001);
-        sd->addFilter(FilterType::DestinationAddress, 0x390001);
+        //sd->addFilter(FilterType::SenderAddress, 0x390001);
+        //sd->addFilter(FilterType::DestinationAddress, 0x390001);
 
-        sd->addFilter(FilterType::SenderAddress, 0x1DA44D); //Stellantrieb Preetz 1. OG Zimmer NW
-        sd->addFilter(FilterType::DestinationAddress, 0x1DA44D); //Stellantrieb Preetz 1. OG Zimmer NW
+        //sd->addFilter(FilterType::SenderAddress, 0x1DA44D); //Stellantrieb Preetz 1. OG Zimmer NW
+        //sd->addFilter(FilterType::DestinationAddress, 0x1DA44D); //Stellantrieb Preetz 1. OG Zimmer NW
 
         //sd->addFilter(FilterType::SenderAddress, 0x1D8DDD); //Wandthermostat Kiel Zimmer NW
         //sd->addFilter(FilterType::DestinationAddress, 0x1D8DDD); //Wandthermostat Kiel Zimmer NW
@@ -101,30 +93,27 @@ int main()
         //sd->addFilter(FilterType::SenderAddress, 0x1D8F45); //Wandthermostat Preetz 1. OG Zimmer NW
         //sd->addFilter(FilterType::DestinationAddress, 0x1D8F45); //Wandthermostat Preetz 1. OG Zimmer NW
 
-        /*sd->addFilter(FilterType::DestinationAddress, 0x3A0001);
-        sd->addFilter(FilterType::DestinationAddress, 0x3A0002);
-        sd->addFilter(FilterType::DestinationAddress, 0x3A0003);
-        sd->addFilter(FilterType::DestinationAddress, 0x1DDD0F);
-        sd->addFilter(FilterType::SenderAddress, 0x1F454D);
-        sd->addFilter(FilterType::DestinationAddress, 0x1F454D);*/
-        //sd->addOverwriteResponse("A0111C69431F454D0201000000", "A0021F454D1C69430400000000000002", 80);
-        //sd->addBlockResponse("A0031C69431F454D", 50);
-        GD::cul->startListening();
+        //sd->addFilter(FilterType::DestinationAddress, 0x1DDD0F);
+        //sd->addFilter(FilterType::SenderAddress, 0x1F454D);
+        //sd->addFilter(FilterType::DestinationAddress, 0x1F454D);
 
+        char inputBuffer[256];
         std::string input = "";
-        while(input != "q")
+        while(input != "q" && input != "quit")
         {
-            std::cin >> input;
+            std::cin.getline(inputBuffer, 256);
+            input = std::string(inputBuffer);
             if(input == "h" || input == "?" || input == "help")
             {
                 //Help
             }
-            if(input == "a")
+            else if(input == "create device")
             {
             	cout << "Please enter a 3 byte address for the device in hexadecimal format (e. g. 3A0001): ";
-            	cin >> input;
             	int32_t address = getHexInput();
+
             	if(address < 1 || address > 0xFFFFFF) cout << "Address not valid." << endl;
+            	else if(GD::devices.get(address) != nullptr) cout << "Address already in use." << endl;
             	else
             	{
             		cout << "Please enter a serial number (length 10, e. g. VVD0000001): ";
@@ -135,15 +124,19 @@ int main()
             			std::string serialNumber = input;
             			cout << "Please enter a device type: ";
 						int32_t deviceType = getHexInput();
-						//HM_CC_TC tc(serialNumber, address);
-						//GD::devices.push_back(&tc);
 						switch(deviceType)
 						{
 						case 0x39:
-
+							GD::devices.add(new HM_CC_TC(serialNumber, address));
+							cout << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
 							break;
 						case 0x3A:
-							//GD::devices->push_back(HM_CC_VD(serialNumber, address));
+							GD::devices.add(new HM_CC_VD(serialNumber, address));
+							cout << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
+							break;
+						case 0xFFFFFFFE:
+							GD::devices.add(new HM_SD(serialNumber, address));
+							cout << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
 							break;
 						default:
 							cout << "Unknown device type." << endl;
@@ -151,57 +144,39 @@ int main()
             		}
             	}
             }
-            if(input == "s")
+            else if(input == "remove device")
+            {
+            	cout << "Please enter the address of the device to delete (e. g. 3A0001): ";
+            	int32_t address = getHexInput();
+            	if(GD::devices.remove(address)) cout << "Device removed." << endl;
+            	else cout << "Device not found." << endl;
+            }
+            else if(input == "select device")
             {
             	cout << "Device address: ";
             	int32_t address = getHexInput();
-            	currentDevice = nullptr;
-            	//for(std::vector<HomeMaticDevice>::iterator i = GD::devices.begin(); i != GD::devices.end(); ++i)
-				//{
-					//if(i->getAddress() == address)
-					//{
-						//currentDevice = &(*i);
-						//break;
-					//}
-				//}
+            	currentDevice = GD::devices.get(address);
             	if(currentDevice == nullptr) cout << "Device not found." << endl;
             	else cout << "Device selected." << endl;
             }
-            if(input == "p1")
+            else if(input == "list devices")
             {
-                if(vd1->pairDevice(10000))
-                {
-                    cout << "Pairing successful" << '\n';
-                }
-                else
-                {
-                    cout << "Pairing not successful" << '\n';
-                }
+            	std::vector<HomeMaticDevice*>* devices = GD::devices.getDevices();
+            	for(std::vector<HomeMaticDevice*>::iterator i = devices->begin(); i != devices->end(); ++i)
+            	{
+            		cout << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (*i)->deviceType() << endl << std::dec;
+            	}
             }
-            if(input == "p2")
+            else if(input == "q" || input == "quit") {} //nothing
+            else
             {
-                if(tc->pairDevice(10000))
-                {
-                    cout << "Pairing successful" << '\n';
-                }
-                else
-                {
-                    cout << "Pairing not successful" << '\n';
-                }
-            }
-            if(input == "p3")
-            {
-                if(vd3->pairDevice(10000))
-                {
-                    cout << "Pairing successful" << '\n';
-                }
-                else
-                {
-                    cout << "Pairing not successful" << '\n';
-                }
+            	if(currentDevice != nullptr)
+            	{
+            		currentDevice->handleCLICommand(input);
+            	}
             }
         }
-
+        GD::devices.save();
         return 0;
     }
     catch(Exception& ex)

@@ -4,7 +4,7 @@ BidCoSQueue::BidCoSQueue() : _queueType(BidCoSQueueType::EMPTY)
 {
 }
 
-BidCoSQueue::BidCoSQueue(Cul* cul, BidCoSQueueType queueType) : _cul(cul), _queueType(queueType)
+BidCoSQueue::BidCoSQueue(BidCoSQueueType queueType) : _queueType(queueType)
 {
 }
 
@@ -119,7 +119,7 @@ void BidCoSQueue::send(BidCoSPacket packet)
 {
 	try
 	{
-		_cul->sendPacket(packet);
+		GD::cul.sendPacket(packet);
 	}
 	catch(const std::exception& ex)
 	{

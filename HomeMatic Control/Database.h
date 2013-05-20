@@ -4,6 +4,7 @@
 using namespace std;
 
 #include "Exception.h"
+#include "GD.h"
 
 #include <iostream>
 #include <mutex>
@@ -20,7 +21,7 @@ class DataColumn
     public:
         DataType dataType;
         int32_t index;
-        int32_t intValue;
+        int64_t intValue;
         double floatValue;
         std::string textValue;
 };
@@ -31,6 +32,7 @@ class Database
 		Database();
         Database(std::string databasePath);
         virtual ~Database();
+        void init(std::string databasePath);
         std::vector<std::vector<DataColumn>> executeCommand(std::string command);
         std::vector<std::vector<DataColumn>> executeCommand(std::string command, std::vector<DataColumn> dataToEscape);
     protected:

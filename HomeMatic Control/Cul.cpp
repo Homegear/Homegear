@@ -1,8 +1,19 @@
 #include "Cul.h"
+Cul GD::cul;
 
-Cul::Cul(std::string culDevice) : _fileDescriptor(-1)
+Cul::Cul()
+{
+
+}
+
+Cul::Cul(std::string culDevice)
 {
     _culDevice = culDevice;
+}
+
+void Cul::init(std::string culDevice)
+{
+	_culDevice = culDevice;
 }
 
 Cul::~Cul()
@@ -199,7 +210,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
         timeout.tv_sec = 0;
         timeout.tv_usec = 5000;
         fd_set writeFileDescriptor;
-        if(printSending)
+        if(GD::debugLevel > 3 && printSending)
         {
             cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << data.substr(2, data.size() - 4) << endl;
         }

@@ -161,7 +161,7 @@ bool BidCoSMessage::checkAccess(BidCoSPacket* packet, BidCoSQueue* queue)
 			//cout << "Access denied, because device is not paired with sender: " << packet->hexString() << endl;
 			return false;
 		}
-		if((access & ACCESSDESTISME) && packet->destinationAddress() != _device->getAddress())
+		if((access & ACCESSDESTISME) && packet->destinationAddress() != _device->address())
 		{
 			//cout << "Access denied, because the destination address is not me: " << packet->hexString() << endl;
 			return false;

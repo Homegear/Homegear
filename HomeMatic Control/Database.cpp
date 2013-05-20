@@ -1,6 +1,19 @@
 #include "Database.h"
 
+Database GD::db;
+
+Database::Database()
+{
+
+}
+
 Database::Database(std::string databasePath)
+{
+	if(databasePath.size() == 0) return;
+    openDatabase(databasePath);
+}
+
+void Database::init(std::string databasePath)
 {
 	if(databasePath.size() == 0) return;
     openDatabase(databasePath);
@@ -58,6 +71,10 @@ void Database::getDataRows(sqlite3_stmt* statement, std::vector<std::vector<Data
 					case SQLITE_TEXT: //or SQLITE3_TEXT. As we are not using SQLite version 2 it doesn't matter
 						col.dataType = TEXT;
 						col.textValue = std::string((const char*)sqlite3_column_text(statement, i));
+						if(GD::debugLevel == 5)
+						{
+							cout << "Read text column from database: " << col.textValue << endl;;
+						}
 						break;
 				}
 				row.push_back(col);
@@ -80,6 +97,8 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
 	std::vector<std::vector<DataColumn>> dataRows;
 	try
 	{
+		if(GD::debugLevel == 5) cout << "Executing SQL command: " << command << endl;
+		_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
 		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
@@ -119,6 +138,7 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
 	{
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
 	}
+	_databaseMutex.unlock();
 	return dataRows;
 }
 
@@ -127,6 +147,8 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
     std::vector<std::vector<DataColumn>> dataRows;
     try
     {
+    	if(GD::debugLevel == 5) cout << "Executing SQL command: " << command << endl;
+    	_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
 		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
@@ -144,5 +166,6 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
     {
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
     }
+    _databaseMutex.unlock();
     return dataRows;
 }

@@ -2,22 +2,16 @@
 
 HM_CC_TC::HM_CC_TC(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
 {
-    _deviceType = 0x39;
-    _firmwareVersion = 0x21;
-    _deviceClass = 0x58;
-    _channelMin = 0x00;
-    _channelMax = 0xFF;
-    _deviceTypeChannels[0x3A] = 2;
-    _lastPairingByte = 0xFF;
-
-    setUpBidCoSMessages();
-    setUpConfig();
-    startDutyCycle();
+	init();
+	startDutyCycle();
 }
 
-HM_CC_TC::HM_CC_TC(std::string serializedObject) : HomeMaticDevice(serializedObject.substr(serializedObject.find_first_of("|")))
+HM_CC_TC::HM_CC_TC(std::string serializedObject) : HomeMaticDevice(serializedObject.substr(serializedObject.find_first_of("|") + 1))
 {
+	init();
+
 	serializedObject = serializedObject.substr(0, serializedObject.find_first_of("|"));
+	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
 
 	std::istringstream stringstream(serializedObject);
 	std::string entry;
@@ -27,26 +21,43 @@ HM_CC_TC::HM_CC_TC(std::string serializedObject) : HomeMaticDevice(serializedObj
 		switch(i)
 		{
 		case 0:
-			_currentDutyCycleDeviceAddress = std::stoi(entry, 0, 16);
+			_currentDutyCycleDeviceAddress = std::stol(entry, 0, 16);
 			break;
 		case 1:
-			_temperature = std::stoi(entry, 0, 16);
+			_temperature = std::stol(entry, 0, 16);
 			break;
 		case 2:
-			_setPointTemperature = std::stoi(entry, 0, 16);
+			_setPointTemperature = std::stol(entry, 0, 16);
 			break;
 		case 3:
-			_humidity = std::stoi(entry, 0, 16);
+			_humidity = std::stol(entry, 0, 16);
 			break;
 		case 4:
-			_valveState = std::stoi(entry, 0, 16);
+			_valveState = std::stol(entry, 0, 16);
 			break;
 		case 5:
-			_newValveState = std::stoi(entry, 0, 16);
+			_newValveState = std::stol(entry, 0, 16);
 			break;
 		}
 		i++;
 	}
+	startDutyCycle();
+}
+
+void HM_CC_TC::init()
+{
+	HomeMaticDevice::init();
+
+	_deviceType = 0x39;
+    _firmwareVersion = 0x21;
+    _deviceClass = 0x58;
+    _channelMin = 0x00;
+    _channelMax = 0xFF;
+    _deviceTypeChannels[0x3A] = 2;
+    _lastPairingByte = 0xFF;
+
+    setUpBidCoSMessages();
+    setUpConfig();
 }
 
 void HM_CC_TC::setUpConfig()
@@ -163,14 +174,13 @@ void HM_CC_TC::startDutyCycle()
 
 void HM_CC_TC::dutyCycleThread()
 {
-	int64_t lastDutyCycleEvent;
 	int64_t nextDutyCycleEvent = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	int64_t timePassed;
 	int64_t cycleTime;
 	int64_t delay = 0; //TODO sathyaRemove if no problems
 	while(!_stopDutyCycleThread)
 	{
-		lastDutyCycleEvent = nextDutyCycleEvent;
+		_lastDutyCycleEvent = nextDutyCycleEvent;
 		int32_t cycleLength = calculateCycleLength();
 		cycleTime = cycleLength * 250;
 		nextDutyCycleEvent += cycleTime;
@@ -193,23 +203,23 @@ void HM_CC_TC::dutyCycleThread()
 			cycleCounter += 8;
 		}
 
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - lastDutyCycleEvent;
+		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
 		cout << "Time mismatch: " << (timePassed + 10000 - cycleTime) << endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 5000));
 
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - lastDutyCycleEvent;
+		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
 		cout << "Time mismatch: " << (timePassed + 5000 - cycleTime) << endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 2000));
 
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - lastDutyCycleEvent;
+		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
 		cout << "Time mismatch: " << (timePassed + 2000 - cycleTime) << endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 1000));
 
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - lastDutyCycleEvent;
+		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
 		cout << "Time mismatch: " << (timePassed + 1000 - cycleTime) << endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 500));
 
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - lastDutyCycleEvent;
+		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
 		cout << "Time mismatch: " << (timePassed + 500 - cycleTime) << endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed + delay));
 
@@ -234,7 +244,7 @@ void HM_CC_TC::sendDutyCycleBroadcast()
 	payload.push_back(_temperature & 0xFF);
 	payload.push_back(_humidity);
 	BidCoSPacket packet(_messageCounter[1], 0x86, 0x70, _address, 0, payload);
-	GD::cul->sendPacket(packet);
+	GD::cul.sendPacket(packet);
 }
 
 void HM_CC_TC::sendDutyCyclePacket()
@@ -249,7 +259,7 @@ void HM_CC_TC::sendDutyCyclePacket()
 	payload.push_back(getAdjustmentCommand());
 	payload.push_back(_newValveState);
 	BidCoSPacket packet(_messageCounter[1], 0xA2, 0x58, _address, address, payload);
-	GD::cul->sendPacket(packet);
+	GD::cul.sendPacket(packet);
 	_valveState = _newValveState;
 	int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - timePoint;
 	cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << endl;
@@ -443,7 +453,7 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, Bi
 		payload.push_back(0);
 		payload.push_back(0x05);
 		BidCoSPacket requestConfig(messageCounter, 0xA0, 0x01, _address, packet->senderAddress(), payload);
-		GD::cul->sendPacket(requestConfig);
+		GD::cul.sendPacket(requestConfig);
 	}
 	catch(const std::exception& ex)
 	{

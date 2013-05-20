@@ -23,28 +23,29 @@ class HM_SD_OverwriteResponse
         std::string response;
 };
 
-class HM_SD_BlockResponse
-{
-    public:
-        int32_t sendAfter;
-        std::string packetPartToCapture;
-};
-
 class HM_SD : public HomeMaticDevice
 {
     public:
         HM_SD();
+        HM_SD(std::string serializedObject);
+        HM_SD(std::string serialNumber, int32_t address);
         virtual ~HM_SD();
         void packetReceived(BidCoSPacket*);
         void addFilter(FilterType, int32_t);
         void removeFilter(FilterType, int32_t);
         void addOverwriteResponse(std::string packetPartToCapture, std::string response, int32_t sendAfter);
-        void addBlockResponse(std::string packetPartToCapture, int32_t blockAfter);
+        void removeOverwriteResponse(std::string packetPartToCapture);
+        void handleCLICommand(std::string command);
+        std::string serialize();
     protected:
     private:
         std::list<HM_SD_Filter> _filters;
         std::list<HM_SD_OverwriteResponse> _responsesToOverwrite;
-        std::list<HM_SD_BlockResponse> _responsesToBlock;
+
+        void init();
+
+        void unserializeFilters(std::string serializedData);
+        void unserializeOverwriteResponses(std::string serializedData);
 };
 
 #endif // HM_SD_H
