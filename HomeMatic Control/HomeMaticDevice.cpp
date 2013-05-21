@@ -82,13 +82,13 @@ void HomeMaticDevice::unserializeMap(std::unordered_map<int32_t, uint8_t>* map, 
 
 HomeMaticDevice::HomeMaticDevice(std::string serialNumber, int32_t address) : _address(address), _serialNumber(serialNumber)
 {
-	init();
 }
 
 void HomeMaticDevice::init()
 {
 	try
 	{
+		if(_initialized) return; //Prevent running init two times
 		GD::cul.addHomeMaticDevice(this);
 
 		_messages = new BidCoSMessages();
@@ -102,6 +102,7 @@ void HomeMaticDevice::init()
 		}
 
 		setUpBidCoSMessages();
+		_initialized = true;
 	}
 	catch(const std::exception& ex)
 	{

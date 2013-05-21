@@ -110,6 +110,7 @@ class HomeMaticDevice
         std::mutex _receivedPacketMutex;
         BidCoSMessages* _messages = nullptr;
         int64_t _lastDutyCycleEvent = 0;
+        bool _initialized = false;
 
         bool _lowBattery = false;
 
