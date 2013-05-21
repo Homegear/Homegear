@@ -27,7 +27,7 @@ class HM_SD : public HomeMaticDevice
 {
     public:
         HM_SD();
-        HM_SD(std::string serializedObject);
+        HM_SD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         HM_SD(std::string serialNumber, int32_t address);
         virtual ~HM_SD();
         void packetReceived(BidCoSPacket*);

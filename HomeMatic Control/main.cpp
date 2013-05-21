@@ -46,6 +46,9 @@ int main()
 {
     try
     {
+    	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
+			throw(new Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
+
     	signal(SIGSEGV, exceptionHandler);
 
         /*int row,col;
@@ -165,6 +168,17 @@ int main()
             	for(std::vector<HomeMaticDevice*>::iterator i = devices->begin(); i != devices->end(); ++i)
             	{
             		cout << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (*i)->deviceType() << endl << std::dec;
+            	}
+            }
+            else if(input == "set verbosity")
+            {
+            	cout << "Verbosity (0 - 5): ";
+            	int32_t verbosity = getHexInput();
+            	if(verbosity < 0 || verbosity > 5) cout << "Invalid verbosity." << endl;
+            	else
+            	{
+            		GD::debugLevel = verbosity;
+            		cout << "Verbosity set to " << verbosity << endl;
             	}
             }
             else if(input == "q" || input == "quit") {} //nothing

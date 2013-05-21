@@ -34,9 +34,11 @@ class HomeMaticDevice
         std::string serialNumber();
         int32_t firmwareVersion();
         int32_t deviceType();
+        std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
+        virtual int64_t lastDutyCycleEvent() { return _lastDutyCycleEvent; }
 
         HomeMaticDevice();
-        HomeMaticDevice(std::string serializedObject);
+        HomeMaticDevice(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         HomeMaticDevice(std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
         virtual void packetReceived(BidCoSPacket*);
@@ -49,9 +51,8 @@ class HomeMaticDevice
         virtual BidCoSQueue* getBidCoSQueue() { return _bidCoSQueue.get(); }
         virtual BidCoSMessage* getLastReceivedMessage() { return _lastReceivedMessage; }
         virtual BidCoSPacket* getReceivedPacket() { return &_receivedPacket; }
-        virtual std::unordered_map<int32_t, int32_t>* getMessageCounter() { return &_messageCounter; }
         virtual int32_t calculateCycleLength();
-        virtual int64_t lastDutyCycleEvent() { return _lastDutyCycleEvent; }
+        virtual void stopDutyCycle() {};
         virtual std::string serialize();
         virtual int32_t getHexInput();
         virtual void handleCLICommand(std::string command);
@@ -97,7 +98,7 @@ class HomeMaticDevice
         std::unordered_map<int32_t, std::map<int32_t, int32_t> > _config;
         std::unordered_map<int32_t, Peer> _peers;
         std::mutex _peersMutex;
-        std::unordered_map<int32_t, int32_t> _messageCounter;
+        std::unordered_map<int32_t, uint8_t> _messageCounter;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
         bool _pairing = false;
         bool _justPairedToOrThroughCentral = false;
@@ -119,7 +120,7 @@ class HomeMaticDevice
         virtual void setUpConfig();
         virtual void newBidCoSQueue(BidCoSQueueType queueType);
         virtual void resetQueue();
-        virtual void unserializeMap(std::unordered_map<int32_t, int32_t>* map, std::string serializedData);
+        virtual void unserializeMap(std::unordered_map<int32_t, uint8_t>* map, std::string serializedData);
 
         virtual void reset();
     private:

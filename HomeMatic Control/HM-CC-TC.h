@@ -14,11 +14,13 @@ class HM_CC_TC : public HomeMaticDevice
 {
     public:
         HM_CC_TC();
-        HM_CC_TC(std::string serializedObject);
+        HM_CC_TC(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         HM_CC_TC(std::string, int32_t);
         virtual ~HM_CC_TC();
 
         void setValveState(int32_t valveState) { _newValveState = valveState; }
+        void handleCLICommand(std::string command);
+        void stopDutyCycle();
 
         void handlePairingRequest(int32_t messageCounter, BidCoSPacket* packet);
         void handleConfigParamResponse(int32_t messageCounter, BidCoSPacket* packet);
@@ -40,17 +42,19 @@ class HM_CC_TC : public HomeMaticDevice
         std::thread* _dutyCycleThread = nullptr;
         int32_t _valveState = 0;
         int32_t _newValveState = 0;
+        int32_t _dutyCycleCounter  = 0;
         void reset();
 
         int32_t getNextDutyCycleDeviceAddress();
+        int64_t calculateLastDutyCycleEvent();
         int32_t getAdjustmentCommand();
 
         void sendRequestConfig(int32_t messageCounter, int32_t controlByte, BidCoSPacket* packet);
         void sendConfigParams(int32_t messageCounter, int32_t controlByte);
         void sendDutyCycleBroadcast();
         void sendDutyCyclePacket();
-        void startDutyCycle();
-        void dutyCycleThread();
+        void startDutyCycle(int64_t lastDutyCycleEvent);
+        void dutyCycleThread(int64_t lastDutyCycleEvent);
         void setUpConfig();
 };
 

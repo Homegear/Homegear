@@ -55,7 +55,7 @@ void Database::getDataRows(sqlite3_stmt* statement, std::vector<std::vector<Data
 				{
 					case SQLITE_INTEGER:
 						col.dataType = INTEGER;
-						col.intValue = sqlite3_column_int(statement, i);
+						col.intValue = sqlite3_column_int64(statement, i);
 						break;
 					case SQLITE_FLOAT:
 						col.dataType = FLOAT;
@@ -113,7 +113,7 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
 					result = sqlite3_bind_null(statement, col.index);
 					break;
 				case INTEGER:
-					result = sqlite3_bind_int(statement, col.index, col.intValue);
+					result = sqlite3_bind_int64(statement, col.index, col.intValue);
 					break;
 				case FLOAT:
 					result = sqlite3_bind_double(statement, col.index, col.floatValue);

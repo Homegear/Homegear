@@ -9,4 +9,4 @@
 
 std::string GD::startUpPath = "";
 HomeMaticDevices GD::devices;
-int32_t GD::debugLevel = 3;
+int32_t GD::debugLevel = 5;

@@ -4,7 +4,7 @@ HM_SD::HM_SD() : HomeMaticDevice()
 {
 }
 
-HM_SD::HM_SD(std::string serializedObject) : HomeMaticDevice(serializedObject.substr(serializedObject.find_first_of("|") + 1))
+HM_SD::HM_SD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent) : HomeMaticDevice(serializedObject.substr(serializedObject.find_first_of("|") + 1), dutyCycleMessageCounter, lastDutyCycleEvent)
 {
 	init();
 

@@ -4,7 +4,7 @@ HomeMaticDevice::HomeMaticDevice()
 {
 }
 
-HomeMaticDevice::HomeMaticDevice(std::string serializedObject)
+HomeMaticDevice::HomeMaticDevice(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
 	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
 	std::stringstream stringstream(serializedObject);
@@ -66,7 +66,7 @@ HomeMaticDevice::HomeMaticDevice(std::string serializedObject)
 	}
 }
 
-void HomeMaticDevice::unserializeMap(std::unordered_map<int32_t, int32_t>* map, std::string serializedData)
+void HomeMaticDevice::unserializeMap(std::unordered_map<int32_t, uint8_t>* map, std::string serializedData)
 {
 	std::istringstream stringstream(serializedData);
 	int32_t i = 0;
@@ -194,11 +194,11 @@ int32_t HomeMaticDevice::getHexInput()
 
 void HomeMaticDevice::handleCLICommand(std::string command)
 {
-	if(command == "p")
+	if(command == "pair")
 	{
 		if(pairDevice(10000)) cout << "Pairing successful." << endl; else cout << "Pairing not successful." << endl;
 	}
-	else if(command == "r")
+	else if(command == "reset")
 	{
 		reset();
 		cout << "Device reset." << endl;
@@ -214,10 +214,10 @@ std::string HomeMaticDevice::serialize()
 	stringstream << _serialNumber << ";";
 	stringstream << _firmwareVersion << ";";
 	stringstream << _centralAddress << ";";
-	for(std::unordered_map<int32_t, int32_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end();)
+	for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end();)
 	{
 		stringstream << i->first << ",";
-		stringstream << i->second;
+		stringstream << (int32_t)i->second;
 		++i;
 		if(i != _messageCounter.end()) stringstream << ",";
 	}

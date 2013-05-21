@@ -17,6 +17,8 @@ public:
 	std::vector<HomeMaticDevice*>* getDevices() { return &_devices; }
 	void load();
 	void save();
+	void stopDutyCycles();
+	void stopDutyCycle(HomeMaticDevice* device);
 private:
 	std::vector<HomeMaticDevice*> _devices;
 };
