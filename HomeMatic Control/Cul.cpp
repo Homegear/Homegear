@@ -286,7 +286,8 @@ void Cul::stopListening()
 		_stopCallbackThread = false;
 		if(_fileDescriptor != -1)
 		{
-			writeToDevice("X21\r\n", false);
+			//Other X commands than 00 seem to slow down data processing
+			writeToDevice("X00\r\n", false);
 			writeToDevice("Ar\r\n", false);
 			closeDevice();
 		}

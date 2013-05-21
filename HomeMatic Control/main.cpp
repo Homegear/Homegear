@@ -56,7 +56,11 @@ int main()
 
     	signal(SIGSEGV, exceptionHandler);
 
+    	MonoDomain* domain = mono_jit_init("HomeMatic Control");
+    	MonoAssembly* assembly = mono_domain_assembly_open(domain, "CookComputing.XmlRpcV2.dll");
+    	if(!assembly) throw(new Exception("CookComputing.XmlRpcV2.dll not found."));
 
+    	mono_jit_cleanup(domain);
 
         /*int row,col;
         WINDOW* mainWindow = initscr();
@@ -158,6 +162,7 @@ int main()
             {
             	cout << "Please enter the address of the device to delete (e. g. 3A0001): ";
             	int32_t address = getHexInput();
+            	if(currentDevice->address() == address) currentDevice = nullptr;
             	if(GD::devices.remove(address)) cout << "Device removed." << endl;
             	else cout << "Device not found." << endl;
             }
