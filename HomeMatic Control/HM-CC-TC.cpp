@@ -215,7 +215,6 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 	_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250;
 	_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
 	if(GD::debugLevel == 5 && _dutyCycleCounter > 0) cout << "Skipping " << (_dutyCycleCounter * 250) << "ms of duty cycle.";
-	int64_t delay = 0; //TODO sathyaRemove if no problems
 	while(!_stopDutyCycleThread)
 	{
 		int32_t cycleLength = calculateCycleLength();
@@ -259,7 +258,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
 		cout << "Time mismatch: " << (timePassed + 500 - cycleTime) << endl;
-		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed + delay));
+		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed));
 		if(_stopDutyCycleThread) break;
 
 		_lastDutyCycleEvent = nextDutyCycleEvent;

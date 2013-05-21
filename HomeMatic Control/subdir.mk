@@ -11,11 +11,13 @@ CPP_SRCS += \
 ./Cul.cpp \
 ./Database.cpp \
 ./Exception.cpp \
+./GD.cpp \
 ./HM-CC-TC.cpp \
 ./HM-CC-VD.cpp \
 ./HM-RC-Sec3-B.cpp \
 ./HM-SD.cpp \
 ./HomeMaticDevice.cpp \
+./HomeMaticDevices.cpp \
 ./Log.cpp \
 ./Peer.cpp \
 ./main.cpp 
@@ -28,11 +30,13 @@ OBJS += \
 ./Cul.o \
 ./Database.o \
 ./Exception.o \
+./GD.o \
 ./HM-CC-TC.o \
 ./HM-CC-VD.o \
 ./HM-RC-Sec3-B.o \
 ./HM-SD.o \
 ./HomeMaticDevice.o \
+./HomeMaticDevices.o \
 ./Log.o \
 ./Peer.o \
 ./main.o 
@@ -45,11 +49,13 @@ CPP_DEPS += \
 ./Cul.d \
 ./Database.d \
 ./Exception.d \
+./GD.d \
 ./HM-CC-TC.d \
 ./HM-CC-VD.d \
 ./HM-RC-Sec3-B.d \
 ./HM-SD.d \
 ./HomeMaticDevice.d \
+./HomeMaticDevices.d \
 ./Log.d \
 ./Peer.d \
 ./main.d 
@@ -59,7 +65,7 @@ CPP_DEPS += \
 %.o: ./%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -DDEBUG_LEVEL=5 -O3 -Wall -c -fmessage-length=0 -std=c++11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -O3 -Wall -c -fmessage-length=0 -std=c++11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
