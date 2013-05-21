@@ -110,7 +110,7 @@ int main()
             {
                 //Help
             }
-            else if(input == "create device")
+            else if(input == "create device" || input == "add device")
             {
             	cout << "Please enter a 3 byte address for the device in hexadecimal format (e. g. 3A0001): ";
             	int32_t address = getHexInput();
@@ -126,7 +126,7 @@ int main()
             		{
             			std::string serialNumber = input;
             			cout << "Please enter a device type: ";
-						int32_t deviceType = getHexInput();
+						uint32_t deviceType = getHexInput();
 						switch(deviceType)
 						{
 						case 0x39:
@@ -147,7 +147,7 @@ int main()
             		}
             	}
             }
-            else if(input == "remove device")
+            else if(input == "remove device" || input == "delete device")
             {
             	cout << "Please enter the address of the device to delete (e. g. 3A0001): ";
             	int32_t address = getHexInput();
