@@ -87,11 +87,11 @@ class HomeMaticDevice
     protected:
         int32_t _address;
         std::string _serialNumber;
-        int32_t _firmwareVersion;
-        int32_t _deviceType;
-        int32_t _deviceClass;
-        int32_t _channelMin;
-        int32_t _channelMax;
+        int32_t _firmwareVersion = 0;
+        int32_t _deviceType = 0;
+        int32_t _deviceClass = 0;
+        int32_t _channelMin = 0;
+        int32_t _channelMax = 0;
         int32_t _lastPairingByte = 0;
         int32_t _centralAddress = 0;
         int32_t _currentList = 0;
@@ -121,7 +121,6 @@ class HomeMaticDevice
         virtual void setUpConfig();
         virtual void newBidCoSQueue(BidCoSQueueType queueType);
         virtual void resetQueue();
-        virtual void unserializeMap(std::unordered_map<int32_t, uint8_t>* map, std::string serializedData);
 
         virtual void reset();
     private:

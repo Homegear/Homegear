@@ -1,6 +1,7 @@
 #ifndef PEER_H
 #define PEER_H
 
+#include <iomanip>
 #include <string>
 #include <sstream>
 #include <unordered_map>

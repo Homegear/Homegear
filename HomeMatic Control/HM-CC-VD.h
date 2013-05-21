@@ -14,16 +14,19 @@ class HM_CC_VD : public HomeMaticDevice
 {
     public:
         HM_CC_VD();
-        /** Default constructor */
+        HM_CC_VD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         HM_CC_VD(std::string, int32_t);
-        /** Default destructor */
         virtual ~HM_CC_VD();
         void setValveDriveBlocked(bool);
         void setValveDriveLoose(bool);
         void setAdjustingRangeTooSmall(bool);
+        void handleCLICommand(std::string command);
 
         void handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet);
+        std::string serialize();
     protected:
+        virtual void setUpBidCoSMessages();
+        virtual void init();
     private:
         int32_t _valveState = 0;
         int32_t* _errorPosition = nullptr;

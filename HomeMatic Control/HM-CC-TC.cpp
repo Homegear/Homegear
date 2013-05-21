@@ -6,41 +6,17 @@ HM_CC_TC::HM_CC_TC(std::string serialNumber, int32_t address) : HomeMaticDevice(
 	startDutyCycle(-1);
 }
 
-HM_CC_TC::HM_CC_TC(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent) : HomeMaticDevice(serializedObject.substr(serializedObject.find_first_of("|") + 1), dutyCycleMessageCounter, lastDutyCycleEvent)
+HM_CC_TC::HM_CC_TC(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent) : HomeMaticDevice(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent)
 {
 	init();
 
-	serializedObject = serializedObject.substr(0, serializedObject.find_first_of("|"));
-	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
-
-	std::istringstream stringstream(serializedObject);
-	std::string entry;
-	int32_t i = 0;
-	while(std::getline(stringstream, entry, ';'))
-	{
-		switch(i)
-		{
-		case 0:
-			_currentDutyCycleDeviceAddress = std::stoll(entry, 0, 16);
-			break;
-		case 1:
-			_temperature = std::stoll(entry, 0, 16);
-			break;
-		case 2:
-			_setPointTemperature = std::stoll(entry, 0, 16);
-			break;
-		case 3:
-			_humidity = std::stoll(entry, 0, 16);
-			break;
-		case 4:
-			_valveState = std::stoll(entry, 0, 16);
-			break;
-		case 5:
-			_newValveState = std::stoll(entry, 0, 16);
-			break;
-		}
-		i++;
-	}
+	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
+	_currentDutyCycleDeviceAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	_temperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+	_setPointTemperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+	_humidity = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+	_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+	_newValveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 
 	_messageCounter[1] = dutyCycleMessageCounter;
 	_lastDutyCycleEvent = lastDutyCycleEvent;
@@ -178,17 +154,17 @@ void HM_CC_TC::stopDutyCycle()
 
 std::string HM_CC_TC::serialize()
 {
-	std::string serializedObject = HomeMaticDevice::serialize();
+	std::string serializedBase = HomeMaticDevice::serialize();
 	std::ostringstream stringstream;
-	stringstream << std::hex;
-	stringstream << _currentDutyCycleDeviceAddress << ";";
-	stringstream << _temperature << ";";
-	stringstream << _setPointTemperature << ";";
-	stringstream << _humidity << ";";
-	stringstream << _valveState << ";";
-	stringstream << _newValveState << "|"; //The "|" seperates the base class from the inherited class part
-	stringstream << std::dec;
-	return stringstream.str() + serializedObject;
+	stringstream << std::hex << std::uppercase << std::setfill('0');
+	stringstream << std::setw(8) << serializedBase.size() << serializedBase;
+	stringstream << std::setw(8) << _currentDutyCycleDeviceAddress;
+	stringstream << std::setw(4) << _temperature;
+	stringstream << std::setw(4) << _setPointTemperature;
+	stringstream << std::setw(2) << _humidity;
+	stringstream << std::setw(2) << _valveState;
+	stringstream << std::setw(2) << _newValveState;
+	return  stringstream.str();
 }
 
 void HM_CC_TC::handleCLICommand(std::string command)

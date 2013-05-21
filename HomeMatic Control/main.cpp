@@ -6,11 +6,6 @@ using namespace std;
 #include <signal.h>
 #include <stdlib.h>
 
-//Mono:
-#include <mono/jit/jit.h>
-#include <mono/metadata/assembly.h>
-//Mono end
-
 #include "Cul.h"
 #include "HM-RC-Sec3-B.h"
 #include "HM-SD.h"
@@ -55,12 +50,6 @@ int main()
 			throw(new Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
 
     	signal(SIGSEGV, exceptionHandler);
-
-    	MonoDomain* domain = mono_jit_init("HomeMatic Control");
-    	MonoAssembly* assembly = mono_domain_assembly_open(domain, "CookComputing.XmlRpcV2.dll");
-    	if(!assembly) throw(new Exception("CookComputing.XmlRpcV2.dll not found."));
-
-    	mono_jit_cleanup(domain);
 
         /*int row,col;
         WINDOW* mainWindow = initscr();
@@ -192,6 +181,10 @@ int main()
             		GD::debugLevel = verbosity;
             		cout << "Verbosity set to " << verbosity << endl;
             	}
+            }
+            else if(input == "time")
+            {
+            	cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << endl;
             }
             else if(input == "q" || input == "quit") {} //nothing
             else

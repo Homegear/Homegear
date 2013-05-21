@@ -8,6 +8,7 @@
 #include "HomeMaticDevices.h"
 #include "HM-CC-TC.h"
 #include "HM-SD.h"
+#include "HM-CC-VD.h"
 
 HomeMaticDevices::HomeMaticDevices()
 {
@@ -51,6 +52,9 @@ void HomeMaticDevices::load()
 				{
 				case 0x39:
 					device = new HM_CC_TC(serializedObject, dutyCycleMessageCounter, col->intValue);
+					break;
+				case 0x3A:
+					device = new HM_CC_VD(serializedObject, dutyCycleMessageCounter, col->intValue);
 					break;
 				case 0xFFFFFFFE:
 					device = new HM_SD(serializedObject, dutyCycleMessageCounter, col->intValue);

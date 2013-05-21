@@ -43,9 +43,6 @@ class HM_SD : public HomeMaticDevice
         std::list<HM_SD_OverwriteResponse> _responsesToOverwrite;
 
         void init();
-
-        void unserializeFilters(std::string serializedData);
-        void unserializeOverwriteResponses(std::string serializedData);
 };
 
 #endif // HM_SD_H

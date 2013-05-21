@@ -7,72 +7,33 @@ HomeMaticDevice::HomeMaticDevice()
 HomeMaticDevice::HomeMaticDevice(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
 	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
-	std::stringstream stringstream(serializedObject);
-	std::stringstream stringstream3;
-	std::string entry;
-	int32_t i = 0;
 
-	std::string entry2;
-	int32_t key;
-	int32_t j = 0;
-	while(std::getline(stringstream, entry, ';'))
+	uint32_t pos = 0;
+	_deviceType = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	_serialNumber = serializedObject.substr(pos, 10); pos += 10;
+	_firmwareVersion = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+	_centralAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	uint32_t messageCounterSize = std::stoll(serializedObject.substr(pos, 8), 0, 16) * 10; pos += 8;
+	for(uint32_t i = pos; i < (pos + messageCounterSize); i += 10)
+		_messageCounter[std::stoll(serializedObject.substr(i, 8), 0, 16)] = (uint8_t)std::stoll(serializedObject.substr(i + 8, 2), 0, 16);
+	pos += messageCounterSize;
+	uint32_t peersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	for(uint32_t i = 0; i < peersSize; i++)
 	{
-		if(i == 0) _deviceType = std::stoll(entry, 0, 16);
-		else if(i == 1)	_address = std::stoll(entry, 0, 16);
-		else if(i == 2) _serialNumber = entry;
-		else if(i == 3) _firmwareVersion = std::stoll(entry, 0, 16);
-		else if(i == 4)	_centralAddress = std::stoll(entry, 0, 16);
-		else if(i == 5)	unserializeMap(&_messageCounter, entry);
-		else if(i == 6)
-		{
-			std::istringstream stringstream2(entry);
-			while(std::getline(stringstream2, entry2, '-'))
-			{
-				Peer peer(entry2);
-				_peers[peer.address] = peer;
-			}
-		}
-		else if(i == 7)
-		{
-			std::istringstream stringstream2(entry);
-			int32_t key2;
-			j = 0;
-			int32_t size = 0;
-			while(std::getline(stringstream2, entry2, ','))
-			{
-				if(j < size)
-				{
-					if(j % 2 == 0) key2 = std::stoi(entry2, 0, 16);
-					else _config[key][key2] = std::stoi(entry2, 0, 16);
-					j++;
-				}
-				else if(size == -1)
-				{
-					size = std::stoi(entry2, 0, 16);
-				}
-				else
-				{
-					key = std::stoi(entry2, 0, 16);
-					size = -1;
-					j = 0;
-				}
-			}
-		}
-		i++;
+		int32_t address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		int32_t peerSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_peers[address] = Peer(serializedObject.substr(pos, peerSize)); pos += peerSize;
 	}
-}
-
-void HomeMaticDevice::unserializeMap(std::unordered_map<int32_t, uint8_t>* map, std::string serializedData)
-{
-	std::istringstream stringstream(serializedData);
-	int32_t i = 0;
-	int32_t key = 0;
-	std::string entry;
-	while(std::getline(stringstream, entry, ','))
+	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	for(uint32_t i = 0; i < configSize; i++)
 	{
-		if(i % 2 == 0) key = std::stoi(entry, 0, 16);
-		else (*map)[key] = std::stoi(entry, 0, 16);
-		i++;
+		int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t j = 0; j < listSize; j++)
+		{
+			_config[listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
+		}
 	}
 }
 
@@ -85,9 +46,9 @@ void HomeMaticDevice::init()
 	try
 	{
 		if(_initialized) return; //Prevent running init two times
-		GD::cul.addHomeMaticDevice(this);
-
 		_messages = new BidCoSMessages();
+
+		GD::cul.addHomeMaticDevice(this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
 		_messageCounter[1] = 0; //Duty cycle message counter
@@ -205,32 +166,35 @@ void HomeMaticDevice::handleCLICommand(std::string command)
 std::string HomeMaticDevice::serialize()
 {
 	std::ostringstream stringstream;
-	stringstream << std::hex;
-	stringstream << _deviceType << ";";
-	stringstream << _address << ";";
-	stringstream << _serialNumber << ";";
-	stringstream << _firmwareVersion << ";";
-	stringstream << _centralAddress << ";";
-	for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end();)
+	stringstream << std::hex << std::uppercase << std::setfill('0');
+	stringstream << std::setw(8) << (int32_t)_deviceType;
+	stringstream << std::setw(8) << _address;
+	stringstream << _serialNumber;
+	stringstream << std::setw(2) << _firmwareVersion;
+	stringstream << std::setw(8) << _centralAddress;
+	stringstream << std::setw(8) << _messageCounter.size();
+	for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
 	{
-		stringstream << i->first << ",";
-		stringstream << (int32_t)i->second;
-		++i;
-		if(i != _messageCounter.end()) stringstream << ",";
+		stringstream << std::setw(8) << i->first;
+		stringstream << std::setw(2) << (int32_t)i->second;
 	}
-	stringstream << ";";
+	stringstream << std::setw(8) << _peers.size();
 	for(std::unordered_map<int32_t, Peer>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 	{
-		stringstream << i->second.serialize() << "-";
+		stringstream << std::setw(8) << i->first;
+		std::string peer = i->second.serialize();
+		stringstream << std::setw(8) << peer.size();
+		stringstream << peer;
 	}
+	stringstream << std::setw(8) << _config.size();
 	for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
 	{
-		stringstream << i->first << ","; //List index
-		stringstream << i->second.size() << ",";
+		stringstream << std::setw(8) << i->first; //List index
+		stringstream << std::setw(8) << i->second.size();
 		for(std::map<int32_t, int32_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 		{
-			stringstream << j->first << ",";
-			stringstream << j->second << ",";
+			stringstream << std::setw(8) << j->first;
+			stringstream << std::setw(8) << j->second;
 		}
 	}
 	stringstream << std::dec;

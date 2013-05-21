@@ -14,11 +14,100 @@ HM_CC_VD::HM_CC_VD(std::string serialNumber, int32_t address) : HomeMaticDevice(
     _config[0x05][0x0A] = 15;
     _errorPosition = &(_config[0x05][0x0A]);
 
-    _messages->add(BidCoSMessage(0x58, this, ACCESSPAIREDTOSENDER, NOACCESS, &HomeMaticDevice::handleDutyCyclePacket));
+    init();
+}
+
+HM_CC_VD::HM_CC_VD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent) : HomeMaticDevice(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent)
+{
+	init();
+
+	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
+	_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+	_valveDriveBlocked = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+	_valveDriveLoose = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+	_adjustingRangeTooSmall = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+}
+
+void HM_CC_VD::init()
+{
+	HomeMaticDevice::init();
+
+    setUpBidCoSMessages();
 }
 
 HM_CC_VD::~HM_CC_VD()
 {
+}
+
+std::string HM_CC_VD::serialize()
+{
+	std::string serializedBase = HomeMaticDevice::serialize();
+	std::ostringstream stringstream;
+	stringstream << std::hex << std::uppercase << std::setfill('0');
+	stringstream << std::setw(8) << serializedBase.size() << serializedBase;
+	stringstream << std::setw(2) << _valveState;
+	stringstream << std::setw(1) << (int32_t)_valveDriveBlocked;
+	stringstream << std::setw(1) << (int32_t)_valveDriveLoose;
+	stringstream << std::setw(1) << (int32_t)_adjustingRangeTooSmall;
+	return  stringstream.str();
+}
+
+void HM_CC_VD::setUpBidCoSMessages()
+{
+    HomeMaticDevice::setUpBidCoSMessages();
+
+    _messages->add(BidCoSMessage(0x58, this, ACCESSPAIREDTOSENDER, NOACCESS, &HomeMaticDevice::handleDutyCyclePacket));
+}
+
+void HM_CC_VD::handleCLICommand(std::string command)
+{
+	std::string input;
+	if(command == "set valve drive blocked")
+	{
+		cout << "Please enter \"yes\" or \"no\": ";
+        cin >> input;
+        if(input == "yes")
+        {
+        	_valveDriveBlocked = true;
+        	cout << "Valve drive blocked." << endl;
+        }
+        else
+        {
+        	_valveDriveBlocked = false;
+        	cout << "Valve drive not blocked." << endl;
+        }
+	}
+	if(command == "set valve drive loose")
+	{
+		cout << "Please enter \"yes\" or \"no\": ";
+        cin >> input;
+        if(input == "yes")
+        {
+        	_valveDriveLoose = true;
+        	cout << "Valve drive loose." << endl;
+        }
+        else
+        {
+        	_valveDriveLoose = false;
+        	cout << "Valve drive not loose." << endl;
+        }
+	}
+	if(command == "set adjusting range too small")
+	{
+		cout << "Please enter \"yes\" or \"no\": ";
+        cin >> input;
+        if(input == "yes")
+        {
+        	_adjustingRangeTooSmall = true;
+        	cout << "Adjusting range too small." << endl;
+        }
+        else
+        {
+        	_adjustingRangeTooSmall = false;
+        	cout << "Adjusting range ok." << endl;
+        }
+	}
+	HomeMaticDevice::handleCLICommand(command);
 }
 
 void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, BidCoSPacket* packet)

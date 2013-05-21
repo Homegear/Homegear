@@ -4,66 +4,34 @@ Peer::Peer(std::string serializedObject)
 {
 	std::istringstream stringstream(serializedObject);
 	std::string entry;
-	int32_t i = 0;
-	while(std::getline(stringstream, entry, '.'))
-	{
-		switch(i)
-		{
-		case 0:
-			address = std::stoll(entry, 0, 16);
-			break;
-		case 1:
-			serialNumber = entry;
-			break;
-		case 2:
-			firmwareVersion = std::stoll(entry, 0, 16);
-			break;
-		case 3:
-			remoteChannel = std::stoll(entry, 0, 16);
-			break;
-		case 4:
-			localChannel = std::stoll(entry, 0, 16);
-			break;
-		case 5:
-			deviceType = (HMDeviceTypes)std::stoll(entry, 0, 16);
-			break;
-		case 6:
-			messageCounter = std::stoll(entry, 0, 16);
-			break;
-		case 7:
-			std::istringstream stringstream2(entry);
-			std::string entry2;
-			int32_t key;
-			int32_t j = 0;
-			while(std::getline(stringstream2, entry2, ','))
-			{
-				if(j % 2 == 0) key = std::stoll(entry2, 0, 16);
-				else config[key] = std::stoll(entry2, 0, 16);
-				j++;
-			}
-			break;
-		}
-		i++;
-	}
+	address = std::stoll(serializedObject.substr(0, 8), 0, 16);
+	serialNumber = serializedObject.substr(8, 10);
+	firmwareVersion = std::stol(serializedObject.substr(18, 2), 0, 16);
+	remoteChannel = std::stol(serializedObject.substr(20, 2), 0, 16);
+	localChannel = std::stol(serializedObject.substr(22, 2), 0, 16);
+	deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(24, 8), 0, 16);
+	messageCounter = std::stol(serializedObject.substr(32, 2), 0, 16);
+	uint32_t configSize = (std::stoll(serializedObject.substr(34, 8)) * 16);
+	for(uint32_t i = 42; i < (42 + configSize); i += 16)
+		config[std::stoll(serializedObject.substr(i, 8), 0, 16)] = std::stoll(serializedObject.substr(i + 8, 8), 0, 16);
 }
 
 std::string Peer::serialize()
 {
 	std::ostringstream stringstream;
-	stringstream << std::hex;
-	stringstream << address << ".";
-	stringstream << serialNumber << ".";
-	stringstream << firmwareVersion << ".";
-	stringstream << remoteChannel << ".";
-	stringstream << localChannel << ".";
-	stringstream << (int32_t)deviceType << ".";
-	stringstream << (int32_t)messageCounter << ".";
-	for(std::unordered_map<int32_t, int32_t>::const_iterator i = config.begin(); i != config.end();)
+	stringstream << std::hex << std::uppercase << std::setfill('0');
+	stringstream << std::setw(8) << address;
+	stringstream << serialNumber;
+	stringstream << std::setw(2) << firmwareVersion;
+	stringstream << std::setw(2) << remoteChannel;
+	stringstream << std::setw(2) << localChannel;
+	stringstream << std::setw(8) << (int32_t)deviceType;
+	stringstream << std::setw(2) << (int32_t)messageCounter;
+	stringstream << std::setw(8) << config.size();
+	for(std::unordered_map<int32_t, int32_t>::const_iterator i = config.begin(); i != config.end(); ++i)
 	{
-		stringstream << i->first << ",";
-		stringstream << i->second;
-		if(i != config.end()) stringstream << ",";
-		++i;
+		stringstream << std::setw(8) << i->first;
+		stringstream << std::setw(8) << i->second;
 	}
 	stringstream << std::dec;
 	return stringstream.str();

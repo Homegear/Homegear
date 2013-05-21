@@ -4,28 +4,28 @@ HM_SD::HM_SD() : HomeMaticDevice()
 {
 }
 
-HM_SD::HM_SD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent) : HomeMaticDevice(serializedObject.substr(serializedObject.find_first_of("|") + 1), dutyCycleMessageCounter, lastDutyCycleEvent)
+HM_SD::HM_SD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent) : HomeMaticDevice(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent)
 {
 	init();
 
-	serializedObject = serializedObject.substr(0, serializedObject.find_first_of("|"));
-	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
-
-	std::istringstream stringstream(serializedObject);
-	std::string entry;
-	int32_t i = 0;
-	while(std::getline(stringstream, entry, ';'))
+	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
+	uint32_t filtersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	for(uint32_t i = 0; i < filtersSize; i++)
 	{
-		switch(i)
-		{
-		case 0:
-			unserializeFilters(entry);
-			break;
-		case 1:
-			unserializeOverwriteResponses(entry);
-			break;
-		}
-		i++;
+		HM_SD_Filter filter;
+		filter.filterType = (FilterType)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		filter.filterValue = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_filters.push_back(filter);
+	}
+	uint32_t responsesToOverwriteSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	for(uint32_t i = 0; i < responsesToOverwriteSize; i++)
+	{
+		HM_SD_OverwriteResponse responseToOverwrite;
+		uint32_t size = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		responseToOverwrite.packetPartToCapture = serializedObject.substr(pos, size); pos += size;
+		size = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		responseToOverwrite.response = serializedObject.substr(pos, size); pos += size;
+		responseToOverwrite.sendAfter = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	}
 }
 
@@ -45,67 +45,29 @@ void HM_SD::init()
 	_deviceType = HMSD;
 }
 
-void HM_SD::unserializeFilters(std::string serializedData)
-{
-	std::istringstream stringstream(serializedData);
-	int32_t i = 0;
-	HM_SD_Filter filter;
-	std::string entry;
-	while(std::getline(stringstream, entry, ','))
-	{
-		if(i % 2 == 0) filter.filterType = (FilterType)std::stoll(entry, 0, 16);
-		else
-		{
-			filter.filterValue = std::stoll(entry, 0, 16);
-			_filters.push_back(filter);
-		}
-		i++;
-	}
-}
-
-void HM_SD::unserializeOverwriteResponses(std::string serializedData)
-{
-	std::istringstream stringstream(serializedData);
-	int32_t i = 0;
-	HM_SD_OverwriteResponse overwriteResponse;
-	std::string entry;
-	while(std::getline(stringstream, entry, ','))
-	{
-		if(i % 3 == 0) overwriteResponse.packetPartToCapture = entry;
-		else if(i % 3 == 1) overwriteResponse.response = entry;
-		else
-		{
-			overwriteResponse.sendAfter = std::stoll(entry, 0, 16);
-			_responsesToOverwrite.push_back(overwriteResponse);
-		}
-		i++;
-	}
-}
-
 std::string HM_SD::serialize()
 {
-	std::string serializedObject = HomeMaticDevice::serialize();
+	std::string serializedBase = HomeMaticDevice::serialize();
 	std::ostringstream stringstream;
-	stringstream << std::hex;
-	for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end();)
+	stringstream << std::hex << std::uppercase << std::setfill('0');
+	stringstream << std::setw(8) << serializedBase.size() << serializedBase;
+	stringstream << std::setw(8) << _filters.size();
+	for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
 	{
-		stringstream << (int32_t)i->filterType << ",";
-		stringstream << i->filterValue;
-		++i;
-		if(i != _filters.end()) stringstream << ",";
+		stringstream << std::setw(8) << (int32_t)i->filterType;
+		stringstream << std::setw(8) << i->filterValue;
 	}
-	stringstream << ";";
-	for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end();)
+	stringstream << std::setw(8) << _responsesToOverwrite.size();
+	for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
 	{
-		stringstream << i->packetPartToCapture << ",";
-		stringstream << i->response << ",";
-		stringstream << i->sendAfter << ",";
-		++i;
-		if(i != _responsesToOverwrite.end()) stringstream << ",";
+		stringstream << std::setw(8) << i->packetPartToCapture.size();
+		stringstream << i->packetPartToCapture;
+		stringstream << std::setw(8) << i->response.size();
+		stringstream << i->response;
+		stringstream << std::setw(8) << i->sendAfter;
 	}
-	stringstream << "|"; //The "|" seperates the base class from the inherited class part
 	stringstream << std::dec;
-	return stringstream.str() + serializedObject;
+	return stringstream.str();
 }
 
 void HM_SD::packetReceived(BidCoSPacket* packet)
