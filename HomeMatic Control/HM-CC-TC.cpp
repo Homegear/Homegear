@@ -21,22 +21,22 @@ HM_CC_TC::HM_CC_TC(std::string serializedObject, uint8_t dutyCycleMessageCounter
 		switch(i)
 		{
 		case 0:
-			_currentDutyCycleDeviceAddress = std::stol(entry, 0, 16);
+			_currentDutyCycleDeviceAddress = std::stoll(entry, 0, 16);
 			break;
 		case 1:
-			_temperature = std::stol(entry, 0, 16);
+			_temperature = std::stoll(entry, 0, 16);
 			break;
 		case 2:
-			_setPointTemperature = std::stol(entry, 0, 16);
+			_setPointTemperature = std::stoll(entry, 0, 16);
 			break;
 		case 3:
-			_humidity = std::stol(entry, 0, 16);
+			_humidity = std::stoll(entry, 0, 16);
 			break;
 		case 4:
-			_valveState = std::stol(entry, 0, 16);
+			_valveState = std::stoll(entry, 0, 16);
 			break;
 		case 5:
-			_newValveState = std::stol(entry, 0, 16);
+			_newValveState = std::stoll(entry, 0, 16);
 			break;
 		}
 		i++;

@@ -19,19 +19,19 @@ HomeMaticDevice::HomeMaticDevice(std::string serializedObject, uint8_t dutyCycle
 		switch(i)
 		{
 		case 0:
-			_deviceType = std::stol(entry, 0, 16);
+			_deviceType = std::stoll(entry, 0, 16);
 			break;
 		case 1:
-			_address = std::stol(entry, 0, 16);
+			_address = std::stoll(entry, 0, 16);
 			break;
 		case 2:
 			_serialNumber = entry;
 			break;
 		case 3:
-			_firmwareVersion = std::stol(entry, 0, 16);
+			_firmwareVersion = std::stoll(entry, 0, 16);
 			break;
 		case 4:
-			_centralAddress = std::stol(entry, 0, 16);
+			_centralAddress = std::stoll(entry, 0, 16);
 			break;
 		case 5:
 			unserializeMap(&_messageCounter, entry);
@@ -188,7 +188,7 @@ int32_t HomeMaticDevice::getHexInput()
 	std::string input;
 	cin >> input;
 	int32_t intInput = -1;
-	try	{ intInput = std::stol(input, 0, 16); } catch(...) {}
+	try	{ intInput = std::stoll(input, 0, 16); } catch(...) {}
     return intInput;
 }
 

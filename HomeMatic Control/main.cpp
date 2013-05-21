@@ -29,7 +29,7 @@ int32_t getIntInput()
 	std::string input;
 	cin >> input;
 	int32_t intInput = -1;
-	try	{ intInput = std::stol(input); } catch(...) {}
+	try	{ intInput = std::stoll(input); } catch(...) {}
     return intInput;
 }
 
@@ -38,7 +38,7 @@ int32_t getHexInput()
 	std::string input;
 	cin >> input;
 	int32_t intInput = -1;
-	try	{ intInput = std::stol(input, 0, 16); } catch(...) {}
+	try	{ intInput = std::stoll(input, 0, 16); } catch(...) {}
     return intInput;
 }
 
@@ -126,7 +126,7 @@ int main()
             		{
             			std::string serialNumber = input;
             			cout << "Please enter a device type: ";
-						uint32_t deviceType = getHexInput();
+						int32_t deviceType = getHexInput();
 						switch(deviceType)
 						{
 						case 0x39:

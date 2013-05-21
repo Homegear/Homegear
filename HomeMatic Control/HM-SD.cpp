@@ -53,10 +53,10 @@ void HM_SD::unserializeFilters(std::string serializedData)
 	std::string entry;
 	while(std::getline(stringstream, entry, ','))
 	{
-		if(i % 2 == 0) filter.filterType = (FilterType)std::stol(entry, 0, 16);
+		if(i % 2 == 0) filter.filterType = (FilterType)std::stoll(entry, 0, 16);
 		else
 		{
-			filter.filterValue = std::stol(entry, 0, 16);
+			filter.filterValue = std::stoll(entry, 0, 16);
 			_filters.push_back(filter);
 		}
 		i++;
@@ -75,7 +75,7 @@ void HM_SD::unserializeOverwriteResponses(std::string serializedData)
 		else if(i % 3 == 1) overwriteResponse.response = entry;
 		else
 		{
-			overwriteResponse.sendAfter = std::stol(entry, 0, 16);
+			overwriteResponse.sendAfter = std::stoll(entry, 0, 16);
 			_responsesToOverwrite.push_back(overwriteResponse);
 		}
 		i++;
@@ -198,7 +198,7 @@ void HM_SD::handleCLICommand(std::string command)
 			}
 		}while(input == "l");
 		int32_t filterType = -1;
-		try	{ filterType = std::stol(input, 0, 16); } catch(...) {}
+		try	{ filterType = std::stoll(input, 0, 16); } catch(...) {}
 		if(filterType < 0 || filterType > 3) cout << "Invalid filter type." << endl;
 		else
 		{
