@@ -8,6 +8,7 @@ HomeMaticDevice::HomeMaticDevice(std::string serializedObject, uint8_t dutyCycle
 {
 	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
 	std::stringstream stringstream(serializedObject);
+	std::stringstream stringstream3;
 	std::string entry;
 	int32_t i = 0;
 
@@ -16,32 +17,28 @@ HomeMaticDevice::HomeMaticDevice(std::string serializedObject, uint8_t dutyCycle
 	int32_t j = 0;
 	while(std::getline(stringstream, entry, ';'))
 	{
-		switch(i)
+		if(i == 0) _deviceType = std::stoll(entry, 0, 16);
+		else if(i == 1)	_address = std::stoll(entry, 0, 16);
+		else if(i == 2) _serialNumber = entry;
+		else if(i == 3) _firmwareVersion = std::stoll(entry, 0, 16);
+		else if(i == 4)	_centralAddress = std::stoll(entry, 0, 16);
+		else if(i == 5)	unserializeMap(&_messageCounter, entry);
+		else if(i == 6)
 		{
-		case 0:
-			_deviceType = std::stoll(entry, 0, 16);
-			break;
-		case 1:
-			_address = std::stoll(entry, 0, 16);
-			break;
-		case 2:
-			_serialNumber = entry;
-			break;
-		case 3:
-			_firmwareVersion = std::stoll(entry, 0, 16);
-			break;
-		case 4:
-			_centralAddress = std::stoll(entry, 0, 16);
-			break;
-		case 5:
-			unserializeMap(&_messageCounter, entry);
-			break;
-		case 6:
-			std::istringstream stringstream3(entry);
+			std::istringstream stringstream2(entry);
+			while(std::getline(stringstream2, entry2, '-'))
+			{
+				Peer peer(entry2);
+				_peers[peer.address] = peer;
+			}
+		}
+		else if(i == 7)
+		{
+			std::istringstream stringstream2(entry);
 			int32_t key2;
 			j = 0;
 			int32_t size = 0;
-			while(std::getline(stringstream3, entry2, ','))
+			while(std::getline(stringstream2, entry2, ','))
 			{
 				if(j < size)
 				{
@@ -60,7 +57,6 @@ HomeMaticDevice::HomeMaticDevice(std::string serializedObject, uint8_t dutyCycle
 					j = 0;
 				}
 			}
-			break;
 		}
 		i++;
 	}
@@ -223,6 +219,10 @@ std::string HomeMaticDevice::serialize()
 		if(i != _messageCounter.end()) stringstream << ",";
 	}
 	stringstream << ";";
+	for(std::unordered_map<int32_t, Peer>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+	{
+		stringstream << i->second.serialize() << "-";
+	}
 	for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
 	{
 		stringstream << i->first << ","; //List index

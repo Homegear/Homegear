@@ -6,6 +6,11 @@ using namespace std;
 #include <signal.h>
 #include <stdlib.h>
 
+//Mono:
+#include <mono/jit/jit.h>
+#include <mono/metadata/assembly.h>
+//Mono end
+
 #include "Cul.h"
 #include "HM-RC-Sec3-B.h"
 #include "HM-SD.h"
@@ -50,6 +55,8 @@ int main()
 			throw(new Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
 
     	signal(SIGSEGV, exceptionHandler);
+
+
 
         /*int row,col;
         WINDOW* mainWindow = initscr();
