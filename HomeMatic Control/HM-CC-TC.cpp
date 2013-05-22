@@ -190,12 +190,13 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 	int64_t cycleTime;
 	_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250;
 	_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
-	if(GD::debugLevel == 5 && _dutyCycleCounter > 0) cout << "Skipping " << (_dutyCycleCounter * 250) << "ms of duty cycle." << endl;
+	if(GD::debugLevel == 5 && _dutyCycleCounter > 0) cout << "Skipping " << (_dutyCycleCounter * 250) << " ms of duty cycle." << endl;
 	while(!_stopDutyCycleThread)
 	{
 		int32_t cycleLength = calculateCycleLength();
 		cycleTime = cycleLength * 250;
 		nextDutyCycleEvent += cycleTime;
+		if(GD::debugLevel == 5) cout << "Next duty cycle: " << nextDutyCycleEvent << " (in " << cycleTime << " ms)" << endl;
 		std::chrono::milliseconds sleepingTime(2000);
 		while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
 		{
