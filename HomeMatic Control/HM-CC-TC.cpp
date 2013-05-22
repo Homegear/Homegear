@@ -196,7 +196,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		int32_t cycleLength = calculateCycleLength();
 		cycleTime = cycleLength * 250;
 		nextDutyCycleEvent += cycleTime;
-		if(GD::debugLevel == 5) cout << "Next duty cycle: " << nextDutyCycleEvent << " (in " << cycleTime << " ms)" << endl;
+		if(GD::debugLevel == 5) cout << "Next duty cycle: " << nextDutyCycleEvent << " (in " << cycleTime << " ms) with message counter " << std::hex << _messageCounter[1] << std::dec << endl;
 		std::chrono::milliseconds sleepingTime(2000);
 		while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
 		{

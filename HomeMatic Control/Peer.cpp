@@ -6,11 +6,11 @@ Peer::Peer(std::string serializedObject)
 	std::string entry;
 	address = std::stoll(serializedObject.substr(0, 8), 0, 16);
 	serialNumber = serializedObject.substr(8, 10);
-	firmwareVersion = std::stol(serializedObject.substr(18, 2), 0, 16);
-	remoteChannel = std::stol(serializedObject.substr(20, 2), 0, 16);
-	localChannel = std::stol(serializedObject.substr(22, 2), 0, 16);
+	firmwareVersion = std::stoll(serializedObject.substr(18, 2), 0, 16);
+	remoteChannel = std::stoll(serializedObject.substr(20, 2), 0, 16);
+	localChannel = std::stoll(serializedObject.substr(22, 2), 0, 16);
 	deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(24, 8), 0, 16);
-	messageCounter = std::stol(serializedObject.substr(32, 2), 0, 16);
+	messageCounter = std::stoll(serializedObject.substr(32, 2), 0, 16);
 	uint32_t configSize = (std::stoll(serializedObject.substr(34, 8)) * 16);
 	for(uint32_t i = 42; i < (42 + configSize); i += 16)
 		config[std::stoll(serializedObject.substr(i, 8), 0, 16)] = std::stoll(serializedObject.substr(i + 8, 8), 0, 16);
