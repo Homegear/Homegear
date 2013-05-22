@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -lpthread -lmono-2.0 -lm -lrt -ldl -lsqlite3 -lncurses
+LIBS := -lpthread -lsqlite3 -lncurses
 
