@@ -1,7 +1,9 @@
 #include "Peer.h"
+#include "GD.h"
 
 Peer::Peer(std::string serializedObject)
 {
+	if(GD::debugLevel == 5) cout << "Unserializing peer: " << serializedObject << endl;
 	std::istringstream stringstream(serializedObject);
 	std::string entry;
 	address = std::stoll(serializedObject.substr(0, 8), 0, 16);
@@ -21,7 +23,7 @@ std::string Peer::serialize()
 	std::ostringstream stringstream;
 	stringstream << std::hex << std::uppercase << std::setfill('0');
 	stringstream << std::setw(8) << address;
-	stringstream << serialNumber;
+	if(serialNumber.size() != 10) stringstream << "0000000000"; else stringstream << serialNumber;
 	stringstream << std::setw(2) << firmwareVersion;
 	stringstream << std::setw(2) << remoteChannel;
 	stringstream << std::setw(2) << localChannel;

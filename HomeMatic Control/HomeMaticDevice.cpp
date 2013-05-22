@@ -169,7 +169,7 @@ std::string HomeMaticDevice::serialize()
 	stringstream << std::hex << std::uppercase << std::setfill('0');
 	stringstream << std::setw(8) << (int32_t)_deviceType;
 	stringstream << std::setw(8) << _address;
-	stringstream << _serialNumber;
+	if(_serialNumber.size() != 10) stringstream << "0000000000"; else stringstream << _serialNumber;
 	stringstream << std::setw(2) << _firmwareVersion;
 	stringstream << std::setw(8) << _centralAddress;
 	stringstream << std::setw(8) << _messageCounter.size();
