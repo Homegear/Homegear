@@ -9,7 +9,6 @@
 #include "BidCoSMessages.h"
 #include "GD.h"
 
-
 #include <string>
 #include <unordered_map>
 #include <map>
@@ -18,6 +17,7 @@
 #include <queue>
 #include <thread>
 #include "pthread.h"
+#include <xmlrpc-c/base.hpp>
 
 class BidCoSMessages;
 class Cul;
@@ -56,6 +56,9 @@ class HomeMaticDevice
         virtual std::string serialize();
         virtual int32_t getHexInput();
         virtual void handleCLICommand(std::string command);
+
+        virtual void setValue(const xmlrpc_c::paramList& paramList) {}
+        virtual xmlrpc_c::value getValue(const xmlrpc_c::paramList& paramList);
 
         virtual void handleAck(int32_t messageCounter, BidCoSPacket* packet) {}
         virtual void handlePairingRequest(int32_t messageCounter, BidCoSPacket*);

@@ -17,7 +17,7 @@ class GD {
 public:
 	static std::string startUpPath;
 	static HomeMaticDevices devices;
-	static XMLRPCServer xmlrpcServer;
+	static XMLRPC::Server xmlrpcServer;
 	static Database db;
 	static Cul cul;
 	static int32_t debugLevel;

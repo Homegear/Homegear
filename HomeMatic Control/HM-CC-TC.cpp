@@ -296,6 +296,24 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter)
 	}
 }
 
+void HM_CC_TC::setValue(const xmlrpc_c::paramList& paramList)
+{
+	if(paramList.getString(1) == "VALVE_STATE")
+	{
+		_newValveState = paramList.getInt(2);
+		if(GD::debugLevel >= 3) cout << "Valve state set to " << _newValveState << " by XMLRPC." << endl;
+	}
+}
+
+xmlrpc_c::value HM_CC_TC::getValue(const xmlrpc_c::paramList& paramList)
+{
+	if(paramList.getString(1) == "VALVE_STATE")
+	{
+		return xmlrpc_c::value_int(_newValveState);
+	}
+	return xmlrpc_c::value_nil();
+}
+
 int32_t HM_CC_TC::getAdjustmentCommand()
 {
 	if(_setPointTemperature == 0) //OFF

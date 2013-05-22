@@ -10,47 +10,35 @@
 #include <xmlrpc-c/registry.hpp>
 #include <xmlrpc-c/server_abyss.hpp>
 
-class sampleAddMethod : public xmlrpc_c::method {
-public:
-    sampleAddMethod() {
-        // signature and help strings are documentation -- the client
-        // can query this information with a system.methodSignature and
-        // system.methodHelp RPC.
-        this->_signature = "i:ii";
-            // method's result and two arguments are integers
-        this->_help = "This method adds two integers together";
-    }
-    void
-    execute(xmlrpc_c::paramList const& paramList,
-            xmlrpc_c::value *   const  retvalP) {
+namespace XMLRPC
+{
+	class getValue : public xmlrpc_c::method
+	{
+		public:
+			getValue();
+			void execute(xmlrpc_c::paramList const& paramList, xmlrpc_c::value* const retvalP);
+	};
 
-        int const addend(paramList.getInt(0));
-        int const adder(paramList.getInt(1));
+	class setValue : public xmlrpc_c::method
+	{
+		public:
+			setValue();
+			void execute(xmlrpc_c::paramList const& paramList, xmlrpc_c::value* const retvalP);
+	};
 
-        paramList.verifyEnd(2);
+	class Server {
+		public:
+			Server();
+			virtual ~Server();
 
-        *retvalP = xmlrpc_c::value_int(addend + adder);
+			void run();
+			void shutdown();
+		protected:
+		private:
+			std::thread _runThread;
+			xmlrpc_c::serverAbyss* _abyssServer = nullptr;
 
-        // Sometimes, make it look hard (so client can see what it's like
-        // to do an RPC that takes a while).
-        if (adder == 1)
-            sleep(2);
-    }
-};
-
-class XMLRPCServer {
-public:
-	XMLRPCServer();
-	virtual ~XMLRPCServer();
-
-	void run();
-	void shutdown();
-protected:
-private:
-	std::thread _runThread;
-	xmlrpc_c::serverAbyss* _abyssServer = nullptr;
-
-	void runThread();
-};
-
+			void runThread();
+	};
+}
 #endif /* XMLRPCSERVER_H_ */

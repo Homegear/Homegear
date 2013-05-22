@@ -148,3 +148,15 @@ HomeMaticDevice* HomeMaticDevices::get(int32_t address)
 	}
 	return nullptr;
 }
+
+HomeMaticDevice* HomeMaticDevices::get(std::string serialNumber)
+{
+	for(std::vector<HomeMaticDevice*>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+	{
+		if((*i)->serialNumber() == serialNumber)
+		{
+			return (*i);
+		}
+	}
+	return nullptr;
+}

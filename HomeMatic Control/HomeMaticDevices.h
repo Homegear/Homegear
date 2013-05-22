@@ -14,6 +14,7 @@ public:
 	void add(HomeMaticDevice* device);
 	bool remove(int32_t address);
 	HomeMaticDevice* get(int32_t address);
+	HomeMaticDevice* get(std::string serialNumber);
 	std::vector<HomeMaticDevice*>* getDevices() { return &_devices; }
 	void load();
 	void save();
