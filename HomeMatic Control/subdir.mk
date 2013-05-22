@@ -20,6 +20,7 @@ CPP_SRCS += \
 ./HomeMaticDevices.cpp \
 ./Log.cpp \
 ./Peer.cpp \
+./XMLRPCServer.cpp \
 ./main.cpp 
 
 OBJS += \
@@ -39,6 +40,7 @@ OBJS += \
 ./HomeMaticDevices.o \
 ./Log.o \
 ./Peer.o \
+./XMLRPCServer.o \
 ./main.o 
 
 CPP_DEPS += \
@@ -58,6 +60,7 @@ CPP_DEPS += \
 ./HomeMaticDevices.d \
 ./Log.d \
 ./Peer.d \
+./XMLRPCServer.d \
 ./main.d 
 
 
@@ -65,7 +68,7 @@ CPP_DEPS += \
 %.o: ./%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -O3 -Wall -c -fmessage-length=0 -std=c++11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -I/usr/local/include -O3 -Wall -c -fmessage-length=0 -std=c++11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

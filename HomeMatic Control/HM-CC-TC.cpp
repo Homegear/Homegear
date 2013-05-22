@@ -248,7 +248,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		sendDutyCyclePacketThread.detach();
 
 		_lastDutyCycleEvent = nextDutyCycleEvent;
-		cycleLength = calculateCycleLength();
+		cycleLength = calculateCycleLength(_messageCounter[1]);
 		_messageCounter[1]++;
 		std::ostringstream command;
 		command << "UPDATE devices SET dutyCycleMessageCounter=" << std::dec << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent;
