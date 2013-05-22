@@ -7,6 +7,7 @@
 #include "Database.h"
 #include "Cul.h"
 #include "HomeMaticDevices.h"
+#include "XMLRPCServer.h"
 
 class Cul;
 class Database;
@@ -16,6 +17,7 @@ class GD {
 public:
 	static std::string startUpPath;
 	static HomeMaticDevices devices;
+	static XMLRPCServer xmlrpcServer;
 	static Database db;
 	static Cul cul;
 	static int32_t debugLevel;

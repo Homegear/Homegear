@@ -698,8 +698,8 @@ int32_t HomeMaticDevice::getCentralAddress()
     return _centralAddress;
 }
 
-int32_t HomeMaticDevice::calculateCycleLength()
+int32_t HomeMaticDevice::calculateCycleLength(uint8_t messageCounter)
 {
-	int32_t result = (((_address << 8) | _messageCounter[1]) * 1103515245 + 12345) >> 16;
+	int32_t result = (((_address << 8) | messageCounter) * 1103515245 + 12345) >> 16;
 	return (result & 0xFF) + 480;
 }

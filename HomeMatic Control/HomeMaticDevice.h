@@ -51,7 +51,7 @@ class HomeMaticDevice
         virtual BidCoSQueue* getBidCoSQueue() { return _bidCoSQueue.get(); }
         virtual BidCoSMessage* getLastReceivedMessage() { return _lastReceivedMessage; }
         virtual BidCoSPacket* getReceivedPacket() { return &_receivedPacket; }
-        virtual int32_t calculateCycleLength();
+        virtual int32_t calculateCycleLength(uint8_t messageCounter);
         virtual void stopDutyCycle() {};
         virtual std::string serialize();
         virtual int32_t getHexInput();

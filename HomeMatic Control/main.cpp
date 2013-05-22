@@ -6,13 +6,6 @@ using namespace std;
 #include <signal.h>
 #include <stdlib.h>
 
-//XML-RPC
-//#include <unistd.h>
-//#include <xmlrpc-c/base.hpp>
-//#include <xmlrpc-c/registry.hpp>
-//#include <xmlrpc-c/server_abyss.hpp>
-//XML-RPC end
-
 #include "Cul.h"
 #include "HM-RC-Sec3-B.h"
 #include "HM-SD.h"
@@ -58,9 +51,6 @@ int main()
 
     	signal(SIGSEGV, exceptionHandler);
 
-    	//xmlrpc_c::registry myRegistry;
-    	//xmlrpc_c::serverAbyss myAbyssServer(xmlrpc_c::serverAbyss::constrOpt().registryP(&myRegistry).portNumber(8080));
-
         /*int row,col;
         WINDOW* mainWindow = initscr();
 
@@ -88,8 +78,12 @@ int main()
     	GD::db.init(GD::startUpPath + "/db.sql");
 
         GD::cul.init("/dev/ttyACM0");
+        cout << "Start listening for BidCoS packets..." << endl;
         GD::cul.startListening();
+        cout << "Loading devices..." << endl;
         GD::devices.load(); //Don't load before database is open!
+        cout << "Starting XML RPC server..." << endl;
+        GD::xmlrpcServer.run();
 
         //sd->addFilter(FilterType::SenderAddress, 0x1E53E7);
         //sd->addFilter(FilterType::DestinationAddress, 0x1E53E7);

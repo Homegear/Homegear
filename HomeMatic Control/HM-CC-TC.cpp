@@ -45,10 +45,11 @@ int64_t HM_CC_TC::calculateLastDutyCycleEvent()
 	if(now - _lastDutyCycleEvent > 1800000) return -1; //Duty cycle is out of sync anyway so don't bother to calculate
 	int64_t nextDutyCycleEvent = _lastDutyCycleEvent;
 	int64_t lastDutyCycleEvent = _lastDutyCycleEvent;
+	_messageCounter[1]--; //The saved message counter is the current one, but the calculation has to use the last one
 	while(nextDutyCycleEvent < now + 25000)
 	{
 		lastDutyCycleEvent = nextDutyCycleEvent;
-		nextDutyCycleEvent = lastDutyCycleEvent + (calculateCycleLength() * 250);
+		nextDutyCycleEvent = lastDutyCycleEvent + (calculateCycleLength(_messageCounter[1]) * 250);
 		_messageCounter[1]++;
 	}
 	if(GD::debugLevel == 5) cout << "Setting last duty cycle event to: " << lastDutyCycleEvent << endl;
@@ -187,7 +188,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 	_lastDutyCycleEvent = nextDutyCycleEvent;
 	int64_t timePassed;
 	int64_t cycleTime;
-	int32_t cycleLength = calculateCycleLength();
+	int32_t cycleLength = calculateCycleLength(_messageCounter[1] - 1); //The calculation has to use the last message counter
 	_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250;
 	_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
 	if(GD::debugLevel == 5 && _dutyCycleCounter > 0) cout << "Skipping " << (_dutyCycleCounter * 250) << " ms of duty cycle." << endl;
@@ -246,12 +247,12 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		if(!pthread_setschedparam(sendDutyCyclePacketThread.native_handle(), policy, &schedParam)) throw(new Exception("Error: Could not set thread priority."));
 		sendDutyCyclePacketThread.detach();
 
-		cycleLength = calculateCycleLength();
 		_lastDutyCycleEvent = nextDutyCycleEvent;
+		cycleLength = calculateCycleLength();
+		_messageCounter[1]++;
 		std::ostringstream command;
 		command << "UPDATE devices SET dutyCycleMessageCounter=" << std::dec << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent;
 		GD::db.executeCommand(command.str());
-		_messageCounter[1]++;
 
 		_dutyCycleCounter = 0;
 	}

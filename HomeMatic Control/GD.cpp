@@ -9,4 +9,5 @@
 
 std::string GD::startUpPath = "";
 HomeMaticDevices GD::devices;
+XMLRPCServer GD::xmlrpcServer;
 int32_t GD::debugLevel = 5;
