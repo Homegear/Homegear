@@ -6,6 +6,13 @@ using namespace std;
 #include <signal.h>
 #include <stdlib.h>
 
+//XML-RPC
+//#include <unistd.h>
+//#include <xmlrpc-c/base.hpp>
+//#include <xmlrpc-c/registry.hpp>
+//#include <xmlrpc-c/server_abyss.hpp>
+//XML-RPC end
+
 #include "Cul.h"
 #include "HM-RC-Sec3-B.h"
 #include "HM-SD.h"
@@ -50,6 +57,9 @@ int main()
 			throw(new Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
 
     	signal(SIGSEGV, exceptionHandler);
+
+    	//xmlrpc_c::registry myRegistry;
+    	//xmlrpc_c::serverAbyss myAbyssServer(xmlrpc_c::serverAbyss::constrOpt().registryP(&myRegistry).portNumber(8080));
 
         /*int row,col;
         WINDOW* mainWindow = initscr();

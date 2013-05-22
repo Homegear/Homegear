@@ -51,7 +51,6 @@ int64_t HM_CC_TC::calculateLastDutyCycleEvent()
 		nextDutyCycleEvent = lastDutyCycleEvent + (calculateCycleLength() * 250);
 		_messageCounter[1]++;
 	}
-	_messageCounter[1]--;
 	if(GD::debugLevel == 5) cout << "Setting last duty cycle event to: " << lastDutyCycleEvent << endl;
 	return lastDutyCycleEvent;
 }
@@ -188,12 +187,12 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 	_lastDutyCycleEvent = nextDutyCycleEvent;
 	int64_t timePassed;
 	int64_t cycleTime;
+	int32_t cycleLength = calculateCycleLength();
 	_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250;
 	_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
 	if(GD::debugLevel == 5 && _dutyCycleCounter > 0) cout << "Skipping " << (_dutyCycleCounter * 250) << " ms of duty cycle." << endl;
 	while(!_stopDutyCycleThread)
 	{
-		int32_t cycleLength = calculateCycleLength();
 		cycleTime = cycleLength * 250;
 		nextDutyCycleEvent += cycleTime;
 		if(GD::debugLevel == 5) cout << "Next duty cycle: " << nextDutyCycleEvent << " (in " << cycleTime << " ms) with message counter " << std::hex << (int32_t)_messageCounter[1] << std::dec << endl;
@@ -238,8 +237,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed));
 		if(_stopDutyCycleThread) break;
 
-		_lastDutyCycleEvent = nextDutyCycleEvent;
-		std::thread sendDutyCyclePacketThread(&HM_CC_TC::sendDutyCyclePacket, this);
+		std::thread sendDutyCyclePacketThread(&HM_CC_TC::sendDutyCyclePacket, this, _messageCounter[1]);
 
 		sched_param schedParam;
 		int policy;
@@ -247,6 +245,13 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		schedParam.sched_priority = 99;
 		if(!pthread_setschedparam(sendDutyCyclePacketThread.native_handle(), policy, &schedParam)) throw(new Exception("Error: Could not set thread priority."));
 		sendDutyCyclePacketThread.detach();
+
+		cycleLength = calculateCycleLength();
+		_lastDutyCycleEvent = nextDutyCycleEvent;
+		std::ostringstream command;
+		command << "UPDATE devices SET dutyCycleMessageCounter=" << std::dec << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent;
+		GD::db.executeCommand(command.str());
+		_messageCounter[1]++;
 
 		_dutyCycleCounter = 0;
 	}
@@ -263,7 +268,7 @@ void HM_CC_TC::sendDutyCycleBroadcast()
 	GD::cul.sendPacket(packet);
 }
 
-void HM_CC_TC::sendDutyCyclePacket()
+void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter)
 {
 	try
 	{
@@ -278,15 +283,11 @@ void HM_CC_TC::sendDutyCyclePacket()
 		std::vector<uint8_t> payload;
 		payload.push_back(getAdjustmentCommand());
 		payload.push_back(_newValveState);
-		BidCoSPacket packet(_messageCounter[1], 0xA2, 0x58, _address, address, payload);
+		BidCoSPacket packet(messageCounter, 0xA2, 0x58, _address, address, payload);
 		GD::cul.sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - timePoint;
 		cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << endl;
-		_messageCounter[1]++;
-		std::ostringstream command;
-		command << "UPDATE devices SET dutyCycleMessageCounter=" << std::dec << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent;
-		GD::db.executeCommand(command.str());
 	}
 	catch(const std::exception& ex)
 	{
