@@ -4,6 +4,7 @@
 Peer::Peer(std::string serializedObject)
 {
 	if(GD::debugLevel == 5) cout << "Unserializing peer: " << serializedObject << endl;
+
 	std::istringstream stringstream(serializedObject);
 	std::string entry;
 	address = std::stoll(serializedObject.substr(0, 8), 0, 16);
