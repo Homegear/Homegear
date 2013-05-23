@@ -7,7 +7,7 @@
 #include "Database.h"
 #include "Cul.h"
 #include "HomeMaticDevices.h"
-#include "XMLRPCServer.h"
+#include "XMLRPC/Server.h"
 
 class Cul;
 class Database;

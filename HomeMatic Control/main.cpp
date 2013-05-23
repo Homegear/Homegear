@@ -7,13 +7,17 @@ using namespace std;
 #include <stdlib.h>
 
 #include "Cul.h"
-#include "HM-RC-Sec3-B.h"
-#include "HM-SD.h"
-#include "HM-CC-VD.h"
-#include "HM-CC-TC.h"
+#include "Devices/HM-RC-Sec3-B.h"
+#include "Devices/HM-SD.h"
+#include "Devices/HM-CC-VD.h"
+#include "Devices/HM-CC-TC.h"
 #include "HomeMaticDevice.h"
 #include "Database.h"
 #include "GD.h"
+
+//Testing
+#include "XMLRPC/Device.h"
+//Testing end
 
 void exceptionHandler(int32_t signal) {
   void *stackTrace[10];
@@ -51,6 +55,8 @@ int main()
 
     	signal(SIGSEGV, exceptionHandler);
 
+    	XMLRPC::Device device("rf_cc_tc.xml");
+    	cout << device.version() << " " << device.cyclicTimeout() << " " << (int32_t)device.rxModes() << endl;
         /*int row,col;
         WINDOW* mainWindow = initscr();
 
@@ -155,7 +161,7 @@ int main()
             {
             	cout << "Please enter the address of the device to delete (e. g. 3A0001): ";
             	int32_t address = getHexInput();
-            	if(currentDevice->address() == address) currentDevice = nullptr;
+            	if(currentDevice != nullptr && currentDevice->address() == address) currentDevice = nullptr;
             	if(GD::devices.remove(address)) cout << "Device removed." << endl;
             	else cout << "Device not found." << endl;
             }

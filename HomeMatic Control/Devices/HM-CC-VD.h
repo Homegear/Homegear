@@ -4,8 +4,8 @@
 
 using namespace std;
 
-#include "HomeMaticDevice.h"
-#include "Cul.h"
+#include "../HomeMaticDevice.h"
+#include "../Cul.h"
 
 //TODO Pairing by serial
 //TODO Was wird beim Batterien einlegen gesendet?

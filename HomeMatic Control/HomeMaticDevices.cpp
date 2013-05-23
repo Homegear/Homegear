@@ -6,9 +6,9 @@
  */
 
 #include "HomeMaticDevices.h"
-#include "HM-CC-TC.h"
-#include "HM-SD.h"
-#include "HM-CC-VD.h"
+#include "Devices/HM-CC-TC.h"
+#include "Devices/HM-SD.h"
+#include "Devices/HM-CC-VD.h"
 
 HomeMaticDevices::HomeMaticDevices()
 {
@@ -31,7 +31,7 @@ void HomeMaticDevices::load()
 		HomeMaticDevice* device = nullptr;
 		int32_t deviceType = 0;
 		std::string serializedObject;
-		uint8_t dutyCycleMessageCounter;
+		uint8_t dutyCycleMessageCounter = 0;
 		for(std::vector<DataColumn>::iterator col = row->begin(); col != row->end(); ++col)
 		{
 			if(col->index == 1)

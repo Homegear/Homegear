@@ -3,9 +3,9 @@
 
 #include <thread>
 
-#include "HomeMaticDevice.h"
-#include "Cul.h"
-#include "GD.h"
+#include "../HomeMaticDevice.h"
+#include "../Cul.h"
+#include "../GD.h"
 
 //TODO Pairing by serial
 //TODO Was wird beim Batterien einlegen gesendet?

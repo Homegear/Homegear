@@ -1,6 +1,6 @@
-#include "XMLRPCServer.h"
+#include "Server.h"
 
-#include "GD.h"
+#include "../GD.h"
 
 using namespace XMLRPC;
 

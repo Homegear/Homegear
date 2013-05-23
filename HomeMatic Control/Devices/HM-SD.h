@@ -3,8 +3,8 @@
 
 using namespace std;
 
-#include "HomeMaticDevice.h"
-#include "Cul.h"
+#include "../HomeMaticDevice.h"
+#include "../Cul.h"
 
 enum class FilterType {SenderAddress, DestinationAddress, DeviceType, MessageType};
 
