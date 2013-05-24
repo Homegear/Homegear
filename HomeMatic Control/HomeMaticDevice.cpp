@@ -7,7 +7,6 @@ HomeMaticDevice::HomeMaticDevice()
 HomeMaticDevice::HomeMaticDevice(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
 	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
-
 	uint32_t pos = 0;
 	_deviceType = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
