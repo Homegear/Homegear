@@ -208,8 +208,9 @@ int main()
         GD::devices.save();
         return 0;
     }
-    catch(Exception& ex)
+    catch(const std::exception& ex)
     {
         std::cerr << "Exception: " << ex.what() << '\n';
     }
+    return 1;
 }
