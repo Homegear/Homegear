@@ -128,14 +128,17 @@ void HomeMaticDevice::setUpBidCoSMessages()
 
 HomeMaticDevice::~HomeMaticDevice()
 {
+	if(GD::debugLevel == 5) cout << "Removing device from CUL event queue..." << endl;
     GD::cul.removeHomeMaticDevice(this);
     if(_resetQueueThread.joinable())
 	{
+    	if(GD::debugLevel == 5) cout << "Stopping reset queue thread..." << endl;
 		_stopResetQueueThread = true;
 		_resetQueueThread.join();
 	}
     if(_messages != nullptr)
     {
+    	if(GD::debugLevel == 5) cout << "Deleting BidCoS messages array..." << endl;
     	delete(_messages);
     	_messages = nullptr;
     }

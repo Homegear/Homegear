@@ -149,6 +149,7 @@ HM_CC_TC::~HM_CC_TC()
 void HM_CC_TC::stopDutyCycle()
 {
 	_stopDutyCycleThread = true;
+	if(GD::debugLevel == 5) cout << "Stopping duty cycle..." << endl;
 	if(_dutyCycleThread != nullptr && _dutyCycleThread->joinable())	_dutyCycleThread->join();
 }
 
