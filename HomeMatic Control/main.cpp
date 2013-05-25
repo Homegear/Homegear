@@ -56,7 +56,6 @@ int main()
     	signal(SIGSEGV, exceptionHandler);
 
     	XMLRPC::Device device("rf_cc_tc.xml");
-    	cout << device.version() << " " << device.cyclicTimeout() << " " << (int32_t)device.rxModes() << endl;
         /*int row,col;
         WINDOW* mainWindow = initscr();
 
@@ -80,8 +79,14 @@ int main()
 
     	char path[1024];
     	getcwd(path, 1024);
-    	GD::startUpPath = std::string(path);
-    	GD::db.init(GD::startUpPath + "/db.sql");
+    	GD::workingDirectory = std::string(path);
+		ssize_t length = readlink("/proc/self/exe", path, sizeof(path) - 1);
+		if (length == -1) throw new Exception("Could not get executable path.");
+		path[length] = '\0';
+		GD::executablePath = std::string(path);
+		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/"));
+		cout << GD::executablePath << endl;
+    	GD::db.init(GD::executablePath + "/db.sql");
 
         GD::cul.init("/dev/ttyACM0");
         cout << "Start listening for BidCoS packets..." << endl;
@@ -210,6 +215,10 @@ int main()
         return 0;
     }
     catch(const std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << '\n';
+    }
+    catch(const Exception& ex)
     {
         std::cerr << "Exception: " << ex.what() << '\n';
     }

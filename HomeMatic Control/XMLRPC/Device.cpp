@@ -4,6 +4,40 @@
 
 namespace XMLRPC {
 
+ParameterConversion::ParameterConversion(xml_node<>* node)
+{
+	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
+	{
+		std::string attributeName(attr->name());
+		std::string attributeValue(attr->value());
+		if(attributeName == "type")
+		{
+			if(attributeValue == "float_integer_scale") type = Type::Enum::floatIntegerScale;
+			else if(attributeValue == "integer_integer_scale") type = Type::Enum::integerIntegerScale;
+			else if(attributeValue == "integer_integer_map") type = Type::Enum::integerIntegerMap;
+			else if(attributeValue == "boolean_integer") type = Type::Enum::booleanInteger;
+		}
+		else if(attributeName == "factor") factor = std::stod(attributeValue);
+		else if(attributeName == "threshold") threshold = std::stoll(attributeValue);
+		else if(attributeName == "false") valueFalse = std::stoll(attributeValue);
+		else if(attributeName == "true") valueTrue = std::stoll(attributeValue);
+		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"conversion\": " << attributeName << std::endl;
+	}
+	for(xml_node<>* conversionNode = node->first_node(); conversionNode; conversionNode = conversionNode->next_sibling())
+	{
+		std::string nodeName(conversionNode->name());
+		if(nodeName == "value_map" && type == Type::Enum::integerIntegerMap)
+		{
+			xml_attribute<>* attr1;
+			xml_attribute<>* attr2;
+			attr1 = node->first_attribute("device_value");
+			attr2 = node->first_attribute("parameter_value");
+			if(attr1 != nullptr && attr2 != nullptr) integerIntegerMap[std::stoll(attr1->value())] = std::stoll(attr2->value());
+		}
+		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown subnode for \"conversion\": " << nodeName << std::endl;
+	}
+}
+
 Parameter::Parameter(xml_node<>* parameterNode)
 {
 	for(xml_attribute<>* attr = parameterNode->first_attribute(); attr; attr = attr->next_attribute())
@@ -24,6 +58,7 @@ Parameter::Parameter(xml_node<>* parameterNode)
 		}
 		else if(attributeName == "const_value") constValue = std::stoll(attributeValue, 0, 16);
 		else if(attributeName == "id") id = attributeValue;
+		else if(attributeName == "param") param = attributeValue;
 		else if(attributeName == "operations")
 		{
 			std::stringstream stream(attributeValue);

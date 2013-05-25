@@ -15,7 +15,8 @@ class HomeMaticDevices;
 
 class GD {
 public:
-	static std::string startUpPath;
+	static std::string workingDirectory;
+	static std::string executablePath;
 	static HomeMaticDevices devices;
 	static XMLRPC::Server xmlrpcServer;
 	static Database db;

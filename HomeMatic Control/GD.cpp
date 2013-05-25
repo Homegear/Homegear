@@ -7,7 +7,8 @@
 
 #include "GD.h"
 
-std::string GD::startUpPath = "";
+std::string GD::workingDirectory = "";
+std::string GD::executablePath = "";
 HomeMaticDevices GD::devices;
 XMLRPC::Server GD::xmlrpcServer;
 int32_t GD::debugLevel = 5;

@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 
 #include "rapidxml.hpp"
 #include "LogicalParameter.h"
@@ -22,6 +23,12 @@ public:
 	{
 		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap };
 	};
+	Type::Enum type = Type::Enum::none;
+	unordered_map<int32_t, int32_t> integerIntegerMap;
+	double factor = 0;
+	int32_t threshold = 0;
+	int32_t valueFalse = 0;
+	int32_t valueTrue = 0;
 
 	ParameterConversion() {}
 	ParameterConversion(xml_node<>* node);
@@ -51,6 +58,7 @@ public:
 	UIFlags::Enum uiFlags = UIFlags::Enum::none;
 	uint32_t constValue = 0;
 	std::string id;
+	std::string param;
 
 	Parameter() {}
 	Parameter(xml_node<>* parameterNode);
