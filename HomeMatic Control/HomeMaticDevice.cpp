@@ -90,7 +90,7 @@ void HomeMaticDevice::setUpBidCoSMessages()
     message.addSubtype(0x01, 0x02);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSLASTPACKETMATCH | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamRequest);
+    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamRequest);
     message.addSubtype(0x01, 0x04);
     _messages->add(message);
 
@@ -114,7 +114,7 @@ void HomeMaticDevice::setUpBidCoSMessages()
     message.addSubtype(0x03, 0x00);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSLASTPACKETMATCH | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigEnd);
+    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME | ACCESSUNPAIRING, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigEnd);
     message.addSubtype(0x01, 0x06);
     _messages->add(message);
 

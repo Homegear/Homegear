@@ -8,10 +8,25 @@
 #include <vector>
 
 #include "rapidxml.hpp"
+#include "LogicalParameter.h"
+#include "PhysicalParameter.h"
 
 using namespace rapidxml;
 
 namespace XMLRPC {
+
+class ParameterConversion
+{
+public:
+	struct Type
+	{
+		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap };
+	};
+
+	ParameterConversion() {}
+	ParameterConversion(xml_node<>* node);
+	virtual ~ParameterConversion() {}
+};
 
 class Parameter
 {
@@ -21,13 +36,25 @@ public:
 	{
 		enum Enum { none = 0, e = 1, g = 2, l = 3, ge = 4, le = 5 };
 	};
+	struct Operations
+	{
+		enum Enum { none = 0, read = 1, write = 2, event = 4 };
+	};
+	struct UIFlags
+	{
+		enum Enum { none = 0, service = 1, sticky = 2 };
+	};
 	double index = 0;
 	double size = 0;
 	ConditionalOperator::Enum conditionalOperator = ConditionalOperator::Enum::none;
+	Operations::Enum operations = Operations::Enum::none;
+	UIFlags::Enum uiFlags = UIFlags::Enum::none;
 	uint32_t constValue = 0;
+	std::string id;
 
 	Parameter() {}
 	Parameter(xml_node<>* parameterNode);
+	virtual ~Parameter() {}
 };
 
 class DeviceType
@@ -39,6 +66,7 @@ public:
 
 	DeviceType() {}
 	DeviceType(xml_node<>* typeNode);
+	virtual ~DeviceType() {}
 };
 
 class ParameterSet
@@ -54,6 +82,7 @@ public:
 
 	ParameterSet() {}
 	ParameterSet(xml_node<>* parameterSetNode);
+	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
 };
 
@@ -65,15 +94,15 @@ public:
 		enum Enum { none = 0, config = 1, wakeUp = 2 };
 	};
 
-	Device() {}
-	Device(std::string xmlFilename);
-	uint32_t version() { return _version; }
-	uint32_t cyclicTimeout() { return _cyclicTimeout; }
-	RXModes::Enum rxModes() { return _rxModes; }
 	std::vector<DeviceType>* supportedTypes() { return &_supportedTypes; }
 	ParameterSet parameterSet;
 
+	Device() {}
+	Device(std::string xmlFilename);
 	virtual ~Device();
+	uint32_t version() { return _version; }
+	uint32_t cyclicTimeout() { return _cyclicTimeout; }
+	RXModes::Enum rxModes() { return _rxModes; }
 protected:
 	uint32_t _version = 0;
 	uint32_t _cyclicTimeout = 0;

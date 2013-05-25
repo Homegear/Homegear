@@ -156,14 +156,18 @@ bool BidCoSMessage::checkAccess(BidCoSPacket* packet, BidCoSQueue* queue)
 			}
 		}
 		if(access & FULLACCESS) return true;
-		if((access & ACCESSPAIREDTOSENDER) && currentPeer == nullptr)
-		{
-			//cout << "Access denied, because device is not paired with sender: " << packet->hexString() << endl;
-			return false;
-		}
 		if((access & ACCESSDESTISME) && packet->destinationAddress() != _device->address())
 		{
 			//cout << "Access denied, because the destination address is not me: " << packet->hexString() << endl;
+			return false;
+		}
+		if((access & ACCESSUNPAIRING) && queue != nullptr && queue->getQueueType() == BidCoSQueueType::UNPAIRING)
+		{
+			return true;
+		}
+		if((access & ACCESSPAIREDTOSENDER) && currentPeer == nullptr)
+		{
+			//cout << "Access denied, because device is not paired with sender: " << packet->hexString() << endl;
 			return false;
 		}
 		if((access & ACCESSCENTRAL) && _device->getCentralAddress() != packet->senderAddress())

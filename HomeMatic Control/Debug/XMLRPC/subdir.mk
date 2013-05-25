@@ -5,14 +5,20 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
 ../XMLRPC/Device.cpp \
+../XMLRPC/LogicalParameter.cpp \
+../XMLRPC/PhysicalParameter.cpp \
 ../XMLRPC/Server.cpp 
 
 OBJS += \
 ./XMLRPC/Device.o \
+./XMLRPC/LogicalParameter.o \
+./XMLRPC/PhysicalParameter.o \
 ./XMLRPC/Server.o 
 
 CPP_DEPS += \
 ./XMLRPC/Device.d \
+./XMLRPC/LogicalParameter.d \
+./XMLRPC/PhysicalParameter.d \
 ./XMLRPC/Server.d 
 
 

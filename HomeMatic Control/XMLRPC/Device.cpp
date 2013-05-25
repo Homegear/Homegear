@@ -1,5 +1,6 @@
 #include "Device.h"
 #include "../HelperFunctions.h"
+#include "../GD.h"
 
 namespace XMLRPC {
 
@@ -19,10 +20,32 @@ Parameter::Parameter(xml_node<>* parameterNode)
 			else if(attributeValue == "l") conditionalOperator = ConditionalOperator::Enum::l;
 			else if(attributeValue == "ge") conditionalOperator = ConditionalOperator::Enum::ge;
 			else if(attributeValue == "le") conditionalOperator = ConditionalOperator::Enum::le;
+			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"parameter\": " << attributeName << std::endl;
 		}
-		else if(attributeName == "const_value")
+		else if(attributeName == "const_value") constValue = std::stoll(attributeValue, 0, 16);
+		else if(attributeName == "id") id = attributeValue;
+		else if(attributeName == "operations")
 		{
-			constValue = std::stoll(attributeValue, 0, 16);
+			std::stringstream stream(attributeValue);
+			std::string element;
+			while(std::getline(stream, element, ','))
+			{
+				HelperFunctions::toLower(HelperFunctions::trim(element));
+				if(element == "read") operations = (Operations::Enum)(operations | Operations::Enum::read);
+				else if(element == "write") operations = (Operations::Enum)(operations | Operations::Enum::write);
+				else if(element == "event") operations = (Operations::Enum)(operations | Operations::Enum::event);
+			}
+		}
+		else if(attributeName == "ui_flags")
+		{
+			std::stringstream stream(attributeValue);
+			std::string element;
+			while(std::getline(stream, element, ','))
+			{
+				HelperFunctions::toLower(HelperFunctions::trim(element));
+				if(element == "service") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::service);
+				else if(element == "sticky") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::sticky);
+			}
 		}
 	}
 }
@@ -35,6 +58,7 @@ DeviceType::DeviceType(xml_node<>* typeNode)
 		std::string attributeValue(attr->value());
 		if(attributeName == "name") name = attributeValue;
 		else if(attributeName == "id") id = attributeValue;
+		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"type\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* parameterNode = typeNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
@@ -110,6 +134,7 @@ void Device::parseXML(xml_document<>* doc)
 			}
 		}
 		else if(attributeName == "cyclic_timeout") _cyclicTimeout = std::stoll(attributeValue);
+		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"device\": " << attributeName << std::endl;
 	}
 
 	for(node = node->first_node(); node; node = node->next_sibling())
@@ -137,6 +162,7 @@ void Device::parseXML(xml_document<>* doc)
 					else if(attributeValue == "VALUES") parameterSet.type = ParameterSet::Type::Enum::values;
 					else if(attributeValue == "LINK") parameterSet.type = ParameterSet::Type::Enum::values;
 				}
+				else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
 			}
 			parameterSet.init(node);
 		}
