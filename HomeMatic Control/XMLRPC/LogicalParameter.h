@@ -19,7 +19,7 @@ namespace XMLRPC
 class ParameterOption
 {
 public:
-	std::string id = "";
+	std::string id;
 	bool isDefault = false;
 
 	ParameterOption() {}
@@ -49,7 +49,7 @@ public:
 	int32_t min = 0;
 	int32_t max = 0;
 	int32_t defaultValue = 0;
-	std::string unit = "";
+	std::string unit;
 
 	LogicalParameterInteger();
 	LogicalParameterInteger(xml_node<>* node);
@@ -62,7 +62,7 @@ public:
 	double min = 0;
 	double max = 0;
 	double defaultValue = 0;
-	std::string unit = "";
+	std::string unit;
 	std::unordered_map<std::string, double> specialValues;
 
 	LogicalParameterFloat();
@@ -82,6 +82,8 @@ public:
 class LogicalParameterBoolean : public LogicalParameter
 {
 public:
+	bool defaultValue = false;
+
 	LogicalParameterBoolean();
 	LogicalParameterBoolean(xml_node<>* node);
 	virtual ~LogicalParameterBoolean() {}

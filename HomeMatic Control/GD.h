@@ -8,6 +8,7 @@
 #include "Cul.h"
 #include "HomeMaticDevices.h"
 #include "XMLRPC/Server.h"
+#include "XMLRPC/Devices.h"
 
 class Cul;
 class Database;
@@ -19,6 +20,7 @@ public:
 	static std::string executablePath;
 	static HomeMaticDevices devices;
 	static XMLRPC::Server xmlrpcServer;
+	static XMLRPC::Devices xmlrpcDevices;
 	static Database db;
 	static Cul cul;
 	static int32_t debugLevel;

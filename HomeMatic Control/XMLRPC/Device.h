@@ -16,6 +16,27 @@ using namespace rapidxml;
 
 namespace XMLRPC {
 
+class DescriptionField
+{
+public:
+	std::string id;
+	std::string value;
+
+	DescriptionField() {}
+	DescriptionField(xml_node<>* node);
+	virtual ~DescriptionField() {}
+};
+
+class ParameterDescription
+{
+public:
+	std::vector<DescriptionField> fields;
+
+	ParameterDescription() {}
+	ParameterDescription(xml_node<>* node);
+	virtual ~ParameterDescription() {}
+};
+
 class ParameterConversion
 {
 public:
@@ -24,8 +45,10 @@ public:
 		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap };
 	};
 	Type::Enum type = Type::Enum::none;
-	unordered_map<int32_t, int32_t> integerIntegerMap;
+	std::unordered_map<int32_t, int32_t> integerIntegerMap;
 	double factor = 0;
+	int32_t div = 0;
+	int32_t mul = 0;
 	int32_t threshold = 0;
 	int32_t valueFalse = 0;
 	int32_t valueTrue = 0;
@@ -59,17 +82,22 @@ public:
 	uint32_t constValue = 0;
 	std::string id;
 	std::string param;
+	std::string control;
+	std::vector<LogicalParameter> logicalParameters;
+	std::vector<PhysicalParameter> physicalParameters;
+	std::vector<ParameterConversion> conversions;
+	std::vector<ParameterDescription> descriptions;
 
 	Parameter() {}
-	Parameter(xml_node<>* parameterNode);
+	Parameter(xml_node<>* node);
 	virtual ~Parameter() {}
 };
 
 class DeviceType
 {
 public:
-	std::string name = "";
-	std::string id = "";
+	std::string name;
+	std::string id;
 	std::vector<Parameter> parameters;
 
 	DeviceType() {}
@@ -85,13 +113,89 @@ public:
 		enum Enum { none = 0, master = 1, values = 2, link = 3 };
 	};
 	Type::Enum type = Type::Enum::none;
-	std::string id = "";
+	std::string id;
 	std::vector<Parameter> parameters;
 
 	ParameterSet() {}
 	ParameterSet(xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
+};
+
+class EnforceLink
+{
+public:
+	struct ID
+	{
+		enum Enum { none = 0, peerNeedsBurst = 1 };
+	};
+	ID::Enum id = ID::Enum::none;
+	bool value = false;
+
+	EnforceLink() {}
+	EnforceLink(xml_node<>* parameterSetNode);
+	virtual ~EnforceLink() {}
+};
+
+class LinkRole
+{
+public:
+	std::string sourceName;
+	std::string targetName;
+
+	LinkRole() {}
+	LinkRole(xml_node<>* parameterSetNode);
+	virtual ~LinkRole() {}
+};
+
+class DeviceChannel
+{
+public:
+	struct UIFlags
+	{
+		enum Enum { none = 0, internal = 1 };
+	};
+
+	uint32_t index = 0;
+	std::string type;
+	UIFlags::Enum uiFlags = UIFlags::Enum::none;
+	std::string channelClass;
+	uint32_t count = 0;
+	std::vector<ParameterSet> parameterSets;
+	std::vector<LinkRole> linkRoles;
+	std::vector<EnforceLink> enforceLinks;
+
+	DeviceChannel() {}
+	DeviceChannel(xml_node<>* node);
+	virtual ~DeviceChannel() {}
+};
+
+class DeviceFrame
+{
+public:
+	struct Direction
+	{
+		enum Enum { none, toDevice, fromDevice };
+	};
+	struct AllowedReceivers
+	{
+		enum Enum { none = 0, broadcast = 1, central = 2, other = 4 };
+	};
+
+	Direction::Enum direction = Direction::Enum::none;
+	AllowedReceivers::Enum allowedReceivers = AllowedReceivers::Enum::none;
+	std::string id;
+	bool isEvent = false;
+	uint32_t type = 0;
+	uint32_t subtype = 0;
+	uint32_t subtypeIndex = 0;
+	uint32_t channelField = 0;
+	uint32_t fixedChannel = 0;
+	std::vector<Parameter> parameters;
+
+	DeviceFrame() {}
+	DeviceFrame(xml_node<>* node);
+	virtual ~DeviceFrame() {}
 };
 
 class Device
@@ -102,21 +206,18 @@ public:
 		enum Enum { none = 0, config = 1, wakeUp = 2 };
 	};
 
-	std::vector<DeviceType>* supportedTypes() { return &_supportedTypes; }
+	uint32_t version = 0;
+	uint32_t cyclicTimeout = 0;
 	ParameterSet parameterSet;
+	std::vector<DeviceChannel> channels;
+	std::vector<DeviceType> supportedTypes;
+	std::vector<DeviceFrame> frames;
+	RXModes::Enum rxModes = RXModes::Enum::none;
 
 	Device() {}
 	Device(std::string xmlFilename);
 	virtual ~Device();
-	uint32_t version() { return _version; }
-	uint32_t cyclicTimeout() { return _cyclicTimeout; }
-	RXModes::Enum rxModes() { return _rxModes; }
 protected:
-	uint32_t _version = 0;
-	uint32_t _cyclicTimeout = 0;
-	RXModes::Enum _rxModes = RXModes::Enum::none;
-	std::vector<DeviceType> _supportedTypes;
-
 	virtual void load(std::string xmlFilename);
 	virtual void parseXML(xml_document<>* doc);
 private:

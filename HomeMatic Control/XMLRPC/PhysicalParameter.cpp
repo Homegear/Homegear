@@ -17,10 +17,14 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		{
 			if(attributeValue == "command") interface = Interface::Enum::command;
 			else if(attributeValue == "internal") interface = Interface::Enum::internal;
+			else if(attributeValue == "config") interface = Interface::Enum::config;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown interface for \"physical\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "value_id") valueID = attributeValue;
 		else if(attributeName == "no_init" && attributeValue == "true") noInit = true;
+		else if(attributeName == "list") list = std::stoll(attributeValue);
+		else if(attributeName == "index") index = std::stod(attributeValue);
+		else if(attributeName == "size") size = std::stod(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"physical\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* physicalNode = node->first_node(); physicalNode; physicalNode = physicalNode->next_sibling())

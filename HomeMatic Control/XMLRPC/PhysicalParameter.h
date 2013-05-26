@@ -22,17 +22,17 @@ public:
 	};
 	struct Interface
 	{
-		enum Enum { none, command, internal };
+		enum Enum { none, command, internal, config };
 	};
 	Type::Enum type() { return _type; }
 	Interface::Enum interface = Interface::none;
 	uint32_t list = 0;
 	double index = 0;
 	double size = 0;
-	std::string valueID = "";
+	std::string valueID;
 	bool noInit = false;
-	std::string getRequest = "";
-	std::string setRequest = "";
+	std::string getRequest;
+	std::string setRequest;
 	std::vector<std::string> eventFrames;
 
 	PhysicalParameter() {}

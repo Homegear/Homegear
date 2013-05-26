@@ -15,10 +15,6 @@ using namespace std;
 #include "Database.h"
 #include "GD.h"
 
-//Testing
-#include "XMLRPC/Device.h"
-//Testing end
-
 void exceptionHandler(int32_t signal) {
   void *stackTrace[10];
   size_t length = backtrace(stackTrace, 10);
@@ -55,7 +51,6 @@ int main()
 
     	signal(SIGSEGV, exceptionHandler);
 
-    	XMLRPC::Device device("rf_cc_tc.xml");
         /*int row,col;
         WINDOW* mainWindow = initscr();
 
@@ -85,15 +80,16 @@ int main()
 		path[length] = '\0';
 		GD::executablePath = std::string(path);
 		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/"));
-		cout << GD::executablePath << endl;
     	GD::db.init(GD::executablePath + "/db.sql");
 
         GD::cul.init("/dev/ttyACM0");
-        cout << "Start listening for BidCoS packets..." << endl;
+        if(GD::debugLevel >= 4) cout << "Start listening for BidCoS packets..." << endl;
         GD::cul.startListening();
-        cout << "Loading devices..." << endl;
+        if(GD::debugLevel >= 4) cout << "Loading devices..." << endl;
         GD::devices.load(); //Don't load before database is open!
-        cout << "Starting XML RPC server..." << endl;
+        if(GD::debugLevel >= 4) cout << "Loading XML RPC devices..." << endl;
+        GD::xmlrpcDevices.load();
+        if(GD::debugLevel >= 4) cout << "Starting XML RPC server..." << endl;
         GD::xmlrpcServer.run();
 
         //sd->addFilter(FilterType::SenderAddress, 0x1E53E7);

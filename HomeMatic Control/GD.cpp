@@ -11,4 +11,5 @@ std::string GD::workingDirectory = "";
 std::string GD::executablePath = "";
 HomeMaticDevices GD::devices;
 XMLRPC::Server GD::xmlrpcServer;
+XMLRPC::Devices GD::xmlrpcDevices;
 int32_t GD::debugLevel = 5;
