@@ -304,11 +304,13 @@ void Cul::callCallback(std::string packetHex)
 	BidCoSPacket* packet = new BidCoSPacket(packetHex); //To avoid copying the packet two times, we pass a pointer to the packet.
 	try
 	{
+		std::thread received(&HomeMaticCentral::packetReceived, _homeMaticCentral, packet);
+		received.detach();
 		for(std::list<HomeMaticDevice*>::const_iterator i = _homeMaticDevices.begin(); i != _homeMaticDevices.end(); ++i)
 		{
 			//Don't filter destination addresses here! Some devices need to receive packets not directed to them.
-			std::thread send(&HomeMaticDevice::packetReceived, (*i), packet);
-			send.detach();
+			std::thread received(&HomeMaticDevice::packetReceived, (*i), packet);
+			received.detach();
 		}
 	}
     catch(const std::exception& ex)

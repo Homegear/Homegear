@@ -4,6 +4,7 @@
 using namespace std;
 
 #include "HomeMaticDevice.h"
+#include "HomeMaticCentral.h"
 #include "Exception.h"
 #include "BidCoSPacket.h"
 
@@ -35,11 +36,13 @@ class Cul
         void stopListening();
         void addHomeMaticDevice(HomeMaticDevice*);
         void removeHomeMaticDevice(HomeMaticDevice*);
+        void setHomeMaticCentral(HomeMaticCentral* central) { _homeMaticCentral = central; }
         void sendPacket(BidCoSPacket& packet);
         void sendPacket(BidCoSPacket* packet);
     protected:
     private:
         std::list<HomeMaticDevice*> _homeMaticDevices;
+        HomeMaticCentral* _homeMaticCentral;
         int32_t _fileDescriptor = -1;
         std::string _culDevice;
         std::thread _listenThread;
