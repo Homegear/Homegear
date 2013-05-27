@@ -35,6 +35,11 @@ void Cul::sendPacket(BidCoSPacket* packet)
 {
 	try
 	{
+		if(packet == nullptr)
+		{
+			if(GD::debugLevel >= 3) cout << "Warning: Packet was nullptr." << endl;
+			return;
+		}
 		bool deviceWasClosed = false;
 		if(_fileDescriptor == -1)
 		{
@@ -304,8 +309,6 @@ void Cul::callCallback(std::string packetHex)
 	BidCoSPacket* packet = new BidCoSPacket(packetHex); //To avoid copying the packet two times, we pass a pointer to the packet.
 	try
 	{
-		std::thread received(&HomeMaticCentral::packetReceived, _homeMaticCentral, packet);
-		received.detach();
 		for(std::list<HomeMaticDevice*>::const_iterator i = _homeMaticDevices.begin(); i != _homeMaticDevices.end(); ++i)
 		{
 			//Don't filter destination addresses here! Some devices need to receive packets not directed to them.

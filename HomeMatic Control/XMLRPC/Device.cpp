@@ -174,6 +174,11 @@ Parameter::Parameter(xml_node<>* node)
 	}
 }
 
+bool DeviceType::matches(BidCoSPacket* packet)
+{
+	bla
+}
+
 DeviceType::DeviceType(xml_node<>* typeNode)
 {
 	for(xml_attribute<>* attr = typeNode->first_attribute(); attr; attr = attr->next_attribute())

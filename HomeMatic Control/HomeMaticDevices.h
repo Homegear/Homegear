@@ -15,6 +15,7 @@ public:
 	bool remove(int32_t address);
 	HomeMaticDevice* get(int32_t address);
 	HomeMaticDevice* get(std::string serialNumber);
+	HomeMaticDevice* getCentral() { return _central; }
 	std::vector<HomeMaticDevice*>* getDevices() { return &_devices; }
 	void load();
 	void save();
@@ -22,6 +23,7 @@ public:
 	void stopDutyCycle(HomeMaticDevice* device);
 private:
 	std::vector<HomeMaticDevice*> _devices;
+	HomeMaticDevice* _central = nullptr;
 };
 
 #endif /* HOMEMATICDEVICES_H_ */

@@ -42,4 +42,27 @@ void Devices::load()
     }
 }
 
+Device* Devices::find(uint32_t deviceType)
+{
+	try
+	{
+		for(std::vector<Device*>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		{
+			for(std::vector<DeviceType>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
+			{
+				j->
+			}
+		}
+		return nullptr;
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << '\n';
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << '\n';
+    }
+}
+
 } /* namespace XMLRPC */

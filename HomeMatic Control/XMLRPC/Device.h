@@ -11,6 +11,7 @@
 #include "rapidxml.hpp"
 #include "LogicalParameter.h"
 #include "PhysicalParameter.h"
+#include "../BidCoSPacket.h"
 
 using namespace rapidxml;
 
@@ -103,6 +104,8 @@ public:
 	DeviceType() {}
 	DeviceType(xml_node<>* typeNode);
 	virtual ~DeviceType() {}
+
+	bool matches(BidCoSPacket* packet);
 };
 
 class ParameterSet

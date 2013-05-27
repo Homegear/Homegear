@@ -8,7 +8,7 @@ HomeMaticDevice::HomeMaticDevice(std::string serializedObject, uint8_t dutyCycle
 {
 	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
 	uint32_t pos = 0;
-	_deviceType = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	_deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	_serialNumber = serializedObject.substr(pos, 10); pos += 10;
 	_firmwareVersion = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
@@ -46,6 +46,7 @@ void HomeMaticDevice::init()
 	{
 		if(_initialized) return; //Prevent running init two times
 		_messages = new BidCoSMessages();
+		_deviceType = HMDeviceTypes::HMUNKNOWN;
 
 		GD::cul.addHomeMaticDevice(this);
 
@@ -169,7 +170,7 @@ std::string HomeMaticDevice::serialize()
 {
 	std::ostringstream stringstream;
 	stringstream << std::hex << std::uppercase << std::setfill('0');
-	stringstream << std::setw(8) << (int32_t)_deviceType;
+	stringstream << std::setw(8) << (uint32_t)_deviceType;
 	stringstream << std::setw(8) << _address;
 	if(_serialNumber.size() != 10) stringstream << "0000000000"; else stringstream << _serialNumber;
 	stringstream << std::setw(2) << _firmwareVersion;
@@ -218,7 +219,7 @@ int32_t HomeMaticDevice::firmwareVersion()
     return _firmwareVersion;
 }
 
-int32_t HomeMaticDevice::deviceType()
+HMDeviceTypes HomeMaticDevice::deviceType()
 {
     return _deviceType;
 }
@@ -342,7 +343,7 @@ void HomeMaticDevice::handleConfigPeerDelete(int32_t messageCounter, BidCoSPacke
 		_peersMutex.lock();
 		try
 		{
-			if(_peers[address].deviceType != HMRCV50) _peers.erase(address); //Unpair. Unpairing of HMRCV50 is done through CONFIG_WRITE_INDEX
+			if(_peers[address].deviceType != HMDeviceTypes::HMRCV50) _peers.erase(address); //Unpair. Unpairing of HMRCV50 is done through CONFIG_WRITE_INDEX
 		}
 		catch(const std::exception& ex)
 		{
@@ -417,7 +418,7 @@ void HomeMaticDevice::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* 
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
     if(_peers.find(address) == _peers.end())
     {
-        Peer peer = createPeer(address, -1, HMUNKNOWN, "", packet->payload()->at(5), 0);
+        Peer peer = createPeer(address, -1, HMDeviceTypes::HMUNKNOWN, "", packet->payload()->at(5), 0);
         _peersMutex.lock();
         try
         {
@@ -441,7 +442,7 @@ void HomeMaticDevice::newBidCoSQueue(BidCoSQueueType queueType)
 		_resetQueueThread.join();
 	}
 	_stopResetQueueThread = false;
-	_bidCoSQueue = auto_ptr<BidCoSQueue>(new BidCoSQueue(queueType));
+	_bidCoSQueue = unique_ptr<BidCoSQueue>(new BidCoSQueue(queueType));
 	_resetQueueThread = std::thread(&HomeMaticDevice::resetQueue, this);
 	_resetQueueThread.detach();
 }
@@ -455,7 +456,7 @@ void HomeMaticDevice::resetQueue()
 		std::this_thread::sleep_for(sleepingTime);
 		i++;
 	}
-	_bidCoSQueue = auto_ptr<BidCoSQueue>(0);
+	_bidCoSQueue = unique_ptr<BidCoSQueue>(nullptr);
 }
 
 void HomeMaticDevice::handleConfigStart(int32_t messageCounter, BidCoSPacket* packet)
@@ -467,7 +468,7 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, BidCoSPacket* pa
 			newBidCoSQueue(BidCoSQueueType::PAIRINGCENTRAL);
 			Peer peer;
 			peer.address = packet->senderAddress();
-			peer.deviceType = HMRCV50;
+			peer.deviceType = HMDeviceTypes::HMRCV50;
 			peer.messageCounter = 0x00; //Unknown at this point
 			_bidCoSQueue->peer = peer;
 			_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x05) }));
@@ -508,7 +509,7 @@ void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAd
     payload.push_back(0x01); //I think it's always channel 1
     for(std::unordered_map<int32_t, Peer>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
     {
-        if(i->second.deviceType == HMRCV50) continue;
+        if(i->second.deviceType == HMDeviceTypes::HMRCV50) continue;
         if(i->second.localChannel != channel) continue;
         payload.push_back(i->first >> 16);
         payload.push_back((i->first >> 8) & 0xFF);
@@ -641,8 +642,8 @@ void HomeMaticDevice::sendPairingRequest()
 	{
 		std::vector<uint8_t> payload;
 		payload.push_back(_firmwareVersion);
-		payload.push_back(_deviceType >> 8);
-		payload.push_back(_deviceType & 0xFF);
+		payload.push_back(((uint32_t)_deviceType) >> 8);
+		payload.push_back((uint32_t)_deviceType & 0xFF);
 		std::for_each(_serialNumber.begin(), _serialNumber.end(), [&](unsigned char byte)
 		{
 			payload.push_back(byte);
@@ -669,8 +670,8 @@ void HomeMaticDevice::sendDirectedPairingRequest(int32_t messageCounter, int32_t
 		if(_deviceTypeChannels.find(deviceType) == _deviceTypeChannels.end()) return;
 		std::vector<uint8_t> payload;
 		payload.push_back(_firmwareVersion);
-		payload.push_back(_deviceType >> 8);
-		payload.push_back(_deviceType & 0xFF);
+		payload.push_back(((uint32_t)_deviceType) >> 8);
+		payload.push_back((uint32_t)_deviceType & 0xFF);
 		std::for_each(_serialNumber.begin(), _serialNumber.end(), [&](unsigned char byte)
 		{
 			payload.push_back(byte);

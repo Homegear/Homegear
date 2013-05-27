@@ -42,7 +42,7 @@ void HM_SD::init()
 {
 	HomeMaticDevice::init();
 
-	_deviceType = HMSD;
+	_deviceType = HMDeviceTypes::HMSD;
 }
 
 std::string HM_SD::serialize()

@@ -12,6 +12,7 @@ public:
 	Devices();
 	virtual ~Devices() {}
 	void load();
+	Device* find(uint32_t deviceType, uint32_t firmwareVersion);
 protected:
 	std::vector<Device> _devices;
 };

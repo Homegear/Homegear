@@ -1,9 +1,9 @@
 #ifndef HOMEMATICDEVICE_H
 #define HOMEMATICDEVICE_H
 
+#include "Peer.h"
 #include "Cul.h"
 #include "BidCoSQueue.h"
-#include "Peer.h"
 #include "BidCoSPacket.h"
 #include "BidCoSMessage.h"
 #include "BidCoSMessages.h"
@@ -19,21 +19,22 @@
 #include "pthread.h"
 #include <xmlrpc-c/base.hpp>
 
+enum class HMDeviceTypes : uint32_t { HMUNKNOWN = 0xFFFFFFFF, HMSD = 0xFFFFFFFE, HMCENTRAL = 0xFFFFFFFD, HMRCV50 = 0x0000, HMCCTC = 0x0039, HMCCVD = 0x003A };
+
 class BidCoSMessages;
 class Cul;
 class BidCoSMessage;
 enum class BidCoSQueueType;
 class BidCoSQueue;
+class Peer;
 
-//TODO Pairing not working when virtual device is put into pairing mode after the real device
-//TODO Check if last pairing byte triggers sending of broadcast pairing request
 class HomeMaticDevice
 {
     public:
         int32_t address();
         std::string serialNumber();
         int32_t firmwareVersion();
-        int32_t deviceType();
+        HMDeviceTypes deviceType();
         std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
         virtual int64_t lastDutyCycleEvent() { return _lastDutyCycleEvent; }
 
@@ -91,7 +92,7 @@ class HomeMaticDevice
         int32_t _address;
         std::string _serialNumber;
         int32_t _firmwareVersion = 0;
-        int32_t _deviceType = 0;
+        HMDeviceTypes _deviceType;
         int32_t _deviceClass = 0;
         int32_t _channelMin = 0;
         int32_t _channelMax = 0;
@@ -105,7 +106,7 @@ class HomeMaticDevice
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
         bool _pairing = false;
         bool _justPairedToOrThroughCentral = false;
-        auto_ptr<BidCoSQueue> _bidCoSQueue;
+        unique_ptr<BidCoSQueue> _bidCoSQueue;
         std::thread _resetQueueThread;
         bool _stopResetQueueThread = false;
         BidCoSMessage* _lastReceivedMessage;

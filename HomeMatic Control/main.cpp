@@ -11,6 +11,7 @@ using namespace std;
 #include "Devices/HM-SD.h"
 #include "Devices/HM-CC-VD.h"
 #include "Devices/HM-CC-TC.h"
+#include "Devices/HomeMaticCentral.h"
 #include "HomeMaticDevice.h"
 #include "Database.h"
 #include "GD.h"
@@ -140,17 +141,21 @@ int main()
 						int32_t deviceType = getHexInput();
 						switch(deviceType)
 						{
-						case 0x39:
+						case (uint32_t)HMDeviceTypes::HMCCTC:
 							GD::devices.add(new HM_CC_TC(serialNumber, address));
 							cout << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
 							break;
-						case 0x3A:
+						case (uint32_t)HMDeviceTypes::HMCCVD:
 							GD::devices.add(new HM_CC_VD(serialNumber, address));
 							cout << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
 							break;
-						case 0xFFFFFFFE:
+						case (uint32_t)HMDeviceTypes::HMCENTRAL:
+							GD::devices.add(new HomeMaticCentral(serialNumber, address));
+							cout << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
+							break;
+						case (uint32_t)HMDeviceTypes::HMSD:
 							GD::devices.add(new HM_SD(serialNumber, address));
-							cout << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
+							cout << "Created HM_SD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
 							break;
 						default:
 							cout << "Unknown device type." << endl;
@@ -179,7 +184,7 @@ int main()
             	std::vector<HomeMaticDevice*>* devices = GD::devices.getDevices();
             	for(std::vector<HomeMaticDevice*>::iterator i = devices->begin(); i != devices->end(); ++i)
             	{
-            		cout << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (*i)->deviceType() << endl << std::dec;
+            		cout << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (uint32_t)(*i)->deviceType() << endl << std::dec;
             	}
             }
             else if(input == "set verbosity")

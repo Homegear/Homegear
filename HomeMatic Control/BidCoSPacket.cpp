@@ -165,3 +165,48 @@ int32_t BidCoSPacket::getInt(std::string hexString)
 	}
 	return 0;
 }
+
+int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
+{
+	if(index < 9)
+	{
+		if(GD::debugLevel >= 2) cout << "Error: Packet index < 9 requested." << endl;
+		return 0;
+	}
+	index -= 9;
+	double byteIndex = std::floor(index);
+	int64_t result = 0;
+	if(byteIndex != index)
+	{
+		if(size > 1)
+		{
+			if(GD::debugLevel >= 2) cout << "Error: Partial byte index > 1 requested.";
+			return result;
+		}
+		if(isSigned)
+		{
+			if(GD::debugLevel >= 2) cout << "Error: Signed partial byte index requested.";
+			return result;
+		}
+		result = (_payload.at(byteIndex) >> (((uint32_t)(index * 10)) % 10)) & _bitmask((uint32_t)(size * 10));
+	}
+	else
+	{
+		uint32_t bytes = (uint32_t)std::ceil(size);
+		result = (_payload.at(index) & _bitmask(((uint32_t)(size * 10)) % 10)) << ((bytes - 1) * 8);
+		for(uint32_t i = 1; i < bytes; i++)
+		{
+			result += _payload.at(index + i) << ((bytes - i - 1) * 8);
+		}
+		if(isSigned)
+		{
+			uint32_t signPosition = ((uint32_t)(size * 10)) % 10;
+			if(_payload.at(index) & (1 << signPosition)) //has sign?
+			{
+				uint32_t bits = (uint32_t)std::floor(size) * 8 + signPosition;
+				result = (1 << bits) + result;
+			}
+		}
+	}
+	return result;
+}

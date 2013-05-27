@@ -27,7 +27,7 @@ void HM_CC_TC::init()
 {
 	HomeMaticDevice::init();
 
-	_deviceType = 0x39;
+	_deviceType = HMDeviceTypes::HMCCTC;
     _firmwareVersion = 0x21;
     _deviceClass = 0x58;
     _channelMin = 0x00;
@@ -354,7 +354,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 			{
 				j = _peers.begin();
 			}
-			if(j->second.deviceType == HMCCVD)
+			if(j->second.deviceType == HMDeviceTypes::HMCCVD)
 			{
 				_currentDutyCycleDeviceAddress = j->first;
 				_peersMutex.unlock();
@@ -383,7 +383,7 @@ Peer HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceType
     peer.deviceType = deviceType;
     peer.messageCounter = 0;
     peer.remoteChannel = remoteChannel;
-    if(deviceType == HMCCVD || deviceType == HMUNKNOWN) peer.localChannel = 2; else peer.localChannel = 0;
+    if(deviceType == HMDeviceTypes::HMCCVD || deviceType == HMDeviceTypes::HMUNKNOWN) peer.localChannel = 2; else peer.localChannel = 0;
     peer.serialNumber = serialNumber;
     return peer;
 }
@@ -415,7 +415,7 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet)
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
     if(channel == 2)
     {
-    	_peers[address].deviceType = HMCCVD;
+    	_peers[address].deviceType = HMDeviceTypes::HMCCVD;
     	if(GD::debugLevel == 5) cout << "Added HM-CC-VD with address 0x" << std::hex << address << std::dec << endl;
     }
 }

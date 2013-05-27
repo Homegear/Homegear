@@ -7,7 +7,7 @@
 #include <sstream>
 #include <unordered_map>
 
-enum HMDeviceTypes { HMUNKNOWN = 0xFFFFFFFF, HMSD = 0xFFFFFFFE, HMRCV50 = 0x0000, HMCCTC = 0x0039, HMCCVD = 0x003A };
+enum class HMDeviceTypes : uint32_t;
 
 class Peer
 {
@@ -21,7 +21,7 @@ class Peer
         int32_t firmwareVersion = 0;
         int32_t remoteChannel = 0;
         int32_t localChannel = 0;
-        HMDeviceTypes deviceType = HMUNKNOWN;
+        HMDeviceTypes deviceType;
         uint8_t messageCounter = 0;
         std::unordered_map<int32_t, int32_t> config;
 

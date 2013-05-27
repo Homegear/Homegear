@@ -7,19 +7,22 @@ CPP_SRCS += \
 ../Devices/HM-CC-TC.cpp \
 ../Devices/HM-CC-VD.cpp \
 ../Devices/HM-RC-Sec3-B.cpp \
-../Devices/HM-SD.cpp 
+../Devices/HM-SD.cpp \
+../Devices/HomeMaticCentral.cpp 
 
 OBJS += \
 ./Devices/HM-CC-TC.o \
 ./Devices/HM-CC-VD.o \
 ./Devices/HM-RC-Sec3-B.o \
-./Devices/HM-SD.o 
+./Devices/HM-SD.o \
+./Devices/HomeMaticCentral.o 
 
 CPP_DEPS += \
 ./Devices/HM-CC-TC.d \
 ./Devices/HM-CC-VD.d \
 ./Devices/HM-RC-Sec3-B.d \
-./Devices/HM-SD.d 
+./Devices/HM-SD.d \
+./Devices/HomeMaticCentral.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

@@ -13,7 +13,6 @@ CPP_SRCS += \
 ../Exception.cpp \
 ../GD.cpp \
 ../HelperFunctions.cpp \
-../HomeMaticCentral.cpp \
 ../HomeMaticDevice.cpp \
 ../HomeMaticDevices.cpp \
 ../Log.cpp \
@@ -30,7 +29,6 @@ OBJS += \
 ./Exception.o \
 ./GD.o \
 ./HelperFunctions.o \
-./HomeMaticCentral.o \
 ./HomeMaticDevice.o \
 ./HomeMaticDevices.o \
 ./Log.o \
@@ -47,7 +45,6 @@ CPP_DEPS += \
 ./Exception.d \
 ./GD.d \
 ./HelperFunctions.d \
-./HomeMaticCentral.d \
 ./HomeMaticDevice.d \
 ./HomeMaticDevices.d \
 ./Log.d \

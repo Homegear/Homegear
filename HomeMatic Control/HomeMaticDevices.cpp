@@ -9,6 +9,7 @@
 #include "Devices/HM-CC-TC.h"
 #include "Devices/HM-SD.h"
 #include "Devices/HM-CC-VD.h"
+#include "Devices/HomeMaticCentral.h"
 
 HomeMaticDevices::HomeMaticDevices()
 {
@@ -29,14 +30,14 @@ void HomeMaticDevices::load()
 	for(std::vector<std::vector<DataColumn> >::iterator row = rows.begin(); row != rows.end(); ++row)
 	{
 		HomeMaticDevice* device = nullptr;
-		int32_t deviceType = 0;
+		HMDeviceTypes deviceType;
 		std::string serializedObject;
 		uint8_t dutyCycleMessageCounter = 0;
 		for(std::vector<DataColumn>::iterator col = row->begin(); col != row->end(); ++col)
 		{
 			if(col->index == 1)
 			{
-				deviceType = col->intValue;
+				deviceType = (HMDeviceTypes)col->intValue;
 			}
 			else if(col->index == 2)
 			{
@@ -50,14 +51,20 @@ void HomeMaticDevices::load()
 			{
 				switch(deviceType)
 				{
-				case 0x39:
+				case HMDeviceTypes::HMCCTC:
 					device = new HM_CC_TC(serializedObject, dutyCycleMessageCounter, col->intValue);
 					break;
-				case 0x3A:
+				case HMDeviceTypes::HMCCVD:
 					device = new HM_CC_VD(serializedObject, dutyCycleMessageCounter, col->intValue);
 					break;
-				case 0xFFFFFFFE:
+				case HMDeviceTypes::HMCENTRAL:
+					device = new HomeMaticCentral(serializedObject);
+					_central = device;
+					break;
+				case HMDeviceTypes::HMSD:
 					device = new HM_SD(serializedObject, dutyCycleMessageCounter, col->intValue);
+					break;
+				default:
 					break;
 				}
 				if(device != nullptr)
@@ -68,9 +75,6 @@ void HomeMaticDevices::load()
 			}
 		}
 	}
-			//GD::db->executeCommand("INSERT INTO bla VALUES('Hallo')");
-        //std::vector<std::vector<DataColumn>> rows = GD::db->executeCommand("SELECT * FROM bla");
-        //cout << rows[0][0].textValue << endl;
 }
 
 void HomeMaticDevices::stopDutyCycles()
@@ -102,7 +106,7 @@ void HomeMaticDevices::save()
 			command << "DELETE FROM devices WHERE address=" << std::dec << (*i)->address();
 			GD::db.executeCommand(command.str());
 			std::ostringstream command2;
-			command2 << "INSERT INTO devices VALUES(" << (*i)->address() << "," << (*i)->deviceType() << ",'" << (*i)->serialize() << "'," << (int32_t)(*i)->messageCounter()->at(1) << "," << (*i)->lastDutyCycleEvent() << ")";
+			command2 << "INSERT INTO devices VALUES(" << (*i)->address() << "," << (uint32_t)(*i)->deviceType() << ",'" << (*i)->serialize() << "'," << (int32_t)(*i)->messageCounter()->at(1) << "," << (*i)->lastDutyCycleEvent() << ")";
 			GD::db.executeCommand(command2.str());
 		}
 	}
@@ -114,10 +118,12 @@ void HomeMaticDevices::save()
 
 void HomeMaticDevices::add(HomeMaticDevice* device)
 {
+	if(device == nullptr) return;
 	std::ostringstream command;
-	command << "INSERT INTO devices VALUES(" << std::dec << device->address() << "," << device->deviceType() << ",'" << device->serialize() << "'," << (int32_t)device->messageCounter()->at(1) << ","  << device->lastDutyCycleEvent() << ")";
+	command << "INSERT INTO devices VALUES(" << std::dec << device->address() << "," << (uint32_t)device->deviceType() << ",'" << device->serialize() << "'," << (int32_t)device->messageCounter()->at(1) << ","  << device->lastDutyCycleEvent() << ")";
 	GD::db.executeCommand(command.str());
 	_devices.push_back(device);
+	if(device->deviceType() == HMDeviceTypes::HMCENTRAL) _central = device;
 }
 
 bool HomeMaticDevices::remove(int32_t address)

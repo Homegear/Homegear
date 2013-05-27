@@ -2,7 +2,7 @@
 
 HM_CC_VD::HM_CC_VD(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
 {
-    _deviceType = 0x3A;
+    _deviceType = HMDeviceTypes::HMCCVD;
     _firmwareVersion = 0x20;
     _deviceClass = 0x58;
     _channelMin = 0x01;
@@ -113,7 +113,7 @@ void HM_CC_VD::handleCLICommand(std::string command)
 void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, BidCoSPacket* packet)
 {
     HomeMaticDevice::handleDutyCyclePacket(messageCounter, packet);
-    if(_peers[packet->senderAddress()].deviceType != HMCCTC) return;
+    if(_peers[packet->senderAddress()].deviceType != HMDeviceTypes::HMCCTC) return;
     int32_t oldValveState = _valveState;
     _valveState = (packet->payload()->at(1) * 100) / 256;
     cout << "0x" << std::setw(6) << std::hex << _address << std::dec;
@@ -201,7 +201,7 @@ Peer HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceType
     peer.deviceType = deviceType;
     peer.messageCounter = 0;
     peer.remoteChannel = remoteChannel;
-    if(deviceType == HMCCTC || deviceType == HMUNKNOWN) peer.localChannel = 1; else peer.localChannel = 0;
+    if(deviceType == HMDeviceTypes::HMCCTC || deviceType == HMDeviceTypes::HMUNKNOWN) peer.localChannel = 1; else peer.localChannel = 0;
     peer.serialNumber = serialNumber;
     return peer;
 }
@@ -219,7 +219,7 @@ void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet)
     HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
 
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
-    _peers[address].deviceType = HMCCTC;
+    _peers[address].deviceType = HMDeviceTypes::HMCCTC;
 }
 
 void HM_CC_VD::setValveDriveBlocked(bool valveDriveBlocked)

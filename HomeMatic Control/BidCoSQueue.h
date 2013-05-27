@@ -1,8 +1,8 @@
 #ifndef BIDCOSQUEUE_H
 #define BIDCOSQUEUE_H
 
-#include "Cul.h"
 #include "Peer.h"
+#include "Cul.h"
 #include "BidCoSMessage.h"
 #include "Exception.h"
 
@@ -11,7 +11,6 @@
 #include <mutex>
 
 class Cul;
-class Peer;
 class BidCoSMessage;
 
 enum class QueueEntryType { UNDEFINED, MESSAGE, PACKET };

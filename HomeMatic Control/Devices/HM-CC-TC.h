@@ -9,7 +9,6 @@
 
 //TODO Pairing by serial
 //TODO Was wird beim Batterien einlegen gesendet?
-//TODO Lässt sich beim Pairing über die Zentrale irgendwie der Gerätetyp ermitteln?
 class HM_CC_TC : public HomeMaticDevice
 {
     public:
