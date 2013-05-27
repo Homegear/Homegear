@@ -103,6 +103,32 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 	}
 }
 
+bool Parameter::checkCondition(int64_t value)
+{
+	switch(booleanOperator)
+	{
+	case BooleanOperator::Enum::e:
+		return value == constValue;
+		break;
+	case BooleanOperator::Enum::g:
+		return value > constValue;
+		break;
+	case BooleanOperator::Enum::l:
+		return value < constValue;
+		break;
+	case BooleanOperator::Enum::ge:
+		return value >= constValue;
+		break;
+	case BooleanOperator::Enum::le:
+		return value <= constValue;
+		break;
+	default:
+		if(GD::debugLevel >= 3) cout << "Warning: Boolean operator is none." << endl;
+		break;
+	}
+	return false;
+}
+
 Parameter::Parameter(xml_node<>* node)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
@@ -111,14 +137,15 @@ Parameter::Parameter(xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "index") index = std::stod(attributeValue);
 		else if(attributeName == "size") size = std::stod(attributeValue);
+		else if(attributeName == "signed") { if(attributeValue == "true") isSigned = true; }
 		else if(attributeName == "cond_op")
 		{
 			HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
-			if(attributeValue == "e") conditionalOperator = ConditionalOperator::Enum::e;
-			else if(attributeValue == "g") conditionalOperator = ConditionalOperator::Enum::g;
-			else if(attributeValue == "l") conditionalOperator = ConditionalOperator::Enum::l;
-			else if(attributeValue == "ge") conditionalOperator = ConditionalOperator::Enum::ge;
-			else if(attributeValue == "le") conditionalOperator = ConditionalOperator::Enum::le;
+			if(attributeValue == "e") booleanOperator = BooleanOperator::Enum::e;
+			else if(attributeValue == "g") booleanOperator = BooleanOperator::Enum::g;
+			else if(attributeValue == "l") booleanOperator = BooleanOperator::Enum::l;
+			else if(attributeValue == "ge") booleanOperator = BooleanOperator::Enum::ge;
+			else if(attributeValue == "le") booleanOperator = BooleanOperator::Enum::le;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"parameter\": " << attributeName << std::endl;
 		}
 		else if(attributeName == "const_value") constValue = std::stoll(attributeValue, 0, 16);
@@ -174,9 +201,47 @@ Parameter::Parameter(xml_node<>* node)
 	}
 }
 
+bool DeviceType::matches(HMDeviceTypes deviceType)
+{
+	try
+	{
+		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		{
+			//This might not be the optimal way to get the xml rpc device, because it assumes the device type is unique
+			if(i->index == 10.0 && i->constValue == (uint32_t)deviceType) return true;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    return false;
+}
+
 bool DeviceType::matches(BidCoSPacket* packet)
 {
-	bla
+	try
+	{
+		bool match = true;
+		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		{
+			if(!i->checkCondition(packet->getPosition(i->index, i->size, i->isSigned))) match = false;
+		}
+		return match;
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    return false;
 }
 
 DeviceType::DeviceType(xml_node<>* typeNode)

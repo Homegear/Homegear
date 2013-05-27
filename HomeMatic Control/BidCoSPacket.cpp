@@ -1,4 +1,5 @@
 #include "BidCoSPacket.h"
+#include "GD.h"
 
 //Properties
 uint8_t BidCoSPacket::length()
@@ -188,12 +189,12 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 			if(GD::debugLevel >= 2) cout << "Error: Signed partial byte index requested.";
 			return result;
 		}
-		result = (_payload.at(byteIndex) >> (((uint32_t)(index * 10)) % 10)) & _bitmask((uint32_t)(size * 10));
+		result = (_payload.at(byteIndex) >> (((uint32_t)(index * 10)) % 10)) & _bitmask[(uint32_t)(size * 10)];
 	}
 	else
 	{
 		uint32_t bytes = (uint32_t)std::ceil(size);
-		result = (_payload.at(index) & _bitmask(((uint32_t)(size * 10)) % 10)) << ((bytes - 1) * 8);
+		result = (_payload.at(index) & _bitmask[((uint32_t)(size * 10)) % 10]) << ((bytes - 1) * 8);
 		for(uint32_t i = 1; i < bytes; i++)
 		{
 			result += _payload.at(index + i) << ((bytes - i - 1) * 8);

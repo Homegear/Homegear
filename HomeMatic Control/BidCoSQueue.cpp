@@ -14,10 +14,7 @@ BidCoSQueue::~BidCoSQueue()
 	{
 		_stopResendThread = true;
 		_resendThreadMutex.lock();
-		if(_resendThread.get() != nullptr && _resendThread->joinable())
-		{
-			_resendThread->join();
-		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for _resendThread to finish. I didn't use thread.join, because for some reason "join" sometimes crashed the program.
 	}
 	catch(const std::exception& ex)
 	{
@@ -136,7 +133,7 @@ void BidCoSQueue::startResendThread()
 		if(!(controlByte & 0x02) && (controlByte & 0x20)) //Resend when no response?
 		{
 			_resendThreadMutex.lock();
-			_resendThread = auto_ptr<std::thread>(new std::thread(&BidCoSQueue::resend, this));
+			_resendThread = unique_ptr<std::thread>(new std::thread(&BidCoSQueue::resend, this));
 			_resendThread->detach();
 		}
 	}

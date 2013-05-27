@@ -7,7 +7,8 @@
 #include <sstream>
 #include <unordered_map>
 
-enum class HMDeviceTypes : uint32_t;
+#include "XMLRPC/Device.h"
+#include "HMDeviceTypes.h"
 
 class Peer
 {
@@ -24,6 +25,7 @@ class Peer
         HMDeviceTypes deviceType;
         uint8_t messageCounter = 0;
         std::unordered_map<int32_t, int32_t> config;
+        XMLRPC::Device* xmlrpcDevice = nullptr;
 
         std::string serialize();
 };

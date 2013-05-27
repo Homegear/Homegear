@@ -213,7 +213,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
         int i;
         struct timeval timeout;
         timeout.tv_sec = 0;
-        timeout.tv_usec = 5000;
+        timeout.tv_usec = 100000;
         fd_set writeFileDescriptor;
         if(GD::debugLevel > 3 && printSending)
         {
@@ -231,19 +231,19 @@ void Cul::writeToDevice(std::string data, bool printSending)
                     throw(Exception("Writing to CUL device timed out: " + _culDevice));
                     break;
                 case -1:
-                    throw(Exception("Error writing to CUL device: " + _culDevice));
+                    throw(Exception("Error writing to CUL device (1): " + _culDevice));
                     break;
                 case 1:
                     break;
                 default:
-                    throw(Exception("Error writing to CUL device: " + _culDevice));
+                    throw(Exception("Error writing to CUL device (2): " + _culDevice));
 
             }
             i = write(_fileDescriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
             if(i == -1)
             {
                 if(errno == EAGAIN) continue;
-                throw(Exception("Error writing to CUL device: " + _culDevice));
+                throw(Exception("Error writing to CUL device (3, " + std::to_string(errno) + "): " + _culDevice));
             }
             bytesWritten += i;
         }
@@ -251,6 +251,11 @@ void Cul::writeToDevice(std::string data, bool printSending)
         _sendMutex.unlock();
     }
     catch(const std::exception& ex)
+    {
+    	_sendMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+    }
+    catch(const Exception& ex)
     {
     	_sendMutex.unlock();
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';

@@ -64,6 +64,18 @@ void HomeMaticCentral::packetReceived(BidCoSPacket* packet)
 	}
 }
 
+Peer HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
+{
+	Peer peer;
+	peer.address = address;
+	peer.firmwareVersion = firmwareVersion;
+	peer.deviceType = deviceType;
+	peer.serialNumber = serialNumber;
+	peer.remoteChannel = remoteChannel;
+	peer.messageCounter = messageCounter;
+    return peer;
+}
+
 void HomeMaticCentral::handleCLICommand(std::string command)
 {
 	if(command == "pairing mode on")
@@ -87,12 +99,22 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, BidCoSPacket
 			newBidCoSQueue(BidCoSQueueType::PAIRING);
 			if(_peers.find(packet->senderAddress()) != _peers.end())
 			{
-				//TODO Send config
+				//TODO Send config if pending
 				return;
 			}
-			//TODO Check if device type and firmware version is known before pairing
 
-			_bidCoSQueue->peer.address = packet->senderAddress();
+			XMLRPC::Device* device = GD::xmlrpcDevices.find(packet);
+			if(device == nullptr)
+			{
+				if(GD::debugLevel >= 3) cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
+				return;
+			}
+
+			std::string serialNumber;
+			for(int i = 3; i < 13; i++)
+				serialNumber += std::to_string(packet->payload()->at(i));
+			_bidCoSQueue->peer = createPeer(packet->senderAddress(), packet->payload()->at(9), (HMDeviceTypes)((packet->payload()->at(10) << 8) + packet->payload()->at(11)), serialNumber, 0, 0);
+			_bidCoSQueue->peer.xmlrpcDevice = device;
 
 			//CONFIG_START
 			std::vector<uint8_t> payload;

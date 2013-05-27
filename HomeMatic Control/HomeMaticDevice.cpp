@@ -257,8 +257,7 @@ void HomeMaticDevice::packetReceived(BidCoSPacket* packet)
 		BidCoSMessage* message = _messages->find(DIRECTIONIN, &_receivedPacket);
 		if(message != nullptr && message->checkAccess(&_receivedPacket, _bidCoSQueue.get()))
 		{
-			std::chrono::milliseconds sleepingTime(90); //Don't respond too fast
-			std::this_thread::sleep_for(sleepingTime);
+			std::this_thread::sleep_for(std::chrono::milliseconds(90));  //Don't respond too fast
 			_messageCounter[_receivedPacket.senderAddress()] = _receivedPacket.messageCounter();
 			message->invokeMessageHandlerIncoming(&_receivedPacket);
 			_lastReceivedMessage = message;

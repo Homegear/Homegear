@@ -13,6 +13,7 @@ Peer::Peer(std::string serializedObject)
 	remoteChannel = std::stoll(serializedObject.substr(26, 2), 0, 16);
 	localChannel = std::stoll(serializedObject.substr(28, 2), 0, 16);
 	deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(30, 8), 0, 16);
+	xmlrpcDevice = GD::xmlrpcDevices.find(deviceType);
 	messageCounter = std::stoll(serializedObject.substr(38, 2), 0, 16);
 	uint32_t configSize = (std::stoll(serializedObject.substr(40, 8)) * 16);
 	for(uint32_t i = 48; i < (48 + configSize); i += 16)

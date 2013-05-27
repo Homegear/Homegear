@@ -12,6 +12,7 @@
 #include "LogicalParameter.h"
 #include "PhysicalParameter.h"
 #include "../BidCoSPacket.h"
+#include "../HMDeviceTypes.h"
 
 using namespace rapidxml;
 
@@ -63,9 +64,9 @@ class Parameter
 {
 private:
 public:
-	struct ConditionalOperator
+	struct BooleanOperator
 	{
-		enum Enum { none = 0, e = 1, g = 2, l = 3, ge = 4, le = 5 };
+		enum Enum { e, g, l, ge, le };
 	};
 	struct Operations
 	{
@@ -77,7 +78,8 @@ public:
 	};
 	double index = 0;
 	double size = 0;
-	ConditionalOperator::Enum conditionalOperator = ConditionalOperator::Enum::none;
+	bool isSigned = false;
+	BooleanOperator::Enum booleanOperator = BooleanOperator::Enum::e;
 	Operations::Enum operations = Operations::Enum::none;
 	UIFlags::Enum uiFlags = UIFlags::Enum::none;
 	uint32_t constValue = 0;
@@ -92,6 +94,7 @@ public:
 	Parameter() {}
 	Parameter(xml_node<>* node);
 	virtual ~Parameter() {}
+	bool checkCondition(int64_t value);
 };
 
 class DeviceType
@@ -106,6 +109,7 @@ public:
 	virtual ~DeviceType() {}
 
 	bool matches(BidCoSPacket* packet);
+	bool matches(HMDeviceTypes deviceType);
 };
 
 class ParameterSet

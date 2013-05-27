@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "Device.h"
+#include "../BidCoSPacket.h"
+#include "../HMDeviceTypes.h"
 
 namespace XMLRPC {
 
@@ -12,7 +14,8 @@ public:
 	Devices();
 	virtual ~Devices() {}
 	void load();
-	Device* find(uint32_t deviceType, uint32_t firmwareVersion);
+	Device* find(BidCoSPacket* packet);
+	Device* find(HMDeviceTypes deviceType);
 protected:
 	std::vector<Device> _devices;
 };
