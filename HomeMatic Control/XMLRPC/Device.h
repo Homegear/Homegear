@@ -86,10 +86,10 @@ public:
 	std::string id;
 	std::string param;
 	std::string control;
-	std::vector<LogicalParameter> logicalParameters;
-	std::vector<PhysicalParameter> physicalParameters;
-	std::vector<ParameterConversion> conversions;
-	std::vector<ParameterDescription> descriptions;
+	LogicalParameter logicalParameter;
+	PhysicalParameter physicalParameter;
+	ParameterConversion conversion;
+	ParameterDescription description;
 
 	Parameter() {}
 	Parameter(xml_node<>* node);

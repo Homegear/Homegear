@@ -47,11 +47,12 @@ class Peer
         HMDeviceTypes deviceType;
         uint8_t messageCounter = 0;
         std::unordered_map<int32_t, int32_t> config;
-        std::unordered_map<int32_t, std::unordered_map<int32_t, XMLRPCConfigurationParameter>> configCentral;
+        std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>> configCentral;
         XMLRPC::Device* xmlrpcDevice = nullptr;
         std::vector<PairedPeer> peers;
 
         std::string serialize();
+        void initializeConfigFromXMLRPCDevice(XMLRPC::Device* device);
 };
 
 #endif // PEER_H

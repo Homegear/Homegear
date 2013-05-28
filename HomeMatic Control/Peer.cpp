@@ -11,6 +11,29 @@ std::string XMLRPCConfigurationParameter::serialize()
 
 }
 
+void Peer::initializeConfigFromXMLRPCDevice(XMLRPC::Device* device)
+{
+	XMLRPCConfigurationParameter parameter;
+	for(std::vector<XMLRPC::Parameter>::iterator i = device->parameterSet.parameters.begin(); i != device->parameterSet.parameters.end(); ++i)
+	{
+		if(i->physicalParameter.list < 9999)
+		{
+			parameter = XMLRPCConfigurationParameter();
+			parameter.xmlrpcParameter = &(*i);
+			configCentral[i->physicalParameter.list][i->physicalParameter.index] = parameter;
+		}
+	}
+	for(std::vector<XMLRPC::DeviceChannel>::iterator i = device->channels.begin(); i != device->channels.end(); ++i)
+	{
+		for(std::vector<XMLRPC::Parameter>::iterator j = i->parameterSetsByType[(uint32_t)XMLRPC::ParameterSet::Type::master]->parameters; j != i->parameterSetsByType[(uint32_t)XMLRPC::ParameterSet::Type::master]->parameters.end(); ++j)
+		{
+			parameter = XMLRPCConfigurationParameter();
+			parameter.xmlrpcParameter = &(*j);
+			configCentral[j->physicalParameter.list][j->physicalParameter.index] = parameter;
+		}
+	}
+}
+
 Peer::Peer(std::string serializedObject)
 {
 	if(GD::debugLevel == 5) cout << "Unserializing peer: " << serializedObject << endl;

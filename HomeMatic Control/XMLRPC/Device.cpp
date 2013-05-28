@@ -183,19 +183,19 @@ Parameter::Parameter(xml_node<>* node)
 		{
 			LogicalParameter parameter;
 			std::unique_ptr<LogicalParameter> pParameter = parameter.fromXML(parameterNode);
-			if(pParameter.get() != nullptr) logicalParameters.push_back(*(pParameter.get()));
+			if(pParameter.get() != nullptr) logicalParameter = *(pParameter.get());
 		}
 		else if(nodeName == "physical")
 		{
-			physicalParameters.push_back(parameterNode);
+			physicalParameter = PhysicalParameter(parameterNode);
 		}
 		else if(nodeName == "conversion")
 		{
-			conversions.push_back(parameterNode);
+			conversion = ParameterConversion(parameterNode);
 		}
 		else if(nodeName == "description")
 		{
-			descriptions.push_back(parameterNode);
+			description = ParameterDescription(parameterNode);
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown subnode for \"parameter\": " << nodeName << std::endl;
 	}

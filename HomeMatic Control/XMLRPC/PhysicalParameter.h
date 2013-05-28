@@ -26,7 +26,7 @@ public:
 	};
 	Type::Enum type() { return _type; }
 	Interface::Enum interface = Interface::none;
-	uint32_t list = 0;
+	uint32_t list = 9999;
 	double index = 0;
 	double size = 0;
 	std::string valueID;
