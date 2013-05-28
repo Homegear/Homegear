@@ -201,14 +201,17 @@ Parameter::Parameter(xml_node<>* node)
 	}
 }
 
-bool DeviceType::matches(HMDeviceTypes deviceType)
+bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
 {
 	try
 	{
 		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
+			bool match = true;
 			//This might not be the optimal way to get the xml rpc device, because it assumes the device type is unique
-			if(i->index == 10.0 && i->constValue == (uint32_t)deviceType) return true;
+			if(i->index == 10.0 && i->constValue != (uint32_t)deviceType) match = false;
+			if(i->index == 9.0 && !i->checkCondition(firmwareVersion)) match = false;
+			if(match) return true;
 		}
 	}
 	catch(const std::exception& ex)
@@ -328,6 +331,10 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 		if(nodeName == "paramset")
 		{
 			parameterSets.push_back(channelNode);
+			ParameterSet* parameterSet = &parameterSets.back();
+			if(parameterSetsByType.find(parameterSet->type) != parameterSetsByType.end() && GD::debugLevel >= 3)
+				std::cout << "Warning: ParameterSet with type " << (uint32_t)parameterSet->type << " is already defined for channel " << index << "." << std::endl;
+			parameterSetsByType[parameterSet->type] = parameterSet;
 		}
 		else if(nodeName == "link_roles")
 		{

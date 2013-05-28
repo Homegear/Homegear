@@ -10,6 +10,28 @@
 #include "XMLRPC/Device.h"
 #include "HMDeviceTypes.h"
 
+class PairedPeer
+{
+public:
+	int32_t address;
+	int32_t channel;
+};
+
+class XMLRPCConfigurationParameter
+{
+public:
+	XMLRPCConfigurationParameter() {}
+	XMLRPCConfigurationParameter(std::string serializedObject);
+	virtual ~XMLRPCConfigurationParameter() {}
+
+	XMLRPC::Parameter* xmlrpcParameter = nullptr;
+	bool initialized = false;
+	bool changed = false;
+	int64_t value = 0;
+
+	std::string serialize();
+};
+
 class Peer
 {
     public:
@@ -25,7 +47,9 @@ class Peer
         HMDeviceTypes deviceType;
         uint8_t messageCounter = 0;
         std::unordered_map<int32_t, int32_t> config;
+        std::unordered_map<int32_t, std::unordered_map<int32_t, XMLRPCConfigurationParameter>> configCentral;
         XMLRPC::Device* xmlrpcDevice = nullptr;
+        std::vector<PairedPeer> peers;
 
         std::string serialize();
 };

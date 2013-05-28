@@ -267,7 +267,7 @@ void HM_CC_TC::sendDutyCycleBroadcast()
 	payload.push_back(_temperature & 0xFF);
 	payload.push_back(_humidity);
 	BidCoSPacket packet(_messageCounter[1], 0x86, 0x70, _address, 0, payload);
-	GD::cul.sendPacket(packet);
+	sendPacket(packet);
 }
 
 void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter)
@@ -286,7 +286,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter)
 		payload.push_back(getAdjustmentCommand());
 		payload.push_back(_newValveState);
 		BidCoSPacket packet(messageCounter, 0xA2, 0x58, _address, address, payload);
-		GD::cul.sendPacket(packet);
+		sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - timePoint;
 		cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << endl;
@@ -499,7 +499,7 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, Bi
 		payload.push_back(0);
 		payload.push_back(0x05);
 		BidCoSPacket requestConfig(messageCounter, 0xA0, 0x01, _address, packet->senderAddress(), payload);
-		GD::cul.sendPacket(requestConfig);
+		sendPacket(requestConfig);
 	}
 	catch(const std::exception& ex)
 	{

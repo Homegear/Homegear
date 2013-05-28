@@ -26,6 +26,7 @@ public:
 
 	void handlePairingRequest(int32_t messageCounter, BidCoSPacket*);
 	void handleAck(int32_t messageCounter, BidCoSPacket*);
+	void handleConfigParamResponse(int32_t messageCounter, BidCoSPacket*);
 protected:
 	virtual Peer createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
 private:

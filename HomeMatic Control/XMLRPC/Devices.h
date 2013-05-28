@@ -15,7 +15,7 @@ public:
 	virtual ~Devices() {}
 	void load();
 	Device* find(BidCoSPacket* packet);
-	Device* find(HMDeviceTypes deviceType);
+	Device* find(HMDeviceTypes deviceType, uint32_t firmwareVersion);
 protected:
 	std::vector<Device> _devices;
 };

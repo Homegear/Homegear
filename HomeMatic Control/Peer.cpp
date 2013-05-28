@@ -1,6 +1,16 @@
 #include "Peer.h"
 #include "GD.h"
 
+XMLRPCConfigurationParameter::XMLRPCConfigurationParameter(std::string serializedObject)
+{
+
+}
+
+std::string XMLRPCConfigurationParameter::serialize()
+{
+
+}
+
 Peer::Peer(std::string serializedObject)
 {
 	if(GD::debugLevel == 5) cout << "Unserializing peer: " << serializedObject << endl;
@@ -13,7 +23,9 @@ Peer::Peer(std::string serializedObject)
 	remoteChannel = std::stoll(serializedObject.substr(26, 2), 0, 16);
 	localChannel = std::stoll(serializedObject.substr(28, 2), 0, 16);
 	deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(30, 8), 0, 16);
-	xmlrpcDevice = GD::xmlrpcDevices.find(deviceType);
+	//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
+	xmlrpcDevice = GD::xmlrpcDevices.find(deviceType, firmwareVersion);
+	if(xmlrpcDevice == nullptr && GD::debugLevel >= 2) cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << endl;
 	messageCounter = std::stoll(serializedObject.substr(38, 2), 0, 16);
 	uint32_t configSize = (std::stoll(serializedObject.substr(40, 8)) * 16);
 	for(uint32_t i = 48; i < (48 + configSize); i += 16)

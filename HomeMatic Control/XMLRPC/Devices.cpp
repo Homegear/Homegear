@@ -42,7 +42,7 @@ void Devices::load()
     }
 }
 
-Device* Devices::find(HMDeviceTypes deviceType)
+Device* Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVersion)
 {
 	try
 	{
@@ -50,7 +50,7 @@ Device* Devices::find(HMDeviceTypes deviceType)
 		{
 			for(std::vector<DeviceType>::iterator j = i->supportedTypes.begin(); j != i->supportedTypes.end(); ++j)
 			{
-				if(j->matches(deviceType)) return &(*i);
+				if(j->matches(deviceType, firmwareVersion)) return &(*i);
 			}
 		}
 	}

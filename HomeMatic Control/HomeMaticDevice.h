@@ -109,6 +109,7 @@ class HomeMaticDevice
         std::thread _resetQueueThread;
         bool _stopResetQueueThread = false;
         BidCoSMessage* _lastReceivedMessage;
+        BidCoSPacket _sentPacket;
         BidCoSPacket _receivedPacket;
         std::mutex _receivedPacketMutex;
         BidCoSMessages* _messages = nullptr;
@@ -124,6 +125,8 @@ class HomeMaticDevice
         virtual void setUpConfig();
         virtual void newBidCoSQueue(BidCoSQueueType queueType);
         virtual void resetQueue();
+        virtual void sendPacket(BidCoSPacket& packet);
+        virtual void sendPacket(BidCoSPacket* packet);
 
         virtual void reset();
     private:

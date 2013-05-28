@@ -109,7 +109,7 @@ public:
 	virtual ~DeviceType() {}
 
 	bool matches(BidCoSPacket* packet);
-	bool matches(HMDeviceTypes deviceType);
+	bool matches(HMDeviceTypes deviceType, uint32_t firmwareVersion);
 };
 
 class ParameterSet
@@ -169,6 +169,7 @@ public:
 	std::string channelClass;
 	uint32_t count = 0;
 	std::vector<ParameterSet> parameterSets;
+	std::unordered_map<uint32_t, ParameterSet*> parameterSetsByType;
 	std::vector<LinkRole> linkRoles;
 	std::vector<EnforceLink> enforceLinks;
 

@@ -190,7 +190,7 @@ void HM_CC_VD::sendConfigParamsType2(int32_t messageCounter, int32_t destination
     payload.push_back(0x00);
     payload.push_back(0x00);
     BidCoSPacket config(messageCounter, 0x80, 0x10, _address, destinationAddress, payload);
-    GD::cul.sendPacket(config);
+    sendPacket(config);
 }
 
 Peer HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
