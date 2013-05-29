@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <unordered_map>
+#include <cmath>
 
 #include "rapidxml.hpp"
 #include "LogicalParameter.h"
@@ -127,6 +128,7 @@ public:
 	ParameterSet(xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
+	std::vector<Parameter*> getIndices(int32_t startIndex, int32_t endIndex);
 };
 
 class EnforceLink
@@ -169,13 +171,14 @@ public:
 	std::string channelClass;
 	uint32_t count = 0;
 	std::vector<ParameterSet> parameterSets;
-	std::unordered_map<uint32_t, ParameterSet*> parameterSetsByType;
+	//std::unordered_map<uint32_t, ParameterSet*> parameterSetsByType;
 	std::vector<LinkRole> linkRoles;
 	std::vector<EnforceLink> enforceLinks;
 
 	DeviceChannel() {}
 	DeviceChannel(xml_node<>* node);
 	virtual ~DeviceChannel() {}
+	ParameterSet* getParameterSet(ParameterSet::Type::Enum type);
 };
 
 class DeviceFrame

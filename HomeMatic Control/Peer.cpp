@@ -11,25 +11,35 @@ std::string XMLRPCConfigurationParameter::serialize()
 
 }
 
-void Peer::initializeConfigFromXMLRPCDevice(XMLRPC::Device* device)
+void Peer::initializeCentralConfig()
 {
+	if(xmlrpcDevice == nullptr)
+	{
+		if(GD::debugLevel >= 3) cout << "Warning: Tried to initialize peer's central config without xmlrpcDevice being set." << endl;
+		return;
+	}
 	XMLRPCConfigurationParameter parameter;
-	for(std::vector<XMLRPC::Parameter>::iterator i = device->parameterSet.parameters.begin(); i != device->parameterSet.parameters.end(); ++i)
+	for(std::vector<XMLRPC::Parameter>::iterator i = xmlrpcDevice->parameterSet.parameters.begin(); i != xmlrpcDevice->parameterSet.parameters.end(); ++i)
 	{
 		if(i->physicalParameter.list < 9999)
 		{
 			parameter = XMLRPCConfigurationParameter();
 			parameter.xmlrpcParameter = &(*i);
-			configCentral[i->physicalParameter.list][i->physicalParameter.index] = parameter;
+			configCentral[0][i->physicalParameter.list][i->physicalParameter.index] = parameter;
 		}
 	}
-	for(std::vector<XMLRPC::DeviceChannel>::iterator i = device->channels.begin(); i != device->channels.end(); ++i)
+	for(std::vector<XMLRPC::DeviceChannel>::iterator i = xmlrpcDevice->channels.begin(); i != xmlrpcDevice->channels.end(); ++i)
 	{
-		for(std::vector<XMLRPC::Parameter>::iterator j = i->parameterSetsByType[(uint32_t)XMLRPC::ParameterSet::Type::master]->parameters; j != i->parameterSetsByType[(uint32_t)XMLRPC::ParameterSet::Type::master]->parameters.end(); ++j)
+		XMLRPC::ParameterSet* masterSet = i->getParameterSet(XMLRPC::ParameterSet::Type::master);
+		if(masterSet == nullptr) continue;
+		for(std::vector<XMLRPC::Parameter>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
 		{
-			parameter = XMLRPCConfigurationParameter();
-			parameter.xmlrpcParameter = &(*j);
-			configCentral[j->physicalParameter.list][j->physicalParameter.index] = parameter;
+			if(j->physicalParameter.list < 9999)
+			{
+				parameter = XMLRPCConfigurationParameter();
+				parameter.xmlrpcParameter = &(*j);
+				configCentral[i->index][j->physicalParameter.list][j->physicalParameter.index] = parameter;
+			}
 		}
 	}
 }

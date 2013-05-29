@@ -19,6 +19,7 @@ public:
 	void packetReceived(BidCoSPacket* packet);
 	void enablePairingMode() { _pairing = true; }
 	void disablePairingMode() { _pairing = false; }
+	void unpair(int32_t address);
 	void setUpBidCoSMessages();
 	void setUpConfig() {}
 	std::string serialize();

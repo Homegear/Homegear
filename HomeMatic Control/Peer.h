@@ -14,7 +14,6 @@ class PairedPeer
 {
 public:
 	int32_t address;
-	int32_t channel;
 };
 
 class XMLRPCConfigurationParameter
@@ -47,12 +46,13 @@ class Peer
         HMDeviceTypes deviceType;
         uint8_t messageCounter = 0;
         std::unordered_map<int32_t, int32_t> config;
-        std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>> configCentral;
+        std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>> configCentral;
         XMLRPC::Device* xmlrpcDevice = nullptr;
-        std::vector<PairedPeer> peers;
+        std::unordered_map<int32_t, std::vector<PairedPeer>> peers;
+        std::unordered_map<int32_t, bool> peersReceived;
 
         std::string serialize();
-        void initializeConfigFromXMLRPCDevice(XMLRPC::Device* device);
+        void initializeCentralConfig();
 };
 
 #endif // PEER_H

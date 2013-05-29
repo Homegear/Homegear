@@ -269,8 +269,34 @@ ParameterSet::ParameterSet(xml_node<>* parameterSetNode)
 	init(parameterSetNode);
 }
 
+std::vector<Parameter*> ParameterSet::getIndices(int32_t startIndex, int32_t endIndex)
+{
+	std::vector<Parameter*> filteredParameters;
+	for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	{
+		if(i->index >= startIndex && std::floor(i->index) <= endIndex) filteredParameters.push_back(&(*i));
+	}
+	return filteredParameters;
+}
+
 void ParameterSet::init(xml_node<>* parameterSetNode)
 {
+	for(xml_attribute<>* attr = parameterSetNode->first_attribute(); attr; attr = attr->next_attribute())
+	{
+		std::string attributeName(attr->name());
+		std::string attributeValue(attr->value());
+		if(attributeName == "id") id = attributeValue;
+		else if(attributeName == "type")
+		{
+			std::stringstream stream(attributeValue);
+			HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
+			if(attributeValue == "master") type = Type::Enum::master;
+			else if(attributeValue == "values") type = Type::Enum::values;
+			else if(attributeValue == "link") type = Type::Enum::link;
+			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown parameter set type: " << attributeValue << std::endl;
+		}
+		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
+	}
 	for(xml_node<>* parameterNode = parameterSetNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
 		parameters.push_back(parameterNode);
@@ -331,10 +357,10 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 		if(nodeName == "paramset")
 		{
 			parameterSets.push_back(channelNode);
-			ParameterSet* parameterSet = &parameterSets.back();
-			if(parameterSetsByType.find(parameterSet->type) != parameterSetsByType.end() && GD::debugLevel >= 3)
-				std::cout << "Warning: ParameterSet with type " << (uint32_t)parameterSet->type << " is already defined for channel " << index << "." << std::endl;
-			parameterSetsByType[parameterSet->type] = parameterSet;
+			//ParameterSet* parameterSet = &parameterSets.back();
+			//if(parameterSetsByType.find(parameterSet->type) != parameterSetsByType.end() && GD::debugLevel >= 3)
+			//	std::cout << "Warning: ParameterSet with type " << (uint32_t)parameterSet->type << " is already defined for channel " << index << "." << std::endl;
+			//parameterSetsByType[parameterSet->type] = parameterSet;
 		}
 		else if(nodeName == "link_roles")
 		{
@@ -349,6 +375,15 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
 	}
+}
+
+ParameterSet* DeviceChannel::getParameterSet(ParameterSet::Type::Enum type)
+{
+	for(std::vector<ParameterSet>::iterator i = parameterSets.begin(); i != parameterSets.end(); ++i)
+	{
+		if(i->type == type) return &(*i);
+	}
+	return nullptr;
 }
 
 Device::Device(std::string xmlFilename)
