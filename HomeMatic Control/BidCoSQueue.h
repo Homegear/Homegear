@@ -43,6 +43,7 @@ class BidCoSQueue
         std::mutex _resendThreadMutex;
         int32_t resendCounter = 0;
     public:
+        HomeMaticDevice* device;
         Peer peer;
         BidCoSQueueType getQueueType() { return _queueType; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }

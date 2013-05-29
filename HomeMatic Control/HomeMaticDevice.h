@@ -56,6 +56,8 @@ class HomeMaticDevice
         virtual std::string serialize();
         virtual int32_t getHexInput();
         virtual void handleCLICommand(std::string command);
+        virtual void sendPacket(BidCoSPacket& packet);
+        virtual void sendPacket(BidCoSPacket* packet);
 
         virtual void setValue(const xmlrpc_c::paramList& paramList) {}
         virtual xmlrpc_c::value getValue(const xmlrpc_c::paramList& paramList);
@@ -79,6 +81,7 @@ class HomeMaticDevice
         virtual void sendPairingRequest();
         virtual void sendDirectedPairingRequest(int32_t messageCounter, int32_t controlByte, BidCoSPacket * packet);
         virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
+        virtual void sendStealthyOK(int32_t messageCounter, int32_t destinationAddress);
         virtual void sendOKWithPayload(int32_t messageCounter, int32_t destinationAddress, std::vector<uint8_t> payload, bool isWakeMeUpPacket);
         virtual void sendNOK(int32_t messageCounter, int32_t destinationAddress);
         virtual void sendNOKTargetInvalid(int32_t messageCounter, int32_t destinationAddress);
@@ -125,8 +128,6 @@ class HomeMaticDevice
         virtual void setUpConfig();
         virtual void newBidCoSQueue(BidCoSQueueType queueType);
         virtual void resetQueue();
-        virtual void sendPacket(BidCoSPacket& packet);
-        virtual void sendPacket(BidCoSPacket* packet);
 
         virtual void reset();
     private:

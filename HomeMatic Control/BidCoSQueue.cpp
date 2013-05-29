@@ -116,7 +116,8 @@ void BidCoSQueue::send(BidCoSPacket packet)
 {
 	try
 	{
-		GD::cul.sendPacket(packet);
+		if(device != nullptr) device->sendPacket(packet);
+		else GD::cul.sendPacket(packet);
 	}
 	catch(const std::exception& ex)
 	{

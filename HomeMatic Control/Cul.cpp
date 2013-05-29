@@ -213,7 +213,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
         int i;
         struct timeval timeout;
         timeout.tv_sec = 0;
-        timeout.tv_usec = 100000;
+        timeout.tv_usec = 200000;
         fd_set writeFileDescriptor;
         if(GD::debugLevel > 3 && printSending)
         {

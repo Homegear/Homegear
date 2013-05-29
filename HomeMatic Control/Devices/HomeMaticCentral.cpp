@@ -108,6 +108,8 @@ void HomeMaticCentral::unpair(int32_t address)
 {
 	try
 	{
+		newBidCoSQueue(BidCoSQueueType::UNPAIRING);
+
 		//TODO Implement pending config
 		std::vector<uint8_t> payload;
 
@@ -316,7 +318,6 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, BidCoSP
 		{
 			if(packet->controlByte() & 0x20)
 			{
-				_sentPacket geht nicht
 				int32_t channel = _sentPacket.payload()->at(0);
 				int32_t list = _sentPacket.payload()->at(6);
 				Peer* peer = &_peers[packet->senderAddress()];
@@ -347,7 +348,8 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, BidCoSP
 		}
 		if(packet->controlByte() & 0x20) //Multiple config response packets
 		{
-			sendOK(packet->messageCounter(), packet->senderAddress());
+			//StealthyOK does not set sentPacket
+			sendStealthyOK(packet->messageCounter(), packet->senderAddress());
 			//No popping from queue to stay at the same position until all response packets are received!!!
 			//The popping is done with the last packet, which has no BIDI control bit set. See https://sathya.de/HMCWiki/index.php/Examples:Message_Counter
 		}

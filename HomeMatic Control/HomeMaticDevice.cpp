@@ -454,6 +454,7 @@ void HomeMaticDevice::newBidCoSQueue(BidCoSQueueType queueType)
 	}
 	_stopResetQueueThread = false;
 	_bidCoSQueue = unique_ptr<BidCoSQueue>(new BidCoSQueue(queueType));
+	_bidCoSQueue->device = this;
 	_resetQueueThread = std::thread(&HomeMaticDevice::resetQueue, this);
 	_resetQueueThread.detach();
 }
@@ -533,6 +534,21 @@ void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAd
     payload.push_back(0x00);
     BidCoSPacket packet(messageCounter, 0x80, 0x10, _address, destinationAddress, payload);
     sendPacket(packet);
+}
+
+void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destinationAddress)
+{
+	try
+	{
+		std::vector<uint8_t> payload;
+		payload.push_back(0x00);
+		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
+		GD::cul.sendPacket(ok);
+	}
+	catch(const std::exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+	}
 }
 
 void HomeMaticDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
