@@ -6,7 +6,7 @@
 #include "BidCoSMessage.h"
 #include "Exception.h"
 
-#include <queue>
+#include <deque>
 #include <thread>
 #include <mutex>
 
@@ -35,25 +35,29 @@ enum class BidCoSQueueType { EMPTY, DEFAULT, PAIRING, PAIRINGCENTRAL, UNPAIRING 
 class BidCoSQueue
 {
     protected:
-        std::queue<BidCoSQueueEntry> _queue;
+        std::deque<BidCoSQueueEntry> _queue;
         std::mutex _queueMutex;
         BidCoSQueueType _queueType;
+		shared_ptr<BidCoSQueue> _pendingBidCoSQueue;
         bool _stopResendThread = false;
         unique_ptr<std::thread> _resendThread;
         std::mutex _resendThreadMutex;
         int32_t resendCounter = 0;
     public:
-        HomeMaticDevice* device;
+        bool noSending = false;
+        HomeMaticDevice* device = nullptr;
         Peer peer;
         BidCoSQueueType getQueueType() { return _queueType; }
+        std::deque<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
 
         void push(BidCoSMessage* message);
         void push(const BidCoSPacket& packet);
-
+        void push(shared_ptr<BidCoSQueue>& pendingBidCoSQueue);
         BidCoSQueueEntry* front() { return &_queue.front(); }
         void pop();
         bool isEmpty() { return _queue.empty(); }
+        void clear();
         void resend();
         void startResendThread();
         void send(BidCoSPacket packet);

@@ -6,9 +6,12 @@
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
+#include <memory>
 
 #include "XMLRPC/Device.h"
 #include "HMDeviceTypes.h"
+
+class BidCoSQueue;
 
 class PairedPeer
 {
@@ -50,6 +53,8 @@ class Peer
         XMLRPC::Device* xmlrpcDevice = nullptr;
         std::unordered_map<int32_t, std::vector<PairedPeer>> peers;
         std::unordered_map<int32_t, bool> peersReceived;
+        //Has to be shared_ptr because Peer must be copyable
+        shared_ptr<BidCoSQueue> pendingBidCoSQueue;
 
         std::string serialize();
         void initializeCentralConfig();

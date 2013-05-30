@@ -453,7 +453,8 @@ void HomeMaticDevice::newBidCoSQueue(BidCoSQueueType queueType)
 		_resetQueueThread.join();
 	}
 	_stopResetQueueThread = false;
-	_bidCoSQueue = unique_ptr<BidCoSQueue>(new BidCoSQueue(queueType));
+	if(_bidCoSQueue.get() != nullptr) _bidCoSQueue.reset(new BidCoSQueue(queueType));
+	else _bidCoSQueue = unique_ptr<BidCoSQueue>(new BidCoSQueue(queueType));
 	_bidCoSQueue->device = this;
 	_resetQueueThread = std::thread(&HomeMaticDevice::resetQueue, this);
 	_resetQueueThread.detach();
@@ -468,7 +469,7 @@ void HomeMaticDevice::resetQueue()
 		std::this_thread::sleep_for(sleepingTime);
 		i++;
 	}
-	_bidCoSQueue = unique_ptr<BidCoSQueue>(nullptr);
+	_bidCoSQueue.reset();
 }
 
 void HomeMaticDevice::handleConfigStart(int32_t messageCounter, BidCoSPacket* packet)

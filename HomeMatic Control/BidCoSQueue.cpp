@@ -67,9 +67,9 @@ void BidCoSQueue::push(const BidCoSPacket& packet)
 	{
 		BidCoSQueueEntry entry;
 		entry.setPacket(packet);
-		if(_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN))
+		if(!noSending && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 		{
-			_queue.push(entry);
+			_queue.push_back(entry);
 			resendCounter = 0;
 			std::thread send(&BidCoSQueue::send, this, *entry.getPacket());
 			send.detach();
@@ -77,12 +77,37 @@ void BidCoSQueue::push(const BidCoSPacket& packet)
 		}
 		else
 		{
-			_queue.push(entry);
+			_queue.push_back(entry);
 		}
 	}
 	catch(const std::exception& ex)
 	{
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+	}
+}
+
+void BidCoSQueue::push(shared_ptr<BidCoSQueue>& pendingBidCoSQueue)
+{
+	_pendingBidCoSQueue = pendingBidCoSQueue;
+	for(std::deque<BidCoSQueueEntry>::iterator i = pendingBidCoSQueue->getQueue()->begin(); i != pendingBidCoSQueue->getQueue()->end(); ++i)
+	{
+		if(!noSending && i->getType() == QueueEntryType::MESSAGE && i->getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
+		{
+			_queue.push_back(*i);
+			resendCounter = 0;
+			std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage(), i->getMessage()->getDevice()->getReceivedPacket());
+			send.detach();
+			startResendThread();
+		}
+		else if(!noSending && i->getType() == QueueEntryType::PACKET && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
+		{
+			_queue.push_back(*i);
+			resendCounter = 0;
+			std::thread send(&BidCoSQueue::send, this, *(i->getPacket()));
+			send.detach();
+			startResendThread();
+		}
+		else _queue.push_back(*i);
 	}
 }
 
@@ -93,9 +118,9 @@ void BidCoSQueue::push(BidCoSMessage* message)
 		if(message == nullptr) return;
 		BidCoSQueueEntry entry;
 		entry.setMessage(message);
-		if(entry.getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
+		if(!noSending && entry.getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 		{
-			_queue.push(entry);
+			_queue.push_back(entry);
 			resendCounter = 0;
 			std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message, message->getDevice()->getReceivedPacket());
 			send.detach();
@@ -103,7 +128,7 @@ void BidCoSQueue::push(BidCoSMessage* message)
 		}
 		else
 		{
-			_queue.push(entry);
+			_queue.push_back(entry);
 		}
 	}
 	catch(const std::exception& ex)
@@ -116,6 +141,7 @@ void BidCoSQueue::send(BidCoSPacket packet)
 {
 	try
 	{
+		if(noSending) return;
 		if(device != nullptr) device->sendPacket(packet);
 		else GD::cul.sendPacket(packet);
 	}
@@ -146,14 +172,21 @@ void BidCoSQueue::startResendThread()
 	_queueMutex.unlock();
 }
 
+void BidCoSQueue::clear()
+{
+	std::deque<BidCoSQueueEntry> emptyQueue;
+	std::swap(_queue, emptyQueue);
+}
+
 void BidCoSQueue::pop()
 {
 	try
 	{
 		if(_queue.empty()) return;
 		_queueMutex.lock();
-		_queue.pop();
+		_queue.pop_front();
 		if(_queue.empty()) {
+			if(_pendingBidCoSQueue.get() != nullptr) _pendingBidCoSQueue->clear();
 			_queueMutex.unlock();
 			return;
 		}
