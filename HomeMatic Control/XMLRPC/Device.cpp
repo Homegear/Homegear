@@ -264,8 +264,9 @@ DeviceType::DeviceType(xml_node<>* typeNode)
 	}
 }
 
-ParameterSet::ParameterSet(xml_node<>* parameterSetNode)
+ParameterSet::ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode)
 {
+	channel = channelNumber;
 	init(parameterSetNode);
 }
 
@@ -300,6 +301,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 	for(xml_node<>* parameterNode = parameterSetNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
 		parameters.push_back(parameterNode);
+		parameters.back().parentParameterSet = this;
 	}
 }
 
@@ -356,21 +358,17 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 		std::string nodeName(channelNode->name());
 		if(nodeName == "paramset")
 		{
-			parameterSets.push_back(channelNode);
-			//ParameterSet* parameterSet = &parameterSets.back();
-			//if(parameterSetsByType.find(parameterSet->type) != parameterSetsByType.end() && GD::debugLevel >= 3)
-			//	std::cout << "Warning: ParameterSet with type " << (uint32_t)parameterSet->type << " is already defined for channel " << index << "." << std::endl;
-			//parameterSetsByType[parameterSet->type] = parameterSet;
+			parameterSets.push_back(shared_ptr<ParameterSet>(new ParameterSet(index, channelNode)));
 		}
 		else if(nodeName == "link_roles")
 		{
-			linkRoles.push_back(channelNode);
+			linkRoles.push_back(shared_ptr<LinkRole>(new LinkRole(channelNode)));
 		}
 		else if(nodeName == "enforce_link")
 		{
 			for(xml_node<>* enforceLinkNode = channelNode->first_node("value"); enforceLinkNode; enforceLinkNode = enforceLinkNode->next_sibling("value"))
 			{
-				enforceLinks.push_back(enforceLinkNode);
+				enforceLinks.push_back(shared_ptr<EnforceLink>(new EnforceLink(channelNode)));
 			}
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
@@ -379,9 +377,9 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 
 ParameterSet* DeviceChannel::getParameterSet(ParameterSet::Type::Enum type)
 {
-	for(std::vector<ParameterSet>::iterator i = parameterSets.begin(); i != parameterSets.end(); ++i)
+	for(std::vector<shared_ptr<ParameterSet>>::iterator i = parameterSets.begin(); i != parameterSets.end(); ++i)
 	{
-		if(i->type == type) return &(*i);
+		if((*i)->type == type) return i->get();
 	}
 	return nullptr;
 }

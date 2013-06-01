@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cmath>
+#include <memory>
 
 #include "rapidxml.hpp"
 #include "LogicalParameter.h"
@@ -18,6 +19,8 @@
 using namespace rapidxml;
 
 namespace XMLRPC {
+
+class ParameterSet;
 
 class DescriptionField
 {
@@ -77,6 +80,7 @@ public:
 	{
 		enum Enum { none = 0, service = 1, sticky = 2 };
 	};
+	ParameterSet* parentParameterSet = nullptr;
 	double index = 0;
 	double size = 0;
 	bool isSigned = false;
@@ -120,12 +124,13 @@ public:
 	{
 		enum Enum { none = 0, master = 1, values = 2, link = 3 };
 	};
+	int32_t channel = 0;
 	Type::Enum type = Type::Enum::none;
 	std::string id;
 	std::vector<Parameter> parameters;
 
 	ParameterSet() {}
-	ParameterSet(xml_node<>* parameterSetNode);
+	ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
 	std::vector<Parameter*> getIndices(int32_t startIndex, int32_t endIndex);
@@ -170,10 +175,9 @@ public:
 	UIFlags::Enum uiFlags = UIFlags::Enum::none;
 	std::string channelClass;
 	uint32_t count = 0;
-	std::vector<ParameterSet> parameterSets;
-	//std::unordered_map<uint32_t, ParameterSet*> parameterSetsByType;
-	std::vector<LinkRole> linkRoles;
-	std::vector<EnforceLink> enforceLinks;
+	std::vector<shared_ptr<ParameterSet>> parameterSets;
+	std::vector<shared_ptr<LinkRole>> linkRoles;
+	std::vector<shared_ptr<EnforceLink>> enforceLinks;
 
 	DeviceChannel() {}
 	DeviceChannel(xml_node<>* node);

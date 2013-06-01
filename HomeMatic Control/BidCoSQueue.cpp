@@ -212,7 +212,7 @@ void BidCoSQueue::sleepAndPushPendingQueue()
 
 void BidCoSQueue::pushPendingQueue()
 {
-	if(_pendingQueues->empty()) return;
+	if(_pendingQueues.get() == nullptr || _pendingQueues->empty()) return;
 	_queueType = _pendingQueues->front()->getQueueType();
 	for(std::deque<BidCoSQueueEntry>::iterator i = _pendingQueues->front()->getQueue()->begin(); i != _pendingQueues->front()->getQueue()->end(); ++i)
 	{
@@ -259,7 +259,7 @@ void BidCoSQueue::pop()
 		_queue.pop_front();
 		if(_queue.empty()) {
 			if(_workingOnPendingQueue) _pendingQueues->pop();
-			if(_pendingQueues->size() == 0)
+			if(_pendingQueues.get() != nullptr && _pendingQueues->size() == 0)
 			{
 				if(GD::debugLevel == 5) cout << "Queue is empty and there are no pending queues." << endl;
 				_workingOnPendingQueue = false;
