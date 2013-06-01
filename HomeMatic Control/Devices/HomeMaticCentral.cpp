@@ -102,6 +102,13 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 			unpair(address);
 		}
 	}
+	else if(command == "list peers")
+	{
+		for(std::unordered_map<int32_t, Peer>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		{
+			cout << "Address: 0x" << std::hex << i->second.address << "\tSerial number: " << i->second.serialNumber << "\tDevice type: " << (uint32_t)i->second.deviceType << endl << std::dec;
+		}
+	}
 }
 
 void HomeMaticCentral::unpair(int32_t address)
@@ -109,9 +116,9 @@ void HomeMaticCentral::unpair(int32_t address)
 	try
 	{
 		if(_peers.find(address) == _peers.end()) return;
-		newBidCoSQueue(BidCoSQueueType::UNPAIRING);
 		Peer* peer = &_peers[address];
-		if(peer->pendingBidCoSQueue.get() == nullptr) peer->pendingBidCoSQueue = shared_ptr<BidCoSQueue>(new BidCoSQueue(BidCoSQueueType::DEFAULT));
+		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, address);
+		shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 
 		//TODO Implement pending config
 		std::vector<uint8_t> payload;
@@ -125,8 +132,8 @@ void HomeMaticCentral::unpair(int32_t address)
 		payload.push_back(0);
 		payload.push_back(0);
 		BidCoSPacket configPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload);
-		peer->pendingBidCoSQueue->push(configPacket);
-		peer->pendingBidCoSQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
 		payload.clear();
 		_messageCounter[0]++;
 
@@ -142,8 +149,8 @@ void HomeMaticCentral::unpair(int32_t address)
 		payload.push_back(0x0C);
 		payload.push_back(0);
 		configPacket = BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload);
-		peer->pendingBidCoSQueue->push(configPacket);
-		peer->pendingBidCoSQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
 		payload.clear();
 		_messageCounter[0]++;
 
@@ -151,13 +158,14 @@ void HomeMaticCentral::unpair(int32_t address)
 		payload.push_back(0);
 		payload.push_back(0x06);
 		configPacket = BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload);
-		peer->pendingBidCoSQueue->push(configPacket);
-		peer->pendingBidCoSQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
 		payload.clear();
 		_messageCounter[0]++;
 
-		peer->pendingBidCoSQueue->noSending = true;
-		_bidCoSQueue->push(peer->pendingBidCoSQueue);
+		pendingQueue->noSending = true;
+		peer->pendingBidCoSQueues->push(pendingQueue);
+		queue->push(peer->pendingBidCoSQueues);
 	}
 	catch(const std::exception& ex)
 	{
@@ -173,142 +181,141 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, BidCoSPacket
 {
 	try
 	{
+		if(packet->destinationAddress() != 0) return;
 		Peer* peer = nullptr;
-		if(packet->destinationAddress() == 0)
+		std::vector<uint8_t> payload;
+		XMLRPC::Device* device;
+		BidCoSQueue* queue = nullptr;
+		if(_pairing)
 		{
-			std::vector<uint8_t> payload;
-			XMLRPC::Device* device;
-			if(_pairing)
+			queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
+
+			device = GD::xmlrpcDevices.find(packet);
+			if(device == nullptr)
 			{
-				newBidCoSQueue(BidCoSQueueType::PAIRING);
-
-				device = GD::xmlrpcDevices.find(packet);
-				if(device == nullptr)
-				{
-					if(GD::debugLevel >= 3) cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
-					return;
-				}
-
-				std::string serialNumber;
-				for(int i = 3; i < 13; i++)
-					serialNumber += std::to_string(packet->payload()->at(i));
-				if(_peers.find(packet->senderAddress()) == _peers.end())
-				{
-					_bidCoSQueue->peer = createPeer(packet->senderAddress(), packet->payload()->at(9), (HMDeviceTypes)((packet->payload()->at(10) << 8) + packet->payload()->at(11)), serialNumber, 0, 0);
-					_bidCoSQueue->peer.xmlrpcDevice = device;
-					_bidCoSQueue->peer.initializeCentralConfig();
-					for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>::iterator i = _bidCoSQueue->peer.configCentral.begin(); i != _bidCoSQueue->peer.configCentral.end(); ++i)
-					{
-						//Set peersReceived to false for all channels
-						_bidCoSQueue->peer.peersReceived[i->first] = false;
-					}
-					peer = &_bidCoSQueue->peer;
-				}
-				else peer = &_peers[packet->senderAddress()];
-
-				//CONFIG_START
-				payload.push_back(0);
-				payload.push_back(0x05);
-				payload.push_back(0);
-				payload.push_back(0);
-				payload.push_back(0);
-				payload.push_back(0);
-				payload.push_back(0);
-				BidCoSPacket configPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
-				_bidCoSQueue->push(configPacket);
-				_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
-				payload.clear();
-				_messageCounter[0]++;
-
-				//CONFIG_WRITE_INDEX
-				payload.push_back(0);
-				payload.push_back(0x08);
-				payload.push_back(0x02);
-				payload.push_back(0x01);
-				payload.push_back(0x0A);
-				payload.push_back(_address >> 16);
-				payload.push_back(0x0B);
-				payload.push_back((_address >> 8) & 0xFF);
-				payload.push_back(0x0C);
-				payload.push_back(_address & 0xFF);
-				configPacket = BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
-				_bidCoSQueue->push(configPacket);
-				_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
-				payload.clear();
-				_messageCounter[0]++;
-
-				//END_CONFIG
-				payload.push_back(0);
-				payload.push_back(0x06);
-				configPacket = BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
-				_bidCoSQueue->push(configPacket);
-				_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
-				payload.clear();
-				_messageCounter[0]++;
-
-				if(peer->pendingBidCoSQueue.get() == nullptr) peer->pendingBidCoSQueue = shared_ptr<BidCoSQueue>(new BidCoSQueue(BidCoSQueueType::DEFAULT));
-				if(_peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
-				{
-					for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>::iterator i = peer->configCentral.begin(); i != peer->configCentral.end(); ++i)
-					{
-						int32_t channel = i->first;
-						//Walk through all lists to request master config if necessary
-						for(std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
-						{
-							int32_t list = j->first;
-							//Find out if there are items not received yet
-							bool allEntriesReceived = true;
-							for(std::unordered_map<double, XMLRPCConfigurationParameter>::iterator k = j->second.begin(); k != j->second.end(); ++k)
-							{
-								if(!k->second.initialized)
-								{
-									allEntriesReceived = false;
-									break;
-								}
-							}
-							if(allEntriesReceived) continue;
-							payload.push_back(channel);
-							payload.push_back(0x04);
-							payload.push_back(0);
-							payload.push_back(0);
-							payload.push_back(0);
-							payload.push_back(0);
-							payload.push_back(list);
-							BidCoSPacket configPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
-							peer->pendingBidCoSQueue->push(configPacket);
-							peer->pendingBidCoSQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<int32_t, int32_t>>()));
-							payload.clear();
-							_messageCounter[0]++;
-						}
-						//Request peers if not received yet
-						if(peer->xmlrpcDevice->channels.at(channel).getParameterSet(XMLRPC::ParameterSet::Type::link) != nullptr && !peer->peersReceived[channel])
-						{
-							payload.push_back(channel);
-							payload.push_back(0x03);
-							BidCoSPacket configPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
-							peer->pendingBidCoSQueue->push(configPacket);
-							peer->pendingBidCoSQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<int32_t, int32_t>>()));
-							payload.clear();
-							_messageCounter[0]++;
-						}
-					}
-				}
-			}
-			else
-			{
-				if(_peers.find(packet->senderAddress()) == _peers.end()) return;
-				newBidCoSQueue(BidCoSQueueType::DEFAULT);
-				peer = &_peers[packet->senderAddress()];
-				if(peer->pendingBidCoSQueue.get() == nullptr) peer->pendingBidCoSQueue.reset(new BidCoSQueue(BidCoSQueueType::DEFAULT));
-			}
-			if(peer == nullptr)
-			{
-				if(GD::debugLevel >= 2) cout << "Error: Peer is nullptr. This shouldn't have happened. Something went very wrong." << endl;
+				if(GD::debugLevel >= 3) cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
 				return;
 			}
-			peer->pendingBidCoSQueue->noSending = true;
-			_bidCoSQueue->push(peer->pendingBidCoSQueue); //This pushes the just generated queue and the already existent pending queue onto the queue
+
+			std::string serialNumber;
+			for(int i = 3; i < 13; i++)
+				serialNumber += std::to_string(packet->payload()->at(i));
+			if(_peers.find(packet->senderAddress()) == _peers.end())
+			{
+				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(9), (HMDeviceTypes)((packet->payload()->at(10) << 8) + packet->payload()->at(11)), serialNumber, 0, 0);
+				queue->peer.xmlrpcDevice = device;
+				queue->peer.initializeCentralConfig();
+				for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>::iterator i = queue->peer.configCentral.begin(); i != queue->peer.configCentral.end(); ++i)
+				{
+					//Set peersReceived to false for all channels
+					queue->peer.peersReceived[i->first] = false;
+				}
+				peer = &queue->peer;
+			}
+			else peer = &_peers[packet->senderAddress()];
+
+			//CONFIG_START
+			payload.push_back(0);
+			payload.push_back(0x05);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			BidCoSPacket configPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
+			payload.clear();
+			_messageCounter[0]++;
+
+			//CONFIG_WRITE_INDEX
+			payload.push_back(0);
+			payload.push_back(0x08);
+			payload.push_back(0x02);
+			payload.push_back(0x01);
+			payload.push_back(0x0A);
+			payload.push_back(_address >> 16);
+			payload.push_back(0x0B);
+			payload.push_back((_address >> 8) & 0xFF);
+			payload.push_back(0x0C);
+			payload.push_back(_address & 0xFF);
+			configPacket = BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
+			payload.clear();
+			_messageCounter[0]++;
+
+			//END_CONFIG
+			payload.push_back(0);
+			payload.push_back(0x06);
+			configPacket = BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
+			payload.clear();
+			_messageCounter[0]++;
+
+			shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
+			if(_peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
+			{
+				for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>::iterator i = peer->configCentral.begin(); i != peer->configCentral.end(); ++i)
+				{
+					int32_t channel = i->first;
+					//Walk through all lists to request master config if necessary
+					for(std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+					{
+						int32_t list = j->first;
+						//Find out if there are items not received yet
+						bool allEntriesReceived = true;
+						for(std::unordered_map<double, XMLRPCConfigurationParameter>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+						{
+							if(!k->second.initialized)
+							{
+								allEntriesReceived = false;
+								break;
+							}
+						}
+						if(allEntriesReceived) continue;
+						payload.push_back(channel);
+						payload.push_back(0x04);
+						payload.push_back(0);
+						payload.push_back(0);
+						payload.push_back(0);
+						payload.push_back(0);
+						payload.push_back(list);
+						BidCoSPacket configPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
+						pendingQueue->push(configPacket);
+						pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<int32_t, int32_t>>()));
+						payload.clear();
+						_messageCounter[0]++;
+					}
+					//Request peers if not received yet
+					if(peer->xmlrpcDevice->channels.at(channel).getParameterSet(XMLRPC::ParameterSet::Type::link) != nullptr && !peer->peersReceived[channel])
+					{
+						payload.push_back(channel);
+						payload.push_back(0x03);
+						BidCoSPacket configPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload);
+						pendingQueue->push(configPacket);
+						pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<int32_t, int32_t>>()));
+						payload.clear();
+						_messageCounter[0]++;
+					}
+				}
+				pendingQueue->noSending = true;
+				peer->pendingBidCoSQueues->push(pendingQueue);
+			}
 		}
+		else
+		{
+			if(_peers.find(packet->senderAddress()) == _peers.end()) return;
+			peer = &_peers[packet->senderAddress()];
+			queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, packet->senderAddress());
+		}
+		if(peer == nullptr)
+		{
+			if(GD::debugLevel >= 2) cout << "Error: Peer is nullptr. This shouldn't have happened. Something went very wrong." << endl;
+			return;
+		}
+		queue->push(peer->pendingBidCoSQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
 	}
 	catch(const std::exception& ex)
 	{
@@ -324,7 +331,8 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, BidCoSP
 {
 	try
 	{
-		if(_bidCoSQueue.get() == nullptr) return;
+		BidCoSQueue* queue = _bidCoSQueueManager.get(packet->senderAddress());
+		if(queue == nullptr) return;
 		if(_sentPacket.payload()->at(1) == 0x03) //Peer request
 		{
 			for(uint32_t i = 1; i < packet->payload()->size(); i += 4)
@@ -377,7 +385,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, BidCoSP
 		}
 		else
 		{
-			_bidCoSQueue->pop(); //Messages are not popped by default.
+			queue->pop(); //Messages are not popped by default.
 		}
 	}
 	catch(const std::exception& ex)
@@ -390,27 +398,36 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, BidCoSP
 	}
 }
 
+//TODO Crash when double pairing
 void HomeMaticCentral::handleAck(int32_t messageCounter, BidCoSPacket* packet)
 {
 	try
 	{
-		if(_bidCoSQueue.get() == nullptr) return;
-		if(_bidCoSQueue->getQueueType() == BidCoSQueueType::PAIRING)
+		BidCoSQueue* queue = _bidCoSQueueManager.get(packet->senderAddress());
+		if(queue == nullptr) return;
+		if(queue->getQueueType() == BidCoSQueueType::PAIRING)
 		{
 			if(_sentPacket.messageType() == 0x01 && _sentPacket.payload()->at(0) == 0x00 && _sentPacket.payload()->at(1) == 0x06)
 			{
 				if(_peers.find(packet->senderAddress()) == _peers.end())
 				{
-					_peers[_bidCoSQueue->peer.address] = _bidCoSQueue->peer;
-					cout << "Added device 0x" << std::hex << _bidCoSQueue->peer.address << std::dec << endl;
+					_peers[queue->peer.address] = queue->peer;
+					cout << "Added device 0x" << std::hex << queue->peer.address << std::dec << endl;
 				}
 			}
 		}
-		else if(_bidCoSQueue->getQueueType() == BidCoSQueueType::UNPAIRING)
+		else if(queue->getQueueType() == BidCoSQueueType::UNPAIRING)
 		{
-			if(_peers.find(packet->senderAddress()) != _peers.end()) _peers.erase(_peers.find(packet->senderAddress()));
+			if(_sentPacket.messageType() == 0x01 && _sentPacket.payload()->at(0) == 0x00 && _sentPacket.payload()->at(1) == 0x06)
+			{
+				if(_peers.find(packet->senderAddress()) != _peers.end())
+				{
+					_peers.erase(_peers.find(packet->senderAddress()));
+					cout << "Removed device 0x" << std::hex << packet->senderAddress() << std::dec << endl;
+				}
+			}
 		}
-		_bidCoSQueue->pop(); //Messages are not popped by default.
+		queue->pop(); //Messages are not popped by default.
 	}
 	catch(const std::exception& ex)
 	{

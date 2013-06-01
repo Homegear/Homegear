@@ -46,6 +46,7 @@ void Peer::initializeCentralConfig()
 
 Peer::Peer(std::string serializedObject)
 {
+	pendingBidCoSQueues = shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>(new std::queue<shared_ptr<BidCoSQueue>>());
 	if(GD::debugLevel == 5) cout << "Unserializing peer: " << serializedObject << endl;
 
 	std::istringstream stringstream(serializedObject);

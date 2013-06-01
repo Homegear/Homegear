@@ -41,9 +41,9 @@ void BidCoSMessage::invokeMessageHandlerOutgoing(BidCoSPacket* packet)
 	try
 	{
 		if(_device == nullptr || _messageHandlerOutgoing == nullptr || packet == nullptr) return;
-		//Actually the message counter implemation is not correct. See https://sathya.de/HMCWiki/index.php/Examples:Message_Counter
-		_device->messageCounter()->at(_device->getBidCoSQueue()->peer.address)++;
-		((_device)->*(_messageHandlerOutgoing))(_device->messageCounter()->at(_device->getBidCoSQueue()->peer.address), _controlByte, packet);
+		//Actually the message counter implementation is not correct. See https://sathya.de/HMCWiki/index.php/Examples:Message_Counter
+		_device->messageCounter()->at(packet->senderAddress())++;
+		((_device)->*(_messageHandlerOutgoing))(_device->messageCounter()->at(packet->senderAddress()), _controlByte, packet);
 	}
 	catch(const std::exception& ex)
 	{

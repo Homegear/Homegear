@@ -4,6 +4,7 @@
 #include "Peer.h"
 #include "Cul.h"
 #include "BidCoSQueue.h"
+#include "BidCoSQueueManager.h"
 #include "BidCoSPacket.h"
 #include "BidCoSMessage.h"
 #include "BidCoSMessages.h"
@@ -24,7 +25,6 @@ class BidCoSMessages;
 class Cul;
 class BidCoSMessage;
 enum class BidCoSQueueType;
-class BidCoSQueue;
 class Peer;
 
 class HomeMaticDevice
@@ -48,9 +48,8 @@ class HomeMaticDevice
         virtual bool isInPairingMode() { return _pairing; }
         virtual int32_t getCentralAddress();
         virtual std::unordered_map<int32_t, Peer>* getPeers();
-        virtual BidCoSQueue* getBidCoSQueue() { return _bidCoSQueue.get(); }
+        //virtual BidCoSQueue* getBidCoSQueue() { return _bidCoSQueue.get(); }
         virtual BidCoSMessage* getLastReceivedMessage() { return _lastReceivedMessage; }
-        virtual BidCoSPacket* getReceivedPacket() { return &_receivedPacket; }
         virtual int32_t calculateCycleLength(uint8_t messageCounter);
         virtual void stopDutyCycle() {};
         virtual std::string serialize();
@@ -85,7 +84,7 @@ class HomeMaticDevice
         virtual void sendOKWithPayload(int32_t messageCounter, int32_t destinationAddress, std::vector<uint8_t> payload, bool isWakeMeUpPacket);
         virtual void sendNOK(int32_t messageCounter, int32_t destinationAddress);
         virtual void sendNOKTargetInvalid(int32_t messageCounter, int32_t destinationAddress);
-        virtual void sendConfigParams(int32_t messageCounter, int32_t destinationAddress);
+        virtual void sendConfigParams(int32_t messageCounter, int32_t destinationAddress, BidCoSPacket* packet);
         virtual void sendConfigParamsType2(int32_t messageCounter, int32_t destinationAddress) {}
         virtual void sendPeerList(int32_t messageCounter, int32_t destinationAddress, int32_t channel);
         virtual void sendDutyCycleResponse(int32_t destinationAddress);
@@ -108,13 +107,9 @@ class HomeMaticDevice
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
         bool _pairing = false;
         bool _justPairedToOrThroughCentral = false;
-        unique_ptr<BidCoSQueue> _bidCoSQueue;
-        std::thread _resetQueueThread;
-        bool _stopResetQueueThread = false;
+        BidCoSQueueManager _bidCoSQueueManager;
         BidCoSMessage* _lastReceivedMessage;
         BidCoSPacket _sentPacket;
-        BidCoSPacket _receivedPacket;
-        std::mutex _receivedPacketMutex;
         BidCoSMessages* _messages = nullptr;
         int64_t _lastDutyCycleEvent = 0;
         bool _initialized = false;
@@ -126,8 +121,6 @@ class HomeMaticDevice
         virtual void init();
         virtual void setUpBidCoSMessages();
         virtual void setUpConfig();
-        virtual void newBidCoSQueue(BidCoSQueueType queueType);
-        virtual void resetQueue();
 
         virtual void reset();
     private:

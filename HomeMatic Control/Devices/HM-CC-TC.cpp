@@ -370,9 +370,9 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 	return -1;
 }
 
-void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddress)
+void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddress, BidCoSPacket* packet)
 {
-    HomeMaticDevice::sendConfigParams(messageCounter, destinationAddress);
+    HomeMaticDevice::sendConfigParams(messageCounter, destinationAddress, packet);
 }
 
 Peer HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
@@ -451,11 +451,11 @@ void HM_CC_TC::handlePairingRequest(int32_t messageCounter, BidCoSPacket* packet
 			return;
 		}
 		Peer peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), "", packet->payload()->at(15), 0);
-		newBidCoSQueue(BidCoSQueueType::PAIRING);
-		_bidCoSQueue->peer = peer;
-		_bidCoSQueue->push(_messages->find(DIRECTIONOUT, 0x00, std::vector<std::pair<int32_t, int32_t>>()));
-		_bidCoSQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
-		_bidCoSQueue->push(_messages->find(DIRECTIONOUT, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x04) }));
+		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
+		queue->peer = peer;
+		queue->push(_messages->find(DIRECTIONOUT, 0x00, std::vector<std::pair<int32_t, int32_t>>()), packet);
+		queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
+		queue->push(_messages->find(DIRECTIONOUT, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x04) }), packet);
 		//The 0x10 response with the config does not have to be part of the queue.
 	}
 	catch(const std::exception& ex)
@@ -489,9 +489,9 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, Bi
 {
 	try
 	{
-		if(_bidCoSQueue.get() == nullptr) return;
+		if(_bidCoSQueueManager.get(packet->senderAddress()) == nullptr) return;
 		std::vector<uint8_t> payload;
-		payload.push_back(_bidCoSQueue->peer.remoteChannel);
+		payload.push_back(_bidCoSQueueManager.get(packet->senderAddress())->peer.remoteChannel);
 		payload.push_back(0x04);
 		payload.push_back(0);
 		payload.push_back(0);
@@ -511,11 +511,12 @@ void HM_CC_TC::handleAck(int32_t messageCounter, BidCoSPacket* packet)
 {
 	try
 	{
-		if(_bidCoSQueue.get() == nullptr) return;
-		_bidCoSQueue->pop(); //Messages are not popped by default.
-		if(_bidCoSQueue->getQueueType() == BidCoSQueueType::PAIRING)
+		BidCoSQueue* queue = _bidCoSQueueManager.get(packet->senderAddress());
+		if(queue == nullptr) return;
+		queue->pop(); //Messages are not popped by default.
+		if(queue->getQueueType() == BidCoSQueueType::PAIRING)
 		{
-			_peers[_bidCoSQueue->peer.address] = _bidCoSQueue->peer;
+			_peers[queue->peer.address] = queue->peer;
 			_pairing = false;
 		}
 	}

@@ -52,7 +52,7 @@ class HM_CC_TC : public HomeMaticDevice
         int32_t getAdjustmentCommand();
 
         void sendRequestConfig(int32_t messageCounter, int32_t controlByte, BidCoSPacket* packet);
-        void sendConfigParams(int32_t messageCounter, int32_t controlByte);
+        void sendConfigParams(int32_t messageCounter, int32_t controlByte, BidCoSPacket* packet);
         void sendDutyCycleBroadcast();
         void sendDutyCyclePacket(uint8_t messageCounter);
         void startDutyCycle(int64_t lastDutyCycleEvent);

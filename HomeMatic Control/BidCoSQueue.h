@@ -7,6 +7,7 @@
 #include "Exception.h"
 
 #include <deque>
+#include <queue>
 #include <thread>
 #include <mutex>
 
@@ -25,7 +26,7 @@ public:
 	virtual ~BidCoSQueueEntry() {}
 	QueueEntryType getType() { return _type; }
 	BidCoSPacket* getPacket() { return &_packet; }
-	void setPacket(const BidCoSPacket& packet) { _packet = packet; _type = QueueEntryType::PACKET; }
+	void setPacket(const BidCoSPacket& packet, bool setQueueEntryType) { _packet = packet; if(setQueueEntryType) _type = QueueEntryType::PACKET; }
 	BidCoSMessage* getMessage() { return _message; }
 	void setMessage(BidCoSMessage* message) { _message = message; _type = QueueEntryType::MESSAGE; }
 };
@@ -36,14 +37,19 @@ class BidCoSQueue
 {
     protected:
         std::deque<BidCoSQueueEntry> _queue;
+        shared_ptr<std::queue<shared_ptr<BidCoSQueue>>> _pendingQueues;
         std::mutex _queueMutex;
         BidCoSQueueType _queueType;
-		shared_ptr<BidCoSQueue> _pendingBidCoSQueue;
         bool _stopResendThread = false;
         unique_ptr<std::thread> _resendThread;
         std::mutex _resendThreadMutex;
         int32_t resendCounter = 0;
+        bool _workingOnPendingQueue = false;
+
+        void pushPendingQueue();
+        void sleepAndPushPendingQueue();
     public:
+        uint64_t* lastAction = nullptr;
         bool noSending = false;
         HomeMaticDevice* device = nullptr;
         Peer peer;
@@ -52,8 +58,9 @@ class BidCoSQueue
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
 
         void push(BidCoSMessage* message);
+        void push(BidCoSMessage* message, BidCoSPacket* packet);
         void push(const BidCoSPacket& packet);
-        void push(shared_ptr<BidCoSQueue>& pendingBidCoSQueue);
+        void push(shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>& pendingBidCoSQueue);
         BidCoSQueueEntry* front() { return &_queue.front(); }
         void pop();
         bool isEmpty() { return _queue.empty(); }
@@ -61,6 +68,7 @@ class BidCoSQueue
         void resend();
         void startResendThread();
         void send(BidCoSPacket packet);
+        void keepAlive();
 
         BidCoSQueue();
 
