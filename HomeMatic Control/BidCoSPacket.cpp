@@ -110,19 +110,20 @@ BidCoSPacket::~BidCoSPacket()
 }
 
 //Packet looks like A...DATA...\r\n
-void BidCoSPacket::import(std::string packet)
+void BidCoSPacket::import(std::string packet, bool removeFirstCharacter)
 {
 	try
 	{
-		_length = getByte(packet.substr(1, 2));
-		_messageCounter = getByte(packet.substr(3, 2));
-		_controlByte = getByte(packet.substr(5, 2));
-		_messageType = getByte(packet.substr(7, 2));
-		_senderAddress = getInt(packet.substr(9, 6));
-		_destinationAddress = getInt(packet.substr(15, 6));
+		uint32_t startIndex = removeFirstCharacter ? 1 : 0;
+		_length = getByte(packet.substr(startIndex, 2));
+		_messageCounter = getByte(packet.substr(startIndex + 2, 2));
+		_controlByte = getByte(packet.substr(startIndex + 4, 2));
+		_messageType = getByte(packet.substr(startIndex + 6, 2));
+		_senderAddress = getInt(packet.substr(startIndex + 8, 6));
+		_destinationAddress = getInt(packet.substr(startIndex + 14, 6));
 
 		//_payload.clear();
-		for(int32_t i = 21; i < (signed)packet.length() - 2; i+=2)
+		for(int32_t i = startIndex + 20; i < (signed)packet.length() - 2; i+=2)
 		{
 			_payload.push_back(getByte(packet.substr(i, 2)));
 		}

@@ -71,7 +71,7 @@ int main()
         //delscreen for all screens!!!
         return 0;*/
 
-    	HomeMaticDevice* currentDevice = nullptr;
+    	shared_ptr<HomeMaticDevice> currentDevice;
 
     	char path[1024];
     	getcwd(path, 1024);
@@ -86,10 +86,10 @@ int main()
         GD::cul.init("/dev/ttyACM0");
         if(GD::debugLevel >= 4) cout << "Start listening for BidCoS packets..." << endl;
         GD::cul.startListening();
-        if(GD::debugLevel >= 4) cout << "Loading devices..." << endl;
-        GD::devices.load(); //Don't load before database is open!
         if(GD::debugLevel >= 4) cout << "Loading XML RPC devices..." << endl;
         GD::xmlrpcDevices.load();
+        if(GD::debugLevel >= 4) cout << "Loading devices..." << endl;
+        GD::devices.load(); //Don't load before database is open!
         if(GD::debugLevel >= 4) cout << "Starting XML RPC server..." << endl;
         GD::xmlrpcServer.run();
 
@@ -181,8 +181,8 @@ int main()
             }
             else if(input == "list devices")
             {
-            	std::vector<HomeMaticDevice*>* devices = GD::devices.getDevices();
-            	for(std::vector<HomeMaticDevice*>::iterator i = devices->begin(); i != devices->end(); ++i)
+            	std::vector<shared_ptr<HomeMaticDevice>>* devices = GD::devices.getDevices();
+            	for(std::vector<shared_ptr<HomeMaticDevice>>::iterator i = devices->begin(); i != devices->end(); ++i)
             	{
             		cout << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (uint32_t)(*i)->deviceType() << endl << std::dec;
             	}

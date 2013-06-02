@@ -56,7 +56,7 @@ void HM_CC_VD::setUpBidCoSMessages()
 {
     HomeMaticDevice::setUpBidCoSMessages();
 
-    _messages->add(BidCoSMessage(0x58, this, ACCESSPAIREDTOSENDER, NOACCESS, &HomeMaticDevice::handleDutyCyclePacket));
+    _messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x58, this, ACCESSPAIREDTOSENDER, NOACCESS, &HomeMaticDevice::handleDutyCyclePacket)));
 }
 
 void HM_CC_VD::handleCLICommand(std::string command)

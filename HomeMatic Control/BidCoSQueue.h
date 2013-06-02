@@ -19,7 +19,7 @@ enum class QueueEntryType { UNDEFINED, MESSAGE, PACKET };
 class BidCoSQueueEntry {
 protected:
 	QueueEntryType _type = QueueEntryType::UNDEFINED;
-	BidCoSMessage* _message = nullptr;
+	shared_ptr<BidCoSMessage> _message;
 	BidCoSPacket _packet;
 public:
 	BidCoSQueueEntry() {}
@@ -27,8 +27,8 @@ public:
 	QueueEntryType getType() { return _type; }
 	BidCoSPacket* getPacket() { return &_packet; }
 	void setPacket(const BidCoSPacket& packet, bool setQueueEntryType) { _packet = packet; if(setQueueEntryType) _type = QueueEntryType::PACKET; }
-	BidCoSMessage* getMessage() { return _message; }
-	void setMessage(BidCoSMessage* message) { _message = message; _type = QueueEntryType::MESSAGE; }
+	shared_ptr<BidCoSMessage> getMessage() { return _message; }
+	void setMessage(shared_ptr<BidCoSMessage> message) { _message = message; _type = QueueEntryType::MESSAGE; }
 };
 
 enum class BidCoSQueueType { EMPTY, DEFAULT, PAIRING, PAIRINGCENTRAL, UNPAIRING };
@@ -57,8 +57,8 @@ class BidCoSQueue
         std::deque<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
 
-        void push(BidCoSMessage* message);
-        void push(BidCoSMessage* message, BidCoSPacket* packet);
+        void push(shared_ptr<BidCoSMessage> message);
+        void push(shared_ptr<BidCoSMessage> message, BidCoSPacket* packet);
         void push(const BidCoSPacket& packet);
         void push(shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>& pendingBidCoSQueue);
         BidCoSQueueEntry* front() { return &_queue.front(); }
@@ -69,11 +69,11 @@ class BidCoSQueue
         void startResendThread();
         void send(BidCoSPacket packet);
         void keepAlive();
+        std::string serialize();
 
         BidCoSQueue();
-
+        BidCoSQueue(std::string serializedObject, HomeMaticDevice* device);
         BidCoSQueue(BidCoSQueueType queueType);
-
         virtual ~BidCoSQueue();
 };
 

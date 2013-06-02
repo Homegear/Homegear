@@ -17,10 +17,6 @@ HomeMaticDevices::HomeMaticDevices()
 
 HomeMaticDevices::~HomeMaticDevices()
 {
-	for(std::vector<HomeMaticDevice*>::iterator i = _devices.begin(); i != _devices.end(); ++i)
-	{
-		delete (*i);
-	}
 }
 
 void HomeMaticDevices::load()
@@ -29,7 +25,7 @@ void HomeMaticDevices::load()
 	std::vector<std::vector<DataColumn>> rows = GD::db.executeCommand("SELECT * FROM devices");
 	for(std::vector<std::vector<DataColumn> >::iterator row = rows.begin(); row != rows.end(); ++row)
 	{
-		HomeMaticDevice* device = nullptr;
+		shared_ptr<HomeMaticDevice> device;
 		HMDeviceTypes deviceType;
 		std::string serializedObject;
 		uint8_t dutyCycleMessageCounter = 0;
@@ -52,17 +48,17 @@ void HomeMaticDevices::load()
 				switch(deviceType)
 				{
 				case HMDeviceTypes::HMCCTC:
-					device = new HM_CC_TC(serializedObject, dutyCycleMessageCounter, col->intValue);
+					device = shared_ptr<HomeMaticDevice>(new HM_CC_TC(serializedObject, dutyCycleMessageCounter, col->intValue));
 					break;
 				case HMDeviceTypes::HMCCVD:
-					device = new HM_CC_VD(serializedObject, dutyCycleMessageCounter, col->intValue);
+					device = shared_ptr<HomeMaticDevice>(new HM_CC_VD(serializedObject, dutyCycleMessageCounter, col->intValue));
 					break;
 				case HMDeviceTypes::HMCENTRAL:
-					device = new HomeMaticCentral(serializedObject);
+					device = shared_ptr<HomeMaticDevice>(new HomeMaticCentral(serializedObject));
 					_central = device;
 					break;
 				case HMDeviceTypes::HMSD:
-					device = new HM_SD(serializedObject, dutyCycleMessageCounter, col->intValue);
+					device = shared_ptr<HomeMaticDevice>(new HM_SD(serializedObject, dutyCycleMessageCounter, col->intValue));
 					break;
 				default:
 					break;
@@ -79,7 +75,7 @@ void HomeMaticDevices::load()
 
 void HomeMaticDevices::stopDutyCycles()
 {
-	for(std::vector<HomeMaticDevice*>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+	for(std::vector<shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 	{
 		std::thread stop(&HomeMaticDevices::stopDutyCycle, this, (*i));
 		stop.detach();
@@ -87,7 +83,7 @@ void HomeMaticDevices::stopDutyCycles()
 	std::this_thread::sleep_for(std::chrono::milliseconds(8000));
 }
 
-void HomeMaticDevices::stopDutyCycle(HomeMaticDevice* device)
+void HomeMaticDevices::stopDutyCycle(shared_ptr<HomeMaticDevice> device)
 {
 	device->stopDutyCycle();
 }
@@ -100,7 +96,7 @@ void HomeMaticDevices::save()
 		//The stopping is necessary, because there is a small time gap between setting "_lastDutyCycleEvent" and the duty cycle message counter.
 		//If saving takes place within this gap, the paired duty cycle devices are out of sync after restart of this program.
 		stopDutyCycles();
-		for(std::vector<HomeMaticDevice*>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		for(std::vector<shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			std::ostringstream command;
 			command << "DELETE FROM devices WHERE address=" << std::dec << (*i)->address();
@@ -122,18 +118,16 @@ void HomeMaticDevices::add(HomeMaticDevice* device)
 	std::ostringstream command;
 	command << "INSERT INTO devices VALUES(" << std::dec << device->address() << "," << (uint32_t)device->deviceType() << ",'" << device->serialize() << "'," << (int32_t)device->messageCounter()->at(1) << ","  << device->lastDutyCycleEvent() << ")";
 	GD::db.executeCommand(command.str());
-	_devices.push_back(device);
-	if(device->deviceType() == HMDeviceTypes::HMCENTRAL) _central = device;
+	_devices.push_back(shared_ptr<HomeMaticDevice>(device));
+	if(device->deviceType() == HMDeviceTypes::HMCENTRAL) _central = _devices.back();
 }
 
 bool HomeMaticDevices::remove(int32_t address)
 {
-	for(std::vector<HomeMaticDevice*>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+	for(std::vector<shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 	{
 		if((*i)->address() == address)
 		{
-			if(GD::debugLevel == 5) cout << "Deleting device object..." << endl;
-			delete (*i);
 			if(GD::debugLevel == 5) cout << "Removing device pointer from device array..." << endl;
 			_devices.erase(i);
 
@@ -147,9 +141,9 @@ bool HomeMaticDevices::remove(int32_t address)
 	return false;
 }
 
-HomeMaticDevice* HomeMaticDevices::get(int32_t address)
+shared_ptr<HomeMaticDevice> HomeMaticDevices::get(int32_t address)
 {
-	for(std::vector<HomeMaticDevice*>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+	for(std::vector<shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 	{
 		if((*i)->address() == address)
 		{
@@ -159,9 +153,9 @@ HomeMaticDevice* HomeMaticDevices::get(int32_t address)
 	return nullptr;
 }
 
-HomeMaticDevice* HomeMaticDevices::get(std::string serialNumber)
+shared_ptr<HomeMaticDevice> HomeMaticDevices::get(std::string serialNumber)
 {
-	for(std::vector<HomeMaticDevice*>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+	for(std::vector<shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 	{
 		if((*i)->serialNumber() == serialNumber)
 		{

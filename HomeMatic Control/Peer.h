@@ -17,6 +17,10 @@ class BidCoSQueue;
 class PairedPeer
 {
 public:
+	PairedPeer() {}
+	PairedPeer(int32_t addr) { address = addr; }
+	virtual ~PairedPeer() {}
+
 	int32_t address;
 };
 
@@ -24,15 +28,11 @@ class XMLRPCConfigurationParameter
 {
 public:
 	XMLRPCConfigurationParameter() {}
-	XMLRPCConfigurationParameter(std::string serializedObject);
 	virtual ~XMLRPCConfigurationParameter() {}
 
-	XMLRPC::Parameter* xmlrpcParameter = nullptr;
-	bool initialized = false;
+	shared_ptr<XMLRPC::Parameter> xmlrpcParameter;
 	bool changed = false;
 	int64_t value = 0;
-
-	std::string serialize();
 };
 
 class Peer
@@ -50,10 +50,9 @@ class Peer
         HMDeviceTypes deviceType;
         uint8_t messageCounter = 0;
         std::unordered_map<int32_t, int32_t> config;
-        std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>> configCentral;
-        XMLRPC::Device* xmlrpcDevice = nullptr;
+        std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>> configCentral;
+        shared_ptr<XMLRPC::Device> xmlrpcDevice = nullptr;
         std::unordered_map<int32_t, std::vector<PairedPeer>> peers;
-        std::unordered_map<int32_t, bool> peersReceived;
         //Has to be shared_ptr because Peer must be copyable
         shared_ptr<std::queue<shared_ptr<BidCoSQueue>>> pendingBidCoSQueues;
 

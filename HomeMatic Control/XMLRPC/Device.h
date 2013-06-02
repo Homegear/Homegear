@@ -21,6 +21,7 @@ using namespace rapidxml;
 namespace XMLRPC {
 
 class ParameterSet;
+class Device;
 
 class DescriptionField
 {
@@ -127,13 +128,14 @@ public:
 	int32_t channel = 0;
 	Type::Enum type = Type::Enum::none;
 	std::string id;
-	std::vector<Parameter> parameters;
+	std::vector<shared_ptr<Parameter>> parameters;
 
 	ParameterSet() {}
 	ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
-	std::vector<Parameter*> getIndices(int32_t startIndex, int32_t endIndex);
+	std::vector<shared_ptr<Parameter>> getIndices(int32_t startIndex, int32_t endIndex);
+	shared_ptr<Parameter> getParameter(std::string id);
 };
 
 class EnforceLink
@@ -169,7 +171,7 @@ public:
 	{
 		enum Enum { none = 0, internal = 1 };
 	};
-
+	Device* parentDevice = nullptr;
 	uint32_t index = 0;
 	std::string type;
 	UIFlags::Enum uiFlags = UIFlags::Enum::none;
@@ -224,9 +226,9 @@ public:
 	uint32_t version = 0;
 	uint32_t cyclicTimeout = 0;
 	ParameterSet parameterSet;
-	std::vector<DeviceChannel> channels;
-	std::vector<DeviceType> supportedTypes;
-	std::vector<DeviceFrame> frames;
+	std::vector<shared_ptr<DeviceChannel>> channels;
+	std::vector<shared_ptr<DeviceType>> supportedTypes;
+	std::vector<shared_ptr<DeviceFrame>> frames;
 	RXModes::Enum rxModes = RXModes::Enum::none;
 
 	Device() {}

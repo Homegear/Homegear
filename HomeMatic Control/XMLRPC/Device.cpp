@@ -270,14 +270,24 @@ ParameterSet::ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode)
 	init(parameterSetNode);
 }
 
-std::vector<Parameter*> ParameterSet::getIndices(int32_t startIndex, int32_t endIndex)
+std::vector<shared_ptr<Parameter>> ParameterSet::getIndices(int32_t startIndex, int32_t endIndex)
 {
-	std::vector<Parameter*> filteredParameters;
-	for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	std::vector<shared_ptr<Parameter>> filteredParameters;
+	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
-		if(i->index >= startIndex && std::floor(i->index) <= endIndex) filteredParameters.push_back(&(*i));
+		if((*i)->index >= startIndex && std::floor((*i)->index) <= endIndex) filteredParameters.push_back(*i);
 	}
 	return filteredParameters;
+}
+
+shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
+{
+	std::vector<shared_ptr<Parameter>> filteredParameters;
+	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	{
+		if((*i)->id == id) return *i;
+	}
+	return shared_ptr<Parameter>();
 }
 
 void ParameterSet::init(xml_node<>* parameterSetNode)
@@ -300,8 +310,8 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 	}
 	for(xml_node<>* parameterNode = parameterSetNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
-		parameters.push_back(parameterNode);
-		parameters.back().parentParameterSet = this;
+		parameters.push_back(shared_ptr<Parameter>(new Parameter(parameterNode)));
+		parameters.back()->parentParameterSet = this;
 	}
 }
 
@@ -377,6 +387,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 
 ParameterSet* DeviceChannel::getParameterSet(ParameterSet::Type::Enum type)
 {
+	if(index == 0 && type == ParameterSet::Type::Enum::master && parentDevice != nullptr) return &parentDevice->parameterSet;
 	for(std::vector<shared_ptr<ParameterSet>>::iterator i = parameterSets.begin(); i != parameterSets.end(); ++i)
 	{
 		if((*i)->type == type) return i->get();
@@ -449,7 +460,7 @@ void Device::parseXML(xml_document<>* doc)
 			{
 				for(xml_node<>* typeNode = node->first_node("type"); typeNode; typeNode = typeNode->next_sibling())
 				{
-					supportedTypes.push_back(typeNode);
+					supportedTypes.push_back(shared_ptr<DeviceType>(new DeviceType(typeNode)));
 				}
 			}
 			else if(nodeName == "paramset")
@@ -474,14 +485,15 @@ void Device::parseXML(xml_document<>* doc)
 			{
 				for(xml_node<>* channelNode = node->first_node("channel"); channelNode; channelNode = channelNode->next_sibling())
 				{
-					channels.push_back(channelNode);
+					channels.push_back(shared_ptr<DeviceChannel>(new DeviceChannel(channelNode)));
+					channels.back()->parentDevice = this;
 				}
 			}
 			else if(nodeName == "frames")
 			{
 				for(xml_node<>* frameNode = node->first_node("frame"); frameNode; frameNode = frameNode->next_sibling("frame"))
 				{
-					frames.push_back(frameNode);
+					frames.push_back(shared_ptr<DeviceFrame>(new DeviceFrame(frameNode)));
 				}
 			}
 			else if(nodeName == "paramset_defs")

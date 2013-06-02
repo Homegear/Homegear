@@ -38,11 +38,11 @@ void HomeMaticCentral::init()
 void HomeMaticCentral::setUpBidCoSMessages()
 {
 	//Don't call HomeMaticDevice::setUpBidCoSMessages!
-	_messages->add(BidCoSMessage(0x00, this, ACCESSPAIREDTOSENDER, FULLACCESS, &HomeMaticDevice::handlePairingRequest));
+	_messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x00, this, ACCESSPAIREDTOSENDER, FULLACCESS, &HomeMaticDevice::handlePairingRequest)));
 
-	_messages->add(BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck));
+	_messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
 
-	_messages->add(BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse));
+	_messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
 }
 
 std::string HomeMaticCentral::serialize()
@@ -184,7 +184,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, BidCoSPacket
 		if(packet->destinationAddress() != 0) return;
 		Peer* peer = nullptr;
 		std::vector<uint8_t> payload;
-		XMLRPC::Device* device;
+		shared_ptr<XMLRPC::Device> device;
 		BidCoSQueue* queue = nullptr;
 		if(_pairing)
 		{
@@ -198,18 +198,13 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, BidCoSPacket
 			}
 
 			std::string serialNumber;
-			for(int i = 3; i < 13; i++)
-				serialNumber += std::to_string(packet->payload()->at(i));
+			for(uint32_t i = 3; i < 13; i++)
+				serialNumber.push_back((char)packet->payload()->at(i));
 			if(_peers.find(packet->senderAddress()) == _peers.end())
 			{
-				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(9), (HMDeviceTypes)((packet->payload()->at(10) << 8) + packet->payload()->at(11)), serialNumber, 0, 0);
+				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), serialNumber, 0, 0);
 				queue->peer.xmlrpcDevice = device;
 				queue->peer.initializeCentralConfig();
-				for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>::iterator i = queue->peer.configCentral.begin(); i != queue->peer.configCentral.end(); ++i)
-				{
-					//Set peersReceived to false for all channels
-					queue->peer.peersReceived[i->first] = false;
-				}
 				peer = &queue->peer;
 			}
 			else peer = &_peers[packet->senderAddress()];
@@ -257,24 +252,13 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, BidCoSPacket
 			shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 			if(_peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
 			{
-				for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>::iterator i = peer->configCentral.begin(); i != peer->configCentral.end(); ++i)
+				for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>>::iterator i = peer->configCentral.begin(); i != peer->configCentral.end(); ++i)
 				{
 					int32_t channel = i->first;
 					//Walk through all lists to request master config if necessary
-					for(std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+					for(std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>::iterator j = i->second.at(XMLRPC::ParameterSet::Type::Enum::master).begin(); j != i->second.at(XMLRPC::ParameterSet::Type::Enum::master).end(); ++j)
 					{
 						int32_t list = j->first;
-						//Find out if there are items not received yet
-						bool allEntriesReceived = true;
-						for(std::unordered_map<double, XMLRPCConfigurationParameter>::iterator k = j->second.begin(); k != j->second.end(); ++k)
-						{
-							if(!k->second.initialized)
-							{
-								allEntriesReceived = false;
-								break;
-							}
-						}
-						if(allEntriesReceived) continue;
 						payload.push_back(channel);
 						payload.push_back(0x04);
 						payload.push_back(0);
@@ -289,7 +273,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, BidCoSPacket
 						_messageCounter[0]++;
 					}
 					//Request peers if not received yet
-					if(peer->xmlrpcDevice->channels.at(channel).getParameterSet(XMLRPC::ParameterSet::Type::link) != nullptr && !peer->peersReceived[channel])
+					if(peer->xmlrpcDevice->channels[channel]->getParameterSet(XMLRPC::ParameterSet::Type::link) != nullptr)
 					{
 						payload.push_back(channel);
 						payload.push_back(0x03);
@@ -338,10 +322,13 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, BidCoSP
 			for(uint32_t i = 1; i < packet->payload()->size(); i += 4)
 			{
 				int32_t peerAddress = (packet->payload()->at(i) << 16) + (packet->payload()->at(i + 1) << 8) + packet->payload()->at(i + 2);
-				int32_t peerChannel = packet->payload()->at(i + 3);
-				PairedPeer peer;
-				peer.address = peerAddress;
-				_peers[packet->senderAddress()].peers[peerChannel].push_back(peer);
+				if(peerAddress != 0)
+				{
+					int32_t peerChannel = packet->payload()->at(i + 3);
+					PairedPeer peer;
+					peer.address = peerAddress;
+					_peers[packet->senderAddress()].peers[peerChannel].push_back(peer);
+				}
 			}
 		}
 		else if(_sentPacket.payload()->at(1) == 0x04) //Config request
@@ -353,17 +340,16 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, BidCoSP
 				Peer* peer = &_peers[packet->senderAddress()];
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = packet->payload()->size() - 1;
-				if(peer->xmlrpcDevice->channels[channel].getParameterSet(XMLRPC::ParameterSet::Type::master) == nullptr)
+				if(peer->xmlrpcDevice->channels[channel]->getParameterSet(XMLRPC::ParameterSet::Type::master) == nullptr)
 				{
 					if(GD::debugLevel >= 2) cout << "Error: Received config for non existant parameter set." << endl;
 				}
 				else
 				{
-					std::vector<XMLRPC::Parameter*> packetParameters = peer->xmlrpcDevice->channels[channel].getParameterSet(XMLRPC::ParameterSet::Type::master)->getIndices(startIndex, endIndex);
-					for(std::vector<XMLRPC::Parameter*>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
+					std::vector<shared_ptr<XMLRPC::Parameter>> packetParameters = peer->xmlrpcDevice->channels[channel]->getParameterSet(XMLRPC::ParameterSet::Type::master)->getIndices(startIndex, endIndex);
+					for(std::vector<shared_ptr<XMLRPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
 					{
-						peer->configCentral[channel][list][(*i)->index].value = packet->getPosition((*i)->index, (*i)->size, (*i)->isSigned);
-						peer->configCentral[channel][list][(*i)->index].initialized = true;
+						peer->configCentral[channel][(uint32_t)XMLRPC::ParameterSet::Type::master][list][(*i)->index].value = packet->getPosition((*i)->index, (*i)->size, (*i)->isSigned);
 					}
 				}
 			}
@@ -371,8 +357,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, BidCoSP
 			{
 				for(uint32_t i = 1; i < packet->payload()->size() - 2; i += 2)
 				{
-					_peers[packet->senderAddress()].configCentral[_sentPacket.payload()->at(0)][_sentPacket.payload()->at(6)][packet->payload()->at(i)].value = packet->payload()->at(i + 1);
-					_peers[packet->senderAddress()].configCentral[_sentPacket.payload()->at(0)][_sentPacket.payload()->at(6)][packet->payload()->at(i)].initialized = true;
+					_peers[packet->senderAddress()].configCentral[_sentPacket.payload()->at(0)][(uint32_t)XMLRPC::ParameterSet::Type::master][_sentPacket.payload()->at(6)][packet->payload()->at(i)].value = packet->payload()->at(i + 1);
 				}
 			}
 		}

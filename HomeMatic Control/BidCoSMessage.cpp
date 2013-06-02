@@ -93,7 +93,7 @@ bool BidCoSMessage::typeIsEqual(BidCoSPacket* packet)
 	return false;
 }
 
-bool BidCoSMessage::typeIsEqual(BidCoSMessage* message)
+bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message)
 {
 	try
 	{
@@ -114,7 +114,7 @@ bool BidCoSMessage::typeIsEqual(BidCoSMessage* message)
 	return false;
 }
 
-bool BidCoSMessage::typeIsEqual(BidCoSMessage* message, BidCoSPacket* packet)
+bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message, BidCoSPacket* packet)
 {
 	try
 	{

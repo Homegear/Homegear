@@ -45,7 +45,7 @@ void HomeMaticDevice::init()
 	try
 	{
 		if(_initialized) return; //Prevent running init two times
-		_messages = new BidCoSMessages();
+		_messages = shared_ptr<BidCoSMessages>(new BidCoSMessages());
 		_deviceType = HMDeviceTypes::HMUNKNOWN;
 
 		GD::cul.addHomeMaticDevice(this);
@@ -77,65 +77,59 @@ void HomeMaticDevice::setUpConfig()
 
 void HomeMaticDevice::setUpBidCoSMessages()
 {
-    _messages->add(BidCoSMessage(0x00, this, NOACCESS, FULLACCESS, &HomeMaticDevice::handlePairingRequest));
+    _messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x00, this, NOACCESS, FULLACCESS, &HomeMaticDevice::handlePairingRequest)));
 
-    BidCoSMessage message(0x11, this, ACCESSCENTRAL | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleReset);
-    message.addSubtype(0x00, 0x04);
+    shared_ptr<BidCoSMessage> message(new BidCoSMessage(0x11, this, ACCESSCENTRAL | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleReset));
+    message->addSubtype(0x00, 0x04);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSCENTRAL | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigPeerAdd);
-    message.addSubtype(0x01, 0x01);
+    message = shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSCENTRAL | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigPeerAdd));
+    message->addSubtype(0x01, 0x01);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigPeerDelete);
-    message.addSubtype(0x01, 0x02);
+    message = shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigPeerDelete));
+    message->addSubtype(0x01, 0x02);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamRequest);
-    message.addSubtype(0x01, 0x04);
+    message = shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamRequest));
+    message->addSubtype(0x01, 0x04);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, FULLACCESS, &HomeMaticDevice::handleConfigStart);
-    message.addSubtype(0x01, 0x05);
+    message = shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, FULLACCESS, &HomeMaticDevice::handleConfigStart));
+    message->addSubtype(0x01, 0x05);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex);
-    message.addSubtype(0x01, 0x08);
+    message = shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex));
+    message->addSubtype(0x01, 0x08);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, NOACCESS, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex);
-    message.addSubtype(0x01, 0x08);
-    message.addSubtype(0x02, 0x02);
-    message.addSubtype(0x03, 0x01);
+    message = shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, NOACCESS, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex));
+    message->addSubtype(0x01, 0x08);
+    message->addSubtype(0x02, 0x02);
+    message->addSubtype(0x03, 0x01);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSCENTRAL | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex);
-    message.addSubtype(0x01, 0x08);
-    message.addSubtype(0x02, 0x02);
-    message.addSubtype(0x03, 0x00);
+    message = shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSCENTRAL | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex));
+    message->addSubtype(0x01, 0x08);
+    message->addSubtype(0x02, 0x02);
+    message->addSubtype(0x03, 0x00);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME | ACCESSUNPAIRING, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigEnd);
-    message.addSubtype(0x01, 0x06);
+    message = shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME | ACCESSUNPAIRING, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigEnd));
+    message->addSubtype(0x01, 0x06);
     _messages->add(message);
 
-    message = BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigRequestPeers);
-    message.addSubtype(0x01, 0x03);
+    message = shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigRequestPeers));
+    message->addSubtype(0x01, 0x03);
     _messages->add(message);
 
-    _messages->add(BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck));
+    _messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
 }
 
 HomeMaticDevice::~HomeMaticDevice()
 {
 	if(GD::debugLevel == 5) cout << "Removing device from CUL event queue..." << endl;
     GD::cul.removeHomeMaticDevice(this);
-    if(_messages != nullptr)
-    {
-    	if(GD::debugLevel == 5) cout << "Deleting BidCoS messages array..." << endl;
-    	delete(_messages);
-    	_messages = nullptr;
-    }
 }
 
 int32_t HomeMaticDevice::getHexInput()
@@ -247,7 +241,7 @@ void HomeMaticDevice::packetReceived(BidCoSPacket* packet)
 	try
 	{
 		BidCoSPacket receivedPacket = *packet; //Make a copy of packet
-		BidCoSMessage* message = _messages->find(DIRECTIONIN, &receivedPacket);
+		shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, &receivedPacket);
 		if(message != nullptr && message->checkAccess(&receivedPacket, _bidCoSQueueManager.get(receivedPacket.senderAddress())))
 		{
 			if(GD::debugLevel == 5) cout << "Device " << std::hex << _address << ": Access granted for packet " << receivedPacket.hexString() << std::dec << endl;

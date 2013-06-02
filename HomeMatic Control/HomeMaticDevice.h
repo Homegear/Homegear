@@ -49,11 +49,12 @@ class HomeMaticDevice
         virtual int32_t getCentralAddress();
         virtual std::unordered_map<int32_t, Peer>* getPeers();
         //virtual BidCoSQueue* getBidCoSQueue() { return _bidCoSQueue.get(); }
-        virtual BidCoSMessage* getLastReceivedMessage() { return _lastReceivedMessage; }
+        virtual shared_ptr<BidCoSMessage> getLastReceivedMessage() { return _lastReceivedMessage; }
         virtual int32_t calculateCycleLength(uint8_t messageCounter);
         virtual void stopDutyCycle() {};
         virtual std::string serialize();
         virtual int32_t getHexInput();
+        virtual shared_ptr<BidCoSMessages> getMessages() { return _messages; }
         virtual void handleCLICommand(std::string command);
         virtual void sendPacket(BidCoSPacket& packet);
         virtual void sendPacket(BidCoSPacket* packet);
@@ -108,9 +109,9 @@ class HomeMaticDevice
         bool _pairing = false;
         bool _justPairedToOrThroughCentral = false;
         BidCoSQueueManager _bidCoSQueueManager;
-        BidCoSMessage* _lastReceivedMessage;
+        shared_ptr<BidCoSMessage> _lastReceivedMessage;
         BidCoSPacket _sentPacket;
-        BidCoSMessages* _messages = nullptr;
+        shared_ptr<BidCoSMessages> _messages;
         int64_t _lastDutyCycleEvent = 0;
         bool _initialized = false;
 

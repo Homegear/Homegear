@@ -45,7 +45,7 @@ void BidCoSQueue::resend()
 					if(_queue.front().getType() == QueueEntryType::MESSAGE)
 					{
 						if(GD::debugLevel == 5) cout << "Invoking outgoing message handler from BidCoSQueue." << endl;
-						send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage(), _queue.front().getPacket());
+						send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 					}
 					else send = std::thread(&BidCoSQueue::send, this, *_queue.front().getPacket());
 					send.detach();
@@ -102,7 +102,7 @@ void BidCoSQueue::push(shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>& pendingQ
 	if(_queue.size() == 0) pushPendingQueue();
 }
 
-void BidCoSQueue::push(BidCoSMessage* message, BidCoSPacket* packet)
+void BidCoSQueue::push(shared_ptr<BidCoSMessage> message, BidCoSPacket* packet)
 {
 	try
 	{
@@ -117,7 +117,7 @@ void BidCoSQueue::push(BidCoSMessage* message, BidCoSPacket* packet)
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message, entry.getPacket());
+				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				send.detach();
 				startResendThread();
 			}
@@ -133,7 +133,7 @@ void BidCoSQueue::push(BidCoSMessage* message, BidCoSPacket* packet)
 	}
 }
 
-void BidCoSQueue::push(BidCoSMessage* message)
+void BidCoSQueue::push(shared_ptr<BidCoSMessage> message)
 {
 	try
 	{
@@ -147,7 +147,7 @@ void BidCoSQueue::push(BidCoSMessage* message)
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message, entry.getPacket());
+				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				send.detach();
 				startResendThread();
 			}
@@ -222,7 +222,7 @@ void BidCoSQueue::pushPendingQueue()
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage(), i->getPacket());
+				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
 				send.detach();
 				startResendThread();
 			}
@@ -284,7 +284,7 @@ void BidCoSQueue::pop()
 			std::thread send;
 			if(!noSending)
 			{
-				if(_queue.front().getType() == QueueEntryType::MESSAGE) send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage(), _queue.front().getPacket());
+				if(_queue.front().getType() == QueueEntryType::MESSAGE) send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 				else send = std::thread(&BidCoSQueue::send, this, *_queue.front().getPacket());
 				send.detach();
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread()
@@ -297,4 +297,19 @@ void BidCoSQueue::pop()
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
 	}
 	_queueMutex.unlock();
+}
+
+std::string BidCoSQueue::serialize()
+{
+	std::ostringstream stringstream;
+	stringstream << std::hex << std::uppercase << std::setfill('0');
+	stringstream << std::setw(8) << (uint32_t)_queueType;
+	stringstream << std::setw(8) << _queue.size();
+	for(std::deque<BidCoSQueueEntry>::const_iterator i = _queue.begin(); i != _queue.end(); ++i)
+	{
+		//stringstream << std::setw(8) << (uint32_t)i->getType();
+
+	}
+	stringstream << std::dec;
+	return stringstream.str();
 }

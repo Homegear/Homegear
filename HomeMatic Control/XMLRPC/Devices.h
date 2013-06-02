@@ -2,6 +2,7 @@
 #define DEVICES_H_
 
 #include <vector>
+#include <memory>
 
 #include "Device.h"
 #include "../BidCoSPacket.h"
@@ -14,10 +15,10 @@ public:
 	Devices();
 	virtual ~Devices() {}
 	void load();
-	Device* find(BidCoSPacket* packet);
-	Device* find(HMDeviceTypes deviceType, uint32_t firmwareVersion);
+	shared_ptr<Device> find(BidCoSPacket* packet);
+	shared_ptr<Device> find(HMDeviceTypes deviceType, uint32_t firmwareVersion);
 protected:
-	std::vector<Device> _devices;
+	std::vector<shared_ptr<Device>> _devices;
 };
 
 } /* namespace XMLRPC */

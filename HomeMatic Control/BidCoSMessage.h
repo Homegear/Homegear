@@ -45,8 +45,8 @@ class BidCoSMessage
         int32_t subtypeCount() { if(_subtypes == nullptr) return 0; else return _subtypes->size(); }
         void setMessageCounter(BidCoSPacket* packet);
         bool typeIsEqual(BidCoSPacket* packet);
-        bool typeIsEqual(BidCoSMessage* message, BidCoSPacket* packet);
-        bool typeIsEqual(BidCoSMessage* message);
+        bool typeIsEqual(shared_ptr<BidCoSMessage> message, BidCoSPacket* packet);
+        bool typeIsEqual(shared_ptr<BidCoSMessage> message);
         bool typeIsEqual(int32_t messageType, std::vector<std::pair<int32_t, int32_t> >* subtypes);
     protected:
         MessageDirection _direction = DIRECTIONIN;
