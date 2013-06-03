@@ -114,7 +114,7 @@ public:
 	DeviceType(xml_node<>* typeNode);
 	virtual ~DeviceType() {}
 
-	bool matches(BidCoSPacket* packet);
+	bool matches(shared_ptr<BidCoSPacket> packet);
 	bool matches(HMDeviceTypes deviceType, uint32_t firmwareVersion);
 };
 

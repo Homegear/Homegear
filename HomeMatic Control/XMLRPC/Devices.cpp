@@ -65,7 +65,7 @@ shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVers
     return nullptr;
 }
 
-shared_ptr<Device> Devices::find(BidCoSPacket* packet)
+shared_ptr<Device> Devices::find(shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{

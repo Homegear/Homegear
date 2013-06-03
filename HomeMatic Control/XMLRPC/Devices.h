@@ -15,7 +15,7 @@ public:
 	Devices();
 	virtual ~Devices() {}
 	void load();
-	shared_ptr<Device> find(BidCoSPacket* packet);
+	shared_ptr<Device> find(shared_ptr<BidCoSPacket> packet);
 	shared_ptr<Device> find(HMDeviceTypes deviceType, uint32_t firmwareVersion);
 protected:
 	std::vector<shared_ptr<Device>> _devices;

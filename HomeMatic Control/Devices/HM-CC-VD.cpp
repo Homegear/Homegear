@@ -17,15 +17,9 @@ HM_CC_VD::HM_CC_VD(std::string serialNumber, int32_t address) : HomeMaticDevice(
     init();
 }
 
-HM_CC_VD::HM_CC_VD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent) : HomeMaticDevice(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent)
+HM_CC_VD::HM_CC_VD() : HomeMaticDevice()
 {
 	init();
-
-	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
-	_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	_valveDriveBlocked = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-	_valveDriveLoose = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-	_adjustingRangeTooSmall = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
 }
 
 void HM_CC_VD::init()
@@ -50,6 +44,16 @@ std::string HM_CC_VD::serialize()
 	stringstream << std::setw(1) << (int32_t)_valveDriveLoose;
 	stringstream << std::setw(1) << (int32_t)_adjustingRangeTooSmall;
 	return  stringstream.str();
+}
+
+void HM_CC_VD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+{
+	HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
+	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
+	_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+	_valveDriveBlocked = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+	_valveDriveLoose = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+	_adjustingRangeTooSmall = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
 }
 
 void HM_CC_VD::setUpBidCoSMessages()
@@ -110,7 +114,7 @@ void HM_CC_VD::handleCLICommand(std::string command)
 	HomeMaticDevice::handleCLICommand(command);
 }
 
-void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, BidCoSPacket* packet)
+void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
     HomeMaticDevice::handleDutyCyclePacket(messageCounter, packet);
     if(_peers[packet->senderAddress()].deviceType != HMDeviceTypes::HMCCTC) return;
@@ -189,7 +193,7 @@ void HM_CC_VD::sendConfigParamsType2(int32_t messageCounter, int32_t destination
     payload.push_back(*_errorPosition);
     payload.push_back(0x00);
     payload.push_back(0x00);
-    BidCoSPacket config(messageCounter, 0x80, 0x10, _address, destinationAddress, payload);
+    shared_ptr<BidCoSPacket> config(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
     sendPacket(config);
 }
 
@@ -214,7 +218,7 @@ void HM_CC_VD::reset()
     _valveState = 0x00;
 }
 
-void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet)
+void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
     HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
 

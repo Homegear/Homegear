@@ -4,38 +4,6 @@ HomeMaticDevice::HomeMaticDevice()
 {
 }
 
-HomeMaticDevice::HomeMaticDevice(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
-{
-	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
-	uint32_t pos = 0;
-	_deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	_serialNumber = serializedObject.substr(pos, 10); pos += 10;
-	_firmwareVersion = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	_centralAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	uint32_t messageCounterSize = std::stoll(serializedObject.substr(pos, 8), 0, 16) * 10; pos += 8;
-	for(uint32_t i = pos; i < (pos + messageCounterSize); i += 10)
-		_messageCounter[std::stoll(serializedObject.substr(i, 8), 0, 16)] = (uint8_t)std::stoll(serializedObject.substr(i + 8, 2), 0, 16);
-	pos += messageCounterSize;
-	uint32_t peersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	for(uint32_t i = 0; i < peersSize; i++)
-	{
-		int32_t address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		int32_t peerSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_peers[address] = Peer(serializedObject.substr(pos, peerSize)); pos += peerSize;
-	}
-	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	for(uint32_t i = 0; i < configSize; i++)
-	{
-		int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t j = 0; j < listSize; j++)
-		{
-			_config[listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
-		}
-	}
-}
-
 HomeMaticDevice::HomeMaticDevice(std::string serialNumber, int32_t address) : _address(address), _serialNumber(serialNumber)
 {
 }
@@ -52,11 +20,6 @@ void HomeMaticDevice::init()
 
 		_messageCounter[0] = 0; //Broadcast message counter
 		_messageCounter[1] = 0; //Duty cycle message counter
-
-		if(_serialNumber.size() != 10)
-		{
-			throw(Exception("Serial number has an invalid length: " + _serialNumber));
-		}
 
 		setUpBidCoSMessages();
 		_initialized = true;
@@ -154,6 +117,38 @@ void HomeMaticDevice::handleCLICommand(std::string command)
 	}
 }
 
+void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+{
+	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
+	uint32_t pos = 0;
+	_deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	_serialNumber = serializedObject.substr(pos, 10); pos += 10;
+	_firmwareVersion = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+	_centralAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	uint32_t messageCounterSize = std::stoll(serializedObject.substr(pos, 8), 0, 16) * 10; pos += 8;
+	for(uint32_t i = pos; i < (pos + messageCounterSize); i += 10)
+		_messageCounter[std::stoll(serializedObject.substr(i, 8), 0, 16)] = (uint8_t)std::stoll(serializedObject.substr(i + 8, 2), 0, 16);
+	pos += messageCounterSize;
+	uint32_t peersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	for(uint32_t i = 0; i < peersSize; i++)
+	{
+		int32_t address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		int32_t peerSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_peers[address] = Peer(serializedObject.substr(pos, peerSize), this); pos += peerSize;
+	}
+	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	for(uint32_t i = 0; i < configSize; i++)
+	{
+		int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t j = 0; j < listSize; j++)
+		{
+			_config[listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
+		}
+	}
+}
+
 std::string HomeMaticDevice::serialize()
 {
 	std::ostringstream stringstream;
@@ -236,21 +231,20 @@ bool HomeMaticDevice::pairDevice(int32_t timeout)
     return true;
 }
 
-void HomeMaticDevice::packetReceived(BidCoSPacket* packet)
+void HomeMaticDevice::packetReceived(shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		BidCoSPacket receivedPacket = *packet; //Make a copy of packet
-		shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, &receivedPacket);
-		if(message != nullptr && message->checkAccess(&receivedPacket, _bidCoSQueueManager.get(receivedPacket.senderAddress())))
+		shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, packet);
+		if(message != nullptr && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
 		{
-			if(GD::debugLevel == 5) cout << "Device " << std::hex << _address << ": Access granted for packet " << receivedPacket.hexString() << std::dec << endl;
+			if(GD::debugLevel == 5) cout << "Device " << std::hex << _address << ": Access granted for packet " << packet->hexString() << std::dec << endl;
 			std::this_thread::sleep_for(std::chrono::milliseconds(90));  //Don't respond too fast
-			_messageCounter[receivedPacket.senderAddress()] = receivedPacket.messageCounter();
-			message->invokeMessageHandlerIncoming(&receivedPacket);
+			_messageCounter[packet->senderAddress()] = packet->messageCounter();
+			message->invokeMessageHandlerIncoming(packet);
 			_lastReceivedMessage = message;
 		}
-		if(message == nullptr && receivedPacket.destinationAddress() == _address) cout << "Could not process message. Unknown message type: " << receivedPacket.hexString() << endl;
+		if(message == nullptr && packet->destinationAddress() == _address) cout << "Could not process message. Unknown message type: " << packet->hexString() << endl;
 	}
 	catch(const std::exception& ex)
 	{
@@ -258,19 +252,13 @@ void HomeMaticDevice::packetReceived(BidCoSPacket* packet)
 	}
 }
 
-void HomeMaticDevice::sendPacket(BidCoSPacket& packet)
-{
-	_sentPacket = packet;
-	GD::cul.sendPacket(packet);
-}
-
-void HomeMaticDevice::sendPacket(BidCoSPacket* packet)
+void HomeMaticDevice::sendPacket(shared_ptr<BidCoSPacket> packet)
 {
 	_sentPacket = *packet;
 	GD::cul.sendPacket(packet);
 }
 
-void HomeMaticDevice::handleReset(int32_t messageCounter, BidCoSPacket* packet)
+void HomeMaticDevice::handleReset(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
     sendOK(messageCounter, packet->senderAddress());
     reset();
@@ -285,7 +273,7 @@ void HomeMaticDevice::reset()
     _peers.clear();
 }
 
-void HomeMaticDevice::handlePairingRequest(int32_t messageCounter, BidCoSPacket* packet)
+void HomeMaticDevice::handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -313,7 +301,7 @@ void HomeMaticDevice::handlePairingRequest(int32_t messageCounter, BidCoSPacket*
 	}
 }
 
-void HomeMaticDevice::handleWakeUp(int32_t messageCounter, BidCoSPacket * packet)
+void HomeMaticDevice::handleWakeUp(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	sendOK(messageCounter, packet->senderAddress());
 }
@@ -323,13 +311,13 @@ Peer HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, HMDev
     return Peer();
 }
 
-void HomeMaticDevice::handleConfigRequestPeers(int32_t messageCounter, BidCoSPacket* packet)
+void HomeMaticDevice::handleConfigRequestPeers(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
     if(_peers.find(packet->senderAddress()) == _peers.end() || packet->destinationAddress() != _address) return;
     sendPeerList(messageCounter, packet->senderAddress(), packet->payload()->at(0));
 }
 
-void HomeMaticDevice::handleConfigPeerDelete(int32_t messageCounter, BidCoSPacket* packet)
+void HomeMaticDevice::handleConfigPeerDelete(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -355,7 +343,7 @@ void HomeMaticDevice::handleConfigPeerDelete(int32_t messageCounter, BidCoSPacke
 	}
 }
 
-void HomeMaticDevice::handleConfigEnd(int32_t messageCounter, BidCoSPacket* packet)
+void HomeMaticDevice::handleConfigEnd(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -399,7 +387,7 @@ void HomeMaticDevice::handleConfigEnd(int32_t messageCounter, BidCoSPacket* pack
 	}
 }
 
-void HomeMaticDevice::handleConfigParamRequest(int32_t messageCounter, BidCoSPacket* packet)
+void HomeMaticDevice::handleConfigParamRequest(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -412,7 +400,7 @@ void HomeMaticDevice::handleConfigParamRequest(int32_t messageCounter, BidCoSPac
 	}
 }
 
-void HomeMaticDevice::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet)
+void HomeMaticDevice::handleConfigPeerAdd(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
     if(_peers.find(address) == _peers.end())
@@ -433,7 +421,7 @@ void HomeMaticDevice::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* 
     sendOK(messageCounter, packet->senderAddress());
 }
 
-void HomeMaticDevice::handleConfigStart(int32_t messageCounter, BidCoSPacket* packet)
+void HomeMaticDevice::handleConfigStart(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -445,10 +433,10 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, BidCoSPacket* pa
 			peer.deviceType = HMDeviceTypes::HMRCV50;
 			peer.messageCounter = 0x00; //Unknown at this point
 			queue->peer = peer;
-			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x05) }));
-			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x08), std::pair<int32_t, int32_t>(0x02, 0x02), std::pair<int32_t, int32_t>(0x03, 0x01) }));
-			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x06) }));
-			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x04) }));
+			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x05) }));
+			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x08), std::pair<int32_t, int32_t>(0x02, 0x02), std::pair<int32_t, int32_t>(0x03, 0x01) }));
+			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x06) }));
+			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x04) }));
 		}
 		_currentList = packet->payload()->at(6);
 		sendOK(messageCounter, packet->senderAddress());
@@ -459,14 +447,14 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, BidCoSPacket* pa
 	}
 }
 
-void HomeMaticDevice::handleConfigWriteIndex(int32_t messageCounter, BidCoSPacket* packet)
+void HomeMaticDevice::handleConfigWriteIndex(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	if(packet->payload()->at(2) == 0x02 && packet->payload()->at(3) == 0x00)
     {
         BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, packet->senderAddress());
         queue->peer = _peers[packet->senderAddress()];
-        queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x08), std::pair<int32_t, int32_t>(0x02, 0x02), std::pair<int32_t, int32_t>(0x03, 0x00) }));
-        queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x06) }));
+        queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x08), std::pair<uint32_t, int32_t>(0x02, 0x02), std::pair<uint32_t, int32_t>(0x03, 0x00) }));
+        queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x06) }));
     }
 	for(int i = 2; i < (signed)packet->payload()->size(); i+=2)
 	{
@@ -494,7 +482,7 @@ void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAd
     payload.push_back(0x00);
     payload.push_back(0x00);
     payload.push_back(0x00);
-    BidCoSPacket packet(messageCounter, 0x80, 0x10, _address, destinationAddress, payload);
+    shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
     sendPacket(packet);
 }
 
@@ -507,7 +495,7 @@ void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destination
 		if(queue != nullptr) queue->keepAlive();
 		std::vector<uint8_t> payload;
 		payload.push_back(0x00);
-		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
+		shared_ptr<BidCoSPacket> ok(new BidCoSPacket(messageCounter, 0x80, 0x02, _address, destinationAddress, payload));
 		GD::cul.sendPacket(ok);
 	}
 	catch(const std::exception& ex)
@@ -522,7 +510,7 @@ void HomeMaticDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
 	{
 		std::vector<uint8_t> payload;
 		payload.push_back(0x00);
-		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
+		shared_ptr<BidCoSPacket> ok(new BidCoSPacket(messageCounter, 0x80, 0x02, _address, destinationAddress, payload));
 		sendPacket(ok);
 	}
 	catch(const std::exception& ex)
@@ -537,7 +525,7 @@ void HomeMaticDevice::sendOKWithPayload(int32_t messageCounter, int32_t destinat
 	{
 		uint8_t controlByte = 0x80;
 		if(isWakeMeUpPacket) controlByte &= 0x02;
-		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
+		shared_ptr<BidCoSPacket> ok(new BidCoSPacket(messageCounter, 0x80, 0x02, _address, destinationAddress, payload));
 		sendPacket(ok);
 	}
 	catch(const std::exception& ex)
@@ -552,7 +540,7 @@ void HomeMaticDevice::sendNOK(int32_t messageCounter, int32_t destinationAddress
 	{
 		std::vector<uint8_t> payload;
 		payload.push_back(0x80);
-		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
+		shared_ptr<BidCoSPacket> ok(new BidCoSPacket(messageCounter, 0x80, 0x02, _address, destinationAddress, payload));
 		sendPacket(ok);
 	}
 	catch(const std::exception& ex)
@@ -567,7 +555,7 @@ void HomeMaticDevice::sendNOKTargetInvalid(int32_t messageCounter, int32_t desti
 	{
 		std::vector<uint8_t> payload;
 		payload.push_back(0x84);
-		BidCoSPacket ok(messageCounter, 0x80, 0x02, _address, destinationAddress, payload);
+		shared_ptr<BidCoSPacket> ok(new BidCoSPacket(messageCounter, 0x80, 0x02, _address, destinationAddress, payload));
 		sendPacket(ok);
 	}
 	catch(const std::exception& ex)
@@ -576,7 +564,7 @@ void HomeMaticDevice::sendNOKTargetInvalid(int32_t messageCounter, int32_t desti
 	}
 }
 
-void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinationAddress, BidCoSPacket* packet)
+void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinationAddress, shared_ptr<BidCoSPacket> packet)
 {
 	if(_config[_currentList].size() >= 8)
 	{
@@ -585,7 +573,7 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 		if(_peers.find(destinationAddress) != _peers.end()) queue->peer = _peers[destinationAddress];
 
 		//Add request config packet in case the request is being repeated
-		queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x04) }));
+		queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x04) }));
 
 		std::vector<uint8_t> payload;
 		std::map<int32_t, int32_t>::const_iterator i = _config[_currentList].begin();
@@ -595,9 +583,9 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 			{
 				if(!payload.empty())
 				{
-					BidCoSPacket packet(messageCounter, 0xA0, 0x10, _address, destinationAddress, payload);
+					shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA0, 0x10, _address, destinationAddress, payload));
 					queue->push(packet);
-					queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
+					queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 					payload.clear();
 				}
 				if(i == _config[_currentList].end()) break;
@@ -609,7 +597,7 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 		}
 		payload.push_back((packet->payload()->at(0) == 2) ? 3 : 2);
 		payload.push_back(0x00);
-		BidCoSPacket packet(messageCounter, 0x80, 0x10, _address, destinationAddress, payload);
+		shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
 		queue->push(packet);
 	}
 	else
@@ -623,7 +611,7 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 		}
 		payload.push_back(0); //I think the packet always ends with two zero bytes
 		payload.push_back(0);
-		BidCoSPacket config(messageCounter, 0x80, 0x10, _address, destinationAddress, payload);
+		shared_ptr<BidCoSPacket> config(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
 		sendPacket(config);
 	}
 }
@@ -644,7 +632,7 @@ void HomeMaticDevice::sendPairingRequest()
 		payload.push_back(_channelMin);
 		payload.push_back(_channelMax);
 		payload.push_back(_lastPairingByte);
-		BidCoSPacket pairingRequest(_messageCounter[0], 0x84, 0x00, _address, 0x00, payload);
+		shared_ptr<BidCoSPacket> pairingRequest(new BidCoSPacket(_messageCounter[0], 0x84, 0x00, _address, 0x00, payload));
 		_messageCounter[0]++;
 		sendPacket(pairingRequest);
 	}
@@ -654,7 +642,7 @@ void HomeMaticDevice::sendPairingRequest()
 	}
 }
 
-void HomeMaticDevice::sendDirectedPairingRequest(int32_t messageCounter, int32_t controlByte, BidCoSPacket* packet)
+void HomeMaticDevice::sendDirectedPairingRequest(int32_t messageCounter, int32_t controlByte, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -672,7 +660,7 @@ void HomeMaticDevice::sendDirectedPairingRequest(int32_t messageCounter, int32_t
 		payload.push_back(_channelMin);
 		payload.push_back(_deviceTypeChannels[deviceType]);
 		payload.push_back(0x00);
-		BidCoSPacket pairingRequest(messageCounter, 0xA0, 0x00, _address, packet->senderAddress(), payload);
+		shared_ptr<BidCoSPacket> pairingRequest(new BidCoSPacket(messageCounter, 0xA0, 0x00, _address, packet->senderAddress(), payload));
 		sendPacket(pairingRequest);
 	}
 	catch(const std::exception& ex)

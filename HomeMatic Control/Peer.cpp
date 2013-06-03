@@ -34,7 +34,7 @@ void Peer::initializeCentralConfig()
 	}
 }
 
-Peer::Peer(std::string serializedObject)
+Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 {
 	pendingBidCoSQueues = shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>(new std::queue<shared_ptr<BidCoSQueue>>());
 	if(GD::debugLevel == 5) cout << "Unserializing peer: " << serializedObject << endl;
@@ -88,14 +88,24 @@ Peer::Peer(std::string serializedObject)
 			}
 		}
 	}
-	uint32_t peersSize = (std::stoll(serializedObject.substr(pos, 8)) * 16); pos += 8;
+	uint32_t peersSize = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
 	for(uint32_t i = 0; i < peersSize; i++)
 	{
-		uint32_t channel = (std::stoll(serializedObject.substr(pos, 8)) * 16); pos += 8;
-		uint32_t peerCount = (std::stoll(serializedObject.substr(pos, 8)) * 16); pos += 8;
+		uint32_t channel = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
+		uint32_t peerCount = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
 		for(uint32_t j = 0; j < peerCount; j++)
 		{
 			peers[channel].push_back(std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
+		}
+	}
+	uint32_t pendingQueuesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	for(uint32_t i = 0; i < pendingQueuesSize; i++)
+	{
+		uint32_t queueLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		if(queueLength > 0)
+		{
+			pendingBidCoSQueues->push(shared_ptr<BidCoSQueue>(new BidCoSQueue(serializedObject.substr(pos, queueLength), device))); pos += queueLength;
+			pendingBidCoSQueues->back()->noSending = true;
 		}
 	}
 }
@@ -156,6 +166,14 @@ std::string Peer::serialize()
 		{
 			stringstream << std::setw(8) << j->address;
 		}
+	}
+	stringstream << std::setw(8) << pendingBidCoSQueues->size();
+	while(!pendingBidCoSQueues->empty())
+	{
+		std::string bidCoSQueue = pendingBidCoSQueues->front()->serialize();
+		stringstream << std::setw(8) << bidCoSQueue.size();
+		stringstream << bidCoSQueue;
+		pendingBidCoSQueues->pop();
 	}
 	stringstream << std::dec;
 	return stringstream.str();

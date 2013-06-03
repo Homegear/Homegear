@@ -48,23 +48,24 @@ void HomeMaticDevices::load()
 				switch(deviceType)
 				{
 				case HMDeviceTypes::HMCCTC:
-					device = shared_ptr<HomeMaticDevice>(new HM_CC_TC(serializedObject, dutyCycleMessageCounter, col->intValue));
+					device = shared_ptr<HomeMaticDevice>(new HM_CC_TC());
 					break;
 				case HMDeviceTypes::HMCCVD:
-					device = shared_ptr<HomeMaticDevice>(new HM_CC_VD(serializedObject, dutyCycleMessageCounter, col->intValue));
+					device = shared_ptr<HomeMaticDevice>(new HM_CC_VD());
 					break;
 				case HMDeviceTypes::HMCENTRAL:
-					device = shared_ptr<HomeMaticDevice>(new HomeMaticCentral(serializedObject));
+					device = shared_ptr<HomeMaticDevice>(new HomeMaticCentral());
 					_central = device;
 					break;
 				case HMDeviceTypes::HMSD:
-					device = shared_ptr<HomeMaticDevice>(new HM_SD(serializedObject, dutyCycleMessageCounter, col->intValue));
+					device = shared_ptr<HomeMaticDevice>(new HM_SD());
 					break;
 				default:
 					break;
 				}
 				if(device != nullptr)
 				{
+					device->unserialize(serializedObject, dutyCycleMessageCounter, col->intValue);
 					_devices.push_back(device);
 					device = nullptr;
 				}

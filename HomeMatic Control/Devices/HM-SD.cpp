@@ -2,11 +2,28 @@
 
 HM_SD::HM_SD() : HomeMaticDevice()
 {
+	init();
 }
 
-HM_SD::HM_SD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent) : HomeMaticDevice(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent)
+HM_SD::HM_SD(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
 {
 	init();
+}
+
+HM_SD::~HM_SD()
+{
+}
+
+void HM_SD::init()
+{
+	HomeMaticDevice::init();
+
+	_deviceType = HMDeviceTypes::HMSD;
+}
+
+void HM_SD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+{
+	HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
 
 	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
 	uint32_t filtersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -27,22 +44,6 @@ HM_SD::HM_SD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int6
 		responseToOverwrite.response = serializedObject.substr(pos, size); pos += size;
 		responseToOverwrite.sendAfter = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	}
-}
-
-HM_SD::HM_SD(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
-{
-	init();
-}
-
-HM_SD::~HM_SD()
-{
-}
-
-void HM_SD::init()
-{
-	HomeMaticDevice::init();
-
-	_deviceType = HMDeviceTypes::HMSD;
 }
 
 std::string HM_SD::serialize()
@@ -70,43 +71,42 @@ std::string HM_SD::serialize()
 	return stringstream.str();
 }
 
-void HM_SD::packetReceived(BidCoSPacket* packet)
+void HM_SD::packetReceived(shared_ptr<BidCoSPacket> packet)
 {
-	BidCoSPacket receivedPacket = *packet;
     bool printPacket = false;
     for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
     {
         switch(i->filterType)
         {
             case FilterType::SenderAddress:
-                if(receivedPacket.senderAddress() == i->filterValue) printPacket = true;
+                if(packet->senderAddress() == i->filterValue) printPacket = true;
                 break;
             case FilterType::DestinationAddress:
-                if(receivedPacket.destinationAddress() == i->filterValue) printPacket = true;
+                if(packet->destinationAddress() == i->filterValue) printPacket = true;
                 break;
             case FilterType::DeviceType:
                 //Only possible for paired devices
                 break;
             case FilterType::MessageType:
-                if(receivedPacket.messageType() == i->filterValue) printPacket = true;
+                if(packet->messageType() == i->filterValue) printPacket = true;
                 break;
         }
     }
     if(_filters.size() == 0) printPacket = true;
     std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
-    if(printPacket) cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Received: " << receivedPacket.hexString() << '\n';
+    if(printPacket) cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Received: " << packet->hexString() << '\n';
     for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
     {
-        std::string packetHex = receivedPacket.hexString();
+        std::string packetHex = packet->hexString();
         if(packetHex.find(i->packetPartToCapture) != std::string::npos)
         {
             std::chrono::milliseconds sleepingTime(i->sendAfter); //Don't respond too fast
             std::this_thread::sleep_for(sleepingTime);
-            BidCoSPacket packet;
+            shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
             std::stringstream stringstream;
             stringstream << std::hex << std::setw(2) << (i->response.size() / 2) + 1;
             std::string lengthHex = stringstream.str();
-            packet.import("A" + lengthHex + packetHex.substr(2, 2) + i->response + "\r\n");
+            packet->import(lengthHex + packetHex.substr(2, 2) + i->response, false);
             std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
             cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response: " << '\n';
             sendPacket(packet);

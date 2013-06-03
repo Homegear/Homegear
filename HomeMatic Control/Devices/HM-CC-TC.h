@@ -2,6 +2,7 @@
 #define HM_CC_TC_H
 
 #include <thread>
+#include <memory>
 
 #include "../HomeMaticDevice.h"
 #include "../Cul.h"
@@ -13,7 +14,6 @@ class HM_CC_TC : public HomeMaticDevice
 {
     public:
         HM_CC_TC();
-        HM_CC_TC(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         HM_CC_TC(std::string, int32_t);
         virtual ~HM_CC_TC();
 
@@ -24,13 +24,14 @@ class HM_CC_TC : public HomeMaticDevice
         virtual void setValue(const xmlrpc_c::paramList& paramList);
         virtual xmlrpc_c::value getValue(const xmlrpc_c::paramList& paramList);
 
-        void handlePairingRequest(int32_t messageCounter, BidCoSPacket* packet);
-        void handleConfigParamResponse(int32_t messageCounter, BidCoSPacket* packet);
-        void handleAck(int32_t messageCounter, BidCoSPacket* packet);
-        void handleSetPoint(int32_t messageCounter, BidCoSPacket* packet);
-        void handleSetValveState(int32_t messageCounter, BidCoSPacket* packet);
-        void handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet);
+        void handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPacket> packet);
+        void handleConfigParamResponse(int32_t messageCounter, shared_ptr<BidCoSPacket> packet);
+        void handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket> packet);
+        void handleSetPoint(int32_t messageCounter, shared_ptr<BidCoSPacket> packet);
+        void handleSetValveState(int32_t messageCounter, shared_ptr<BidCoSPacket> packet);
+        void handleConfigPeerAdd(int32_t messageCounter, shared_ptr<BidCoSPacket> packet);
         std::string serialize();
+        void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
     protected:
         virtual void setUpBidCoSMessages();
         virtual void init();
@@ -51,8 +52,8 @@ class HM_CC_TC : public HomeMaticDevice
         int64_t calculateLastDutyCycleEvent();
         int32_t getAdjustmentCommand();
 
-        void sendRequestConfig(int32_t messageCounter, int32_t controlByte, BidCoSPacket* packet);
-        void sendConfigParams(int32_t messageCounter, int32_t controlByte, BidCoSPacket* packet);
+        void sendRequestConfig(int32_t messageCounter, int32_t controlByte, shared_ptr<BidCoSPacket> packet);
+        void sendConfigParams(int32_t messageCounter, int32_t controlByte, shared_ptr<BidCoSPacket> packet);
         void sendDutyCycleBroadcast();
         void sendDutyCyclePacket(uint8_t messageCounter);
         void startDutyCycle(int64_t lastDutyCycleEvent);

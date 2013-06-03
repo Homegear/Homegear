@@ -225,7 +225,7 @@ bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
     return false;
 }
 
-bool DeviceType::matches(BidCoSPacket* packet)
+bool DeviceType::matches(shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{

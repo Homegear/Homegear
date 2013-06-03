@@ -4,17 +4,17 @@ BidCoSMessage::BidCoSMessage()
 {
 }
 
-BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, void (HomeMaticDevice::*messageHandler)(int32_t, BidCoSPacket*)) : _messageType(messageType), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
+BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, void (HomeMaticDevice::*messageHandler)(int32_t, shared_ptr<BidCoSPacket>)) : _messageType(messageType), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, int32_t accessPairing, void (HomeMaticDevice::*messageHandler)(int32_t, BidCoSPacket*)) : _messageType(messageType), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
+BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, int32_t accessPairing, void (HomeMaticDevice::*messageHandler)(int32_t, shared_ptr<BidCoSPacket>)) : _messageType(messageType), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-BidCoSMessage::BidCoSMessage(int32_t messageType, int32_t controlByte, HomeMaticDevice* device, void (HomeMaticDevice::*messageHandler)(int32_t, int32_t, BidCoSPacket*)) : _messageType(messageType), _controlByte(controlByte), _device(device), _messageHandlerOutgoing(messageHandler)
+BidCoSMessage::BidCoSMessage(int32_t messageType, int32_t controlByte, HomeMaticDevice* device, void (HomeMaticDevice::*messageHandler)(int32_t, int32_t, shared_ptr<BidCoSPacket>)) : _messageType(messageType), _controlByte(controlByte), _device(device), _messageHandlerOutgoing(messageHandler)
 {
     _direction = DIRECTIONOUT;
 }
@@ -23,7 +23,7 @@ BidCoSMessage::~BidCoSMessage()
 {
 }
 
-void BidCoSMessage::invokeMessageHandlerIncoming(BidCoSPacket* packet)
+void BidCoSMessage::invokeMessageHandlerIncoming(shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -36,7 +36,7 @@ void BidCoSMessage::invokeMessageHandlerIncoming(BidCoSPacket* packet)
 	}
 }
 
-void BidCoSMessage::invokeMessageHandlerOutgoing(BidCoSPacket* packet)
+void BidCoSMessage::invokeMessageHandlerOutgoing(shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -51,16 +51,15 @@ void BidCoSMessage::invokeMessageHandlerOutgoing(BidCoSPacket* packet)
 	}
 }
 
-bool BidCoSMessage::typeIsEqual(int32_t messageType, std::vector<std::pair<int32_t, int32_t> >* subtypes)
+bool BidCoSMessage::typeIsEqual(int32_t messageType, std::vector<std::pair<uint32_t, int32_t> >* subtypes)
 {
 	try
 	{
 		if(_messageType != messageType) return false;
-		if(_subtypes == nullptr) return true;
-		if(subtypes->size() != _subtypes->size()) return false;
-		for(int i = 0; i < (signed)subtypes->size(); i++)
+		if(subtypes->size() != _subtypes.size()) return false;
+		for(uint32_t i = 0; i < subtypes->size(); i++)
 		{
-			if(subtypes->at(i).first != _subtypes->at(i).first || subtypes->at(i).second != _subtypes->at(i).second) return false;
+			if(subtypes->at(i).first != _subtypes.at(i).first || subtypes->at(i).second != _subtypes.at(i).second) return false;
 		}
 		return true;
 	}
@@ -72,14 +71,14 @@ bool BidCoSMessage::typeIsEqual(int32_t messageType, std::vector<std::pair<int32
 }
 
 
-bool BidCoSMessage::typeIsEqual(BidCoSPacket* packet)
+bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
 		if(_messageType != packet->messageType()) return false;
 		std::vector<uint8_t>* payload = packet->payload();
-		if(_subtypes == nullptr || _subtypes->empty()) return true;
-		for(std::vector<std::pair<int32_t, int32_t> >::const_iterator i = _subtypes->begin(); i != _subtypes->end(); ++i)
+		if(_subtypes.empty()) return true;
+		for(std::vector<std::pair<uint32_t, int32_t>>::const_iterator i = _subtypes.begin(); i != _subtypes.end(); ++i)
 		{
 			if(i->first >= (signed)payload->size()) return false;
 			if(payload->at(i->first) != i->second) return false;
@@ -98,12 +97,12 @@ bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message)
 	try
 	{
 		if(_messageType != message->getMessageType()) return false;
-		if(_subtypes == nullptr || _subtypes->empty()) return true;
-		if(message->subtypeCount() != (signed)_subtypes->size()) return false;
-		std::vector<std::pair<int32_t, int32_t> >* subtypes = message->getSubtypes();
-		for(int i = 0; i < (signed)_subtypes->size(); i++)
+		if(_subtypes.empty()) return true;
+		if(message->subtypeCount() != _subtypes.size()) return false;
+		std::vector<std::pair<uint32_t, int32_t> >* subtypes = message->getSubtypes();
+		for(uint32_t i = 0; i < _subtypes.size(); i++)
 		{
-			if(subtypes->at(i).first != _subtypes->at(i).first || subtypes->at(i).second != _subtypes->at(i).second) return false;
+			if(subtypes->at(i).first != _subtypes.at(i).first || subtypes->at(i).second != _subtypes.at(i).second) return false;
 		}
 		return true;
 	}
@@ -114,17 +113,17 @@ bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message)
 	return false;
 }
 
-bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message, BidCoSPacket* packet)
+bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
 		if(message->getMessageType() != packet->messageType()) return false;
-		std::vector<std::pair<int32_t, int32_t> >* subtypes = message->getSubtypes();
+		std::vector<std::pair<uint32_t, int32_t>>* subtypes = message->getSubtypes();
 		std::vector<uint8_t>* payload = packet->payload();
 		if(subtypes == nullptr || subtypes->size() == 0) return true;
-		for(std::vector<std::pair<int32_t, int32_t> >::const_iterator i = subtypes->begin(); i != subtypes->end(); ++i)
+		for(std::vector<std::pair<uint32_t, int32_t> >::const_iterator i = subtypes->begin(); i != subtypes->end(); ++i)
 		{
-			if(i->first >= (signed)payload->size()) return false;
+			if(i->first >= payload->size()) return false;
 			if(payload->at(i->first) != i->second) return false;
 		}
 		return true;
@@ -136,7 +135,7 @@ bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message, BidCoSPacket*
 	return false;
 }
 
-bool BidCoSMessage::checkAccess(BidCoSPacket* packet, BidCoSQueue* queue)
+bool BidCoSMessage::checkAccess(shared_ptr<BidCoSPacket> packet, BidCoSQueue* queue)
 {
 	try
 	{
@@ -145,7 +144,6 @@ bool BidCoSMessage::checkAccess(BidCoSPacket* packet, BidCoSQueue* queue)
 		int32_t access = _device->isInPairingMode() ? _accessPairing : _access;
 		Peer* currentPeer = _device->isInPairingMode() ? ((queue != nullptr && queue->peer.address == packet->senderAddress()) ? &(queue->peer) : nullptr) : nullptr;
 		if(currentPeer == nullptr) currentPeer = ((_device->getPeers()->find(packet->senderAddress()) == _device->getPeers()->end()) ? nullptr : &_device->getPeers()->at(packet->senderAddress()));
-
 		if(access == NOACCESS) return false;
 		if(queue != nullptr && !queue->isEmpty())
 		{

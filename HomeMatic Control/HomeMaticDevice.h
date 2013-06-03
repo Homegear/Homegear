@@ -38,10 +38,9 @@ class HomeMaticDevice
         virtual int64_t lastDutyCycleEvent() { return _lastDutyCycleEvent; }
 
         HomeMaticDevice();
-        HomeMaticDevice(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         HomeMaticDevice(std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
-        virtual void packetReceived(BidCoSPacket*);
+        virtual void packetReceived(shared_ptr<BidCoSPacket> packet);
 
         virtual void setLowBattery(bool);
         virtual bool pairDevice(int32_t timeout);
@@ -53,43 +52,43 @@ class HomeMaticDevice
         virtual int32_t calculateCycleLength(uint8_t messageCounter);
         virtual void stopDutyCycle() {};
         virtual std::string serialize();
+        virtual void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         virtual int32_t getHexInput();
         virtual shared_ptr<BidCoSMessages> getMessages() { return _messages; }
         virtual void handleCLICommand(std::string command);
-        virtual void sendPacket(BidCoSPacket& packet);
-        virtual void sendPacket(BidCoSPacket* packet);
+        virtual void sendPacket(shared_ptr<BidCoSPacket> packet);
 
         virtual void setValue(const xmlrpc_c::paramList& paramList) {}
         virtual xmlrpc_c::value getValue(const xmlrpc_c::paramList& paramList);
 
-        virtual void handleAck(int32_t messageCounter, BidCoSPacket* packet) {}
-        virtual void handlePairingRequest(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleDutyCyclePacket(int32_t messageCounter, BidCoSPacket*) {}
-        virtual void handleConfigStart(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleConfigWriteIndex(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleConfigParamRequest(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleConfigParamResponse(int32_t messageCounter, BidCoSPacket*) {};
-        virtual void handleConfigRequestPeers(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleReset(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleConfigEnd(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleConfigPeerDelete(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleWakeUp(int32_t messageCounter, BidCoSPacket*);
-        virtual void handleSetPoint(int32_t messageCounter, BidCoSPacket*) {}
-        virtual void handleSetValveState(int32_t messageCounter, BidCoSPacket*) {}
+        virtual void handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket> packet) {}
+        virtual void handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleDutyCyclePacket(int32_t messageCounter, shared_ptr<BidCoSPacket>) {}
+        virtual void handleConfigStart(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleConfigWriteIndex(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleConfigPeerAdd(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleConfigParamRequest(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleConfigParamResponse(int32_t messageCounter, shared_ptr<BidCoSPacket>) {};
+        virtual void handleConfigRequestPeers(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleReset(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleConfigEnd(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleConfigPeerDelete(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleWakeUp(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+        virtual void handleSetPoint(int32_t messageCounter, shared_ptr<BidCoSPacket>) {}
+        virtual void handleSetValveState(int32_t messageCounter, shared_ptr<BidCoSPacket>) {}
 
         virtual void sendPairingRequest();
-        virtual void sendDirectedPairingRequest(int32_t messageCounter, int32_t controlByte, BidCoSPacket * packet);
+        virtual void sendDirectedPairingRequest(int32_t messageCounter, int32_t controlByte, shared_ptr<BidCoSPacket> packet);
         virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
         virtual void sendStealthyOK(int32_t messageCounter, int32_t destinationAddress);
         virtual void sendOKWithPayload(int32_t messageCounter, int32_t destinationAddress, std::vector<uint8_t> payload, bool isWakeMeUpPacket);
         virtual void sendNOK(int32_t messageCounter, int32_t destinationAddress);
         virtual void sendNOKTargetInvalid(int32_t messageCounter, int32_t destinationAddress);
-        virtual void sendConfigParams(int32_t messageCounter, int32_t destinationAddress, BidCoSPacket* packet);
+        virtual void sendConfigParams(int32_t messageCounter, int32_t destinationAddress, shared_ptr<BidCoSPacket> packet);
         virtual void sendConfigParamsType2(int32_t messageCounter, int32_t destinationAddress) {}
         virtual void sendPeerList(int32_t messageCounter, int32_t destinationAddress, int32_t channel);
         virtual void sendDutyCycleResponse(int32_t destinationAddress);
-        virtual void sendRequestConfig(int32_t messageCounter, int32_t controlByte, BidCoSPacket* packet) {}
+        virtual void sendRequestConfig(int32_t messageCounter, int32_t controlByte, shared_ptr<BidCoSPacket> packet) {}
     protected:
         int32_t _address;
         std::string _serialNumber;

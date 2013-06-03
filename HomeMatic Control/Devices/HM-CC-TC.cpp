@@ -1,26 +1,14 @@
 #include "HM-CC-TC.h"
 
+HM_CC_TC::HM_CC_TC() : HomeMaticDevice()
+{
+	init();
+}
+
 HM_CC_TC::HM_CC_TC(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
 {
 	init();
 	startDutyCycle(-1);
-}
-
-HM_CC_TC::HM_CC_TC(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent) : HomeMaticDevice(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent)
-{
-	init();
-
-	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
-	_currentDutyCycleDeviceAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	_temperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-	_setPointTemperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-	_humidity = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	_newValveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-
-	_messageCounter[1] = dutyCycleMessageCounter;
-	_lastDutyCycleEvent = lastDutyCycleEvent;
-	startDutyCycle(calculateLastDutyCycleEvent());
 }
 
 void HM_CC_TC::init()
@@ -168,6 +156,23 @@ std::string HM_CC_TC::serialize()
 	return  stringstream.str();
 }
 
+void HM_CC_TC::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+{
+	HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
+
+	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
+	_currentDutyCycleDeviceAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	_temperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+	_setPointTemperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+	_humidity = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+	_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+	_newValveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+
+	_messageCounter[1] = dutyCycleMessageCounter;
+	_lastDutyCycleEvent = lastDutyCycleEvent;
+	startDutyCycle(calculateLastDutyCycleEvent());
+}
+
 void HM_CC_TC::handleCLICommand(std::string command)
 {
 	if(command == "get duty cycle counter")
@@ -266,7 +271,7 @@ void HM_CC_TC::sendDutyCycleBroadcast()
 	payload.push_back((_temperature & 0xFF00) >> 8);
 	payload.push_back(_temperature & 0xFF);
 	payload.push_back(_humidity);
-	BidCoSPacket packet(_messageCounter[1], 0x86, 0x70, _address, 0, payload);
+	shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter[1], 0x86, 0x70, _address, 0, payload));
 	sendPacket(packet);
 }
 
@@ -285,7 +290,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter)
 		std::vector<uint8_t> payload;
 		payload.push_back(getAdjustmentCommand());
 		payload.push_back(_newValveState);
-		BidCoSPacket packet(messageCounter, 0xA2, 0x58, _address, address, payload);
+		shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA2, 0x58, _address, address, payload));
 		sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - timePoint;
@@ -370,7 +375,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 	return -1;
 }
 
-void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddress, BidCoSPacket* packet)
+void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddress, shared_ptr<BidCoSPacket> packet)
 {
     HomeMaticDevice::sendConfigParams(messageCounter, destinationAddress, packet);
 }
@@ -393,7 +398,7 @@ void HM_CC_TC::reset()
     HomeMaticDevice::reset();
 }
 
-void HM_CC_TC::handleSetValveState(int32_t messageCounter, BidCoSPacket* packet)
+void HM_CC_TC::handleSetValveState(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -407,7 +412,7 @@ void HM_CC_TC::handleSetValveState(int32_t messageCounter, BidCoSPacket* packet)
 	}
 }
 
-void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet)
+void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
     HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
 
@@ -420,7 +425,7 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, BidCoSPacket* packet)
     }
 }
 
-void HM_CC_TC::handleSetPoint(int32_t messageCounter, BidCoSPacket* packet)
+void HM_CC_TC::handleSetPoint(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -440,7 +445,7 @@ void HM_CC_TC::handleSetPoint(int32_t messageCounter, BidCoSPacket* packet)
 	}
 }
 
-void HM_CC_TC::handlePairingRequest(int32_t messageCounter, BidCoSPacket* packet)
+void HM_CC_TC::handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -453,9 +458,9 @@ void HM_CC_TC::handlePairingRequest(int32_t messageCounter, BidCoSPacket* packet
 		Peer peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), "", packet->payload()->at(15), 0);
 		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
 		queue->peer = peer;
-		queue->push(_messages->find(DIRECTIONOUT, 0x00, std::vector<std::pair<int32_t, int32_t>>()), packet);
-		queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<int32_t, int32_t>>()));
-		queue->push(_messages->find(DIRECTIONOUT, 0x01, std::vector<std::pair<int32_t, int32_t>> { std::pair<int32_t, int32_t>(0x01, 0x04) }), packet);
+		queue->push(_messages->find(DIRECTIONOUT, 0x00, std::vector<std::pair<uint32_t, int32_t>>()), packet);
+		queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		queue->push(_messages->find(DIRECTIONOUT, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x04) }), packet);
 		//The 0x10 response with the config does not have to be part of the queue.
 	}
 	catch(const std::exception& ex)
@@ -464,7 +469,7 @@ void HM_CC_TC::handlePairingRequest(int32_t messageCounter, BidCoSPacket* packet
 	}
 }
 
-void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, BidCoSPacket* packet)
+void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -485,7 +490,7 @@ void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, BidCoSPacket* p
 	}
 }
 
-void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, BidCoSPacket* packet)
+void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -498,7 +503,7 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, Bi
 		payload.push_back(0);
 		payload.push_back(0);
 		payload.push_back(0x05);
-		BidCoSPacket requestConfig(messageCounter, 0xA0, 0x01, _address, packet->senderAddress(), payload);
+		shared_ptr<BidCoSPacket> requestConfig(new BidCoSPacket(messageCounter, 0xA0, 0x01, _address, packet->senderAddress(), payload));
 		sendPacket(requestConfig);
 	}
 	catch(const std::exception& ex)
@@ -507,7 +512,7 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, Bi
 	}
 }
 
-void HM_CC_TC::handleAck(int32_t messageCounter, BidCoSPacket* packet)
+void HM_CC_TC::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{

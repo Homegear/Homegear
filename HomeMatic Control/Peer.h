@@ -12,6 +12,7 @@
 #include "XMLRPC/Device.h"
 #include "HMDeviceTypes.h"
 
+class HomeMaticDevice;
 class BidCoSQueue;
 
 class PairedPeer
@@ -39,7 +40,7 @@ class Peer
 {
     public:
 		Peer() { pendingBidCoSQueues = shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>(new std::queue<shared_ptr<BidCoSQueue>>()); }
-		Peer(std::string serializedObject);
+		Peer(std::string serializedObject, HomeMaticDevice* device);
 		virtual ~Peer() {}
 
         int32_t address = 0;

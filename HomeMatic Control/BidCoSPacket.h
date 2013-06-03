@@ -38,12 +38,12 @@ class BidCoSPacket
         int64_t getPosition(double index, double size, bool isSigned);
     protected:
     private:
-        uint8_t _length;
-        uint8_t _messageCounter;
-        uint8_t _controlByte;
-        uint8_t _messageType;
-        uint32_t _senderAddress;
-        uint32_t _destinationAddress;
+        uint8_t _length = 0;
+        uint8_t _messageCounter = 0;
+        uint8_t _controlByte = 0;
+        uint8_t _messageType = 0;
+        uint32_t _senderAddress = 0;
+        uint32_t _destinationAddress = 0;
         std::vector<uint8_t> _payload;
         uint32_t _bitmask[8] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
 

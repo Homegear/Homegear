@@ -22,17 +22,18 @@ void BidCoSMessages::add(shared_ptr<BidCoSMessage> message)
 	}
 }
 
-shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, BidCoSPacket* packet)
+shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
+		if(packet == nullptr) return shared_ptr<BidCoSMessage>();
 		int32_t subtypeMax = -1;
 		shared_ptr<BidCoSMessage>* elementToReturn = nullptr;
 		for(uint32_t i = 0; i < _messages.size(); i++)
 		{
 			if(_messages[i]->getDirection() == direction && _messages[i]->typeIsEqual(packet))
 			{
-				if(_messages[i]->subtypeCount() > subtypeMax)
+				if((signed)_messages[i]->subtypeCount() > subtypeMax)
 				{
 					elementToReturn = &_messages[i];
 					subtypeMax = _messages[i]->subtypeCount();
@@ -48,7 +49,7 @@ shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, BidCoSPacket* 
 	return nullptr;
 }
 
-shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, int32_t messageType, std::vector<std::pair<int32_t, int32_t>> subtypes)
+shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, int32_t messageType, std::vector<std::pair<uint32_t, int32_t>> subtypes)
 {
 	try
 	{

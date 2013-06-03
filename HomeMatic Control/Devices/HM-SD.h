@@ -27,16 +27,16 @@ class HM_SD : public HomeMaticDevice
 {
     public:
         HM_SD();
-        HM_SD(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         HM_SD(std::string serialNumber, int32_t address);
         virtual ~HM_SD();
-        void packetReceived(BidCoSPacket*);
+        void packetReceived(shared_ptr<BidCoSPacket> packet);
         void addFilter(FilterType, int32_t);
         void removeFilter(FilterType, int32_t);
         void addOverwriteResponse(std::string packetPartToCapture, std::string response, int32_t sendAfter);
         void removeOverwriteResponse(std::string packetPartToCapture);
         void handleCLICommand(std::string command);
         std::string serialize();
+        void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
     protected:
     private:
         std::list<HM_SD_Filter> _filters;

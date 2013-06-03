@@ -35,8 +35,7 @@ class Cul
         void stopListening();
         void addHomeMaticDevice(HomeMaticDevice*);
         void removeHomeMaticDevice(HomeMaticDevice*);
-        void sendPacket(BidCoSPacket& packet);
-        void sendPacket(BidCoSPacket* packet);
+        void sendPacket(shared_ptr<BidCoSPacket> packet);
     protected:
     private:
         std::list<HomeMaticDevice*> _homeMaticDevices;
@@ -53,7 +52,7 @@ class Cul
         void setupDevice();
         void writeToDevice(std::string, bool);
         std::string readFromDevice();
-        void callCallback(std::string);
+        void callCallback(shared_ptr<BidCoSPacket> packet);
         void listen();
 };
 

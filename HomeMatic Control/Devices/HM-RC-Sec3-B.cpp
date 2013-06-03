@@ -18,7 +18,7 @@ void HM_RC_Sec3_B::pressButtonInt()
     std::vector<uint8_t> payload;
     payload.push_back(1);
     payload.push_back(_buttonIntCounter);
-    BidCoSPacket packet(_messageCounter[0], 0b10000100, 0x40, _address, 0, payload);
+    shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter[0], 0b10000100, 0x40, _address, 0, payload));
     sendPacket(packet);
     _buttonIntCounter++;
 }
@@ -28,7 +28,7 @@ void HM_RC_Sec3_B::pressButtonUnscharf()
     std::vector<uint8_t> payload;
     payload.push_back(3);
     payload.push_back(_buttonUnscharfCounter);
-    BidCoSPacket packet(_messageCounter[0], controlByteCounter, 0x40, _address, 0x1C6943, payload);
+    shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter[0], controlByteCounter, 0x40, _address, 0x1C6943, payload));
     sendPacket(packet);
     _buttonUnscharfCounter++;
     _messageCounter[0]++;

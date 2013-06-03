@@ -122,8 +122,10 @@ void BidCoSPacket::import(std::string packet, bool removeFirstCharacter)
 		_senderAddress = getInt(packet.substr(startIndex + 8, 6));
 		_destinationAddress = getInt(packet.substr(startIndex + 14, 6));
 
-		//_payload.clear();
-		for(int32_t i = startIndex + 20; i < (signed)packet.length() - 2; i+=2)
+		uint32_t tailLength = 0;
+		if(packet.back() == '\n') tailLength = 2;
+		_payload.clear();
+		for(int32_t i = startIndex + 20; i < (signed)packet.length() - tailLength; i+=2)
 		{
 			_payload.push_back(getByte(packet.substr(i, 2)));
 		}

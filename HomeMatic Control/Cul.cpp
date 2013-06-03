@@ -31,7 +31,7 @@ void Cul::removeHomeMaticDevice(HomeMaticDevice* device)
     _homeMaticDevices.remove(device);
 }
 
-void Cul::sendPacket(BidCoSPacket* packet)
+void Cul::sendPacket(shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -51,18 +51,6 @@ void Cul::sendPacket(BidCoSPacket* packet)
 		writeToDevice("As" + packet->hexString() + "\r\n", true);
 
 		if(deviceWasClosed) closeDevice();
-	}
-	catch(const std::exception& ex)
-	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
-	}
-}
-
-void Cul::sendPacket(BidCoSPacket& packet)
-{
-	try
-	{
-		sendPacket(&packet);
 	}
 	catch(const std::exception& ex)
 	{
@@ -308,10 +296,8 @@ void Cul::stopListening()
 	}
 }
 
-void Cul::callCallback(std::string packetHex)
+void Cul::callCallback(shared_ptr<BidCoSPacket> packet)
 {
-	if(packetHex.length() < 21) return; //21 is minimal packet length (=10 Byte + CUL "A")
-	BidCoSPacket* packet = new BidCoSPacket(packetHex); //To avoid copying the packet two times, we pass a pointer to the packet.
 	try
 	{
 		for(std::list<HomeMaticDevice*>::const_iterator i = _homeMaticDevices.begin(); i != _homeMaticDevices.end(); ++i)
@@ -325,8 +311,6 @@ void Cul::callCallback(std::string packetHex)
     {
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000)); //Give some time to copy the packet
-    delete(packet);
 }
 
 void Cul::listen()
@@ -335,9 +319,14 @@ void Cul::listen()
     {
         while(!_stopCallbackThread)
         {
-            std::string packetHex(readFromDevice());
-            std::thread t(&Cul::callCallback, this, packetHex);
-            t.detach();
+        	std::string packetHex = readFromDevice();
+        	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + CUL "A")
+        	{
+				shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
+				packet->import(packetHex);
+				std::thread t(&Cul::callCallback, this, packet);
+				t.detach();
+        	}
         }
     }
     catch(const std::exception& ex)

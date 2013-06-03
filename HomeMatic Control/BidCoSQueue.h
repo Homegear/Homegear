@@ -20,15 +20,16 @@ class BidCoSQueueEntry {
 protected:
 	QueueEntryType _type = QueueEntryType::UNDEFINED;
 	shared_ptr<BidCoSMessage> _message;
-	BidCoSPacket _packet;
+	shared_ptr<BidCoSPacket> _packet;
 public:
 	BidCoSQueueEntry() {}
 	virtual ~BidCoSQueueEntry() {}
 	QueueEntryType getType() { return _type; }
-	BidCoSPacket* getPacket() { return &_packet; }
-	void setPacket(const BidCoSPacket& packet, bool setQueueEntryType) { _packet = packet; if(setQueueEntryType) _type = QueueEntryType::PACKET; }
+	void setType(QueueEntryType type) { _type = type; }
+	shared_ptr<BidCoSPacket> getPacket() { return _packet; }
+	void setPacket(shared_ptr<BidCoSPacket> packet, bool setQueueEntryType) { _packet = packet; if(setQueueEntryType) _type = QueueEntryType::PACKET; }
 	shared_ptr<BidCoSMessage> getMessage() { return _message; }
-	void setMessage(shared_ptr<BidCoSMessage> message) { _message = message; _type = QueueEntryType::MESSAGE; }
+	void setMessage(shared_ptr<BidCoSMessage> message, bool setQueueEntryType) { _message = message; if(setQueueEntryType) _type = QueueEntryType::MESSAGE; }
 };
 
 enum class BidCoSQueueType { EMPTY, DEFAULT, PAIRING, PAIRINGCENTRAL, UNPAIRING };
@@ -58,8 +59,8 @@ class BidCoSQueue
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
 
         void push(shared_ptr<BidCoSMessage> message);
-        void push(shared_ptr<BidCoSMessage> message, BidCoSPacket* packet);
-        void push(const BidCoSPacket& packet);
+        void push(shared_ptr<BidCoSMessage> message, shared_ptr<BidCoSPacket> packet);
+        void push(shared_ptr<BidCoSPacket> packet);
         void push(shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>& pendingBidCoSQueue);
         BidCoSQueueEntry* front() { return &_queue.front(); }
         void pop();
@@ -67,7 +68,7 @@ class BidCoSQueue
         void clear();
         void resend();
         void startResendThread();
-        void send(BidCoSPacket packet);
+        void send(shared_ptr<BidCoSPacket> packet);
         void keepAlive();
         std::string serialize();
 
