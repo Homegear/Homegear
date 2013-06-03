@@ -48,67 +48,67 @@ void HM_CC_TC::setUpConfig()
 {
 	HomeMaticDevice::setUpConfig();
 
-	_config[0][1] = 0x00;
-	_config[0][5] = 0x00;
-	_config[0][15] = 0x00;
+	_config[0][0][1] = 0x00;
+	_config[0][0][5] = 0x00;
+	_config[0][0][15] = 0x00;
 
 	//Possible temperature values are: 12 - 60 [= 6.0°C - 30.0°C]
 	//Possible timeout values are: 1 - 144 (10 - 1440 minutes)
-	_config[5][1] = 0x09; //Bit 0: DISPLAY_TEMPERATUR_HUMIDITY_CHANGE (0: TEMPERATUR_ONLY, 1: TEMPERATUR_AND_HUMIDITY), bit 1: DISPLAY_TEMPERATUR_INFORMATION (0: ACTUAL_VALVE, 1: SET_POINT), Bit 2: DISPLAY_TEMPERATUR_UNIT (0: CELSIUS, 1: FAHRENHEIT), Bit 3 - 4: MODE_TEMPERATUR_REGULATOR (0: MANUAL, 1: AUTO, 2: CENTRAL, 3: PARTY), bit 5 - 7: DECALCIFICATION_DAY (0: SAT, 1: SUN, 2: MON, 3: TUE, ...)
-	_config[5][2] = 0x2A; //Bit 6 - 7: MODE_TEMPERATUR_VALVE (0: AUTO, 1: CLOSE_VALVE, 2: OPEN_VALVE)
-	_config[5][3] = 0x2A; //Bit 0 - 5: TEMPERATUR_COMFORT_VALUE
-	_config[5][4] = 0x22; //Bit 0 - 5: TEMPERATUR_LOWERING_VALUE
-	_config[5][5] = 0x18;
-	_config[5][6] = 0x28; //Bit 0 - 5: TEMPERATUR_PARTY_VALUE
-	_config[5][7] = 0x00;
-	_config[5][8] = 0x58; //Bit 0 - 2: DECALCIFICATION_MINUTE (0 - 5 [= 0 - 50 minutes]), bit 3 - 7: DECALCIFICATION_HOUR (0 - 23)
-	_config[5][9] = 0x00;
-	_config[5][10] = 0x00;
-	_config[5][11] = 0x24; //TIMEOUT_SATURDAY_1
-	_config[5][12] = 0x22; //TEMPERATUR_SATURDAY_1
-	_config[5][13] = 0x48; //TIMEOUT_SATURDAY_2
-	_config[5][14] = 0x2A; //TEMPERATUR_SATURDAY_2
-	_config[5][15] = 0x8A; //TIMEOUT_SATURDAY_3
-	_config[5][16] = 0x2A; //TEMPERATUR_SATURDAY_3
-	_config[5][17] = 0x90; //TIMEOUT_SATURDAY_3
-	_config[5][18] = 0x22; //TEMPERATUR_SATURDAY_3
+	_config[2][5][1] = 0x09; //Bit 0: DISPLAY_TEMPERATUR_HUMIDITY_CHANGE (0: TEMPERATUR_ONLY, 1: TEMPERATUR_AND_HUMIDITY), bit 1: DISPLAY_TEMPERATUR_INFORMATION (0: ACTUAL_VALVE, 1: SET_POINT), Bit 2: DISPLAY_TEMPERATUR_UNIT (0: CELSIUS, 1: FAHRENHEIT), Bit 3 - 4: MODE_TEMPERATUR_REGULATOR (0: MANUAL, 1: AUTO, 2: CENTRAL, 3: PARTY), bit 5 - 7: DECALCIFICATION_DAY (0: SAT, 1: SUN, 2: MON, 3: TUE, ...)
+	_config[2][5][2] = 0x2A; //Bit 6 - 7: MODE_TEMPERATUR_VALVE (0: AUTO, 1: CLOSE_VALVE, 2: OPEN_VALVE)
+	_config[2][5][3] = 0x2A; //Bit 0 - 5: TEMPERATUR_COMFORT_VALUE
+	_config[2][5][4] = 0x22; //Bit 0 - 5: TEMPERATUR_LOWERING_VALUE
+	_config[2][5][5] = 0x18;
+	_config[2][5][6] = 0x28; //Bit 0 - 5: TEMPERATUR_PARTY_VALUE
+	_config[2][5][7] = 0x00;
+	_config[2][5][8] = 0x58; //Bit 0 - 2: DECALCIFICATION_MINUTE (0 - 5 [= 0 - 50 minutes]), bit 3 - 7: DECALCIFICATION_HOUR (0 - 23)
+	_config[2][5][9] = 0x00;
+	_config[2][5][10] = 0x00;
+	_config[2][5][11] = 0x24; //TIMEOUT_SATURDAY_1
+	_config[2][5][12] = 0x22; //TEMPERATUR_SATURDAY_1
+	_config[2][5][13] = 0x48; //TIMEOUT_SATURDAY_2
+	_config[2][5][14] = 0x2A; //TEMPERATUR_SATURDAY_2
+	_config[2][5][15] = 0x8A; //TIMEOUT_SATURDAY_3
+	_config[2][5][16] = 0x2A; //TEMPERATUR_SATURDAY_3
+	_config[2][5][17] = 0x90; //TIMEOUT_SATURDAY_3
+	_config[2][5][18] = 0x22; //TEMPERATUR_SATURDAY_3
 	for(int i = 19; i <= 58; i+=2) //TIMEOUT AND TEMPERATURE 4 to 24
 	{
-		_config[5][i] = 0x90;
-		_config[5][i+1] = 0x28;
+		_config[2][5][i] = 0x90;
+		_config[2][5][i+1] = 0x28;
 	}
 	for(int i = 59; i <= 106; i+=2) //TIMEOUT_SUNDAY AND TEMPERATURE_SUNDAY
 	{
-		_config[5][i] = _config[5][i - 48];
-		_config[5][i+1] = _config[5][i - 47];
+		_config[2][5][i] = _config[2][5][i - 48];
+		_config[2][5][i+1] = _config[2][5][i - 47];
 	}
 	for(int i = 107; i <= 154; i+=2) //TIMEOUT_SUNDAY AND TEMPERATURE_MONDAY
 	{
-		_config[5][i] = _config[5][i - 48];
-		_config[5][i+1] = _config[5][i - 47];
+		_config[2][5][i] = _config[2][5][i - 48];
+		_config[2][5][i+1] = _config[2][5][i - 47];
 	}
 	for(int i = 155; i <= 202; i+=2) //TIMEOUT_SUNDAY AND TEMPERATURE_TUESDAY
 	{
-		_config[5][i] = _config[5][i - 48];
-		_config[5][i+1] = _config[5][i - 47];
+		_config[2][5][i] = _config[2][5][i - 48];
+		_config[2][5][i+1] = _config[2][5][i - 47];
 	}
 	for(int i = 203; i <= 250; i+=2) //TIMEOUT_SUNDAY AND TEMPERATURE_WEDNESDAY
 	{
-		_config[5][i] = _config[5][i - 48];
-		_config[5][i+1] = _config[5][i - 47];
+		_config[2][5][i] = _config[2][5][i - 48];
+		_config[2][5][i+1] = _config[2][5][i - 47];
 	}
 	for(int i = 1; i <= 48; i+=2) //TIMEOUT_SUNDAY AND TEMPERATURE_THURSDAY
 	{
-		_config[6][i] = _config[5][i + 10];
-		_config[6][i+1] = _config[5][i + 11];
+		_config[2][6][i] = _config[2][5][i + 10];
+		_config[2][6][i+1] = _config[2][5][i + 11];
 	}
 	for(int i = 49; i <= 96; i+=2) //TIMEOUT_SUNDAY AND TEMPERATURE_FRIDAY
 	{
-		_config[6][i] = _config[6][i - 48];
-		_config[6][i+1] = _config[6][i - 47];
+		_config[2][6][i] = _config[2][6][i - 48];
+		_config[2][6][i+1] = _config[2][6][i - 47];
 	}
-	//_config[6][97] = NOT DEFINED //Bit 0 - 5: PARTY_END_HOUR, Bit 7: PARTY_END_MINUTE (0: 0 minutes, 1: 30 minutes)
-	//_config[6][98] = NOT DEFINED //PARTY_END_DAY (0 - 200 days)
+	//_config[2][6][97] = NOT DEFINED //Bit 0 - 5: PARTY_END_HOUR, Bit 7: PARTY_END_MINUTE (0: 0 minutes, 1: 30 minutes)
+	//_config[2][6][98] = NOT DEFINED //PARTY_END_DAY (0 - 200 days)
 }
 
 void HM_CC_TC::setUpBidCoSMessages()

@@ -32,10 +32,10 @@ void HomeMaticDevice::init()
 
 void HomeMaticDevice::setUpConfig()
 {
-	_config[0x00][0x02] = 0; //Paired to central (Possible values: 0 - false, 1 - true);
-	_config[0x00][0x0A] = 0; //First byte of central address
-	_config[0x00][0x0B] = 0; //Second byte of central address
-	_config[0x00][0x0C] = 0; //Third byte of central address
+	_config[0x00][0x00][0x02] = 0; //Paired to central (Possible values: 0 - false, 1 - true);
+	_config[0x00][0x00][0x0A] = 0; //First byte of central address
+	_config[0x00][0x00][0x0B] = 0; //Second byte of central address
+	_config[0x00][0x00][0x0C] = 0; //Third byte of central address
 }
 
 void HomeMaticDevice::setUpBidCoSMessages()
@@ -140,11 +140,16 @@ void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycl
 	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	for(uint32_t i = 0; i < configSize; i++)
 	{
-		int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t j = 0; j < listSize; j++)
+		int32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		uint32_t listCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t j = 0; j < listCount; j++)
 		{
-			_config[listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
+			int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			for(uint32_t k = 0; k < listSize; k++)
+			{
+				_config[channel][listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
+			}
 		}
 	}
 }
@@ -173,14 +178,19 @@ std::string HomeMaticDevice::serialize()
 		stringstream << peer;
 	}
 	stringstream << std::setw(8) << _config.size();
-	for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
+	for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
 	{
-		stringstream << std::setw(8) << i->first; //List index
+		stringstream << std::setw(8) << i->first; //channel
 		stringstream << std::setw(8) << i->second.size();
-		for(std::map<int32_t, int32_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+		for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 		{
-			stringstream << std::setw(8) << j->first;
-			stringstream << std::setw(8) << j->second;
+			stringstream << std::setw(8) << j->first; //List index
+			stringstream << std::setw(8) << j->second.size();
+			for(std::map<int32_t, int32_t>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
+			{
+				stringstream << std::setw(8) << k->first;
+				stringstream << std::setw(8) << k->second;
+			}
 		}
 	}
 	stringstream << std::dec;
@@ -238,7 +248,7 @@ void HomeMaticDevice::packetReceived(shared_ptr<BidCoSPacket> packet)
 		shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, packet);
 		if(message != nullptr && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
 		{
-			if(GD::debugLevel == 5) cout << "Device " << std::hex << _address << ": Access granted for packet " << packet->hexString() << std::dec << endl;
+			if(GD::debugLevel >= 6) cout << "Device " << std::hex << _address << ": Access granted for packet " << packet->hexString() << std::dec << endl;
 			std::this_thread::sleep_for(std::chrono::milliseconds(90));  //Don't respond too fast
 			_messageCounter[packet->senderAddress()] = packet->messageCounter();
 			message->invokeMessageHandlerIncoming(packet);
@@ -456,9 +466,10 @@ void HomeMaticDevice::handleConfigWriteIndex(int32_t messageCounter, shared_ptr<
         queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x08), std::pair<uint32_t, int32_t>(0x02, 0x02), std::pair<uint32_t, int32_t>(0x03, 0x00) }));
         queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x06) }));
     }
+	uint32_t channel = packet->payload()->at(0);
 	for(int i = 2; i < (signed)packet->payload()->size(); i+=2)
 	{
-		_config[_currentList][(int32_t)packet->payload()->at(i)] = packet->payload()->at(i + 1);
+		_config[channel][_currentList][(int32_t)packet->payload()->at(i)] = packet->payload()->at(i + 1);
 		cout << "0x" << std::setw(6) << std::hex << _address;
 		cout << ": Config at index " << std::setw(2) << (int32_t)(packet->payload()->at(i)) << " set to " << std::setw(2) << (int32_t)(packet->payload()->at(i + 1)) << std::dec << endl;
 	}
@@ -566,7 +577,8 @@ void HomeMaticDevice::sendNOKTargetInvalid(int32_t messageCounter, int32_t desti
 
 void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinationAddress, shared_ptr<BidCoSPacket> packet)
 {
-	if(_config[_currentList].size() >= 8)
+	uint32_t channel = packet->payload()->at(0);
+	if(_config[channel][_currentList].size() >= 8)
 	{
 		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, destinationAddress);
 		//Actually destinationAddress should always be in _peers at this point
@@ -576,19 +588,20 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 		queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x04) }));
 
 		std::vector<uint8_t> payload;
-		std::map<int32_t, int32_t>::const_iterator i = _config[_currentList].begin();
+		std::map<int32_t, int32_t>::const_iterator i = _config[channel][_currentList].begin();
 		while(true)
 		{
-			if(i->first % 15 == 1 || i == _config[_currentList].end()) //New packet
+			if(i->first % 15 == 1 || i == _config[channel][_currentList].end()) //New packet
 			{
 				if(!payload.empty())
 				{
 					shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA0, 0x10, _address, destinationAddress, payload));
 					queue->push(packet);
+					messageCounter++;
 					queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 					payload.clear();
 				}
-				if(i == _config[_currentList].end()) break;
+				if(i == _config[channel][_currentList].end()) break;
 				payload.push_back((packet->payload()->at(0) == 2) ? 3 : 2);
 				payload.push_back(i->first);
 			}
@@ -604,7 +617,7 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 	{
 		std::vector<unsigned char> payload;
 		payload.push_back((packet->payload()->at(0) == 2) ? 3 : 2); //No idea how to determine the destination channel
-		for(std::map<int32_t, int32_t>::const_iterator i = _config[_currentList].begin(); i != _config[_currentList].end(); ++i)
+		for(std::map<int32_t, int32_t>::const_iterator i = _config[channel][_currentList].begin(); i != _config[channel][_currentList].end(); ++i)
 		{
 			payload.push_back(i->first);
 			payload.push_back(i->second);

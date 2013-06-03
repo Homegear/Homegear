@@ -9,10 +9,10 @@ HM_CC_VD::HM_CC_VD(std::string serialNumber, int32_t address) : HomeMaticDevice(
     _channelMax = 0x01;
     _deviceTypeChannels[0x39] = 1;
 
-    _config[0x05][0x09] = 0;
-    _offsetPosition = &(_config[0x05][0x09]);
-    _config[0x05][0x0A] = 15;
-    _errorPosition = &(_config[0x05][0x0A]);
+    _config[1][5][0x09] = 0;
+    _offsetPosition = &(_config[1][5][0x09]);
+    _config[1][5][0x0A] = 15;
+    _errorPosition = &(_config[1][5][0x0A]);
 
     init();
 }
