@@ -91,7 +91,7 @@ int main()
         if(GD::debugLevel >= 4) cout << "Loading devices..." << endl;
         GD::devices.load(); //Don't load before database is open!
         if(GD::debugLevel >= 4) cout << "Starting XML RPC server..." << endl;
-        GD::xmlrpcServer.run();
+        GD::xmlrpcServer.start();
 
         //sd->addFilter(FilterType::SenderAddress, 0x1E53E7);
         //sd->addFilter(FilterType::DestinationAddress, 0x1E53E7);

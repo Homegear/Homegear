@@ -4,41 +4,44 @@
 #include <thread>
 #include <iostream>
 #include <string>
+#include <vector>
+#include <list>
+#include <iterator>
+#include <sstream>
+#include <mutex>
 
-#include <unistd.h>
-#include <xmlrpc-c/base.hpp>
-#include <xmlrpc-c/registry.hpp>
-#include <xmlrpc-c/server_abyss.hpp>
+#include <cstring>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <errno.h>
 
 namespace XMLRPC
 {
-	class getValue : public xmlrpc_c::method
-	{
-		public:
-			getValue();
-			void execute(xmlrpc_c::paramList const& paramList, xmlrpc_c::value* const retvalP);
-	};
-
-	class setValue : public xmlrpc_c::method
-	{
-		public:
-			setValue();
-			void execute(xmlrpc_c::paramList const& paramList, xmlrpc_c::value* const retvalP);
-	};
 
 	class Server {
 		public:
 			Server();
 			virtual ~Server();
 
-			void run();
-			void shutdown();
+			void start();
 		protected:
 		private:
-			std::thread _runThread;
-			xmlrpc_c::serverAbyss* _abyssServer = nullptr;
+			bool _stopServer = false;
+			std::thread _mainThread;
+			std::string _port = "2001";
+			int32_t _backlog = 10;
+			int32_t _serverFileDescriptor = 0;
+			int32_t _maxConnections = 100;
+			std::mutex _stateMutex;
+			volatile fd_set _fileDescriptors;
+			std::vector<std::thread> _readThreads;
 
-			void runThread();
+			void getFileDescriptor();
+			int32_t getClientFileDescriptor();
+			void mainThread();
+			void readClient(int32_t clientFileDescriptor);
+			void sendToClient(int32_t clientFileDescriptor, std::string data);
 	};
 }
 #endif /* XMLRPCSERVER_H_ */

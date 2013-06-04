@@ -19,7 +19,6 @@
 #include <queue>
 #include <thread>
 #include "pthread.h"
-#include <xmlrpc-c/base.hpp>
 
 class BidCoSMessages;
 class Cul;
@@ -57,9 +56,6 @@ class HomeMaticDevice
         virtual shared_ptr<BidCoSMessages> getMessages() { return _messages; }
         virtual void handleCLICommand(std::string command);
         virtual void sendPacket(shared_ptr<BidCoSPacket> packet);
-
-        virtual void setValue(const xmlrpc_c::paramList& paramList) {}
-        virtual xmlrpc_c::value getValue(const xmlrpc_c::paramList& paramList);
 
         virtual void handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket> packet) {}
         virtual void handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPacket>);

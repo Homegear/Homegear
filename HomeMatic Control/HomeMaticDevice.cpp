@@ -217,11 +217,6 @@ HMDeviceTypes HomeMaticDevice::deviceType()
     return _deviceType;
 }
 
-xmlrpc_c::value HomeMaticDevice::getValue(const xmlrpc_c::paramList& paramList)
-{
-	return xmlrpc_c::value_nil();
-}
-
 bool HomeMaticDevice::pairDevice(int32_t timeout)
 {
     _pairing = true;

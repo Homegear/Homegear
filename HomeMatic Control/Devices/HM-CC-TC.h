@@ -21,9 +21,6 @@ class HM_CC_TC : public HomeMaticDevice
         void handleCLICommand(std::string command);
         void stopDutyCycle();
 
-        virtual void setValue(const xmlrpc_c::paramList& paramList);
-        virtual xmlrpc_c::value getValue(const xmlrpc_c::paramList& paramList);
-
         void handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPacket> packet);
         void handleConfigParamResponse(int32_t messageCounter, shared_ptr<BidCoSPacket> packet);
         void handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket> packet);
