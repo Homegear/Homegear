@@ -8,6 +8,7 @@ CPP_SRCS += \
 ../XMLRPC/Devices.cpp \
 ../XMLRPC/LogicalParameter.cpp \
 ../XMLRPC/PhysicalParameter.cpp \
+../XMLRPC/RPCVariable.cpp \
 ../XMLRPC/Server.cpp 
 
 OBJS += \
@@ -15,6 +16,7 @@ OBJS += \
 ./XMLRPC/Devices.o \
 ./XMLRPC/LogicalParameter.o \
 ./XMLRPC/PhysicalParameter.o \
+./XMLRPC/RPCVariable.o \
 ./XMLRPC/Server.o 
 
 CPP_DEPS += \
@@ -22,6 +24,7 @@ CPP_DEPS += \
 ./XMLRPC/Devices.d \
 ./XMLRPC/LogicalParameter.d \
 ./XMLRPC/PhysicalParameter.d \
+./XMLRPC/RPCVariable.d \
 ./XMLRPC/Server.d 
 
 
