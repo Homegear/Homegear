@@ -7,8 +7,8 @@
 #include "Database.h"
 #include "Cul.h"
 #include "HomeMaticDevices.h"
-#include "XMLRPC/Server.h"
-#include "XMLRPC/Devices.h"
+#include "RPC/Server.h"
+#include "RPC/Devices.h"
 
 class Cul;
 class Database;
@@ -19,8 +19,8 @@ public:
 	static std::string workingDirectory;
 	static std::string executablePath;
 	static HomeMaticDevices devices;
-	static XMLRPC::Server xmlrpcServer;
-	static XMLRPC::Devices xmlrpcDevices;
+	static RPC::Server xmlrpcServer;
+	static RPC::Devices xmlrpcDevices;
 	static Database db;
 	static Cul cul;
 	static int32_t debugLevel;

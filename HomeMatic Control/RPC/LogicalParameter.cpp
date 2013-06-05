@@ -1,7 +1,7 @@
 #include "LogicalParameter.h"
 #include "../GD.h"
 
-namespace XMLRPC {
+namespace RPC {
 
 ParameterOption::ParameterOption(xml_node<>* node)
 {

@@ -80,7 +80,7 @@ bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSPacket> packet)
 		if(_subtypes.empty()) return true;
 		for(std::vector<std::pair<uint32_t, int32_t>>::const_iterator i = _subtypes.begin(); i != _subtypes.end(); ++i)
 		{
-			if(i->first >= (signed)payload->size()) return false;
+			if(i->first >= payload->size()) return false;
 			if(payload->at(i->first) != i->second) return false;
 		}
 		return true;

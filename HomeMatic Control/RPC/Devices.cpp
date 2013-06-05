@@ -2,7 +2,7 @@
 #include "../GD.h"
 #include <dirent.h>
 
-namespace XMLRPC
+namespace RPC
 {
 
 Devices::Devices()

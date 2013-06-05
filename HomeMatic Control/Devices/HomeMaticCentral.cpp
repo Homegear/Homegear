@@ -207,7 +207,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 		if(packet->destinationAddress() != 0) return;
 		Peer* peer = nullptr;
 		std::vector<uint8_t> payload;
-		shared_ptr<XMLRPC::Device> device;
+		shared_ptr<RPC::Device> device;
 		BidCoSQueue* queue = nullptr;
 		if(_pairing)
 		{
@@ -280,7 +280,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 				{
 					int32_t channel = i->first;
 					//Walk through all lists to request master config if necessary
-					for(std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>::iterator j = i->second.at(XMLRPC::ParameterSet::Type::Enum::master).begin(); j != i->second.at(XMLRPC::ParameterSet::Type::Enum::master).end(); ++j)
+					for(std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>::iterator j = i->second.at(RPC::ParameterSet::Type::Enum::master).begin(); j != i->second.at(RPC::ParameterSet::Type::Enum::master).end(); ++j)
 					{
 						int32_t list = j->first;
 						payload.push_back(channel);
@@ -297,7 +297,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 						_messageCounter[0]++;
 					}
 					//Request peers if not received yet
-					if(peer->xmlrpcDevice->channels[channel]->getParameterSet(XMLRPC::ParameterSet::Type::link) != nullptr)
+					if(peer->xmlrpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::link) != nullptr)
 					{
 						payload.push_back(channel);
 						payload.push_back(0x03);
@@ -363,16 +363,16 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 				Peer* peer = &_peers[packet->senderAddress()];
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = packet->payload()->size() - 1;
-				if(peer->xmlrpcDevice->channels[channel]->getParameterSet(XMLRPC::ParameterSet::Type::master) == nullptr)
+				if(peer->xmlrpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::master) == nullptr)
 				{
 					if(GD::debugLevel >= 2) cout << "Error: Received config for non existant parameter set." << endl;
 				}
 				else
 				{
-					std::vector<shared_ptr<XMLRPC::Parameter>> packetParameters = peer->xmlrpcDevice->channels[channel]->getParameterSet(XMLRPC::ParameterSet::Type::master)->getIndices(startIndex, endIndex);
-					for(std::vector<shared_ptr<XMLRPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
+					std::vector<shared_ptr<RPC::Parameter>> packetParameters = peer->xmlrpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::master)->getIndices(startIndex, endIndex);
+					for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
 					{
-						peer->configCentral[channel][(uint32_t)XMLRPC::ParameterSet::Type::master][list][(*i)->index].value = packet->getPosition((*i)->index, (*i)->size, (*i)->isSigned);
+						peer->configCentral[channel][(uint32_t)RPC::ParameterSet::Type::master][list][(*i)->index].value = packet->getPosition((*i)->index, (*i)->size, (*i)->isSigned);
 					}
 				}
 			}
@@ -380,7 +380,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 			{
 				for(uint32_t i = 1; i < packet->payload()->size() - 2; i += 2)
 				{
-					_peers[packet->senderAddress()].configCentral[_sentPacket.payload()->at(0)][(uint32_t)XMLRPC::ParameterSet::Type::master][_sentPacket.payload()->at(6)][packet->payload()->at(i)].value = packet->payload()->at(i + 1);
+					_peers[packet->senderAddress()].configCentral[_sentPacket.payload()->at(0)][(uint32_t)RPC::ParameterSet::Type::master][_sentPacket.payload()->at(6)][packet->payload()->at(i)].value = packet->payload()->at(i + 1);
 				}
 			}
 		}

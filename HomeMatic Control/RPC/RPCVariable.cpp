@@ -1,6 +1,6 @@
 #include "RPCVariable.h"
 
-namespace XMLRPC
+namespace RPC
 {
 
 

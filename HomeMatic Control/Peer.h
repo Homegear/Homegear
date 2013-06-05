@@ -9,7 +9,7 @@
 #include <memory>
 #include <queue>
 
-#include "XMLRPC/Device.h"
+#include "RPC/Device.h"
 #include "HMDeviceTypes.h"
 
 class HomeMaticDevice;
@@ -31,7 +31,7 @@ public:
 	XMLRPCConfigurationParameter() {}
 	virtual ~XMLRPCConfigurationParameter() {}
 
-	shared_ptr<XMLRPC::Parameter> xmlrpcParameter;
+	shared_ptr<RPC::Parameter> xmlrpcParameter;
 	bool changed = false;
 	int64_t value = 0;
 };
@@ -52,7 +52,7 @@ class Peer
         uint8_t messageCounter = 0;
         std::unordered_map<int32_t, int32_t> config;
         std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>> configCentral;
-        shared_ptr<XMLRPC::Device> xmlrpcDevice = nullptr;
+        shared_ptr<RPC::Device> xmlrpcDevice = nullptr;
         std::unordered_map<int32_t, std::vector<PairedPeer>> peers;
         //Has to be shared_ptr because Peer must be copyable
         shared_ptr<std::queue<shared_ptr<BidCoSQueue>>> pendingBidCoSQueues;

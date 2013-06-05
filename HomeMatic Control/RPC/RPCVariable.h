@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-namespace XMLRPC
+namespace RPC
 {
 
 	enum class RPCVariableType

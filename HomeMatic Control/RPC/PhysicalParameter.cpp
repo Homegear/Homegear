@@ -1,7 +1,7 @@
 #include "PhysicalParameter.h"
 #include "../GD.h"
 
-namespace XMLRPC {
+namespace RPC {
 
 PhysicalParameter::PhysicalParameter(xml_node<>* node)
 {

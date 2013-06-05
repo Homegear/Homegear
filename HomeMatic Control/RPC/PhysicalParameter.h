@@ -11,7 +11,7 @@
 
 using namespace rapidxml;
 
-namespace XMLRPC {
+namespace RPC {
 
 class PhysicalParameter
 {

@@ -8,7 +8,7 @@
 #include "../BidCoSPacket.h"
 #include "../HMDeviceTypes.h"
 
-namespace XMLRPC {
+namespace RPC {
 
 class Devices {
 public:

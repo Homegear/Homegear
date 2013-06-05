@@ -9,26 +9,26 @@ void Peer::initializeCentralConfig()
 		return;
 	}
 	XMLRPCConfigurationParameter parameter;
-	for(std::vector<shared_ptr<XMLRPC::Parameter>>::iterator i = xmlrpcDevice->parameterSet.parameters.begin(); i != xmlrpcDevice->parameterSet.parameters.end(); ++i)
+	for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = xmlrpcDevice->parameterSet.parameters.begin(); i != xmlrpcDevice->parameterSet.parameters.end(); ++i)
 	{
 		if((*i)->physicalParameter.list < 9999)
 		{
 			parameter = XMLRPCConfigurationParameter();
 			parameter.xmlrpcParameter = *i;
-			configCentral[0][(uint32_t)XMLRPC::ParameterSet::Type::Enum::master][(*i)->physicalParameter.list][(*i)->physicalParameter.index] = parameter;
+			configCentral[0][(uint32_t)RPC::ParameterSet::Type::Enum::master][(*i)->physicalParameter.list][(*i)->physicalParameter.index] = parameter;
 		}
 	}
-	for(std::vector<shared_ptr<XMLRPC::DeviceChannel>>::iterator i = xmlrpcDevice->channels.begin(); i != xmlrpcDevice->channels.end(); ++i)
+	for(std::vector<shared_ptr<RPC::DeviceChannel>>::iterator i = xmlrpcDevice->channels.begin(); i != xmlrpcDevice->channels.end(); ++i)
 	{
-		XMLRPC::ParameterSet* masterSet = (*i)->getParameterSet(XMLRPC::ParameterSet::Type::master);
+		RPC::ParameterSet* masterSet = (*i)->getParameterSet(RPC::ParameterSet::Type::master);
 		if(masterSet == nullptr) continue;
-		for(std::vector<shared_ptr<XMLRPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
+		for(std::vector<shared_ptr<RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
 		{
 			if((*j)->physicalParameter.list < 9999)
 			{
 				parameter = XMLRPCConfigurationParameter();
 				parameter.xmlrpcParameter = *j;
-				configCentral[(*i)->index][(uint32_t)XMLRPC::ParameterSet::Type::Enum::master][(*j)->physicalParameter.list][(*j)->physicalParameter.index] = parameter;
+				configCentral[(*i)->index][(uint32_t)RPC::ParameterSet::Type::Enum::master][(*j)->physicalParameter.list][(*j)->physicalParameter.index] = parameter;
 			}
 		}
 	}

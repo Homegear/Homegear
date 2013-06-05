@@ -1,14 +1,14 @@
-#include "Server.h"
+#include "RPCServer.h"
 
 #include "../GD.h"
 
-using namespace XMLRPC;
+using namespace RPC;
 
-Server::Server()
+RPCServer::RPCServer()
 {
 }
 
-Server::~Server()
+RPCServer::~RPCServer()
 {
 	_stopServer = true;
 	if(_mainThread.joinable()) _mainThread.join();
@@ -19,17 +19,16 @@ Server::~Server()
 	if(GD::debugLevel >= 4) cout << "XML RPC Server successfully shut down." << endl;
 }
 
-void Server::start()
+void RPCServer::start()
 {
 
-	_mainThread = std::thread(&Server::mainThread, this);
+	_mainThread = std::thread(&RPCServer::mainThread, this);
 	_mainThread.detach();
 }
 
-void Server::mainThread()
+void RPCServer::mainThread()
 {
 	getFileDescriptor();
-	FD_ZERO(&_fileDescriptors);
 	int32_t clientFileDescriptor;
 	while(!_stopServer)
 	{
@@ -46,15 +45,17 @@ void Server::mainThread()
 			continue;
 		}
 		_stateMutex.lock();
-		FD_SET(clientFileDescriptor, &_fileDescriptors);
+		_fileDescriptors.push_back(clientFileDescriptor);
 		_stateMutex.unlock();
 
-		_readThreads.push_back(std::thread(&Server::readClient, this, clientFileDescriptor));
+		_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
 		_readThreads.back().detach();
 	}
+	close(_serverFileDescriptor);
+	_serverFileDescriptor = -1;
 }
 
-void Server::sendToClient(int32_t clientFileDescriptor, std::string data)
+void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::string data)
 {
 	try
 	{
@@ -80,7 +81,7 @@ void Server::sendToClient(int32_t clientFileDescriptor, std::string data)
     }
 }
 
-int32_t Server::getInteger(char* packet, int32_t packetLength, int32_t* position)
+int32_t RPCServer::getInteger(char* packet, uint32_t packetLength, uint32_t* position)
 {
 	if(*position + 4 > packetLength) return 0;
 	int32_t integer = (*(packet + *position) << 24) + (*(packet + *position + 1) << 16) + (*(packet + *position + 2) << 8) + *(packet + *position + 3);
@@ -88,12 +89,12 @@ int32_t Server::getInteger(char* packet, int32_t packetLength, int32_t* position
 	return integer;
 }
 
-RPCVariableType Server::getVariableType(char* packet, int32_t packetLength, int32_t* position)
+RPCVariableType RPCServer::getVariableType(char* packet, uint32_t packetLength, uint32_t* position)
 {
 	return (RPCVariableType)getInteger(packet, packetLength, position);
 }
 
-std::string Server::getString(char* packet, int32_t packetLength, int32_t* position)
+std::string RPCServer::getString(char* packet, uint32_t packetLength, uint32_t* position)
 {
 	int32_t stringLength = getInteger(packet, packetLength, position);
 	if(*position + stringLength > packetLength) return "";
@@ -104,7 +105,7 @@ std::string Server::getString(char* packet, int32_t packetLength, int32_t* posit
 	return std::string(string);
 }
 
-RPCVariable Server::getParameter(char* packet, int32_t packetLength, int32_t* position)
+RPCVariable RPCServer::getParameter(char* packet, uint32_t packetLength, uint32_t* position)
 {
 	RPCVariableType type = getVariableType(packet, packetLength, position);
 	RPCVariable variable(type);
@@ -119,13 +120,13 @@ RPCVariable Server::getParameter(char* packet, int32_t packetLength, int32_t* po
 	return variable;
 }
 
-void Server::analyzeBinaryRPC(std::shared_ptr<char> packet, int32_t packetLength)
+void RPCServer::analyzeBinaryRPC(std::shared_ptr<char> packet, uint32_t packetLength)
 {
-	int32_t position = 0;
+	uint32_t position = 0;
 	std::string methodName = getString(packet.get(), packetLength, &position);
-	int32_t parameterCount = getInteger(packet.get(), packetLength, &position);
+	uint32_t parameterCount = getInteger(packet.get(), packetLength, &position);
 	std::vector<RPCVariable> parameters;
-	for(int32_t i = 0; i < parameterCount; i++)
+	for(uint32_t i = 0; i < parameterCount; i++)
 	{
 		parameters.push_back(getParameter(packet.get(), packetLength, &position));
 	}
@@ -143,9 +144,95 @@ void Server::analyzeBinaryRPC(std::shared_ptr<char> packet, int32_t packetLength
 		}
 	}
 	cout << endl;
+	if(methodName == "init")
+	{
+		if((parameters.size() == 1 && parameters[1].type == RPCVariableType::rpcString) || (parameters.size() == 2 && parameters[1].type == RPCVariableType::rpcString && parameters[1].stringValue == ""))
+		{
+			removeLocalClient(parameters[0].stringValue);
+		}
+		else if(parameters.size() == 2 && parameters[0].type == RPCVariableType::rpcString && parameters[1].type == RPCVariableType::rpcString)
+		{
+			createLocalClient(parameters[0].stringValue);
+		}
+		else if(GD::debugLevel >= 3)
+		{
+			cout << "Warning: init called with wrong parameters.";
+		}
+	}
+	else
+	{
+
+	}
 }
 
-void Server::packetReceived(std::shared_ptr<char> packet, int32_t packetLength, packetType::Enum packetType)
+std::pair<std::string, std::string> RPCServer::getAddressAndPort(std::string address)
+{
+		try
+	{
+		if(address.size() < 8) return std::pair<std::string, std::string>();
+		if(address.substr(0, 7) == "http://")
+		{
+			address = address.substr(7);
+		}
+		if(address.substr(0, 8) == "https://")
+		{
+			if(GD::debugLevel >= 2) cout << "Error: Cannot connect to RPC server, because SSL is not supported." << endl;
+			return std::pair<std::string, std::string>();
+		}
+		uint32_t pos = address.find(':');
+		if(pos == std::string::npos || pos + 1 >= address.size())
+		{
+			if(GD::debugLevel >= 2) cout << "Error: Cannot connect to RPC server, because no port was specified." << endl;
+			return std::pair<std::string, std::string>();
+		}
+		if(pos < 7)
+		{
+			if(GD::debugLevel >= 2) cout << "Error: Cannot connect to RPC server, because no address was specified." << endl;
+			return std::pair<std::string, std::string>();
+		}
+		return std::pair<std::string, std::string>(address.substr(0, pos), address.substr(pos + 1));
+	}
+    catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << endl;
+    }
+    return std::pair<std::string, std::string>();
+}
+
+void RPCServer::createLocalClient(std::string address)
+{
+	try
+	{
+
+	}
+    catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << endl;
+    }
+}
+
+void RPCServer::removeLocalClient(std::string address)
+{
+
+}
+
+void RPCServer::packetReceived(std::shared_ptr<char> packet, uint32_t packetLength, packetType::Enum packetType)
 {
 	try
 	{
@@ -165,73 +252,22 @@ void Server::packetReceived(std::shared_ptr<char> packet, int32_t packetLength, 
     }
 }
 
-void Server::readClient(int32_t clientFileDescriptor)
+void RPCServer::removeClientFileDescriptor(int32_t clientFileDescriptor)
 {
 	try
 	{
-		char buffer[1024];
-		std::shared_ptr<char> packet(new char[1]);
-		int32_t packetLength;
-		int32_t bytesRead;
-		int32_t dataSize;
-		while(!_stopServer)
+		_stateMutex.lock();
+		for(std::vector<int32_t>::iterator i = _fileDescriptors.begin(); i != _fileDescriptors.end(); ++i)
 		{
-			bytesRead = read(clientFileDescriptor, buffer, sizeof(buffer));
-			if(bytesRead <= 0)
+			if(*i == clientFileDescriptor)
 			{
-				_stateMutex.lock();
-				FD_CLR(clientFileDescriptor, &_fileDescriptors);
-				_stateMutex.unlock();
-				close(clientFileDescriptor);
+				_fileDescriptors.erase(i);
 				return;
 			}
-			if(bytesRead < 8) continue;
-			if(buffer[0] == 'B' && buffer[1] == 'i' && buffer[2] == 'n')
-			{
-				dataSize = (buffer[4] << 24) + (buffer[5] << 16) + (buffer[6] << 8) + buffer[7];
-				if(GD::debugLevel >= 6) cout << "Receiving packet with size: " << dataSize << endl;
-				if(dataSize == 0) continue;
-				if(dataSize > 104857600)
-				{
-					if(GD::debugLevel >= 2) cout << "Error: Packet with data larger than 100 MiB received." << endl;
-					continue;
-				}
-				packet.reset(new char[dataSize]);
-				if(dataSize > bytesRead - 8)
-				{
-					memcpy(packet.get(), buffer + 8, bytesRead - 8);
-					packetLength = bytesRead - 8;
-				}
-				else
-				{
-					packetLength = 0;
-					memcpy(packet.get(), buffer + 8, bytesRead - 8);
-					std::thread t(&Server::packetReceived, this, packet, dataSize, packetType::Enum::binary);
-					t.detach();
-				}
-			}
-			else if(packetLength > 0)
-			{
-				cout << "else if" << endl;
-				if(packetLength + bytesRead > dataSize)
-				{
-					if(GD::debugLevel >= 2) cout << "Error: Packet length is wrong." << endl;
-					packetLength = 0;
-					continue;
-				}
-				memcpy(packet.get() + packetLength, buffer, bytesRead);
-				packetLength += bytesRead;
-				if(packetLength == dataSize)
-				{
-					std::thread t(&Server::packetReceived, this, packet, dataSize, packetType::Enum::binary);
-					t.detach();
-					packetLength = 0;
-				}
-			}
-			else continue;
 		}
+		_stateMutex.unlock();
 	}
-    catch(const std::exception& ex)
+	catch(const std::exception& ex)
     {
     	_stateMutex.unlock();
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
@@ -248,7 +284,89 @@ void Server::readClient(int32_t clientFileDescriptor)
     }
 }
 
-int32_t Server::getClientFileDescriptor()
+void RPCServer::readClient(int32_t clientFileDescriptor)
+{
+	try
+	{
+		char buffer[1024];
+		std::shared_ptr<char> packet(new char[1]);
+		uint32_t packetLength;
+		int32_t bytesRead;
+		uint32_t bufferSize;
+		uint32_t dataSize;
+		while(!_stopServer)
+		{
+			bytesRead = read(clientFileDescriptor, buffer, sizeof(buffer));
+			if(bytesRead <= 0)
+			{
+				removeClientFileDescriptor(clientFileDescriptor);
+				close(clientFileDescriptor);
+				return;
+			}
+			bufferSize = bytesRead; //To prevent errors comparing signed and unsigned integers
+			if(buffer[0] == 'B' && buffer[1] == 'i' && buffer[2] == 'n')
+			{
+				if(bufferSize < 8) continue;
+				dataSize = (buffer[4] << 24) + (buffer[5] << 16) + (buffer[6] << 8) + buffer[7];
+				if(GD::debugLevel >= 6) cout << "Receiving packet with size: " << dataSize << endl;
+				if(dataSize == 0) continue;
+				if(dataSize > 104857600)
+				{
+					if(GD::debugLevel >= 2) cout << "Error: Packet with data larger than 100 MiB received." << endl;
+					continue;
+				}
+				packet.reset(new char[dataSize]);
+				if(dataSize > bufferSize - 8)
+				{
+					memcpy(packet.get(), buffer + 8, bufferSize - 8);
+					packetLength = bufferSize - 8;
+				}
+				else
+				{
+					packetLength = 0;
+					memcpy(packet.get(), buffer + 8, bufferSize - 8);
+					std::thread t(&RPCServer::packetReceived, this, packet, dataSize, packetType::Enum::binary);
+					t.detach();
+				}
+			}
+			else if(packetLength > 0)
+			{
+				cout << "else if" << endl;
+				if(packetLength + bufferSize > dataSize)
+				{
+					if(GD::debugLevel >= 2) cout << "Error: Packet length is wrong." << endl;
+					packetLength = 0;
+					continue;
+				}
+				memcpy(packet.get() + packetLength, buffer, bufferSize);
+				packetLength += bufferSize;
+				if(packetLength == dataSize)
+				{
+					std::thread t(&RPCServer::packetReceived, this, packet, dataSize, packetType::Enum::binary);
+					t.detach();
+					packetLength = 0;
+				}
+			}
+		}
+		//This point is only reached, when stopServer is true
+		removeClientFileDescriptor(clientFileDescriptor);
+		close(clientFileDescriptor);
+	}
+    catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << endl;
+    }
+}
+
+int32_t RPCServer::getClientFileDescriptor()
 {
 	try
 	{
@@ -289,7 +407,7 @@ int32_t Server::getClientFileDescriptor()
     return -1;
 }
 
-void Server::getFileDescriptor()
+void RPCServer::getFileDescriptor()
 {
 	struct addrinfo hostInfo, *serverInfo;
 

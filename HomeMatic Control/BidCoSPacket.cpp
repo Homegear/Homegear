@@ -125,7 +125,7 @@ void BidCoSPacket::import(std::string packet, bool removeFirstCharacter)
 		uint32_t tailLength = 0;
 		if(packet.back() == '\n') tailLength = 2;
 		_payload.clear();
-		for(int32_t i = startIndex + 20; i < (signed)packet.length() - tailLength; i+=2)
+		for(uint32_t i = startIndex + 20; i < packet.length() - tailLength; i+=2)
 		{
 			_payload.push_back(getByte(packet.substr(i, 2)));
 		}

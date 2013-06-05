@@ -2,7 +2,7 @@
 #include "../HelperFunctions.h"
 #include "../GD.h"
 
-namespace XMLRPC {
+namespace RPC {
 
 DescriptionField::DescriptionField(xml_node<>* node)
 {
