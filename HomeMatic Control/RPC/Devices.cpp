@@ -22,7 +22,7 @@ void Devices::load()
 			{
 				if(entry->d_type == 8)
 				{
-					if(GD::debugLevel == 5) cout << "Loading XML RPC device " << entry->d_name << endl;
+					if(GD::debugLevel >= 5) cout << "Loading XML RPC device " << entry->d_name << endl;
 					_devices.push_back(shared_ptr<Device>(new Device(deviceDir + "/" + entry->d_name)));
 				}
 			}

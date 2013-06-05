@@ -129,10 +129,10 @@ bool HomeMaticDevices::remove(int32_t address)
 	{
 		if((*i)->address() == address)
 		{
-			if(GD::debugLevel == 5) cout << "Removing device pointer from device array..." << endl;
+			if(GD::debugLevel >= 5) cout << "Removing device pointer from device array..." << endl;
 			_devices.erase(i);
 
-			if(GD::debugLevel == 5) cout << "Deleting database entry..." << endl;
+			if(GD::debugLevel >= 5) cout << "Deleting database entry..." << endl;
 			std::ostringstream command;
 			command << "DELETE FROM devices WHERE address=" << std::dec << address;
 			GD::db.executeCommand(command.str());

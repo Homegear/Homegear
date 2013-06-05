@@ -213,7 +213,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 		{
 			queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
 
-			device = GD::xmlrpcDevices.find(packet);
+			device = GD::rpcDevices.find(packet);
 			if(device == nullptr)
 			{
 				if(GD::debugLevel >= 3) cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;

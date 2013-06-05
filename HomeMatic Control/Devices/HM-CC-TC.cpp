@@ -40,7 +40,7 @@ int64_t HM_CC_TC::calculateLastDutyCycleEvent()
 		nextDutyCycleEvent = lastDutyCycleEvent + (calculateCycleLength(_messageCounter[1]) * 250);
 		_messageCounter[1]++;
 	}
-	if(GD::debugLevel == 5) cout << "Setting last duty cycle event to: " << lastDutyCycleEvent << endl;
+	if(GD::debugLevel >= 5) cout << "Setting last duty cycle event to: " << lastDutyCycleEvent << endl;
 	return lastDutyCycleEvent;
 }
 
@@ -137,7 +137,7 @@ HM_CC_TC::~HM_CC_TC()
 void HM_CC_TC::stopDutyCycle()
 {
 	_stopDutyCycleThread = true;
-	if(GD::debugLevel == 5) cout << "Stopping duty cycle..." << endl;
+	if(GD::debugLevel >= 5) cout << "Stopping duty cycle..." << endl;
 	if(_dutyCycleThread != nullptr && _dutyCycleThread->joinable())	_dutyCycleThread->join();
 }
 
@@ -197,12 +197,12 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 	int32_t cycleLength = calculateCycleLength(_messageCounter[1] - 1); //The calculation has to use the last message counter
 	_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250;
 	_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
-	if(GD::debugLevel == 5 && _dutyCycleCounter > 0) cout << "Skipping " << (_dutyCycleCounter * 250) << " ms of duty cycle." << endl;
+	if(GD::debugLevel >= 5 && _dutyCycleCounter > 0) cout << "Skipping " << (_dutyCycleCounter * 250) << " ms of duty cycle." << endl;
 	while(!_stopDutyCycleThread)
 	{
 		cycleTime = cycleLength * 250;
 		nextDutyCycleEvent += cycleTime;
-		if(GD::debugLevel == 5) cout << "Next duty cycle: " << nextDutyCycleEvent << " (in " << cycleTime << " ms) with message counter 0x" << std::hex << (int32_t)_messageCounter[1] << std::dec << endl;
+		if(GD::debugLevel >= 5) cout << "Next duty cycle: " << nextDutyCycleEvent << " (in " << cycleTime << " ms) with message counter 0x" << std::hex << (int32_t)_messageCounter[1] << std::dec << endl;
 		std::chrono::milliseconds sleepingTime(2000);
 		while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
 		{
@@ -281,10 +281,10 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter)
 	{
 		int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		int32_t address = getNextDutyCycleDeviceAddress();
-		if(GD::debugLevel == 5)	cout << "Next HM-CC-VD is 0x" << std::hex << address << std::dec << endl;
+		if(GD::debugLevel >= 5)	cout << "Next HM-CC-VD is 0x" << std::hex << address << std::dec << endl;
 		if(address < 1)
 		{
-			if(GD::debugLevel == 5) cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Not sending duty cycle packet, because no valve drives are paired to me." << endl;
+			if(GD::debugLevel >= 5) cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Not sending duty cycle packet, because no valve drives are paired to me." << endl;
 			return;
 		}
 		std::vector<uint8_t> payload;
@@ -385,7 +385,7 @@ void HM_CC_TC::handleSetValveState(int32_t messageCounter, shared_ptr<BidCoSPack
 	try
 	{
 		_newValveState = packet->payload()->at(0);
-		if(GD::debugLevel == 5) cout << "New valve state: " << _newValveState << endl;
+		if(GD::debugLevel >= 5) cout << "New valve state: " << _newValveState << endl;
 		sendOK(messageCounter, packet->senderAddress());
 	}
 	catch(const std::exception& ex)
@@ -403,7 +403,7 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, shared_ptr<BidCoSPack
     if(channel == 2)
     {
     	_peers[address].deviceType = HMDeviceTypes::HMCCVD;
-    	if(GD::debugLevel == 5) cout << "Added HM-CC-VD with address 0x" << std::hex << address << std::dec << endl;
+    	if(GD::debugLevel >= 5) cout << "Added HM-CC-VD with address 0x" << std::hex << address << std::dec << endl;
     }
 }
 

@@ -1,5 +1,5 @@
-#ifndef XMLRPCSERVER_H_
-#define XMLRPCSERVER_H_
+#ifndef RPCSERVER_H_
+#define RPCSERVER_H_
 
 #include <thread>
 #include <iostream>
@@ -21,6 +21,8 @@
 
 #include "RPCVariable.h"
 #include "RPCMethod.h"
+#include "RPCDecoder.h"
+#include "RPCEncoder.h"
 
 namespace RPC
 {
@@ -30,11 +32,12 @@ namespace RPC
 			virtual ~RPCServer();
 
 			void start();
+			void registerMethod(std::string methodName, RPCMethod method);
 		protected:
 		private:
-			struct packetType
+			struct PacketType
 			{
-				enum Enum { xml, binary };
+				enum Enum { xmlRequest, xmlResponse, binaryRequest, binaryResponse };
 			};
 			bool _stopServer = false;
 			std::thread _mainThread;
@@ -48,6 +51,8 @@ namespace RPC
 			std::mutex _sendMutex;
 			std::unordered_map<std::string, int32_t> _localClientFileDescriptors;
 			std::unordered_map<std::string, RPCMethod> _rpcMethods;
+			RPCDecoder _rpcDecoder;
+			RPCEncoder _rpcEncoder;
 
 			void createLocalClient(std::string address);
 			void removeLocalClient(std::string address);
@@ -56,14 +61,11 @@ namespace RPC
 			int32_t getClientFileDescriptor();
 			void mainThread();
 			void readClient(int32_t clientFileDescriptor);
-			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::string data);
-			void packetReceived(std::shared_ptr<char> packet, uint32_t packetLength, packetType::Enum packetType);
-			void analyzeBinaryRPC(std::shared_ptr<char> packet, uint32_t packetLength);
-			int32_t getInteger(char* packet, uint32_t packetLength, uint32_t* position);
-			std::string getString(char* packet, uint32_t packetLength, uint32_t* position);
-			RPCVariable getParameter(char* packet, uint32_t packetLength, uint32_t* position);
-			RPCVariableType getVariableType(char* packet, uint32_t packetLength, uint32_t* position);
+			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<char> data, uint32_t dataLength);
+			void packetReceived(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
+			void analyzeBinaryRPC(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength);
+			void analyzeBinaryRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength);
 			void removeClientFileDescriptor(int32_t clientFileDescriptor);
 	};
 }
-#endif /* XMLRPCSERVER_H_ */
+#endif /* RPCSERVER_H_ */

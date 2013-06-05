@@ -91,7 +91,7 @@ void HomeMaticDevice::setUpBidCoSMessages()
 
 HomeMaticDevice::~HomeMaticDevice()
 {
-	if(GD::debugLevel == 5) cout << "Removing device from CUL event queue..." << endl;
+	if(GD::debugLevel >= 5) cout << "Removing device from CUL event queue..." << endl;
     GD::cul.removeHomeMaticDevice(this);
 }
 
@@ -119,7 +119,7 @@ void HomeMaticDevice::handleCLICommand(std::string command)
 
 void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
-	if(GD::debugLevel == 5) cout << "Unserializing: " << serializedObject << endl;
+	if(GD::debugLevel >= 5) cout << "Unserializing: " << serializedObject << endl;
 	uint32_t pos = 0;
 	_deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;

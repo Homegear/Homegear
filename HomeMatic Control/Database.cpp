@@ -71,7 +71,7 @@ void Database::getDataRows(sqlite3_stmt* statement, std::vector<std::vector<Data
 					case SQLITE_TEXT: //or SQLITE3_TEXT. As we are not using SQLite version 2 it doesn't matter
 						col.dataType = TEXT;
 						col.textValue = std::string((const char*)sqlite3_column_text(statement, i));
-						if(GD::debugLevel == 5)
+						if(GD::debugLevel >= 5)
 						{
 							cout << "Read text column from database: " << col.textValue << endl;;
 						}
@@ -97,7 +97,7 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
 	std::vector<std::vector<DataColumn>> dataRows;
 	try
 	{
-		if(GD::debugLevel == 5) cout << "Executing SQL command: " << command << endl;
+		if(GD::debugLevel >= 5) cout << "Executing SQL command: " << command << endl;
 		_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
 		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
@@ -147,7 +147,7 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
     std::vector<std::vector<DataColumn>> dataRows;
     try
     {
-    	if(GD::debugLevel == 5) cout << "Executing SQL command: " << command << endl;
+    	if(GD::debugLevel >= 5) cout << "Executing SQL command: " << command << endl;
     	_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
 		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);

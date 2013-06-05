@@ -19,8 +19,8 @@ public:
 	static std::string workingDirectory;
 	static std::string executablePath;
 	static HomeMaticDevices devices;
-	static RPC::Server xmlrpcServer;
-	static RPC::Devices xmlrpcDevices;
+	static RPC::Server rpcServer;
+	static RPC::Devices rpcDevices;
 	static Database db;
 	static Cul cul;
 	static int32_t debugLevel;

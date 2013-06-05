@@ -1,6 +1,5 @@
-#include "XMLRPC.h"
+#include "RPCMethods.h"
 
 namespace RPC {
-
 
 } /* namespace RPC */

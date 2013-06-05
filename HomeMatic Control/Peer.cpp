@@ -37,7 +37,7 @@ void Peer::initializeCentralConfig()
 Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 {
 	pendingBidCoSQueues = shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>(new std::queue<shared_ptr<BidCoSQueue>>());
-	if(GD::debugLevel == 5) cout << "Unserializing peer: " << serializedObject << endl;
+	if(GD::debugLevel >= 5) cout << "Unserializing peer: " << serializedObject << endl;
 
 	std::istringstream stringstream(serializedObject);
 	std::string entry;
@@ -49,7 +49,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 	localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 	deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
-	xmlrpcDevice = GD::xmlrpcDevices.find(deviceType, firmwareVersion);
+	xmlrpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
 	if(xmlrpcDevice == nullptr && GD::debugLevel >= 2) cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << endl;
 	messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
