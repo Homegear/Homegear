@@ -3,10 +3,12 @@
 
 #include <thread>
 #include <memory>
+#include <vector>
+
+class BidCoSQueue;
+enum class BidCoSQueueType;
 
 #include "../HomeMaticDevice.h"
-#include "../Cul.h"
-#include "../GD.h"
 
 //TODO Pairing by serial
 //TODO Was wird beim Batterien einlegen gesendet?
@@ -38,7 +40,7 @@ class HM_CC_TC : public HomeMaticDevice
         int32_t _setPointTemperature = 42;
         int32_t _humidity = 56;
         bool _stopDutyCycleThread = false;
-        Peer createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
+        shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
         std::thread* _dutyCycleThread = nullptr;
         int32_t _valveState = 0;
         int32_t _newValveState = 0;

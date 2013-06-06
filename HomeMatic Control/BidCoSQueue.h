@@ -1,18 +1,19 @@
 #ifndef BIDCOSQUEUE_H
 #define BIDCOSQUEUE_H
 
-#include "Peer.h"
-#include "Cul.h"
-#include "BidCoSMessage.h"
-#include "Exception.h"
+class Peer;
+class BidCoSMessage;
+class BidCoSPacket;
+class HomeMaticDevice;
 
+#include <iostream>
+#include <string>
 #include <deque>
 #include <queue>
 #include <thread>
 #include <mutex>
 
-class Cul;
-class BidCoSMessage;
+#include "Exception.h"
 
 enum class QueueEntryType { UNDEFINED, MESSAGE, PACKET };
 
@@ -53,7 +54,7 @@ class BidCoSQueue
         uint64_t* lastAction = nullptr;
         bool noSending = false;
         HomeMaticDevice* device = nullptr;
-        Peer peer;
+        shared_ptr<Peer> peer;
         BidCoSQueueType getQueueType() { return _queueType; }
         std::deque<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }

@@ -1,12 +1,14 @@
 #ifndef HOMEMATICDEVICES_H_
 #define HOMEMATICDEVICES_H_
 
+class HomeMaticDevice;
+
+#include <string>
+#include <iostream>
 #include <vector>
 #include <memory>
 
-#include "HomeMaticDevice.h"
-
-class HomeMaticDevice;
+#include "Devices/HomeMaticCentral.h"
 
 class HomeMaticDevices {
 public:
@@ -14,17 +16,17 @@ public:
 	virtual ~HomeMaticDevices();
 	void add(HomeMaticDevice* device);
 	bool remove(int32_t address);
-	shared_ptr<HomeMaticDevice> get(int32_t address);
-	shared_ptr<HomeMaticDevice> get(std::string serialNumber);
-	shared_ptr<HomeMaticDevice> getCentral() { return _central; }
-	std::vector<shared_ptr<HomeMaticDevice>>* getDevices() { return &_devices; }
+	std::shared_ptr<HomeMaticDevice> get(int32_t address);
+	std::shared_ptr<HomeMaticDevice> get(std::string serialNumber);
+	std::shared_ptr<HomeMaticCentral> getCentral() { return _central; }
+	std::vector<std::shared_ptr<HomeMaticDevice>>* getDevices() { return &_devices; }
 	void load();
 	void save();
 	void stopDutyCycles();
-	void stopDutyCycle(shared_ptr<HomeMaticDevice> device);
+	void stopDutyCycle(std::shared_ptr<HomeMaticDevice> device);
 private:
-	std::vector<shared_ptr<HomeMaticDevice>> _devices;
-	shared_ptr<HomeMaticDevice> _central = nullptr;
+	std::vector<std::shared_ptr<HomeMaticDevice>> _devices;
+	std::shared_ptr<HomeMaticCentral> _central;
 };
 
 #endif /* HOMEMATICDEVICES_H_ */

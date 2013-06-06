@@ -1,16 +1,19 @@
 #include "BidCoSQueue.h"
+#include "GD.h"
 
 BidCoSQueue::BidCoSQueue() : _queueType(BidCoSQueueType::EMPTY)
 {
+	peer = shared_ptr<Peer>(new Peer());
 }
 
-BidCoSQueue::BidCoSQueue(BidCoSQueueType queueType) : _queueType(queueType)
+BidCoSQueue::BidCoSQueue(BidCoSQueueType queueType) : BidCoSQueue()
 {
+	_queueType = queueType;
 }
 
-BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device)
+BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device) : BidCoSQueue()
 {
-	if(GD::debugLevel == 5) cout << "Unserializing queue: " << serializedObject << endl;
+	if(GD::debugLevel >= 5) cout << "Unserializing queue: " << serializedObject << endl;
 	uint32_t pos = 0;
 	_queueType = (BidCoSQueueType)std::stoi(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 	uint32_t queueSize = std::stol(serializedObject.substr(pos, 4), 0, 16); pos += 4;
@@ -77,7 +80,7 @@ void BidCoSQueue::resend()
 				{
 					if(_queue.front().getType() == QueueEntryType::MESSAGE)
 					{
-						if(GD::debugLevel == 5) cout << "Invoking outgoing message handler from BidCoSQueue." << endl;
+						if(GD::debugLevel >= 5) cout << "Invoking outgoing message handler from BidCoSQueue." << endl;
 						send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 					}
 					else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket());
@@ -286,7 +289,7 @@ void BidCoSQueue::pop()
 	try
 	{
 		keepAlive();
-		if(GD::debugLevel == 5) cout << "Popping from BidCoSQueue." << endl;
+		if(GD::debugLevel >= 5) cout << "Popping from BidCoSQueue." << endl;
 		if(_queue.empty()) return;
 		_queueMutex.lock();
 		_queue.pop_front();
@@ -294,14 +297,14 @@ void BidCoSQueue::pop()
 			if(_workingOnPendingQueue) _pendingQueues->pop();
 			if(_pendingQueues.get() != nullptr && _pendingQueues->size() == 0)
 			{
-				if(GD::debugLevel == 5) cout << "Queue is empty and there are no pending queues." << endl;
+				if(GD::debugLevel >= 5) cout << "Queue is empty and there are no pending queues." << endl;
 				_workingOnPendingQueue = false;
 				_queueMutex.unlock();
 				return;
 			}
 			else
 			{
-				if(GD::debugLevel == 5) cout << "Queue is empty. Pushing pending queue..." << endl;
+				if(GD::debugLevel >= 5) cout << "Queue is empty. Pushing pending queue..." << endl;
 				_queueMutex.unlock();
 				std::thread push(&BidCoSQueue::sleepAndPushPendingQueue, this);
 				push.detach();

@@ -1,5 +1,5 @@
 #include "Cul.h"
-Cul GD::cul;
+#include "GD.h"
 
 Cul::Cul()
 {

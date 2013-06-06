@@ -9,12 +9,20 @@
 namespace RPC
 {
 
-class RPCMethod {
+class RPCMethod
+{
 public:
+	struct ParameterError
+	{
+		enum Enum { noError, wrongCount, wrongType };
+	};
+
 	RPCMethod() {}
 	virtual ~RPCMethod() {}
 
-	virtual std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters) { return std::shared_ptr<RPCVariable>(new RPCVariable()); }
+	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<RPCVariableType> types);
+	virtual std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<RPCVariable> getError(ParameterError::Enum error);
 };
 
 } /* namespace RPC */

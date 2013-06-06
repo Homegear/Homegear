@@ -32,7 +32,7 @@ namespace RPC
 			virtual ~RPCServer();
 
 			void start();
-			void registerMethod(std::string methodName, RPCMethod method);
+			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
 		protected:
 		private:
 			struct PacketType
@@ -50,7 +50,7 @@ namespace RPC
 			std::vector<std::thread> _readThreads;
 			std::mutex _sendMutex;
 			std::unordered_map<std::string, int32_t> _localClientFileDescriptors;
-			std::unordered_map<std::string, RPCMethod> _rpcMethods;
+			std::unordered_map<std::string, std::shared_ptr<RPCMethod>> _rpcMethods;
 			RPCDecoder _rpcDecoder;
 			RPCEncoder _rpcEncoder;
 

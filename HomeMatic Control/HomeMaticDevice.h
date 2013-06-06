@@ -1,15 +1,18 @@
 #ifndef HOMEMATICDEVICE_H
 #define HOMEMATICDEVICE_H
 
-#include "Peer.h"
-#include "Cul.h"
+class Cul;
+class BidCoSPacket;
+class BidCoSMessages;
+enum class BidCoSQueueType;
+
+#include "HMDeviceTypes.h"
 #include "BidCoSQueue.h"
-#include "BidCoSQueueManager.h"
-#include "BidCoSPacket.h"
+#include "Peer.h"
 #include "BidCoSMessage.h"
 #include "BidCoSMessages.h"
-#include "GD.h"
-#include "HMDeviceTypes.h"
+#include "Cul.h"
+#include "BidCoSQueueManager.h"
 
 #include <string>
 #include <unordered_map>
@@ -19,12 +22,6 @@
 #include <queue>
 #include <thread>
 #include "pthread.h"
-
-class BidCoSMessages;
-class Cul;
-class BidCoSMessage;
-enum class BidCoSQueueType;
-class Peer;
 
 class HomeMaticDevice
 {
@@ -45,8 +42,7 @@ class HomeMaticDevice
         virtual bool pairDevice(int32_t timeout);
         virtual bool isInPairingMode() { return _pairing; }
         virtual int32_t getCentralAddress();
-        virtual std::unordered_map<int32_t, Peer>* getPeers();
-        //virtual BidCoSQueue* getBidCoSQueue() { return _bidCoSQueue.get(); }
+        virtual std::unordered_map<int32_t, shared_ptr<Peer>>* getPeers();
         virtual shared_ptr<BidCoSMessage> getLastReceivedMessage() { return _lastReceivedMessage; }
         virtual int32_t calculateCycleLength(uint8_t messageCounter);
         virtual void stopDutyCycle() {};
@@ -97,7 +93,7 @@ class HomeMaticDevice
         int32_t _centralAddress = 0;
         int32_t _currentList = 0;
         std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>> _config;
-        std::unordered_map<int32_t, Peer> _peers;
+        std::unordered_map<int32_t, shared_ptr<Peer>> _peers;
         std::mutex _peersMutex;
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
@@ -105,14 +101,14 @@ class HomeMaticDevice
         bool _justPairedToOrThroughCentral = false;
         BidCoSQueueManager _bidCoSQueueManager;
         shared_ptr<BidCoSMessage> _lastReceivedMessage;
-        BidCoSPacket _sentPacket;
+        shared_ptr<BidCoSPacket> _sentPacket;
         shared_ptr<BidCoSMessages> _messages;
         int64_t _lastDutyCycleEvent = 0;
         bool _initialized = false;
 
         bool _lowBattery = false;
 
-        virtual Peer createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
+        virtual shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
 
         virtual void init();
         virtual void setUpBidCoSMessages();

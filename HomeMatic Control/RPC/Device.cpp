@@ -171,7 +171,10 @@ Parameter::Parameter(xml_node<>* node)
 			while(std::getline(stream, element, ','))
 			{
 				HelperFunctions::toLower(HelperFunctions::trim(element));
-				if(element == "service") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::service);
+				if(element == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
+				else if(element == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
+				else if(element == "transform") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::transform);
+				else if(element == "service") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::service);
 				else if(element == "sticky") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::sticky);
 			}
 		}
@@ -355,7 +358,9 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 		if(attributeName == "index") index = std::stoll(attributeValue);
 		else if(attributeName == "ui_flags")
 		{
-			if(attributeValue == "internal") uiFlags = UIFlags::Enum::internal;
+			if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
+			else if(attributeValue == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
+			else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown ui flag for \"channel\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "class") channelClass = attributeValue;
@@ -448,6 +453,13 @@ void Device::parseXML(xml_document<>* doc)
 					if(element == "wakeup") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::wakeUp);
 					else if(element == "config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::config);
 				}
+			}
+			else if(attributeName == "ui_flags")
+			{
+				if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
+				else if(attributeValue == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
+				else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
+				else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown ui flag for \"channel\": " << attributeValue << std::endl;
 			}
 			else if(attributeName == "cyclic_timeout") cyclicTimeout = std::stoll(attributeValue);
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"device\": " << attributeName << std::endl;

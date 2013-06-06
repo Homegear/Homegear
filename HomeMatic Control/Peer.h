@@ -9,11 +9,11 @@
 #include <memory>
 #include <queue>
 
-#include "RPC/Device.h"
-#include "HMDeviceTypes.h"
-
 class HomeMaticDevice;
 class BidCoSQueue;
+
+#include "RPC/Device.h"
+#include "RPC/RPCVariable.h"
 
 class PairedPeer
 {
@@ -31,7 +31,7 @@ public:
 	XMLRPCConfigurationParameter() {}
 	virtual ~XMLRPCConfigurationParameter() {}
 
-	shared_ptr<RPC::Parameter> xmlrpcParameter;
+	std::shared_ptr<RPC::Parameter> xmlrpcParameter;
 	bool changed = false;
 	int64_t value = 0;
 };
@@ -39,7 +39,7 @@ public:
 class Peer
 {
     public:
-		Peer() { pendingBidCoSQueues = shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>(new std::queue<shared_ptr<BidCoSQueue>>()); }
+		Peer() { pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>()); }
 		Peer(std::string serializedObject, HomeMaticDevice* device);
 		virtual ~Peer() {}
 
@@ -52,13 +52,14 @@ class Peer
         uint8_t messageCounter = 0;
         std::unordered_map<int32_t, int32_t> config;
         std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>> configCentral;
-        shared_ptr<RPC::Device> xmlrpcDevice = nullptr;
+        std::shared_ptr<RPC::Device> rpcDevice = nullptr;
         std::unordered_map<int32_t, std::vector<PairedPeer>> peers;
         //Has to be shared_ptr because Peer must be copyable
-        shared_ptr<std::queue<shared_ptr<BidCoSQueue>>> pendingBidCoSQueues;
+        std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>> pendingBidCoSQueues;
 
         std::string serialize();
         void initializeCentralConfig();
+        std::shared_ptr<RPC::RPCVariable> getDeviceDescription();
 };
 
 #endif // PEER_H

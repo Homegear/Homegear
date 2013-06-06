@@ -1,6 +1,8 @@
 #ifndef SERVER_H_
 #define SERVER_H_
 
+#include <memory>
+
 #include "RPCServer.h"
 
 namespace RPC {
@@ -10,6 +12,7 @@ public:
 	Server() {}
 	virtual ~Server() {}
 
+	void registerMethods();
 	void start();
 protected:
 	RPCServer _server;

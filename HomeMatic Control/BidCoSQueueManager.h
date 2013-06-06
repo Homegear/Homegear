@@ -1,14 +1,14 @@
 #ifndef BIDCOSQUEUEMANAGER_H_
 #define BIDCOSQUEUEMANAGER_H_
 
+class HomeMaticDevice;
+class BidCoSQueue;
+enum class BidCoSQueueType;
+
 #include <thread>
 #include <mutex>
 #include <memory>
 #include <unordered_map>
-
-class HomeMaticDevice;
-class BidCoSQueue;
-enum class BidCoSQueueType;
 
 class BidCoSQueueData
 {

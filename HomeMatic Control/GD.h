@@ -1,6 +1,10 @@
 #ifndef GD_H_
 #define GD_H_
 
+class Cul;
+class Database;
+class HomeMaticDevices;
+
 #include <vector>
 #include <string>
 
@@ -9,10 +13,6 @@
 #include "HomeMaticDevices.h"
 #include "RPC/Server.h"
 #include "RPC/Devices.h"
-
-class Cul;
-class Database;
-class HomeMaticDevices;
 
 class GD {
 public:
@@ -24,6 +24,7 @@ public:
 	static Database db;
 	static Cul cul;
 	static int32_t debugLevel;
+	static int32_t rpcLogLevel;
 
 	virtual ~GD() { }
 private:

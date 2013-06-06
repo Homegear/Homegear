@@ -3,6 +3,19 @@
 namespace RPC
 {
 
+std::shared_ptr<RPCVariable> RPCVariable::createError(int32_t faultCode, std::string faultString)
+{
+	std::shared_ptr<RPCVariable> error(new RPCVariable(RPCVariableType::rpcStruct));
+	error->errorStruct = true;
+	error->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger)));
+	error->structValue->back()->name = "faultCode";
+	error->structValue->back()->integerValue = faultCode;
+	error->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcString)));
+	error->structValue->back()->name = "faultString";
+	error->structValue->back()->stringValue = faultString;
+	return error;
+}
+
 void RPCVariable::print()
 {
 	if(type == RPCVariableType::rpcVoid)

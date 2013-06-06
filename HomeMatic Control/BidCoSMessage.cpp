@@ -4,17 +4,17 @@ BidCoSMessage::BidCoSMessage()
 {
 }
 
-BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, void (HomeMaticDevice::*messageHandler)(int32_t, shared_ptr<BidCoSPacket>)) : _messageType(messageType), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
+BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, void (HomeMaticDevice::*messageHandler)(int32_t, std::shared_ptr<BidCoSPacket>)) : _messageType(messageType), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, int32_t accessPairing, void (HomeMaticDevice::*messageHandler)(int32_t, shared_ptr<BidCoSPacket>)) : _messageType(messageType), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
+BidCoSMessage::BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, int32_t accessPairing, void (HomeMaticDevice::*messageHandler)(int32_t, std::shared_ptr<BidCoSPacket>)) : _messageType(messageType), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-BidCoSMessage::BidCoSMessage(int32_t messageType, int32_t controlByte, HomeMaticDevice* device, void (HomeMaticDevice::*messageHandler)(int32_t, int32_t, shared_ptr<BidCoSPacket>)) : _messageType(messageType), _controlByte(controlByte), _device(device), _messageHandlerOutgoing(messageHandler)
+BidCoSMessage::BidCoSMessage(int32_t messageType, int32_t controlByte, HomeMaticDevice* device, void (HomeMaticDevice::*messageHandler)(int32_t, int32_t, std::shared_ptr<BidCoSPacket>)) : _messageType(messageType), _controlByte(controlByte), _device(device), _messageHandlerOutgoing(messageHandler)
 {
     _direction = DIRECTIONOUT;
 }
@@ -23,7 +23,7 @@ BidCoSMessage::~BidCoSMessage()
 {
 }
 
-void BidCoSMessage::invokeMessageHandlerIncoming(shared_ptr<BidCoSPacket> packet)
+void BidCoSMessage::invokeMessageHandlerIncoming(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -36,7 +36,7 @@ void BidCoSMessage::invokeMessageHandlerIncoming(shared_ptr<BidCoSPacket> packet
 	}
 }
 
-void BidCoSMessage::invokeMessageHandlerOutgoing(shared_ptr<BidCoSPacket> packet)
+void BidCoSMessage::invokeMessageHandlerOutgoing(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -71,7 +71,7 @@ bool BidCoSMessage::typeIsEqual(int32_t messageType, std::vector<std::pair<uint3
 }
 
 
-bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSPacket> packet)
+bool BidCoSMessage::typeIsEqual(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -92,7 +92,7 @@ bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSPacket> packet)
 	return false;
 }
 
-bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message)
+bool BidCoSMessage::typeIsEqual(std::shared_ptr<BidCoSMessage> message)
 {
 	try
 	{
@@ -113,7 +113,7 @@ bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message)
 	return false;
 }
 
-bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message, shared_ptr<BidCoSPacket> packet)
+bool BidCoSMessage::typeIsEqual(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -135,15 +135,15 @@ bool BidCoSMessage::typeIsEqual(shared_ptr<BidCoSMessage> message, shared_ptr<Bi
 	return false;
 }
 
-bool BidCoSMessage::checkAccess(shared_ptr<BidCoSPacket> packet, BidCoSQueue* queue)
+bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, BidCoSQueue* queue)
 {
 	try
 	{
 		if(_device == nullptr || packet == nullptr) return false;
 
 		int32_t access = _device->isInPairingMode() ? _accessPairing : _access;
-		Peer* currentPeer = _device->isInPairingMode() ? ((queue != nullptr && queue->peer.address == packet->senderAddress()) ? &(queue->peer) : nullptr) : nullptr;
-		if(currentPeer == nullptr) currentPeer = ((_device->getPeers()->find(packet->senderAddress()) == _device->getPeers()->end()) ? nullptr : &_device->getPeers()->at(packet->senderAddress()));
+		Peer* currentPeer = _device->isInPairingMode() ? ((queue != nullptr && queue->peer->address == packet->senderAddress()) ? queue->peer.get() : nullptr) : nullptr;
+		if(currentPeer == nullptr) currentPeer = ((_device->getPeers()->find(packet->senderAddress()) == _device->getPeers()->end()) ? nullptr : _device->getPeers()->at(packet->senderAddress()).get());
 		if(access == NOACCESS) return false;
 		if(queue != nullptr && !queue->isEmpty())
 		{

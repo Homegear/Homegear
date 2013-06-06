@@ -1,11 +1,12 @@
 #ifndef DEVICES_H_
 #define DEVICES_H_
 
+class BidCoSPacket;
+
 #include <vector>
 #include <memory>
 
 #include "Device.h"
-#include "../BidCoSPacket.h"
 #include "../HMDeviceTypes.h"
 
 namespace RPC {
@@ -15,10 +16,10 @@ public:
 	Devices();
 	virtual ~Devices() {}
 	void load();
-	shared_ptr<Device> find(shared_ptr<BidCoSPacket> packet);
-	shared_ptr<Device> find(HMDeviceTypes deviceType, uint32_t firmwareVersion);
+	std::shared_ptr<Device> find(std::shared_ptr<BidCoSPacket> packet);
+	std::shared_ptr<Device> find(HMDeviceTypes deviceType, uint32_t firmwareVersion);
 protected:
-	std::vector<shared_ptr<Device>> _devices;
+	std::vector<std::shared_ptr<Device>> _devices;
 };
 
 } /* namespace XMLRPC */

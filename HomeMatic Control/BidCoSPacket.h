@@ -1,8 +1,6 @@
 #ifndef BIDCOSPACKET_H
 #define BIDCOSPACKET_H
 
-using namespace std;
-
 #include "Exception.h"
 
 #include <iostream>

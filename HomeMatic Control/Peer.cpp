@@ -3,13 +3,13 @@
 
 void Peer::initializeCentralConfig()
 {
-	if(xmlrpcDevice == nullptr)
+	if(rpcDevice == nullptr)
 	{
 		if(GD::debugLevel >= 3) cout << "Warning: Tried to initialize peer's central config without xmlrpcDevice being set." << endl;
 		return;
 	}
 	XMLRPCConfigurationParameter parameter;
-	for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = xmlrpcDevice->parameterSet.parameters.begin(); i != xmlrpcDevice->parameterSet.parameters.end(); ++i)
+	for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = rpcDevice->parameterSet.parameters.begin(); i != rpcDevice->parameterSet.parameters.end(); ++i)
 	{
 		if((*i)->physicalParameter.list < 9999)
 		{
@@ -18,7 +18,7 @@ void Peer::initializeCentralConfig()
 			configCentral[0][(uint32_t)RPC::ParameterSet::Type::Enum::master][(*i)->physicalParameter.list][(*i)->physicalParameter.index] = parameter;
 		}
 	}
-	for(std::vector<shared_ptr<RPC::DeviceChannel>>::iterator i = xmlrpcDevice->channels.begin(); i != xmlrpcDevice->channels.end(); ++i)
+	for(std::vector<shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 	{
 		RPC::ParameterSet* masterSet = (*i)->getParameterSet(RPC::ParameterSet::Type::master);
 		if(masterSet == nullptr) continue;
@@ -49,8 +49,8 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 	localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 	deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
-	xmlrpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
-	if(xmlrpcDevice == nullptr && GD::debugLevel >= 2) cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << endl;
+	rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
+	if(rpcDevice == nullptr && GD::debugLevel >= 2) cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << endl;
 	messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
 	for(uint32_t i = 0; i < configSize; i++)
@@ -78,12 +78,12 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 					parameter->changed = (bool)std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
 					uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 					std::string id = serializedObject.substr(pos, idLength); pos += idLength;
-					if(xmlrpcDevice == nullptr)
+					if(rpcDevice == nullptr)
 					{
 						if(GD::debugLevel >= 3) cout << "Warning: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec;
 						continue;
 					}
-					parameter->xmlrpcParameter = xmlrpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
+					parameter->xmlrpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
 				}
 			}
 		}
@@ -177,4 +177,25 @@ std::string Peer::serialize()
 	}
 	stringstream << std::dec;
 	return stringstream.str();
+}
+
+std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription()
+{
+	std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", serialNumber)));
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
+	RPC::RPCVariable* variable = description->structValue->back().get();
+	variable->name = "CHILDREN";
+	for(std::vector<std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+	{
+		variable->arrayValue->push_back(shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(serialNumber + ":" + std::to_string((*i)->index))));
+	}
+	std::ostringstream stringStream;
+	stringStream << std::setw(2) << std::hex << (int32_t)firmwareVersion << std::dec;
+	std::string firmware = stringStream.str();
+	if(firmware.size() < 2) firmware = "00";
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", firmware.substr(0, 1) + "." + firmware.substr(1))));
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)rpcDevice->uiFlags)));
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INTERFACE", GD::devices.getCentral()->serialNumber())));
+	return description;
 }

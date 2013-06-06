@@ -20,6 +20,7 @@ enum class RPCVariableType
 
 class RPCVariable {
 public:
+	bool errorStruct = false;
 	RPCVariableType type;
 	std::string name;
 	std::string stringValue;
@@ -27,9 +28,14 @@ public:
 	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> arrayValue;
 	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> structValue;
 
-	RPCVariable() { type = RPCVariableType::rpcInteger; }
+	RPCVariable() { type = RPCVariableType::rpcVoid; arrayValue = std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>()); structValue = std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>()); }
 	RPCVariable(RPCVariableType variableType) : RPCVariable() { type = variableType; }
+	RPCVariable(int32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; integerValue = integer; }
+	RPCVariable(std::string structElementName, int32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; name = structElementName; integerValue = integer; }
+	RPCVariable(std::string string) : RPCVariable() { type = RPCVariableType::rpcString; stringValue = string; }
+	RPCVariable(std::string structElementName, std::string string) : RPCVariable() { type = RPCVariableType::rpcString; name = structElementName; stringValue = string; }
 	virtual ~RPCVariable() {}
+	static std::shared_ptr<RPCVariable> createError(int32_t faultCode, std::string faultString);
 	void print();
 private:
 	void print(std::shared_ptr<RPCVariable>, std::string indent);

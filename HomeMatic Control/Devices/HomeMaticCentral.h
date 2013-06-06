@@ -1,12 +1,14 @@
 #ifndef HOMEMATICCENTRAL_H_
 #define HOMEMATICCENTRAL_H_
 
+#include <memory>
 #include <mutex>
 #include <string>
 
-#include "../HomeMaticDevice.h"
-
 class BidCoSPacket;
+
+#include "../HomeMaticDevice.h"
+#include "../RPC/RPCVariable.h"
 
 class HomeMaticCentral : public HomeMaticDevice
 {
@@ -28,10 +30,12 @@ public:
 	void handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPacket>);
 	void handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket>);
 	void handleConfigParamResponse(int32_t messageCounter, shared_ptr<BidCoSPacket>);
+
+	shared_ptr<RPC::RPCVariable> listDevices();
 protected:
-	virtual Peer createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
+	shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
 private:
-	Peer* _currentPeer = nullptr;
+	shared_ptr<Peer> _currentPeer = nullptr;
 };
 
 #endif /* HOMEMATICCENTRAL_H_ */

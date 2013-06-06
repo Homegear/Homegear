@@ -56,11 +56,15 @@ shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVers
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Exception: " << ex.what() << '\n';
+        std::cerr << "Exception: " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Exception: " << ex.what() << '\n';
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Unknown exception." << std::endl;
     }
     return nullptr;
 }

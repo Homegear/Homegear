@@ -26,7 +26,7 @@ void RPCServer::start()
 	_mainThread.detach();
 }
 
-void RPCServer::registerMethod(std::string methodName, RPCMethod method)
+void RPCServer::registerMethod(std::string methodName, shared_ptr<RPCMethod> method)
 {
 	if(_rpcMethods.find(methodName) != _rpcMethods.end())
 	{
@@ -110,31 +110,20 @@ void RPCServer::analyzeBinaryRPC(int32_t clientFileDescriptor, std::shared_ptr<c
 		}
 	}
 	cout << endl;
-	if(methodName == "init")
+	if(_rpcMethods.find(methodName) != _rpcMethods.end())
 	{
-		if((parameters->size() == 1 && parameters->at(1)->type == RPCVariableType::rpcString) || (parameters->size() == 2 && parameters->at(1)->type == RPCVariableType::rpcString && parameters->at(1)->stringValue == ""))
-		{
-			removeLocalClient(parameters->at(0)->stringValue);
-		}
-		else if(parameters->size() == 2 && parameters->at(0)->type == RPCVariableType::rpcString && parameters->at(1)->type == RPCVariableType::rpcString)
-		{
-			createLocalClient(parameters->at(0)->stringValue);
-		}
-		else if(GD::debugLevel >= 3)
-		{
-			cout << "Warning: init called with wrong parameters.";
-		}
-	}
-	else if(_rpcMethods.find(methodName) != _rpcMethods.end())
-	{
-		shared_ptr<RPCVariable> ret = _rpcMethods[methodName].invoke(parameters);
+		shared_ptr<RPCVariable> ret = _rpcMethods[methodName]->invoke(parameters);
 		std::shared_ptr<char> data;
 		uint32_t dataLength = _rpcEncoder.encodeResponse(data, ret);
+		_rpcDecoder.decodeResponse(data, dataLength, 8)->print();
 		sendRPCResponseToClient(clientFileDescriptor, data, dataLength);
 	}
 	else if(GD::debugLevel >= 3)
 	{
 		cout << "Warning: RPC method not found: " << methodName << endl;
+		std::shared_ptr<char> data;
+		uint32_t dataLength = _rpcEncoder.encodeResponse(data, RPCVariable::createError(-1, ": unknown method name"));
+		sendRPCResponseToClient(clientFileDescriptor, data, dataLength);
 	}
 }
 
@@ -244,6 +233,7 @@ void RPCServer::removeClientFileDescriptor(int32_t clientFileDescriptor)
 			if(*i == clientFileDescriptor)
 			{
 				_fileDescriptors.erase(i);
+				_stateMutex.unlock();
 				return;
 			}
 		}
@@ -277,6 +267,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 		uint32_t bufferSize;
 		uint32_t dataSize;
 		PacketType::Enum packetType;
+		cout << "Listening for incoming packets from client number " << clientFileDescriptor << "." << endl;
 		while(!_stopServer)
 		{
 			bytesRead = read(clientFileDescriptor, buffer, sizeof(buffer));
@@ -284,6 +275,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 			{
 				removeClientFileDescriptor(clientFileDescriptor);
 				close(clientFileDescriptor);
+				if(GD::debugLevel >= 5) cout << "Connection to client number " << clientFileDescriptor << " closed." << endl;
 				return;
 			}
 			bufferSize = bytesRead; //To prevent errors comparing signed and unsigned integers
@@ -371,7 +363,7 @@ int32_t RPCServer::getClientFileDescriptor()
 			inet_ntop(AF_INET6, &s->sin6_addr, ipString, sizeof ipString);
 		}
 
-		if(GD::debugLevel >= 4) cout << "Connection from " << ipString << ":" << port << " accepted." << endl;
+		if(GD::debugLevel >= 4) cout << "Connection from " << ipString << ":" << port << " accepted. Client number: " << clientFileDescriptor << endl;
 
 		return clientFileDescriptor;
 	}

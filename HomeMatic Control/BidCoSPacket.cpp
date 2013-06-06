@@ -140,10 +140,6 @@ uint8_t BidCoSPacket::getByte(std::string hexString)
 {
 	try
 	{
-		/*int32_t buffer;
-		std::stringstream packetStream;
-		packetStream << std::hex << hexString;
-		packetStream >> buffer;*/
 		return (uint8_t)std::stoi(hexString, 0, 16);
 	}
 	catch(const std::exception& ex)
@@ -157,10 +153,6 @@ int32_t BidCoSPacket::getInt(std::string hexString)
 {
 	try
 	{
-		/*int32_t buffer;
-		std::stringstream packetStream;
-		packetStream << std::hex << hexString;
-		packetStream >> buffer;*/
 		return std::stoi(hexString, 0, 16);
 	}
 	catch(const std::exception& ex)

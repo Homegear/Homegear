@@ -1,6 +1,8 @@
 #ifndef DEVICE_H_
 #define DEVICE_H_
 
+class BidCoSPacket;
+
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -13,7 +15,6 @@
 #include "rapidxml.hpp"
 #include "LogicalParameter.h"
 #include "PhysicalParameter.h"
-#include "../BidCoSPacket.h"
 #include "../HMDeviceTypes.h"
 
 using namespace rapidxml;
@@ -79,7 +80,7 @@ public:
 	};
 	struct UIFlags
 	{
-		enum Enum { none = 0, service = 1, sticky = 2 };
+		enum Enum { none = 0, visible = 1, internal = 2, transform = 4, service = 8, sticky = 0x10 };
 	};
 	ParameterSet* parentParameterSet = nullptr;
 	double index = 0;
@@ -87,7 +88,7 @@ public:
 	bool isSigned = false;
 	BooleanOperator::Enum booleanOperator = BooleanOperator::Enum::e;
 	Operations::Enum operations = Operations::Enum::none;
-	UIFlags::Enum uiFlags = UIFlags::Enum::none;
+	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	uint32_t constValue = 0;
 	std::string id;
 	std::string param;
@@ -114,7 +115,7 @@ public:
 	DeviceType(xml_node<>* typeNode);
 	virtual ~DeviceType() {}
 
-	bool matches(shared_ptr<BidCoSPacket> packet);
+	bool matches(std::shared_ptr<BidCoSPacket> packet);
 	bool matches(HMDeviceTypes deviceType, uint32_t firmwareVersion);
 };
 
@@ -128,14 +129,14 @@ public:
 	int32_t channel = 0;
 	Type::Enum type = Type::Enum::none;
 	std::string id;
-	std::vector<shared_ptr<Parameter>> parameters;
+	std::vector<std::shared_ptr<Parameter>> parameters;
 
 	ParameterSet() {}
 	ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
-	std::vector<shared_ptr<Parameter>> getIndices(int32_t startIndex, int32_t endIndex);
-	shared_ptr<Parameter> getParameter(std::string id);
+	std::vector<std::shared_ptr<Parameter>> getIndices(int32_t startIndex, int32_t endIndex);
+	std::shared_ptr<Parameter> getParameter(std::string id);
 };
 
 class EnforceLink
@@ -169,17 +170,17 @@ class DeviceChannel
 public:
 	struct UIFlags
 	{
-		enum Enum { none = 0, internal = 1 };
+		enum Enum { none = 0, visible = 1, internal = 2, dontdelete = 8 };
 	};
 	Device* parentDevice = nullptr;
 	uint32_t index = 0;
 	std::string type;
-	UIFlags::Enum uiFlags = UIFlags::Enum::none;
+	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	std::string channelClass;
 	uint32_t count = 0;
-	std::vector<shared_ptr<ParameterSet>> parameterSets;
-	std::vector<shared_ptr<LinkRole>> linkRoles;
-	std::vector<shared_ptr<EnforceLink>> enforceLinks;
+	std::vector<std::shared_ptr<ParameterSet>> parameterSets;
+	std::vector<std::shared_ptr<LinkRole>> linkRoles;
+	std::vector<std::shared_ptr<EnforceLink>> enforceLinks;
 
 	DeviceChannel() {}
 	DeviceChannel(xml_node<>* node);
@@ -218,6 +219,10 @@ public:
 class Device
 {
 public:
+	struct UIFlags
+	{
+		enum Enum { none = 0, visible = 1, internal = 2, dontdelete = 8 };
+	};
 	struct RXModes
 	{
 		enum Enum { none = 0, config = 1, wakeUp = 2 };
@@ -226,10 +231,11 @@ public:
 	uint32_t version = 0;
 	uint32_t cyclicTimeout = 0;
 	ParameterSet parameterSet;
-	std::vector<shared_ptr<DeviceChannel>> channels;
-	std::vector<shared_ptr<DeviceType>> supportedTypes;
-	std::vector<shared_ptr<DeviceFrame>> frames;
+	std::vector<std::shared_ptr<DeviceChannel>> channels;
+	std::vector<std::shared_ptr<DeviceType>> supportedTypes;
+	std::vector<std::shared_ptr<DeviceFrame>> frames;
 	RXModes::Enum rxModes = RXModes::Enum::none;
+	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 
 	Device() {}
 	Device(std::string xmlFilename);

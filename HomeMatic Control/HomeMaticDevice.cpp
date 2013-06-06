@@ -1,4 +1,5 @@
 #include "HomeMaticDevice.h"
+#include "GD.h"
 
 HomeMaticDevice::HomeMaticDevice()
 {
@@ -135,7 +136,7 @@ void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycl
 	{
 		int32_t address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		int32_t peerSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_peers[address] = Peer(serializedObject.substr(pos, peerSize), this); pos += peerSize;
+		_peers[address] = shared_ptr<Peer>(new Peer(serializedObject.substr(pos, peerSize), this)); pos += peerSize;
 	}
 	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	for(uint32_t i = 0; i < configSize; i++)
@@ -170,10 +171,10 @@ std::string HomeMaticDevice::serialize()
 		stringstream << std::setw(2) << (int32_t)i->second;
 	}
 	stringstream << std::setw(8) << _peers.size();
-	for(std::unordered_map<int32_t, Peer>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+	for(std::unordered_map<int32_t, shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 	{
 		stringstream << std::setw(8) << i->first;
-		std::string peer = i->second.serialize();
+		std::string peer = i->second->serialize();
 		stringstream << std::setw(8) << peer.size();
 		stringstream << peer;
 	}
@@ -259,7 +260,7 @@ void HomeMaticDevice::packetReceived(shared_ptr<BidCoSPacket> packet)
 
 void HomeMaticDevice::sendPacket(shared_ptr<BidCoSPacket> packet)
 {
-	_sentPacket = *packet;
+	_sentPacket = packet;
 	GD::cul.sendPacket(packet);
 }
 
@@ -294,7 +295,6 @@ void HomeMaticDevice::handlePairingRequest(int32_t messageCounter, shared_ptr<Bi
 				return;
 			}
 			if(_bidCoSQueueManager.get(packet->senderAddress()) == nullptr) return;
-			Peer peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), "", packet->payload()->at(15), 0);
 			_peers[packet->senderAddress()] = _bidCoSQueueManager.get(packet->senderAddress())->peer;
 			_pairing = false;
 			sendOK(messageCounter, packet->senderAddress());
@@ -311,9 +311,9 @@ void HomeMaticDevice::handleWakeUp(int32_t messageCounter, shared_ptr<BidCoSPack
 	sendOK(messageCounter, packet->senderAddress());
 }
 
-Peer HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
+shared_ptr<Peer> HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
 {
-    return Peer();
+    return shared_ptr<Peer>(new Peer());
 }
 
 void HomeMaticDevice::handleConfigRequestPeers(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
@@ -334,7 +334,7 @@ void HomeMaticDevice::handleConfigPeerDelete(int32_t messageCounter, shared_ptr<
 		_peersMutex.lock();
 		try
 		{
-			if(_peers[address].deviceType != HMDeviceTypes::HMRCV50) _peers.erase(address); //Unpair. Unpairing of HMRCV50 is done through CONFIG_WRITE_INDEX
+			if(_peers[address]->deviceType != HMDeviceTypes::HMRCV50) _peers.erase(address); //Unpair. Unpairing of HMRCV50 is done through CONFIG_WRITE_INDEX
 		}
 		catch(const std::exception& ex)
 		{
@@ -360,8 +360,8 @@ void HomeMaticDevice::handleConfigEnd(int32_t messageCounter, shared_ptr<BidCoSP
 			_peersMutex.lock();
 			try
 			{
-				_peers[queue->peer.address] = queue->peer;
-				_centralAddress = queue->peer.address;
+				_peers[queue->peer->address] = queue->peer;
+				_centralAddress = queue->peer->address;
 			}
 			catch(const std::exception& ex)
 			{
@@ -410,7 +410,7 @@ void HomeMaticDevice::handleConfigPeerAdd(int32_t messageCounter, shared_ptr<Bid
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
     if(_peers.find(address) == _peers.end())
     {
-        Peer peer = createPeer(address, -1, HMDeviceTypes::HMUNKNOWN, "", packet->payload()->at(5), 0);
+        shared_ptr<Peer> peer = createPeer(address, -1, HMDeviceTypes::HMUNKNOWN, "", packet->payload()->at(5), 0);
         _peersMutex.lock();
         try
         {
@@ -433,10 +433,10 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, shared_ptr<BidCo
 		if(_pairing)
 		{
 			BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRINGCENTRAL, packet->senderAddress());
-			Peer peer;
-			peer.address = packet->senderAddress();
-			peer.deviceType = HMDeviceTypes::HMRCV50;
-			peer.messageCounter = 0x00; //Unknown at this point
+			shared_ptr<Peer> peer(new Peer());
+			peer->address = packet->senderAddress();
+			peer->deviceType = HMDeviceTypes::HMRCV50;
+			peer->messageCounter = 0x00; //Unknown at this point
 			queue->peer = peer;
 			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x05) }));
 			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x08), std::pair<int32_t, int32_t>(0x02, 0x02), std::pair<int32_t, int32_t>(0x03, 0x01) }));
@@ -475,14 +475,14 @@ void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAd
 {
     std::vector<uint8_t> payload;
     payload.push_back(0x01); //I think it's always channel 1
-    for(std::unordered_map<int32_t, Peer>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+    for(std::unordered_map<int32_t, shared_ptr<Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
     {
-        if(i->second.deviceType == HMDeviceTypes::HMRCV50) continue;
-        if(i->second.localChannel != channel) continue;
+        if(i->second->deviceType == HMDeviceTypes::HMRCV50) continue;
+        if(i->second->localChannel != channel) continue;
         payload.push_back(i->first >> 16);
         payload.push_back((i->first >> 8) & 0xFF);
         payload.push_back(i->first & 0xFF);
-        payload.push_back(i->second.remoteChannel); //Channel
+        payload.push_back(i->second->remoteChannel); //Channel
     }
     payload.push_back(0x00);
     payload.push_back(0x00);
@@ -684,7 +684,7 @@ void HomeMaticDevice::setLowBattery(bool lowBattery)
 
 void HomeMaticDevice::sendDutyCycleResponse(int32_t destinationAddress) {}
 
-std::unordered_map<int32_t, Peer>* HomeMaticDevice::getPeers()
+std::unordered_map<int32_t, shared_ptr<Peer>>* HomeMaticDevice::getPeers()
 {
     return &_peers;
 }

@@ -17,14 +17,14 @@ public:
 	virtual ~RPCDecoder() {}
 
 	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::shared_ptr<char> packet, uint32_t packetLength, std::string* methodName);
-	std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<char> packet, uint32_t packetLength);
+	std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<char> packet, uint32_t packetLength, uint32_t offset = 0);
 private:
-	int32_t getInteger(char* packet, uint32_t packetLength, uint32_t* position);
-	std::string getString(char* packet, uint32_t packetLength, uint32_t* position);
-	std::shared_ptr<RPCVariable> getParameter(char* packet, uint32_t packetLength, uint32_t* position);
-	RPCVariableType getVariableType(char* packet, uint32_t packetLength, uint32_t* position);
-	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> getArray(char* packet, uint32_t packetLength, uint32_t* position);
-	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> getStruct(char* packet, uint32_t packetLength, uint32_t* position);
+	int32_t decodeInteger(char* packet, uint32_t packetLength, uint32_t* position);
+	std::string decodeString(char* packet, uint32_t packetLength, uint32_t* position);
+	std::shared_ptr<RPCVariable> decodeParameter(char* packet, uint32_t packetLength, uint32_t* position);
+	RPCVariableType decodeType(char* packet, uint32_t packetLength, uint32_t* position);
+	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeArray(char* packet, uint32_t packetLength, uint32_t* position);
+	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeStruct(char* packet, uint32_t packetLength, uint32_t* position);
 };
 
 } /* namespace RPC */
