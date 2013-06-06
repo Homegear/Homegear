@@ -236,6 +236,7 @@ public:
 	std::vector<std::shared_ptr<DeviceFrame>> frames;
 	RXModes::Enum rxModes = RXModes::Enum::none;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
+	std::string deviceClass;
 
 	Device() {}
 	Device(std::string xmlFilename);

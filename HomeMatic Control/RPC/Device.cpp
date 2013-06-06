@@ -454,6 +454,10 @@ void Device::parseXML(xml_document<>* doc)
 					else if(element == "config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::config);
 				}
 			}
+			else if(attributeName == "class")
+			{
+				deviceClass = attributeValue;
+			}
 			else if(attributeName == "ui_flags")
 			{
 				if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
