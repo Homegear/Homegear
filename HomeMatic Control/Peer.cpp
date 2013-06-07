@@ -65,6 +65,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 		for(uint32_t k = 0; k < parameterCount; k++)
 		{
 			uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			if(idLength == 0 && GD::debugLevel >= 1) cout << "Critical: Added central config parameter without id. Device: " << address << " Channel: " << channel;
 			std::string id = serializedObject.substr(pos, idLength); pos += idLength;
 			RPCConfigurationParameter* parameter = &configCentral[channel][id];
 			parameter->value = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
