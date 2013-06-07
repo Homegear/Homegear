@@ -8,6 +8,7 @@ class BidCoSPacket;
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <map>
 #include <unordered_map>
 #include <cmath>
 #include <memory>
@@ -99,7 +100,7 @@ public:
 	ParameterDescription description;
 
 	Parameter() {}
-	Parameter(xml_node<>* node);
+	Parameter(xml_node<>* node, bool checkForID = false);
 	virtual ~Parameter() {}
 	bool checkCondition(int64_t value);
 };
@@ -130,13 +131,16 @@ public:
 	Type::Enum type = Type::Enum::none;
 	std::string id;
 	std::vector<std::shared_ptr<Parameter>> parameters;
+	std::map<uint32_t, uint32_t> lists;
 
 	ParameterSet() {}
 	ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
 	std::vector<std::shared_ptr<Parameter>> getIndices(int32_t startIndex, int32_t endIndex);
+	std::shared_ptr<Parameter> getIndex(double index);
 	std::shared_ptr<Parameter> getParameter(std::string id);
+	std::string typeString();
 };
 
 class EnforceLink
@@ -157,8 +161,8 @@ public:
 class LinkRole
 {
 public:
-	std::string sourceName;
-	std::string targetName;
+	std::vector<std::string> sourceNames;
+	std::vector<std::string> targetNames;
 
 	LinkRole() {}
 	LinkRole(xml_node<>* parameterSetNode);
@@ -241,6 +245,7 @@ public:
 	Device() {}
 	Device(std::string xmlFilename);
 	virtual ~Device();
+	std::shared_ptr<DeviceType> getType(HMDeviceTypes deviceType, int32_t firmwareVersion);
 protected:
 	virtual void load(std::string xmlFilename);
 	virtual void parseXML(xml_document<>* doc);

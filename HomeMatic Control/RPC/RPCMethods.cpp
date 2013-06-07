@@ -38,6 +38,12 @@ std::shared_ptr<RPCVariable> RPCListDevices::invoke(std::shared_ptr<std::vector<
 		if(error != ParameterError::Enum::noError) return getError(error);
 		interfaceID = parameters->at(0)->stringValue;
 	}
+	std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+	if(!central)
+	{
+		if(GD::debugLevel >= 2) cout << "Error: Could not execute RPC method list devices. Please add a central device." << endl;
+		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
+	}
 	return GD::devices.getCentral()->listDevices();
 }
 

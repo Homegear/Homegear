@@ -36,13 +36,13 @@ BidCoSQueue* BidCoSQueueManager::createQueue(HomeMaticDevice* device, BidCoSQueu
 void BidCoSQueueManager::resetQueue(int32_t address)
 {
 	std::chrono::milliseconds sleepingTime(300);
-	while(_queues.find(address) != _queues.end() && !_queues[address].stopThread && (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _queues[address].lastAction + 1000)
+	while(_queues.find(address) != _queues.end() && !_queues[address].stopThread && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _queues[address].lastAction + 1000)
 	{
 		std::this_thread::sleep_for(sleepingTime);
 	}
 	if(_queues.find(address) != _queues.end() && !_queues[address].stopThread)
 	{
-		if(GD::debugLevel == 5) cout << "Deleting queue for 0x" << std::hex << address << std::dec << endl;
+		if(GD::debugLevel >= 5) cout << "Deleting queue for 0x" << std::hex << address << std::dec << endl;
 		_queues.erase(_queues.find(address));
 	}
 }

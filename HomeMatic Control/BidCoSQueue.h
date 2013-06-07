@@ -51,7 +51,7 @@ class BidCoSQueue
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
     public:
-        uint64_t* lastAction = nullptr;
+        int64_t* lastAction = nullptr;
         bool noSending = false;
         HomeMaticDevice* device = nullptr;
         shared_ptr<Peer> peer;

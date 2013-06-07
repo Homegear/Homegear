@@ -275,25 +275,27 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 			pendingQueue->noSending = true;
 			if(_peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
 			{
-				for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>>::iterator i = peer->configCentral.begin(); i != peer->configCentral.end(); ++i)
+				for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = peer->configCentral.begin(); i != peer->configCentral.end(); ++i)
 				{
 					int32_t channel = i->first;
 					//Walk through all lists to request master config if necessary
-					for(std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>::iterator j = i->second.at(RPC::ParameterSet::Type::Enum::master).begin(); j != i->second.at(RPC::ParameterSet::Type::Enum::master).end(); ++j)
+					for(std::vector<std::shared_ptr<RPC::ParameterSet>>::iterator j = device->channels.at(channel)->parameterSets.begin(); j != device->channels.at(channel)->parameterSets.end(); ++j)
 					{
-						int32_t list = j->first;
-						payload.push_back(channel);
-						payload.push_back(0x04);
-						payload.push_back(0);
-						payload.push_back(0);
-						payload.push_back(0);
-						payload.push_back(0);
-						payload.push_back(list);
-						configPacket = shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
-						pendingQueue->push(configPacket);
-						pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
-						payload.clear();
-						_messageCounter[0]++;
+						for(std::map<uint32_t, uint32_t>::iterator k = (*j)->lists.begin(); k != (*j)->lists.end(); ++k)
+						{
+							payload.push_back(channel);
+							payload.push_back(0x04);
+							payload.push_back(0);
+							payload.push_back(0);
+							payload.push_back(0);
+							payload.push_back(0);
+							payload.push_back(k->first);
+							configPacket = shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
+							pendingQueue->push(configPacket);
+							pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
+							payload.clear();
+							_messageCounter[0]++;
+						}
 					}
 					//Request peers if not received yet
 					if(peer->rpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::link) != nullptr)
@@ -358,7 +360,6 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 			if(packet->controlByte() & 0x20)
 			{
 				int32_t channel = _sentPacket->payload()->at(0);
-				int32_t list = _sentPacket->payload()->at(6);
 				Peer* peer = _peers[packet->senderAddress()].get();
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = packet->payload()->size() - 1;
@@ -371,7 +372,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 					std::vector<shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::master)->getIndices(startIndex, endIndex);
 					for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
 					{
-						peer->configCentral[channel][(uint32_t)RPC::ParameterSet::Type::master][list][(*i)->index].value = packet->getPosition((*i)->index, (*i)->size, (*i)->isSigned);
+						peer->configCentral[channel][(*i)->id].value = packet->getPosition((*i)->index, (*i)->size, (*i)->isSigned);
 					}
 				}
 			}
@@ -379,7 +380,14 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 			{
 				for(uint32_t i = 1; i < packet->payload()->size() - 2; i += 2)
 				{
-					_peers[packet->senderAddress()]->configCentral[_sentPacket->payload()->at(0)][(uint32_t)RPC::ParameterSet::Type::master][_sentPacket->payload()->at(6)][packet->payload()->at(i)].value = packet->payload()->at(i + 1);
+					int32_t channel = _sentPacket->payload()->at(0);
+					shared_ptr<RPC::Parameter> packetParameter = _peers[packet->senderAddress()]->rpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::master)->getIndex((double)packet->payload()->at(i));
+					if(!packetParameter)
+					{
+						if(GD::debugLevel >= 2) cout << "Error: Tried to set non existant parameter. Device: " << _peers[packet->senderAddress()]->address << " Index:" << packet->payload()->at(i);
+						continue;
+					}
+					_peers[packet->senderAddress()]->configCentral[channel][packetParameter->id].value = packet->payload()->at(i + 1);
 				}
 			}
 		}
@@ -452,7 +460,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices()
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			array->arrayValue->push_back(i->second->getDeviceDescription());
+			std::vector<shared_ptr<RPC::RPCVariable>> descriptions = i->second->getDeviceDescription();
+			for(std::vector<shared_ptr<RPC::RPCVariable>>::iterator j = descriptions.begin(); j != descriptions.end(); ++j)
+			{
+				array->arrayValue->push_back(*j);
+			}
 		}
 		return array;
 	}

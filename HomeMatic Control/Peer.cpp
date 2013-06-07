@@ -8,14 +8,14 @@ void Peer::initializeCentralConfig()
 		if(GD::debugLevel >= 3) cout << "Warning: Tried to initialize peer's central config without xmlrpcDevice being set." << endl;
 		return;
 	}
-	XMLRPCConfigurationParameter parameter;
+	RPCConfigurationParameter parameter;
 	for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = rpcDevice->parameterSet.parameters.begin(); i != rpcDevice->parameterSet.parameters.end(); ++i)
 	{
 		if((*i)->physicalParameter.list < 9999)
 		{
-			parameter = XMLRPCConfigurationParameter();
-			parameter.xmlrpcParameter = *i;
-			configCentral[0][(uint32_t)RPC::ParameterSet::Type::Enum::master][(*i)->physicalParameter.list][(*i)->physicalParameter.index] = parameter;
+			parameter = RPCConfigurationParameter();
+			parameter.rpcParameter = *i;
+			if(!(*i)->id.empty()) configCentral[0][(*i)->id] = parameter;
 		}
 	}
 	for(std::vector<shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
@@ -26,9 +26,9 @@ void Peer::initializeCentralConfig()
 		{
 			if((*j)->physicalParameter.list < 9999)
 			{
-				parameter = XMLRPCConfigurationParameter();
-				parameter.xmlrpcParameter = *j;
-				configCentral[(*i)->index][(uint32_t)RPC::ParameterSet::Type::Enum::master][(*j)->physicalParameter.list][(*j)->physicalParameter.index] = parameter;
+				parameter = RPCConfigurationParameter();
+				parameter.rpcParameter = *j;
+				if(!(*j)->id.empty()) configCentral[(*i)->index][(*j)->id] = parameter;
 			}
 		}
 	}
@@ -61,31 +61,20 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 	for(uint32_t i = 0; i < configCentralSize; i++)
 	{
 		uint32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		uint32_t typeCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t j = 0; j < typeCount; j++)
+		uint32_t parameterCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t k = 0; k < parameterCount; k++)
 		{
-			uint32_t parameterSetType = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			uint32_t listCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			for(uint32_t j = 0; j < listCount; j++)
+			uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			std::string id = serializedObject.substr(pos, idLength); pos += idLength;
+			RPCConfigurationParameter* parameter = &configCentral[channel][id];
+			parameter->value = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			parameter->changed = (bool)std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+			if(rpcDevice == nullptr)
 			{
-				uint32_t list = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				uint32_t parameterCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				for(uint32_t k = 0; k < parameterCount; k++)
-				{
-					double index = std::stod(serializedObject.substr(pos, 8)); pos += 8;
-					XMLRPCConfigurationParameter* parameter = &configCentral[channel][parameterSetType][list][index];
-					parameter->value = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-					parameter->changed = (bool)std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-					uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-					std::string id = serializedObject.substr(pos, idLength); pos += idLength;
-					if(rpcDevice == nullptr)
-					{
-						if(GD::debugLevel >= 3) cout << "Warning: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec;
-						continue;
-					}
-					parameter->xmlrpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
-				}
+				if(GD::debugLevel >= 2) cout << "Error: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec;
+				continue;
 			}
+			parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::Enum::master]->getParameter(id);
 		}
 	}
 	uint32_t peersSize = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
@@ -128,33 +117,29 @@ std::string Peer::serialize()
 		stringstream << std::setw(8) << i->second;
 	}
 	stringstream << std::setw(8) << configCentral.size();
-	for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>>::const_iterator i = configCentral.begin(); i != configCentral.end(); ++i)
+	for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator i = configCentral.begin(); i != configCentral.end(); ++i)
 	{
 		stringstream << std::setw(8) << i->first;
 		stringstream << std::setw(8) << i->second.size();
-		for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>::const_iterator l = i->second.begin(); l != i->second.end(); ++l)
+		for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 		{
-			stringstream << std::setw(8) << l->first;
-			stringstream << std::setw(8) << l->second.size();
-			for(std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>::const_iterator j = l->second.begin(); j != l->second.end(); ++j)
+			if(!j->second.rpcParameter)
 			{
-				stringstream << std::setw(8) << j->first;
-				stringstream << std::setw(8) << j->second.size();
-				for(std::unordered_map<double, XMLRPCConfigurationParameter>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
-				{
-					stringstream << std::setw(8) << k->first;
-					//Four byte should be enough. Probably even two byte would be sufficient.
-					stringstream << std::setw(8) << k->second.value;
-					stringstream << std::setw(1) << (int32_t)k->second.changed;
-					if(k->second.xmlrpcParameter == nullptr || k->second.xmlrpcParameter->id.size() == 0)
-					{
-						stringstream << std::setw(8) << 0;
-						continue;
-					}
-					stringstream << std::setw(8) << k->second.xmlrpcParameter->id.size();
-					stringstream << k->second.xmlrpcParameter->id;
-				}
+				if(GD::debugLevel >= 1) cout << "Critical: Parameter has no corresponding RPC parameter. Writing dummy data. Device: " << address << " Channel: " << i->first << endl;
+				stringstream << std::setw(8) << 0;
+				stringstream << std::setw(8) << 0;
+				stringstream << std::setw(1) << 0;
+				continue;
 			}
+			if(j->second.rpcParameter->id.size() == 0 && GD::debugLevel >= 2)
+			{
+				cout << "Error: Parameter has no id." << endl;
+			}
+			stringstream << std::setw(8) << j->second.rpcParameter->id.size();
+			stringstream << j->second.rpcParameter->id;
+			//Four byte should be enough. Probably even two byte would be sufficient.
+			stringstream << std::setw(8) << j->second.value;
+			stringstream << std::setw(1) << (int32_t)j->second.changed;
 		}
 	}
 	stringstream << std::setw(8) << peers.size();
@@ -179,10 +164,13 @@ std::string Peer::serialize()
 	return stringstream.str();
 }
 
-std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription()
+std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
 {
+	std::vector<std::shared_ptr<RPC::RPCVariable>> descriptions;
 	std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+
 	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", serialNumber)));
+
 	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
 	RPC::RPCVariable* variable = description->structValue->back().get();
 	variable->name = "CHILDREN";
@@ -190,12 +178,106 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription()
 	{
 		variable->arrayValue->push_back(shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(serialNumber + ":" + std::to_string((*i)->index))));
 	}
+
 	std::ostringstream stringStream;
 	stringStream << std::setw(2) << std::hex << (int32_t)firmwareVersion << std::dec;
 	std::string firmware = stringStream.str();
 	if(firmware.size() < 2) firmware = "00";
 	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", firmware.substr(0, 1) + "." + firmware.substr(1))));
+
 	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)rpcDevice->uiFlags)));
+
 	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INTERFACE", GD::devices.getCentral()->serialNumber())));
-	return description;
+
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
+	variable = description->structValue->back().get();
+	variable->name = "PARAMSETS";
+	variable->arrayValue->push_back(shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("MASTER")));
+
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", "")));
+
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RF_ADDRESS", std::to_string(address))));
+
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ROAMING", 0)));
+
+	shared_ptr<RPC::DeviceType> type = rpcDevice->getType(deviceType, firmwareVersion);
+	if(type)
+	{
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", type->id)));
+	}
+
+	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
+
+	descriptions.push_back(description);
+
+	for(std::vector<std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+	{
+		description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", serialNumber + ":" + std::to_string((*i)->index))));
+
+		int32_t aesActive = 0;
+		if(configCentral.find((*i)->index) != configCentral.end() && configCentral.at((*i)->index).find("AES_ACTIVE") != configCentral.at((*i)->index).end() && configCentral.at((*i)->index).at("AES_ACTIVE").value != 0)
+		{
+			aesActive = 1;
+		}
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("AES_ACTIVE", aesActive)));
+
+		int32_t direction = 0;
+		ostringstream linkSourceRoles;
+		ostringstream linkTargetRoles;
+		for(std::vector<std::shared_ptr<RPC::LinkRole>>::iterator j = (*i)->linkRoles.begin(); j != (*i)->linkRoles.end(); ++j)
+		{
+			for(std::vector<std::string>::iterator k = (*j)->sourceNames.begin(); k != (*j)->sourceNames.end(); ++k)
+			{
+				//Probably only one direction is supported, but just in case I use the "or"
+				if(!k->empty())
+				{
+					if(direction & 1) linkSourceRoles << " ";
+					linkSourceRoles << *k;
+					direction |= 1;
+				}
+			}
+			for(std::vector<std::string>::iterator k = (*j)->targetNames.begin(); k != (*j)->targetNames.end(); ++k)
+			{
+				//Probably only one direction is supported, but just in case I use the "or"
+				if(!k->empty())
+				{
+					if(direction & 2) linkTargetRoles << " ";
+					linkTargetRoles << *k;
+					direction |= 2;
+				}
+			}
+
+		}
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DIRECTION", direction)));
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)(*i)->uiFlags)));
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INDEX", (*i)->index)));
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LINK_SOURCE_ROLES", linkSourceRoles.str())));
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LINK_TARGET_ROLES", linkTargetRoles.str())));
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
+		variable = description->structValue->back().get();
+		variable->name = "PARAMSETS";
+		for(std::vector<std::shared_ptr<RPC::ParameterSet>>::iterator j = (*i)->parameterSets.begin(); j != (*i)->parameterSets.end(); ++j)
+		{
+			variable->arrayValue->push_back(shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*j)->typeString())));
+		}
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", serialNumber)));
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT_TYPE", type->id)));
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", (*i)->type)));
+
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
+
+		descriptions.push_back(description);
+	}
+
+	return descriptions;
 }

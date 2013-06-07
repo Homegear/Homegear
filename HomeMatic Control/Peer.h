@@ -25,13 +25,13 @@ public:
 	int32_t address;
 };
 
-class XMLRPCConfigurationParameter
+class RPCConfigurationParameter
 {
 public:
-	XMLRPCConfigurationParameter() {}
-	virtual ~XMLRPCConfigurationParameter() {}
+	RPCConfigurationParameter() {}
+	virtual ~RPCConfigurationParameter() {}
 
-	std::shared_ptr<RPC::Parameter> xmlrpcParameter;
+	std::shared_ptr<RPC::Parameter> rpcParameter;
 	bool changed = false;
 	int64_t value = 0;
 };
@@ -51,7 +51,7 @@ class Peer
         HMDeviceTypes deviceType;
         uint8_t messageCounter = 0;
         std::unordered_map<int32_t, int32_t> config;
-        std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<double, XMLRPCConfigurationParameter>>>> configCentral;
+        std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
         std::shared_ptr<RPC::Device> rpcDevice = nullptr;
         std::unordered_map<int32_t, std::vector<PairedPeer>> peers;
         //Has to be shared_ptr because Peer must be copyable
@@ -59,7 +59,7 @@ class Peer
 
         std::string serialize();
         void initializeCentralConfig();
-        std::shared_ptr<RPC::RPCVariable> getDeviceDescription();
+        std::vector<std::shared_ptr<RPC::RPCVariable>> getDeviceDescription();
 };
 
 #endif // PEER_H

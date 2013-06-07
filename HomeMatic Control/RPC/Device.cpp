@@ -129,7 +129,7 @@ bool Parameter::checkCondition(int64_t value)
 	return false;
 }
 
-Parameter::Parameter(xml_node<>* node)
+Parameter::Parameter(xml_node<>* node, bool checkForID)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -178,6 +178,10 @@ Parameter::Parameter(xml_node<>* node)
 				else if(element == "sticky") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::sticky);
 			}
 		}
+	}
+	if(checkForID && id.empty() && GD::debugLevel >= 2)
+	{
+		std::cout << "Error: Parameter has no id." << std::endl;
 	}
 	for(xml_node<>* parameterNode = node->first_node(); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
@@ -283,9 +287,34 @@ std::vector<shared_ptr<Parameter>> ParameterSet::getIndices(int32_t startIndex, 
 	return filteredParameters;
 }
 
-shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
+shared_ptr<Parameter> ParameterSet::getIndex(double index)
 {
 	std::vector<shared_ptr<Parameter>> filteredParameters;
+	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	{
+		if((*i)->index == index) return *i;
+	}
+	return nullptr;
+}
+
+std::string ParameterSet::typeString()
+{
+	switch(type)
+	{
+	case Type::Enum::master:
+		return "MASTER";
+	case Type::Enum::values:
+		return "VALUES";
+	case Type::Enum::link:
+		return "LINK";
+	case Type::Enum::none:
+		return "";
+	}
+	return "";
+}
+
+shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
+{
 	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
 		if((*i)->id == id) return *i;
@@ -313,8 +342,9 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 	}
 	for(xml_node<>* parameterNode = parameterSetNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
-		parameters.push_back(shared_ptr<Parameter>(new Parameter(parameterNode)));
+		parameters.push_back(shared_ptr<Parameter>(new Parameter(parameterNode, true)));
 		parameters.back()->parentParameterSet = this;
+		if(parameters.back()->physicalParameter.list < 9999) lists[parameters.back()->physicalParameter.list] = 1;
 	}
 }
 
@@ -325,13 +355,13 @@ LinkRole::LinkRole(xml_node<>* node)
 		std::string nodeName(linkRoleNode->name());
 		if(nodeName == "target")
 		{
-			xml_attribute<>* attr = node->first_attribute("name");
-			if(attr != nullptr) targetName = std::string(attr->value());
+			xml_attribute<>* attr = linkRoleNode->first_attribute("name");
+			if(attr != nullptr) targetNames.push_back(attr->value());
 		}
 		else if(nodeName == "source")
 		{
-			xml_attribute<>* attr = node->first_attribute("name");
-			if(attr != nullptr) sourceName = std::string(attr->value());
+			xml_attribute<>* attr = linkRoleNode->first_attribute("name");
+			if(attr != nullptr) sourceNames.push_back(attr->value());
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"link_roles\": " << nodeName << std::endl;
 	}
@@ -527,6 +557,15 @@ void Device::parseXML(xml_document<>* doc)
     {
         std::cerr << "Exception: " << ex.what() << std::endl;
     }
+}
+
+shared_ptr<DeviceType> Device::getType(HMDeviceTypes deviceType, int32_t firmwareVersion)
+{
+	for(std::vector<shared_ptr<DeviceType>>::iterator j = supportedTypes.begin(); j != supportedTypes.end(); ++j)
+	{
+		if((*j)->matches(deviceType, firmwareVersion)) return *j;
+	}
+	return shared_ptr<DeviceType>();
 }
 
 }

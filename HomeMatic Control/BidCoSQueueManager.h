@@ -16,7 +16,7 @@ public:
 	std::shared_ptr<BidCoSQueue> queue;
 	std::shared_ptr<std::thread> thread;
 	bool stopThread = false;
-	uint64_t lastAction;
+	int64_t lastAction;
 
 	BidCoSQueueData();
 	virtual ~BidCoSQueueData() {}
