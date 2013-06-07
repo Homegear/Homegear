@@ -4,6 +4,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <cmath>
 
 class BidCoSPacket;
 

@@ -30,6 +30,14 @@ int32_t RPCDecoder::decodeInteger(char* packet, uint32_t packetLength, uint32_t*
 	return integer;
 }
 
+bool RPCDecoder::decodeBoolean(char* packet, uint32_t packetLength, uint32_t* position)
+{
+	if(*position + 1 > packetLength) return 0;
+	bool boolean = (bool)*(packet + *position);
+	*position += 1;
+	return boolean;
+}
+
 RPCVariableType RPCDecoder::decodeType(char* packet, uint32_t packetLength, uint32_t* position)
 {
 	return (RPCVariableType)decodeInteger(packet, packetLength, position);
@@ -57,6 +65,10 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(char* packet, uint32_t 
 	else if(type == RPCVariableType::rpcInteger)
 	{
 		variable->integerValue = decodeInteger(packet, packetLength, position);
+	}
+	else if(type == RPCVariableType::rpcBoolean)
+	{
+		variable->booleanValue = decodeBoolean(packet, packetLength, position);
 	}
 	else if(type == RPCVariableType::rpcArray)
 	{

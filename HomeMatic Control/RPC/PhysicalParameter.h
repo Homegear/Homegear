@@ -28,7 +28,7 @@ public:
 	Interface::Enum interface = Interface::none;
 	uint32_t list = 9999;
 	double index = 0;
-	double size = 0;
+	double size = 1.0;
 	std::string valueID;
 	bool noInit = false;
 	std::string getRequest;

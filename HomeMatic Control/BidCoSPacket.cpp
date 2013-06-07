@@ -184,19 +184,23 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 			if(GD::debugLevel >= 2) cout << "Error: Signed partial byte index requested.";
 			return result;
 		}
-		result = (_payload.at(byteIndex) >> (((uint32_t)(index * 10)) % 10)) & _bitmask[(uint32_t)(size * 10)];
+		//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
+		uint32_t bitSize = std::lround(size * 10);
+		result = (_payload.at(byteIndex) >> ((std::lround(index * 10) % 10) - (bitSize - 1))) & _bitmask[bitSize];
 	}
 	else
 	{
 		uint32_t bytes = (uint32_t)std::ceil(size);
-		result = (_payload.at(index) & _bitmask[((uint32_t)(size * 10)) % 10]) << ((bytes - 1) * 8);
+		uint32_t bitSize = std::lround(size * 10) % 10;
+		if(bytes == 0) bytes = 1;
+		result = (_payload.at(index) & _bitmask[bitSize]) << ((bytes - 1) * 8);
 		for(uint32_t i = 1; i < bytes; i++)
 		{
 			result += _payload.at(index + i) << ((bytes - i - 1) * 8);
 		}
 		if(isSigned)
 		{
-			uint32_t signPosition = ((uint32_t)(size * 10)) % 10;
+			uint32_t signPosition = bitSize;
 			if(_payload.at(index) & (1 << signPosition)) //has sign?
 			{
 				uint32_t bits = (uint32_t)std::floor(size) * 8 + signPosition;

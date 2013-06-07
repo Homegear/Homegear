@@ -362,7 +362,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 				int32_t channel = _sentPacket->payload()->at(0);
 				Peer* peer = _peers[packet->senderAddress()].get();
 				int32_t startIndex = packet->payload()->at(1);
-				int32_t endIndex = packet->payload()->size() - 1;
+				int32_t endIndex = startIndex + packet->payload()->size() - 3;
 				if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::master) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master])
 				{
 					if(GD::debugLevel >= 2) cout << "Error: Received config for non existant parameter set." << endl;
@@ -372,7 +372,12 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 					std::vector<shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndices(startIndex, endIndex);
 					for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
 					{
-						if(!(*i)->id.empty()) peer->configCentral[channel][(*i)->id].value = packet->getPosition((*i)->index, (*i)->size, (*i)->isSigned);
+						if(!(*i)->id.empty())
+						{
+							double position = ((*i)->physicalParameter.index - startIndex) + 2 + 9;
+							peer->configCentral[channel][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter.size, false);
+							if(GD::debugLevel >= 5) cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter.index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter.size) << " was set to " << peer->configCentral[channel][(*i)->id].value << endl;
+						}
 						else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*i)->physicalParameter.list << " Parameter index: " << (*i)->index << endl;
 					}
 				}
@@ -389,14 +394,18 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 				{
 					for(uint32_t i = 1; i < packet->payload()->size() - 2; i += 2)
 					{
-						shared_ptr<RPC::Parameter> packetParameter = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndex((double)packet->payload()->at(i));
-						if(!packetParameter)
+						int32_t index = packet->payload()->at(i);
+						std::vector<shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndices(index, index);
+						for(std::vector<shared_ptr<RPC::Parameter>>::iterator j = packetParameters.begin(); j != packetParameters.end(); ++j)
 						{
-							if(GD::debugLevel >= 2) cout << "Error: Tried to set non existant parameter. Device: " << peer->address << " Index:" << packet->payload()->at(i);
-							continue;
+							if(!(*j)->id.empty())
+							{
+								double position = std::fmod((*j)->physicalParameter.index, 1) + 9 + i + 1;
+								peer->configCentral[channel][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter.size, false);
+								if(GD::debugLevel >= 5) cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter.index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << endl;
+							}
+							else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*j)->physicalParameter.list << " Parameter index: " << (*j)->index << endl;
 						}
-						else if(!packetParameter->id.empty()) peer->configCentral[channel][packetParameter->id].value = packet->payload()->at(i + 1);
-						else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << packetParameter->physicalParameter.list << " Parameter index: " << packetParameter->index << endl;
 					}
 				}
 			}

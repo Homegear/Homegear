@@ -13,6 +13,7 @@ enum class RPCVariableType
 {
 	rpcVoid = 0x00,
 	rpcInteger = 0x01,
+	rpcBoolean = 0x02,
 	rpcString = 0x03,
 	rpcArray = 0x100,
 	rpcStruct = 0x101
@@ -25,6 +26,7 @@ public:
 	std::string name;
 	std::string stringValue;
 	int32_t integerValue = 0;
+	bool booleanValue = false;
 	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> arrayValue;
 	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> structValue;
 

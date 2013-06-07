@@ -282,7 +282,7 @@ std::vector<shared_ptr<Parameter>> ParameterSet::getIndices(int32_t startIndex, 
 	std::vector<shared_ptr<Parameter>> filteredParameters;
 	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
-		if((*i)->index >= startIndex && std::floor((*i)->index) <= endIndex) filteredParameters.push_back(*i);
+		if((*i)->physicalParameter.index >= startIndex && std::floor((*i)->physicalParameter.index) <= endIndex) filteredParameters.push_back(*i);
 	}
 	return filteredParameters;
 }
@@ -292,7 +292,7 @@ shared_ptr<Parameter> ParameterSet::getIndex(double index)
 	std::vector<shared_ptr<Parameter>> filteredParameters;
 	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
-		if((*i)->index == index) return *i;
+		if((*i)->physicalParameter.index == index) return *i;
 	}
 	return nullptr;
 }
@@ -404,7 +404,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 		if(nodeName == "paramset")
 		{
 			shared_ptr<ParameterSet> parameterSet(new ParameterSet(index, channelNode));
-			if(parameterSets.find(parameterSet->type) != parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
+			if(parameterSets.find(parameterSet->type) == parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
 			else if(GD::debugLevel >= 2) cout << "Error: Tried to add same parameter set type twice." << endl;
 		}
 		else if(nodeName == "link_roles")
@@ -431,6 +431,8 @@ Device::Device(std::string xmlFilename) : Device()
 {
 	load(xmlFilename);
 
+	if(!channels[0]) channels[0] = std::shared_ptr<DeviceChannel>(new DeviceChannel());
+	if(!channels[0]->parameterSets[ParameterSet::Type::Enum::master]) channels[0]->parameterSets[ParameterSet::Type::Enum::master] = std::shared_ptr<ParameterSet>(new ParameterSet());
 	if(parameterSet->type == ParameterSet::Type::Enum::master)
 	{
 		if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0 && GD::debugLevel >= 2)
@@ -564,8 +566,8 @@ void Device::parseXML(xml_document<>* doc)
 					if(attributeName == "id") parameterSet->id = attributeValue;
 					else if(attributeName == "type")
 					{
-						if(attributeValue == "MASTER") parameterSet->type = ParameterSet::Type::Enum::master;
-						else if(GD::debugLevel >= 2) cout << "Error tried to add parameter set of type \"" << attributeValue << "\" to device. That is not allowed." << endl;
+						if(attributeValue == "master") parameterSet->type = ParameterSet::Type::Enum::master;
+						else if(GD::debugLevel >= 2) cout << "Error: Tried to add parameter set of type \"" << attributeValue << "\" to device. That is not allowed." << endl;
 					}
 					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
 				}
@@ -577,7 +579,7 @@ void Device::parseXML(xml_document<>* doc)
 				{
 					shared_ptr<DeviceChannel> channel(new DeviceChannel(channelNode));
 					channel->parentDevice = this;
-					if(channels.find(channel->index) != channels.end()) channels[channel->index] = channel;
+					if(channels.find(channel->index) == channels.end()) channels[channel->index] = channel;
 					else if(GD::debugLevel >= 2) cout << "Error: Tried to add channel with the same index twice." << endl;
 				}
 			}

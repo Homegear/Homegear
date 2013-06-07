@@ -20,6 +20,7 @@ public:
 	std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<char> packet, uint32_t packetLength, uint32_t offset = 0);
 private:
 	int32_t decodeInteger(char* packet, uint32_t packetLength, uint32_t* position);
+	bool decodeBoolean(char* packet, uint32_t packetLength, uint32_t* position);
 	std::string decodeString(char* packet, uint32_t packetLength, uint32_t* position);
 	std::shared_ptr<RPCVariable> decodeParameter(char* packet, uint32_t packetLength, uint32_t* position);
 	RPCVariableType decodeType(char* packet, uint32_t packetLength, uint32_t* position);

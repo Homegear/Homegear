@@ -129,7 +129,6 @@ void RPCServer::analyzeBinaryRPC(int32_t clientFileDescriptor, std::shared_ptr<c
 
 void RPCServer::analyzeBinaryRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength)
 {
-	std::string methodName;
 	std::shared_ptr<RPCVariable> response = _rpcDecoder.decodeResponse(packet, packetLength);
 	if(response == nullptr) return; //parameters should never be nullptr, but just to make sure
 	if(GD::debugLevel >= 7) response->print();

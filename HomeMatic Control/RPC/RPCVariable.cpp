@@ -56,6 +56,10 @@ void RPCVariable::print(std::shared_ptr<RPCVariable> variable, std::string inden
 	{
 		std::cout << indent << "(Integer) " << variable->integerValue << std::endl;
 	}
+	else if(variable->type == RPCVariableType::rpcBoolean)
+	{
+		std::cout << indent << "(Boolean) " << variable->booleanValue << std::endl;
+	}
 	else if(variable->type == RPCVariableType::rpcString)
 	{
 		std::cout << indent << "(String) " << variable->stringValue << std::endl;

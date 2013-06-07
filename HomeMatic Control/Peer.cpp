@@ -175,9 +175,9 @@ std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
 	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
 	RPC::RPCVariable* variable = description->structValue->back().get();
 	variable->name = "CHILDREN";
-	for(std::vector<std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+	for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 	{
-		variable->arrayValue->push_back(shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(serialNumber + ":" + std::to_string((*i)->index))));
+		variable->arrayValue->push_back(shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(serialNumber + ":" + std::to_string(i->second->index))));
 	}
 
 	std::ostringstream stringStream;
@@ -211,14 +211,14 @@ std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
 
 	descriptions.push_back(description);
 
-	for(std::vector<std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+	for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 	{
 		description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", serialNumber + ":" + std::to_string((*i)->index))));
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", serialNumber + ":" + std::to_string(i->first))));
 
 		int32_t aesActive = 0;
-		if(configCentral.find((*i)->index) != configCentral.end() && configCentral.at((*i)->index).find("AES_ACTIVE") != configCentral.at((*i)->index).end() && configCentral.at((*i)->index).at("AES_ACTIVE").value != 0)
+		if(configCentral.find(i->first) != configCentral.end() && configCentral.at(i->first).find("AES_ACTIVE") != configCentral.at(i->first).end() && configCentral.at(i->first).at("AES_ACTIVE").value != 0)
 		{
 			aesActive = 1;
 		}
@@ -227,7 +227,7 @@ std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
 		int32_t direction = 0;
 		ostringstream linkSourceRoles;
 		ostringstream linkTargetRoles;
-		for(std::vector<std::shared_ptr<RPC::LinkRole>>::iterator j = (*i)->linkRoles.begin(); j != (*i)->linkRoles.end(); ++j)
+		for(std::vector<std::shared_ptr<RPC::LinkRole>>::iterator j = i->second->linkRoles.begin(); j != i->second->linkRoles.end(); ++j)
 		{
 			for(std::vector<std::string>::iterator k = (*j)->sourceNames.begin(); k != (*j)->sourceNames.end(); ++k)
 			{
@@ -253,9 +253,9 @@ std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
 		}
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DIRECTION", direction)));
 
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)(*i)->uiFlags)));
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)i->second->uiFlags)));
 
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INDEX", (*i)->index)));
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INDEX", i->first)));
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LINK_SOURCE_ROLES", linkSourceRoles.str())));
 
@@ -264,16 +264,16 @@ std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
 		variable = description->structValue->back().get();
 		variable->name = "PARAMSETS";
-		for(std::vector<std::shared_ptr<RPC::ParameterSet>>::iterator j = (*i)->parameterSets.begin(); j != (*i)->parameterSets.end(); ++j)
+		for(std::map<RPC::ParameterSet::Type::Enum, std::shared_ptr<RPC::ParameterSet>>::iterator j = i->second->parameterSets.begin(); j != i->second->parameterSets.end(); ++j)
 		{
-			variable->arrayValue->push_back(shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*j)->typeString())));
+			variable->arrayValue->push_back(shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second->typeString())));
 		}
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", serialNumber)));
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT_TYPE", type->id)));
 
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", (*i)->type)));
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", i->second->type)));
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
 
