@@ -182,14 +182,13 @@ public:
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	std::string channelClass;
 	uint32_t count = 0;
-	std::vector<std::shared_ptr<ParameterSet>> parameterSets;
+	std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>> parameterSets;
 	std::vector<std::shared_ptr<LinkRole>> linkRoles;
 	std::vector<std::shared_ptr<EnforceLink>> enforceLinks;
 
 	DeviceChannel() {}
 	DeviceChannel(xml_node<>* node);
 	virtual ~DeviceChannel() {}
-	ParameterSet* getParameterSet(ParameterSet::Type::Enum type);
 };
 
 class DeviceFrame
@@ -234,15 +233,15 @@ public:
 
 	uint32_t version = 0;
 	uint32_t cyclicTimeout = 0;
-	ParameterSet parameterSet;
-	std::vector<std::shared_ptr<DeviceChannel>> channels;
+	std::shared_ptr<ParameterSet> parameterSet;
+	std::map<uint32_t, std::shared_ptr<DeviceChannel>> channels;
 	std::vector<std::shared_ptr<DeviceType>> supportedTypes;
 	std::vector<std::shared_ptr<DeviceFrame>> frames;
 	RXModes::Enum rxModes = RXModes::Enum::none;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	std::string deviceClass;
 
-	Device() {}
+	Device();
 	Device(std::string xmlFilename);
 	virtual ~Device();
 	std::shared_ptr<DeviceType> getType(HMDeviceTypes deviceType, int32_t firmwareVersion);

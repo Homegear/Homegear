@@ -403,7 +403,9 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 		std::string nodeName(channelNode->name());
 		if(nodeName == "paramset")
 		{
-			parameterSets.push_back(shared_ptr<ParameterSet>(new ParameterSet(index, channelNode)));
+			shared_ptr<ParameterSet> parameterSet(new ParameterSet(index, channelNode));
+			if(parameterSets.find(parameterSet->type) != parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
+			else if(GD::debugLevel >= 2) cout << "Error: Tried to add same parameter set type twice." << endl;
 		}
 		else if(nodeName == "link_roles")
 		{
@@ -420,19 +422,62 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 	}
 }
 
-ParameterSet* DeviceChannel::getParameterSet(ParameterSet::Type::Enum type)
+Device::Device()
 {
-	if(index == 0 && type == ParameterSet::Type::Enum::master && parentDevice != nullptr) return &parentDevice->parameterSet;
-	for(std::vector<shared_ptr<ParameterSet>>::iterator i = parameterSets.begin(); i != parameterSets.end(); ++i)
-	{
-		if((*i)->type == type) return i->get();
-	}
-	return nullptr;
+	parameterSet.reset(new ParameterSet());
 }
 
-Device::Device(std::string xmlFilename)
+Device::Device(std::string xmlFilename) : Device()
 {
 	load(xmlFilename);
+
+	if(parameterSet->type == ParameterSet::Type::Enum::master)
+	{
+		if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0 && GD::debugLevel >= 2)
+		{
+			cout << "Error: Master parameter set of channnel 0 has to be empty." << endl;
+		}
+		channels[0]->parameterSets[ParameterSet::Type::Enum::master] = parameterSet;
+	}
+	std::shared_ptr<Parameter> parameter(new Parameter());
+	parameter->id = "PAIRED_TO_CENTRAL";
+	parameter->logicalParameter.type = LogicalParameter::Type::Enum::typeBoolean;
+	parameter->physicalParameter.interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter.type = PhysicalParameter::Type::Enum::typeBoolean;
+	parameter->physicalParameter.valueID = "PAIRED_TO_CENTRAL";
+	parameter->physicalParameter.list = 0;
+	parameter->physicalParameter.index = 2;
+	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+
+	parameter.reset(new Parameter());
+	parameter->id = "CENTRAL_ADDRESS_BYTE_1";
+	parameter->logicalParameter.type = LogicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter.interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter.type = PhysicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter.valueID = "CENTRAL_ADDRESS_BYTE_1";
+	parameter->physicalParameter.list = 0;
+	parameter->physicalParameter.index = 10;
+	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+
+	parameter.reset(new Parameter());
+	parameter->id = "CENTRAL_ADDRESS_BYTE_2";
+	parameter->logicalParameter.type = LogicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter.interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter.type = PhysicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter.valueID = "CENTRAL_ADDRESS_BYTE_2";
+	parameter->physicalParameter.list = 0;
+	parameter->physicalParameter.index = 11;
+	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+
+	parameter.reset(new Parameter());
+	parameter->id = "CENTRAL_ADDRESS_BYTE_3";
+	parameter->logicalParameter.type = LogicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter.interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter.type = PhysicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter.valueID = "CENTRAL_ADDRESS_BYTE_1";
+	parameter->physicalParameter.list = 0;
+	parameter->physicalParameter.index = 12;
+	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 }
 
 Device::~Device() {
@@ -516,23 +561,24 @@ void Device::parseXML(xml_document<>* doc)
 					std::string attributeName(attr->name());
 					std::string attributeValue(attr->value());
 					HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
-					if(attributeName == "id") parameterSet.id = attributeValue;
+					if(attributeName == "id") parameterSet->id = attributeValue;
 					else if(attributeName == "type")
 					{
-						if(attributeValue == "MASTER") parameterSet.type = ParameterSet::Type::Enum::master;
-						else if(attributeValue == "VALUES") parameterSet.type = ParameterSet::Type::Enum::values;
-						else if(attributeValue == "LINK") parameterSet.type = ParameterSet::Type::Enum::values;
+						if(attributeValue == "MASTER") parameterSet->type = ParameterSet::Type::Enum::master;
+						else if(GD::debugLevel >= 2) cout << "Error tried to add parameter set of type \"" << attributeValue << "\" to device. That is not allowed." << endl;
 					}
 					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
 				}
-				parameterSet.init(node);
+				parameterSet->init(node);
 			}
 			else if(nodeName == "channels")
 			{
 				for(xml_node<>* channelNode = node->first_node("channel"); channelNode; channelNode = channelNode->next_sibling())
 				{
-					channels.push_back(shared_ptr<DeviceChannel>(new DeviceChannel(channelNode)));
-					channels.back()->parentDevice = this;
+					shared_ptr<DeviceChannel> channel(new DeviceChannel(channelNode));
+					channel->parentDevice = this;
+					if(channels.find(channel->index) != channels.end()) channels[channel->index] = channel;
+					else if(GD::debugLevel >= 2) cout << "Error: Tried to add channel with the same index twice." << endl;
 				}
 			}
 			else if(nodeName == "frames")

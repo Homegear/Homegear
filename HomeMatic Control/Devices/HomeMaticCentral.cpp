@@ -279,9 +279,9 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 				{
 					int32_t channel = i->first;
 					//Walk through all lists to request master config if necessary
-					for(std::vector<std::shared_ptr<RPC::ParameterSet>>::iterator j = device->channels.at(channel)->parameterSets.begin(); j != device->channels.at(channel)->parameterSets.end(); ++j)
+					for(std::map<RPC::ParameterSet::Type::Enum, std::shared_ptr<RPC::ParameterSet>>::iterator j = device->channels.at(channel)->parameterSets.begin(); j != device->channels.at(channel)->parameterSets.end(); ++j)
 					{
-						for(std::map<uint32_t, uint32_t>::iterator k = (*j)->lists.begin(); k != (*j)->lists.end(); ++k)
+						for(std::map<uint32_t, uint32_t>::iterator k = j->second->lists.begin(); k != j->second->lists.end(); ++k)
 						{
 							payload.push_back(channel);
 							payload.push_back(0x04);
@@ -298,7 +298,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 						}
 					}
 					//Request peers if not received yet
-					if(peer->rpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::link) != nullptr)
+					if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) != peer->rpcDevice->channels[channel]->parameterSets.end() && peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link])
 					{
 						payload.push_back(channel);
 						payload.push_back(0x03);
@@ -363,31 +363,41 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 				Peer* peer = _peers[packet->senderAddress()].get();
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = packet->payload()->size() - 1;
-				if(peer->rpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::master) == nullptr)
+				if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::master) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master])
 				{
 					if(GD::debugLevel >= 2) cout << "Error: Received config for non existant parameter set." << endl;
 				}
 				else
 				{
-					std::vector<shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::master)->getIndices(startIndex, endIndex);
+					std::vector<shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndices(startIndex, endIndex);
 					for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
 					{
-						peer->configCentral[channel][(*i)->id].value = packet->getPosition((*i)->index, (*i)->size, (*i)->isSigned);
+						if(!(*i)->id.empty()) peer->configCentral[channel][(*i)->id].value = packet->getPosition((*i)->index, (*i)->size, (*i)->isSigned);
+						else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*i)->physicalParameter.list << " Parameter index: " << (*i)->index << endl;
 					}
 				}
 			}
 			else
 			{
-				for(uint32_t i = 1; i < packet->payload()->size() - 2; i += 2)
+				Peer* peer = _peers[packet->senderAddress()].get();
+				int32_t channel = _sentPacket->payload()->at(0);
+				if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::master) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master])
 				{
-					int32_t channel = _sentPacket->payload()->at(0);
-					shared_ptr<RPC::Parameter> packetParameter = _peers[packet->senderAddress()]->rpcDevice->channels[channel]->getParameterSet(RPC::ParameterSet::Type::master)->getIndex((double)packet->payload()->at(i));
-					if(!packetParameter)
+					if(GD::debugLevel >= 2) cout << "Error: Received config for non existant parameter set." << endl;
+				}
+				else
+				{
+					for(uint32_t i = 1; i < packet->payload()->size() - 2; i += 2)
 					{
-						if(GD::debugLevel >= 2) cout << "Error: Tried to set non existant parameter. Device: " << _peers[packet->senderAddress()]->address << " Index:" << packet->payload()->at(i);
-						continue;
+						shared_ptr<RPC::Parameter> packetParameter = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndex((double)packet->payload()->at(i));
+						if(!packetParameter)
+						{
+							if(GD::debugLevel >= 2) cout << "Error: Tried to set non existant parameter. Device: " << peer->address << " Index:" << packet->payload()->at(i);
+							continue;
+						}
+						else if(!packetParameter->id.empty()) peer->configCentral[channel][packetParameter->id].value = packet->payload()->at(i + 1);
+						else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << packetParameter->physicalParameter.list << " Parameter index: " << packetParameter->index << endl;
 					}
-					_peers[packet->senderAddress()]->configCentral[channel][packetParameter->id].value = packet->payload()->at(i + 1);
 				}
 			}
 		}

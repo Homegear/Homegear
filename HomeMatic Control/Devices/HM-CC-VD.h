@@ -3,9 +3,6 @@
 
 #include "../HomeMaticDevice.h"
 
-//TODO Pairing by serial
-//TODO Was wird beim Batterien einlegen gesendet?
-//TODO Don't allow pairing to two TCs
 class HM_CC_VD : public HomeMaticDevice
 {
     public:

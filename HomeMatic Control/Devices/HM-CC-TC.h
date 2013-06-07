@@ -10,8 +10,6 @@ enum class BidCoSQueueType;
 
 #include "../HomeMaticDevice.h"
 
-//TODO Pairing by serial
-//TODO Was wird beim Batterien einlegen gesendet?
 class HM_CC_TC : public HomeMaticDevice
 {
     public:

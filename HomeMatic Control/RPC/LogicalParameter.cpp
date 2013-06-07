@@ -42,14 +42,14 @@ std::unique_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
 
 LogicalParameterOption::LogicalParameterOption()
 {
-	_type = Type::Enum::typeOption;
+	type = Type::Enum::typeOption;
 }
 
 LogicalParameterOption::LogicalParameterOption(xml_node<>* node)
 {
 	try
 	{
-		_type = Type::Enum::typeOption;
+		type = Type::Enum::typeOption;
 		for(xml_node<>* optionNode = node->first_node("option"); optionNode; optionNode = optionNode->next_sibling())
 		{
 			ParameterOption option(optionNode);
@@ -68,14 +68,14 @@ LogicalParameterOption::LogicalParameterOption(xml_node<>* node)
 
 LogicalParameterInteger::LogicalParameterInteger()
 {
-	_type = Type::Enum::typeInteger;
+	type = Type::Enum::typeInteger;
 }
 
 LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node)
 {
 	try
 	{
-		_type = Type::Enum::typeInteger;
+		type = Type::Enum::typeInteger;
 		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 		{
 			std::string attributeName(attr->name());
@@ -100,14 +100,14 @@ LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node)
 
 LogicalParameterFloat::LogicalParameterFloat()
 {
-	_type = Type::Enum::typeFloat;
+	type = Type::Enum::typeFloat;
 }
 
 LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node)
 {
 	try
 	{
-		_type = Type::Enum::typeFloat;
+		type = Type::Enum::typeFloat;
 		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 		{
 			std::string attributeName(attr->name());
@@ -145,14 +145,14 @@ LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node)
 
 LogicalParameterBoolean::LogicalParameterBoolean()
 {
-	_type = Type::Enum::typeBoolean;
+	type = Type::Enum::typeBoolean;
 }
 
 LogicalParameterBoolean::LogicalParameterBoolean(xml_node<>* node)
 {
 	try
 	{
-		_type = Type::Enum::typeBoolean;
+		type = Type::Enum::typeBoolean;
 		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 		{
 			std::string attributeName(attr->name());

@@ -1,0 +1,5 @@
+- Save peers in seperate databases
+- Central: Pairing by serial
+- Device: Pairing by serial
+- Central: Is configuration sent to device after inserting batteries?
+- Device: Don't allow pairing to two masters

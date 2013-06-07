@@ -9,7 +9,7 @@ void Peer::initializeCentralConfig()
 		return;
 	}
 	RPCConfigurationParameter parameter;
-	for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = rpcDevice->parameterSet.parameters.begin(); i != rpcDevice->parameterSet.parameters.end(); ++i)
+	for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = rpcDevice->parameterSet->parameters.begin(); i != rpcDevice->parameterSet->parameters.end(); ++i)
 	{
 		if((*i)->physicalParameter.list < 9999)
 		{
@@ -18,17 +18,17 @@ void Peer::initializeCentralConfig()
 			if(!(*i)->id.empty()) configCentral[0][(*i)->id] = parameter;
 		}
 	}
-	for(std::vector<shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+	for(std::map<uint32_t, shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 	{
-		RPC::ParameterSet* masterSet = (*i)->getParameterSet(RPC::ParameterSet::Type::master);
-		if(masterSet == nullptr) continue;
+		if(i->second->parameterSets.find(RPC::ParameterSet::Type::master) == i->second->parameterSets.end() || !i->second->parameterSets[RPC::ParameterSet::Type::master]) continue;
+		shared_ptr<RPC::ParameterSet> masterSet = i->second->parameterSets[RPC::ParameterSet::Type::master];
 		for(std::vector<shared_ptr<RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
 		{
 			if((*j)->physicalParameter.list < 9999)
 			{
 				parameter = RPCConfigurationParameter();
 				parameter.rpcParameter = *j;
-				if(!(*j)->id.empty()) configCentral[(*i)->index][(*j)->id] = parameter;
+				if(!(*j)->id.empty()) configCentral[i->first][(*j)->id] = parameter;
 			}
 		}
 	}
@@ -72,7 +72,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 			parameter->changed = (bool)std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
 			if(rpcDevice == nullptr)
 			{
-				if(GD::debugLevel >= 2) cout << "Error: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec;
+				if(GD::debugLevel >= 1) cout << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec;
 				continue;
 			}
 			parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::Enum::master]->getParameter(id);

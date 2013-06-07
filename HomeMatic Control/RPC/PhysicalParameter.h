@@ -24,7 +24,7 @@ public:
 	{
 		enum Enum { none, command, internal, config };
 	};
-	Type::Enum type() { return _type; }
+	Type::Enum type;
 	Interface::Enum interface = Interface::none;
 	uint32_t list = 9999;
 	double index = 0;
@@ -38,8 +38,6 @@ public:
 	PhysicalParameter() {}
 	PhysicalParameter(xml_node<>* node);
 	virtual ~PhysicalParameter() {}
-protected:
-	Type::Enum _type = Type::Enum::none;
 };
 } /* namespace XMLRPC */
 #endif /* PHYSICALPARAMETER_H_ */

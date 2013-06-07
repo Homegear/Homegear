@@ -34,13 +34,11 @@ public:
 	{
 		enum Enum { none, typeBoolean, typeInteger, typeFloat, typeOption };
 	};
-	Type::Enum type() { return _type; }
+	Type::Enum type;
 
 	LogicalParameter() {}
 	virtual ~LogicalParameter() {}
 	static std::unique_ptr<LogicalParameter> fromXML(xml_node<>* node);
-protected:
-	Type::Enum _type = Type::Enum::none;
 };
 
 class LogicalParameterInteger : public LogicalParameter
