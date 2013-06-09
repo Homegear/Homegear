@@ -15,18 +15,18 @@ ParameterOption::ParameterOption(xml_node<>* node)
 	}
 }
 
-std::unique_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
+std::shared_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
 {
-	LogicalParameter* parameter = nullptr;
+	std::shared_ptr<LogicalParameter> parameter;
 	try
 	{
 		xml_attribute<>* attr = node->first_attribute("type");
 		if(attr != nullptr)
 		{
 			std::string attributeValue(attr->value());
-			if(attributeValue == "option") parameter = new LogicalParameterOption(node);
-			else if(attributeValue == "integer") parameter = new LogicalParameterInteger(node);
-			else if(attributeValue == "boolean") parameter = new LogicalParameterBoolean(node);
+			if(attributeValue == "option") parameter.reset(new LogicalParameterOption(node));
+			else if(attributeValue == "integer") parameter.reset(new LogicalParameterInteger(node));
+			else if(attributeValue == "boolean") parameter.reset(new LogicalParameterBoolean(node));
 		}
 	}
     catch(const std::exception& ex)
@@ -37,7 +37,7 @@ std::unique_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
     {
         std::cerr << "Exception: " << ex.what() << std::endl;
     }
-    return std::unique_ptr<LogicalParameter>(parameter);
+    return parameter;
 }
 
 LogicalParameterOption::LogicalParameterOption()

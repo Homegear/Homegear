@@ -94,6 +94,7 @@ class HomeMaticDevice
         int32_t _currentList = 0;
         std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>> _config;
         std::unordered_map<int32_t, shared_ptr<Peer>> _peers;
+        std::unordered_map<std::string, shared_ptr<Peer>> _peersBySerial;
         std::mutex _peersMutex;
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;

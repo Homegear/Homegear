@@ -33,6 +33,7 @@ public:
 	void handleConfigParamResponse(int32_t messageCounter, shared_ptr<BidCoSPacket>);
 
 	shared_ptr<RPC::RPCVariable> listDevices();
+	shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
 protected:
 	shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
 private:

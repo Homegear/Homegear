@@ -94,12 +94,12 @@ public:
 	std::string id;
 	std::string param;
 	std::string control;
-	LogicalParameter logicalParameter;
-	PhysicalParameter physicalParameter;
+	std::shared_ptr<LogicalParameter> logicalParameter;
+	std::shared_ptr<PhysicalParameter> physicalParameter;
 	ParameterConversion conversion;
 	ParameterDescription description;
 
-	Parameter() {}
+	Parameter() { logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameter()); physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter()); }
 	Parameter(xml_node<>* node, bool checkForID = false);
 	virtual ~Parameter() {}
 	bool checkCondition(int64_t value);

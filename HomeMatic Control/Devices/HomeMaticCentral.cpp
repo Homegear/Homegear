@@ -374,11 +374,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 					{
 						if(!(*i)->id.empty())
 						{
-							double position = ((*i)->physicalParameter.index - startIndex) + 2 + 9;
-							peer->configCentral[channel][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter.size, false);
-							if(GD::debugLevel >= 5) cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter.index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter.size) << " was set to " << peer->configCentral[channel][(*i)->id].value << endl;
+							double position = ((*i)->physicalParameter->index - startIndex) + 2 + 9;
+							peer->configCentral[channel][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter->size, false);
+							if(GD::debugLevel >= 5) cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->configCentral[channel][(*i)->id].value << endl;
 						}
-						else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*i)->physicalParameter.list << " Parameter index: " << (*i)->index << endl;
+						else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*i)->physicalParameter->list << " Parameter index: " << (*i)->index << endl;
 					}
 				}
 			}
@@ -400,11 +400,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 						{
 							if(!(*j)->id.empty())
 							{
-								double position = std::fmod((*j)->physicalParameter.index, 1) + 9 + i + 1;
-								peer->configCentral[channel][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter.size, false);
-								if(GD::debugLevel >= 5) cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter.index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << endl;
+								double position = std::fmod((*j)->physicalParameter->index, 1) + 9 + i + 1;
+								peer->configCentral[channel][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter->size, false);
+								if(GD::debugLevel >= 5) cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << endl;
 							}
-							else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*j)->physicalParameter.list << " Parameter index: " << (*j)->index << endl;
+							else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*j)->physicalParameter->list << " Parameter index: " << (*j)->index << endl;
 						}
 					}
 				}
@@ -444,6 +444,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket
 			{
 				if(_peers.find(packet->senderAddress()) == _peers.end())
 				{
+					if(queue->peer->serialNumber.size() == 10) _peersBySerial[queue->peer->serialNumber] = queue->peer;
 					_peers[queue->peer->address] = queue->peer;
 					cout << "Added device 0x" << std::hex << queue->peer->address << std::dec << endl;
 				}
@@ -455,6 +456,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket
 			{
 				if(_peers.find(packet->senderAddress()) != _peers.end())
 				{
+					if(_peersBySerial.find(_peers[packet->senderAddress()]->serialNumber) != _peersBySerial.end()) _peersBySerial.erase(_peers[packet->senderAddress()]->serialNumber);
 					_peers.erase(_peers.find(packet->senderAddress()));
 					cout << "Removed device 0x" << std::hex << packet->senderAddress() << std::dec << endl;
 				}
@@ -502,3 +504,23 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices()
     return shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
 }
 
+shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type)
+{
+	try
+	{
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamsetDescription(serialNumber, channel, type);
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Unknown exception." << std::endl;
+    }
+    return shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
+}

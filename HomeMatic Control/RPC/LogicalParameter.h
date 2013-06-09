@@ -38,14 +38,14 @@ public:
 
 	LogicalParameter() {}
 	virtual ~LogicalParameter() {}
-	static std::unique_ptr<LogicalParameter> fromXML(xml_node<>* node);
+	static std::shared_ptr<LogicalParameter> fromXML(xml_node<>* node);
 };
 
 class LogicalParameterInteger : public LogicalParameter
 {
 public:
-	int32_t min = 0;
-	int32_t max = 0;
+	int32_t min = -2147483648;
+	int32_t max = 2147483647;
 	int32_t defaultValue = 0;
 	std::string unit;
 
@@ -80,7 +80,10 @@ public:
 class LogicalParameterBoolean : public LogicalParameter
 {
 public:
+	bool min = false;
+	bool max = true;
 	bool defaultValue = false;
+	std::string unit;
 
 	LogicalParameterBoolean();
 	LogicalParameterBoolean(xml_node<>* node);

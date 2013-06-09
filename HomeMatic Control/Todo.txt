@@ -3,3 +3,5 @@
 - Device: Pairing by serial
 - Central: Is configuration sent to device after inserting batteries?
 - Device: Don't allow pairing to two masters
+- Peer.cpp - getDeviceDescription: Add GROUP, TEAM, TEAM_TAG and TEAM_CHANNELS
+- Check device type and serial number on repairing

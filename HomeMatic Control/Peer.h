@@ -60,6 +60,7 @@ class Peer
         std::string serialize();
         void initializeCentralConfig();
         std::vector<std::shared_ptr<RPC::RPCVariable>> getDeviceDescription();
+        std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
 };
 
 #endif // PEER_H

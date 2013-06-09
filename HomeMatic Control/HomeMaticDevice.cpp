@@ -137,6 +137,7 @@ void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycl
 		int32_t address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		int32_t peerSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		_peers[address] = shared_ptr<Peer>(new Peer(serializedObject.substr(pos, peerSize), this)); pos += peerSize;
+		if(_peers[address]->serialNumber.size() == 10) _peersBySerial[_peers[address]->serialNumber] = _peers[address];
 	}
 	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	for(uint32_t i = 0; i < configSize; i++)

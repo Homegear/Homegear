@@ -136,7 +136,7 @@ void RPCServer::analyzeBinaryRPCResponse(int32_t clientFileDescriptor, std::shar
 
 std::pair<std::string, std::string> RPCServer::getAddressAndPort(std::string address)
 {
-		try
+	try
 	{
 		if(address.size() < 8) return std::pair<std::string, std::string>();
 		if(address.substr(0, 7) == "http://")

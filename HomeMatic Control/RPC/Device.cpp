@@ -129,7 +129,7 @@ bool Parameter::checkCondition(int64_t value)
 	return false;
 }
 
-Parameter::Parameter(xml_node<>* node, bool checkForID)
+Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -188,13 +188,12 @@ Parameter::Parameter(xml_node<>* node, bool checkForID)
 		std::string nodeName(parameterNode->name());
 		if(nodeName == "logical")
 		{
-			LogicalParameter parameter;
-			std::unique_ptr<LogicalParameter> pParameter = parameter.fromXML(parameterNode);
-			if(pParameter.get() != nullptr) logicalParameter = *(pParameter.get());
+			std::shared_ptr<LogicalParameter> parameter = LogicalParameter::fromXML(parameterNode);
+			if(parameter) logicalParameter = parameter;
 		}
 		else if(nodeName == "physical")
 		{
-			physicalParameter = PhysicalParameter(parameterNode);
+			physicalParameter.reset(new PhysicalParameter(parameterNode));
 		}
 		else if(nodeName == "conversion")
 		{
@@ -282,7 +281,7 @@ std::vector<shared_ptr<Parameter>> ParameterSet::getIndices(int32_t startIndex, 
 	std::vector<shared_ptr<Parameter>> filteredParameters;
 	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
-		if((*i)->physicalParameter.index >= startIndex && std::floor((*i)->physicalParameter.index) <= endIndex) filteredParameters.push_back(*i);
+		if((*i)->physicalParameter->index >= startIndex && std::floor((*i)->physicalParameter->index) <= endIndex) filteredParameters.push_back(*i);
 	}
 	return filteredParameters;
 }
@@ -292,7 +291,7 @@ shared_ptr<Parameter> ParameterSet::getIndex(double index)
 	std::vector<shared_ptr<Parameter>> filteredParameters;
 	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
-		if((*i)->physicalParameter.index == index) return *i;
+		if((*i)->physicalParameter->index == index) return *i;
 	}
 	return nullptr;
 }
@@ -344,7 +343,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 	{
 		parameters.push_back(shared_ptr<Parameter>(new Parameter(parameterNode, true)));
 		parameters.back()->parentParameterSet = this;
-		if(parameters.back()->physicalParameter.list < 9999) lists[parameters.back()->physicalParameter.list] = 1;
+		if(parameters.back()->physicalParameter->list < 9999) lists[parameters.back()->physicalParameter->list] = 1;
 	}
 }
 
@@ -443,42 +442,42 @@ Device::Device(std::string xmlFilename) : Device()
 	}
 	std::shared_ptr<Parameter> parameter(new Parameter());
 	parameter->id = "PAIRED_TO_CENTRAL";
-	parameter->logicalParameter.type = LogicalParameter::Type::Enum::typeBoolean;
-	parameter->physicalParameter.interface = PhysicalParameter::Interface::Enum::internal;
-	parameter->physicalParameter.type = PhysicalParameter::Type::Enum::typeBoolean;
-	parameter->physicalParameter.valueID = "PAIRED_TO_CENTRAL";
-	parameter->physicalParameter.list = 0;
-	parameter->physicalParameter.index = 2;
+	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeBoolean;
+	parameter->physicalParameter->valueID = "PAIRED_TO_CENTRAL";
+	parameter->physicalParameter->list = 0;
+	parameter->physicalParameter->index = 2;
 	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
 	parameter.reset(new Parameter());
 	parameter->id = "CENTRAL_ADDRESS_BYTE_1";
-	parameter->logicalParameter.type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter.interface = PhysicalParameter::Interface::Enum::internal;
-	parameter->physicalParameter.type = PhysicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter.valueID = "CENTRAL_ADDRESS_BYTE_1";
-	parameter->physicalParameter.list = 0;
-	parameter->physicalParameter.index = 10;
+	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
+	parameter->physicalParameter->list = 0;
+	parameter->physicalParameter->index = 10;
 	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
 	parameter.reset(new Parameter());
 	parameter->id = "CENTRAL_ADDRESS_BYTE_2";
-	parameter->logicalParameter.type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter.interface = PhysicalParameter::Interface::Enum::internal;
-	parameter->physicalParameter.type = PhysicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter.valueID = "CENTRAL_ADDRESS_BYTE_2";
-	parameter->physicalParameter.list = 0;
-	parameter->physicalParameter.index = 11;
+	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_2";
+	parameter->physicalParameter->list = 0;
+	parameter->physicalParameter->index = 11;
 	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
 	parameter.reset(new Parameter());
 	parameter->id = "CENTRAL_ADDRESS_BYTE_3";
-	parameter->logicalParameter.type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter.interface = PhysicalParameter::Interface::Enum::internal;
-	parameter->physicalParameter.type = PhysicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter.valueID = "CENTRAL_ADDRESS_BYTE_1";
-	parameter->physicalParameter.list = 0;
-	parameter->physicalParameter.index = 12;
+	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
+	parameter->physicalParameter->list = 0;
+	parameter->physicalParameter->index = 12;
 	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 }
 
