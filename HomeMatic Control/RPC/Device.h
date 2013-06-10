@@ -89,7 +89,7 @@ public:
 	double size = 0;
 	bool isSigned = false;
 	BooleanOperator::Enum booleanOperator = BooleanOperator::Enum::e;
-	Operations::Enum operations = Operations::Enum::none;
+	Operations::Enum operations = (Operations::Enum)3;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	uint32_t constValue = 0;
 	std::string id;

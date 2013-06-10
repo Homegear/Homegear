@@ -1,4 +1,5 @@
 #include "RPCDecoder.h"
+#include "../HelperFunctions.h"
 
 namespace RPC
 {
@@ -25,9 +26,24 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeResponse(std::shared_ptr<char> pa
 int32_t RPCDecoder::decodeInteger(char* packet, uint32_t packetLength, uint32_t* position)
 {
 	if(*position + 4 > packetLength) return 0;
-	int32_t integer = (((unsigned char)*(packet + *position)) << 24) + (((unsigned char)*(packet + *position + 1)) << 16) + (((unsigned char)*(packet + *position + 2)) << 8) + ((unsigned char)*(packet + *position + 3));
+	int32_t integer = 0;
+	HelperFunctions::memcpyBigEndian((char*)&integer, packet + *position, 4);
 	*position += 4;
 	return integer;
+}
+
+double RPCDecoder::decodeFloat(char* packet, uint32_t packetLength, uint32_t* position)
+{
+	if(*position + 8 > packetLength) return 0;
+	int32_t mantissa = 0;
+	int32_t exponent = 0;
+	HelperFunctions::memcpyBigEndian((char*)&mantissa, packet + *position, 4);
+	*position += 4;
+	HelperFunctions::memcpyBigEndian((char*)&exponent, packet + *position, 4);
+	*position += 4;
+	double floatValue = (double)mantissa / 0x40000000;
+	floatValue *= std::pow(2, exponent);
+	return floatValue;
 }
 
 bool RPCDecoder::decodeBoolean(char* packet, uint32_t packetLength, uint32_t* position)
@@ -65,6 +81,10 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(char* packet, uint32_t 
 	else if(type == RPCVariableType::rpcInteger)
 	{
 		variable->integerValue = decodeInteger(packet, packetLength, position);
+	}
+	else if(type == RPCVariableType::rpcFloat)
+	{
+		variable->floatValue = decodeFloat(packet, packetLength, position);
 	}
 	else if(type == RPCVariableType::rpcBoolean)
 	{

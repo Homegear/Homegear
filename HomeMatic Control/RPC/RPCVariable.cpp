@@ -24,11 +24,15 @@ void RPCVariable::print()
 	}
 	else if(type == RPCVariableType::rpcInteger)
 	{
-		std::cout << "(Integer) " << integerValue;
+		std::cout << "(Integer) " << integerValue << std::endl;
+	}
+	else if(type == RPCVariableType::rpcFloat)
+	{
+		std::cout << "(Float) " << floatValue << std::endl;
 	}
 	else if(type == RPCVariableType::rpcString)
 	{
-		std::cout << "(String) " << stringValue;
+		std::cout << "(String) " << stringValue << std::endl;
 	}
 	else if(type == RPCVariableType::rpcArray)
 	{
@@ -55,6 +59,10 @@ void RPCVariable::print(std::shared_ptr<RPCVariable> variable, std::string inden
 	else if(variable->type == RPCVariableType::rpcInteger)
 	{
 		std::cout << indent << "(Integer) " << variable->integerValue << std::endl;
+	}
+	else if(variable->type == RPCVariableType::rpcFloat)
+	{
+		std::cout << indent << "(Float) " << variable->floatValue << std::endl;
 	}
 	else if(variable->type == RPCVariableType::rpcBoolean)
 	{

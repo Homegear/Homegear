@@ -5,6 +5,7 @@ using namespace std;
 #include <execinfo.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <cmath>
 
 #include "Cul.h"
 #include "Devices/HM-RC-Sec3-B.h"
@@ -15,6 +16,7 @@ using namespace std;
 #include "HomeMaticDevice.h"
 #include "Database.h"
 #include "GD.h"
+#include "HelperFunctions.h"
 
 void exceptionHandler(int32_t signal) {
   void *stackTrace[10];
@@ -72,6 +74,8 @@ int main()
         return 0;*/
 
     	shared_ptr<HomeMaticDevice> currentDevice;
+
+    	GD::bigEndian = HelperFunctions::isBigEndian();
 
     	char path[1024];
     	getcwd(path, 1024);

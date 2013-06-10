@@ -12,6 +12,8 @@
 #include <functional>
 #include <cctype>
 #include <locale>
+#include <iostream>
+#include <string>
 
 class HelperFunctions {
 public:
@@ -42,11 +44,23 @@ public:
 
 	static int32_t getNumber(std::string &s)
 	{
-		uint32_t xpos = s.find('x');
-		if(xpos == std::string::npos) return std::stoll(s, 0, 10);
+		int32_t xpos = s.find('x');
+		if(xpos == -1) return std::stoll(s, 0, 10);
 		else if(xpos == 1) return std::stoll(s, 0, 16);
 		else return 0;
 	}
+
+	static bool isBigEndian()
+	{
+		union {
+			uint32_t i;
+			char c[4];
+		} bint = {0x01020304};
+
+		return bint.c[0] == 1;
+	}
+
+	static void memcpyBigEndian(char* to, char* from, uint32_t length);
 private:
 	//Non public constructor
 	HelperFunctions();

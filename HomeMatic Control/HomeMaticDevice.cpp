@@ -136,8 +136,27 @@ void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycl
 	{
 		int32_t address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		int32_t peerSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_peers[address] = shared_ptr<Peer>(new Peer(serializedObject.substr(pos, peerSize), this)); pos += peerSize;
-		if(_peers[address]->serialNumber.size() == 10) _peersBySerial[_peers[address]->serialNumber] = _peers[address];
+		shared_ptr<Peer> peer(new Peer(serializedObject.substr(pos, peerSize), this)); pos += peerSize;
+		if(!peer->rpcDevice) continue;
+		_peers[address] = peer;
+		if(!peer->serialNumber.empty()) _peersBySerial[peer->serialNumber] = peer;
+		if(!peer->team.serialNumber.empty())
+		{
+			if(_peersBySerial.find(peer->team.serialNumber) == _peersBySerial.end())
+			{
+				shared_ptr<Peer> team = createTeam(peer->address, peer->deviceType, peer->team.serialNumber);
+				team->rpcDevice = peer->rpcDevice->team;
+				_peersBySerial[team->serialNumber] = team;
+			}
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+			{
+				if(i->second->hasTeam)
+				{
+					_peersBySerial[peer->team.serialNumber]->teamChannels.push_back(std::pair<string, uint32_t>(peer->serialNumber, i->first));
+					break;
+				}
+			}
+		}
 	}
 	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	for(uint32_t i = 0; i < configSize; i++)
@@ -315,6 +334,15 @@ void HomeMaticDevice::handleWakeUp(int32_t messageCounter, shared_ptr<BidCoSPack
 shared_ptr<Peer> HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
 {
     return shared_ptr<Peer>(new Peer());
+}
+
+shared_ptr<Peer> HomeMaticDevice::createTeam(int32_t address, HMDeviceTypes deviceType, std::string serialNumber)
+{
+	std::shared_ptr<Peer> team(new Peer());
+	team->address = address;
+	team->deviceType = deviceType;
+	team->serialNumber = serialNumber;
+    return team;
 }
 
 void HomeMaticDevice::handleConfigRequestPeers(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)

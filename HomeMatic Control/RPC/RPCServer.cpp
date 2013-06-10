@@ -1,5 +1,5 @@
 #include "RPCServer.h"
-
+#include "../HelperFunctions.h"
 #include "../GD.h"
 
 using namespace RPC;
@@ -264,7 +264,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 		uint32_t packetLength;
 		int32_t bytesRead;
 		uint32_t bufferSize;
-		uint32_t dataSize;
+		uint32_t dataSize = 0;
 		PacketType::Enum packetType;
 		cout << "Listening for incoming packets from client number " << clientFileDescriptor << "." << endl;
 		while(!_stopServer)
@@ -282,7 +282,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 			{
 				packetType = (buffer[3] == 0) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryResponse;
 				if(bufferSize < 8) continue;
-				dataSize = (buffer[4] << 24) + (buffer[5] << 16) + (buffer[6] << 8) + buffer[7];
+				HelperFunctions::memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
 				if(GD::debugLevel >= 6) cout << "Receiving packet with size: " << dataSize << endl;
 				if(dataSize == 0) continue;
 				if(dataSize > 104857600)

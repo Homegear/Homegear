@@ -250,6 +250,11 @@ void BidCoSQueue::pushPendingQueue()
 {
 	if(_pendingQueues.get() == nullptr || _pendingQueues->empty()) return;
 	_queueType = _pendingQueues->front()->getQueueType();
+	while(!_pendingQueues->empty() && _pendingQueues->front()->isEmpty())
+	{
+		_pendingQueues->pop();
+	}
+	if(_pendingQueues->empty()) return;
 	for(std::deque<BidCoSQueueEntry>::iterator i = _pendingQueues->front()->getQueue()->begin(); i != _pendingQueues->front()->getQueue()->end(); ++i)
 	{
 		if(!noSending && i->getType() == QueueEntryType::MESSAGE && i->getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
@@ -337,6 +342,7 @@ void BidCoSQueue::pop()
 
 std::string BidCoSQueue::serialize()
 {
+	if(_queue.size() == 0) return "";
 	std::ostringstream stringstream;
 	stringstream << std::hex << std::uppercase << std::setfill('0');
 	stringstream << std::setw(2) << (uint32_t)_queueType;

@@ -110,6 +110,7 @@ class HomeMaticDevice
         bool _lowBattery = false;
 
         virtual shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
+        virtual shared_ptr<Peer> createTeam(int32_t address, HMDeviceTypes deviceType, std::string serialNumber);
 
         virtual void init();
         virtual void setUpBidCoSMessages();

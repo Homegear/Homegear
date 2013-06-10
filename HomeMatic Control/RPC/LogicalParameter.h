@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <limits>
 
 #include "rapidxml.hpp"
 
@@ -32,7 +33,7 @@ class LogicalParameter
 public:
 	struct Type
 	{
-		enum Enum { none, typeBoolean, typeInteger, typeFloat, typeOption };
+		enum Enum { none, typeBoolean, typeInteger, typeFloat, typeEnum, typeString, typeAction };
 	};
 	Type::Enum type;
 
@@ -48,6 +49,7 @@ public:
 	int32_t max = 2147483647;
 	int32_t defaultValue = 0;
 	std::string unit;
+	std::unordered_map<std::string, int32_t> specialValues;
 
 	LogicalParameterInteger();
 	LogicalParameterInteger(xml_node<>* node);
@@ -57,8 +59,8 @@ public:
 class LogicalParameterFloat : public LogicalParameter
 {
 public:
-	double min = 0;
-	double max = 0;
+	double min = std::numeric_limits<double>::min();
+	double max = std::numeric_limits<double>::max();
 	double defaultValue = 0;
 	std::string unit;
 	std::unordered_map<std::string, double> specialValues;
@@ -68,12 +70,17 @@ public:
 	virtual ~LogicalParameterFloat() {}
 };
 
-class LogicalParameterOption : public LogicalParameter
+class LogicalParameterEnum : public LogicalParameter
 {
 public:
-	LogicalParameterOption();
-	LogicalParameterOption(xml_node<>* node);
-	virtual ~LogicalParameterOption() {}
+	int32_t min = 0;
+	int32_t max = 0;
+	int32_t defaultValue = 0;
+	std::string unit;
+
+	LogicalParameterEnum();
+	LogicalParameterEnum(xml_node<>* node);
+	virtual ~LogicalParameterEnum() {}
 	std::vector<ParameterOption> options;
 };
 
@@ -88,6 +95,32 @@ public:
 	LogicalParameterBoolean();
 	LogicalParameterBoolean(xml_node<>* node);
 	virtual ~LogicalParameterBoolean() {}
+};
+
+class LogicalParameterString : public LogicalParameter
+{
+public:
+	std::string min;
+	std::string max;
+	std::string defaultValue;
+	std::string unit;
+
+	LogicalParameterString();
+	LogicalParameterString(xml_node<>* node);
+	virtual ~LogicalParameterString() {}
+};
+
+class LogicalParameterAction : public LogicalParameter
+{
+public:
+	bool min = false;
+	bool max = true;
+	bool defaultValue = false;
+	std::string unit;
+
+	LogicalParameterAction();
+	LogicalParameterAction(xml_node<>* node);
+	virtual ~LogicalParameterAction() {}
 };
 
 } /* namespace XMLRPC */

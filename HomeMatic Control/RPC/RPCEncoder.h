@@ -31,6 +31,7 @@ private:
 	void encodeVariable(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable);
 	void encodeRawInteger(char* packet, uint32_t* position, uint32_t packetLength, int32_t integer);
 	void encodeInteger(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable);
+	void encodeFloat(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable);
 	void encodeBoolean(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable);
 	void encodeType(char* packet, uint32_t* position, uint32_t packetLength, RPCVariableType type);
 	void encodeRawString(char* packet,  uint32_t* position, uint32_t packetLength, std::string string);

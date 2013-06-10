@@ -25,6 +25,7 @@ public:
 	static Cul cul;
 	static int32_t debugLevel;
 	static int32_t rpcLogLevel;
+	static bool bigEndian;
 
 	virtual ~GD() { }
 private:

@@ -1,5 +1,6 @@
 #include "RPCEncoder.h"
 #include "../GD.h"
+#include "../HelperFunctions.h"
 
 namespace RPC
 {
@@ -29,6 +30,10 @@ void RPCEncoder::encodeVariable(char* packet, uint32_t* position, uint32_t packe
 	{
 		encodeInteger(packet, position, packetLength, variable);
 	}
+	else if(variable->type == RPCVariableType::rpcFloat)
+	{
+		encodeFloat(packet, position, packetLength, variable);
+	}
 	else if(variable->type == RPCVariableType::rpcBoolean)
 	{
 		encodeBoolean(packet, position, packetLength, variable);
@@ -57,6 +62,10 @@ uint32_t RPCEncoder::calculateLength(std::shared_ptr<RPCVariable> variable)
 	else if(variable->type == RPCVariableType::rpcInteger)
 	{
 		length = 8;
+	}
+	else if(variable->type == RPCVariableType::rpcFloat)
+	{
+		length = 12;
 	}
 	else if(variable->type == RPCVariableType::rpcBoolean)
 	{
@@ -118,12 +127,7 @@ void RPCEncoder::encodeRawInteger(char* packet, uint32_t* position, uint32_t pac
 		if(GD::debugLevel >= 1) std::cout << "Critical: RPC data exceeds calculated packet length." << std::endl;
 		return;
 	}
-	char data[4];
-	data[0] = integer >> 24;
-	data[1] = (integer >> 16) & 0xFF;
-	data[2] = (integer >> 8) & 0xFF;
-	data[3] = integer & 0xFF;
-	memcpy(packet + *position, data, 4);
+	HelperFunctions::memcpyBigEndian(packet + *position, (char*)&integer, 4);
 	*position += 4;
 }
 
@@ -131,6 +135,37 @@ void RPCEncoder::encodeInteger(char* packet, uint32_t* position, uint32_t packet
 {
 	encodeType(packet, position, packetLength, RPCVariableType::rpcInteger);
 	encodeRawInteger(packet, position, packetLength, variable->integerValue);
+}
+
+void RPCEncoder::encodeFloat(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable)
+{
+	encodeType(packet, position, packetLength, RPCVariableType::rpcFloat);
+	if(*position + 8 > packetLength)
+	{
+		if(GD::debugLevel >= 1) std::cout << "Critical: RPC data exceeds calculated packet length." << std::endl;
+		return;
+	}
+	double temp = std::abs(variable->floatValue);
+	int32_t exponent = 0;
+	if(temp < 0.5)
+	{
+		while(temp < 0.5)
+		{
+			temp *= 2;
+			exponent--;
+		}
+	}
+	else while(temp >= 1)
+	{
+		temp /= 2;
+		exponent++;
+	}
+	int32_t mantissa = std::roundl(temp * 0x40000000);
+	if(variable->floatValue < 0) mantissa |= 0x80000000;
+	HelperFunctions::memcpyBigEndian(packet + *position, (char*)&mantissa, 4);
+	*position += 4;
+	HelperFunctions::memcpyBigEndian(packet + *position, (char*)&exponent, 4);
+	*position += 4;
 }
 
 void RPCEncoder::encodeBoolean(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable)

@@ -122,15 +122,38 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 	}
 	else if(command == "pending queues info")
 	{
-		if(_currentPeer == nullptr)
+		if(!_currentPeer)
 		{
 			cout << "No peer selected." << endl;
 			return;
 		}
 		cout << "Number of Pending queues:\t\t\t" << _currentPeer->pendingBidCoSQueues->size() << endl;
-		cout << "First pending queue type:\t\t\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->getQueueType() << endl;
-		cout << "First packet of first pending queue:\t\t" << _currentPeer->pendingBidCoSQueues->front()->front()->getPacket()->hexString() << endl;
-		cout << "Type of first entry of first pending queue:\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->front()->getType() << endl;
+		if(!_currentPeer->pendingBidCoSQueues->empty() && !_currentPeer->pendingBidCoSQueues->front()->isEmpty())
+		{
+			cout << "First pending queue type:\t\t\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->getQueueType() << endl;
+			if(_currentPeer->pendingBidCoSQueues->front()->front()->getPacket()) cout << "First packet of first pending queue:\t\t" << _currentPeer->pendingBidCoSQueues->front()->front()->getPacket()->hexString() << endl;
+			cout << "Type of first entry of first pending queue:\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->front()->getType() << endl;
+		}
+	}
+	else if(command == "clear pending queues")
+	{
+		if(!_currentPeer)
+		{
+			cout << "No peer selected." << endl;
+			return;
+		}
+		_currentPeer->pendingBidCoSQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
+		cout << "Pending queues cleared." << endl;
+	}
+	else if(command == "team info")
+	{
+		if(!_currentPeer)
+		{
+			cout << "No peer selected." << endl;
+			return;
+		}
+		if(_currentPeer->team.serialNumber.empty()) cout << "This peer doesn't support teams." << endl;
+		else cout << "Team address: 0x" << std::hex << _currentPeer->team.address << std::dec << " Team serial number: " << _currentPeer->team.serialNumber << endl;
 	}
 }
 
@@ -309,7 +332,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 						_messageCounter[0]++;
 					}
 				}
-				peer->pendingBidCoSQueues->push(pendingQueue);
+				if(!pendingQueue->isEmpty()) peer->pendingBidCoSQueues->push(pendingQueue);
 			}
 		}
 		else
@@ -349,7 +372,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 				if(peerAddress != 0)
 				{
 					int32_t peerChannel = packet->payload()->at(i + 3);
-					PairedPeer peer;
+					BasicPeer peer;
 					peer.address = peerAddress;
 					_peers[packet->senderAddress()]->peers[peerChannel].push_back(peer);
 				}
@@ -444,9 +467,28 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket
 			{
 				if(_peers.find(packet->senderAddress()) == _peers.end())
 				{
-					if(queue->peer->serialNumber.size() == 10) _peersBySerial[queue->peer->serialNumber] = queue->peer;
+					for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = queue->peer->rpcDevice->channels.begin(); i != queue->peer->rpcDevice->channels.end(); ++i)
+					{
+						if(i->second->hasTeam)
+						{
+							shared_ptr<Peer> team;
+							std::string serialNumber('*' + queue->peer->serialNumber);
+							if(_peersBySerial.find(serialNumber) == _peersBySerial.end())
+							{
+								team = createTeam(queue->peer->address, queue->peer->deviceType, serialNumber);
+								team->rpcDevice = queue->peer->rpcDevice->team;
+								_peersBySerial[team->serialNumber] = team;
+							}
+							else team = _peersBySerial['*' + queue->peer->serialNumber];
+							queue->peer->team.address = team->address;
+							queue->peer->team.serialNumber = team->serialNumber;
+							_peersBySerial[team->serialNumber]->teamChannels.push_back(std::pair<string, uint32_t>(queue->peer->serialNumber, i->first));
+							break;
+						}
+					}
 					_peers[queue->peer->address] = queue->peer;
-					cout << "Added device 0x" << std::hex << queue->peer->address << std::dec << endl;
+					if(queue->peer->serialNumber.size() == 10) _peersBySerial[queue->peer->serialNumber] = queue->peer;
+					cout << "Added device 0x" << std::hex << queue->peer->address << std::dec << "." << endl;
 				}
 			}
 		}
@@ -479,7 +521,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices()
 	try
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
 			std::vector<shared_ptr<RPC::RPCVariable>> descriptions = i->second->getDeviceDescription();
 			for(std::vector<shared_ptr<RPC::RPCVariable>>::iterator j = descriptions.begin(); j != descriptions.end(); ++j)
@@ -508,7 +550,28 @@ shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::strin
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamsetDescription(serialNumber, channel, type);
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamsetDescription(channel, type);
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Unknown exception." << std::endl;
+    }
+    return shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
+}
+
+shared_ptr<RPC::RPCVariable> HomeMaticCentral::getValue(std::string serialNumber, uint32_t channel, std::string valueKey)
+{
+	try
+	{
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getValue(channel, valueKey);
 	}
 	catch(const std::exception& ex)
     {
