@@ -39,6 +39,14 @@ public:
 		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 		return s;
 	}
+
+	static int32_t getNumber(std::string &s)
+	{
+		uint32_t xpos = s.find('x');
+		if(xpos == std::string::npos) return std::stoll(s, 0, 10);
+		else if(xpos == 1) return std::stoll(s, 0, 16);
+		else return 0;
+	}
 private:
 	//Non public constructor
 	HelperFunctions();

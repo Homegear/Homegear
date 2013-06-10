@@ -61,6 +61,7 @@ public:
 	int32_t threshold = 0;
 	int32_t valueFalse = 0;
 	int32_t valueTrue = 0;
+	double offset = 0;
 
 	ParameterConversion() {}
 	ParameterConversion(xml_node<>* node);
@@ -111,6 +112,7 @@ public:
 	std::string name;
 	std::string id;
 	std::vector<Parameter> parameters;
+	int32_t priority = 0;
 
 	DeviceType() {}
 	DeviceType(xml_node<>* typeNode);
@@ -151,7 +153,7 @@ public:
 		enum Enum { none = 0, peerNeedsBurst = 1 };
 	};
 	ID::Enum id = ID::Enum::none;
-	bool value = false;
+	int32_t value = 0;
 
 	EnforceLink() {}
 	EnforceLink(xml_node<>* parameterSetNode);
@@ -176,12 +178,20 @@ public:
 	{
 		enum Enum { none = 0, visible = 1, internal = 2, dontdelete = 8 };
 	};
+	struct Direction
+	{
+		enum Enum { none = 0, sender = 1, receiver = 2 };
+	};
 	Device* parentDevice = nullptr;
 	uint32_t index = 0;
 	std::string type;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
+	Direction::Enum direction = Direction::Enum::none;
 	std::string channelClass;
 	uint32_t count = 0;
+	bool hasTeam = false;
+	bool aesDefault = false;
+	std::string teamTag;
 	std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>> parameterSets;
 	std::vector<std::shared_ptr<LinkRole>> linkRoles;
 	std::vector<std::shared_ptr<EnforceLink>> enforceLinks;
@@ -240,6 +250,9 @@ public:
 	RXModes::Enum rxModes = RXModes::Enum::none;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	std::string deviceClass;
+	bool supportsAES = false;
+	bool peeringSysinfoExpectChannel = true;
+	std::shared_ptr<Device> team;
 
 	Device();
 	Device(std::string xmlFilename);
@@ -247,7 +260,7 @@ public:
 	std::shared_ptr<DeviceType> getType(HMDeviceTypes deviceType, int32_t firmwareVersion);
 protected:
 	virtual void load(std::string xmlFilename);
-	virtual void parseXML(xml_document<>* doc);
+	virtual void parseXML(xml_node<>* node);
 private:
 };
 

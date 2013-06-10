@@ -86,6 +86,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 		else if(attributeName == "true") valueTrue = std::stoll(attributeValue);
 		else if(attributeName == "div") div = std::stoll(attributeValue);
 		else if(attributeName == "mul") mul = std::stoll(attributeValue);
+		else if(attributeName == "offset") offset = std::stod(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"conversion\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* conversionNode = node->first_node(); conversionNode; conversionNode = conversionNode->next_sibling())
@@ -148,7 +149,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 			else if(attributeValue == "le") booleanOperator = BooleanOperator::Enum::le;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"parameter\": " << attributeName << std::endl;
 		}
-		else if(attributeName == "const_value") constValue = std::stoll(attributeValue, 0, 16);
+		else if(attributeName == "const_value") constValue = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "param") param = attributeValue;
 		else if(attributeName == "control") control = attributeValue;
@@ -215,6 +216,8 @@ bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
 		{
 			bool match = true;
 			//This might not be the optimal way to get the xml rpc device, because it assumes the device type is unique
+			//When the device type is not at index 10 of the pairing packet, the device is not supported
+			//The "priority" attribute is ignored, for the standard devices "priority" seems not important
 			if(i->index == 10.0 && i->constValue != (uint32_t)deviceType) match = false;
 			if(i->index == 9.0 && !i->checkCondition(firmwareVersion)) match = false;
 			if(match) return true;
@@ -261,6 +264,7 @@ DeviceType::DeviceType(xml_node<>* typeNode)
 		std::string attributeValue(attr->value());
 		if(attributeName == "name") name = attributeValue;
 		else if(attributeName == "id") id = attributeValue;
+		else if(attributeName == "priority") priority = std::stoll(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"type\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* parameterNode = typeNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
@@ -373,7 +377,11 @@ EnforceLink::EnforceLink(xml_node<>* node)
 		std::string attributeName(attr->name());
 		std::string attributeValue(attr->value());
 		if(attributeName == "id" && attributeValue == "PEER_NEEDS_BURST") id = ID::Enum::peerNeedsBurst;
-		else if(attributeName == "value" && attributeValue == "true") value = true;
+		else if(attributeName == "value")
+		{
+			if(attributeValue == "true") value = 1;
+			else value = stoll(attributeValue);
+		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"enforce_link - value\": " << attributeName << std::endl;
 	}
 }
@@ -392,10 +400,19 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 			else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown ui flag for \"channel\": " << attributeValue << std::endl;
 		}
+		else if(attributeName == "direction")
+		{
+			if(attributeValue == "sender") direction = (Direction::Enum)(direction | Direction::Enum::sender);
+			else if(attributeValue == "receiver") direction = (Direction::Enum)(direction | Direction::Enum::receiver);
+			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown direction for \"channel\": " << attributeValue << std::endl;
+		}
 		else if(attributeName == "class") channelClass = attributeValue;
 		else if(attributeName == "type") type = attributeValue;
 		else if(attributeName == "count") count = std::stoll(attributeValue);
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"device\": " << attributeName << std::endl;
+		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
+		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
+		else if(attributeName == "team_tag") teamTag = attributeValue;
+		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"channel\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* channelNode = node->first_node(); channelNode; channelNode = channelNode->next_sibling())
 	{
@@ -499,7 +516,7 @@ void Device::load(std::string xmlFilename)
 		fileStream.read(&buffer[0], length);
 		fileStream.close();
 		doc.parse<0>(buffer);
-		parseXML(&doc);
+		parseXML(doc.first_node("device"));
 	}
 	else
 	{
@@ -508,12 +525,10 @@ void Device::load(std::string xmlFilename)
 	doc.clear();
 }
 
-void Device::parseXML(xml_document<>* doc)
+void Device::parseXML(xml_node<>* node)
 {
 	try
 	{
-		//Device
-		xml_node<>* node = doc->first_node("device");
 		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 		{
 			std::string attributeName(attr->name());
@@ -542,6 +557,8 @@ void Device::parseXML(xml_document<>* doc)
 				else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown ui flag for \"channel\": " << attributeValue << std::endl;
 			}
 			else if(attributeName == "cyclic_timeout") cyclicTimeout = std::stoll(attributeValue);
+			else if(attributeName == "supports_aes") { if(attributeValue == "true") supportsAES = true; }
+			else if(attributeName == "peering_sysinfo_expect_channel") { if(attributeValue == "false") peeringSysinfoExpectChannel = false; }
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"device\": " << attributeName << std::endl;
 		}
 
@@ -592,6 +609,11 @@ void Device::parseXML(xml_document<>* doc)
 			else if(nodeName == "paramset_defs")
 			{
 				if(node->first_node() != nullptr && GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"paramset_defs\"" << std::endl;
+			}
+			else if(nodeName == "team")
+			{
+				team.reset(new Device());
+				team->parseXML(node);
 			}
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
 		}

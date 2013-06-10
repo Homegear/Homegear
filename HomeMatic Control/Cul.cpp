@@ -163,7 +163,7 @@ std::string Cul::readFromDevice()
 			switch(i)
 			{
 				case 0:
-					throw(Exception("Reading from CUL device timed out: " + _culDevice));
+					if(GD::debugLevel >= 3) cout << "Warning: Reading from CUL device timed out: " + _culDevice << endl;
 					break;
 				case -1:
 					throw(Exception("Error reading from CUL device: " + _culDevice));

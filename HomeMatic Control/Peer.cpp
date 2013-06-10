@@ -253,6 +253,8 @@ std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
 			}
 
 		}
+		//Overwrite direction when manually set
+		if(i->second->direction != RPC::DeviceChannel::Direction::Enum::none) direction = (int32_t)i->second->direction;
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DIRECTION", direction)));
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)i->second->uiFlags)));
