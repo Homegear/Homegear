@@ -1,8 +1,6 @@
 #ifndef HM_SD_H
 #define HM_SD_H
 
-using namespace std;
-
 #include "../HomeMaticDevice.h"
 #include "../Cul.h"
 
@@ -29,7 +27,7 @@ class HM_SD : public HomeMaticDevice
         HM_SD();
         HM_SD(std::string serialNumber, int32_t address);
         virtual ~HM_SD();
-        void packetReceived(shared_ptr<BidCoSPacket> packet);
+        bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
         void addFilter(FilterType, int32_t);
         void removeFilter(FilterType, int32_t);
         void addOverwriteResponse(std::string packetPartToCapture, std::string response, int32_t sendAfter);

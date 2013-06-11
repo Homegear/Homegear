@@ -142,6 +142,7 @@ public:
 	std::vector<std::shared_ptr<Parameter>> getIndices(int32_t startIndex, int32_t endIndex);
 	std::shared_ptr<Parameter> getIndex(double index);
 	std::shared_ptr<Parameter> getParameter(std::string id);
+	std::vector<std::shared_ptr<Parameter>> getParameters(std::string );
 	std::string typeString();
 };
 
@@ -218,11 +219,12 @@ public:
 	std::string id;
 	bool isEvent = false;
 	uint32_t type = 0;
-	uint32_t subtype = 0;
-	uint32_t subtypeIndex = 0;
-	uint32_t channelField = 0;
-	uint32_t fixedChannel = 0;
+	int32_t subtype = -1;
+	int32_t subtypeIndex = -1;
+	int32_t channelField = -1;
+	int32_t fixedChannel = -1;
 	std::vector<Parameter> parameters;
+	std::vector<std::shared_ptr<Parameter>> associatedValues;
 
 	DeviceFrame() {}
 	DeviceFrame(xml_node<>* node);
@@ -246,7 +248,8 @@ public:
 	std::shared_ptr<ParameterSet> parameterSet;
 	std::map<uint32_t, std::shared_ptr<DeviceChannel>> channels;
 	std::vector<std::shared_ptr<DeviceType>> supportedTypes;
-	std::vector<std::shared_ptr<DeviceFrame>> frames;
+	std::multimap<uint32_t, std::shared_ptr<DeviceFrame>> framesByMessageType;
+	std::map<std::string, std::shared_ptr<DeviceFrame>> framesByID;
 	RXModes::Enum rxModes = RXModes::Enum::none;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	std::string deviceClass;

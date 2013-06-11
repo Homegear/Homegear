@@ -31,13 +31,13 @@ void Cul::removeHomeMaticDevice(HomeMaticDevice* device)
     _homeMaticDevices.remove(device);
 }
 
-void Cul::sendPacket(shared_ptr<BidCoSPacket> packet)
+void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
 		if(packet == nullptr)
 		{
-			if(GD::debugLevel >= 3) cout << "Warning: Packet was nullptr." << endl;
+			if(GD::debugLevel >= 3) std::cout << "Warning: Packet was nullptr." << std::endl;
 			return;
 		}
 		bool deviceWasClosed = false;
@@ -163,7 +163,7 @@ std::string Cul::readFromDevice()
 			switch(i)
 			{
 				case 0:
-					if(GD::debugLevel >= 3) cout << "Warning: Reading from CUL device timed out: " + _culDevice << endl;
+					if(GD::debugLevel >= 3) std::cout << "Warning: Reading from CUL device timed out: " + _culDevice << std::endl;
 					break;
 				case -1:
 					throw(Exception("Error reading from CUL device: " + _culDevice));
@@ -205,7 +205,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
         fd_set writeFileDescriptor;
         if(GD::debugLevel > 3 && printSending)
         {
-            cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << data.substr(2, data.size() - 4) << endl;
+            std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << data.substr(2, data.size() - 4) << std::endl;
         }
         _sendMutex.lock();
         FD_ZERO(&writeFileDescriptor);
@@ -216,7 +216,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
             switch(i)
             {
                 case 0:
-                    throw(Exception("Writing to CUL device timed out: " + _culDevice));
+                    if(GD::debugLevel >= 3) std::cout << "Warning: Writing to CUL device timed out: " + _culDevice << std::endl;
                     break;
                 case -1:
                     throw(Exception("Error writing to CUL device (1): " + _culDevice));
@@ -241,17 +241,17 @@ void Cul::writeToDevice(std::string data, bool printSending)
     catch(const std::exception& ex)
     {
     	_sendMutex.unlock();
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
     	_sendMutex.unlock();
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
     	_sendMutex.unlock();
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << endl;
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
 }
 
@@ -296,7 +296,7 @@ void Cul::stopListening()
 	}
 }
 
-void Cul::callCallback(shared_ptr<BidCoSPacket> packet)
+void Cul::callCallback(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -322,7 +322,7 @@ void Cul::listen()
         	std::string packetHex = readFromDevice();
         	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + CUL "A")
         	{
-				shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
+				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 				packet->import(packetHex);
 				std::thread t(&Cul::callCallback, this, packet);
 				t.detach();

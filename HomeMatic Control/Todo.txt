@@ -5,3 +5,4 @@
 - Device: Don't allow pairing to two masters
 - Peer.cpp - getDeviceDescription: Add GROUP
 - Check device type and serial number on repairing
+- RPC Server/Central: paramset_defs

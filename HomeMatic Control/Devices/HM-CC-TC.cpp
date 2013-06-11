@@ -41,7 +41,7 @@ int64_t HM_CC_TC::calculateLastDutyCycleEvent()
 		nextDutyCycleEvent = lastDutyCycleEvent + (calculateCycleLength(_messageCounter[1]) * 250);
 		_messageCounter[1]++;
 	}
-	if(GD::debugLevel >= 5) cout << "Setting last duty cycle event to: " << lastDutyCycleEvent << endl;
+	if(GD::debugLevel >= 5) std::cout << "Setting last duty cycle event to: " << lastDutyCycleEvent << std::endl;
 	return lastDutyCycleEvent;
 }
 
@@ -117,17 +117,17 @@ void HM_CC_TC::setUpBidCoSMessages()
     HomeMaticDevice::setUpBidCoSMessages();
 
     //Outgoing
-    _messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x00, 0xA0, this, &HomeMaticDevice::sendDirectedPairingRequest)));
+    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x00, 0xA0, this, &HomeMaticDevice::sendDirectedPairingRequest)));
 
-    shared_ptr<BidCoSMessage> message(new BidCoSMessage(0x01, 0xA0, this, &HomeMaticDevice::sendRequestConfig));
+    std::shared_ptr<BidCoSMessage> message(new BidCoSMessage(0x01, 0xA0, this, &HomeMaticDevice::sendRequestConfig));
     message->addSubtype(0x01, 0x04);
     _messages->add(message);
 
     //Incoming
-    _messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
-    _messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x11, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleSetPoint)));
-    _messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x12, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleWakeUp)));
-    _messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0xDD, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleSetValveState)));
+    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
+    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x11, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleSetPoint)));
+    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x12, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleWakeUp)));
+    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0xDD, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleSetValveState)));
 }
 
 HM_CC_TC::~HM_CC_TC()
@@ -138,7 +138,7 @@ HM_CC_TC::~HM_CC_TC()
 void HM_CC_TC::stopDutyCycle()
 {
 	_stopDutyCycleThread = true;
-	if(GD::debugLevel >= 5) cout << "Stopping duty cycle..." << endl;
+	if(GD::debugLevel >= 5) std::cout << "Stopping duty cycle..." << std::endl;
 	if(_dutyCycleThread != nullptr && _dutyCycleThread->joinable())	_dutyCycleThread->join();
 }
 
@@ -178,7 +178,7 @@ void HM_CC_TC::handleCLICommand(std::string command)
 {
 	if(command == "get duty cycle counter")
 	{
-		cout << "Duty cycle counter: " << std::dec << _dutyCycleCounter << " (" << ((_dutyCycleCounter * 250) / 1000) << "s)" << endl;
+		std::cout << "Duty cycle counter: " << std::dec << _dutyCycleCounter << " (" << ((_dutyCycleCounter * 250) / 1000) << "s)" << std::endl;
 	}
 	HomeMaticDevice::handleCLICommand(command);
 }
@@ -198,12 +198,12 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 	int32_t cycleLength = calculateCycleLength(_messageCounter[1] - 1); //The calculation has to use the last message counter
 	_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250;
 	_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
-	if(GD::debugLevel >= 5 && _dutyCycleCounter > 0) cout << "Skipping " << (_dutyCycleCounter * 250) << " ms of duty cycle." << endl;
+	if(GD::debugLevel >= 5 && _dutyCycleCounter > 0) std::cout << "Skipping " << (_dutyCycleCounter * 250) << " ms of duty cycle." << std::endl;
 	while(!_stopDutyCycleThread)
 	{
 		cycleTime = cycleLength * 250;
 		nextDutyCycleEvent += cycleTime;
-		if(GD::debugLevel >= 5) cout << "Next duty cycle: " << nextDutyCycleEvent << " (in " << cycleTime << " ms) with message counter 0x" << std::hex << (int32_t)_messageCounter[1] << std::dec << endl;
+		if(GD::debugLevel >= 5) std::cout << "Next duty cycle: " << nextDutyCycleEvent << " (in " << cycleTime << " ms) with message counter 0x" << std::hex << (int32_t)_messageCounter[1] << std::dec << std::endl;
 		std::chrono::milliseconds sleepingTime(2000);
 		while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
 		{
@@ -223,25 +223,25 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		if(_stopDutyCycleThread) break;
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		cout << "Time mismatch: " << (timePassed + 10000 - cycleTime) << endl;
+		std::cout << "Time mismatch: " << (timePassed + 10000 - cycleTime) << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 5000));
 		if(_stopDutyCycleThread) break;
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		cout << "Time mismatch: " << (timePassed + 5000 - cycleTime) << endl;
+		std::cout << "Time mismatch: " << (timePassed + 5000 - cycleTime) << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 2000));
 		if(_stopDutyCycleThread) break;
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		cout << "Time mismatch: " << (timePassed + 2000 - cycleTime) << endl;
+		std::cout << "Time mismatch: " << (timePassed + 2000 - cycleTime) << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 1000));
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		cout << "Time mismatch: " << (timePassed + 1000 - cycleTime) << endl;
+		std::cout << "Time mismatch: " << (timePassed + 1000 - cycleTime) << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 500));
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		cout << "Time mismatch: " << (timePassed + 500 - cycleTime) << endl;
+		std::cout << "Time mismatch: " << (timePassed + 500 - cycleTime) << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed));
 		if(_stopDutyCycleThread) break;
 
@@ -272,7 +272,7 @@ void HM_CC_TC::sendDutyCycleBroadcast()
 	payload.push_back((_temperature & 0xFF00) >> 8);
 	payload.push_back(_temperature & 0xFF);
 	payload.push_back(_humidity);
-	shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter[1], 0x86, 0x70, _address, 0, payload));
+	std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter[1], 0x86, 0x70, _address, 0, payload));
 	sendPacket(packet);
 }
 
@@ -282,24 +282,24 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter)
 	{
 		int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		int32_t address = getNextDutyCycleDeviceAddress();
-		if(GD::debugLevel >= 5)	cout << "Next HM-CC-VD is 0x" << std::hex << address << std::dec << endl;
+		if(GD::debugLevel >= 5)	std::cout << "Next HM-CC-VD is 0x" << std::hex << address << std::dec << std::endl;
 		if(address < 1)
 		{
-			if(GD::debugLevel >= 5) cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Not sending duty cycle packet, because no valve drives are paired to me." << endl;
+			if(GD::debugLevel >= 5) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Not sending duty cycle packet, because no valve drives are paired to me." << std::endl;
 			return;
 		}
 		std::vector<uint8_t> payload;
 		payload.push_back(getAdjustmentCommand());
 		payload.push_back(_newValveState);
-		shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA2, 0x58, _address, address, payload));
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA2, 0x58, _address, address, payload));
 		sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - timePoint;
-		cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << endl;
+		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << std::endl;
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
@@ -352,20 +352,20 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 	_peersMutex.unlock();
 	return -1;
 }
 
-void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddress, shared_ptr<BidCoSPacket> packet)
+void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddress, std::shared_ptr<BidCoSPacket> packet)
 {
     HomeMaticDevice::sendConfigParams(messageCounter, destinationAddress, packet);
 }
 
-shared_ptr<Peer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
+std::shared_ptr<Peer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
 {
-    shared_ptr<Peer> peer(new Peer());
+    std::shared_ptr<Peer> peer(new Peer());
     peer->address = address;
     peer->firmwareVersion = firmwareVersion;
     peer->deviceType = deviceType;
@@ -381,21 +381,21 @@ void HM_CC_TC::reset()
     HomeMaticDevice::reset();
 }
 
-void HM_CC_TC::handleSetValveState(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HM_CC_TC::handleSetValveState(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
 		_newValveState = packet->payload()->at(0);
-		if(GD::debugLevel >= 5) cout << "New valve state: " << _newValveState << endl;
+		if(GD::debugLevel >= 5) std::cout << "New valve state: " << _newValveState << std::endl;
 		sendOK(messageCounter, packet->senderAddress());
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
-void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
     HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
 
@@ -404,11 +404,11 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, shared_ptr<BidCoSPack
     if(channel == 2)
     {
     	_peers[address]->deviceType = HMDeviceTypes::HMCCVD;
-    	if(GD::debugLevel >= 5) cout << "Added HM-CC-VD with address 0x" << std::hex << address << std::dec << endl;
+    	if(GD::debugLevel >= 5) std::cout << "Added HM-CC-VD with address 0x" << std::hex << address << std::dec << std::endl;
     }
 }
 
-void HM_CC_TC::handleSetPoint(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HM_CC_TC::handleSetPoint(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -424,11 +424,11 @@ void HM_CC_TC::handleSetPoint(int32_t messageCounter, shared_ptr<BidCoSPacket> p
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
-void HM_CC_TC::handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HM_CC_TC::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -448,11 +448,11 @@ void HM_CC_TC::handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPac
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
-void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -462,18 +462,18 @@ void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, shared_ptr<BidC
 		for(int i = 7; i < (signed)packet->payload()->size() - 2; i+=2)
 		{
 			_peers[packet->senderAddress()]->config[packet->payload()->at(i)] = packet->payload()->at(i + 1);
-			cout << "0x" << std::setw(6) << std::hex << _address;
-			cout << ": Config of device 0x" << std::setw(6) << packet->senderAddress() << " at index " << std::setw(2) << (int32_t)(packet->payload()->at(i)) << " set to " << std::setw(2) << (int32_t)(packet->payload()->at(i + 1)) << std::dec << endl;
+			std::cout << "0x" << std::setw(6) << std::hex << _address;
+			std::cout << ": Config of device 0x" << std::setw(6) << packet->senderAddress() << " at index " << std::setw(2) << (int32_t)(packet->payload()->at(i)) << " set to " << std::setw(2) << (int32_t)(packet->payload()->at(i + 1)) << std::dec << std::endl;
 		}
 		sendOK(messageCounter, packet->senderAddress());
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
-void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, shared_ptr<BidCoSPacket> packet)
+void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -486,16 +486,16 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, sh
 		payload.push_back(0);
 		payload.push_back(0);
 		payload.push_back(0x05);
-		shared_ptr<BidCoSPacket> requestConfig(new BidCoSPacket(messageCounter, 0xA0, 0x01, _address, packet->senderAddress(), payload));
+		std::shared_ptr<BidCoSPacket> requestConfig(new BidCoSPacket(messageCounter, 0xA0, 0x01, _address, packet->senderAddress(), payload));
 		sendPacket(requestConfig);
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
-void HM_CC_TC::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -510,6 +510,6 @@ void HM_CC_TC::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket> packet
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }

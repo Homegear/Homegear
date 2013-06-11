@@ -71,7 +71,7 @@ std::string HM_SD::serialize()
 	return stringstream.str();
 }
 
-void HM_SD::packetReceived(shared_ptr<BidCoSPacket> packet)
+bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
     bool printPacket = false;
     for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
@@ -94,7 +94,7 @@ void HM_SD::packetReceived(shared_ptr<BidCoSPacket> packet)
     }
     if(_filters.size() == 0) printPacket = true;
     std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
-    if(printPacket) cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Received: " << packet->hexString() << '\n';
+    if(printPacket) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Received: " << packet->hexString() << '\n';
     for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
     {
         std::string packetHex = packet->hexString();
@@ -102,16 +102,17 @@ void HM_SD::packetReceived(shared_ptr<BidCoSPacket> packet)
         {
             std::chrono::milliseconds sleepingTime(i->sendAfter); //Don't respond too fast
             std::this_thread::sleep_for(sleepingTime);
-            shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
+            std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
             std::stringstream stringstream;
             stringstream << std::hex << std::setw(2) << (i->response.size() / 2) + 1;
             std::string lengthHex = stringstream.str();
             packet->import(lengthHex + packetHex.substr(2, 2) + i->response, false);
             std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
-            cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response: " << '\n';
+            std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response: " << '\n';
             sendPacket(packet);
         }
     }
+    return false;
 }
 
 void HM_SD::addFilter(FilterType filterType, int32_t filterValue)
@@ -146,61 +147,61 @@ void HM_SD::handleCLICommand(std::string command)
 	if(command == "add filter")
 	{
 		std::string input;
-		cout << "Enter filter type or press \"l\" to list filter types: ";
+		std::cout << "Enter filter type or press \"l\" to list filter types: ";
 		do
 		{
-			cin >> input;
+			std::cin >> input;
 			if(input == "l")
 			{
-				cout << "Filter types:" << endl;
-				cout << "\t00: Sender address" << endl;
-				cout << "\t01: Destination address" << endl;
-				cout << "\t03: Message type" << endl << endl;
-				cout << "Enter filter type or press \"l\" to list filter types: ";
+				std::cout << "Filter types:" << std::endl;
+				std::cout << "\t00: Sender address" << std::endl;
+				std::cout << "\t01: Destination address" << std::endl;
+				std::cout << "\t03: Message type" << std::endl << std::endl;
+				std::cout << "Enter filter type or press \"l\" to list filter types: ";
 			}
 		}while(input == "l");
 		int32_t filterType = -1;
 		try	{ filterType = std::stoll(input, 0, 16); } catch(...) {}
-		if(filterType < 0 || filterType > 3) cout << "Invalid filter type." << endl;
+		if(filterType < 0 || filterType > 3) std::cout << "Invalid filter type." << std::endl;
 		else
 		{
-			cout << "Please enter a filter value in hexadecimal format: ";
+			std::cout << "Please enter a filter value in hexadecimal format: ";
 			HM_SD_Filter filter;
 			filter.filterType = (FilterType)filterType;
 			filter.filterValue = getHexInput();
 			_filters.push_back(filter);
-			cout << "Filter added." << endl;
+			std::cout << "Filter added." << std::endl;
 		}
 	}
 	else if(command == "remove filter")
 	{
 		std::string input;
-		cout << "Enter filter type or press \"l\" to list filter types: ";
+		std::cout << "Enter filter type or press \"l\" to list filter types: ";
 		while(input == "l")
 		{
-			cin >> input;
-			cout << "Filter types:" << endl;
-			cout << "\t00: Sender address" << endl;
-			cout << "\t01: Destination address" << endl;
-			cout << "\t03: Message type" << endl << endl;
-			cout << "Enter filter type or press \"l\" to list filter types: ";
+			std::cin >> input;
+			std::cout << "Filter types:" << std::endl;
+			std::cout << "\t00: Sender address" << std::endl;
+			std::cout << "\t01: Destination address" << std::endl;
+			std::cout << "\t03: Message type" << std::endl << std::endl;
+			std::cout << "Enter filter type or press \"l\" to list filter types: ";
 		}
 		int32_t filterType = getHexInput();
-		if(filterType < 0 || filterType > 3) cout << "Invalid filter type." << endl;
+		if(filterType < 0 || filterType > 3) std::cout << "Invalid filter type." << std::endl;
 		else
 		{
-			cout << "Please enter a filter value in hexadecimal format: ";
+			std::cout << "Please enter a filter value in hexadecimal format: ";
 			uint32_t oldSize = _filters.size();
 			removeFilter((FilterType)filterType, getHexInput());
-			if(_filters.size() != oldSize) cout << "Filter removed." << endl;
-			else cout << "Filter not found." << endl;
+			if(_filters.size() != oldSize) std::cout << "Filter removed." << std::endl;
+			else std::cout << "Filter not found." << std::endl;
 		}
 	}
 	else if(command == "list filters")
 	{
 		for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
 		{
-			cout << "Filter type: " << std::hex << (int32_t)i->filterType << "\tFilter value: " << i->filterValue << std::dec << endl;
+			std::cout << "Filter type: " << std::hex << (int32_t)i->filterType << "\tFilter value: " << i->filterValue << std::dec << std::endl;
 		}
 	}
 }

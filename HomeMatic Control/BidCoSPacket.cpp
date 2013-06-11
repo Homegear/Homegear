@@ -62,7 +62,7 @@ int32_t BidCoSPacket::channel()
     }
 }
 
-vector<uint8_t>* BidCoSPacket::payload()
+std::vector<uint8_t>* BidCoSPacket::payload()
 {
     return &_payload;
 }
@@ -99,7 +99,7 @@ BidCoSPacket::BidCoSPacket(std::string packet)
     import(packet);
 }
 
-BidCoSPacket::BidCoSPacket(uint8_t messageCounter, uint8_t controlByte, uint8_t messageType, int32_t senderAddress, int32_t destinationAddress, vector<uint8_t> payload)
+BidCoSPacket::BidCoSPacket(uint8_t messageCounter, uint8_t controlByte, uint8_t messageType, int32_t senderAddress, int32_t destinationAddress, std::vector<uint8_t> payload)
      : _messageCounter(messageCounter), _controlByte(controlByte), _messageType(messageType), _senderAddress(senderAddress), _destinationAddress(destinationAddress), _payload(payload)
 {
     _length = 9 + _payload.size();
@@ -166,7 +166,7 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 {
 	if(index < 9)
 	{
-		if(GD::debugLevel >= 2) cout << "Error: Packet index < 9 requested." << endl;
+		if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 9 requested." << std::endl;
 		return 0;
 	}
 	index -= 9;
@@ -176,12 +176,12 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 	{
 		if(size > 1)
 		{
-			if(GD::debugLevel >= 2) cout << "Error: Partial byte index > 1 requested.";
+			if(GD::debugLevel >= 2) std::cout << "Error: Partial byte index > 1 requested." << std::endl;
 			return result;
 		}
 		if(isSigned)
 		{
-			if(GD::debugLevel >= 2) cout << "Error: Signed partial byte index requested.";
+			if(GD::debugLevel >= 2) std::cout << "Error: Signed partial byte index requested." << std::endl;
 			return result;
 		}
 		//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1

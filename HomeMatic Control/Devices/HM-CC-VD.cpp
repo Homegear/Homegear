@@ -60,7 +60,7 @@ void HM_CC_VD::setUpBidCoSMessages()
 {
     HomeMaticDevice::setUpBidCoSMessages();
 
-    _messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x58, this, ACCESSPAIREDTOSENDER, NOACCESS, &HomeMaticDevice::handleDutyCyclePacket)));
+    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x58, this, ACCESSPAIREDTOSENDER, NOACCESS, &HomeMaticDevice::handleDutyCyclePacket)));
 }
 
 void HM_CC_VD::handleCLICommand(std::string command)
@@ -68,60 +68,60 @@ void HM_CC_VD::handleCLICommand(std::string command)
 	std::string input;
 	if(command == "set valve drive blocked")
 	{
-		cout << "Please enter \"yes\" or \"no\": ";
-        cin >> input;
+		std::cout << "Please enter \"yes\" or \"no\": ";
+        std::cin >> input;
         if(input == "yes")
         {
         	_valveDriveBlocked = true;
-        	cout << "Valve drive blocked." << endl;
+        	std::cout << "Valve drive blocked." << std::endl;
         }
         else
         {
         	_valveDriveBlocked = false;
-        	cout << "Valve drive not blocked." << endl;
+        	std::cout << "Valve drive not blocked." << std::endl;
         }
 	}
 	if(command == "set valve drive loose")
 	{
-		cout << "Please enter \"yes\" or \"no\": ";
-        cin >> input;
+		std::cout << "Please enter \"yes\" or \"no\": ";
+        std::cin >> input;
         if(input == "yes")
         {
         	_valveDriveLoose = true;
-        	cout << "Valve drive loose." << endl;
+        	std::cout << "Valve drive loose." << std::endl;
         }
         else
         {
         	_valveDriveLoose = false;
-        	cout << "Valve drive not loose." << endl;
+        	std::cout << "Valve drive not loose." << std::endl;
         }
 	}
 	if(command == "set adjusting range too small")
 	{
-		cout << "Please enter \"yes\" or \"no\": ";
-        cin >> input;
+		std::cout << "Please enter \"yes\" or \"no\": ";
+        std::cin >> input;
         if(input == "yes")
         {
         	_adjustingRangeTooSmall = true;
-        	cout << "Adjusting range too small." << endl;
+        	std::cout << "Adjusting range too small." << std::endl;
         }
         else
         {
         	_adjustingRangeTooSmall = false;
-        	cout << "Adjusting range ok." << endl;
+        	std::cout << "Adjusting range ok." << std::endl;
         }
 	}
 	HomeMaticDevice::handleCLICommand(command);
 }
 
-void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
     HomeMaticDevice::handleDutyCyclePacket(messageCounter, packet);
     if(_peers[packet->senderAddress()]->deviceType != HMDeviceTypes::HMCCTC) return;
     int32_t oldValveState = _valveState;
     _valveState = (packet->payload()->at(1) * 100) / 256;
-    cout << "0x" << std::setw(6) << std::hex << _address << std::dec;
-    cout << ": New valve state " << _valveState << '\n';
+    std::cout << "0x" << std::setw(6) << std::hex << _address << std::dec;
+    std::cout << ": New valve state " << _valveState << '\n';
     if(packet->destinationAddress() != _address) return; //Unidirectional packet (more than three valve drives connected to one room thermostat) or packet to other valve drive
     sendDutyCycleResponse(packet->senderAddress(), oldValveState, packet->payload()->at(0));
     if(_justPairedToOrThroughCentral)
@@ -193,13 +193,13 @@ void HM_CC_VD::sendConfigParamsType2(int32_t messageCounter, int32_t destination
     payload.push_back(*_errorPosition);
     payload.push_back(0x00);
     payload.push_back(0x00);
-    shared_ptr<BidCoSPacket> config(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
+    std::shared_ptr<BidCoSPacket> config(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
     sendPacket(config);
 }
 
-shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
+std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
 {
-    shared_ptr<Peer> peer(new Peer());
+    std::shared_ptr<Peer> peer(new Peer());
     peer->address = address;
     peer->firmwareVersion = firmwareVersion;
     peer->deviceType = deviceType;
@@ -218,7 +218,7 @@ void HM_CC_VD::reset()
     _valveState = 0x00;
 }
 
-void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
     HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
 

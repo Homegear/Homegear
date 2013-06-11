@@ -10,7 +10,7 @@ BidCoSMessages::~BidCoSMessages()
     //dtor
 }
 
-void BidCoSMessages::add(shared_ptr<BidCoSMessage> message)
+void BidCoSMessages::add(std::shared_ptr<BidCoSMessage> message)
 {
 	try
 	{
@@ -22,13 +22,13 @@ void BidCoSMessages::add(shared_ptr<BidCoSMessage> message)
 	}
 }
 
-shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, shared_ptr<BidCoSPacket> packet)
+std::shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		if(packet == nullptr) return shared_ptr<BidCoSMessage>();
+		if(packet == nullptr) return std::shared_ptr<BidCoSMessage>();
 		int32_t subtypeMax = -1;
-		shared_ptr<BidCoSMessage>* elementToReturn = nullptr;
+		std::shared_ptr<BidCoSMessage>* elementToReturn = nullptr;
 		for(uint32_t i = 0; i < _messages.size(); i++)
 		{
 			if(_messages[i]->getDirection() == direction && _messages[i]->typeIsEqual(packet))
@@ -40,7 +40,7 @@ shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, shared_ptr<Bid
 				}
 			}
 		}
-		if(elementToReturn == nullptr) return shared_ptr<BidCoSMessage>(); else return *elementToReturn;
+		if(elementToReturn == nullptr) return std::shared_ptr<BidCoSMessage>(); else return *elementToReturn;
 	}
 	catch(const std::exception& ex)
 	{
@@ -49,7 +49,7 @@ shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, shared_ptr<Bid
 	return nullptr;
 }
 
-shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, int32_t messageType, std::vector<std::pair<uint32_t, int32_t>> subtypes)
+std::shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, int32_t messageType, std::vector<std::pair<uint32_t, int32_t>> subtypes)
 {
 	try
 	{
@@ -62,5 +62,5 @@ shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, int32_t messag
 	{
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
 	}
-    return shared_ptr<BidCoSMessage>();
+    return std::shared_ptr<BidCoSMessage>();
 }

@@ -26,18 +26,18 @@ void HomeMaticCentral::init()
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
 void HomeMaticCentral::setUpBidCoSMessages()
 {
 	//Don't call HomeMaticDevice::setUpBidCoSMessages!
-	_messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x00, this, ACCESSPAIREDTOSENDER, FULLACCESS, &HomeMaticDevice::handlePairingRequest)));
+	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x00, this, ACCESSPAIREDTOSENDER, FULLACCESS, &HomeMaticDevice::handlePairingRequest)));
 
-	_messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
+	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
 
-	_messages->add(shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
+	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
 }
 
 void HomeMaticCentral::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
@@ -54,19 +54,41 @@ std::string HomeMaticCentral::serialize()
 	return  stringstream.str();
 }
 
-void HomeMaticCentral::packetReceived(shared_ptr<BidCoSPacket> packet)
+bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		HomeMaticDevice::packetReceived(packet);
+		if(!HomeMaticDevice::packetReceived(packet)) //Packet already handled?
+		{
+			for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+			{
+				std::thread t(&Peer::packetReceived, i->second.get(), packet);
+				t.detach();
+			}
+		}
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	return true;
+}
+
+void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<BidCoSQueue> packets, bool pushPendingBidCoSQueues)
+{
+	try
+	{
+		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
+		queue->push(packets, true, true);
+		if(_peers.find(deviceAddress) != _peers.end() && pushPendingBidCoSQueues) queue->push(_peers[deviceAddress]->pendingBidCoSQueues);
+	}
+	catch(const std::exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
-shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
+std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
 {
 	std::shared_ptr<Peer> peer(new Peer());
 	peer->address = address;
@@ -83,77 +105,77 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 	if(command == "pairing mode on")
 	{
 		_pairing = true;
-		cout << "Pairing mode enabled." << endl;
+		std::cout << "Pairing mode enabled." << std::endl;
 	}
 	else if(command == "pairing mode off")
 	{
 		_pairing = false;
-		cout << "Pairing mode disabled." << endl;
+		std::cout << "Pairing mode disabled." << std::endl;
 	}
 	else if(command == "unpair")
 	{
 		std::string input;
-		cout << "Please enter the devices address: ";
+		std::cout << "Please enter the devices address: ";
 		int32_t address = getHexInput();
-		if(_peers.find(address) == _peers.end()) cout << "This device is not paired to this central." << endl;
+		if(_peers.find(address) == _peers.end()) std::cout << "This device is not paired to this central." << std::endl;
 		else
 		{
-			cout << "Unpairing device 0x" << std::hex << address << std::dec << endl;
+			std::cout << "Unpairing device 0x" << std::hex << address << std::dec << std::endl;
 			unpair(address);
 		}
 	}
 	else if(command == "list peers")
 	{
-		for(std::unordered_map<int32_t, shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			cout << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->serialNumber << "\tDevice type: " << (uint32_t)i->second->deviceType << endl << std::dec;
+			std::cout << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->serialNumber << "\tDevice type: " << (uint32_t)i->second->deviceType << std::endl << std::dec;
 		}
 	}
 	else if(command == "select peer")
 	{
-		cout << "Please enter the devices address: ";
+		std::cout << "Please enter the devices address: ";
 		int32_t address = getHexInput();
-		if(_peers.find(address) == _peers.end()) cout << "This device is not paired to this central." << endl;
+		if(_peers.find(address) == _peers.end()) std::cout << "This device is not paired to this central." << std::endl;
 		else
 		{
 			_currentPeer = _peers[address];
-			cout << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->deviceType << " selected." << std::dec << endl;
+			std::cout << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->deviceType << " selected." << std::dec << std::endl;
 		}
 	}
 	else if(command == "pending queues info")
 	{
 		if(!_currentPeer)
 		{
-			cout << "No peer selected." << endl;
+			std::cout << "No peer selected." << std::endl;
 			return;
 		}
-		cout << "Number of Pending queues:\t\t\t" << _currentPeer->pendingBidCoSQueues->size() << endl;
+		std::cout << "Number of Pending queues:\t\t\t" << _currentPeer->pendingBidCoSQueues->size() << std::endl;
 		if(!_currentPeer->pendingBidCoSQueues->empty() && !_currentPeer->pendingBidCoSQueues->front()->isEmpty())
 		{
-			cout << "First pending queue type:\t\t\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->getQueueType() << endl;
-			if(_currentPeer->pendingBidCoSQueues->front()->front()->getPacket()) cout << "First packet of first pending queue:\t\t" << _currentPeer->pendingBidCoSQueues->front()->front()->getPacket()->hexString() << endl;
-			cout << "Type of first entry of first pending queue:\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->front()->getType() << endl;
+			std::cout << "First pending queue type:\t\t\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->getQueueType() << std::endl;
+			if(_currentPeer->pendingBidCoSQueues->front()->front()->getPacket()) std::cout << "First packet of first pending queue:\t\t" << _currentPeer->pendingBidCoSQueues->front()->front()->getPacket()->hexString() << std::endl;
+			std::cout << "Type of first entry of first pending queue:\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->front()->getType() << std::endl;
 		}
 	}
 	else if(command == "clear pending queues")
 	{
 		if(!_currentPeer)
 		{
-			cout << "No peer selected." << endl;
+			std::cout << "No peer selected." << std::endl;
 			return;
 		}
 		_currentPeer->pendingBidCoSQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
-		cout << "Pending queues cleared." << endl;
+		std::cout << "Pending queues cleared." << std::endl;
 	}
 	else if(command == "team info")
 	{
 		if(!_currentPeer)
 		{
-			cout << "No peer selected." << endl;
+			std::cout << "No peer selected." << std::endl;
 			return;
 		}
-		if(_currentPeer->team.serialNumber.empty()) cout << "This peer doesn't support teams." << endl;
-		else cout << "Team address: 0x" << std::hex << _currentPeer->team.address << std::dec << " Team serial number: " << _currentPeer->team.serialNumber << endl;
+		if(_currentPeer->team.serialNumber.empty()) std::cout << "This peer doesn't support teams." << std::endl;
+		else std::cout << "Team address: 0x" << std::hex << _currentPeer->team.address << std::dec << " Team serial number: " << _currentPeer->team.serialNumber << std::endl;
 	}
 }
 
@@ -164,7 +186,7 @@ void HomeMaticCentral::unpair(int32_t address)
 		if(_peers.find(address) == _peers.end()) return;
 		Peer* peer = _peers[address].get();
 		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, address);
-		shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
+		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
 
 		std::vector<uint8_t> payload;
@@ -177,7 +199,7 @@ void HomeMaticCentral::unpair(int32_t address)
 		payload.push_back(0);
 		payload.push_back(0);
 		payload.push_back(0);
-		shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -194,7 +216,7 @@ void HomeMaticCentral::unpair(int32_t address)
 		payload.push_back(0);
 		payload.push_back(0x0C);
 		payload.push_back(0);
-		configPacket = shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+		configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -203,7 +225,7 @@ void HomeMaticCentral::unpair(int32_t address)
 		//END_CONFIG
 		payload.push_back(0);
 		payload.push_back(0x06);
-		configPacket = shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+		configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -214,22 +236,22 @@ void HomeMaticCentral::unpair(int32_t address)
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 	catch(const Exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
-void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
 		if(packet->destinationAddress() != 0) return;
 		Peer* peer = nullptr;
 		std::vector<uint8_t> payload;
-		shared_ptr<RPC::Device> device;
+		std::shared_ptr<RPC::Device> device;
 		BidCoSQueue* queue = nullptr;
 		if(_pairing)
 		{
@@ -238,7 +260,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 			device = GD::rpcDevices.find(packet);
 			if(device == nullptr)
 			{
-				if(GD::debugLevel >= 3) cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
+				if(GD::debugLevel >= 3) std::cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
 				return;
 			}
 
@@ -262,7 +284,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 			payload.push_back(0);
 			payload.push_back(0);
 			payload.push_back(0);
-			shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
+			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
 			queue->push(configPacket);
 			queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
@@ -279,7 +301,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 			payload.push_back((_address >> 8) & 0xFF);
 			payload.push_back(0x0C);
 			payload.push_back(_address & 0xFF);
-			configPacket = shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
+			configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
 			queue->push(configPacket);
 			queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
@@ -288,13 +310,13 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 			//END_CONFIG
 			payload.push_back(0);
 			payload.push_back(0x06);
-			configPacket = shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
+			configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
 			queue->push(configPacket);
 			queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
 			_messageCounter[0]++;
 
-			shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
+			std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
 			pendingQueue->noSending = true;
 			if(_peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
 			{
@@ -313,7 +335,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 							payload.push_back(0);
 							payload.push_back(0);
 							payload.push_back(k->first);
-							configPacket = shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
+							configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
 							pendingQueue->push(configPacket);
 							pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
 							payload.clear();
@@ -325,7 +347,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 					{
 						payload.push_back(channel);
 						payload.push_back(0x03);
-						configPacket = shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
+						configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
 						pendingQueue->push(configPacket);
 						pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
 						payload.clear();
@@ -343,22 +365,22 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, shared_ptr<B
 		}
 		if(peer == nullptr)
 		{
-			if(GD::debugLevel >= 2) cout << "Error: Peer is nullptr. This shouldn't have happened. Something went very wrong." << endl;
+			if(GD::debugLevel >= 2) std::cout << "Error: Peer is nullptr. This shouldn't have happened. Something went very wrong." << std::endl;
 			return;
 		}
 		queue->push(peer->pendingBidCoSQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 	catch(const Exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
-void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -388,20 +410,20 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 				int32_t endIndex = startIndex + packet->payload()->size() - 3;
 				if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::master) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master])
 				{
-					if(GD::debugLevel >= 2) cout << "Error: Received config for non existant parameter set." << endl;
+					if(GD::debugLevel >= 2) std::cout << "Error: Received config for non existant parameter set." << std::endl;
 				}
 				else
 				{
-					std::vector<shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndices(startIndex, endIndex);
-					for(std::vector<shared_ptr<RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
+					std::vector<std::shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndices(startIndex, endIndex);
+					for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
 					{
 						if(!(*i)->id.empty())
 						{
 							double position = ((*i)->physicalParameter->index - startIndex) + 2 + 9;
 							peer->configCentral[channel][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter->size, false);
-							if(GD::debugLevel >= 5) cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->configCentral[channel][(*i)->id].value << endl;
+							if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->configCentral[channel][(*i)->id].value << std::endl;
 						}
-						else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*i)->physicalParameter->list << " Parameter index: " << (*i)->index << endl;
+						else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*i)->physicalParameter->list << " Parameter index: " << (*i)->index << std::endl;
 					}
 				}
 			}
@@ -411,23 +433,23 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 				int32_t channel = _sentPacket->payload()->at(0);
 				if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::master) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master])
 				{
-					if(GD::debugLevel >= 2) cout << "Error: Received config for non existant parameter set." << endl;
+					if(GD::debugLevel >= 2) std::cout << "Error: Received config for non existant parameter set." << std::endl;
 				}
 				else
 				{
 					for(uint32_t i = 1; i < packet->payload()->size() - 2; i += 2)
 					{
 						int32_t index = packet->payload()->at(i);
-						std::vector<shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndices(index, index);
-						for(std::vector<shared_ptr<RPC::Parameter>>::iterator j = packetParameters.begin(); j != packetParameters.end(); ++j)
+						std::vector<std::shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndices(index, index);
+						for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = packetParameters.begin(); j != packetParameters.end(); ++j)
 						{
 							if(!(*j)->id.empty())
 							{
 								double position = std::fmod((*j)->physicalParameter->index, 1) + 9 + i + 1;
 								peer->configCentral[channel][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter->size, false);
-								if(GD::debugLevel >= 5) cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << endl;
+								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << std::endl;
 							}
-							else if(GD::debugLevel >= 2) cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*j)->physicalParameter->list << " Parameter index: " << (*j)->index << endl;
+							else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*j)->physicalParameter->list << " Parameter index: " << (*j)->index << std::endl;
 						}
 					}
 				}
@@ -447,15 +469,15 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, shared_
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 	catch(const Exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
-void HomeMaticCentral::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket> packet)
+void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -471,7 +493,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket
 					{
 						if(i->second->hasTeam)
 						{
-							shared_ptr<Peer> team;
+							std::shared_ptr<Peer> team;
 							std::string serialNumber('*' + queue->peer->serialNumber);
 							if(_peersBySerial.find(serialNumber) == _peersBySerial.end())
 							{
@@ -482,13 +504,13 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket
 							else team = _peersBySerial['*' + queue->peer->serialNumber];
 							queue->peer->team.address = team->address;
 							queue->peer->team.serialNumber = team->serialNumber;
-							_peersBySerial[team->serialNumber]->teamChannels.push_back(std::pair<string, uint32_t>(queue->peer->serialNumber, i->first));
+							_peersBySerial[team->serialNumber]->teamChannels.push_back(std::pair<std::string, uint32_t>(queue->peer->serialNumber, i->first));
 							break;
 						}
 					}
 					_peers[queue->peer->address] = queue->peer;
 					if(queue->peer->serialNumber.size() == 10) _peersBySerial[queue->peer->serialNumber] = queue->peer;
-					cout << "Added device 0x" << std::hex << queue->peer->address << std::dec << "." << endl;
+					std::cout << "Added device 0x" << std::hex << queue->peer->address << std::dec << "." << std::endl;
 				}
 			}
 		}
@@ -500,7 +522,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket
 				{
 					if(_peersBySerial.find(_peers[packet->senderAddress()]->serialNumber) != _peersBySerial.end()) _peersBySerial.erase(_peers[packet->senderAddress()]->serialNumber);
 					_peers.erase(_peers.find(packet->senderAddress()));
-					cout << "Removed device 0x" << std::hex << packet->senderAddress() << std::dec << endl;
+					std::cout << "Removed device 0x" << std::hex << packet->senderAddress() << std::dec << std::endl;
 				}
 			}
 		}
@@ -508,11 +530,11 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, shared_ptr<BidCoSPacket
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 	catch(const Exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << endl;
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 }
 
@@ -523,8 +545,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices()
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
-			std::vector<shared_ptr<RPC::RPCVariable>> descriptions = i->second->getDeviceDescription();
-			for(std::vector<shared_ptr<RPC::RPCVariable>>::iterator j = descriptions.begin(); j != descriptions.end(); ++j)
+			std::vector<std::shared_ptr<RPC::RPCVariable>> descriptions = i->second->getDeviceDescription();
+			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions.begin(); j != descriptions.end(); ++j)
 			{
 				array->arrayValue->push_back(*j);
 			}
@@ -543,10 +565,10 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices()
     {
         std::cerr << "Unknown exception." << std::endl;
     }
-    return shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
+    return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
 }
 
-shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type)
 {
 	try
 	{
@@ -564,10 +586,10 @@ shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::strin
     {
         std::cerr << "Unknown exception." << std::endl;
     }
-    return shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
+    return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
 }
 
-shared_ptr<RPC::RPCVariable> HomeMaticCentral::getValue(std::string serialNumber, uint32_t channel, std::string valueKey)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getValue(std::string serialNumber, uint32_t channel, std::string valueKey)
 {
 	try
 	{
@@ -585,5 +607,5 @@ shared_ptr<RPC::RPCVariable> HomeMaticCentral::getValue(std::string serialNumber
     {
         std::cerr << "Unknown exception." << std::endl;
     }
-    return shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
+    return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
 }

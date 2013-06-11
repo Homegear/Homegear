@@ -22,8 +22,8 @@ void Devices::load()
 			{
 				if(entry->d_type == 8)
 				{
-					if(GD::debugLevel >= 5) cout << "Loading XML RPC device " << entry->d_name << endl;
-					_devices.push_back(shared_ptr<Device>(new Device(deviceDir + "/" + entry->d_name)));
+					if(GD::debugLevel >= 5) std::cout << "Loading XML RPC device " << entry->d_name << std::endl;
+					_devices.push_back(std::shared_ptr<Device>(new Device(deviceDir + "/" + entry->d_name)));
 				}
 			}
 		}
@@ -42,13 +42,13 @@ void Devices::load()
     }
 }
 
-shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVersion)
+std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVersion)
 {
 	try
 	{
-		for(std::vector<shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		for(std::vector<std::shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			for(std::vector<shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
+			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
 			{
 				if((*j)->matches(deviceType, firmwareVersion)) return *i;
 			}
@@ -69,13 +69,13 @@ shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVers
     return nullptr;
 }
 
-shared_ptr<Device> Devices::find(shared_ptr<BidCoSPacket> packet)
+std::shared_ptr<Device> Devices::find(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		for(std::vector<shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		for(std::vector<std::shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			for(std::vector<shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
+			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
 			{
 				if((*j)->matches(packet)) return *i;
 			}

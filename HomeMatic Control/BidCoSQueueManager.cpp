@@ -42,7 +42,7 @@ void BidCoSQueueManager::resetQueue(int32_t address)
 	}
 	if(_queues.find(address) != _queues.end() && !_queues[address].stopThread)
 	{
-		if(GD::debugLevel >= 5) cout << "Deleting queue for 0x" << std::hex << address << std::dec << endl;
+		if(GD::debugLevel >= 5) std::cout << "Deleting queue for 0x" << std::hex << address << std::dec << std::endl;
 		_queues.erase(_queues.find(address));
 	}
 }

@@ -1,8 +1,6 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-using namespace std;
-
 #include "Exception.h"
 #include "GD.h"
 

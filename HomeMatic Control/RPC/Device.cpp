@@ -39,6 +39,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		{
 			if(attributeValue == "from_device") direction = Direction::Enum::fromDevice;
 			else if(attributeValue == "to_device") direction = Direction::Enum::toDevice;
+			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown direction for \"frame\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "allowed_receivers")
 		{
@@ -54,7 +55,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		}
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "event") { if(attributeValue == "true") isEvent = true; }
-		else if(attributeName == "type") type = std::stoll(attributeValue);
+		else if(attributeName == "type") type = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "subtype") subtype = std::stoll(attributeValue);
 		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
 		else if(attributeName == "channel_field") channelField = std::stoll(attributeValue);
@@ -124,7 +125,7 @@ bool Parameter::checkCondition(int64_t value)
 		return value <= constValue;
 		break;
 	default:
-		if(GD::debugLevel >= 3) cout << "Warning: Boolean operator is none." << endl;
+		if(GD::debugLevel >= 3) std::cout << "Warning: Boolean operator is none." << std::endl;
 		break;
 	}
 	return false;
@@ -234,7 +235,7 @@ bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
     return false;
 }
 
-bool DeviceType::matches(shared_ptr<BidCoSPacket> packet)
+bool DeviceType::matches(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -280,20 +281,20 @@ ParameterSet::ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode)
 	init(parameterSetNode);
 }
 
-std::vector<shared_ptr<Parameter>> ParameterSet::getIndices(int32_t startIndex, int32_t endIndex)
+std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(int32_t startIndex, int32_t endIndex)
 {
-	std::vector<shared_ptr<Parameter>> filteredParameters;
-	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	std::vector<std::shared_ptr<Parameter>> filteredParameters;
+	for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
 		if((*i)->physicalParameter->index >= startIndex && std::floor((*i)->physicalParameter->index) <= endIndex) filteredParameters.push_back(*i);
 	}
 	return filteredParameters;
 }
 
-shared_ptr<Parameter> ParameterSet::getIndex(double index)
+std::shared_ptr<Parameter> ParameterSet::getIndex(double index)
 {
-	std::vector<shared_ptr<Parameter>> filteredParameters;
-	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	std::vector<std::shared_ptr<Parameter>> filteredParameters;
+	for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
 		if((*i)->physicalParameter->index == index) return *i;
 	}
@@ -316,13 +317,13 @@ std::string ParameterSet::typeString()
 	return "";
 }
 
-shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
+std::shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
 {
-	for(std::vector<shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
 		if((*i)->id == id) return *i;
 	}
-	return shared_ptr<Parameter>();
+	return std::shared_ptr<Parameter>();
 }
 
 void ParameterSet::init(xml_node<>* parameterSetNode)
@@ -345,9 +346,10 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 	}
 	for(xml_node<>* parameterNode = parameterSetNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
-		parameters.push_back(shared_ptr<Parameter>(new Parameter(parameterNode, true)));
-		parameters.back()->parentParameterSet = this;
-		if(parameters.back()->physicalParameter->list < 9999) lists[parameters.back()->physicalParameter->list] = 1;
+		std::shared_ptr<Parameter> parameter(new Parameter(parameterNode, true));
+		parameters.push_back(parameter);
+		parameter->parentParameterSet = this;
+		if(parameter->physicalParameter->list < 9999) lists[parameter->physicalParameter->list] = 1;
 	}
 }
 
@@ -419,19 +421,19 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 		std::string nodeName(channelNode->name());
 		if(nodeName == "paramset")
 		{
-			shared_ptr<ParameterSet> parameterSet(new ParameterSet(index, channelNode));
+			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(index, channelNode));
 			if(parameterSets.find(parameterSet->type) == parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
-			else if(GD::debugLevel >= 2) cout << "Error: Tried to add same parameter set type twice." << endl;
+			else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add same parameter set type twice." << std::endl;
 		}
 		else if(nodeName == "link_roles")
 		{
-			linkRoles.push_back(shared_ptr<LinkRole>(new LinkRole(channelNode)));
+			linkRoles.push_back(std::shared_ptr<LinkRole>(new LinkRole(channelNode)));
 		}
 		else if(nodeName == "enforce_link")
 		{
 			for(xml_node<>* enforceLinkNode = channelNode->first_node("value"); enforceLinkNode; enforceLinkNode = enforceLinkNode->next_sibling("value"))
 			{
-				enforceLinks.push_back(shared_ptr<EnforceLink>(new EnforceLink(channelNode)));
+				enforceLinks.push_back(std::shared_ptr<EnforceLink>(new EnforceLink(channelNode)));
 			}
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
@@ -453,7 +455,7 @@ Device::Device(std::string xmlFilename) : Device()
 	{
 		if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0 && GD::debugLevel >= 2)
 		{
-			cout << "Error: Master parameter set of channnel 0 has to be empty." << endl;
+			std::cout << "Error: Master parameter set of channnel 0 has to be empty." << std::endl;
 		}
 		channels[0]->parameterSets[ParameterSet::Type::Enum::master] = parameterSet;
 	}
@@ -496,6 +498,18 @@ Device::Device(std::string xmlFilename) : Device()
 	parameter->physicalParameter->list = 0;
 	parameter->physicalParameter->index = 12;
 	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+
+	for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+	{
+		for(std::vector<std::shared_ptr<Parameter>>::iterator j = i->second->parameterSets.at(ParameterSet::Type::Enum::values)->parameters.begin(); j != i->second->parameterSets.at(ParameterSet::Type::Enum::values)->parameters.end(); ++j)
+		{
+			if(!(*j)->physicalParameter->getRequest.empty() && framesByID.find((*j)->physicalParameter->getRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->getRequest]->associatedValues.push_back(*j);
+			for(std::vector<std::string>::iterator k = (*j)->physicalParameter->eventFrames.begin(); k != (*j)->physicalParameter->eventFrames.end(); ++k)
+			{
+				if(framesByID.find(*k) != framesByID.end()) framesByID[*k]->associatedValues.push_back(*j);
+			}
+		}
+	}
 }
 
 Device::~Device() {
@@ -569,7 +583,7 @@ void Device::parseXML(xml_node<>* node)
 			{
 				for(xml_node<>* typeNode = node->first_node("type"); typeNode; typeNode = typeNode->next_sibling())
 				{
-					supportedTypes.push_back(shared_ptr<DeviceType>(new DeviceType(typeNode)));
+					supportedTypes.push_back(std::shared_ptr<DeviceType>(new DeviceType(typeNode)));
 				}
 			}
 			else if(nodeName == "paramset")
@@ -583,7 +597,7 @@ void Device::parseXML(xml_node<>* node)
 					else if(attributeName == "type")
 					{
 						if(attributeValue == "master") parameterSet->type = ParameterSet::Type::Enum::master;
-						else if(GD::debugLevel >= 2) cout << "Error: Tried to add parameter set of type \"" << attributeValue << "\" to device. That is not allowed." << endl;
+						else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add parameter set of type \"" << attributeValue << "\" to device. That is not allowed." << std::endl;
 					}
 					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
 				}
@@ -593,17 +607,19 @@ void Device::parseXML(xml_node<>* node)
 			{
 				for(xml_node<>* channelNode = node->first_node("channel"); channelNode; channelNode = channelNode->next_sibling())
 				{
-					shared_ptr<DeviceChannel> channel(new DeviceChannel(channelNode));
+					std::shared_ptr<DeviceChannel> channel(new DeviceChannel(channelNode));
 					channel->parentDevice = this;
 					if(channels.find(channel->index) == channels.end()) channels[channel->index] = channel;
-					else if(GD::debugLevel >= 2) cout << "Error: Tried to add channel with the same index twice." << endl;
+					else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add channel with the same index twice." << std::endl;
 				}
 			}
 			else if(nodeName == "frames")
 			{
 				for(xml_node<>* frameNode = node->first_node("frame"); frameNode; frameNode = frameNode->next_sibling("frame"))
 				{
-					frames.push_back(shared_ptr<DeviceFrame>(new DeviceFrame(frameNode)));
+					std::shared_ptr<DeviceFrame> frame(new DeviceFrame(frameNode));
+					framesByMessageType.insert(std::pair<uint32_t, std::shared_ptr<DeviceFrame>>(frame->type, frame));
+					framesByID[frame->id] = frame;
 				}
 			}
 			else if(nodeName == "paramset_defs")
@@ -628,13 +644,13 @@ void Device::parseXML(xml_node<>* node)
     }
 }
 
-shared_ptr<DeviceType> Device::getType(HMDeviceTypes deviceType, int32_t firmwareVersion)
+std::shared_ptr<DeviceType> Device::getType(HMDeviceTypes deviceType, int32_t firmwareVersion)
 {
-	for(std::vector<shared_ptr<DeviceType>>::iterator j = supportedTypes.begin(); j != supportedTypes.end(); ++j)
+	for(std::vector<std::shared_ptr<DeviceType>>::iterator j = supportedTypes.begin(); j != supportedTypes.end(); ++j)
 	{
 		if((*j)->matches(deviceType, firmwareVersion)) return *j;
 	}
-	return shared_ptr<DeviceType>();
+	return std::shared_ptr<DeviceType>();
 }
 
 }

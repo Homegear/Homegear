@@ -1,5 +1,3 @@
-using namespace std;
-
 #include <algorithm>
 #include <ncurses.h>
 #include <execinfo.h>
@@ -8,7 +6,6 @@ using namespace std;
 #include <cmath>
 
 #include "Cul.h"
-#include "Devices/HM-RC-Sec3-B.h"
 #include "Devices/HM-SD.h"
 #include "Devices/HM-CC-VD.h"
 #include "Devices/HM-CC-TC.h"
@@ -22,7 +19,7 @@ void exceptionHandler(int32_t signal) {
   void *stackTrace[10];
   size_t length = backtrace(stackTrace, 10);
 
-  cerr << "Error: Signal " << signal << ":" << endl;
+  std::cerr << "Error: Signal " << signal << ":" << std::endl;
   backtrace_symbols_fd(stackTrace, length, 2);
   exit(1);
 }
@@ -30,7 +27,7 @@ void exceptionHandler(int32_t signal) {
 int32_t getIntInput()
 {
 	std::string input;
-	cin >> input;
+	std::cin >> input;
 	int32_t intInput = -1;
 	try	{ intInput = std::stoll(input); } catch(...) {}
     return intInput;
@@ -39,7 +36,7 @@ int32_t getIntInput()
 int32_t getHexInput()
 {
 	std::string input;
-	cin >> input;
+	std::cin >> input;
 	int32_t intInput = -1;
 	try	{ intInput = std::stoll(input, 0, 16); } catch(...) {}
     return intInput;
@@ -73,7 +70,7 @@ int main()
         //delscreen for all screens!!!
         return 0;*/
 
-    	shared_ptr<HomeMaticDevice> currentDevice;
+    	std::shared_ptr<HomeMaticDevice> currentDevice;
 
     	GD::bigEndian = HelperFunctions::isBigEndian();
 
@@ -88,13 +85,13 @@ int main()
     	GD::db.init(GD::executablePath + "/db.sql");
 
         GD::cul.init("/dev/ttyACM0");
-        if(GD::debugLevel >= 4) cout << "Start listening for BidCoS packets..." << endl;
+        if(GD::debugLevel >= 4) std::cout << "Start listening for BidCoS packets..." << std::endl;
         GD::cul.startListening();
-        if(GD::debugLevel >= 4) cout << "Loading XML RPC devices..." << endl;
+        if(GD::debugLevel >= 4) std::cout << "Loading XML RPC devices..." << std::endl;
         GD::rpcDevices.load();
-        if(GD::debugLevel >= 4) cout << "Loading devices..." << endl;
+        if(GD::debugLevel >= 4) std::cout << "Loading devices..." << std::endl;
         GD::devices.load(); //Don't load before database is open!
-        if(GD::debugLevel >= 4) cout << "Starting XML RPC server..." << endl;
+        if(GD::debugLevel >= 4) std::cout << "Starting XML RPC server..." << std::endl;
         GD::rpcServer.start();
 
         //sd->addFilter(FilterType::SenderAddress, 0x1E53E7);
@@ -126,85 +123,91 @@ int main()
             {
                 //Help
             }
+            else if(input == "test")
+            {
+            	std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
+            	packet->import("0C7986701D8F4500000000F72C", false);
+            	GD::devices.getCentral()->packetReceived(packet);
+            }
             else if(input == "create device" || input == "add device")
             {
-            	cout << "Please enter a 3 byte address for the device in hexadecimal format (e. g. 3A0001): ";
+            	std::cout << "Please enter a 3 byte address for the device in hexadecimal format (e. g. 3A0001): ";
             	int32_t address = getHexInput();
 
-            	if(address < 1 || address > 0xFFFFFF) cout << "Address not valid." << endl;
-            	else if(GD::devices.get(address) != nullptr) cout << "Address already in use." << endl;
+            	if(address < 1 || address > 0xFFFFFF) std::cout << "Address not valid." << std::endl;
+            	else if(GD::devices.get(address) != nullptr) std::cout << "Address already in use." << std::endl;
             	else
             	{
-            		cout << "Please enter a serial number (length 10, e. g. VVD0000001): ";
-            		cin >> input;
-            		if(input.size() != 10) cout << "Serial number has wrong length." << endl;
+            		std::cout << "Please enter a serial number (length 10, e. g. VVD0000001): ";
+            		std::cin >> input;
+            		if(input.size() != 10) std::cout << "Serial number has wrong length." << std::endl;
             		else
             		{
             			std::string serialNumber = input;
-            			cout << "Please enter a device type: ";
+            			std::cout << "Please enter a device type: ";
 						int32_t deviceType = getHexInput();
 						switch(deviceType)
 						{
 						case (uint32_t)HMDeviceTypes::HMCCTC:
 							GD::devices.add(new HM_CC_TC(serialNumber, address));
-							cout << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
+							std::cout << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 							break;
 						case (uint32_t)HMDeviceTypes::HMCCVD:
 							GD::devices.add(new HM_CC_VD(serialNumber, address));
-							cout << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
+							std::cout << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 							break;
 						case (uint32_t)HMDeviceTypes::HMCENTRAL:
 							GD::devices.add(new HomeMaticCentral(serialNumber, address));
-							cout << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
+							std::cout << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 							break;
 						case (uint32_t)HMDeviceTypes::HMSD:
 							GD::devices.add(new HM_SD(serialNumber, address));
-							cout << "Created HM_SD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << endl;
+							std::cout << "Created HM_SD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 							break;
 						default:
-							cout << "Unknown device type." << endl;
+							std::cout << "Unknown device type." << std::endl;
 						}
             		}
             	}
             }
             else if(input == "remove device" || input == "delete device")
             {
-            	cout << "Please enter the address of the device to delete (e. g. 3A0001): ";
+            	std::cout << "Please enter the address of the device to delete (e. g. 3A0001): ";
             	int32_t address = getHexInput();
             	if(currentDevice != nullptr && currentDevice->address() == address) currentDevice = nullptr;
-            	if(GD::devices.remove(address)) cout << "Device removed." << endl;
-            	else cout << "Device not found." << endl;
+            	if(GD::devices.remove(address)) std::cout << "Device removed." << std::endl;
+            	else std::cout << "Device not found." << std::endl;
             }
             else if(input == "select device")
             {
-            	cout << "Device address: ";
+            	std::cout << "Device address: ";
             	int32_t address = getHexInput();
             	currentDevice = GD::devices.get(address);
-            	if(currentDevice == nullptr) cout << "Device not found." << endl;
-            	else cout << "Device selected." << endl;
+            	if(currentDevice == nullptr) std::cout << "Device not found." << std::endl;
+            	else std::cout << "Device selected." << std::endl;
             }
             else if(input == "list devices")
             {
-            	std::vector<shared_ptr<HomeMaticDevice>>* devices = GD::devices.getDevices();
-            	for(std::vector<shared_ptr<HomeMaticDevice>>::iterator i = devices->begin(); i != devices->end(); ++i)
+            	std::vector<std::shared_ptr<HomeMaticDevice>>* devices = GD::devices.getDevices();
+            	for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = devices->begin(); i != devices->end(); ++i)
             	{
-            		cout << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (uint32_t)(*i)->deviceType() << endl << std::dec;
+            		std::cout << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (uint32_t)(*i)->deviceType() << std::endl << std::dec;
             	}
             }
             else if(input == "set verbosity")
             {
-            	cout << "Verbosity (0 - 5): ";
+            	std::cout << "Verbosity (0 - 5): ";
             	int32_t verbosity = getHexInput();
-            	if(verbosity < 0 || verbosity > 5) cout << "Invalid verbosity." << endl;
+            	if(verbosity < 0 || verbosity > 5) std::cout << "Invalid verbosity." << std::endl;
             	else
             	{
             		GD::debugLevel = verbosity;
-            		cout << "Verbosity set to " << verbosity << endl;
+            		std::cout << "Verbosity set to " << verbosity << std::endl;
             	}
             }
             else if(input == "time")
             {
-            	cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << endl;
+            	std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << std::endl;
             }
             else if(input == "q" || input == "quit") {} //nothing
             else

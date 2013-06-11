@@ -29,21 +29,21 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 	}
 	for(xml_node<>* physicalNode = node->first_node(); physicalNode; physicalNode = physicalNode->next_sibling())
 	{
-		std::string nodeName(node->name());
+		std::string nodeName(physicalNode->name());
 		xml_attribute<>* attr;
 		if(nodeName == "set")
 		{
-			attr = node->first_attribute("request");
+			attr = physicalNode->first_attribute("request");
 			if(attr != nullptr) setRequest = std::string(attr->value());
 		}
 		else if(nodeName == "get")
 		{
-			attr = node->first_attribute("request");
+			attr = physicalNode->first_attribute("request");
 			if(attr != nullptr) getRequest = std::string(attr->value());
 		}
 		else if(nodeName == "event")
 		{
-			attr = node->first_attribute("frame");
+			attr = physicalNode->first_attribute("frame");
 			if(attr != nullptr) eventFrames.push_back(std::string(attr->value()));
 		}
 	}

@@ -1,8 +1,6 @@
 #ifndef CUL_H
 #define CUL_H
 
-using namespace std;
-
 #include "HomeMaticDevice.h"
 #include "Exception.h"
 #include "BidCoSPacket.h"
@@ -35,7 +33,7 @@ class Cul
         void stopListening();
         void addHomeMaticDevice(HomeMaticDevice*);
         void removeHomeMaticDevice(HomeMaticDevice*);
-        void sendPacket(shared_ptr<BidCoSPacket> packet);
+        void sendPacket(std::shared_ptr<BidCoSPacket> packet);
     protected:
     private:
         std::list<HomeMaticDevice*> _homeMaticDevices;
@@ -52,7 +50,7 @@ class Cul
         void setupDevice();
         void writeToDevice(std::string, bool);
         std::string readFromDevice();
-        void callCallback(shared_ptr<BidCoSPacket> packet);
+        void callCallback(std::shared_ptr<BidCoSPacket> packet);
         void listen();
 };
 

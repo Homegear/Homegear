@@ -3,7 +3,7 @@
 
 BidCoSQueue::BidCoSQueue() : _queueType(BidCoSQueueType::EMPTY)
 {
-	peer = shared_ptr<Peer>(new Peer());
+	peer = std::shared_ptr<Peer>(new Peer());
 }
 
 BidCoSQueue::BidCoSQueue(BidCoSQueueType queueType) : BidCoSQueue()
@@ -13,7 +13,7 @@ BidCoSQueue::BidCoSQueue(BidCoSQueueType queueType) : BidCoSQueue()
 
 BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device) : BidCoSQueue()
 {
-	if(GD::debugLevel >= 5) cout << "Unserializing queue: " << serializedObject << endl;
+	if(GD::debugLevel >= 5) std::cout << "Unserializing queue: " << serializedObject << std::endl;
 	uint32_t pos = 0;
 	_queueType = (BidCoSQueueType)std::stoi(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 	uint32_t queueSize = std::stol(serializedObject.substr(pos, 4), 0, 16); pos += 4;
@@ -25,7 +25,7 @@ BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device) 
 		int32_t packetExists = std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
 		if(packetExists)
 		{
-			shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 			uint32_t packetLength = std::stoi(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 			packet->import(serializedObject.substr(pos, packetLength), false); pos += packetLength;
 			entry->setPacket(packet, false);
@@ -80,7 +80,7 @@ void BidCoSQueue::resend()
 				{
 					if(_queue.front().getType() == QueueEntryType::MESSAGE)
 					{
-						if(GD::debugLevel >= 5) cout << "Invoking outgoing message handler from BidCoSQueue." << endl;
+						if(GD::debugLevel >= 5) std::cout << "Invoking outgoing message handler from BidCoSQueue." << std::endl;
 						send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 					}
 					else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket());
@@ -104,7 +104,7 @@ void BidCoSQueue::resend()
 	_queueMutex.unlock();
 }
 
-void BidCoSQueue::push(shared_ptr<BidCoSPacket> packet)
+void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -132,17 +132,29 @@ void BidCoSQueue::push(shared_ptr<BidCoSPacket> packet)
 	}
 }
 
-void BidCoSQueue::push(shared_ptr<std::queue<shared_ptr<BidCoSQueue>>>& pendingQueues)
+void BidCoSQueue::push(std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>& pendingQueues)
 {
 	_pendingQueues = pendingQueues;
 	if(_queue.empty()) pushPendingQueue();
 }
 
-void BidCoSQueue::push(shared_ptr<BidCoSMessage> message, shared_ptr<BidCoSPacket> packet)
+void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmediately, bool clearPendingQueues)
+{
+	if(!_pendingQueues || clearPendingQueues) _pendingQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
+	_pendingQueues->push(pendingQueue);
+	pushPendingQueue();
+	if(popImmediately)
+	{
+		_pendingQueues->pop();
+		_workingOnPendingQueue = false;
+	}
+}
+
+void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		if(message->getDirection() != DIRECTIONOUT && GD::debugLevel >= 3) cout << "Warning: Wrong push method used. Packet is not necessary for incoming messages" << endl;
+		if(message->getDirection() != DIRECTIONOUT && GD::debugLevel >= 3) std::cout << "Warning: Wrong push method used. Packet is not necessary for incoming messages" << std::endl;
 		if(message == nullptr) return;
 		BidCoSQueueEntry entry;
 		entry.setMessage(message, true);
@@ -169,11 +181,11 @@ void BidCoSQueue::push(shared_ptr<BidCoSMessage> message, shared_ptr<BidCoSPacke
 	}
 }
 
-void BidCoSQueue::push(shared_ptr<BidCoSMessage> message)
+void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message)
 {
 	try
 	{
-		if(message->getDirection() == DIRECTIONOUT && GD::debugLevel >= 1) cout << "Critical: Wrong push method used. Please provide the received packet for outgoing messages" << endl;
+		if(message->getDirection() == DIRECTIONOUT && GD::debugLevel >= 1) std::cout << "Critical: Wrong push method used. Please provide the received packet for outgoing messages" << std::endl;
 		if(message == nullptr) return;
 		BidCoSQueueEntry entry;
 		entry.setMessage(message, true);
@@ -199,7 +211,7 @@ void BidCoSQueue::push(shared_ptr<BidCoSMessage> message)
 	}
 }
 
-void BidCoSQueue::send(shared_ptr<BidCoSPacket> packet)
+void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -222,7 +234,7 @@ void BidCoSQueue::startResendThread()
 		if(!(controlByte & 0x02) && (controlByte & 0x20)) //Resend when no response?
 		{
 			_resendThreadMutex.lock();
-			_resendThread = unique_ptr<std::thread>(new std::thread(&BidCoSQueue::resend, this));
+			_resendThread = std::unique_ptr<std::thread>(new std::thread(&BidCoSQueue::resend, this));
 			_resendThread->detach();
 		}
 	}
@@ -248,10 +260,11 @@ void BidCoSQueue::sleepAndPushPendingQueue()
 
 void BidCoSQueue::pushPendingQueue()
 {
-	if(_pendingQueues.get() == nullptr || _pendingQueues->empty()) return;
+	if(!_pendingQueues || _pendingQueues->empty()) return;
 	_queueType = _pendingQueues->front()->getQueueType();
 	while(!_pendingQueues->empty() && _pendingQueues->front()->isEmpty())
 	{
+		if(GD::debugLevel >= 5) std::cout << "Debug: Empty queue was pushed." << std::endl;
 		_pendingQueues->pop();
 	}
 	if(_pendingQueues->empty()) return;
@@ -294,22 +307,22 @@ void BidCoSQueue::pop()
 	try
 	{
 		keepAlive();
-		if(GD::debugLevel >= 5) cout << "Popping from BidCoSQueue." << endl;
+		if(GD::debugLevel >= 5) std::cout << "Popping from BidCoSQueue." << std::endl;
 		if(_queue.empty()) return;
 		_queueMutex.lock();
 		_queue.pop_front();
 		if(_queue.empty()) {
 			if(_workingOnPendingQueue) _pendingQueues->pop();
-			if(_pendingQueues.get() != nullptr && _pendingQueues->size() == 0)
+			if(_pendingQueues && _pendingQueues->empty())
 			{
-				if(GD::debugLevel >= 5) cout << "Queue is empty and there are no pending queues." << endl;
+				if(GD::debugLevel >= 5) std::cout << "Queue is empty and there are no pending queues." << std::endl;
 				_workingOnPendingQueue = false;
 				_queueMutex.unlock();
 				return;
 			}
 			else
 			{
-				if(GD::debugLevel >= 5) cout << "Queue is empty. Pushing pending queue..." << endl;
+				if(GD::debugLevel >= 5) std::cout << "Queue is empty. Pushing pending queue..." << std::endl;
 				_queueMutex.unlock();
 				std::thread push(&BidCoSQueue::sleepAndPushPendingQueue, this);
 				push.detach();
@@ -361,7 +374,7 @@ std::string BidCoSQueue::serialize()
 			stringstream << std::setw(2) << packetHex.size();
 			stringstream << packetHex;
 		}
-		shared_ptr<BidCoSMessage> message = i->getMessage();
+		std::shared_ptr<BidCoSMessage> message = i->getMessage();
 		if(message == nullptr)
 		{
 			stringstream << '0';
