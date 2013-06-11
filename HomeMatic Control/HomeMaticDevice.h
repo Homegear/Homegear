@@ -36,7 +36,7 @@ class HomeMaticDevice
         HomeMaticDevice();
         HomeMaticDevice(std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
-        virtual bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
+        virtual void packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
         virtual void setLowBattery(bool);
         virtual bool pairDevice(int32_t timeout);
@@ -106,6 +106,7 @@ class HomeMaticDevice
         std::shared_ptr<BidCoSMessages> _messages;
         int64_t _lastDutyCycleEvent = 0;
         bool _initialized = false;
+        bool _handlingPacket = false;
 
         bool _lowBattery = false;
 

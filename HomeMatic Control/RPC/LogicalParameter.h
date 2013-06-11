@@ -33,7 +33,7 @@ class LogicalParameter
 public:
 	struct Type
 	{
-		enum Enum { none, typeBoolean, typeInteger, typeFloat, typeEnum, typeString, typeAction };
+		enum Enum { none = 0x00, typeInteger = 0x01, typeBoolean = 0x02, typeString = 0x03, typeFloat = 0x04, typeEnum = 0x20, typeAction = 0x30 };
 	};
 	Type::Enum type;
 

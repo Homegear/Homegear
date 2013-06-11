@@ -24,6 +24,7 @@ namespace RPC {
 
 class ParameterSet;
 class Device;
+class RPCVariable;
 
 class DescriptionField
 {
@@ -54,7 +55,8 @@ public:
 		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap };
 	};
 	Type::Enum type = Type::Enum::none;
-	std::unordered_map<int32_t, int32_t> integerIntegerMap;
+	std::unordered_map<int32_t, int32_t> integerIntegerMapDevice;
+	std::unordered_map<int32_t, int32_t> integerIntegerMapParameter;
 	double factor = 0;
 	int32_t div = 0;
 	int32_t mul = 0;
@@ -66,6 +68,8 @@ public:
 	ParameterConversion() {}
 	ParameterConversion(xml_node<>* node);
 	virtual ~ParameterConversion() {}
+	std::shared_ptr<RPCVariable> fromPacket(int32_t value);
+	int32_t toPacket(std::shared_ptr<RPCVariable> value);
 };
 
 class Parameter
@@ -91,7 +95,7 @@ public:
 	BooleanOperator::Enum booleanOperator = BooleanOperator::Enum::e;
 	Operations::Enum operations = (Operations::Enum)3;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
-	uint32_t constValue = 0;
+	int32_t constValue = -1;
 	std::string id;
 	std::string param;
 	std::string control;
@@ -104,6 +108,8 @@ public:
 	Parameter(xml_node<>* node, bool checkForID = false);
 	virtual ~Parameter() {}
 	bool checkCondition(int64_t value);
+	std::shared_ptr<RPC::RPCVariable> convertFromPacket(int32_t value);
+	int32_t convertToPacket(std::shared_ptr<RPC::RPCVariable> value);
 };
 
 class DeviceType

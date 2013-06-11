@@ -257,7 +257,7 @@ bool HomeMaticDevice::pairDevice(int32_t timeout)
     return true;
 }
 
-bool HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
+void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -265,11 +265,11 @@ bool HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		if(message != nullptr && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
 		{
 			if(GD::debugLevel >= 6) std::cout << "Device " << std::hex << _address << ": Access granted for packet " << packet->hexString() << std::dec << std::endl;
-			std::this_thread::sleep_for(std::chrono::milliseconds(90));  //Don't respond too fast
+			_handlingPacket = true;
 			_messageCounter[packet->senderAddress()] = packet->messageCounter();
 			message->invokeMessageHandlerIncoming(packet);
 			_lastReceivedMessage = message;
-			return true;
+			_handlingPacket = false;
 		}
 		if(message == nullptr && packet->destinationAddress() == _address && GD::debugLevel >= 3) std::cout << "Warning: Could not process message. Unknown message type: " << packet->hexString() << std::endl;
 	}
@@ -277,11 +277,11 @@ bool HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	{
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
-	return false;
 }
 
 void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 {
+	if(_handlingPacket) std::this_thread::sleep_for(std::chrono::milliseconds(90));
 	_sentPacket = packet;
 	GD::cul.sendPacket(packet);
 }
@@ -527,6 +527,7 @@ void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destination
 {
 	try
 	{
+		if(_handlingPacket) std::this_thread::sleep_for(std::chrono::milliseconds(90));
 		//As there is no action in the queue when sending stealthy ok's, we need to manually keep it alive
 		BidCoSQueue* queue = _bidCoSQueueManager.get(destinationAddress);
 		if(queue != nullptr) queue->keepAlive();

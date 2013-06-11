@@ -147,7 +147,7 @@ void RPCEncoder::encodeFloat(char* packet, uint32_t* position, uint32_t packetLe
 	}
 	double temp = std::abs(variable->floatValue);
 	int32_t exponent = 0;
-	if(temp < 0.5)
+	if(temp != 0 && temp < 0.5)
 	{
 		while(temp < 0.5)
 		{

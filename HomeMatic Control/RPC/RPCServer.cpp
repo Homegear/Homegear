@@ -176,31 +176,6 @@ std::pair<std::string, std::string> RPCServer::getAddressAndPort(std::string add
     return std::pair<std::string, std::string>();
 }
 
-void RPCServer::createLocalClient(std::string address)
-{
-	try
-	{
-
-	}
-    catch(const std::exception& ex)
-    {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(const Exception& ex)
-    {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(...)
-    {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
-    }
-}
-
-void RPCServer::removeLocalClient(std::string address)
-{
-
-}
-
 void RPCServer::packetReceived(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType)
 {
 	try

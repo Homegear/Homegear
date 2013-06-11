@@ -217,7 +217,7 @@ void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet)
 	{
 		if(noSending) return;
 		if(device != nullptr) device->sendPacket(packet);
-		else GD::cul.sendPacket(packet);
+		else if(GD::debugLevel >= 2) std::cout << "Error: Device pointer of queue is null." << std::endl;
 	}
 	catch(const std::exception& ex)
 	{

@@ -17,7 +17,8 @@ enum class RPCVariableType
 	rpcString = 0x03,
 	rpcFloat = 0x04,
 	rpcArray = 0x100,
-	rpcStruct = 0x101
+	rpcStruct = 0x101,
+	rpcVariant = 0x1111
 };
 
 class RPCVariable {
@@ -38,6 +39,8 @@ public:
 	RPCVariable(std::string structElementName, int32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; name = structElementName; integerValue = integer; }
 	RPCVariable(uint32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; integerValue = (int32_t)integer; }
 	RPCVariable(std::string structElementName, uint32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; name = structElementName; integerValue = (int32_t)integer; }
+	RPCVariable(bool boolean) : RPCVariable() { type = RPCVariableType::rpcBoolean; booleanValue = boolean; }
+	RPCVariable(std::string structElementName, bool boolean) : RPCVariable() { type = RPCVariableType::rpcBoolean; name = structElementName; booleanValue = boolean; }
 	RPCVariable(std::string string) : RPCVariable() { type = RPCVariableType::rpcString; stringValue = string; }
 	RPCVariable(std::string structElementName, std::string string) : RPCVariable() { type = RPCVariableType::rpcString; name = structElementName; stringValue = string; }
 	RPCVariable(double floatVal) : RPCVariable() { type = RPCVariableType::rpcFloat; floatValue = floatVal; }

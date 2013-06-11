@@ -56,7 +56,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "event") { if(attributeValue == "true") isEvent = true; }
 		else if(attributeName == "type") type = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "subtype") subtype = std::stoll(attributeValue);
+		else if(attributeName == "subtype") subtype = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
 		else if(attributeName == "channel_field") channelField = std::stoll(attributeValue);
 		else if(attributeName == "fixed_channel") fixedChannel = std::stoll(attributeValue);
@@ -66,6 +66,80 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 	{
 		parameters.push_back(frameNode);
 	}
+}
+
+std::shared_ptr<RPC::RPCVariable> ParameterConversion::fromPacket(int32_t value)
+{
+	if(type == Type::Enum::none)
+	{
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value));
+	}
+	else if(type == Type::Enum::floatIntegerScale)
+	{
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((double)value / factor));
+	}
+	else if(type == Type::Enum::integerIntegerScale)
+	{
+		if(div > 0)
+		{
+			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value * div));
+		}
+		else if(mul > 0)
+		{
+			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value / mul));
+		}
+		else
+		{
+			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value));
+		}
+	}
+	else if(type == Type::Enum::integerIntegerMap)
+	{
+		if(integerIntegerMapDevice.find(value) != integerIntegerMapDevice.end()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(integerIntegerMapDevice[value]));
+	}
+	else if(type == Type::Enum::booleanInteger)
+	{
+		if(value == valueFalse) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(false));
+		if(value == valueTrue || value > threshold) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true));
+	}
+	return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value));
+}
+
+int32_t ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
+{
+	if(type == Type::Enum::none)
+	{
+		return value->integerValue;
+	}
+	else if(type == Type::Enum::floatIntegerScale)
+	{
+		return std::lround(value->floatValue * factor);
+	}
+	else if(type == Type::Enum::integerIntegerScale)
+	{
+		if(div > 0)
+		{
+			return value->integerValue / div;
+		}
+		else if(mul > 0)
+		{
+			return value->integerValue * mul;
+		}
+		else
+		{
+			return value->integerValue;
+		}
+	}
+	else if(type == Type::Enum::integerIntegerMap)
+	{
+		if(integerIntegerMapParameter.find(value->integerValue) != integerIntegerMapParameter.end()) return integerIntegerMapParameter[value->integerValue];
+	}
+	else if(type == Type::Enum::booleanInteger)
+	{
+		if(value->booleanValue) return valueTrue;
+		else return valueFalse;
+	}
+	return value->integerValue;
 }
 
 ParameterConversion::ParameterConversion(xml_node<>* node)
@@ -99,7 +173,15 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			xml_attribute<>* attr2;
 			attr1 = node->first_attribute("device_value");
 			attr2 = node->first_attribute("parameter_value");
-			if(attr1 != nullptr && attr2 != nullptr) integerIntegerMap[std::stoll(attr1->value())] = std::stoll(attr2->value());
+			if(attr1 != nullptr && attr2 != nullptr)
+			{
+				std::string attribute1(attr1->value());
+				std::string attribute2(attr2->value());
+				int32_t deviceValue = HelperFunctions::getNumber(attribute1);
+				int32_t parameterValue = HelperFunctions::getNumber(attribute2);
+				integerIntegerMapDevice[deviceValue] = parameterValue;
+				integerIntegerMapParameter[parameterValue] = deviceValue;
+			}
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown subnode for \"conversion\": " << nodeName << std::endl;
 	}
@@ -129,6 +211,40 @@ bool Parameter::checkCondition(int64_t value)
 		break;
 	}
 	return false;
+}
+
+std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
+{
+	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
+	{
+		return std::shared_ptr<RPCVariable>(new RPCVariable(value));
+	}
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
+	{
+		return false;
+	}
+	else
+	{
+		return conversion.fromPacket(value);
+	}
+	return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(value));
+}
+
+int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
+{
+	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
+	{
+		return value->integerValue;
+	}
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
+	{
+		return true;
+	}
+	else
+	{
+		return conversion.toPacket(value);
+	}
+	return value->integerValue;
 }
 
 Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
@@ -219,7 +335,7 @@ bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
 			//This might not be the optimal way to get the xml rpc device, because it assumes the device type is unique
 			//When the device type is not at index 10 of the pairing packet, the device is not supported
 			//The "priority" attribute is ignored, for the standard devices "priority" seems not important
-			if(i->index == 10.0 && i->constValue != (uint32_t)deviceType) match = false;
+			if(i->index == 10.0 && i->constValue != (int32_t)deviceType) match = false;
 			if(i->index == 9.0 && !i->checkCondition(firmwareVersion)) match = false;
 			if(match) return true;
 		}

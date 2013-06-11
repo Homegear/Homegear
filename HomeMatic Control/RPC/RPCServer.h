@@ -54,8 +54,6 @@ namespace RPC
 			RPCDecoder _rpcDecoder;
 			RPCEncoder _rpcEncoder;
 
-			void createLocalClient(std::string address);
-			void removeLocalClient(std::string address);
 			std::pair<std::string, std::string> getAddressAndPort(std::string address);
 			void getFileDescriptor();
 			int32_t getClientFileDescriptor();

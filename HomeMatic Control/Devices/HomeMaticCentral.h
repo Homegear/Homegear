@@ -18,7 +18,7 @@ public:
 	HomeMaticCentral(std::string, int32_t);
 	virtual ~HomeMaticCentral();
 	void init();
-	bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
+	void packetReceived(std::shared_ptr<BidCoSPacket> packet);
 	void enablePairingMode() { _pairing = true; }
 	void disablePairingMode() { _pairing = false; }
 	void unpair(int32_t address);
@@ -35,6 +35,7 @@ public:
 
 	std::shared_ptr<RPC::RPCVariable> listDevices();
 	std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
+	std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 	std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
 protected:
 	std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);

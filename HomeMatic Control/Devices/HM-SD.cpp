@@ -71,7 +71,7 @@ std::string HM_SD::serialize()
 	return stringstream.str();
 }
 
-bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
+void HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
     bool printPacket = false;
     for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
@@ -112,7 +112,6 @@ bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
             sendPacket(packet);
         }
     }
-    return false;
 }
 
 void HM_SD::addFilter(FilterType filterType, int32_t filterValue)

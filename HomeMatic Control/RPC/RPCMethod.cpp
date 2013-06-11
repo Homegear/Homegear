@@ -16,6 +16,7 @@ RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::
 	}
 	for(uint32_t i = 0; i < types.size(); i++)
 	{
+		if(types.at(i) == RPCVariableType::rpcVariant && parameters->at(i)->type != RPCVariableType::rpcVoid) continue;
 		if(types.at(i) != parameters->at(i)->type) return RPCMethod::ParameterError::Enum::wrongType;
 	}
 	return RPCMethod::ParameterError::Enum::noError;

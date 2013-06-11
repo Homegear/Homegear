@@ -419,7 +419,10 @@ void HM_CC_TC::handleSetPoint(int32_t messageCounter, std::shared_ptr<BidCoSPack
 			payload.push_back(0x01); //Channel
 			payload.push_back(0x02); //Subtype
 			payload.push_back(_setPointTemperature);
+			payload.push_back(0);
 			payload.push_back(0x4D); //RSSI
+			std::shared_ptr<BidCoSPacket> response(new BidCoSPacket(packet->messageCounter(), 0x80, 0x02, _address, packet->senderAddress(), payload));
+			sendPacket(response);
 		}
 	}
 	catch(const std::exception& ex)
