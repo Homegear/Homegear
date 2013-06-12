@@ -51,7 +51,7 @@ class HomeMaticDevice
         virtual int32_t getHexInput();
         virtual std::shared_ptr<BidCoSMessages> getMessages() { return _messages; }
         virtual void handleCLICommand(std::string command);
-        virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet);
+        virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet, bool enableWaiting = true);
 
         virtual void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet) {}
         virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
@@ -72,7 +72,7 @@ class HomeMaticDevice
         virtual void sendPairingRequest();
         virtual void sendDirectedPairingRequest(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet);
         virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
-        virtual void sendStealthyOK(int32_t messageCounter, int32_t destinationAddress);
+        virtual void sendStealthyOK(int32_t messageCounter, int32_t destinationAddress, bool enableWaiting = true);
         virtual void sendOKWithPayload(int32_t messageCounter, int32_t destinationAddress, std::vector<uint8_t> payload, bool isWakeMeUpPacket);
         virtual void sendNOK(int32_t messageCounter, int32_t destinationAddress);
         virtual void sendNOKTargetInvalid(int32_t messageCounter, int32_t destinationAddress);

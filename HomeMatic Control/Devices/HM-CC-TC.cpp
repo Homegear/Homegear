@@ -504,7 +504,7 @@ void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> p
 	{
 		BidCoSQueue* queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(queue == nullptr) return;
-		queue->pop(); //Messages are not popped by default.
+		queue->pop(true); //Messages are not popped by default.
 		if(queue->getQueueType() == BidCoSQueueType::PAIRING)
 		{
 			_peers[queue->peer->address] = queue->peer;

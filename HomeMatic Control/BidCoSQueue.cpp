@@ -83,7 +83,7 @@ void BidCoSQueue::resend()
 						if(GD::debugLevel >= 5) std::cout << "Invoking outgoing message handler from BidCoSQueue." << std::endl;
 						send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 					}
-					else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket());
+					else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), false);
 					send.detach();
 				}
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread
@@ -116,7 +116,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet)
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSQueue::send, this, entry.getPacket());
+				std::thread send(&BidCoSQueue::send, this, entry.getPacket(), true);
 				send.detach();
 				startResendThread();
 			}
@@ -165,6 +165,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 			resendCounter = 0;
 			if(!noSending)
 			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(90));
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				send.detach();
 				startResendThread();
@@ -195,6 +196,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message)
 			resendCounter = 0;
 			if(!noSending)
 			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(90));
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				send.detach();
 				startResendThread();
@@ -211,12 +213,12 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message)
 	}
 }
 
-void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet)
+void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet, bool wait)
 {
 	try
 	{
 		if(noSending) return;
-		if(device != nullptr) device->sendPacket(packet);
+		if(device != nullptr) device->sendPacket(packet, false);
 		else if(GD::debugLevel >= 2) std::cout << "Error: Device pointer of queue is null." << std::endl;
 	}
 	catch(const std::exception& ex)
@@ -276,6 +278,7 @@ void BidCoSQueue::pushPendingQueue()
 			resendCounter = 0;
 			if(!noSending)
 			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(90));
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
 				send.detach();
 				startResendThread();
@@ -287,7 +290,7 @@ void BidCoSQueue::pushPendingQueue()
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSQueue::send, this, i->getPacket());
+				std::thread send(&BidCoSQueue::send, this, i->getPacket(), true);
 				send.detach();
 				startResendThread();
 			}
@@ -302,7 +305,7 @@ void BidCoSQueue::keepAlive()
 	if(lastAction != nullptr) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-void BidCoSQueue::pop()
+void BidCoSQueue::pop(bool waitBeforeSending)
 {
 	try
 	{
@@ -324,7 +327,7 @@ void BidCoSQueue::pop()
 			{
 				if(GD::debugLevel >= 5) std::cout << "Queue is empty. Pushing pending queue..." << std::endl;
 				_queueMutex.unlock();
-				std::thread push(&BidCoSQueue::sleepAndPushPendingQueue, this);
+				std::thread push(&BidCoSQueue::pushPendingQueue, this);
 				push.detach();
 				return;
 			}
@@ -338,8 +341,12 @@ void BidCoSQueue::pop()
 			std::thread send;
 			if(!noSending)
 			{
-				if(_queue.front().getType() == QueueEntryType::MESSAGE) send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
-				else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket());
+				if(_queue.front().getType() == QueueEntryType::MESSAGE)
+				{
+					if(waitBeforeSending) std::this_thread::sleep_for(std::chrono::milliseconds(90));
+					send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
+				}
+				else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), waitBeforeSending);
 				send.detach();
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread()
 				startResendThread();

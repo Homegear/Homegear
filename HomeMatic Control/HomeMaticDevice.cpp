@@ -279,9 +279,9 @@ void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	}
 }
 
-void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
+void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool enableWaiting)
 {
-	if(_handlingPacket) std::this_thread::sleep_for(std::chrono::milliseconds(90));
+	if(_handlingPacket && enableWaiting) std::this_thread::sleep_for(std::chrono::milliseconds(90));
 	_sentPacket = packet;
 	GD::cul.sendPacket(packet);
 }
@@ -523,11 +523,11 @@ void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAd
     sendPacket(packet);
 }
 
-void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destinationAddress)
+void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destinationAddress, bool enableWaiting)
 {
 	try
 	{
-		if(_handlingPacket) std::this_thread::sleep_for(std::chrono::milliseconds(90));
+		if(_handlingPacket && enableWaiting) std::this_thread::sleep_for(std::chrono::milliseconds(90));
 		//As there is no action in the queue when sending stealthy ok's, we need to manually keep it alive
 		BidCoSQueue* queue = _bidCoSQueueManager.get(destinationAddress);
 		if(queue != nullptr) queue->keepAlive();

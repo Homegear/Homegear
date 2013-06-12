@@ -149,7 +149,7 @@ bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, BidCoSQueu
 		{
 			if(queue->front()->getType() == QueueEntryType::PACKET || (queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())))
 			{
-				queue->pop(); //Popping takes place here to be able to process resent messages.
+				queue->pop(true); //Popping takes place here to be able to process resent messages.
 				if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())) return false;
 			}
 		}

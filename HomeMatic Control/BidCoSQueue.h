@@ -65,12 +65,12 @@ class BidCoSQueue
         void push(std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>& pendingBidCoSQueues);
         void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool popImmediately = true, bool clearPendingQueues = false);
         BidCoSQueueEntry* front() { return &_queue.front(); }
-        void pop();
+        void pop(bool waitBeforeSending);
         bool isEmpty() { return _queue.empty(); }
         void clear();
         void resend();
         void startResendThread();
-        void send(std::shared_ptr<BidCoSPacket> packet);
+        void send(std::shared_ptr<BidCoSPacket> packet, bool wait = false);
         void keepAlive();
         std::string serialize();
 

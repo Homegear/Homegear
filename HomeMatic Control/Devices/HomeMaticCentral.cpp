@@ -493,7 +493,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		}
 		else
 		{
-			queue->pop(); //Messages are not popped by default.
+			queue->pop(true); //Messages are not popped by default.
 		}
 	}
 	catch(const std::exception& ex)
@@ -559,7 +559,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 				}
 			}
 		}
-		queue->pop(); //Messages are not popped by default.
+		queue->pop(true); //Messages are not popped by default.
 	}
 	catch(const std::exception& ex)
     {

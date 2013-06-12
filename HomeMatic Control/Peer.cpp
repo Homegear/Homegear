@@ -246,7 +246,6 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			queue->push(configPacket);
 			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(90));
 			GD::devices.getCentral()->enqueuePackets(address, queue, true);
 		}
 	}
