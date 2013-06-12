@@ -76,7 +76,7 @@ std::shared_ptr<RPC::RPCVariable> ParameterConversion::fromPacket(int32_t value)
 	}
 	else if(type == Type::Enum::floatIntegerScale)
 	{
-		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((double)value / factor));
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((double)value / factor) - offset));
 	}
 	else if(type == Type::Enum::integerIntegerScale)
 	{
@@ -113,7 +113,7 @@ int32_t ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 	}
 	else if(type == Type::Enum::floatIntegerScale)
 	{
-		return std::lround(value->floatValue * factor);
+		return std::lround((value->floatValue + offset) * factor);
 	}
 	else if(type == Type::Enum::integerIntegerScale)
 	{

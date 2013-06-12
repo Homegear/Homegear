@@ -6,3 +6,4 @@
 - Peer.cpp - getDeviceDescription: Add GROUP
 - Check device type and serial number on repairing
 - RPC Server/Central: paramset_defs
+- RPC Server: Store sysinfo and handle count_from_sysinfo
