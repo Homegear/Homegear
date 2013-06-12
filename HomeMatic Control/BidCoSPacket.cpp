@@ -140,7 +140,9 @@ uint8_t BidCoSPacket::getByte(std::string hexString)
 {
 	try
 	{
-		return (uint8_t)std::stoi(hexString, 0, 16);
+		uint8_t value = 0;
+		try	{ value = std::stoi(hexString, 0, 16); } catch(...) {}
+		return value;
 	}
 	catch(const std::exception& ex)
 	{
@@ -153,7 +155,9 @@ int32_t BidCoSPacket::getInt(std::string hexString)
 {
 	try
 	{
-		return std::stoi(hexString, 0, 16);
+		int32_t value = 0;
+		try	{ value = std::stoll(hexString, 0, 16); } catch(...) {}
+		return value;
 	}
 	catch(const std::exception& ex)
 	{

@@ -39,7 +39,7 @@ class BidCoSMessage
         HomeMaticDevice* getDevice() { return _device; }
         void invokeMessageHandlerIncoming(std::shared_ptr<BidCoSPacket> packet);
         void invokeMessageHandlerOutgoing(std::shared_ptr<BidCoSPacket> packet);
-        bool checkAccess(std::shared_ptr<BidCoSPacket> packet, BidCoSQueue* queue);
+        bool checkAccess(std::shared_ptr<BidCoSPacket> packet, std::shared_ptr<BidCoSQueue> queue);
         std::vector<std::pair<uint32_t, int32_t>>* getSubtypes() { return &_subtypes; }
         void addSubtype(int32_t subtypePosition, int32_t subtype) { _subtypes.push_back(std::pair<uint32_t, int32_t>(subtypePosition, subtype)); };
         uint32_t subtypeCount() { return _subtypes.size(); }

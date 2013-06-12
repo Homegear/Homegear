@@ -87,6 +87,8 @@ void HomeMaticDevice::setUpBidCoSMessages()
     message->addSubtype(0x01, 0x03);
     _messages->add(message);
 
+    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x3F, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleTimeRequest)));
+
     _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
 }
 
@@ -261,15 +263,13 @@ void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
+		_receivedPackets.set(packet->senderAddress(), packet);
 		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, packet);
 		if(message != nullptr && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
 		{
 			if(GD::debugLevel >= 6) std::cout << "Device " << std::hex << _address << ": Access granted for packet " << packet->hexString() << std::dec << std::endl;
-			_handlingPacket = true;
 			_messageCounter[packet->senderAddress()] = packet->messageCounter();
 			message->invokeMessageHandlerIncoming(packet);
-			_lastReceivedMessage = message;
-			_handlingPacket = false;
 		}
 		if(message == nullptr && packet->destinationAddress() == _address && GD::debugLevel >= 3) std::cout << "Warning: Could not process message. Unknown message type: " << packet->hexString() << std::endl;
 	}
@@ -279,10 +279,15 @@ void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	}
 }
 
-void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool enableWaiting)
+void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 {
-	if(_handlingPacket && enableWaiting) std::this_thread::sleep_for(std::chrono::milliseconds(90));
-	_sentPacket = packet;
+	_sentPackets.set(packet->destinationAddress(), packet);
+	std::shared_ptr<BidCoSPacketInfo> packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
+	if(packetInfo)
+	{
+		int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
+		if(timeDifference > 0 && timeDifference < 90) std::this_thread::sleep_for(std::chrono::milliseconds(90 - timeDifference));
+	}
 	GD::cul.sendPacket(packet);
 }
 
@@ -384,8 +389,8 @@ void HomeMaticDevice::handleConfigEnd(int32_t messageCounter, std::shared_ptr<Bi
 	try
 	{
 		sendOK(messageCounter, packet->senderAddress());
-		BidCoSQueue* queue = _bidCoSQueueManager.get(packet->senderAddress());
-		if(queue == nullptr) return;
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+		if(!queue) return;
 		if(queue->getQueueType() == BidCoSQueueType::PAIRINGCENTRAL)
 		{
 			_peersMutex.lock();
@@ -436,6 +441,20 @@ void HomeMaticDevice::handleConfigParamRequest(int32_t messageCounter, std::shar
 	}
 }
 
+void HomeMaticDevice::handleTimeRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
+{
+	std::vector<uint8_t> payload;
+	payload.push_back(0x02);
+	payload.push_back(0x04);
+	uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 946684800;
+	payload.push_back(time >> 24);
+	payload.push_back((time >> 16) & 0xFF);
+	payload.push_back((time >> 8) & 0xFF);
+	payload.push_back(time & 0xFF);
+	std::shared_ptr<BidCoSPacket> timePacket(new BidCoSPacket(messageCounter, 0x80, 0x3F, _address, packet->senderAddress(), payload));
+	sendPacket(timePacket);
+}
+
 void HomeMaticDevice::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
@@ -463,7 +482,7 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, std::shared_ptr<
 	{
 		if(_pairing)
 		{
-			BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRINGCENTRAL, packet->senderAddress());
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRINGCENTRAL, packet->senderAddress());
 			std::shared_ptr<Peer> peer(new Peer());
 			peer->address = packet->senderAddress();
 			peer->deviceType = HMDeviceTypes::HMRCV50;
@@ -487,7 +506,7 @@ void HomeMaticDevice::handleConfigWriteIndex(int32_t messageCounter, std::shared
 {
 	if(packet->payload()->at(2) == 0x02 && packet->payload()->at(3) == 0x00)
     {
-        BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, packet->senderAddress());
+        std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, packet->senderAddress());
         queue->peer = _peers[packet->senderAddress()];
         queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x08), std::pair<uint32_t, int32_t>(0x02, 0x02), std::pair<uint32_t, int32_t>(0x03, 0x00) }));
         queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x06) }));
@@ -523,16 +542,17 @@ void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAd
     sendPacket(packet);
 }
 
-void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destinationAddress, bool enableWaiting)
+void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destinationAddress)
 {
 	try
 	{
-		if(_handlingPacket && enableWaiting) std::this_thread::sleep_for(std::chrono::milliseconds(90));
 		//As there is no action in the queue when sending stealthy ok's, we need to manually keep it alive
-		BidCoSQueue* queue = _bidCoSQueueManager.get(destinationAddress);
-		if(queue != nullptr) queue->keepAlive();
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(destinationAddress);
+		if(queue) queue->keepAlive();
+		_sentPackets.keepAlive(destinationAddress);
 		std::vector<uint8_t> payload;
 		payload.push_back(0x00);
+		std::this_thread::sleep_for(std::chrono::milliseconds(90));
 		std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(messageCounter, 0x80, 0x02, _address, destinationAddress, payload));
 		GD::cul.sendPacket(ok);
 	}
@@ -607,7 +627,7 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 	uint32_t channel = packet->payload()->at(0);
 	if(_config[channel][_currentList].size() >= 8)
 	{
-		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, destinationAddress);
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, destinationAddress);
 		//Actually destinationAddress should always be in _peers at this point
 		if(_peers.find(destinationAddress) != _peers.end()) queue->peer = _peers[destinationAddress];
 

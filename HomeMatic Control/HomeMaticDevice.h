@@ -13,6 +13,7 @@ enum class BidCoSQueueType;
 #include "BidCoSMessages.h"
 #include "Cul.h"
 #include "BidCoSQueueManager.h"
+#include "BidCoSPacketManager.h"
 
 #include <string>
 #include <unordered_map>
@@ -21,6 +22,7 @@ enum class BidCoSQueueType;
 #include <vector>
 #include <queue>
 #include <thread>
+#include <chrono>
 #include "pthread.h"
 
 class HomeMaticDevice
@@ -43,7 +45,6 @@ class HomeMaticDevice
         virtual bool isInPairingMode() { return _pairing; }
         virtual int32_t getCentralAddress();
         virtual std::unordered_map<int32_t, std::shared_ptr<Peer>>* getPeers();
-        virtual std::shared_ptr<BidCoSMessage> getLastReceivedMessage() { return _lastReceivedMessage; }
         virtual int32_t calculateCycleLength(uint8_t messageCounter);
         virtual void stopDutyCycle() {};
         virtual std::string serialize();
@@ -51,7 +52,7 @@ class HomeMaticDevice
         virtual int32_t getHexInput();
         virtual std::shared_ptr<BidCoSMessages> getMessages() { return _messages; }
         virtual void handleCLICommand(std::string command);
-        virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet, bool enableWaiting = true);
+        virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet);
 
         virtual void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet) {}
         virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
@@ -68,11 +69,12 @@ class HomeMaticDevice
         virtual void handleWakeUp(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
         virtual void handleSetPoint(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
         virtual void handleSetValveState(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
+        virtual void handleTimeRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 
         virtual void sendPairingRequest();
         virtual void sendDirectedPairingRequest(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet);
         virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
-        virtual void sendStealthyOK(int32_t messageCounter, int32_t destinationAddress, bool enableWaiting = true);
+        virtual void sendStealthyOK(int32_t messageCounter, int32_t destinationAddress);
         virtual void sendOKWithPayload(int32_t messageCounter, int32_t destinationAddress, std::vector<uint8_t> payload, bool isWakeMeUpPacket);
         virtual void sendNOK(int32_t messageCounter, int32_t destinationAddress);
         virtual void sendNOKTargetInvalid(int32_t messageCounter, int32_t destinationAddress);
@@ -101,12 +103,11 @@ class HomeMaticDevice
         bool _pairing = false;
         bool _justPairedToOrThroughCentral = false;
         BidCoSQueueManager _bidCoSQueueManager;
-        std::shared_ptr<BidCoSMessage> _lastReceivedMessage;
-        std::shared_ptr<BidCoSPacket> _sentPacket;
+        BidCoSPacketManager _receivedPackets;
+        BidCoSPacketManager _sentPackets;
         std::shared_ptr<BidCoSMessages> _messages;
         int64_t _lastDutyCycleEvent = 0;
         bool _initialized = false;
-        bool _handlingPacket = false;
 
         bool _lowBattery = false;
 

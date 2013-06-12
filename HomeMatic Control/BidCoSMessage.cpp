@@ -135,21 +135,21 @@ bool BidCoSMessage::typeIsEqual(std::shared_ptr<BidCoSMessage> message, std::sha
 	return false;
 }
 
-bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, BidCoSQueue* queue)
+bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, std::shared_ptr<BidCoSQueue> queue)
 {
 	try
 	{
-		if(_device == nullptr || packet == nullptr) return false;
+		if(_device == nullptr || !packet) return false;
 
 		int32_t access = _device->isInPairingMode() ? _accessPairing : _access;
 		Peer* currentPeer = _device->isInPairingMode() ? ((queue != nullptr && queue->peer->address == packet->senderAddress()) ? queue->peer.get() : nullptr) : nullptr;
 		if(currentPeer == nullptr) currentPeer = ((_device->getPeers()->find(packet->senderAddress()) == _device->getPeers()->end()) ? nullptr : _device->getPeers()->at(packet->senderAddress()).get());
 		if(access == NOACCESS) return false;
-		if(queue != nullptr && !queue->isEmpty())
+		if(queue && !queue->isEmpty())
 		{
 			if(queue->front()->getType() == QueueEntryType::PACKET || (queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())))
 			{
-				queue->pop(true); //Popping takes place here to be able to process resent messages.
+				queue->pop(); //Popping takes place here to be able to process resent messages.
 				if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())) return false;
 			}
 		}

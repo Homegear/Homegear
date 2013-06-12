@@ -233,7 +233,6 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		} while(++i != range.second && i != rpcDevice->framesByMessageType.end());
 		if(sendOK && (packet->controlByte() & 32) && packet->destinationAddress() == GD::devices.getCentral()->address())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(90));
 			GD::devices.getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
 		}
 		if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == address && !(packet->controlByte() & 32) && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional

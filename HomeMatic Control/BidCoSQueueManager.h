@@ -27,11 +27,13 @@ public:
 	BidCoSQueueManager() {}
 	virtual ~BidCoSQueueManager();
 
-	BidCoSQueue* get(int32_t address);
-	BidCoSQueue* createQueue(HomeMaticDevice* device, BidCoSQueueType queueType, int32_t address);
+	std::shared_ptr<BidCoSQueue> get(int32_t address);
+	std::shared_ptr<BidCoSQueue> createQueue(HomeMaticDevice* device, BidCoSQueueType queueType, int32_t address);
 	void resetQueue(int32_t address);
 protected:
-	std::unordered_map<int32_t, BidCoSQueueData> _queues;
+	uint32_t _id = 0;
+	std::unordered_map<int32_t, std::shared_ptr<BidCoSQueueData>> _queues;
+	std::mutex _queueMutex;
 };
 
 #endif /* BIDCOSQUEUEMANAGER_H_ */

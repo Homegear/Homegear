@@ -203,4 +203,20 @@ void HM_SD::handleCLICommand(std::string command)
 			std::cout << "Filter type: " << std::hex << (int32_t)i->filterType << "\tFilter value: " << i->filterValue << std::dec << std::endl;
 		}
 	}
+	else if(command == "send packet")
+	{
+		std::cout << "Please provide a packet in hexadecimal format: ";
+		std::string packetHex;
+		std::cin >> packetHex;
+		if(packetHex.size() < 18)
+		{
+			std::cout << "Packet is too short. Please provide at least 9 bytes." << std::endl;
+		}
+		else
+		{
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
+			packet->import(packetHex, false);
+			sendPacket(packet);
+		}
+	}
 }

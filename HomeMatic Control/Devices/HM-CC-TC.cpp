@@ -442,7 +442,7 @@ void HM_CC_TC::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidC
 			return;
 		}
 		std::shared_ptr<Peer> peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), "", packet->payload()->at(15), 0);
-		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
 		queue->peer = peer;
 		queue->push(_messages->find(DIRECTIONOUT, 0x00, std::vector<std::pair<uint32_t, int32_t>>()), packet);
 		queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
@@ -502,9 +502,9 @@ void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> p
 {
 	try
 	{
-		BidCoSQueue* queue = _bidCoSQueueManager.get(packet->senderAddress());
-		if(queue == nullptr) return;
-		queue->pop(true); //Messages are not popped by default.
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+		if(!queue) return;
+		queue->pop(); //Messages are not popped by default.
 		if(queue->getQueueType() == BidCoSQueueType::PAIRING)
 		{
 			_peers[queue->peer->address] = queue->peer;

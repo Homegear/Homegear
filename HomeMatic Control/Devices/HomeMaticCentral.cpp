@@ -46,6 +46,8 @@ void HomeMaticCentral::setUpBidCoSMessages()
 	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
 
 	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
+
+	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x3F, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleTimeRequest)));
 }
 
 void HomeMaticCentral::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
@@ -91,7 +93,7 @@ void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<Bid
 {
 	try
 	{
-		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
 		queue->push(packets, true, true);
 		if(_peers.find(deviceAddress) != _peers.end() && pushPendingBidCoSQueues) queue->push(_peers[deviceAddress]->pendingBidCoSQueues);
 	}
@@ -206,7 +208,7 @@ void HomeMaticCentral::unpair(int32_t address)
 	{
 		if(_peers.find(address) == _peers.end()) return;
 		Peer* peer = _peers[address].get();
-		BidCoSQueue* queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, address);
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, address);
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
 
@@ -277,7 +279,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 		Peer* peer = nullptr;
 		std::vector<uint8_t> payload;
 		std::shared_ptr<RPC::Device> device;
-		BidCoSQueue* queue = nullptr;
+		std::shared_ptr<BidCoSQueue> queue;
 		if(_pairing)
 		{
 			queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
@@ -413,9 +415,10 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 {
 	try
 	{
-		BidCoSQueue* queue = _bidCoSQueueManager.get(packet->senderAddress());
-		if(queue == nullptr) return;
-		if(_sentPacket->payload()->at(1) == 0x03) //Peer request
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+		if(!queue) return;
+		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
+		if(sentPacket && sentPacket->payload()->at(1) == 0x03) //Peer request
 		{
 			for(uint32_t i = 1; i < packet->payload()->size(); i += 4)
 			{
@@ -429,11 +432,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				}
 			}
 		}
-		else if(_sentPacket->payload()->at(1) == 0x04) //Config request
+		else if(sentPacket && sentPacket->payload()->at(1) == 0x04) //Config request
 		{
 			if(packet->controlByte() & 0x20)
 			{
-				int32_t channel = _sentPacket->payload()->at(0);
+				int32_t channel = sentPacket->payload()->at(0);
 				Peer* peer = _peers[packet->senderAddress()].get();
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = startIndex + packet->payload()->size() - 3;
@@ -459,7 +462,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			else
 			{
 				Peer* peer = _peers[packet->senderAddress()].get();
-				int32_t channel = _sentPacket->payload()->at(0);
+				int32_t channel = sentPacket->payload()->at(0);
 				if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::master) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master])
 				{
 					if(GD::debugLevel >= 2) std::cout << "Error: Received config for non existant parameter set." << std::endl;
@@ -493,7 +496,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		}
 		else
 		{
-			queue->pop(true); //Messages are not popped by default.
+			queue->pop(); //Messages are not popped by default.
 		}
 	}
 	catch(const std::exception& ex)
@@ -514,11 +517,12 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 {
 	try
 	{
-		BidCoSQueue* queue = _bidCoSQueueManager.get(packet->senderAddress());
-		if(queue == nullptr) return;
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+		if(!queue) return;
+		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
 		if(queue->getQueueType() == BidCoSQueueType::PAIRING)
 		{
-			if(_sentPacket->messageType() == 0x01 && _sentPacket->payload()->at(0) == 0x00 && _sentPacket->payload()->at(1) == 0x06)
+			if(sentPacket && sentPacket->messageType() == 0x01 && sentPacket->payload()->at(0) == 0x00 && sentPacket->payload()->at(1) == 0x06)
 			{
 				if(_peers.find(packet->senderAddress()) == _peers.end())
 				{
@@ -549,7 +553,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 		}
 		else if(queue->getQueueType() == BidCoSQueueType::UNPAIRING)
 		{
-			if(_sentPacket->messageType() == 0x01 && _sentPacket->payload()->at(0) == 0x00 && _sentPacket->payload()->at(1) == 0x06)
+			if(sentPacket && sentPacket->messageType() == 0x01 && sentPacket->payload()->at(0) == 0x00 && sentPacket->payload()->at(1) == 0x06)
 			{
 				if(_peers.find(packet->senderAddress()) != _peers.end())
 				{
@@ -559,7 +563,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 				}
 			}
 		}
-		queue->pop(true); //Messages are not popped by default.
+		queue->pop(); //Messages are not popped by default.
 	}
 	catch(const std::exception& ex)
     {

@@ -43,14 +43,15 @@ class BidCoSQueue
         std::mutex _queueMutex;
         BidCoSQueueType _queueType;
         bool _stopResendThread = false;
-        std::unique_ptr<std::thread> _resendThread;
-        std::mutex _resendThreadMutex;
+        std::thread _resendThread;
         int32_t resendCounter = 0;
+        uint32_t _resendThreadId = 0;
         bool _workingOnPendingQueue = false;
 
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
     public:
+        uint32_t id = 0;
         int64_t* lastAction = nullptr;
         bool noSending = false;
         HomeMaticDevice* device = nullptr;
@@ -65,12 +66,12 @@ class BidCoSQueue
         void push(std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>& pendingBidCoSQueues);
         void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool popImmediately = true, bool clearPendingQueues = false);
         BidCoSQueueEntry* front() { return &_queue.front(); }
-        void pop(bool waitBeforeSending);
+        void pop();
         bool isEmpty() { return _queue.empty(); }
         void clear();
-        void resend();
+        void resend(uint32_t threadId);
         void startResendThread();
-        void send(std::shared_ptr<BidCoSPacket> packet, bool wait = false);
+        void send(std::shared_ptr<BidCoSPacket> packet);
         void keepAlive();
         std::string serialize();
 

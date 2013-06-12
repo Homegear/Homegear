@@ -49,23 +49,33 @@ BidCoSQueue::~BidCoSQueue()
 	try
 	{
 		_stopResendThread = true;
-		_resendThreadMutex.lock();
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for _resendThread to finish. I didn't use thread.join, because for some reason "join" sometimes crashed the program.
+		if(_resendThread.joinable()) _resendThread.join();
 	}
 	catch(const std::exception& ex)
 	{
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
 	}
-	_resendThreadMutex.unlock();
 }
 
-void BidCoSQueue::resend()
+void BidCoSQueue::resend(uint32_t threadId)
 {
 	try
 	{
+		//Add 90 milliseconds after pushing the packet, otherwise the first resend is 90 ms too early
 		int32_t i = 0;
-		std::chrono::milliseconds sleepingTime(50);
-		while(!_stopResendThread && i < 4)
+		std::chrono::milliseconds sleepingTime(30);
+		if(resendCounter == 0)
+		{
+			while(!_stopResendThread && i < 3)
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				i++;
+			}
+		}
+		//Sleep for 200 ms
+		i = 0;
+		sleepingTime = std::chrono::milliseconds(25);
+		while(!_stopResendThread && i < 8)
 		{
 			std::this_thread::sleep_for(sleepingTime);
 			i++;
@@ -73,17 +83,18 @@ void BidCoSQueue::resend()
 		if(!_stopResendThread)
 		{
 			_queueMutex.lock();
-			if(!_queue.empty())
+			if(!_queue.empty() && !_stopResendThread)
 			{
 				std::thread send;
 				if(!noSending)
 				{
+					if(GD::debugLevel >= 5) std::cout << "Sending from resend thread " << threadId << " of queue " << id << "." << std::endl;
 					if(_queue.front().getType() == QueueEntryType::MESSAGE)
 					{
 						if(GD::debugLevel >= 5) std::cout << "Invoking outgoing message handler from BidCoSQueue." << std::endl;
 						send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 					}
-					else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), false);
+					else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket());
 					send.detach();
 				}
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread
@@ -94,14 +105,14 @@ void BidCoSQueue::resend()
 				}
 				else resendCounter = 0;
 			}
+			else _queueMutex.unlock();
 		}
-		else _stopResendThread = false;
 	}
 	catch(const std::exception& ex)
 	{
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+		_queueMutex.unlock();
 	}
-	_queueMutex.unlock();
 }
 
 void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet)
@@ -116,7 +127,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet)
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSQueue::send, this, entry.getPacket(), true);
+				std::thread send(&BidCoSQueue::send, this, entry.getPacket());
 				send.detach();
 				startResendThread();
 			}
@@ -165,7 +176,6 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(90));
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				send.detach();
 				startResendThread();
@@ -196,7 +206,6 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message)
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(90));
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				send.detach();
 				startResendThread();
@@ -213,13 +222,13 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message)
 	}
 }
 
-void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet, bool wait)
+void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
 		if(noSending) return;
-		if(device != nullptr) device->sendPacket(packet, false);
-		else if(GD::debugLevel >= 2) std::cout << "Error: Device pointer of queue is null." << std::endl;
+		if(device != nullptr) device->sendPacket(packet);
+		else if(GD::debugLevel >= 2) std::cout << "Error: Device pointer of queue " << id << " is null." << std::endl;
 	}
 	catch(const std::exception& ex)
 	{
@@ -233,19 +242,19 @@ void BidCoSQueue::startResendThread()
 	{
 		_queueMutex.lock();
 		uint8_t controlByte = (_queue.front().getType() == QueueEntryType::MESSAGE) ? _queue.front().getMessage()->getControlByte() : _queue.front().getPacket()->controlByte();
+		_queueMutex.unlock();
 		if(!(controlByte & 0x02) && (controlByte & 0x20)) //Resend when no response?
 		{
-			_resendThreadMutex.lock();
-			_resendThread = std::unique_ptr<std::thread>(new std::thread(&BidCoSQueue::resend, this));
-			_resendThread->detach();
+			if(_resendThread.joinable()) _resendThread.join();
+			_stopResendThread = false;
+			_resendThread = std::thread(&BidCoSQueue::resend, this, _resendThreadId++);
 		}
 	}
 	catch(const std::exception& ex)
 	{
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+		_queueMutex.unlock();
 	}
-	_resendThreadMutex.unlock();
-	_queueMutex.unlock();
 }
 
 void BidCoSQueue::clear()
@@ -278,7 +287,6 @@ void BidCoSQueue::pushPendingQueue()
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(90));
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
 				send.detach();
 				startResendThread();
@@ -290,7 +298,7 @@ void BidCoSQueue::pushPendingQueue()
 			resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSQueue::send, this, i->getPacket(), true);
+				std::thread send(&BidCoSQueue::send, this, i->getPacket());
 				send.detach();
 				startResendThread();
 			}
@@ -305,12 +313,13 @@ void BidCoSQueue::keepAlive()
 	if(lastAction != nullptr) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-void BidCoSQueue::pop(bool waitBeforeSending)
+void BidCoSQueue::pop()
 {
 	try
 	{
 		keepAlive();
-		if(GD::debugLevel >= 5) std::cout << "Popping from BidCoSQueue." << std::endl;
+		if(GD::debugLevel >= 5) std::cout << "Popping from BidCoSQueue: " << id << std::endl;
+		if(_resendThread.joinable()) _stopResendThread = true;
 		if(_queue.empty()) return;
 		_queueMutex.lock();
 		_queue.pop_front();
@@ -318,23 +327,20 @@ void BidCoSQueue::pop(bool waitBeforeSending)
 			if(_workingOnPendingQueue) _pendingQueues->pop();
 			if(_pendingQueues && _pendingQueues->empty())
 			{
-				if(GD::debugLevel >= 5) std::cout << "Queue is empty and there are no pending queues." << std::endl;
+				if(GD::debugLevel >= 5) std::cout << "Queue " << id << " is empty and there are no pending queues." << std::endl;
 				_workingOnPendingQueue = false;
 				_queueMutex.unlock();
 				return;
 			}
 			else
 			{
-				if(GD::debugLevel >= 5) std::cout << "Queue is empty. Pushing pending queue..." << std::endl;
+				if(GD::debugLevel >= 5) std::cout << "Queue " << id << " is empty. Pushing pending queue..." << std::endl;
 				_queueMutex.unlock();
 				std::thread push(&BidCoSQueue::pushPendingQueue, this);
 				push.detach();
 				return;
 			}
 		}
-		_resendThreadMutex.lock();
-		if(_resendThread.get() != nullptr && _resendThread->joinable()) _stopResendThread = true;
-		_resendThreadMutex.unlock();
 		if((_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONOUT) || _queue.front().getType() == QueueEntryType::PACKET)
 		{
 			resendCounter = 0;
@@ -343,21 +349,22 @@ void BidCoSQueue::pop(bool waitBeforeSending)
 			{
 				if(_queue.front().getType() == QueueEntryType::MESSAGE)
 				{
-					if(waitBeforeSending) std::this_thread::sleep_for(std::chrono::milliseconds(90));
 					send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 				}
-				else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), waitBeforeSending);
+				else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket());
 				send.detach();
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread()
 				startResendThread();
 			}
+			else _queueMutex.unlock();
 		}
+		else _queueMutex.unlock();
 	}
 	catch(const std::exception& ex)
 	{
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+		_queueMutex.unlock();
 	}
-	_queueMutex.unlock();
 }
 
 std::string BidCoSQueue::serialize()
