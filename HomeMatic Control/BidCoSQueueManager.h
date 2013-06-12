@@ -13,6 +13,7 @@ enum class BidCoSQueueType;
 class BidCoSQueueData
 {
 public:
+	uint32_t id = 0;
 	std::shared_ptr<BidCoSQueue> queue;
 	std::shared_ptr<std::thread> thread;
 	bool stopThread = false;
@@ -29,7 +30,7 @@ public:
 
 	std::shared_ptr<BidCoSQueue> get(int32_t address);
 	std::shared_ptr<BidCoSQueue> createQueue(HomeMaticDevice* device, BidCoSQueueType queueType, int32_t address);
-	void resetQueue(int32_t address);
+	void resetQueue(int32_t address, uint32_t id);
 protected:
 	uint32_t _id = 0;
 	std::unordered_map<int32_t, std::shared_ptr<BidCoSQueueData>> _queues;

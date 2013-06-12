@@ -28,7 +28,8 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		queueData->queue->device = device;
 		queueData->queue->lastAction = &queueData->lastAction;
 		queueData->queue->id = _id++;
-		queueData->thread = std::shared_ptr<std::thread>(new std::thread(&BidCoSQueueManager::resetQueue, this, address));
+		queueData->id = queueData->queue->id;
+		queueData->thread = std::shared_ptr<std::thread>(new std::thread(&BidCoSQueueManager::resetQueue, this, address, queueData->id));
 		queueData->thread->detach();
 		_queueMutex.lock();
 		_queues.insert(std::pair<int32_t, std::shared_ptr<BidCoSQueueData>>(address, queueData));
@@ -53,7 +54,7 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
     return std::shared_ptr<BidCoSQueue>();
 }
 
-void BidCoSQueueManager::resetQueue(int32_t address)
+void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 {
 	try
 	{
@@ -63,9 +64,9 @@ void BidCoSQueueManager::resetQueue(int32_t address)
 			std::this_thread::sleep_for(sleepingTime);
 		}
 		_queueMutex.lock();
-		if(_queues.find(address) != _queues.end() && !_queues[address]->stopThread)
+		if(_queues.find(address) != _queues.end() && !_queues[address]->stopThread && _queues[address]->id == id)
 		{
-			if(GD::debugLevel >= 5) std::cout << "Deleting queue for 0x" << std::hex << address << std::dec << std::endl;
+			if(GD::debugLevel >= 5) std::cout << "Deleting queue " << id << " for 0x" << std::hex << address << std::dec << std::endl;
 			_queues.erase(_queues.find(address));
 		}
 		_queueMutex.unlock();

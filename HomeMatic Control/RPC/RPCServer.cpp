@@ -358,27 +358,45 @@ int32_t RPCServer::getClientFileDescriptor()
 
 void RPCServer::getFileDescriptor()
 {
-	struct addrinfo hostInfo, *serverInfo;
+	try
+	{
+		struct addrinfo hostInfo, *serverInfo;
 
-	int32_t fileDescriptor;
-	int32_t yes = 1;
+		int32_t fileDescriptor;
+		int32_t yes = 1;
 
-	memset(&hostInfo, 0, sizeof(hostInfo));
+		memset(&hostInfo, 0, sizeof(hostInfo));
 
-	hostInfo.ai_family = AF_UNSPEC;
-	hostInfo.ai_socktype = SOCK_STREAM;
-	hostInfo.ai_flags = AI_PASSIVE;
+		hostInfo.ai_family = AF_UNSPEC;
+		hostInfo.ai_socktype = SOCK_STREAM;
+		hostInfo.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(0, _port.c_str(), &hostInfo, &serverInfo);
+		if(getaddrinfo(0, _port.c_str(), &hostInfo, &serverInfo) != 0) throw new Exception("Error: Could not get address information.");
 
-	for(struct addrinfo *info = serverInfo; info != 0; info = info->ai_next) {
-		fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
-        if(fileDescriptor == -1) continue;
-		if(setsockopt(fileDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw new Exception("Error: Could not set socket options.");
-		if(bind(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) continue;
-        break;
+		for(struct addrinfo *info = serverInfo; info != 0; info = info->ai_next) {
+			fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+			if(fileDescriptor == -1) continue;
+			if(setsockopt(fileDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw new Exception("Error: Could not set socket options.");
+			if(bind(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) continue;
+			break;
+		}
+		freeaddrinfo(serverInfo);
+		if(listen(fileDescriptor, _backlog) == -1) throw new Exception("Error: Server could not start listening.");
+		_serverFileDescriptor = fileDescriptor;
     }
-	freeaddrinfo(serverInfo);
-    if(listen(fileDescriptor, _backlog) == -1) throw new Exception("Error: Server could not start listening.");
-    _serverFileDescriptor = fileDescriptor;
+    catch(const std::exception& ex)
+    {
+    	_sendMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_sendMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_sendMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }

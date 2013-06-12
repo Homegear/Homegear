@@ -148,7 +148,7 @@ std::string Cul::readFromDevice()
 	{
 		if(_fileDescriptor == -1) throw(Exception("Couldn't read from CUL device, because the file descriptor is not valid: " + _culDevice));
 		std::string packet;
-		int i;
+		int32_t i;
 		char localBuffer[1];
 		struct timeval timeout;
 		timeout.tv_sec = 1200;
@@ -197,8 +197,8 @@ void Cul::writeToDevice(std::string data, bool printSending)
     try
     {
         if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _culDevice));
-        int bytesWritten = 0;
-        int i;
+        int32_t bytesWritten = 0;
+        int32_t i;
         struct timeval timeout;
         timeout.tv_sec = 0;
         timeout.tv_usec = 200000;

@@ -7,6 +7,3 @@
 - Check device type and serial number on repairing
 - RPC Server/Central: paramset_defs
 - RPC Server: Store sysinfo and handle count_from_sysinfo
-- RPC Server: Negative numbers not working
-- Device/Central: Received packets for every sender
-- Device/Central: Remove all sleeping before sending and check sleeping through received packets.

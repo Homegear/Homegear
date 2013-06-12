@@ -14,6 +14,7 @@
 #include "Database.h"
 #include "GD.h"
 #include "HelperFunctions.h"
+#include "RPC/RPCClient.h"
 
 void exceptionHandler(int32_t signal) {
   void *stackTrace[10];
@@ -51,6 +52,10 @@ int main()
 
     	signal(SIGSEGV, exceptionHandler);
 
+    	RPC::RPCClient c;
+    	c.test("www.google.de", "80");
+
+    	return 0;
         /*int row,col;
         WINDOW* mainWindow = initscr();
 
@@ -126,7 +131,7 @@ int main()
             else if(input == "test")
             {
             	std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-            	packet->import("0C7986701D8F4500000000F72C", false);
+            	packet->import("0C7986701D8F450000007F922C", false);
             	GD::devices.getCentral()->packetReceived(packet);
             }
             else if(input == "create device" || input == "add device")

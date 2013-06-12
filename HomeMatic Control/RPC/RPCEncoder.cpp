@@ -160,8 +160,8 @@ void RPCEncoder::encodeFloat(char* packet, uint32_t* position, uint32_t packetLe
 		temp /= 2;
 		exponent++;
 	}
+	if(variable->floatValue < 0) temp *= -1;
 	int32_t mantissa = std::roundl(temp * 0x40000000);
-	if(variable->floatValue < 0) mantissa |= 0x80000000;
 	HelperFunctions::memcpyBigEndian(packet + *position, (char*)&mantissa, 4);
 	*position += 4;
 	HelperFunctions::memcpyBigEndian(packet + *position, (char*)&exponent, 4);

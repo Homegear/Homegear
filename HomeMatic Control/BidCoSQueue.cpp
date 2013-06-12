@@ -61,7 +61,7 @@ void BidCoSQueue::resend(uint32_t threadId)
 {
 	try
 	{
-		//Add 90 milliseconds after pushing the packet, otherwise the first resend is 90 ms too early
+		//Add 90 milliseconds after pushing the packet, otherwise for responses the first resend is 90 ms too early. If the queue is not generated as a response, the resend is 90 ms too late. But so what?
 		int32_t i = 0;
 		std::chrono::milliseconds sleepingTime(30);
 		if(resendCounter == 0)
@@ -101,7 +101,8 @@ void BidCoSQueue::resend(uint32_t threadId)
 				if(resendCounter < 1) //This actually means that the message will be sent three times all together if there is no response
 				{
 					resendCounter++;
-					startResendThread();
+					send = std::thread(&BidCoSQueue::startResendThread, this);
+					send.detach();
 				}
 				else resendCounter = 0;
 			}
@@ -245,6 +246,7 @@ void BidCoSQueue::startResendThread()
 		_queueMutex.unlock();
 		if(!(controlByte & 0x02) && (controlByte & 0x20)) //Resend when no response?
 		{
+			_stopResendThread = true;
 			if(_resendThread.joinable()) _resendThread.join();
 			_stopResendThread = false;
 			_resendThread = std::thread(&BidCoSQueue::resend, this, _resendThreadId++);

@@ -841,25 +841,18 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			while((signed)payload.size() - 1 < frame->channelField - 9) payload.push_back(0);
 			payload.at(frame->channelField - 9) = (uint8_t)channel;
 		}
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA0, (uint8_t)frame->type, GD::devices.getCentral()->address(), address, payload));
 		for(std::vector<RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 		{
-			int32_t byteIndex = std::floor(i->index) - 9;
-			while((signed)payload.size() - 1 < byteIndex) payload.push_back(0);
-			if(i->size != 1)
-			{
-				if(GD::debugLevel >= 2) std::cout << "Error: Frame parameter size is not 1.0. Device: 0x" << std::hex << address << std::dec << " Serial number: " << serialNumber << " Frame: " << frame->id << std::endl;
-				continue;
-			}
 			if(i->constValue > -1)
 			{
-				payload.at(byteIndex) = i->constValue;
+				packet->setPosition(i->index, i->size, i->constValue);
 				continue;
 			}
-			//We can't just search for param, because it is ambiguous
-			if(i->param == valuesCentral[channel][valueKey].rpcParameter->physicalParameter->valueID) payload.at(byteIndex) = (uint8_t)valuesCentral[channel][valueKey].value;
+			//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
+			if(i->param == valuesCentral[channel][valueKey].rpcParameter->physicalParameter->valueID) packet->setPosition(i->index, i->size, valuesCentral[channel][valueKey].value);
 			else if(GD::debugLevel >= 2) std::cout << "Error: Can't generate parameter packet, because the frame parameter does not equal the set parameter. Device: 0x" << std::hex << address << std::dec << " Serial number: " << serialNumber << " Frame: " << frame->id << std::endl;
 		}
-		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA0, (uint8_t)frame->type, GD::devices.getCentral()->address(), address, payload));
 		messageCounter++;
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));

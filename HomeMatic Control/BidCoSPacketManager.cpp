@@ -24,7 +24,8 @@ void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& pa
 
 		std::shared_ptr<BidCoSPacketInfo> info(new BidCoSPacketInfo());
 		info->packet = packet;
-		info->thread = std::shared_ptr<std::thread>(new std::thread(&BidCoSPacketManager::deletePacket, this, address));
+		info->id = _id++;
+		info->thread = std::shared_ptr<std::thread>(new std::thread(&BidCoSPacketManager::deletePacket, this, address, info->id));
 		info->thread->detach();
 		_packetMutex.lock();
 		_packets.insert(std::pair<int32_t, std::shared_ptr<BidCoSPacketInfo>>(address, info));
@@ -47,7 +48,7 @@ void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& pa
     }
 }
 
-void BidCoSPacketManager::deletePacket(int32_t address)
+void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)
 {
 	try
 	{
@@ -57,9 +58,9 @@ void BidCoSPacketManager::deletePacket(int32_t address)
 			std::this_thread::sleep_for(sleepingTime);
 		}
 		_packetMutex.lock();
-		if(_packets.find(address) != _packets.end() && !_packets[address]->stopThread)
+		if(_packets.find(address) != _packets.end() && !_packets[address]->stopThread && _packets[address]->id == id)
 		{
-			if(GD::debugLevel >= 8) std::cout << "Deleting packet for 0x" << std::hex << address << std::dec << std::endl;
+			if(GD::debugLevel >= 8) std::cout << "Deleting packet " << id << " for 0x" << std::hex << address << std::dec << std::endl;
 			_packets.erase(_packets.find(address));
 		}
 		_packetMutex.unlock();
