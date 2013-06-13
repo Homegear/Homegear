@@ -10,6 +10,7 @@
 #include <sstream>
 #include <mutex>
 #include <memory>
+#include <map>
 #include <unordered_map>
 #include <utility>
 
@@ -23,22 +24,27 @@
 #include "RPCMethod.h"
 #include "RPCDecoder.h"
 #include "RPCEncoder.h"
+#include "XMLRPCDecoder.h"
+#include "XMLRPCEncoder.h"
 
 namespace RPC
 {
 	class RPCServer {
 		public:
+			struct PacketType
+			{
+				enum Enum { xmlRequest, xmlResponse, binaryRequest, binaryResponse };
+			};
+
 			RPCServer();
 			virtual ~RPCServer();
 
 			void start();
 			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
+			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
+			void callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType);
 		protected:
 		private:
-			struct PacketType
-			{
-				enum Enum { xmlRequest, xmlResponse, binaryRequest, binaryResponse };
-			};
 			bool _stopServer = false;
 			std::thread _mainThread;
 			std::string _port = "2001";
@@ -50,19 +56,22 @@ namespace RPC
 			std::vector<std::thread> _readThreads;
 			std::mutex _sendMutex;
 			std::unordered_map<std::string, int32_t> _localClientFileDescriptors;
-			std::unordered_map<std::string, std::shared_ptr<RPCMethod>> _rpcMethods;
+			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;
 			RPCDecoder _rpcDecoder;
 			RPCEncoder _rpcEncoder;
+			XMLRPCDecoder _xmlRpcDecoder;
+			XMLRPCEncoder _xmlRpcEncoder;
 
 			std::pair<std::string, std::string> getAddressAndPort(std::string address);
 			void getFileDescriptor();
 			int32_t getClientFileDescriptor();
 			void mainThread();
 			void readClient(int32_t clientFileDescriptor);
+			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<RPCVariable> error, PacketType::Enum packetType);
 			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<char> data, uint32_t dataLength);
 			void packetReceived(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
-			void analyzeBinaryRPC(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength);
-			void analyzeBinaryRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength);
+			void analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
+			void analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
 			void removeClientFileDescriptor(int32_t clientFileDescriptor);
 	};
 }

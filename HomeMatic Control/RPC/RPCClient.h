@@ -20,9 +20,10 @@ public:
 	RPCClient() {}
 	virtual ~RPCClient() {}
 
-	void send(std::string server, std::string port, std::string data);
-private:
+protected:
 	std::vector<std::pair<std::string, std::string>> _servers;
+
+	void sendRequest(std::string server, std::string port, std::string data);
 };
 
 } /* namespace RPC */

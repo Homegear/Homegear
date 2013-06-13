@@ -4,6 +4,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
+../RPC/Client.cpp \
 ../RPC/Device.cpp \
 ../RPC/Devices.cpp \
 ../RPC/LogicalParameter.cpp \
@@ -15,9 +16,12 @@ CPP_SRCS += \
 ../RPC/RPCMethods.cpp \
 ../RPC/RPCServer.cpp \
 ../RPC/RPCVariable.cpp \
-../RPC/Server.cpp 
+../RPC/Server.cpp \
+../RPC/XMLRPCDecoder.cpp \
+../RPC/XMLRPCEncoder.cpp 
 
 OBJS += \
+./RPC/Client.o \
 ./RPC/Device.o \
 ./RPC/Devices.o \
 ./RPC/LogicalParameter.o \
@@ -29,9 +33,12 @@ OBJS += \
 ./RPC/RPCMethods.o \
 ./RPC/RPCServer.o \
 ./RPC/RPCVariable.o \
-./RPC/Server.o 
+./RPC/Server.o \
+./RPC/XMLRPCDecoder.o \
+./RPC/XMLRPCEncoder.o 
 
 CPP_DEPS += \
+./RPC/Client.d \
 ./RPC/Device.d \
 ./RPC/Devices.d \
 ./RPC/LogicalParameter.d \
@@ -43,7 +50,9 @@ CPP_DEPS += \
 ./RPC/RPCMethods.d \
 ./RPC/RPCServer.d \
 ./RPC/RPCVariable.d \
-./RPC/Server.d 
+./RPC/Server.d \
+./RPC/XMLRPCDecoder.d \
+./RPC/XMLRPCEncoder.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

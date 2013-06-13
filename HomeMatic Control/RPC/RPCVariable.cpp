@@ -114,4 +114,31 @@ void RPCVariable::printStruct(std::shared_ptr<std::vector<std::shared_ptr<RPCVar
 	std::cout << indent << "}" << std::endl;
 }
 
+std::string RPCVariable::getTypeString(RPCVariableType type)
+{
+	switch(type)
+	{
+	case RPCVariableType::rpcArray:
+		return "array";
+	case RPCVariableType::rpcBase64:
+		return "base64";
+	case RPCVariableType::rpcBoolean:
+		return "boolean";
+	case RPCVariableType::rpcDate:
+		return "dateTime.iso8601";
+	case RPCVariableType::rpcFloat:
+		return "double";
+	case RPCVariableType::rpcInteger:
+		return "i4";
+	case RPCVariableType::rpcString:
+		return "string";
+	case RPCVariableType::rpcStruct:
+		return "struct";
+	case RPCVariableType::rpcVoid:
+		return "void";
+	case RPCVariableType::rpcVariant:
+		return "valuetype";
+	}
+	return "string";
+}
 } /* namespace XMLRPC */

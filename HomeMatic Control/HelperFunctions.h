@@ -45,9 +45,10 @@ public:
 	static int32_t getNumber(std::string &s)
 	{
 		int32_t xpos = s.find('x');
-		if(xpos == -1) return std::stoll(s, 0, 10);
-		else if(xpos == 1) return std::stoll(s, 0, 16);
-		else return 0;
+		int32_t number = 0;
+		if(xpos == -1) try { number = std::stoll(s, 0, 10); } catch(...) {}
+		else if(xpos == 1) try { number = std::stoll(s, 0, 16); } catch(...) {}
+		return number;
 	}
 
 	static bool isBigEndian()

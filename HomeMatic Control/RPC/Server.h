@@ -9,13 +9,13 @@ namespace RPC {
 
 class Server {
 public:
-	Server() {}
+	Server() { _server.reset(new RPCServer); }
 	virtual ~Server() {}
 
 	void registerMethods();
 	void start();
 protected:
-	RPCServer _server;
+	std::shared_ptr<RPCServer> _server;
 };
 
 } /* namespace RPC */

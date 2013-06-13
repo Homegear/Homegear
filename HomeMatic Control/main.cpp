@@ -52,10 +52,6 @@ int main()
 
     	signal(SIGSEGV, exceptionHandler);
 
-    	RPC::RPCClient c;
-    	c.test("www.google.de", "80");
-
-    	return 0;
         /*int row,col;
         WINDOW* mainWindow = initscr();
 

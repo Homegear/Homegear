@@ -18,6 +18,8 @@ enum class RPCVariableType
 	rpcFloat = 0x04,
 	rpcArray = 0x100,
 	rpcStruct = 0x101,
+	rpcDate = 0x10,
+	rpcBase64 = 0x11,
 	rpcVariant = 0x1111
 };
 
@@ -48,6 +50,7 @@ public:
 	virtual ~RPCVariable() {}
 	static std::shared_ptr<RPCVariable> createError(int32_t faultCode, std::string faultString);
 	void print();
+	static std::string getTypeString(RPCVariableType type);
 private:
 	void print(std::shared_ptr<RPCVariable>, std::string indent);
 	void printStruct(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> rpcStruct, std::string indent);

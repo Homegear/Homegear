@@ -5,7 +5,7 @@
 namespace RPC
 {
 
-void RPCClient::send(std::string server, std::string port, std::string data)
+void RPCClient::sendRequest(std::string server, std::string port, std::string data)
 {
 	try
 	{
@@ -54,7 +54,6 @@ void RPCClient::send(std::string server, std::string port, std::string data)
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(fileDescriptor, &readFileDescriptor);
 		char buffer[1024];
-		int32_t i = 0;
 		receivedBytes = select(fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 		switch(receivedBytes)
 		{
