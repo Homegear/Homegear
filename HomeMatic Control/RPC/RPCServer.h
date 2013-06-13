@@ -42,7 +42,6 @@ namespace RPC
 			void start();
 			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
-			void callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType);
 		protected:
 		private:
 			bool _stopServer = false;
@@ -55,7 +54,6 @@ namespace RPC
 			std::vector<int32_t> _fileDescriptors;
 			std::vector<std::thread> _readThreads;
 			std::mutex _sendMutex;
-			std::unordered_map<std::string, int32_t> _localClientFileDescriptors;
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;
 			RPCDecoder _rpcDecoder;
 			RPCEncoder _rpcEncoder;
@@ -68,11 +66,13 @@ namespace RPC
 			void mainThread();
 			void readClient(int32_t clientFileDescriptor);
 			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<RPCVariable> error, PacketType::Enum packetType);
-			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<char> data, uint32_t dataLength);
+			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<char> data, uint32_t dataLength, bool closeConnection);
 			void packetReceived(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
 			void analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
 			void analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
 			void removeClientFileDescriptor(int32_t clientFileDescriptor);
+			void callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType);
+			std::string getHttpResponseHeader(uint32_t contentLength);
 	};
 }
 #endif /* RPCSERVER_H_ */

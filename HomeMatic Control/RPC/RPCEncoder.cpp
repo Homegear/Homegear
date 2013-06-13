@@ -69,7 +69,7 @@ uint32_t RPCEncoder::calculateLength(std::shared_ptr<RPCVariable> variable)
 	}
 	else if(variable->type == RPCVariableType::rpcBoolean)
 	{
-		length = 8;
+		length = 5;
 	}
 	else if(variable->type == RPCVariableType::rpcString)
 	{

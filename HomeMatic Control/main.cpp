@@ -14,7 +14,6 @@
 #include "Database.h"
 #include "GD.h"
 #include "HelperFunctions.h"
-#include "RPC/RPCClient.h"
 
 void exceptionHandler(int32_t signal) {
   void *stackTrace[10];

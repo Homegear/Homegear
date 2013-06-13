@@ -111,7 +111,7 @@ std::shared_ptr<RPCVariable> RPCSystemMulticall::invoke(std::shared_ptr<std::vec
 			returns->arrayValue->push_back(RPCVariable::createError(-32602, "No method name provided."));
 			continue;
 		}
-		if((*i)->structValue->at(0)->name != "params" || (*i)->structValue->at(0)->type != RPCVariableType::rpcArray)
+		if((*i)->structValue->at(1)->name != "params" || (*i)->structValue->at(1)->type != RPCVariableType::rpcArray)
 		{
 			returns->arrayValue->push_back(RPCVariable::createError(-32602, "No parameters provided."));
 			continue;
@@ -231,7 +231,7 @@ std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std
 	if(pos != 10 || parameters->at(0)->stringValue.size() < 12)
 	{
 		if(GD::debugLevel >= 3) std::cout << "Warning: Wrong serial number format in setValue." << std::endl;
-		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+		return RPC::RPCVariable::createError(-2, "Wrong serial number format.");
 	}
 
 	std::string serialNumber = parameters->at(0)->stringValue.substr(0, 10);
@@ -241,7 +241,7 @@ std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std
 	if(!central)
 	{
 		if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method setValue. Please add a central device." << std::endl;
-		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
+		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
 	}
 	return GD::devices.getCentral()->setValue(serialNumber, channel, parameters->at(1)->stringValue, parameters->at(2));
 }

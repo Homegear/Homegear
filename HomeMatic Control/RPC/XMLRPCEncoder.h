@@ -1,10 +1,14 @@
 #ifndef XMLRPCENCODER_H_
 #define XMLRPCENCODER_H_
 
-#include <iostream>
 #include <memory>
 
+#include "../Exception.h"
 #include "RPCVariable.h"
+//#include "rapidxml.hpp"
+#include "rapidxml_print.hpp"
+
+using namespace rapidxml;
 
 namespace RPC {
 
@@ -14,7 +18,12 @@ public:
 	XMLRPCEncoder() {}
 	virtual ~XMLRPCEncoder() {}
 
-	uint32_t encodeResponse(std::shared_ptr<char>& packet, std::shared_ptr<RPCVariable> variable) { return 0; }
+	std::string encodeResponse(std::shared_ptr<RPCVariable> variable);
+	std::string encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+private:
+	void encodeVariable(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
+	void encodeStruct(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
+	void encodeArray(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
 };
 
 } /* namespace RPC */
