@@ -18,29 +18,18 @@
 
 namespace RPC
 {
-class RemoteRPCServer
-{
-public:
-	std::pair<std::string, std::string> address;
-	std::string id;
-};
-
 class RPCClient {
 public:
-	RPCClient() { _servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>()); }
+	RPCClient() {}
 	virtual ~RPCClient() {}
 
 	void invokeBroadcast(std::string server, std::string port, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
 	std::shared_ptr<RPCVariable> invoke(std::string server, std::string port, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
 
-	void addServer(std::pair<std::string, std::string> address, std::string id);
-	void removeServer(std::pair<std::string, std::string> address);
-	std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> getServers() { return _servers; }
 	void reset();
 protected:
 	XMLRPCDecoder _xmlRpcDecoder;
 	XMLRPCEncoder _xmlRpcEncoder;
-	std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> _servers;
 
 	std::string sendRequest(std::string server, std::string port, std::string data);
 };

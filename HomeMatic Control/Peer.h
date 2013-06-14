@@ -71,7 +71,7 @@ class Peer
 
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
-        std::vector<std::shared_ptr<RPC::RPCVariable>> getDeviceDescription();
+        std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
         std::shared_ptr<RPC::RPCVariable> getParamsetDescription(uint32_t channel, RPC::ParameterSet::Type::Enum type);
         std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);

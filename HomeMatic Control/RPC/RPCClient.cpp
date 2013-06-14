@@ -39,11 +39,6 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::string server, std::string p
 	return _xmlRpcDecoder.decodeResponse(result);
 }
 
-void RPCClient::reset()
-{
-	_servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>());
-}
-
 std::string RPCClient::sendRequest(std::string server, std::string port, std::string data)
 {
 	try
@@ -242,29 +237,4 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
     }
     return "";
 }
-
-void RPCClient::addServer(std::pair<std::string, std::string> address, std::string id)
-{
-	for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
-	{
-		if((*i)->address == address) return;
-	}
-	std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
-	server->address = address;
-	server->id = id;
-	_servers->push_back(server);
-}
-
-void RPCClient::removeServer(std::pair<std::string, std::string> server)
-{
-	for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
-	{
-		if((*i)->address == server)
-		{
-			_servers->erase(i);
-			return;
-		}
-	}
-}
-
 } /* namespace RPC */

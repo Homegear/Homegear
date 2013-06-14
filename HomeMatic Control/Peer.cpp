@@ -281,9 +281,9 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
     }
 }
 
-std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
+std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> Peer::getDeviceDescription()
 {
-	std::vector<std::shared_ptr<RPC::RPCVariable>> descriptions;
+	std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 	std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
 	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", serialNumber)));
@@ -329,7 +329,7 @@ std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
 
 	description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
 
-	descriptions.push_back(description);
+	descriptions->push_back(description);
 
 	for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 	{
@@ -422,7 +422,7 @@ std::vector<std::shared_ptr<RPC::RPCVariable>> Peer::getDeviceDescription()
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
 
-		descriptions.push_back(description);
+		descriptions->push_back(description);
 	}
 
 	return descriptions;

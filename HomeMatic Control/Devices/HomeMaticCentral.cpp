@@ -548,6 +548,9 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 					_peers[queue->peer->address] = queue->peer;
 					if(queue->peer->serialNumber.size() == 10) _peersBySerial[queue->peer->serialNumber] = queue->peer;
 					std::cout << "Added device 0x" << std::hex << queue->peer->address << std::dec << "." << std::endl;
+					std::shared_ptr<RPC::RPCVariable> deviceDescriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+					deviceDescriptions->arrayValue = queue->peer->getDeviceDescription();
+					GD::rpcClient.broadcastNewDevices(deviceDescriptions);
 				}
 			}
 		}
@@ -557,8 +560,16 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 			{
 				if(_peers.find(packet->senderAddress()) != _peers.end())
 				{
-					if(_peersBySerial.find(_peers[packet->senderAddress()]->serialNumber) != _peersBySerial.end()) _peersBySerial.erase(_peers[packet->senderAddress()]->serialNumber);
-					_peers.erase(_peers.find(packet->senderAddress()));
+					std::shared_ptr<Peer> peer(_peers[packet->senderAddress()]);
+					std::shared_ptr<RPC::RPCVariable> deviceAddresses(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+					deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->serialNumber)));
+					for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+					{
+						deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->serialNumber + ":" + std::to_string(i->first))));
+					}
+					GD::rpcClient.broadcastDeleteDevices(deviceAddresses);
+					if(_peersBySerial.find(peer->serialNumber) != _peersBySerial.end()) _peersBySerial.erase(peer->serialNumber);
+					_peers.erase(packet->senderAddress());
 					std::cout << "Removed device 0x" << std::hex << packet->senderAddress() << std::dec << std::endl;
 				}
 			}
@@ -581,13 +592,20 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices()
 {
+	return listDevices(std::shared_ptr<std::map<std::string, int32_t>>());
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<std::map<std::string, int32_t>> knownDevices)
+{
 	try
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
-			std::vector<std::shared_ptr<RPC::RPCVariable>> descriptions = i->second->getDeviceDescription();
-			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions.begin(); j != descriptions.end(); ++j)
+			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = i->second->getDeviceDescription();
+			if(!descriptions) continue;
+			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{
 				array->arrayValue->push_back(*j);
 			}

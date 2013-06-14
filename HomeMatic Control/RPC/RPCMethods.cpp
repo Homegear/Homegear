@@ -197,6 +197,8 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 	else
 	{
 		GD::rpcClient.addServer(server, parameters->at(1)->stringValue);
+		GD::rpcClient.listDevices(server);
+		GD::rpcClient.sendUnknownDevices(server);
 	}
 
 	return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
