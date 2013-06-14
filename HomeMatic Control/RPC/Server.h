@@ -14,6 +14,7 @@ public:
 
 	void registerMethods();
 	void start();
+	void stop();
 protected:
 	std::shared_ptr<RPCServer> _server;
 };

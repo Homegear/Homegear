@@ -104,7 +104,7 @@ public:
 	ParameterConversion conversion;
 	ParameterDescription description;
 
-	Parameter() { logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameter()); physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter()); }
+	Parameter() { logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger()); physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter()); }
 	Parameter(xml_node<>* node, bool checkForID = false);
 	virtual ~Parameter() {}
 	bool checkCondition(int64_t value);

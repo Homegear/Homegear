@@ -2,10 +2,10 @@
 #define XMLRPCENCODER_H_
 
 #include <memory>
+#include <list>
 
 #include "../Exception.h"
 #include "RPCVariable.h"
-//#include "rapidxml.hpp"
 #include "rapidxml_print.hpp"
 
 using namespace rapidxml;
@@ -20,6 +20,7 @@ public:
 
 	std::string encodeResponse(std::shared_ptr<RPCVariable> variable);
 	std::string encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::string encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
 private:
 	void encodeVariable(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
 	void encodeStruct(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);

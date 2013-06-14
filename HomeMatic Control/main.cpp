@@ -219,6 +219,10 @@ int main()
             }
         }
 
+        //Stop rpc server and client before saving
+        GD::rpcServer.stop();
+        GD::rpcClient.reset();
+        GD::cul.stopListening();
         GD::devices.save();
         return 0;
     }

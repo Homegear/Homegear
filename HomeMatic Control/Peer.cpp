@@ -201,6 +201,9 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		if(range.first == rpcDevice->framesByMessageType.end()) return;
 		std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator i = range.first;
 		bool sendOK = false;
+		std::shared_ptr<std::vector<std::string>> valueKeys;
+		std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values;
+		int32_t parameterSetChannel = -1;
 		do
 		{
 			std::shared_ptr<RPC::DeviceFrame> frame(i->second);
@@ -224,10 +227,22 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					if(channel > -1 && (*k)->parentParameterSet->channel != channel) continue;
 					if((*k)->physicalParameter->valueID != j->param) continue;
 					//channel often is -1
-					valuesCentral[(*k)->parentParameterSet->channel][(*k)->id].value = value;
+					if(parameterSetChannel < 0) parameterSetChannel = (*k)->parentParameterSet->channel;
+					else if(parameterSetChannel != (*k)->parentParameterSet->channel)
+					{
+						if(GD::debugLevel >= 2) std::cout << "Error: Parameters from device device 0x" << std::hex << address << std::dec << " with serial number " << serialNumber << " have multiple channels. That is not allowed." << std::endl;
+						continue;
+					}
+					valuesCentral[parameterSetChannel][(*k)->id].value = value;
 					if(GD::debugLevel >= 4) std::cout << "Info: " << (*k)->id << " of device 0x" << std::hex << address << std::dec << " with serial number " << serialNumber << " was set to " << value << "." << std::endl;
+					if(!valueKeys)
+					{
+						valueKeys.reset(new std::vector<std::string>());
+						values.reset(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
+					}
+					valueKeys->push_back((*k)->id);
+					values->push_back((*k)->convertFromPacket(value));
 					sendOK = true;
-					//TODO Send rpc event
 				}
 			}
 		} while(++i != range.second && i != rpcDevice->framesByMessageType.end());
@@ -246,6 +261,10 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 
 			GD::devices.getCentral()->enqueuePackets(address, queue, true);
+		}
+		if(sendOK && parameterSetChannel > -1)
+		{
+			if(parameterSetChannel > -1) GD::rpcClient.broadcastEvent(serialNumber + ":" + std::to_string(parameterSetChannel), valueKeys, values);
 		}
 	}
 	catch(const std::exception& ex)
@@ -423,7 +442,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 		description->name = (*i)->id;
 		if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeBoolean)
 		{
-			std::shared_ptr<RPC::LogicalParameterBoolean> parameter(dynamic_cast<RPC::LogicalParameterBoolean*>((*i)->logicalParameter.get()));
+			RPC::LogicalParameterBoolean* parameter = (RPC::LogicalParameterBoolean*)(*i)->logicalParameter.get();
 
 			if(!(*i)->control.empty())
 			{
@@ -480,7 +499,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 		}
 		else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeString)
 		{
-			std::shared_ptr<RPC::LogicalParameterString> parameter(dynamic_cast<RPC::LogicalParameterString*>((*i)->logicalParameter.get()));
+			RPC::LogicalParameterString* parameter = (RPC::LogicalParameterString*)(*i)->logicalParameter.get();
 
 			if(!(*i)->control.empty())
 			{
@@ -537,7 +556,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 		}
 		else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeAction)
 		{
-			std::shared_ptr<RPC::LogicalParameterAction> parameter(dynamic_cast<RPC::LogicalParameterAction*>((*i)->logicalParameter.get()));
+			RPC::LogicalParameterAction* parameter = (RPC::LogicalParameterAction*)(*i)->logicalParameter.get();
 
 			if(!(*i)->control.empty())
 			{
@@ -594,7 +613,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 		}
 		else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeInteger)
 		{
-			std::shared_ptr<RPC::LogicalParameterInteger> parameter(dynamic_cast<RPC::LogicalParameterInteger*>((*i)->logicalParameter.get()));
+			RPC::LogicalParameterInteger* parameter = (RPC::LogicalParameterInteger*)(*i)->logicalParameter.get();
 
 			if(!(*i)->control.empty())
 			{
@@ -665,7 +684,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 		}
 		else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeEnum)
 		{
-			std::shared_ptr<RPC::LogicalParameterEnum> parameter(dynamic_cast<RPC::LogicalParameterEnum*>((*i)->logicalParameter.get()));
+			RPC::LogicalParameterEnum* parameter = (RPC::LogicalParameterEnum*)(*i)->logicalParameter.get();
 
 			if(!(*i)->control.empty())
 			{
@@ -730,7 +749,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 		}
 		else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeFloat)
 		{
-			std::shared_ptr<RPC::LogicalParameterFloat> parameter(dynamic_cast<RPC::LogicalParameterFloat*>((*i)->logicalParameter.get()));
+			RPC::LogicalParameterFloat* parameter = (RPC::LogicalParameterFloat*)(*i)->logicalParameter.get();
 
 			if(!(*i)->control.empty())
 			{

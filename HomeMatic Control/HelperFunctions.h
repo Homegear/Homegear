@@ -42,6 +42,8 @@ public:
 		return s;
 	}
 
+	static std::pair<std::string, std::string> split(std::string string, char delimiter);
+
 	static int32_t getNumber(std::string &s)
 	{
 		int32_t xpos = s.find('x');

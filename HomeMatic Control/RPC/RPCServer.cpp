@@ -11,12 +11,7 @@ RPCServer::RPCServer()
 
 RPCServer::~RPCServer()
 {
-	_stopServer = true;
-	if(_mainThread.joinable()) _mainThread.join();
-	for(std::vector<std::thread>::iterator i = _readThreads.begin(); i != _readThreads.end(); ++i)
-	{
-		if(i->joinable()) i->join();
-	}
+	stop();
 	if(GD::debugLevel >= 4) std::cout << "XML RPC Server successfully shut down." << std::endl;
 }
 
@@ -25,6 +20,16 @@ void RPCServer::start()
 
 	_mainThread = std::thread(&RPCServer::mainThread, this);
 	_mainThread.detach();
+}
+
+void RPCServer::stop()
+{
+	_stopServer = true;
+	if(_mainThread.joinable()) _mainThread.join();
+	for(std::vector<std::thread>::iterator i = _readThreads.begin(); i != _readThreads.end(); ++i)
+	{
+		if(i->joinable()) i->join();
+	}
 }
 
 void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method)
@@ -146,6 +151,11 @@ void RPCServer::callMethod(int32_t clientFileDescriptor, std::string methodName,
 	try
 	{
 		std::shared_ptr<RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters);
+		if(GD::debugLevel >= 5)
+		{
+			std::cout << "Response: " << std::endl;
+			ret->print();
+		}
 		sendRPCResponseToClient(clientFileDescriptor, ret, responseType);
 	}
 	catch(const std::exception& ex)
@@ -176,52 +186,14 @@ std::string RPCServer::getHttpResponseHeader(uint32_t contentLength)
 void RPCServer::analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType)
 {
 	std::shared_ptr<RPCVariable> response;
-	if(packetType == PacketType::Enum::binaryResponse) _rpcDecoder.decodeResponse(packet, packetLength);
-	else if(packetType == PacketType::Enum::xmlResponse) _xmlRpcDecoder.decodeResponse(packet, packetLength);
+	if(packetType == PacketType::Enum::binaryResponse) response = _rpcDecoder.decodeResponse(packet, packetLength);
+	else if(packetType == PacketType::Enum::xmlResponse)
+	{
+		std::string data(packet.get(), packetLength);
+		response = _xmlRpcDecoder.decodeResponse(data);
+	}
 	if(!response) return;
 	if(GD::debugLevel >= 7) response->print();
-}
-
-std::pair<std::string, std::string> RPCServer::getAddressAndPort(std::string address)
-{
-	try
-	{
-		if(address.size() < 8) return std::pair<std::string, std::string>();
-		if(address.substr(0, 7) == "http://")
-		{
-			address = address.substr(7);
-		}
-		if(address.substr(0, 8) == "https://")
-		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Cannot connect to RPC server, because SSL is not supported." << std::endl;
-			return std::pair<std::string, std::string>();
-		}
-		uint32_t pos = address.find(':');
-		if(pos == std::string::npos || pos + 1 >= address.size())
-		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Cannot connect to RPC server, because no port was specified." << std::endl;
-			return std::pair<std::string, std::string>();
-		}
-		if(pos < 7)
-		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Cannot connect to RPC server, because no address was specified." << std::endl;
-			return std::pair<std::string, std::string>();
-		}
-		return std::pair<std::string, std::string>(address.substr(0, pos), address.substr(pos + 1));
-	}
-    catch(const std::exception& ex)
-    {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(const Exception& ex)
-    {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(...)
-    {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
-    }
-    return std::pair<std::string, std::string>();
 }
 
 void RPCServer::packetReceived(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType)

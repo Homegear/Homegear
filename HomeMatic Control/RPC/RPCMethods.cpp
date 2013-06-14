@@ -1,6 +1,7 @@
 #include "RPCMethods.h"
 #include "Devices.h"
 #include "../GD.h"
+#include "../HelperFunctions.h"
 
 namespace RPC
 {
@@ -182,13 +183,20 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 	ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
 	if(error != ParameterError::Enum::noError) return getError(error);
 
+	std::pair<std::string, std::string> server = HelperFunctions::split(parameters->at(0)->stringValue, ':');
+	if(server.first.empty() || server.second.empty()) return RPCVariable::createError(-32602, "Server address or port is empty.");
+	if(server.first.size() < 5) return RPCVariable::createError(-32602, "Server address too short.");
+	if(server.first.substr(0, 5) == "https") return RPCVariable::createError(-32602, "https is currently not supported.");
+	server.second = std::to_string(HelperFunctions::getNumber(server.second));
+	if(server.second == "0" || server.second.empty()) return RPCVariable::createError(-32602, "Port number is invalid.");
+
 	if(parameters->at(1)->stringValue.empty())
 	{
-		//Remove server
+		GD::rpcClient.removeServer(server);
 	}
 	else
 	{
-		//Add server
+		GD::rpcClient.addServer(server, parameters->at(1)->stringValue);
 	}
 
 	return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));

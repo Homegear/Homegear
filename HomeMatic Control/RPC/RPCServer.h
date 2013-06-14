@@ -40,6 +40,7 @@ namespace RPC
 			virtual ~RPCServer();
 
 			void start();
+			void stop();
 			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
 		protected:
@@ -60,7 +61,6 @@ namespace RPC
 			XMLRPCDecoder _xmlRpcDecoder;
 			XMLRPCEncoder _xmlRpcEncoder;
 
-			std::pair<std::string, std::string> getAddressAndPort(std::string address);
 			void getFileDescriptor();
 			int32_t getClientFileDescriptor();
 			void mainThread();

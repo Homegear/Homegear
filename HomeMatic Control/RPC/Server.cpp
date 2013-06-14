@@ -23,4 +23,9 @@ void Server::start()
 	_server->start();
 }
 
+void Server::stop()
+{
+	_server->stop();
+}
+
 } /* namespace RPC */

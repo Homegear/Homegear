@@ -12,6 +12,7 @@ class HomeMaticDevices;
 #include "Cul.h"
 #include "HomeMaticDevices.h"
 #include "RPC/Server.h"
+#include "RPC/Client.h"
 #include "RPC/Devices.h"
 
 class GD {
@@ -20,6 +21,7 @@ public:
 	static std::string executablePath;
 	static HomeMaticDevices devices;
 	static RPC::Server rpcServer;
+	static RPC::Client rpcClient;
 	static RPC::Devices rpcDevices;
 	static Database db;
 	static Cul cul;

@@ -18,7 +18,7 @@ public:
 	virtual ~XMLRPCDecoder() {}
 
 	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::shared_ptr<char> packet, uint32_t packetLength, std::string* methodName);
-	std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<char> packet, uint32_t packetLength, uint32_t offset = 0);
+	std::shared_ptr<RPCVariable> decodeResponse(std::string& packet);
 private:
 	std::shared_ptr<RPCVariable> decodeParameter(xml_node<>* valueNode);
 	std::shared_ptr<RPCVariable> decodeArray(xml_node<>* dataNode);

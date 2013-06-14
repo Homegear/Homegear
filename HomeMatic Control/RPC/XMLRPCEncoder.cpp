@@ -2,6 +2,46 @@
 
 namespace RPC
 {
+std::string XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
+{
+	xml_document<> doc;
+	try
+	{
+		xml_node<> *node = doc.allocate_node(node_element, "methodCall");
+		doc.append_node(node);
+		xml_node<> *nameNode = doc.allocate_node(node_element, "methodName", methodName.c_str());
+		node->append_node(nameNode);
+		xml_node<> *paramsNode = doc.allocate_node(node_element, "params");
+		node->append_node(paramsNode);
+
+		for(std::list<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+		{
+			xml_node<> *paramNode = doc.allocate_node(node_element, "param");
+			paramsNode->append_node(paramNode);
+			encodeVariable(&doc, paramNode, *i);
+		}
+
+		std::string xml("<?xml version=\"1.0\"?>\n");
+		print(std::back_inserter(xml), doc, 1);
+		doc.clear();
+		return xml;
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    doc.clear();
+    return "";
+}
+
 std::string XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	xml_document<> doc;
@@ -21,7 +61,7 @@ std::string XMLRPCEncoder::encodeRequest(std::string methodName, std::shared_ptr
 			encodeVariable(&doc, paramNode, *i);
 		}
 
-		std::string xml;
+		std::string xml("<?xml version=\"1.0\"?>\n");
 		print(std::back_inserter(xml), doc, 1);
 		doc.clear();
 		return xml;
@@ -110,8 +150,10 @@ void XMLRPCEncoder::encodeVariable(xml_document<>* doc, xml_node<>* node, std::s
 	else if(variable->type == RPCVariableType::rpcString)
 	{
 		//Don't allocate string. It is unnecessary, because variable->stringvalue exists until the encoding is done.
-		xml_node<> *valueNode2 = doc->allocate_node(node_element, "string", variable->stringValue.c_str());
-		valueNode->append_node(valueNode2);
+		//xml_node<> *valueNode2 = doc->allocate_node(node_element, "string", variable->stringValue.c_str());
+		//valueNode->append_node(valueNode2);
+		//Some servers/clients don't understand strings in string tags - don't ask me why, so just print the value
+		valueNode->value(variable->stringValue.c_str());
 	}
 	else if(variable->type == RPCVariableType::rpcStruct)
 	{

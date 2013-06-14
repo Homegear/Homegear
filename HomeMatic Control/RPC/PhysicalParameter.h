@@ -24,7 +24,7 @@ public:
 	{
 		enum Enum { none, command, internal, config };
 	};
-	Type::Enum type;
+	Type::Enum type = Type::Enum::none;
 	Interface::Enum interface = Interface::none;
 	uint32_t list = 9999;
 	double index = 0;

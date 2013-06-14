@@ -67,12 +67,12 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decode
     return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Not well formed.")});
 }
 
-std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::shared_ptr<char> packet, uint32_t packetLength, uint32_t offset)
+std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::string& packet)
 {
 	xml_document<> doc;
 	try
 	{
-		doc.parse<0>(packet.get());
+		doc.parse<0>((char*)packet.c_str());
 		xml_node<>* node = doc.first_node();
 		if(node == nullptr || std::string(doc.first_node()->name()) != "methodResponse")
 		{
@@ -153,7 +153,7 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNod
 	{
 		return decodeStruct(subNode);
 	}
-	return std::shared_ptr<RPCVariable>(new RPCVariable(value));
+	return std::shared_ptr<RPCVariable>(new RPCVariable(value)); //if no type is specified return string
 }
 
 std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeStruct(xml_node<>* structNode)

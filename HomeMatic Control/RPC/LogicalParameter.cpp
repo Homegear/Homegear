@@ -29,7 +29,9 @@ std::shared_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
 			else if(attributeValue == "boolean") parameter.reset(new LogicalParameterBoolean(node));
 			else if(attributeValue == "string") parameter.reset(new LogicalParameterString(node));
 			else if(attributeValue == "action") parameter.reset(new LogicalParameterAction(node));
+			else  parameter.reset(new LogicalParameterInteger(node));
 		}
+		else parameter.reset(new LogicalParameterInteger(node));
 	}
     catch(const std::exception& ex)
     {
