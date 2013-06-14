@@ -409,6 +409,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 			{
 				if(packetLength + uBytesRead == dataSize + 1)
 				{
+					//For XML RPC packets the last byte is "\n", which is not counted in "Content-Length"
 					uBytesRead -= 1;
 				}
 				if(packetLength + uBytesRead > dataSize)
