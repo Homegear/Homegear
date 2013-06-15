@@ -13,7 +13,11 @@ HomeMaticCentral::HomeMaticCentral(std::string serialNumber, int32_t address) : 
 
 HomeMaticCentral::~HomeMaticCentral()
 {
-
+	if(_pairingModeThread.joinable())
+	{
+		_stopPairingModeThread = true;
+		_pairingModeThread.join();
+	}
 }
 
 void HomeMaticCentral::init()
@@ -627,6 +631,27 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
     return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable());
 }
 
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getInstallMode()
+{
+	try
+	{
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_timeLeftInPairingMode));
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(0));
+}
+
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type)
 {
 	try
@@ -688,4 +713,66 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setValue(std::string serialN
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
     return RPC::RPCVariable::createError(-2, "unknown device");
+}
+
+void HomeMaticCentral::pairingModeTimer()
+{
+	try
+	{
+		_pairing = true;
+		std::cout << "Pairing mode enabled." << std::endl;
+		_timeLeftInPairingMode = 60;
+		int64_t startTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		int64_t timePassed = 0;
+		while(timePassed < 60000 && !_stopPairingModeThread)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - startTime;
+			_timeLeftInPairingMode = 60 - (timePassed / 1000);
+		}
+		_timeLeftInPairingMode = 0;
+		_pairing = false;
+		std::cout << "Pairing mode disabled." << std::endl;
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool on)
+{
+	try
+	{
+		_stopPairingModeThread = true;
+		if(_pairingModeThread.joinable()) _pairingModeThread.join();
+		_stopPairingModeThread = false;
+		_timeLeftInPairingMode = 0;
+		if(on)
+		{
+			_pairingModeThread = std::thread(&HomeMaticCentral::pairingModeTimer, this);
+		}
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(0));
 }

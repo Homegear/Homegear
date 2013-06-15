@@ -33,15 +33,22 @@ public:
 	void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleConfigParamResponse(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 
+	std::shared_ptr<RPC::RPCVariable> getInstallMode();
+	std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
+	std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
 	std::shared_ptr<RPC::RPCVariable> listDevices();
 	std::shared_ptr<RPC::RPCVariable> listDevices(std::shared_ptr<std::map<std::string, int32_t>> knownDevices);
-	std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
+	std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on);
 	std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
-	std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
 protected:
 	std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
 private:
 	std::shared_ptr<Peer> _currentPeer = nullptr;
+	uint32_t _timeLeftInPairingMode = 0;
+	void pairingModeTimer();
+	bool _stopPairingModeThread = false;
+	std::thread _pairingModeThread;
+	std::map<std::string, std::shared_ptr<RPC::RPCVariable>> _metadata;
 };
 
 #endif /* HOMEMATICCENTRAL_H_ */

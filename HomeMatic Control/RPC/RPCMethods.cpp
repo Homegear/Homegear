@@ -128,6 +128,27 @@ std::shared_ptr<RPCVariable> RPCSystemMulticall::invoke(std::shared_ptr<std::vec
 	return returns;
 }
 
+std::shared_ptr<RPCVariable> RPCGetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+
+	std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+	if(!central)
+	{
+		if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getInstallMode. Please add a central device." << std::endl;
+		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
+	}
+	return central->getInstallMode();
+}
+
+std::shared_ptr<RPCVariable> RPCGetKeyMissmatchDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcBoolean }));
+	if(error != ParameterError::Enum::noError) return getError(error);
+	//TODO Program function when AES is supported.
+	return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
+}
+
 std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
@@ -204,6 +225,22 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 	return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
 }
 
+std::shared_ptr<RPCVariable> RPCListBidcosInterfaces::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+
+	std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+	if(!central) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
+	std::shared_ptr<RPCVariable> array(new RPCVariable(RPCVariableType::rpcArray));
+	std::shared_ptr<RPCVariable> interface(new RPCVariable(RPCVariableType::rpcStruct));
+	array->arrayValue->push_back(interface);
+	interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("ADDRESS", central->serialNumber())));
+	interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("DESCRIPTION", std::string("Homegear default interface"))));
+	interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("CONNECTED", true)));
+	interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("DEFAULT", true)));
+	return array;
+}
+
 std::shared_ptr<RPCVariable> RPCListDevices::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	std::string interfaceID;
@@ -231,6 +268,20 @@ std::shared_ptr<RPCVariable> RPCLogLevel::invoke(std::shared_ptr<std::vector<std
 		GD::rpcLogLevel = parameters->at(0)->integerValue;
 	}
 	return std::shared_ptr<RPCVariable>(new RPCVariable(GD::rpcLogLevel));
+}
+
+std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcBoolean }));
+	if(error != ParameterError::Enum::noError) return getError(error);
+
+	std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+	if(!central)
+	{
+		if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method setInstallMode. Please add a central device." << std::endl;
+		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
+	}
+	return central->setInstallMode(parameters->at(0)->booleanValue);
 }
 
 std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)

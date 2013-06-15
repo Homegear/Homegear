@@ -77,6 +77,46 @@ private:
 	std::shared_ptr<RPCServer> _server;
 };
 
+class RPCGetAllMetadata : public RPCMethod
+{
+public:
+	RPCGetAllMetadata()
+	{
+		addSignature(RPCVariableType::rpcVariant, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCGetInstallMode : public RPCMethod
+{
+public:
+	RPCGetInstallMode()
+	{
+		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>());
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCGetKeyMissmatchDevice : public RPCMethod
+{
+public:
+	RPCGetKeyMissmatchDevice()
+	{
+		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcBoolean});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCGetMetadata : public RPCMethod
+{
+public:
+	RPCGetMetadata()
+	{
+		addSignature(RPCVariableType::rpcVariant, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCGetParamsetDescription : public RPCMethod
 {
 public:
@@ -107,6 +147,16 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
+class RPCListBidcosInterfaces : public RPCMethod
+{
+public:
+	RPCListBidcosInterfaces()
+	{
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCListDevices : public RPCMethod
 {
 public:
@@ -124,6 +174,26 @@ public:
 	{
 		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcInteger});
 		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>());
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCSetMetadata : public RPCMethod
+{
+public:
+	RPCSetMetadata()
+	{
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcVariant});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCSetInstallMode : public RPCMethod
+{
+public:
+	RPCSetInstallMode()
+	{
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcBoolean});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
