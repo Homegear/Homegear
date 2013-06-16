@@ -342,7 +342,8 @@ std::shared_ptr<RPCVariable> RPCSetMetadata::invoke(std::shared_ptr<std::vector<
 	if(error != ParameterError::Enum::noError) return getError(error);
 	if(parameters->at(0)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "objectID has more than 250 characters.");
 	if(parameters->at(1)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
-	if(parameters->at(2)->type == RPC::RPCVariableType::rpcString &&  parameters->at(2)->stringValue.size() > 1000) return RPC::RPCVariable::createError(-32602, "Data has more than 1000 characters.");
+	//Don't check for type here, so base64, string and future data types that use stringValue are handled
+	if(parameters->at(2)->stringValue.size() > 1000) return RPC::RPCVariable::createError(-32602, "Data has more than 1000 characters.");
 	if(parameters->at(2)->type != RPC::RPCVariableType::rpcBase64 && parameters->at(2)->type != RPC::RPCVariableType::rpcString && parameters->at(2)->type != RPC::RPCVariableType::rpcInteger && parameters->at(2)->type != RPC::RPCVariableType::rpcFloat && parameters->at(2)->type != RPC::RPCVariableType::rpcBoolean) return RPC::RPCVariable::createError(-32602, "Type " + RPC::RPCVariable::getTypeString(parameters->at(2)->type) + " is currently not supported.");
 
 	DataTable rows = GD::db.executeCommand("SELECT COUNT(*) FROM metadata");
