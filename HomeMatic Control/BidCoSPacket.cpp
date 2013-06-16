@@ -180,7 +180,7 @@ void BidCoSPacket::setPosition(double index, double size, int64_t value)
 	}
 	index -= 9;
 	double byteIndex = std::floor(index);
-	if(byteIndex != index)
+	if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
 	{
 		int32_t intByteIndex = byteIndex;
 		if(size > 1)
@@ -232,7 +232,7 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 	index -= 9;
 	double byteIndex = std::floor(index);
 	int64_t result = 0;
-	if(byteIndex != index)
+	if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
 	{
 		if(size > 1)
 		{

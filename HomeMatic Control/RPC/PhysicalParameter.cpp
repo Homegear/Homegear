@@ -1,5 +1,6 @@
 #include "PhysicalParameter.h"
 #include "../GD.h"
+#include "../HelperFunctions.h"
 
 namespace RPC {
 
@@ -16,15 +17,17 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		else if(attributeName == "interface")
 		{
 			if(attributeValue == "command") interface = Interface::Enum::command;
+			else if(attributeValue == "central_command") interface = Interface::Enum::centralCommand;
 			else if(attributeValue == "internal") interface = Interface::Enum::internal;
 			else if(attributeValue == "config") interface = Interface::Enum::config;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown interface for \"physical\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "value_id") valueID = attributeValue;
 		else if(attributeName == "no_init" && attributeValue == "true") noInit = true;
-		else if(attributeName == "list") list = std::stoll(attributeValue);
-		else if(attributeName == "index") index = std::stod(attributeValue);
-		else if(attributeName == "size") size = std::stod(attributeValue);
+		else if(attributeName == "list") list = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "index") index = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "size") size = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "counter") counter = attributeValue;
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"physical\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* physicalNode = node->first_node(); physicalNode; physicalNode = physicalNode->next_sibling())

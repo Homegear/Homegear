@@ -56,6 +56,7 @@ class Peer
         std::unordered_map<int32_t, int32_t> config;
         std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
         std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> valuesCentral;
+        std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> linksCentral;
         std::shared_ptr<RPC::Device> rpcDevice;
         std::unordered_map<int32_t, std::vector<BasicPeer>> peers;
         BasicPeer team;
@@ -68,11 +69,15 @@ class Peer
         std::string serialize();
         void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config);
         void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
+        void deleteFromDatabase(int32_t parentAddress);
 
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
         std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
+        std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);
         std::shared_ptr<RPC::RPCVariable> getParamsetDescription(uint32_t channel, RPC::ParameterSet::Type::Enum type);
+        std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type);
+        std::shared_ptr<RPC::RPCVariable> getParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type);
         std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:

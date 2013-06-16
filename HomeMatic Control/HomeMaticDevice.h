@@ -40,7 +40,6 @@ class HomeMaticDevice
         virtual ~HomeMaticDevice();
         virtual void packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
-        virtual void deletePeerFromDatabase(int32_t address);
         virtual void deletePeersFromDatabase();
         virtual void loadPeersFromDatabase();
         virtual void savePeersToDatabase();

@@ -284,6 +284,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		}
 		else if(attributeName == "ui_flags")
 		{
+			uiFlags = UIFlags::Enum::none; //Remove visible
 			std::stringstream stream(attributeValue);
 			std::string element;
 			while(std::getline(stream, element, ','))
@@ -351,6 +352,23 @@ bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
     return false;
 }
 
+bool DeviceType::matches(std::string typeID)
+{
+	try
+	{
+		if(id == typeID) return true;
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Exception: " << ex.what() << std::endl;
+    }
+    return false;
+}
+
 bool DeviceType::matches(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
@@ -397,11 +415,13 @@ ParameterSet::ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode)
 	init(parameterSetNode);
 }
 
-std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(int32_t startIndex, int32_t endIndex)
+std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(int32_t startIndex, int32_t endIndex, int32_t list)
 {
 	std::vector<std::shared_ptr<Parameter>> filteredParameters;
+	if(list < 0) return filteredParameters;
 	for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
+		if((*i)->physicalParameter->list != (unsigned)list) continue;
 		if((*i)->physicalParameter->index >= startIndex && std::floor((*i)->physicalParameter->index) <= endIndex) filteredParameters.push_back(*i);
 	}
 	return filteredParameters;
@@ -433,6 +453,15 @@ std::string ParameterSet::typeString()
 	return "";
 }
 
+ParameterSet::Type::Enum ParameterSet::typeFromString(std::string type)
+{
+	HelperFunctions::toLower(HelperFunctions::trim(type));
+	if(type == "master") return Type::Enum::master;
+	else if(type == "values") return Type::Enum::values;
+	else if(type == "link") return Type::Enum::link;
+	return Type::Enum::none;
+}
+
 std::shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
 {
 	for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
@@ -452,11 +481,8 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		else if(attributeName == "type")
 		{
 			std::stringstream stream(attributeValue);
-			HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
-			if(attributeValue == "master") type = Type::Enum::master;
-			else if(attributeValue == "values") type = Type::Enum::values;
-			else if(attributeValue == "link") type = Type::Enum::link;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown parameter set type: " << attributeValue << std::endl;
+			type = typeFromString(attributeValue);
+			if(GD::debugLevel >= 3 && type == Type::Enum::none) std::cout << "Warning: Unknown parameter set type: " << attributeValue << std::endl;
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
 	}
@@ -504,7 +530,7 @@ EnforceLink::EnforceLink(xml_node<>* node)
 	}
 }
 
-DeviceChannel::DeviceChannel(xml_node<>* node)
+DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -526,6 +552,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node)
 		}
 		else if(attributeName == "class") channelClass = attributeValue;
 		else if(attributeName == "type") type = attributeValue;
+		else if(attributeName == "hidden") { if(attributeValue == "true") hidden = true; }
 		else if(attributeName == "count") count = std::stoll(attributeValue);
 		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
@@ -567,7 +594,7 @@ Device::Device(std::string xmlFilename) : Device()
 
 	if(!channels[0]) channels[0] = std::shared_ptr<DeviceChannel>(new DeviceChannel());
 	if(!channels[0]->parameterSets[ParameterSet::Type::Enum::master]) channels[0]->parameterSets[ParameterSet::Type::Enum::master] = std::shared_ptr<ParameterSet>(new ParameterSet());
-	if(parameterSet->type == ParameterSet::Type::Enum::master)
+	if(parameterSet->type == ParameterSet::Type::Enum::master && !parameterSet->parameters.empty())
 	{
 		if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0 && GD::debugLevel >= 2)
 		{
@@ -575,8 +602,10 @@ Device::Device(std::string xmlFilename) : Device()
 		}
 		channels[0]->parameterSets[ParameterSet::Type::Enum::master] = parameterSet;
 	}
+
 	std::shared_ptr<Parameter> parameter(new Parameter());
 	parameter->id = "PAIRED_TO_CENTRAL";
+	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
 	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeBoolean;
@@ -587,6 +616,7 @@ Device::Device(std::string xmlFilename) : Device()
 
 	parameter.reset(new Parameter());
 	parameter->id = "CENTRAL_ADDRESS_BYTE_1";
+	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
 	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
@@ -597,6 +627,7 @@ Device::Device(std::string xmlFilename) : Device()
 
 	parameter.reset(new Parameter());
 	parameter->id = "CENTRAL_ADDRESS_BYTE_2";
+	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
 	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
@@ -607,6 +638,7 @@ Device::Device(std::string xmlFilename) : Device()
 
 	parameter.reset(new Parameter());
 	parameter->id = "CENTRAL_ADDRESS_BYTE_3";
+	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
 	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
@@ -617,8 +649,10 @@ Device::Device(std::string xmlFilename) : Device()
 
 	for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
 	{
+		if(!i->second || i->second->parameterSets.find(ParameterSet::Type::Enum::values) == i->second->parameterSets.end()) continue;
 		for(std::vector<std::shared_ptr<Parameter>>::iterator j = i->second->parameterSets.at(ParameterSet::Type::Enum::values)->parameters.begin(); j != i->second->parameterSets.at(ParameterSet::Type::Enum::values)->parameters.end(); ++j)
 		{
+			if(!*j) continue;
 			if(!(*j)->physicalParameter->getRequest.empty() && framesByID.find((*j)->physicalParameter->getRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->getRequest]->associatedValues.push_back(*j);
 			for(std::vector<std::string>::iterator k = (*j)->physicalParameter->eventFrames.begin(); k != (*j)->physicalParameter->eventFrames.end(); ++k)
 			{
@@ -635,24 +669,37 @@ Device::~Device() {
 void Device::load(std::string xmlFilename)
 {
 	xml_document<> doc;
-	std::ifstream fileStream(xmlFilename, std::ios::in | std::ios::binary);
-	if(fileStream)
+	try
 	{
-		uint32_t length;
-		fileStream.seekg(0, std::ios::end);
-		length = fileStream.tellg();
-		fileStream.seekg(0, std::ios::beg);
-		char buffer[length];
-		fileStream.read(&buffer[0], length);
-		fileStream.close();
-		doc.parse<0>(buffer);
-		parseXML(doc.first_node("device"));
+		std::ifstream fileStream(xmlFilename, std::ios::in | std::ios::binary);
+		if(fileStream)
+		{
+			uint32_t length;
+			fileStream.seekg(0, std::ios::end);
+			length = fileStream.tellg();
+			fileStream.seekg(0, std::ios::beg);
+			char buffer[length];
+			fileStream.read(&buffer[0], length);
+			fileStream.close();
+			doc.parse<0>(buffer);
+			parseXML(doc.first_node("device"));
+		}
+		else throw new Exception("Error reading file " + xmlFilename + ". Error number: " + std::to_string(errno));
+		_loaded = true;
 	}
-	else
-	{
-		throw(errno);
-	}
-	doc.clear();
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    doc.clear();
 }
 
 void Device::parseXML(xml_node<>* node)
@@ -723,10 +770,14 @@ void Device::parseXML(xml_node<>* node)
 			{
 				for(xml_node<>* channelNode = node->first_node("channel"); channelNode; channelNode = channelNode->next_sibling())
 				{
-					std::shared_ptr<DeviceChannel> channel(new DeviceChannel(channelNode));
+					uint32_t index = 0;
+					std::shared_ptr<DeviceChannel> channel(new DeviceChannel(channelNode, index));
 					channel->parentDevice = this;
-					if(channels.find(channel->index) == channels.end()) channels[channel->index] = channel;
-					else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add channel with the same index twice." << std::endl;
+					for(uint32_t i = index; i < index + channel->count; i ++)
+					{
+						if(channels.find(i) == channels.end()) channels[i] = channel;
+						else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add channel with the same index twice. Index: " << i << std::endl;
+					}
 				}
 			}
 			else if(nodeName == "frames")
@@ -752,11 +803,15 @@ void Device::parseXML(xml_node<>* node)
 	}
     catch(const std::exception& ex)
     {
-        std::cerr << "Exception: " << ex.what() << std::endl;
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Exception: " << ex.what() << std::endl;
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
 }
 

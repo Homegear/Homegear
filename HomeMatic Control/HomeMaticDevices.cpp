@@ -21,60 +21,75 @@ HomeMaticDevices::~HomeMaticDevices()
 
 void HomeMaticDevices::load()
 {
-	GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (parent INTEGER, address INTEGER, serializedObject TEXT)");
-	GD::db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
-	GD::db.executeCommand("CREATE TABLE IF NOT EXISTS devices (address INTEGER, deviceTYPE INTEGER, serializedObject TEXT, dutyCycleMessageCounter INTEGER, lastDutyCycle INTEGER)");
-	DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
-	for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+	try
 	{
-		std::shared_ptr<HomeMaticDevice> device;
-		HMDeviceTypes deviceType;
-		std::string serializedObject;
-		uint8_t dutyCycleMessageCounter = 0;
-		for(std::map<uint32_t, std::shared_ptr<DataColumn>>::iterator col = row->second.begin(); col != row->second.end(); ++col)
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (parent INTEGER, address INTEGER, serializedObject TEXT)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS devices (address INTEGER, deviceTYPE INTEGER, serializedObject TEXT, dutyCycleMessageCounter INTEGER, lastDutyCycle INTEGER)");
+		DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
-			if(col->second->index == 1)
+			std::shared_ptr<HomeMaticDevice> device;
+			HMDeviceTypes deviceType;
+			std::string serializedObject;
+			uint8_t dutyCycleMessageCounter = 0;
+			for(std::map<uint32_t, std::shared_ptr<DataColumn>>::iterator col = row->second.begin(); col != row->second.end(); ++col)
 			{
-				deviceType = (HMDeviceTypes)col->second->intValue;
-			}
-			else if(col->second->index == 2)
-			{
-				serializedObject = col->second->textValue;
-			}
-			else if(col->second->index == 3)
-			{
-				dutyCycleMessageCounter = col->second->intValue;
-			}
-			else if(col->second->index == 4)
-			{
-				switch(deviceType)
+				if(col->second->index == 1)
 				{
-				case HMDeviceTypes::HMCCTC:
-					device = std::shared_ptr<HomeMaticDevice>(new HM_CC_TC());
-					break;
-				case HMDeviceTypes::HMCCVD:
-					device = std::shared_ptr<HomeMaticDevice>(new HM_CC_VD());
-					break;
-				case HMDeviceTypes::HMCENTRAL:
-					_central = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral());
-					device = _central;
-					break;
-				case HMDeviceTypes::HMSD:
-					device = std::shared_ptr<HomeMaticDevice>(new HM_SD());
-					break;
-				default:
-					break;
+					deviceType = (HMDeviceTypes)col->second->intValue;
 				}
-				if(device != nullptr)
+				else if(col->second->index == 2)
 				{
-					device->unserialize(serializedObject, dutyCycleMessageCounter, col->second->intValue);
-					device->loadPeersFromDatabase();
-					_devices.push_back(device);
-					device = nullptr;
+					serializedObject = col->second->textValue;
+				}
+				else if(col->second->index == 3)
+				{
+					dutyCycleMessageCounter = col->second->intValue;
+				}
+				else if(col->second->index == 4)
+				{
+					switch(deviceType)
+					{
+					case HMDeviceTypes::HMCCTC:
+						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_TC());
+						break;
+					case HMDeviceTypes::HMCCVD:
+						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_VD());
+						break;
+					case HMDeviceTypes::HMCENTRAL:
+						_central = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral());
+						device = _central;
+						break;
+					case HMDeviceTypes::HMSD:
+						device = std::shared_ptr<HomeMaticDevice>(new HM_SD());
+						break;
+					default:
+						break;
+					}
+					if(device != nullptr)
+					{
+						device->unserialize(serializedObject, dutyCycleMessageCounter, col->second->intValue);
+						device->loadPeersFromDatabase();
+						_devices.push_back(device);
+						device = nullptr;
+					}
 				}
 			}
 		}
 	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void HomeMaticDevices::stopDutyCycles()

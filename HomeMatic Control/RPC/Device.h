@@ -125,6 +125,7 @@ public:
 	virtual ~DeviceType() {}
 
 	bool matches(std::shared_ptr<BidCoSPacket> packet);
+	bool matches(std::string typeID);
 	bool matches(HMDeviceTypes deviceType, uint32_t firmwareVersion);
 };
 
@@ -145,11 +146,12 @@ public:
 	ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
-	std::vector<std::shared_ptr<Parameter>> getIndices(int32_t startIndex, int32_t endIndex);
+	std::vector<std::shared_ptr<Parameter>> getIndices(int32_t startIndex, int32_t endIndex, int32_t list);
 	std::shared_ptr<Parameter> getIndex(double index);
 	std::shared_ptr<Parameter> getParameter(std::string id);
 	std::vector<std::shared_ptr<Parameter>> getParameters(std::string );
 	std::string typeString();
+	static ParameterSet::Type::Enum typeFromString(std::string type);
 };
 
 class EnforceLink
@@ -190,21 +192,21 @@ public:
 		enum Enum { none = 0, sender = 1, receiver = 2 };
 	};
 	Device* parentDevice = nullptr;
-	uint32_t index = 0;
 	std::string type;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	Direction::Enum direction = Direction::Enum::none;
 	std::string channelClass;
-	uint32_t count = 0;
+	uint32_t count = 1;
 	bool hasTeam = false;
 	bool aesDefault = false;
+	bool hidden = false;
 	std::string teamTag;
 	std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>> parameterSets;
 	std::vector<std::shared_ptr<LinkRole>> linkRoles;
 	std::vector<std::shared_ptr<EnforceLink>> enforceLinks;
 
 	DeviceChannel() {}
-	DeviceChannel(xml_node<>* node);
+	DeviceChannel(xml_node<>* node, uint32_t& index);
 	virtual ~DeviceChannel() {}
 };
 
@@ -249,6 +251,7 @@ public:
 		enum Enum { none = 0, config = 1, wakeUp = 2 };
 	};
 
+	bool loaded() { return _loaded; }
 	uint32_t version = 0;
 	uint32_t cyclicTimeout = 0;
 	std::shared_ptr<ParameterSet> parameterSet;
@@ -268,6 +271,8 @@ public:
 	virtual ~Device();
 	std::shared_ptr<DeviceType> getType(HMDeviceTypes deviceType, int32_t firmwareVersion);
 protected:
+	bool _loaded = false;
+
 	virtual void load(std::string xmlFilename);
 	virtual void parseXML(xml_node<>* node);
 private:

@@ -22,7 +22,7 @@ public:
 	};
 	struct Interface
 	{
-		enum Enum { none, command, internal, config };
+		enum Enum { none, command, centralCommand, internal, config };
 	};
 	Type::Enum type = Type::Enum::none;
 	Interface::Enum interface = Interface::none;
@@ -33,6 +33,7 @@ public:
 	bool noInit = false;
 	std::string getRequest;
 	std::string setRequest;
+	std::string counter;
 	std::vector<std::string> eventFrames;
 
 	PhysicalParameter() {}

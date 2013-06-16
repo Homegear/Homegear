@@ -13,7 +13,7 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RP
 	else packet->insert(packet->begin(), _packetStart, _packetStart + 4);
 
 	encodeVariable(packet, variable);
-	uint32_t dataSize = packet->size() - 8;
+	uint32_t dataSize = packet->size() - 4;
 
 	char result[4];
 	HelperFunctions::memcpyBigEndian(result, (char*)&dataSize, 4);

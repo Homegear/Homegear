@@ -118,12 +118,6 @@
 					</physical>
 					<conversion type="float_integer_scale" factor="2"/>
 				</parameter>
-				<parameter id="VALVE_STATE" operations="write" control="NONE">
-					<logical type="integer" min="0" max="255"/>
-					<physical type="integer" interface="command" value_id="VALVE_STATE" no_init="true">
-						<set request="VALVE_STATE_SET"/>
-					</physical>
-				</parameter>
 				<parameter id="ADJUSTING_COMMAND" operations="read,event" control="NONE">
 					<logical type="integer" min="0" max="4"/>
 					<physical type="integer" interface="command" value_id="ADJUSTING_COMMAND">
@@ -1975,9 +1969,6 @@
 		</frame>
 		<frame id="LEVEL_SET" direction="to_device" type="0x11" subtype="0x02" subtype_index="9" channel_field="10">
 			<parameter type="integer" index="11.0" size="1.0" param="LEVEL"/>
-		</frame>
-		<frame id="VALVE_STATE_SET" direction="to_device" type="0xDD">
-			<parameter type="integer" index="9.0" size="1.0" param="VALVE_STATE"/>
 		</frame>
 		<frame id="LEVEL_GET" direction="to_device" type="0x01" channel_field="9">
 			<parameter type="integer" index="10.0" size="1.0" const_value="14"/>

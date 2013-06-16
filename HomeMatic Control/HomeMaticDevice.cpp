@@ -183,13 +183,6 @@ void HomeMaticDevice::loadPeersFromDatabase()
 	}
 }
 
-void HomeMaticDevice::deletePeerFromDatabase(int32_t address)
-{
-	std::ostringstream command;
-	command << "DELETE FROM peers WHERE parent=" << std::dec << _address << " AND " << " address=" << address;
-	GD::db.executeCommand(command.str());
-}
-
 void HomeMaticDevice::deletePeersFromDatabase()
 {
 	std::ostringstream command;
@@ -410,7 +403,7 @@ void HomeMaticDevice::handleConfigPeerDelete(int32_t messageCounter, std::shared
 		{
 			if(_peers[address]->deviceType != HMDeviceTypes::HMRCV50)
 			{
-				deletePeerFromDatabase(address);
+				_peers[address]->deleteFromDatabase(_address);
 				_peers.erase(address); //Unpair. Unpairing of HMRCV50 is done through CONFIG_WRITE_INDEX
 			}
 		}
@@ -454,7 +447,7 @@ void HomeMaticDevice::handleConfigEnd(int32_t messageCounter, std::shared_ptr<Bi
 			_peersMutex.lock();
 			try
 			{
-				deletePeerFromDatabase(packet->senderAddress());
+				_peers[packet->senderAddress()]->deleteFromDatabase(_address);
 				_peers.erase(packet->senderAddress());
 			}
 			catch(const std::exception& ex)

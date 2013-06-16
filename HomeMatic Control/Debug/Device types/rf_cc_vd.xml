@@ -57,19 +57,12 @@
 				</parameter>
 			</paramset>
 			<paramset type="VALUES" id="cc_vd_ch_tc_values">
-				<parameter id="VALVE_STATE" operations="read,event,write">
+				<parameter id="VALVE_STATE" operations="read,event">
 					<logical type="integer" min="0" max="99" default="0" unit="%"/>
-					<physical type="integer" interface="command" value_id="VALVE_STATE" no_init="true">
-						<set request="VALVE_SET"/>
+					<physical type="integer" interface="command" value_id="VALVE_STATE">
 						<event frame="ACK_EVENT"/>
 					</physical>
 					<conversion type="integer_integer_scale" mul="2"/>
-				</parameter>
-				<parameter id="ADJUSTING_COMMAND" operations="read,event,write" control="NONE">
-					<logical type="integer" min="0" max="4" default="0" />
-					<physical type="integer" interface="command" value_id="ADJUSTING_COMMAND">
-						<set request="VALVE_SET"/>
-					</physical>
 				</parameter>
 				<parameter id="ERROR" operations="read,event" ui_flags="service" control="NONE">
 					<logical type="option">
@@ -89,11 +82,7 @@
 		</channel>
 	</channels>
 	<frames>
-		<frame id="VALVE_SET" direction="to_device" type="0x58">
-			<parameter type="integer" index="9.0" size="1.0" param="ADJUSTING_COMMAND"/>
-			<parameter type="integer" index="10.0" size="1.0" param="VALVE_STATE"/>
-		</frame>
-		<frame id="ACK_EVENT" direction="from_device" event="true" type="0x02" subtype="1" subtype_index="9" channel_field="10">
+		<frame id="ACK_EVENT" direction="from_device" event="true" fixed_channel="1" type="0x02">
 			<parameter type="integer" index="11.0" size="1.0" param="VALVE_STATE"/>
 			<parameter type="integer" index="12.1" size="0.3" param="ERROR"/>
 		</frame>

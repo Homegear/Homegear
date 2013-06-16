@@ -44,6 +44,13 @@ public:
 
 	static std::pair<std::string, std::string> split(std::string string, char delimiter);
 
+	static inline double getDouble(std::string &s)
+	{
+		double number = 0;
+		try { number = std::stod(s); } catch(...) {}
+		return number;
+	}
+
 	static int32_t getNumber(std::string &s)
 	{
 		int32_t xpos = s.find('x');

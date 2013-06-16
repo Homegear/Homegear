@@ -120,8 +120,8 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
 	if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(clientFileDescriptor, methodName, parameters, responseType);
 	else if(GD::debugLevel >= 3)
 	{
-		std::cout << "Warning: RPC method not found: " << methodName << std::endl;
-		sendRPCResponseToClient(clientFileDescriptor, RPCVariable::createError(-1, ": unknown method name"), responseType);
+		std::cerr << "Warning: RPC method not found: " << methodName << std::endl;
+		sendRPCResponseToClient(clientFileDescriptor, RPCVariable::createError(-32601, ": Requested method not found."), responseType);
 	}
 }
 

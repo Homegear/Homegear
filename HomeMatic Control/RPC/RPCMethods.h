@@ -77,6 +77,27 @@ private:
 	std::shared_ptr<RPCServer> _server;
 };
 
+class RPCDeleteDevice : public RPCMethod
+{
+public:
+	RPCDeleteDevice()
+	{
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcInteger});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCDeleteMetadata : public RPCMethod
+{
+public:
+	RPCDeleteMetadata()
+	{
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCGetAllMetadata : public RPCMethod
 {
 public:
@@ -87,6 +108,16 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 private:
 	RPCDecoder _rpcDecoder;
+};
+
+class RPCGetDeviceDescription : public RPCMethod
+{
+public:
+	RPCGetDeviceDescription()
+	{
+		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
 class RPCGetInstallMode : public RPCMethod
@@ -125,6 +156,26 @@ class RPCGetParamsetDescription : public RPCMethod
 {
 public:
 	RPCGetParamsetDescription()
+	{
+		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCGetParamsetId : public RPCMethod
+{
+public:
+	RPCGetParamsetId()
+	{
+		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCGetParamset : public RPCMethod
+{
+public:
+	RPCGetParamset()
 	{
 		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
 	}
