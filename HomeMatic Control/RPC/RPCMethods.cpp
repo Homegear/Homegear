@@ -128,6 +128,30 @@ std::shared_ptr<RPCVariable> RPCSystemMulticall::invoke(std::shared_ptr<std::vec
 	return returns;
 }
 
+std::shared_ptr<RPCVariable> RPCGetAllMetadata::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+	if(error != ParameterError::Enum::noError) return getError(error);
+	if(parameters->at(0)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "objectID has more than 250 characters.");
+
+	DataColumnVector data;
+	data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameters->at(0)->stringValue)));
+
+	DataTable rows = GD::db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
+	if(rows.empty()) return RPCVariable::createError(-1, "No metadata found.");
+
+	std::shared_ptr<RPCVariable> metadataStruct(new RPCVariable(RPCVariableType::rpcStruct));
+	for(DataTable::iterator i = rows.begin(); i != rows.end(); ++i)
+	{
+		if(i->second.size() < 2) continue;
+		std::shared_ptr<RPCVariable> metadata = _rpcDecoder.decodeResponse(i->second.at(1)->binaryValue, 8);
+		metadata->name = i->second.at(0)->textValue;
+		metadataStruct->structValue->push_back(metadata);
+	}
+
+	return metadataStruct;
+}
+
 std::shared_ptr<RPCVariable> RPCGetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
@@ -141,12 +165,30 @@ std::shared_ptr<RPCVariable> RPCGetInstallMode::invoke(std::shared_ptr<std::vect
 	return central->getInstallMode();
 }
 
-std::shared_ptr<RPCVariable> RPCGetKeyMissmatchDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+std::shared_ptr<RPCVariable> RPCGetKeyMismatchDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcBoolean }));
 	if(error != ParameterError::Enum::noError) return getError(error);
 	//TODO Program function when AES is supported.
 	return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
+}
+
+std::shared_ptr<RPCVariable> RPCGetMetadata::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+	if(error != ParameterError::Enum::noError) return getError(error);
+	if(parameters->at(0)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "objectID has more than 250 characters.");
+	if(parameters->at(1)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
+
+	DataColumnVector data;
+	data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameters->at(0)->stringValue)));
+	data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameters->at(1)->stringValue)));
+
+	DataTable rows = GD::db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
+	if(rows.empty() || rows.at(0).empty()) return RPCVariable::createError(-1, "No metadata found.");
+
+	std::shared_ptr<RPCVariable> metadata = _rpcDecoder.decodeResponse(rows.at(0).at(0)->binaryValue, 8);
+	return metadata;
 }
 
 std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
@@ -174,6 +216,15 @@ std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<s
 		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
 	}
 	return GD::devices.getCentral()->getParamsetDescription(serialNumber, channel, type);
+}
+
+std::shared_ptr<RPCVariable> RPCGetServiceMessages::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+
+	//TODO Implement method
+
+	return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
 }
 
 std::shared_ptr<RPCVariable> RPCGetValue::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
@@ -247,8 +298,9 @@ std::shared_ptr<RPCVariable> RPCListDevices::invoke(std::shared_ptr<std::vector<
 	if(parameters->size() > 0)
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
-		if(error != ParameterError::Enum::noError) return getError(error);
-		interfaceID = parameters->at(0)->stringValue;
+		ParameterError::Enum error2 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcBoolean }));
+		if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError) return getError(error);
+		if(parameters->at(0)->type == RPCVariableType::rpcString) interfaceID = parameters->at(0)->stringValue;
 	}
 	std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 	if(!central)
@@ -282,6 +334,33 @@ std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vect
 		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
 	}
 	return central->setInstallMode(parameters->at(0)->booleanValue);
+}
+
+std::shared_ptr<RPCVariable> RPCSetMetadata::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcVariant }));
+	if(error != ParameterError::Enum::noError) return getError(error);
+	if(parameters->at(0)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "objectID has more than 250 characters.");
+	if(parameters->at(1)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
+	if(parameters->at(2)->type == RPC::RPCVariableType::rpcString &&  parameters->at(2)->stringValue.size() > 1000) return RPC::RPCVariable::createError(-32602, "Data has more than 1000 characters.");
+	if(parameters->at(2)->type != RPC::RPCVariableType::rpcBase64 && parameters->at(2)->type != RPC::RPCVariableType::rpcString && parameters->at(2)->type != RPC::RPCVariableType::rpcInteger && parameters->at(2)->type != RPC::RPCVariableType::rpcFloat && parameters->at(2)->type != RPC::RPCVariableType::rpcBoolean) return RPC::RPCVariable::createError(-32602, "Type " + RPC::RPCVariable::getTypeString(parameters->at(2)->type) + " is currently not supported.");
+
+	DataTable rows = GD::db.executeCommand("SELECT COUNT(*) FROM metadata");
+	if(rows.size() == 0 || rows.at(0).size() == 0) return RPCVariable::createError(-32500, "Error counting metadata in database.");
+	std::cout << "Metadata rows: " << rows.at(0).at(0)->intValue << std::endl;
+	if(rows.at(0).at(0)->intValue > 1000000) return RPCVariable::createError(-32500, "Reached limit of 1000000 metadata entries. Please delete metadata before adding new entries.");
+
+	DataColumnVector data;
+	data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameters->at(0)->stringValue)));
+	data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameters->at(1)->stringValue)));
+	GD::db.executeCommand("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
+
+	std::shared_ptr<std::vector<char>> value = _rpcEncoder.encodeResponse(parameters->at(2));
+	data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+
+	GD::db.executeCommand("INSERT INTO metadata VALUES(?, ?, ?)", data);
+
+	return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
 }
 
 std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)

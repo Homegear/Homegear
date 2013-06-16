@@ -155,6 +155,12 @@ void XMLRPCEncoder::encodeVariable(xml_document<>* doc, xml_node<>* node, std::s
 		//Some servers/clients don't understand strings in string tags - don't ask me why, so just print the value
 		valueNode->value(variable->stringValue.c_str());
 	}
+	else if(variable->type == RPCVariableType::rpcBase64)
+	{
+		//Don't allocate string. It is unnecessary, because variable->stringvalue exists until the encoding is done.
+		xml_node<> *valueNode2 = doc->allocate_node(node_element, "base64", variable->stringValue.c_str());
+		valueNode->append_node(valueNode2);
+	}
 	else if(variable->type == RPCVariableType::rpcStruct)
 	{
 		encodeStruct(doc, valueNode, variable);

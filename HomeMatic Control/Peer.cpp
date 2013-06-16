@@ -43,6 +43,7 @@ void Peer::initializeCentralConfig()
 Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 {
 	pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>());
+	if(serializedObject.empty()) return;
 	if(GD::debugLevel >= 5) std::cout << "Unserializing peer: " << serializedObject << std::endl;
 
 	std::istringstream stringstream(serializedObject);

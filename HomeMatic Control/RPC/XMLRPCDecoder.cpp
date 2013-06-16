@@ -3,12 +3,12 @@
 
 namespace RPC
 {
-std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decodeRequest(std::shared_ptr<char> packet, uint32_t packetLength, std::string* methodName)
+std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName)
 {
 	xml_document<> doc;
 	try
 	{
-		doc.parse<0>(packet.get());
+		doc.parse<0>(&packet->at(0));
 		xml_node<>* node = doc.first_node();
 		if(node == nullptr || std::string(doc.first_node()->name()) != "methodCall")
 		{
@@ -21,8 +21,8 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decode
 			doc.clear();
 			return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Node \"methodName\" not found.")});
 		}
-		*methodName = std::string(subNode->value());
-		if(methodName->empty())
+		methodName = std::string(subNode->value());
+		if(methodName.empty())
 		{
 			doc.clear();
 			return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. \"methodName\" is empty.")});
@@ -73,28 +73,9 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::string& packet)
 	try
 	{
 		doc.parse<0>((char*)packet.c_str());
-		xml_node<>* node = doc.first_node();
-		if(node == nullptr || std::string(doc.first_node()->name()) != "methodResponse")
-		{
-			doc.clear();
-			return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. First root node has to be \"methodResponse\"."));
-		}
-
-		xml_node<>* subNode = node->first_node("params");
-		if(subNode == nullptr)
-		{
-			doc.clear();
-			return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Node \"params\" not found."));
-		}
-
-		subNode = subNode->first_node("param");
-		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
-
-		subNode = subNode->first_node("value");
-		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
-
+		std::shared_ptr<RPCVariable> response = decodeResponse(&doc);
 		doc.clear();
-		return decodeParameter(subNode);
+		return response;
 	}
 	catch(const std::exception& ex)
     {
@@ -112,6 +93,81 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::string& packet)
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     	doc.clear();
+    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
+    }
+    return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
+}
+
+std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::shared_ptr<std::vector<char>> packet)
+{
+	xml_document<> doc;
+	try
+	{
+		doc.parse<0>(&packet->at(0));
+		std::shared_ptr<RPCVariable> response = decodeResponse(&doc);
+		doc.clear();
+		return response;
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	doc.clear();
+    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	doc.clear();
+    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	doc.clear();
+    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
+    }
+    return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
+}
+
+std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(xml_document<>* doc)
+{
+	try
+	{
+		xml_node<>* node = doc->first_node();
+		if(node == nullptr || std::string(doc->first_node()->name()) != "methodResponse")
+		{
+			doc->clear();
+			return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. First root node has to be \"methodResponse\"."));
+		}
+
+		xml_node<>* subNode = node->first_node("params");
+		if(subNode == nullptr)
+		{
+			doc->clear();
+			return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Node \"params\" not found."));
+		}
+
+		subNode = subNode->first_node("param");
+		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+
+		subNode = subNode->first_node("value");
+		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+
+		return decodeParameter(subNode);
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
     }
     return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
@@ -144,6 +200,12 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNod
 		double number = 0;
 		try { number = std::stod(value); } catch(...) {}
 		return std::shared_ptr<RPCVariable>(new RPCVariable(number));
+	}
+	else if(type == "base64")
+	{
+		std::shared_ptr<RPCVariable> base64(new RPCVariable(RPCVariableType::rpcBase64));
+		base64->stringValue = value;
+		return base64;
 	}
 	else if(type == "array")
 	{

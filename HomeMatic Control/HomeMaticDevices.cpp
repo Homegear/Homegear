@@ -21,29 +21,31 @@ HomeMaticDevices::~HomeMaticDevices()
 
 void HomeMaticDevices::load()
 {
+	GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (parent INTEGER, address INTEGER, serializedObject TEXT)");
+	GD::db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
 	GD::db.executeCommand("CREATE TABLE IF NOT EXISTS devices (address INTEGER, deviceTYPE INTEGER, serializedObject TEXT, dutyCycleMessageCounter INTEGER, lastDutyCycle INTEGER)");
-	std::vector<std::vector<DataColumn>> rows = GD::db.executeCommand("SELECT * FROM devices");
-	for(std::vector<std::vector<DataColumn> >::iterator row = rows.begin(); row != rows.end(); ++row)
+	DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
+	for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 	{
 		std::shared_ptr<HomeMaticDevice> device;
 		HMDeviceTypes deviceType;
 		std::string serializedObject;
 		uint8_t dutyCycleMessageCounter = 0;
-		for(std::vector<DataColumn>::iterator col = row->begin(); col != row->end(); ++col)
+		for(std::map<uint32_t, std::shared_ptr<DataColumn>>::iterator col = row->second.begin(); col != row->second.end(); ++col)
 		{
-			if(col->index == 1)
+			if(col->second->index == 1)
 			{
-				deviceType = (HMDeviceTypes)col->intValue;
+				deviceType = (HMDeviceTypes)col->second->intValue;
 			}
-			else if(col->index == 2)
+			else if(col->second->index == 2)
 			{
-				serializedObject = col->textValue;
+				serializedObject = col->second->textValue;
 			}
-			else if(col->index == 3)
+			else if(col->second->index == 3)
 			{
-				dutyCycleMessageCounter = col->intValue;
+				dutyCycleMessageCounter = col->second->intValue;
 			}
-			else if(col->index == 4)
+			else if(col->second->index == 4)
 			{
 				switch(deviceType)
 				{
@@ -65,7 +67,8 @@ void HomeMaticDevices::load()
 				}
 				if(device != nullptr)
 				{
-					device->unserialize(serializedObject, dutyCycleMessageCounter, col->intValue);
+					device->unserialize(serializedObject, dutyCycleMessageCounter, col->second->intValue);
+					device->loadPeersFromDatabase();
 					_devices.push_back(device);
 					device = nullptr;
 				}
@@ -99,6 +102,7 @@ void HomeMaticDevices::save()
 		stopDutyCycles();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
+			(*i)->savePeersToDatabase();
 			std::ostringstream command;
 			command << "DELETE FROM devices WHERE address=" << std::dec << (*i)->address();
 			GD::db.executeCommand(command.str());
@@ -136,9 +140,10 @@ bool HomeMaticDevices::remove(int32_t address)
 	{
 		if((*i)->address() == address)
 		{
+			if(GD::debugLevel >= 5) std::cout << "Deleting peers from database..." << std::endl;
+			(*i)->deletePeersFromDatabase();
 			if(GD::debugLevel >= 5) std::cout << "Removing device pointer from device array..." << std::endl;
 			_devices.erase(i);
-
 			if(GD::debugLevel >= 5) std::cout << "Deleting database entry..." << std::endl;
 			std::ostringstream command;
 			command << "DELETE FROM devices WHERE address=" << std::dec << address;

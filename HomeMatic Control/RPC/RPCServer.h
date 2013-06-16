@@ -66,10 +66,10 @@ namespace RPC
 			void mainThread();
 			void readClient(int32_t clientFileDescriptor);
 			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<RPCVariable> error, PacketType::Enum packetType);
-			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<char> data, uint32_t dataLength, bool closeConnection);
-			void packetReceived(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
-			void analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
-			void analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<char> packet, uint32_t packetLength, PacketType::Enum packetType);
+			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> data, bool closeConnection);
+			void packetReceived(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType);
+			void analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType);
+			void analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType);
 			void removeClientFileDescriptor(int32_t clientFileDescriptor);
 			void callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType);
 			std::string getHttpResponseHeader(uint32_t contentLength);

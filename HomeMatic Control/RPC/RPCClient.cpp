@@ -225,7 +225,6 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
     catch(const std::exception& ex)
     {
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-
     }
     catch(const Exception& ex)
     {

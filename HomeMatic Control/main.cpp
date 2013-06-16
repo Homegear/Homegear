@@ -4,6 +4,8 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <cmath>
+#include <vector>
+#include <memory>
 
 #include "Cul.h"
 #include "Devices/HM-SD.h"

@@ -1,4 +1,3 @@
-- Save peers in seperate table
 - Central: Pairing by serial
 - Device: Pairing by serial
 - Central: Is configuration sent to device after inserting batteries?

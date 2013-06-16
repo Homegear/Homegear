@@ -5,146 +5,97 @@
 namespace RPC
 {
 
-uint32_t RPCEncoder::encodeResponse(std::shared_ptr<char>& packet, std::shared_ptr<RPCVariable> variable)
+std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable)
 {
 	//The "Bin", the type byte after that and the length itself are not part of the length
-	uint32_t packetLength = calculateLength(variable);
-	packet.reset(new char[packetLength + 8]);
-	std::cout << "Packet length: " << packetLength << std::endl;
-	uint32_t position = 0;
-	if(variable->errorStruct) memcpy(packet.get(), _packetStartError, 4);
-	else memcpy(packet.get(), _packetStart, 4);
-	position += 4;
-	encodeRawInteger(packet.get(), &position, packetLength + 8, packetLength);
-	encodeVariable(packet.get(), &position, packetLength + 8, variable);
-	return position;
+	std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
+	if(variable->errorStruct) packet->insert(packet->begin(), _packetStartError, _packetStartError + 4);
+	else packet->insert(packet->begin(), _packetStart, _packetStart + 4);
+
+	encodeVariable(packet, variable);
+	uint32_t dataSize = packet->size() - 8;
+
+	char result[4];
+	HelperFunctions::memcpyBigEndian(result, (char*)&dataSize, 4);
+	packet->insert(packet->begin() + 4, result, result + 4);
+
+	return packet;
 }
 
-void RPCEncoder::encodeVariable(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable)
+void RPCEncoder::encodeVariable(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
 {
 	if(variable->type == RPCVariableType::rpcVoid)
 	{
-		encodeVoid(packet, position, packetLength);
+		encodeVoid(packet);
 	}
 	else if(variable->type == RPCVariableType::rpcInteger)
 	{
-		encodeInteger(packet, position, packetLength, variable);
+		encodeInteger(packet, variable);
 	}
 	else if(variable->type == RPCVariableType::rpcFloat)
 	{
-		encodeFloat(packet, position, packetLength, variable);
+		encodeFloat(packet, variable);
 	}
 	else if(variable->type == RPCVariableType::rpcBoolean)
 	{
-		encodeBoolean(packet, position, packetLength, variable);
+		encodeBoolean(packet, variable);
 	}
 	else if(variable->type == RPCVariableType::rpcString)
 	{
-		encodeString(packet, position, packetLength, variable);
+		encodeString(packet, variable);
 	}
 	else if(variable->type == RPCVariableType::rpcStruct)
 	{
-		encodeStruct(packet, position, packetLength, variable);
+		encodeStruct(packet, variable);
 	}
 	else if(variable->type == RPCVariableType::rpcArray)
 	{
-		encodeArray(packet, position, packetLength, variable);
+		encodeArray(packet, variable);
 	}
 }
 
-uint32_t RPCEncoder::calculateLength(std::shared_ptr<RPCVariable> variable)
+void RPCEncoder::encodeStruct(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
 {
-	uint32_t length = 0;
-	if(variable->type == RPCVariableType::rpcVoid)
-	{
-		length = 8;
-	}
-	else if(variable->type == RPCVariableType::rpcInteger)
-	{
-		length = 8;
-	}
-	else if(variable->type == RPCVariableType::rpcFloat)
-	{
-		length = 12;
-	}
-	else if(variable->type == RPCVariableType::rpcBoolean)
-	{
-		length = 5;
-	}
-	else if(variable->type == RPCVariableType::rpcString)
-	{
-		length = 8 + variable->stringValue.size();
-	}
-	else if(variable->type == RPCVariableType::rpcStruct)
-	{
-		length = 8; //Type and struct length
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
-		{
-			length += 4 + (*i)->name.size() + calculateLength(*i);
-		}
-	}
-	else if(variable->type == RPCVariableType::rpcArray)
-	{
-		length = 8; //Type and array length
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
-		{
-			length += calculateLength(*i);
-		}
-	}
-	return length;
-}
-
-void RPCEncoder::encodeStruct(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable)
-{
-	encodeType(packet, position, packetLength, RPCVariableType::rpcStruct);
-	encodeRawInteger(packet, position, packetLength, variable->structValue->size());
+	encodeType(packet, RPCVariableType::rpcStruct);
+	encodeRawInteger(packet, variable->structValue->size());
 	for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
 	{
-		encodeRawString(packet, position, packetLength, (*i)->name);
-		encodeVariable(packet, position, packetLength, *i);
+		encodeRawString(packet, (*i)->name);
+		encodeVariable(packet, *i);
 	}
 }
 
-void RPCEncoder::encodeArray(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable)
+void RPCEncoder::encodeArray(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
 {
-	encodeType(packet, position, packetLength, RPCVariableType::rpcArray);
-	encodeRawInteger(packet, position, packetLength, variable->arrayValue->size());
+	encodeType(packet, RPCVariableType::rpcArray);
+	encodeRawInteger(packet, variable->arrayValue->size());
 	for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
 	{
-		encodeVariable(packet, position, packetLength, *i);
+		encodeVariable(packet, *i);
 	}
 }
 
-void RPCEncoder::encodeType(char* packet, uint32_t* position, uint32_t packetLength, RPCVariableType type)
+void RPCEncoder::encodeType(std::shared_ptr<std::vector<char>>& packet, RPCVariableType type)
 {
-	encodeRawInteger(packet, position, packetLength, (int32_t)type);
+	encodeRawInteger(packet, (int32_t)type);
 }
 
-void RPCEncoder::encodeRawInteger(char* packet, uint32_t* position, uint32_t packetLength, int32_t integer)
+void RPCEncoder::encodeRawInteger(std::shared_ptr<std::vector<char>>& packet, int32_t integer)
 {
-	if(*position + 4 > packetLength)
-	{
-		if(GD::debugLevel >= 1) std::cout << "Critical: RPC data exceeds calculated packet length." << std::endl;
-		return;
-	}
-	HelperFunctions::memcpyBigEndian(packet + *position, (char*)&integer, 4);
-	*position += 4;
+	char result[4];
+	HelperFunctions::memcpyBigEndian(result, (char*)&integer, 4);
+	packet->insert(packet->end(), result, result + 4);
 }
 
-void RPCEncoder::encodeInteger(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable)
+void RPCEncoder::encodeInteger(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
 {
-	encodeType(packet, position, packetLength, RPCVariableType::rpcInteger);
-	encodeRawInteger(packet, position, packetLength, variable->integerValue);
+	encodeType(packet, RPCVariableType::rpcInteger);
+	encodeRawInteger(packet, variable->integerValue);
 }
 
-void RPCEncoder::encodeFloat(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable)
+void RPCEncoder::encodeFloat(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
 {
-	encodeType(packet, position, packetLength, RPCVariableType::rpcFloat);
-	if(*position + 8 > packetLength)
-	{
-		if(GD::debugLevel >= 1) std::cout << "Critical: RPC data exceeds calculated packet length." << std::endl;
-		return;
-	}
+	encodeType(packet, RPCVariableType::rpcFloat);
 	double temp = std::abs(variable->floatValue);
 	int32_t exponent = 0;
 	if(temp != 0 && temp < 0.5)
@@ -162,61 +113,42 @@ void RPCEncoder::encodeFloat(char* packet, uint32_t* position, uint32_t packetLe
 	}
 	if(variable->floatValue < 0) temp *= -1;
 	int32_t mantissa = std::roundl(temp * 0x40000000);
-	HelperFunctions::memcpyBigEndian(packet + *position, (char*)&mantissa, 4);
-	*position += 4;
-	HelperFunctions::memcpyBigEndian(packet + *position, (char*)&exponent, 4);
-	*position += 4;
+	char data[8];
+	HelperFunctions::memcpyBigEndian(data, (char*)&mantissa, 4);
+	HelperFunctions::memcpyBigEndian(data + 4, (char*)&exponent, 4);
+	packet->insert(packet->end(), data, data + 8);
 }
 
-void RPCEncoder::encodeBoolean(char* packet, uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable)
+void RPCEncoder::encodeBoolean(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
 {
-	encodeType(packet, position, packetLength, RPCVariableType::rpcBoolean);
-	if(*position + 1 > packetLength)
-	{
-		if(GD::debugLevel >= 1) std::cout << "Critical: RPC data exceeds calculated packet length." << std::endl;
-		return;
-	}
-	char data[1];
-	data[0] = (char)variable->booleanValue;
-	memcpy(packet + *position, data, 1);
-	*position += 1;
+	encodeType(packet, RPCVariableType::rpcBoolean);
+	packet->push_back((char)variable->booleanValue);
 }
 
-void RPCEncoder::encodeString(char* packet,  uint32_t* position, uint32_t packetLength, std::shared_ptr<RPCVariable> variable)
+void RPCEncoder::encodeString(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
 {
-	encodeType(packet, position, packetLength, RPCVariableType::rpcString);
+	encodeType(packet, RPCVariableType::rpcString);
 	//We could call encodeRawString here, but then the string would have to be copied and that would cost time.
-	encodeRawInteger(packet, position, packetLength, variable->stringValue.size());
+	encodeRawInteger(packet, variable->stringValue.size());
 	if(variable->stringValue.size() > 0)
 	{
-		if(*position + variable->stringValue.size() > packetLength)
-		{
-			if(GD::debugLevel >= 1) std::cout << "Critical: RPC data exceeds calculated packet length." << std::endl;
-			return;
-		}
-		memcpy(packet + *position, variable->stringValue.c_str(), variable->stringValue.size());
-		*position += variable->stringValue.size();
+		packet->insert(packet->end(), variable->stringValue.begin(), variable->stringValue.end());
 	}
 }
 
-void RPCEncoder::encodeRawString(char* packet,  uint32_t* position, uint32_t packetLength, std::string string)
+void RPCEncoder::encodeRawString(std::shared_ptr<std::vector<char>>& packet, std::string& string)
 {
-	encodeRawInteger(packet, position, packetLength, string.size());
+	encodeRawInteger(packet, string.size());
 	if(string.size() > 0)
 	{
-		if(*position + string.size() > packetLength)
-		{
-			if(GD::debugLevel >= 1) std::cout << "Critical: RPC data exceeds calculated packet length." << std::endl;
-			return;
-		}
-		memcpy(packet + *position, string.c_str(), string.size());
-		*position += string.size();
+		packet->insert(packet->end(), string.begin(), string.end());
 	}
 }
 
-void RPCEncoder::encodeVoid(char* packet, uint32_t* position, uint32_t packetLength)
+void RPCEncoder::encodeVoid(std::shared_ptr<std::vector<char>>& packet)
 {
-	encodeString(packet, position, packetLength, std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcString)));
+	std::shared_ptr<RPCVariable> string(new RPCVariable(RPCVariableType::rpcString));
+	encodeString(packet, string);
 }
 
 } /* namespace RPC */

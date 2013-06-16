@@ -11,9 +11,10 @@ void Server::registerMethods()
 	_server->registerMethod("system.multicall", std::shared_ptr<RPCMethod>(new RPCSystemMulticall(_server)));
 	_server->registerMethod("getAllMetadata", std::shared_ptr<RPCMethod>(new RPCGetAllMetadata()));
 	_server->registerMethod("getInstallMode", std::shared_ptr<RPCMethod>(new RPCGetInstallMode()));
-	_server->registerMethod("getKeyMissmatchDevice", std::shared_ptr<RPCMethod>(new RPCGetKeyMissmatchDevice()));
+	_server->registerMethod("getKeyMismatchDevice", std::shared_ptr<RPCMethod>(new RPCGetKeyMismatchDevice()));
 	_server->registerMethod("getMetadata", std::shared_ptr<RPCMethod>(new RPCGetMetadata()));
 	_server->registerMethod("getParamsetDescription", std::shared_ptr<RPCMethod>(new RPCGetParamsetDescription()));
+	_server->registerMethod("getServiceMessages", std::shared_ptr<RPCMethod>(new RPCGetServiceMessages()));
 	_server->registerMethod("getValue", std::shared_ptr<RPCMethod>(new RPCGetValue()));
 	_server->registerMethod("init", std::shared_ptr<RPCMethod>(new RPCInit()));
 	_server->registerMethod("listBidcosInterfaces", std::shared_ptr<RPCMethod>(new RPCListBidcosInterfaces()));

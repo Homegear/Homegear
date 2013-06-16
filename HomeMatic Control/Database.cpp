@@ -39,47 +39,52 @@ void Database::closeDatabase()
     sqlite3_close(_database);
 }
 
-void Database::getDataRows(sqlite3_stmt* statement, std::vector<std::vector<DataColumn>>* dataRows)
+void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
 {
 	try
 	{
-		int result;
+		int32_t result;
+		int32_t row = 0;
 		while((result = sqlite3_step(statement)) == SQLITE_ROW)
 		{
-			std::vector<DataColumn> row;
-			for(int i = 0; i < sqlite3_column_count(statement); i++)
+			for(int32_t i = 0; i < sqlite3_column_count(statement); i++)
 			{
-				DataColumn col;
-				col.index = i;
-				switch(sqlite3_column_type(statement, i))
+				std::shared_ptr<DataColumn> col(new DataColumn());
+				col->index = i;
+				int32_t columnType = sqlite3_column_type(statement, i);
+				if(columnType == SQLITE_INTEGER)
 				{
-					case SQLITE_INTEGER:
-						col.dataType = INTEGER;
-						col.intValue = sqlite3_column_int64(statement, i);
-						break;
-					case SQLITE_FLOAT:
-						col.dataType = FLOAT;
-						col.floatValue = sqlite3_column_double(statement, i);
-						break;
-					case SQLITE_BLOB:
-						col.dataType = TEXT;
-						col.textValue = std::string((const char*)sqlite3_column_text(statement, i));
-						break;
-					case SQLITE_NULL:
-						col.dataType = NODATA;
-						break;
-					case SQLITE_TEXT: //or SQLITE3_TEXT. As we are not using SQLite version 2 it doesn't matter
-						col.dataType = TEXT;
-						col.textValue = std::string((const char*)sqlite3_column_text(statement, i));
-						if(GD::debugLevel >= 5)
-						{
-							std::cout << "Read text column from database: " << col.textValue << std::endl;;
-						}
-						break;
+					col->dataType = DataColumn::DataType::Enum::INTEGER;
+					col->intValue = sqlite3_column_int64(statement, i);
 				}
-				row.push_back(col);
+				else if(columnType == SQLITE_FLOAT)
+				{
+					col->dataType = DataColumn::DataType::Enum::FLOAT;
+					col->floatValue = sqlite3_column_double(statement, i);
+				}
+				else if(columnType == SQLITE_BLOB)
+				{
+					col->dataType = DataColumn::DataType::Enum::BLOB;
+					char* binaryData = (char*)sqlite3_column_blob(statement, i);
+					int32_t size = sqlite3_column_bytes(statement, i);
+					col->binaryValue.reset(new std::vector<char>(binaryData, binaryData + size));
+				}
+				else if(columnType == SQLITE_NULL)
+				{
+					col->dataType = DataColumn::DataType::Enum::NODATA;
+				}
+				else if(columnType == SQLITE_TEXT) //or SQLITE3_TEXT. As we are not using SQLite version 2 it doesn't matter
+				{
+					col->dataType = DataColumn::DataType::Enum::TEXT;
+					col->textValue = std::string((const char*)sqlite3_column_text(statement, i));
+					if(GD::debugLevel >= 5)
+					{
+						std::cout << "Read text column from database: " << col->textValue << std::endl;;
+					}
+				}
+				dataRows[row][i] = col;
 			}
-			dataRows->push_back(row);
+			row++;
 		}
 		if(result != SQLITE_DONE)
 		{
@@ -92,9 +97,9 @@ void Database::getDataRows(sqlite3_stmt* statement, std::vector<std::vector<Data
 	}
 }
 
-std::vector<std::vector<DataColumn>> Database::executeCommand(std::string command, std::vector<DataColumn> dataToEscape)
+DataTable Database::executeCommand(std::string command, DataColumnVector& dataToEscape)
 {
-	std::vector<std::vector<DataColumn>> dataRows;
+	DataTable dataRows;
 	try
 	{
 		if(GD::debugLevel >= 5) std::cout << "Executing SQL command: " << command << std::endl;
@@ -105,29 +110,34 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
 		{
 			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
 		}
-		std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](DataColumn col)
+		int32_t index = 1;
+		std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](std::shared_ptr<DataColumn> col)
 		{
-			switch(col.dataType)
+			switch(col->dataType)
 			{
-				case NODATA:
-					result = sqlite3_bind_null(statement, col.index);
+				case DataColumn::DataType::Enum::NODATA:
+					result = sqlite3_bind_null(statement, index);
 					break;
-				case INTEGER:
-					result = sqlite3_bind_int64(statement, col.index, col.intValue);
+				case DataColumn::DataType::Enum::INTEGER:
+					result = sqlite3_bind_int64(statement, index, col->intValue);
 					break;
-				case FLOAT:
-					result = sqlite3_bind_double(statement, col.index, col.floatValue);
+				case DataColumn::DataType::Enum::FLOAT:
+					result = sqlite3_bind_double(statement, index, col->floatValue);
 					break;
-				case TEXT:
-					result = sqlite3_bind_text(statement, col.index, col.textValue.c_str(), -1, SQLITE_TRANSIENT);
+				case DataColumn::DataType::Enum::BLOB:
+					result = sqlite3_bind_blob(statement, index, &col->binaryValue->at(0), col->binaryValue->size(), SQLITE_STATIC);
+					break;
+				case DataColumn::DataType::Enum::TEXT:
+					result = sqlite3_bind_text(statement, index, col->textValue.c_str(), -1, SQLITE_STATIC);
 					break;
 			}
 			if(result)
 			{
 				throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
 			}
+			index++;
 		});
-		getDataRows(statement, &dataRows);
+		getDataRows(statement, dataRows);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
@@ -142,9 +152,9 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
 	return dataRows;
 }
 
-std::vector<std::vector<DataColumn>> Database::executeCommand(std::string command)
+DataTable Database::executeCommand(std::string command)
 {
-    std::vector<std::vector<DataColumn>> dataRows;
+    DataTable dataRows;
     try
     {
     	if(GD::debugLevel >= 5) std::cout << "Executing SQL command: " << command << std::endl;
@@ -155,7 +165,7 @@ std::vector<std::vector<DataColumn>> Database::executeCommand(std::string comman
 		{
 			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
 		}
-		getDataRows(statement, &dataRows);
+		getDataRows(statement, dataRows);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{

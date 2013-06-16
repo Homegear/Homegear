@@ -133,14 +133,35 @@ void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycl
 	for(uint32_t i = pos; i < (pos + messageCounterSize); i += 10)
 		_messageCounter[std::stoll(serializedObject.substr(i, 8), 0, 16)] = (uint8_t)std::stoll(serializedObject.substr(i + 8, 2), 0, 16);
 	pos += messageCounterSize;
-	uint32_t peersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	for(uint32_t i = 0; i < peersSize; i++)
+	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	for(uint32_t i = 0; i < configSize; i++)
 	{
-		int32_t address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		int32_t peerSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		std::shared_ptr<Peer> peer(new Peer(serializedObject.substr(pos, peerSize), this)); pos += peerSize;
+		int32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		uint32_t listCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t j = 0; j < listCount; j++)
+		{
+			int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			for(uint32_t k = 0; k < listSize; k++)
+			{
+				_config[channel][listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
+			}
+		}
+	}
+}
+
+void HomeMaticDevice::loadPeersFromDatabase()
+{
+	std::ostringstream command;
+	command << "SELECT * FROM peers WHERE parent=" << std::dec << std::to_string(_address);
+	DataTable rows = GD::db.executeCommand(command.str());
+	for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+	{
+		if(row->second.at(2)->textValue.empty()) continue;
+		std::shared_ptr<Peer> peer(new Peer(row->second.at(2)->textValue, this));
+		_peers[peer->address] = peer;
 		if(!peer->rpcDevice) continue;
-		_peers[address] = peer;
+		_peers[peer->address] = peer;
 		if(!peer->serialNumber.empty()) _peersBySerial[peer->serialNumber] = peer;
 		if(!peer->team.serialNumber.empty())
 		{
@@ -160,21 +181,46 @@ void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycl
 			}
 		}
 	}
-	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	for(uint32_t i = 0; i < configSize; i++)
+}
+
+void HomeMaticDevice::deletePeerFromDatabase(int32_t address)
+{
+	std::ostringstream command;
+	command << "DELETE FROM peers WHERE parent=" << std::dec << _address << " AND " << " address=" << address;
+	GD::db.executeCommand(command.str());
+}
+
+void HomeMaticDevice::deletePeersFromDatabase()
+{
+	std::ostringstream command;
+	command << "DELETE FROM peers WHERE parent=" << std::dec << _address;
+	GD::db.executeCommand(command.str());
+}
+
+void HomeMaticDevice::savePeersToDatabase()
+{
+	try
 	{
-		int32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		uint32_t listCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t j = 0; j < listCount; j++)
+		deletePeersFromDatabase();
+		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			for(uint32_t k = 0; k < listSize; k++)
-			{
-				_config[channel][listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
-			}
+			std::ostringstream command;
+			command << "INSERT INTO peers VALUES(" << _address << "," << i->first << ",'" <<  i->second->serialize() << "')";
+			GD::db.executeCommand(command.str());
 		}
 	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 std::string HomeMaticDevice::serialize()
@@ -191,14 +237,6 @@ std::string HomeMaticDevice::serialize()
 	{
 		stringstream << std::setw(8) << i->first;
 		stringstream << std::setw(2) << (int32_t)i->second;
-	}
-	stringstream << std::setw(8) << _peers.size();
-	for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
-	{
-		stringstream << std::setw(8) << i->first;
-		std::string peer = i->second->serialize();
-		stringstream << std::setw(8) << peer.size();
-		stringstream << peer;
 	}
 	stringstream << std::setw(8) << _config.size();
 	for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
@@ -370,7 +408,11 @@ void HomeMaticDevice::handleConfigPeerDelete(int32_t messageCounter, std::shared
 		_peersMutex.lock();
 		try
 		{
-			if(_peers[address]->deviceType != HMDeviceTypes::HMRCV50) _peers.erase(address); //Unpair. Unpairing of HMRCV50 is done through CONFIG_WRITE_INDEX
+			if(_peers[address]->deviceType != HMDeviceTypes::HMRCV50)
+			{
+				deletePeerFromDatabase(address);
+				_peers.erase(address); //Unpair. Unpairing of HMRCV50 is done through CONFIG_WRITE_INDEX
+			}
 		}
 		catch(const std::exception& ex)
 		{
@@ -412,6 +454,7 @@ void HomeMaticDevice::handleConfigEnd(int32_t messageCounter, std::shared_ptr<Bi
 			_peersMutex.lock();
 			try
 			{
+				deletePeerFromDatabase(packet->senderAddress());
 				_peers.erase(packet->senderAddress());
 			}
 			catch(const std::exception& ex)

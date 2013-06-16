@@ -85,6 +85,8 @@ public:
 		addSignature(RPCVariableType::rpcVariant, std::vector<RPCVariableType>{RPCVariableType::rpcString});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+private:
+	RPCDecoder _rpcDecoder;
 };
 
 class RPCGetInstallMode : public RPCMethod
@@ -97,10 +99,10 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
-class RPCGetKeyMissmatchDevice : public RPCMethod
+class RPCGetKeyMismatchDevice : public RPCMethod
 {
 public:
-	RPCGetKeyMissmatchDevice()
+	RPCGetKeyMismatchDevice()
 	{
 		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcBoolean});
 	}
@@ -115,6 +117,8 @@ public:
 		addSignature(RPCVariableType::rpcVariant, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+private:
+	RPCDecoder _rpcDecoder;
 };
 
 class RPCGetParamsetDescription : public RPCMethod
@@ -123,6 +127,16 @@ public:
 	RPCGetParamsetDescription()
 	{
 		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCGetServiceMessages : public RPCMethod
+{
+public:
+	RPCGetServiceMessages()
+	{
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
@@ -186,6 +200,8 @@ public:
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcVariant});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+private:
+	RPCEncoder _rpcEncoder;
 };
 
 class RPCSetInstallMode : public RPCMethod

@@ -573,6 +573,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 					}
 					GD::rpcClient.broadcastDeleteDevices(deviceAddresses);
 					if(_peersBySerial.find(peer->serialNumber) != _peersBySerial.end()) _peersBySerial.erase(peer->serialNumber);
+					deletePeerFromDatabase(packet->senderAddress());
 					_peers.erase(packet->senderAddress());
 					std::cout << "Removed device 0x" << std::hex << packet->senderAddress() << std::dec << std::endl;
 				}
@@ -721,14 +722,14 @@ void HomeMaticCentral::pairingModeTimer()
 	{
 		_pairing = true;
 		std::cout << "Pairing mode enabled." << std::endl;
-		_timeLeftInPairingMode = 60;
+		_timeLeftInPairingMode = 59;
 		int64_t startTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		int64_t timePassed = 0;
-		while(timePassed < 60000 && !_stopPairingModeThread)
+		while(timePassed < 59000 && !_stopPairingModeThread)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - startTime;
-			_timeLeftInPairingMode = 60 - (timePassed / 1000);
+			_timeLeftInPairingMode = 59 - (timePassed / 1000);
 		}
 		_timeLeftInPairingMode = 0;
 		_pairing = false;
