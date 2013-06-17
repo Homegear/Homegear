@@ -128,7 +128,7 @@ int main()
             else if(input == "test")
             {
             	std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-            	packet->import("0C7986701D8F450000007F922C", false);
+            	packet->import("1A1A84001DA44E00000020003A4A45513035353433303758010100", false);
             	GD::devices.getCentral()->packetReceived(packet);
             }
             else if(input == "create device" || input == "add device")

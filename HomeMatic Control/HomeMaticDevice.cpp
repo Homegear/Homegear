@@ -296,13 +296,13 @@ void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	{
 		_receivedPackets.set(packet->senderAddress(), packet);
 		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, packet);
-		if(message != nullptr && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
+		if(message && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
 		{
 			if(GD::debugLevel >= 6) std::cout << "Device " << std::hex << _address << ": Access granted for packet " << packet->hexString() << std::dec << std::endl;
 			_messageCounter[packet->senderAddress()] = packet->messageCounter();
 			message->invokeMessageHandlerIncoming(packet);
 		}
-		if(message == nullptr && packet->destinationAddress() == _address && GD::debugLevel >= 3) std::cout << "Warning: Could not process message. Unknown message type: " << packet->hexString() << std::endl;
+		if(!message && packet->destinationAddress() == _address && GD::debugLevel >= 3) std::cout << "Warning: Could not process message. Unknown message type: " << packet->hexString() << std::endl;
 	}
 	catch(const std::exception& ex)
 	{
@@ -317,8 +317,9 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 	if(packetInfo)
 	{
 		int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
-		if(timeDifference > 0 && timeDifference < 90) std::this_thread::sleep_for(std::chrono::milliseconds(90 - timeDifference));
+		if(timeDifference >= 0 && timeDifference < 90) std::this_thread::sleep_for(std::chrono::milliseconds(90 - timeDifference));
 	}
+	else if(GD::debugLevel >= 7) std::cout << "Sending packet " << packet->hexString() << " immediately, because it seems it is no response (no packet information found)." << std::endl;
 	GD::cul.sendPacket(packet);
 }
 

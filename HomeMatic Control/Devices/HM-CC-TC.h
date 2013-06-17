@@ -17,7 +17,8 @@ class HM_CC_TC : public HomeMaticDevice
         HM_CC_TC(std::string, int32_t);
         virtual ~HM_CC_TC();
 
-        void setValveState(int32_t valveState) { _newValveState = valveState; }
+        void setValveState(int32_t valveState);
+        int32_t getNewValueState() { return _newValveState; }
         void handleCLICommand(std::string command);
         void stopDutyCycle();
 
@@ -43,6 +44,7 @@ class HM_CC_TC : public HomeMaticDevice
         int32_t _valveState = 0;
         int32_t _newValveState = 0;
         int32_t _dutyCycleCounter  = 0;
+        bool _dutyCycleBroadcast = false;
         void reset();
 
         int32_t getNextDutyCycleDeviceAddress();

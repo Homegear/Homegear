@@ -19,6 +19,7 @@ CPP_SRCS += \
 ../HomeMaticDevices.cpp \
 ../Log.cpp \
 ../Peer.cpp \
+../ServiceMessages.cpp \
 ../main.cpp 
 
 OBJS += \
@@ -37,6 +38,7 @@ OBJS += \
 ./HomeMaticDevices.o \
 ./Log.o \
 ./Peer.o \
+./ServiceMessages.o \
 ./main.o 
 
 CPP_DEPS += \
@@ -55,6 +57,7 @@ CPP_DEPS += \
 ./HomeMaticDevices.d \
 ./Log.d \
 ./Peer.d \
+./ServiceMessages.d \
 ./main.d 
 
 

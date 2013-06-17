@@ -330,16 +330,16 @@ bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
 {
 	try
 	{
+		bool match = true;
 		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
-			bool match = true;
 			//This might not be the optimal way to get the xml rpc device, because it assumes the device type is unique
 			//When the device type is not at index 10 of the pairing packet, the device is not supported
 			//The "priority" attribute is ignored, for the standard devices "priority" seems not important
 			if(i->index == 10.0 && i->constValue != (int32_t)deviceType) match = false;
-			if(i->index == 9.0 && !i->checkCondition(firmwareVersion)) match = false;
-			if(match) return true;
+			else if(i->index == 9.0 && !i->checkCondition(firmwareVersion)) match = false;
 		}
+		if(match) return true;
 	}
 	catch(const std::exception& ex)
     {

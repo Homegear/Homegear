@@ -73,6 +73,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 	rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
 	if(!rpcDevice && GD::debugLevel >= 2) std::cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << std::endl;
 	messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+	homegearFeatures = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
 	team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 	if(serialNumberSize > 0) { team.serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize; }
@@ -104,6 +105,8 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 			pendingBidCoSQueues->back()->noSending = true;
 		}
 	}
+	uint32_t serializedServiceMessagesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	serviceMessages.reset(new ServiceMessages(serializedObject.substr(pos, serializedServiceMessagesSize)));
 }
 
 void Peer::deleteFromDatabase(int32_t parentAddress)
@@ -115,6 +118,23 @@ void Peer::deleteFromDatabase(int32_t parentAddress)
 	std::ostringstream command;
 	command << "DELETE FROM peers WHERE parent=" << std::dec << parentAddress << " AND " << " address=" << address;
 	GD::db.executeCommand(command.str());
+}
+
+void Peer::deletePairedVirtualDevices()
+{
+	std::shared_ptr<HomeMaticDevice> device;
+	for(std::unordered_map<int32_t, std::vector<BasicPeer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+	{
+		for(std::vector<BasicPeer>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+		{
+			if(j->hidden)
+			{
+				device = GD::devices.get(j->address);
+				if(device) GD::devices.remove(j->address);
+				j->device.reset();
+			}
+		}
+	}
 }
 
 std::string Peer::serialize()
@@ -129,6 +149,7 @@ std::string Peer::serialize()
 	stringstream << std::setw(2) << localChannel;
 	stringstream << std::setw(8) << (int32_t)deviceType;
 	stringstream << std::setw(2) << (int32_t)messageCounter;
+	stringstream << std::setw(1) << (int32_t)homegearFeatures;
 	stringstream << std::setw(8) << team.address;
 	stringstream << std::setw(4) << team.serialNumber.size();
 	stringstream << team.serialNumber;
@@ -159,6 +180,9 @@ std::string Peer::serialize()
 		stringstream << bidCoSQueue;
 		pendingBidCoSQueues->pop();
 	}
+	std::string serializedServiceMessages = serviceMessages->serialize();
+	stringstream << std::setw(8) << serializedServiceMessages.length();
+	stringstream << serializedServiceMessages;
 	stringstream << std::dec;
 	return stringstream.str();
 }
@@ -238,12 +262,13 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			if(frame->direction == RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != address) continue;
 			if(frame->direction == RPC::DeviceFrame::Direction::Enum::toDevice && packet->destinationAddress() != address) continue;
 			if(packet->payload()->empty()) continue;
-			if(frame->subtype > -1 && frame->subtypeIndex >= 9 && packet->payload()->at(frame->subtypeIndex - 9) != (unsigned)frame->subtype) continue;
+			if(frame->subtype > -1 && frame->subtypeIndex >= 9 && (signed)packet->payload()->size() > (frame->subtypeIndex - 9) && packet->payload()->at(frame->subtypeIndex - 9) != (unsigned)frame->subtype) continue;
 			int32_t channelIndex = frame->channelField;
 			int32_t channel = -1;
-			if(channelIndex >= 9) channel = packet->payload()->at(channelIndex - 9);
+			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9);
 			for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
 			{
+				if((int32_t)j->index >= (signed)packet->payload()->size()) continue;
 				int64_t value = packet->getPosition(j->index, j->size, j->isSigned);
 				if(j->constValue > -1)
 				{
@@ -975,11 +1000,47 @@ std::shared_ptr<RPC::RPCVariable> Peer::getValue(uint32_t channel, std::string v
 	return valuesCentral[channel][valueKey].rpcParameter->convertFromPacket(valuesCentral[channel][valueKey].value);
 }
 
+bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value)
+{
+	try
+	{
+		if(deviceType == HMDeviceTypes::HMCCVD && valueKey == "VALVE_STATE" && peers.find(1) != peers.end() && peers[1].size() > 0 && peers[1].at(0).hidden)
+		{
+			if(!peers[1].at(0).device)
+			{
+				peers[1].at(0).device = GD::devices.get(peers[1].at(0).address);
+				if(peers[1].at(0).device->deviceType() != HMDeviceTypes::HMCCTC) peers[1].at(0).device.reset();
+			}
+			if(peers[1].at(0).device)
+			{
+				HM_CC_TC* tc = (HM_CC_TC*)peers[1].at(0).device.get();
+				tc->setValveState(value->integerValue);
+				if(GD::debugLevel >= 4) std::cout << "Setting valve state of HM-CC-VD with address 0x" << address << " to " << tc->getNewValueState() << "%." << std::endl;
+				return true;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+	return false;
+}
+
 std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value)
 {
 	try
 	{
 		if(valuesCentral.find(channel) == valuesCentral.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(setHomegearValue(channel, valueKey, value)) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
 		std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 		if(rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::command) return RPC::RPCVariable::createError(-6, "Parameter is not settable.");

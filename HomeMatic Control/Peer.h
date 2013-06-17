@@ -16,6 +16,7 @@ class BidCoSMessages;
 
 #include "RPC/Device.h"
 #include "RPC/RPCVariable.h"
+#include "ServiceMessages.h"
 
 class BasicPeer
 {
@@ -26,6 +27,8 @@ public:
 
 	int32_t address;
 	std::string serialNumber;
+	bool hidden = false;
+	std::shared_ptr<HomeMaticDevice> device;
 };
 
 class RPCConfigurationParameter
@@ -42,10 +45,11 @@ public:
 class Peer
 {
     public:
-		Peer() { pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>()); }
+		Peer() { serviceMessages = std::shared_ptr<ServiceMessages>(new ServiceMessages()); pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>()); }
 		Peer(std::string serializedObject, HomeMaticDevice* device);
 		virtual ~Peer() {}
 
+		std::shared_ptr<ServiceMessages> serviceMessages;
         int32_t address = 0;
         std::string serialNumber = "";
         int32_t firmwareVersion = 0;
@@ -61,6 +65,7 @@ class Peer
         std::unordered_map<int32_t, std::vector<BasicPeer>> peers;
         BasicPeer team;
         std::vector<std::pair<std::string, uint32_t>> teamChannels;
+        bool homegearFeatures = false;
 
         //Has to be shared_ptr because Peer must be copyable
         std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>> pendingBidCoSQueues;
@@ -70,8 +75,10 @@ class Peer
         void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config);
         void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
         void deleteFromDatabase(int32_t parentAddress);
+        void deletePairedVirtualDevices();
 
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
+        bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 
         std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
         std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);

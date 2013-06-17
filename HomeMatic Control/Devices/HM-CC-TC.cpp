@@ -183,6 +183,13 @@ void HM_CC_TC::handleCLICommand(std::string command)
 	HomeMaticDevice::handleCLICommand(command);
 }
 
+void HM_CC_TC::setValveState(int32_t valveState)
+{
+	_newValveState = valveState * 256 / 100;
+	if(_newValveState > 255) _newValveState = 255;
+	if(_newValveState < 0) _newValveState = 0;
+}
+
 void HM_CC_TC::startDutyCycle(int64_t lastDutyCycleEvent)
 {
 	_dutyCycleThread = new std::thread(&HM_CC_TC::dutyCycleThread, this, lastDutyCycleEvent);
@@ -212,8 +219,11 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		}
 		if(_stopDutyCycleThread) break;
 
-		std::thread sendDutyCycleBroadcastThread(&HM_CC_TC::sendDutyCycleBroadcast, this);
-		sendDutyCycleBroadcastThread.detach();
+		if(_dutyCycleBroadcast)
+		{
+			std::thread sendDutyCycleBroadcastThread(&HM_CC_TC::sendDutyCycleBroadcast, this);
+			sendDutyCycleBroadcastThread.detach();
+		}
 
 		while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 40)
 		{

@@ -20,7 +20,7 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 {
 	try
 	{
-		if(_queues.find(address) != _queues.end() && _queues[address]->thread) _queues[address]->stopThread = true;
+		if(_queues.find(address) != _queues.end() && _queues[address] && _queues[address]->thread) _queues[address]->stopThread = true;
 		if(_queues.find(address) != _queues.end()) _queues.erase(_queues.find(address));
 
 		std::shared_ptr<BidCoSQueueData> queueData(new BidCoSQueueData());

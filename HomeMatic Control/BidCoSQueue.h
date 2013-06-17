@@ -43,7 +43,7 @@ class BidCoSQueue
         std::mutex _queueMutex;
         BidCoSQueueType _queueType;
         bool _stopResendThread = false;
-        std::thread _resendThread;
+        std::shared_ptr<std::thread> _resendThread;
         int32_t resendCounter = 0;
         uint32_t _resendThreadId = 0;
         bool _workingOnPendingQueue = false;
@@ -67,7 +67,7 @@ class BidCoSQueue
         void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool popImmediately = true, bool clearPendingQueues = false);
         BidCoSQueueEntry* front() { return &_queue.front(); }
         void pop();
-        bool isEmpty() { return _queue.empty(); }
+        bool isEmpty() { return _queue.empty() && (!_pendingQueues || _pendingQueues->empty()); }
         void clear();
         void resend(uint32_t threadId);
         void startResendThread();

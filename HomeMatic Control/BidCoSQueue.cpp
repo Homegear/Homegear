@@ -49,7 +49,7 @@ BidCoSQueue::~BidCoSQueue()
 	try
 	{
 		_stopResendThread = true;
-		if(_resendThread.joinable()) _resendThread.join();
+		if(_resendThread && _resendThread->joinable()) _resendThread->join();
 	}
 	catch(const std::exception& ex)
 	{
@@ -241,15 +241,16 @@ void BidCoSQueue::startResendThread()
 {
 	try
 	{
+		if(noSending) return;
 		_queueMutex.lock();
 		uint8_t controlByte = (_queue.front().getType() == QueueEntryType::MESSAGE) ? _queue.front().getMessage()->getControlByte() : _queue.front().getPacket()->controlByte();
 		_queueMutex.unlock();
 		if(!(controlByte & 0x02) && (controlByte & 0x20)) //Resend when no response?
 		{
 			_stopResendThread = true;
-			if(_resendThread.joinable()) _resendThread.join();
+			if(_resendThread && _resendThread->joinable()) _resendThread->join();
 			_stopResendThread = false;
-			_resendThread = std::thread(&BidCoSQueue::resend, this, _resendThreadId++);
+			_resendThread.reset(new std::thread(&BidCoSQueue::resend, this, _resendThreadId++));
 		}
 	}
 	catch(const std::exception& ex)
@@ -321,14 +322,15 @@ void BidCoSQueue::pop()
 	{
 		keepAlive();
 		if(GD::debugLevel >= 5) std::cout << "Popping from BidCoSQueue: " << id << std::endl;
-		if(_resendThread.joinable()) _stopResendThread = true;
+		if(_resendThread && _resendThread->joinable()) _stopResendThread = true;
 		if(_queue.empty()) return;
 		_queueMutex.lock();
 		_queue.pop_front();
 		if(_queue.empty()) {
 			if(_workingOnPendingQueue) _pendingQueues->pop();
-			if(_pendingQueues && _pendingQueues->empty())
+			if(!_pendingQueues || (_pendingQueues && _pendingQueues->empty()))
 			{
+				_stopResendThread = true;
 				if(GD::debugLevel >= 5) std::cout << "Queue " << id << " is empty and there are no pending queues." << std::endl;
 				_workingOnPendingQueue = false;
 				_queueMutex.unlock();

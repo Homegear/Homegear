@@ -38,7 +38,6 @@ public:
 protected:
 	uint32_t _id = 0;
 	std::unordered_map<int32_t, std::shared_ptr<BidCoSPacketInfo>> _packets;
-	std::mutex _packetMutex;
 };
 
 #endif /* BIDCOSPACKETMANAGER_H_ */

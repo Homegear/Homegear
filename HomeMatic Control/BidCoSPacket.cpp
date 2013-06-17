@@ -231,6 +231,7 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 	}
 	index -= 9;
 	double byteIndex = std::floor(index);
+	if(byteIndex >= _payload.size()) return 0;
 	int64_t result = 0;
 	if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
 	{
