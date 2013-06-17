@@ -75,7 +75,7 @@ void BidCoSQueue::resend(uint32_t threadId)
 		//Sleep for 200 ms
 		i = 0;
 		sleepingTime = std::chrono::milliseconds(25);
-		while(!_stopResendThread && i < 8)
+		while(!_stopResendThread && i < 16)
 		{
 			std::this_thread::sleep_for(sleepingTime);
 			i++;

@@ -59,7 +59,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		else if(attributeName == "subtype") subtype = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
 		else if(attributeName == "channel_field") channelField = std::stoll(attributeValue);
-		else if(attributeName == "fixed_channel") fixedChannel = std::stoll(attributeValue);
+		else if(attributeName == "fixed_channel") fixedChannel = HelperFunctions::getNumber(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"frame\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))
@@ -399,7 +399,7 @@ DeviceType::DeviceType(xml_node<>* typeNode)
 		std::string attributeValue(attr->value());
 		if(attributeName == "name") name = attributeValue;
 		else if(attributeName == "id") id = attributeValue;
-		else if(attributeName == "priority") priority = std::stoll(attributeValue);
+		else if(attributeName == "priority") priority = HelperFunctions::getNumber(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"type\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* parameterNode = typeNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
@@ -524,7 +524,7 @@ EnforceLink::EnforceLink(xml_node<>* node)
 		else if(attributeName == "value")
 		{
 			if(attributeValue == "true") value = 1;
-			else value = stoll(attributeValue);
+			else value = HelperFunctions::getNumber(attributeValue);
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"enforce_link - value\": " << attributeName << std::endl;
 	}
@@ -536,7 +536,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 	{
 		std::string attributeName(attr->name());
 		std::string attributeValue(attr->value());
-		if(attributeName == "index") index = std::stoll(attributeValue);
+		if(attributeName == "index") index = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "ui_flags")
 		{
 			if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
@@ -553,10 +553,16 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		else if(attributeName == "class") channelClass = attributeValue;
 		else if(attributeName == "type") type = attributeValue;
 		else if(attributeName == "hidden") { if(attributeValue == "true") hidden = true; }
-		else if(attributeName == "count") count = std::stoll(attributeValue);
+		else if(attributeName == "count") count = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
 		else if(attributeName == "team_tag") teamTag = attributeValue;
+		else if(attributeName == "count_from_sysinfo")
+		{
+			std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, ':');
+			if(!splitValue.first.empty()) countFromSysinfo = HelperFunctions::getDouble(splitValue.first);
+			if(!splitValue.second.empty()) countFromSysinfoSize = HelperFunctions::getDouble(splitValue.second);
+		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"channel\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* channelNode = node->first_node(); channelNode; channelNode = channelNode->next_sibling())
@@ -710,7 +716,7 @@ void Device::parseXML(xml_node<>* node)
 		{
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
-			if(attributeName == "version") version = std::stoll(attributeValue);
+			if(attributeName == "version") version = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "rx_modes")
 			{
 				std::stringstream stream(attributeValue);
@@ -733,7 +739,7 @@ void Device::parseXML(xml_node<>* node)
 				else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
 				else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown ui flag for \"channel\": " << attributeValue << std::endl;
 			}
-			else if(attributeName == "cyclic_timeout") cyclicTimeout = std::stoll(attributeValue);
+			else if(attributeName == "cyclic_timeout") cyclicTimeout = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "supports_aes") { if(attributeValue == "true") supportsAES = true; }
 			else if(attributeName == "peering_sysinfo_expect_channel") { if(attributeValue == "false") peeringSysinfoExpectChannel = false; }
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"device\": " << attributeName << std::endl;

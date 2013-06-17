@@ -53,6 +53,9 @@ void HomeMaticCentral::setUpBidCoSMessages()
 	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
 
 	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
+	/********** TEST - DON'T FORGET TO SWITCH BACK COMMENTS **********/
+	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
+	/********** TEST END **********/
 
 	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x3F, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleTimeRequest)));
 }
@@ -60,8 +63,6 @@ void HomeMaticCentral::setUpBidCoSMessages()
 void HomeMaticCentral::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
 	HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
-	//_dummyHMRCV50 = createPeer(_address, 0, HMDeviceTypes::HMRCV50, _serialNumber, 0, 0);
-	//if(!_dummyHMRCV50 && GD::debugLevel >= 2) std::cerr << "Error: Could not create dummy peer for central. Probably the rpc device was not found. Check if the device xml file \"rf_central.xml\" exists." << std::endl;
 }
 
 std::string HomeMaticCentral::serialize()
@@ -157,6 +158,18 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 		{
 			std::cout << "Unpairing device 0x" << std::hex << address << std::dec << std::endl;
 			unpair(address, true);
+		}
+	}
+	else if(command == "enable aes")
+	{
+		std::string input;
+		std::cout << "Please enter the devices address: ";
+		int32_t address = getHexInput();
+		if(_peers.find(address) == _peers.end()) std::cout << "This device is not paired to this central." << std::endl;
+		else
+		{
+			std::cout << "Enabling AES for device device 0x" << std::hex << address << std::dec << std::endl;
+			sendEnableAES(address, 1);
 		}
 	}
 	else if(command == "list peers")
@@ -422,6 +435,55 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
     }
 }
 
+void HomeMaticCentral::sendEnableAES(int32_t address, int32_t channel)
+{
+	if(_peers.find(address) == _peers.end()) return;
+	std::shared_ptr<Peer> peer = _peers[address];
+
+	std::vector<uint8_t> payload;
+
+	std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
+	pendingQueue->noSending = true;
+
+	//CONFIG_START
+	payload.push_back((uint8_t)channel);
+	payload.push_back(0x05);
+	payload.push_back(0);
+	payload.push_back(0);
+	payload.push_back(0);
+	payload.push_back(0);
+	payload.push_back(0x01);
+	std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+	pendingQueue->push(configPacket);
+	pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+	payload.clear();
+	_messageCounter[0]++;
+
+	//CONFIG_WRITE_INDEX
+	payload.push_back((uint8_t)channel);
+	payload.push_back(0x08);
+	payload.push_back(0x08);
+	payload.push_back(0x01);
+	configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+	pendingQueue->push(configPacket);
+	pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+	payload.clear();
+	_messageCounter[0]++;
+
+	//END_CONFIG
+	payload.push_back((uint8_t)channel);
+	payload.push_back(0x06);
+	configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+	pendingQueue->push(configPacket);
+	pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+	payload.clear();
+	_messageCounter[0]++;
+
+	peer->pendingBidCoSQueues->push(pendingQueue);
+	std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, address);
+	queue->push(peer->pendingBidCoSQueues);
+}
+
 void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
@@ -564,6 +626,46 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 {
 	try
 	{
+		/********** TEST - DON'T FORGET TO REMOVE SOURCE CODE **********/
+		/*if(packet->payload()->size() == 4 && packet->payload()->at(0) == 0x06 && packet->payload()->at(1) == 0x01 && packet->payload()->at(2) == 0xC8)
+		{
+			_messageCounter[0] = 0x2F;
+			if(_peers.find(packet->senderAddress()) == _peers.end()) return;
+			std::shared_ptr<Peer> peer = _peers[packet->senderAddress()];
+
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, packet->senderAddress());
+
+			std::vector<uint8_t> payload;
+			//CONFIG_START
+			payload.push_back(0x01);
+			payload.push_back(0x0E);
+			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
+			queue->push(configPacket);
+			queue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
+			payload.clear();
+
+			//CONFIG_WRITE_INDEX
+			payload.push_back(0x04);
+			payload.push_back(0x0E);
+			payload.push_back(0x98);
+			payload.push_back(0x3E);
+			payload.push_back(0x70);
+			payload.push_back(0x11);
+			payload.push_back(0x2C);
+			payload.push_back(0);
+			configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x02, _address, packet->senderAddress(), payload));
+			queue->push(configPacket);
+			//queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+			return;
+		}
+		else
+		{
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+			if(!queue) return;
+			queue->pop();
+			return;
+		}*/
+		/********** TEST END **********/
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue) return;
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));

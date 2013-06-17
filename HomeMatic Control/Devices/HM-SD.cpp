@@ -1,4 +1,5 @@
 #include "HM-SD.h"
+#include "../GD.h"
 
 HM_SD::HM_SD() : HomeMaticDevice()
 {
@@ -109,7 +110,7 @@ void HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
             packet->import(lengthHex + packetHex.substr(2, 2) + i->response, false);
             std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
             std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response: " << '\n';
-            sendPacket(packet);
+            GD::cul.sendPacket(packet);
         }
     }
 }
@@ -195,6 +196,22 @@ void HM_SD::handleCLICommand(std::string command)
 			if(_filters.size() != oldSize) std::cout << "Filter removed." << std::endl;
 			else std::cout << "Filter not found." << std::endl;
 		}
+	}
+	else if(command == "add response")
+	{
+		std::string input;
+		std::cout << "Please enter a hexadecimal byte sequence to capture: ";
+		std::cin >> input;
+		if(input.empty()) return;
+		std::string packetPartToCapture = input;
+		std::cout << "Please enter the packet to send in hexadecimal format without length and message counter: ";
+		std::cin >> input;
+		if(input.empty()) return;
+		HM_SD_OverwriteResponse response;
+		response.packetPartToCapture = packetPartToCapture;
+		response.response = input;
+		response.sendAfter = 80;
+		_responsesToOverwrite.push_back(response);
 	}
 	else if(command == "list filters")
 	{

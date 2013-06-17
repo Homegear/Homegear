@@ -25,7 +25,17 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		else if(attributeName == "value_id") valueID = attributeValue;
 		else if(attributeName == "no_init" && attributeValue == "true") noInit = true;
 		else if(attributeName == "list") list = HelperFunctions::getNumber(attributeValue);
-		else if(attributeName == "index") index = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "index")
+		{
+			std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, '.');
+			index = 0;
+			if(!splitValue.second.empty())
+			{
+				index += HelperFunctions::getNumber(splitValue.second);
+				index /= 10;
+			}
+			index += HelperFunctions::getNumber(splitValue.first);
+		}
 		else if(attributeName == "size") size = HelperFunctions::getDouble(attributeValue);
 		else if(attributeName == "counter") counter = attributeValue;
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"physical\": " << attributeName << std::endl;

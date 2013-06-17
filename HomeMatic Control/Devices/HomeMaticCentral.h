@@ -40,6 +40,7 @@ public:
 	void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleConfigParamResponse(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleReset(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
+	void sendEnableAES(int32_t address, int32_t channel);
 
 	std::shared_ptr<RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);
 	std::shared_ptr<RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel);

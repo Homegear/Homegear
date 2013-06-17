@@ -53,12 +53,12 @@ void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)
 	try
 	{
 		std::chrono::milliseconds sleepingTime(50);
-		while(_packets.find(address) != _packets.end() && !_packets[address]->stopThread && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _packets[address]->time + 500)
+		while(_packets.find(address) != _packets.end() && _packets[address] && !_packets[address]->stopThread && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _packets[address]->time + 500)
 		{
 			std::this_thread::sleep_for(sleepingTime);
 		}
 		_packetMutex.lock();
-		if(_packets.find(address) != _packets.end() && !_packets[address]->stopThread && _packets[address]->id == id)
+		if(_packets.find(address) != _packets.end() && _packets[address] && !_packets[address]->stopThread && _packets[address]->id == id)
 		{
 			if(GD::debugLevel >= 8) std::cout << "Deleting packet " << id << " for 0x" << std::hex << address << std::dec << std::endl;
 			_packets.erase(_packets.find(address));

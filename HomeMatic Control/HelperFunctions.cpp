@@ -30,8 +30,9 @@ std::pair<std::string, std::string> HelperFunctions::split(std::string string, c
 	try
 	{
 
-		uint32_t pos = string.find_last_of(delimiter);
-		if(pos == std::string::npos || pos + 1 >= string.size()) return std::pair<std::string, std::string>();
+		int32_t pos = string.find_last_of(delimiter);
+		if(pos == -1) return std::pair<std::string, std::string>(string, "");
+		if((unsigned)pos + 1 >= string.size()) return std::pair<std::string, std::string>(string.substr(0, pos), "");
 		return std::pair<std::string, std::string>(string.substr(0, pos), string.substr(pos + 1));
 	}
     catch(const std::exception& ex)
