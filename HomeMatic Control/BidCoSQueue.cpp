@@ -49,7 +49,8 @@ BidCoSQueue::~BidCoSQueue()
 	try
 	{
 		_stopResendThread = true;
-		if(_resendThread && _resendThread->joinable()) _resendThread->join();
+		std::this_thread::sleep_for(std::chrono::milliseconds(200)); //Wait for resend thread to finish. join sometimes segfaults the program.
+		//if(_resendThread && _resendThread->joinable()) _resendThread->join();
 	}
 	catch(const std::exception& ex)
 	{
