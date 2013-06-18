@@ -131,9 +131,17 @@ void BidCoSPacket::import(std::string packet, bool removeFirstCharacter)
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<" (Packet: " << packet << "): " << ex.what() << '\n';
-	}
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 uint8_t BidCoSPacket::getByte(std::string hexString)
@@ -145,9 +153,17 @@ uint8_t BidCoSPacket::getByte(std::string hexString)
 		return value;
 	}
 	catch(const std::exception& ex)
-	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
-	}
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 	return 0;
 }
 
@@ -160,119 +176,158 @@ int32_t BidCoSPacket::getInt(std::string hexString)
 		return value;
 	}
 	catch(const std::exception& ex)
-	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
-	}
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 	return 0;
 }
 
 void BidCoSPacket::setPosition(double index, double size, int64_t value)
 {
-	if(size < 0)
+	try
 	{
-		if(GD::debugLevel >= 2) std::cout << "Error: Negative size not allowed." << std::endl;
-		return;
-	}
-	if(index < 9)
-	{
-		if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 9 requested." << std::endl;
-		return;
-	}
-	index -= 9;
-	double byteIndex = std::floor(index);
-	if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
-	{
-		int32_t intByteIndex = byteIndex;
-		if(size > 1)
+		if(size < 0)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Can't set partial byte index > 1." << std::endl;
+			if(GD::debugLevel >= 2) std::cout << "Error: Negative size not allowed." << std::endl;
 			return;
 		}
-		uint32_t bitSize = std::lround(size * 10);
-		while((signed)_payload.size() - 1 < intByteIndex)
+		if(index < 9)
 		{
-			_payload.push_back(0);
+			if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 9 requested." << std::endl;
+			return;
 		}
-		if(value < 0) //has sign?
+		index -= 9;
+		double byteIndex = std::floor(index);
+		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
 		{
-			value = value & _bitmask[bitSize];
+			int32_t intByteIndex = byteIndex;
+			if(size > 1)
+			{
+				if(GD::debugLevel >= 2) std::cout << "Error: Can't set partial byte index > 1." << std::endl;
+				return;
+			}
+			uint32_t bitSize = std::lround(size * 10);
+			while((signed)_payload.size() - 1 < intByteIndex)
+			{
+				_payload.push_back(0);
+			}
+			if(value < 0) //has sign?
+			{
+				value = value & _bitmask[bitSize];
+			}
+			_payload.at(intByteIndex) |= value << (std::lround(index * 10) % 10);
 		}
-		_payload.at(intByteIndex) |= value << (std::lround(index * 10) % 10);
+		else
+		{
+			uint32_t intByteIndex = byteIndex;
+			uint32_t bytes = (uint32_t)std::ceil(size);
+			while(_payload.size() < intByteIndex + bytes)
+			{
+				_payload.push_back(0);
+			}
+			uint32_t bitSize = std::lround(size * 10) % 10;
+			if(bytes == 0) bytes = 1; //size is 0 - assume 1
+			_payload.at(intByteIndex) = (value >> ((bytes - 1) * 8)) & _bitmask[bitSize];
+			for(uint32_t i = 1; i < bytes; i++)
+			{
+				_payload.at(intByteIndex + i) = (value >> ((bytes - i - 1) * 8));
+			}
+		}
 	}
-	else
-	{
-		uint32_t intByteIndex = byteIndex;
-		uint32_t bytes = (uint32_t)std::ceil(size);
-		while(_payload.size() < intByteIndex + bytes)
-		{
-			_payload.push_back(0);
-		}
-		uint32_t bitSize = std::lround(size * 10) % 10;
-		if(bytes == 0) bytes = 1; //size is 0 - assume 1
-		_payload.at(intByteIndex) = (value >> ((bytes - 1) * 8)) & _bitmask[bitSize];
-		for(uint32_t i = 1; i < bytes; i++)
-		{
-			_payload.at(intByteIndex + i) = (value >> ((bytes - i - 1) * 8));
-		}
-	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 {
-	if(size < 0)
+	try
 	{
-		if(GD::debugLevel >= 2) std::cout << "Error: Negative negative size not allowed." << std::endl;
-		return 0;
-	}
-	if(index < 9)
-	{
-		if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 9 requested." << std::endl;
-		return 0;
-	}
-	index -= 9;
-	double byteIndex = std::floor(index);
-	if(byteIndex >= _payload.size()) return 0;
-	int64_t result = 0;
-	if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
-	{
-		if(size > 1)
+		if(size < 0)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Partial byte index > 1 requested." << std::endl;
-			return result;
+			if(GD::debugLevel >= 2) std::cout << "Error: Negative negative size not allowed." << std::endl;
+			return 0;
 		}
-		//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
-		uint32_t bitSize = std::lround(size * 10);
-		result = (_payload.at(byteIndex) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize];
-		if(isSigned && (result & (1 << (bitSize - 1)))) //has sign?
+		if(index < 9)
 		{
-			result -= (1 << bitSize);
+			if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 9 requested." << std::endl;
+			return 0;
 		}
-	}
-	else
-	{
-		uint32_t bytes = (uint32_t)std::ceil(size);
-		uint32_t bitSize = std::lround(size * 10) % 10;
-		if(bytes == 0) bytes = 1; //size is 0 - assume 1
-		result = (_payload.at(index) & _bitmask[bitSize]) << ((bytes - 1) * 8);
-		for(uint32_t i = 1; i < bytes; i++)
+		index -= 9;
+		double byteIndex = std::floor(index);
+		if(byteIndex >= _payload.size()) return 0;
+		int64_t result = 0;
+		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
 		{
-			result += _payload.at(index + i) << ((bytes - i - 1) * 8);
-		}
-		if(isSigned)
-		{
-			uint32_t bits = (uint32_t)std::floor(size) * 8;
-			uint32_t signPosition = 0;
-			if(bitSize == 0) signPosition = 7; //Full bytes are used
-			else
+			if(size > 1)
 			{
-				signPosition = bitSize - 1;
-				bits += bitSize;
+				if(GD::debugLevel >= 2) std::cout << "Error: Partial byte index > 1 requested." << std::endl;
+				return result;
 			}
-			if(_payload.at(index) & (1 << signPosition)) //has sign?
+			//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
+			uint32_t bitSize = std::lround(size * 10);
+			result = (_payload.at(byteIndex) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize];
+			if(isSigned && (result & (1 << (bitSize - 1)))) //has sign?
 			{
-				result -= (1 << bits);
+				result -= (1 << bitSize);
 			}
 		}
+		else
+		{
+			uint32_t bytes = (uint32_t)std::ceil(size);
+			uint32_t bitSize = std::lround(size * 10) % 10;
+			if(bytes == 0) bytes = 1; //size is 0 - assume 1
+			result = (_payload.at(index) & _bitmask[bitSize]) << ((bytes - 1) * 8);
+			for(uint32_t i = 1; i < bytes; i++)
+			{
+				result += _payload.at(index + i) << ((bytes - i - 1) * 8);
+			}
+			if(isSigned)
+			{
+				uint32_t bits = (uint32_t)std::floor(size) * 8;
+				uint32_t signPosition = 0;
+				if(bitSize == 0) signPosition = 7; //Full bytes are used
+				else
+				{
+					signPosition = bitSize - 1;
+					bits += bitSize;
+				}
+				if(_payload.at(index) & (1 << signPosition)) //has sign?
+				{
+					result -= (1 << bits);
+				}
+			}
+		}
+		return result;
 	}
-	return result;
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return -1;
 }
