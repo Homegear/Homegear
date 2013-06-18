@@ -330,14 +330,16 @@ bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
 {
 	try
 	{
+		if(parameters.empty()) return false;
 		bool match = true;
 		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
 			//This might not be the optimal way to get the xml rpc device, because it assumes the device type is unique
 			//When the device type is not at index 10 of the pairing packet, the device is not supported
 			//The "priority" attribute is ignored, for the standard devices "priority" seems not important
-			if(i->index == 10.0 && i->constValue != (int32_t)deviceType) match = false;
-			else if(i->index == 9.0 && !i->checkCondition(firmwareVersion)) match = false;
+			if(i->index == 10.0) { if(i->constValue != (int32_t)deviceType) match = false; }
+			else if(i->index == 9.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
+			else match = false; //Unknown index
 		}
 		if(match) return true;
 	}
@@ -373,12 +375,12 @@ bool DeviceType::matches(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		bool match = true;
+		if(parameters.empty()) return false;
 		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
-			if(!i->checkCondition(packet->getPosition(i->index, i->size, i->isSigned))) match = false;
+			if(!i->checkCondition(packet->getPosition(i->index, i->size, i->isSigned))) return false;
 		}
-		return match;
+		return true;
 	}
 	catch(const std::exception& ex)
     {

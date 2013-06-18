@@ -95,10 +95,10 @@ void BidCoSQueue::resend(uint32_t threadId)
 				i++;
 			}
 		}
-		//Sleep for 200 ms
+		//Sleep for 175 ms
 		i = 0;
 		sleepingTime = std::chrono::milliseconds(25);
-		while(!_stopResendThread && i < 16)
+		while(!_stopResendThread && i < 7)
 		{
 			std::this_thread::sleep_for(sleepingTime);
 			i++;
@@ -407,6 +407,7 @@ void BidCoSQueue::pushPendingQueue()
 	{
 		if(!_pendingQueues || _pendingQueues->empty()) return;
 		_queueType = _pendingQueues->front()->getQueueType();
+		serviceMessages = _pendingQueues->front()->serviceMessages;
 		while(!_pendingQueues->empty() && _pendingQueues->front()->isEmpty())
 		{
 			if(GD::debugLevel >= 5) std::cout << "Debug: Empty queue was pushed." << std::endl;
@@ -478,6 +479,11 @@ void BidCoSQueue::pop()
 				if(GD::debugLevel >= 5) std::cout << "Queue " << id << " is empty and there are no pending queues." << std::endl;
 				_workingOnPendingQueue = false;
 				_queueMutex.unlock();
+				if(serviceMessages && (_queueType == BidCoSQueueType::PAIRING || _queueType == BidCoSQueueType::UNPAIRING || _queueType == BidCoSQueueType::CONFIG))
+				{
+					serviceMessages->configPending = false;
+					serviceMessages.reset();
+				}
 				return;
 			}
 			else

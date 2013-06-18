@@ -41,10 +41,10 @@ public:
 	RPCVariable(std::string structElementName, int32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; name = structElementName; integerValue = integer; }
 	RPCVariable(uint32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; integerValue = (int32_t)integer; }
 	RPCVariable(std::string structElementName, uint32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; name = structElementName; integerValue = (int32_t)integer; }
-	RPCVariable(bool boolean) : RPCVariable() { type = RPCVariableType::rpcBoolean; booleanValue = boolean; }
-	RPCVariable(std::string structElementName, bool boolean) : RPCVariable() { type = RPCVariableType::rpcBoolean; name = structElementName; booleanValue = boolean; }
 	RPCVariable(std::string string) : RPCVariable() { type = RPCVariableType::rpcString; stringValue = string; }
 	RPCVariable(std::string structElementName, std::string string) : RPCVariable() { type = RPCVariableType::rpcString; name = structElementName; stringValue = string; }
+	RPCVariable(bool boolean) : RPCVariable() { type = RPCVariableType::rpcBoolean; booleanValue = boolean; }
+	RPCVariable(std::string structElementName, bool boolean) : RPCVariable() { type = RPCVariableType::rpcBoolean; name = structElementName; booleanValue = boolean; }
 	RPCVariable(double floatVal) : RPCVariable() { type = RPCVariableType::rpcFloat; floatValue = floatVal; }
 	RPCVariable(std::string structElementName, double floatVal) : RPCVariable() { type = RPCVariableType::rpcFloat; name = structElementName; floatValue = floatVal; }
 	virtual ~RPCVariable() {}

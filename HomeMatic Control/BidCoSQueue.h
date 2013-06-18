@@ -5,6 +5,7 @@ class Peer;
 class BidCoSMessage;
 class BidCoSPacket;
 class HomeMaticDevice;
+class ServiceMessages;
 
 #include <iostream>
 #include <string>
@@ -33,7 +34,7 @@ public:
 	void setMessage(std::shared_ptr<BidCoSMessage> message, bool setQueueEntryType) { _message = message; if(setQueueEntryType) _type = QueueEntryType::MESSAGE; }
 };
 
-enum class BidCoSQueueType { EMPTY, DEFAULT, PAIRING, PAIRINGCENTRAL, UNPAIRING };
+enum class BidCoSQueueType { EMPTY, DEFAULT, CONFIG, PAIRING, PAIRINGCENTRAL, UNPAIRING };
 
 class BidCoSQueue
 {
@@ -54,6 +55,7 @@ class BidCoSQueue
         uint32_t id = 0;
         int64_t* lastAction = nullptr;
         bool noSending = false;
+        std::shared_ptr<ServiceMessages> serviceMessages;
         HomeMaticDevice* device = nullptr;
         std::shared_ptr<Peer> peer;
         BidCoSQueueType getQueueType() { return _queueType; }

@@ -121,6 +121,14 @@ void Peer::deleteFromDatabase(int32_t parentAddress)
 	GD::db.executeCommand(command.str());
 }
 
+void Peer::saveToDatabase(int32_t parentAddress)
+{
+	deleteFromDatabase(parentAddress);
+	std::ostringstream command;
+	command << "INSERT INTO peers VALUES(" << parentAddress << "," << address << ",'" <<  serialize() << "')";
+	GD::db.executeCommand(command.str());
+}
+
 void Peer::deletePairedVirtualDevices()
 {
 	std::shared_ptr<HomeMaticDevice> device;
@@ -994,6 +1002,12 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> Peer::getServiceMessages()
+{
+	if(!serviceMessages) return RPC::RPCVariable::createError(-32500, "Service messages are not initialized.");
+	return serviceMessages->get();
+}
+
 std::shared_ptr<RPC::RPCVariable> Peer::getValue(uint32_t channel, std::string valueKey)
 {
 	if(valuesCentral.find(channel) == valuesCentral.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
@@ -1040,6 +1054,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 {
 	try
 	{
+		if(channel == 0 && serviceMessages->set(valueKey, value)) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		if(valuesCentral.find(channel) == valuesCentral.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(setHomegearValue(channel, valueKey, value)) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");

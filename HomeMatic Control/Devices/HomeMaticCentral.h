@@ -48,6 +48,7 @@ public:
 	std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
 	std::shared_ptr<RPC::RPCVariable> getParamsetId(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
 	std::shared_ptr<RPC::RPCVariable> getParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
+	std::shared_ptr<RPC::RPCVariable> getServiceMessages();
 	std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
 	std::shared_ptr<RPC::RPCVariable> listDevices();
 	std::shared_ptr<RPC::RPCVariable> listDevices(std::shared_ptr<std::map<std::string, int32_t>> knownDevices);

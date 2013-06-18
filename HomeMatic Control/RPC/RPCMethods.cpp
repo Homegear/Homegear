@@ -465,7 +465,7 @@ std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<s
 			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getParamsetDescription. Please add a central device." << std::endl;
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getParamsetDescription. Please add a central device.");
 		}
-		return GD::devices.getCentral()->getParamsetDescription(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue));
+		return central->getParamsetDescription(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue));
 	}
 	catch(const std::exception& ex)
     {
@@ -506,7 +506,7 @@ std::shared_ptr<RPCVariable> RPCGetParamsetId::invoke(std::shared_ptr<std::vecto
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getParamsetId. Please add a central device.");
 		}
 
-		return GD::devices.getCentral()->getParamsetId(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue));
+		return central->getParamsetId(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue));
 	}
 	catch(const std::exception& ex)
     {
@@ -547,7 +547,7 @@ std::shared_ptr<RPCVariable> RPCGetParamset::invoke(std::shared_ptr<std::vector<
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getParamsetId. Please add a central device.");
 		}
 
-		return GD::devices.getCentral()->getParamset(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue));
+		return central->getParamset(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue));
 	}
 	catch(const std::exception& ex)
     {
@@ -570,9 +570,13 @@ std::shared_ptr<RPCVariable> RPCGetServiceMessages::invoke(std::shared_ptr<std::
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		//TODO Implement method
-
-		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getValue. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method getValue. Please add a central device.");
+		}
+		return central->getServiceMessages();
 	}
 	catch(const std::exception& ex)
     {
@@ -611,7 +615,7 @@ std::shared_ptr<RPCVariable> RPCGetValue::invoke(std::shared_ptr<std::vector<std
 			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getValue. Please add a central device." << std::endl;
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getValue. Please add a central device.");
 		}
-		return GD::devices.getCentral()->getValue(serialNumber, channel, parameters->at(1)->stringValue);
+		return central->getValue(serialNumber, channel, parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -717,7 +721,7 @@ std::shared_ptr<RPCVariable> RPCListDevices::invoke(std::shared_ptr<std::vector<
 			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method listDevices. Please add a central device." << std::endl;
 			return RPCVariable::createError(-32500, ": Could not execute RPC method listDevices. Please add a central device.");
 		}
-		return GD::devices.getCentral()->listDevices();
+		return central->listDevices();
 	}
 	catch(const std::exception& ex)
     {
@@ -857,7 +861,7 @@ std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std
 			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method setValue. Please add a central device." << std::endl;
 			return RPCVariable::createError(-32500, ": Could not execute RPC method setValue. Please add a central device.");
 		}
-		return GD::devices.getCentral()->setValue(serialNumber, channel, parameters->at(1)->stringValue, parameters->at(2));
+		return central->setValue(serialNumber, channel, parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {

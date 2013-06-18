@@ -3,6 +3,9 @@
 
 #include <string>
 #include <iomanip>
+#include <memory>
+
+#include "RPC/RPCVariable.h"
 
 class ServiceMessages {
 public:
@@ -19,6 +22,8 @@ public:
 	virtual ~ServiceMessages() {}
 
 	std::string serialize();
+	bool set(std::string id, std::shared_ptr<RPC::RPCVariable> value);
+	std::shared_ptr<RPC::RPCVariable> get();
 private:
 	std::string _peerSerialNumber;
 };

@@ -273,9 +273,10 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 		hmcctc.serialNumber = tc->serialNumber();
 		hmcctc.hidden = true;
 		peer->peers[1].push_back(hmcctc);
+		peer->saveToDatabase(_address);
 
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, peer->address);
-		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, peer->address);
+		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		pendingQueue->noSending = true;
 
 		std::vector<uint8_t> payload;
@@ -292,6 +293,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
 
+		pendingQueue->serviceMessages = queue->peer->serviceMessages;
 		queue->peer->serviceMessages->configPending = true;
 		peer->pendingBidCoSQueues->push(pendingQueue);
 		queue->push(peer->pendingBidCoSQueues);
@@ -373,6 +375,7 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
 
 		if(defer)
 		{
+			pendingQueue->serviceMessages = queue->peer->serviceMessages;
 			queue->peer->serviceMessages->configPending = true;
 			while(!peer->pendingBidCoSQueues->empty()) peer->pendingBidCoSQueues->pop();
 			peer->pendingBidCoSQueues->push(pendingQueue);
@@ -448,6 +451,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 
 		if(defer)
 		{
+			pendingQueue->serviceMessages = queue->peer->serviceMessages;
 			queue->peer->serviceMessages->configPending = true;
 			while(!peer->pendingBidCoSQueues->empty()) peer->pendingBidCoSQueues->pop();
 			peer->pendingBidCoSQueues->push(pendingQueue);
@@ -588,10 +592,11 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			payload.clear();
 			_messageCounter[0]++;
 
-			std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
+			std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 			pendingQueue->noSending = true;
 			if((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::config) && _peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
 			{
+				pendingQueue->serviceMessages = queue->peer->serviceMessages;
 				queue->peer->serviceMessages->configPending = true;
 				for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = peer->configCentral.begin(); i != peer->configCentral.end(); ++i)
 				{
@@ -850,7 +855,6 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 		if(queue->isEmpty())
 		{
 			if(!queue->peer) return;
-			if(queue->peer->serviceMessages->configPending) queue->peer->serviceMessages->configPending = false;
 			if(!queue->peer->homegearFeatures) addHomegearFeatures(queue->peer);
 		}
 	}
@@ -1035,6 +1039,34 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::
 	{
 		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamsetDescription(channel, type);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getServiceMessages()
+{
+	try
+	{
+		std::shared_ptr<RPC::RPCVariable> serviceMessages(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		{
+			if(!i->second) continue;
+			std::shared_ptr<RPC::RPCVariable> messages = i->second->getServiceMessages();
+			if(!messages->arrayValue->empty()) serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(), messages->arrayValue->begin(), messages->arrayValue->end());
+		}
+		return serviceMessages;
 	}
 	catch(const std::exception& ex)
     {

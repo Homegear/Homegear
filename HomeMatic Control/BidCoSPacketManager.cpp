@@ -28,8 +28,7 @@ void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& pa
 		info->thread = std::shared_ptr<std::thread>(new std::thread(&BidCoSPacketManager::deletePacket, this, address, info->id));
 		info->thread->detach();
 		_packets.insert(std::pair<int32_t, std::shared_ptr<BidCoSPacketInfo>>(address, info));
-		if(_packets.find(address) == _packets.end()) std::cerr << "Packet was not inserted correctly." << std::endl;
-		else if(_packets[address]->id != info->id) std::cerr << "Packet has wrong id!!!" << std::endl;
+		if(GD::debugLevel >= 3 && _packets[address] && _packets[address]->id != info->id) std::cerr << "Warning: Inserted packet has wrong id." << std::endl;
 	}
 	catch(const std::exception& ex)
     {
