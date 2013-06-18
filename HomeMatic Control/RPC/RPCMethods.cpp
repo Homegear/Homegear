@@ -771,6 +771,47 @@ std::shared_ptr<RPCVariable> RPCLogLevel::invoke(std::shared_ptr<std::vector<std
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCPutParamset::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcStruct }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		uint32_t channel = 0;
+		std::string serialNumber;
+		int32_t pos = parameters->at(0)->stringValue.find(':');
+		if(pos > -1)
+		{
+			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+		}
+		else serialNumber = parameters->at(0)->stringValue;
+
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getParamsetId. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method getParamsetId. Please add a central device.");
+		}
+
+		return central->putParamset(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue), parameters->at(2));
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
 std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try

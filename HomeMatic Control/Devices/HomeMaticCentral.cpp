@@ -1011,6 +1011,29 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::string se
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::shared_ptr<RPC::RPCVariable> paramset)
+{
+	try
+	{
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->putParamset(channel, type, paramset);
+		return RPC::RPCVariable::createError(-2, "Unknown device.");
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type)
 {
 	try

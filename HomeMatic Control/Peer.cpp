@@ -55,63 +55,80 @@ void Peer::initializeCentralConfig()
 
 Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 {
-	pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>());
-	if(serializedObject.empty()) return;
-	if(GD::debugLevel >= 5) std::cout << "Unserializing peer: " << serializedObject << std::endl;
+	try
+	{
+		pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>());
+		if(serializedObject.empty()) return;
+		if(GD::debugLevel >= 5) std::cout << "Unserializing peer: " << serializedObject << std::endl;
 
-	std::istringstream stringstream(serializedObject);
-	std::string entry;
-	uint32_t pos = 0;
-	address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	int32_t serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-	_serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
-	firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
-	rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
-	if(!rpcDevice && GD::debugLevel >= 2) std::cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << std::endl;
-	messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	homegearFeatures = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
-	team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-	if(serialNumberSize > 0) { team.serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize; }
-	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
-	for(uint32_t i = 0; i < configSize; i++)
-	{
-		config[std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
-	}
-	unserializeConfig(serializedObject, configCentral, RPC::ParameterSet::Type::master, pos);
-	unserializeConfig(serializedObject, valuesCentral, RPC::ParameterSet::Type::values, pos);
-	unserializeConfig(serializedObject, linksCentral, RPC::ParameterSet::Type::link, pos);
-	uint32_t peersSize = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-	for(uint32_t i = 0; i < peersSize; i++)
-	{
-		uint32_t channel = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-		uint32_t peerCount = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-		for(uint32_t j = 0; j < peerCount; j++)
+		std::istringstream stringstream(serializedObject);
+		std::string entry;
+		uint32_t pos = 0;
+		address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		int32_t serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+		_serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
+		firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
+		rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
+		if(!rpcDevice && GD::debugLevel >= 2) std::cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << std::endl;
+		messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		homegearFeatures = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+		team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+		if(serialNumberSize > 0) { team.serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize; }
+		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
+		for(uint32_t i = 0; i < configSize; i++)
 		{
-			BasicPeer basicPeer;
-			basicPeer.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-			basicPeer.serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
-			basicPeer.hidden = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
-			peers[channel].push_back(basicPeer);
+			config[std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
+		}
+		unserializeConfig(serializedObject, configCentral, RPC::ParameterSet::Type::master, pos);
+		unserializeConfig(serializedObject, valuesCentral, RPC::ParameterSet::Type::values, pos);
+		unserializeConfig(serializedObject, linksCentral, RPC::ParameterSet::Type::link, pos);
+		uint32_t peersSize = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
+		for(uint32_t i = 0; i < peersSize; i++)
+		{
+			uint32_t channel = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
+			uint32_t peerCount = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
+			for(uint32_t j = 0; j < peerCount; j++)
+			{
+				BasicPeer basicPeer;
+				basicPeer.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+				basicPeer.serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
+				basicPeer.hidden = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+				peers[channel].push_back(basicPeer);
+			}
+		}
+		uint32_t serializedServiceMessagesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		serviceMessages.reset(new ServiceMessages(_serialNumber, serializedObject.substr(pos, serializedServiceMessagesSize)));
+		uint32_t pendingQueuesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t i = 0; i < pendingQueuesSize; i++)
+		{
+			uint32_t queueLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			if(queueLength > 6)
+			{
+				pendingBidCoSQueues->push(std::shared_ptr<BidCoSQueue>(new BidCoSQueue(serializedObject.substr(pos, queueLength), device))); pos += queueLength;
+				std::shared_ptr<BidCoSQueue> queue = pendingBidCoSQueues->back();
+				queue->noSending = true;
+				if(queue->getQueueType() == BidCoSQueueType::UNPAIRING || queue->getQueueType() == BidCoSQueueType::CONFIG) queue->serviceMessages = serviceMessages;
+			}
 		}
 	}
-	uint32_t pendingQueuesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	for(uint32_t i = 0; i < pendingQueuesSize; i++)
-	{
-		uint32_t queueLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		if(queueLength > 6)
-		{
-			pendingBidCoSQueues->push(std::shared_ptr<BidCoSQueue>(new BidCoSQueue(serializedObject.substr(pos, queueLength), device))); pos += queueLength;
-			pendingBidCoSQueues->back()->noSending = true;
-		}
-	}
-	uint32_t serializedServiceMessagesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	serviceMessages.reset(new ServiceMessages(_serialNumber, serializedObject.substr(pos, serializedServiceMessagesSize)));
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void Peer::deleteFromDatabase(int32_t parentAddress)
@@ -188,6 +205,9 @@ std::string Peer::serialize()
 			stringstream << std::setw(1) << j->hidden;
 		}
 	}
+	std::string serializedServiceMessages = serviceMessages->serialize();
+	stringstream << std::setw(8) << serializedServiceMessages.length();
+	stringstream << serializedServiceMessages;
 	stringstream << std::setw(8) << pendingBidCoSQueues->size();
 	while(!pendingBidCoSQueues->empty())
 	{
@@ -196,9 +216,6 @@ std::string Peer::serialize()
 		stringstream << bidCoSQueue;
 		pendingBidCoSQueues->pop();
 	}
-	std::string serializedServiceMessages = serviceMessages->serialize();
-	stringstream << std::setw(8) << serializedServiceMessages.length();
-	stringstream << serializedServiceMessages;
 	stringstream << std::dec;
 	return stringstream.str();
 }
@@ -539,6 +556,50 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetId(uint32_t channel, RPC::Par
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> Peer::putParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::shared_ptr<RPC::RPCVariable> variables)
+{
+	try
+	{
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+
+		for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
+		{
+			if((*i)->name.empty()) continue;
+			int64_t value = 0;
+			if(type == RPC::ParameterSet::Type::Enum::values)
+			{
+				if(valuesCentral[channel].find((*i)->name) == valuesCentral[channel].end()) continue;
+				value = valuesCentral[channel][(*i)->name].rpcParameter->convertToPacket(*i);
+				valuesCentral[channel][(*i)->name].value = value;
+			}
+			else if(type == RPC::ParameterSet::Type::Enum::master)
+			{
+				if(configCentral[channel].find((*i)->name) == configCentral[channel].end()) continue;
+				value = configCentral[channel][(*i)->name].rpcParameter->convertToPacket(*i);
+				configCentral[channel][(*i)->name].value = value;
+			}
+			else RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+			if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " set to 0x" << std::hex << value << std::dec << "." << std::endl;
+		}
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+
 std::shared_ptr<RPC::RPCVariable> Peer::getParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type)
 {
 	try
@@ -565,12 +626,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamset(uint32_t channel, RPC::Param
 				if(configCentral[channel].find((*i)->id) == configCentral[channel].end()) continue;
 				element = configCentral[channel][(*i)->id].rpcParameter->convertFromPacket(configCentral[channel][(*i)->id].value);
 			}
-			else if(type == RPC::ParameterSet::Type::Enum::link)
+			else RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+			/*else if(type == RPC::ParameterSet::Type::Enum::link)
 			{
 				if(linksCentral.find(channel) == linksCentral.end()) continue;
 				if(linksCentral[channel].find((*i)->id) == linksCentral[channel].end()) continue;
 				element = linksCentral[channel][(*i)->id].rpcParameter->convertFromPacket(linksCentral[channel][(*i)->id].value);
-			}
+			}*/
 
 			if(element->errorStruct) continue;
 			if(element->type == RPC::RPCVariableType::rpcVoid) continue;
@@ -622,10 +684,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 					description->structValue->push_back(element);
 				}
 
-				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
-				element->name = "DEFAULT";
-				element->booleanValue = parameter->defaultValue;
-				description->structValue->push_back(element);
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+					element->name = "DEFAULT";
+					element->booleanValue = parameter->defaultValue;
+					description->structValue->push_back(element);
+				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
 				element->name = "FLAGS";
@@ -679,10 +744,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 					description->structValue->push_back(element);
 				}
 
-				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
-				element->name = "DEFAULT";
-				element->stringValue = parameter->defaultValue;
-				description->structValue->push_back(element);
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+					element->name = "DEFAULT";
+					element->stringValue = parameter->defaultValue;
+					description->structValue->push_back(element);
+				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
 				element->name = "FLAGS";
@@ -736,10 +804,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 					description->structValue->push_back(element);
 				}
 
-				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
-				element->name = "DEFAULT";
-				element->booleanValue = parameter->defaultValue;
-				description->structValue->push_back(element);
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+					element->name = "DEFAULT";
+					element->booleanValue = parameter->defaultValue;
+					description->structValue->push_back(element);
+				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
 				element->name = "FLAGS";
@@ -793,10 +864,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 					description->structValue->push_back(element);
 				}
 
-				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "DEFAULT";
-				element->integerValue = parameter->defaultValue;
-				description->structValue->push_back(element);
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+					element->name = "DEFAULT";
+					element->integerValue = parameter->defaultValue;
+					description->structValue->push_back(element);
+				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
 				element->name = "FLAGS";
@@ -864,10 +938,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 					description->structValue->push_back(element);
 				}
 
-				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "DEFAULT";
-				element->integerValue = parameter->defaultValue;
-				description->structValue->push_back(element);
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+					element->name = "DEFAULT";
+					element->integerValue = parameter->defaultValue;
+					description->structValue->push_back(element);
+				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
 				element->name = "FLAGS";
@@ -929,10 +1006,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 					description->structValue->push_back(element);
 				}
 
-				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcFloat));
-				element->name = "DEFAULT";
-				element->floatValue = parameter->defaultValue;
-				description->structValue->push_back(element);
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcFloat));
+					element->name = "DEFAULT";
+					element->floatValue = parameter->defaultValue;
+					description->structValue->push_back(element);
+				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
 				element->name = "FLAGS";

@@ -27,6 +27,7 @@ std::shared_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
 			std::string attributeValue(attr->value());
 			if(attributeValue == "option") parameter.reset(new LogicalParameterEnum(node));
 			else if(attributeValue == "integer") parameter.reset(new LogicalParameterInteger(node));
+			else if(attributeValue == "float") parameter.reset(new LogicalParameterFloat(node));
 			else if(attributeValue == "boolean") parameter.reset(new LogicalParameterBoolean(node));
 			else if(attributeValue == "string") parameter.reset(new LogicalParameterString(node));
 			else if(attributeValue == "action") parameter.reset(new LogicalParameterAction(node));
@@ -59,12 +60,23 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node)
 	try
 	{
 		type = Type::Enum::typeEnum;
+		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
+		{
+			std::string attributeName(attr->name());
+			std::string attributeValue(attr->value());
+			if(attributeName == "unit") unit = attributeValue;
+			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type enum: " << attributeName << std::endl;
+		}
 		int32_t index = 0;
 		for(xml_node<>* optionNode = node->first_node("option"); optionNode; optionNode = optionNode->next_sibling())
 		{
 			ParameterOption option(optionNode);
 			options.push_back(option);
-			if(options.back().isDefault) defaultValue = index;
+			if(options.back().isDefault)
+			{
+				defaultValueExists = true;
+				defaultValue = index;
+			}
 			index++;
 		}
 		max = index - 1;
@@ -100,7 +112,11 @@ LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node)
 			if(attributeName == "type") {}
 			else if(attributeName == "min") min = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "max") max = HelperFunctions::getNumber(attributeValue);
-			else if(attributeName == "default") defaultValue = HelperFunctions::getNumber(attributeValue);
+			else if(attributeName == "default")
+			{
+				defaultValue = HelperFunctions::getNumber(attributeValue);
+				defaultValueExists = true;
+			}
 			else if(attributeName == "unit") unit = attributeValue;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type integer: " << attributeName << std::endl;
 		}
@@ -151,7 +167,11 @@ LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node)
 			if(attributeName == "type") {}
 			else if(attributeName == "min") min = HelperFunctions::getDouble(attributeValue);
 			else if(attributeName == "max") max = HelperFunctions::getDouble(attributeValue);
-			else if(attributeName == "default") defaultValue = HelperFunctions::getDouble(attributeValue);
+			else if(attributeName == "default")
+			{
+				defaultValue = HelperFunctions::getDouble(attributeValue);
+				defaultValueExists = true;
+			}
 			else if(attributeName == "unit") unit = attributeValue;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type float: " << attributeName << std::endl;
 		}
@@ -199,7 +219,11 @@ LogicalParameterBoolean::LogicalParameterBoolean(xml_node<>* node)
 		{
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
-			if(attributeName == "default") { if(attributeValue == "true") defaultValue = true; }
+			if(attributeName == "default")
+			{
+				if(attributeValue == "true") defaultValue = true;
+				defaultValueExists = true;
+			}
 			else if(attributeName == "unit") unit = attributeValue;
 			else if(attributeName != "type" && GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type boolean: " << attributeName << std::endl;
 		}
@@ -232,7 +256,11 @@ LogicalParameterString::LogicalParameterString(xml_node<>* node)
 		{
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
-			if(attributeName == "default") { defaultValue = attributeValue; }
+			if(attributeName == "default")
+			{
+				defaultValue = attributeValue;
+				defaultValueExists = true;
+			}
 			else if(attributeName == "min") min = attributeValue;
 			else if(attributeName == "max") max = attributeValue;
 			else if(attributeName == "unit") unit = attributeValue;

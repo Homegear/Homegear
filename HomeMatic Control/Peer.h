@@ -89,6 +89,7 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> getParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type);
         std::shared_ptr<RPC::RPCVariable> getServiceMessages();
         std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
+        std::shared_ptr<RPC::RPCVariable> putParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::shared_ptr<RPC::RPCVariable> variables);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
         std::string _serialNumber;

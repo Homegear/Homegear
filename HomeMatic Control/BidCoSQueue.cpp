@@ -479,7 +479,7 @@ void BidCoSQueue::pop()
 				if(GD::debugLevel >= 5) std::cout << "Queue " << id << " is empty and there are no pending queues." << std::endl;
 				_workingOnPendingQueue = false;
 				_queueMutex.unlock();
-				if(serviceMessages && (_queueType == BidCoSQueueType::PAIRING || _queueType == BidCoSQueueType::UNPAIRING || _queueType == BidCoSQueueType::CONFIG))
+				if(serviceMessages && (_queueType == BidCoSQueueType::UNPAIRING || _queueType == BidCoSQueueType::CONFIG))
 				{
 					serviceMessages->configPending = false;
 					serviceMessages.reset();

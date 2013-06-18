@@ -25,6 +25,7 @@ void Server::registerMethods()
 	_server->registerMethod("listBidcosInterfaces", std::shared_ptr<RPCMethod>(new RPCListBidcosInterfaces()));
 	_server->registerMethod("listDevices", std::shared_ptr<RPCMethod>(new RPCListDevices()));
 	_server->registerMethod("logLevel", std::shared_ptr<RPCMethod>(new RPCLogLevel()));
+	_server->registerMethod("putParamset", std::shared_ptr<RPCMethod>(new RPCPutParamset()));
 	_server->registerMethod("setInstallMode", std::shared_ptr<RPCMethod>(new RPCSetInstallMode()));
 	_server->registerMethod("setMetadata", std::shared_ptr<RPCMethod>(new RPCSetMetadata()));
 	_server->registerMethod("setValue", std::shared_ptr<RPCMethod>(new RPCSetValue()));

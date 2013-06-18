@@ -689,7 +689,7 @@ void Device::load(std::string xmlFilename)
 			char buffer[length];
 			fileStream.read(&buffer[0], length);
 			fileStream.close();
-			doc.parse<0>(buffer);
+			doc.parse<parse_no_entity_translation>(buffer);
 			parseXML(doc.first_node("device"));
 		}
 		else throw new Exception("Error reading file " + xmlFilename + ". Error number: " + std::to_string(errno));

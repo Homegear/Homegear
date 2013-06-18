@@ -45,7 +45,7 @@ all: HomeMatic\ Control
 HomeMatic\ Control: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	arm-linux-gnueabi-g++-4.7  -o "HomeMatic Control" $(OBJS) $(USER_OBJS) $(LIBS)
+	arm-linux-gnueabihf-g++-4.7 -L"/home/sathya/git/HomeMaticControl/HomeMatic Control/ARM libraries" -o "HomeMatic Control" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

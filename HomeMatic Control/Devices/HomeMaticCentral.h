@@ -52,6 +52,7 @@ public:
 	std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
 	std::shared_ptr<RPC::RPCVariable> listDevices();
 	std::shared_ptr<RPC::RPCVariable> listDevices(std::shared_ptr<std::map<std::string, int32_t>> knownDevices);
+	std::shared_ptr<RPC::RPCVariable> putParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::shared_ptr<RPC::RPCVariable> paramset);
 	std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on);
 	std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 protected:
