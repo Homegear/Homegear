@@ -300,7 +300,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 					if(GD::debugLevel >= 2) std::cout << "Error: Packet with data larger than 100 MiB received." << std::endl;
 					continue;
 				}
-				packet.reset(new std::vector<char>(dataSize));
+				packet.reset(new std::vector<char>());
 				packet->insert(packet->begin(), buffer + 8, buffer + uBytesRead);
 				if(dataSize > uBytesRead - 8) packetLength = uBytesRead - 8;
 				else

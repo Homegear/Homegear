@@ -25,8 +25,16 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeResponse(std::shared_ptr<std::vec
 
 int32_t RPCDecoder::decodeInteger(std::shared_ptr<std::vector<char>>& packet, uint32_t& position)
 {
-	if(position + 4 > packet->size()) return 0;
 	int32_t integer = 0;
+	if(position + 4 > packet->size())
+	{
+		if(position + 1 > packet->size()) return 0;
+		//IP-Symcon encodes integers as string => Difficult to interpret. This works for numbers up to 3 digits:
+		std::string string(&packet->at(position), &packet->at(packet->size() - 1) + 1);
+		position = packet->size();
+		integer = HelperFunctions::getNumber(string);
+		return integer;
+	}
 	HelperFunctions::memcpyBigEndian((char*)&integer, &packet->at(position), 4);
 	position += 4;
 	return integer;

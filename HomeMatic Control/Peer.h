@@ -22,7 +22,7 @@ class BasicPeer
 {
 public:
 	BasicPeer() {}
-	BasicPeer(int32_t addr) { address = addr; }
+	BasicPeer(int32_t addr, std::string serial, bool hid) { address = addr; serialNumber = serial; hidden = hid; }
 	virtual ~BasicPeer() {}
 
 	int32_t address;

@@ -646,6 +646,12 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 		server.second = std::to_string(HelperFunctions::getNumber(server.second));
 		if(server.second == "0" || server.second.empty()) return RPCVariable::createError(-32602, "Port number is invalid.");
 
+		if(!GD::devices.getCentral())
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method init. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method init. Please add a central device.");
+		}
+
 		if(parameters->at(1)->stringValue.empty())
 		{
 			GD::rpcClient.removeServer(server);

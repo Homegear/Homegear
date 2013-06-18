@@ -49,3 +49,16 @@ std::pair<std::string, std::string> HelperFunctions::split(std::string string, c
     }
     return std::pair<std::string, std::string>();
 }
+
+void HelperFunctions::printBinary(std::shared_ptr<std::vector<char>> data)
+{
+	if(!data) return;
+	std::ostringstream stringstream;
+	stringstream << std::hex << std::setfill('0') << std::uppercase;
+	for(std::vector<char>::iterator i = data->begin(); i != data->end(); ++i)
+	{
+		stringstream << std::setw(2) << (int32_t)(*i);
+	}
+	stringstream << std::dec;
+	std::cout << stringstream.str() << std::endl;
+}

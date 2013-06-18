@@ -92,7 +92,12 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 		uint32_t peerCount = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
 		for(uint32_t j = 0; j < peerCount; j++)
 		{
-			peers[channel].push_back(std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
+			BasicPeer basicPeer;
+			basicPeer.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+			basicPeer.serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
+			basicPeer.hidden = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+			peers[channel].push_back(basicPeer);
 		}
 	}
 	uint32_t pendingQueuesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -178,6 +183,9 @@ std::string Peer::serialize()
 		for(std::vector<BasicPeer>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 		{
 			stringstream << std::setw(8) << j->address;
+			stringstream << std::setw(4) << j->serialNumber.size();
+			stringstream << j->serialNumber;
+			stringstream << std::setw(1) << j->hidden;
 		}
 	}
 	stringstream << std::setw(8) << pendingBidCoSQueues->size();
@@ -1030,7 +1038,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 			{
 				HM_CC_TC* tc = (HM_CC_TC*)peers[1].at(0).device.get();
 				tc->setValveState(value->integerValue);
-				if(GD::debugLevel >= 4) std::cout << "Setting valve state of HM-CC-VD with address 0x" << address << " to " << tc->getNewValueState() << "%." << std::endl;
+				if(GD::debugLevel >= 4) std::cout << "Setting valve state of HM-CC-VD with address 0x" << address << " to " << (tc->getNewValueState() * 100 / 256) << "%." << std::endl;
 				return true;
 			}
 		}

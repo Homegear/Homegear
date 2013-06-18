@@ -14,6 +14,7 @@
 #include <locale>
 #include <iostream>
 #include <string>
+#include <memory>
 
 class HelperFunctions {
 public:
@@ -71,6 +72,7 @@ public:
 	}
 
 	static void memcpyBigEndian(char* to, char* from, uint32_t length);
+	static void printBinary(std::shared_ptr<std::vector<char>> data);
 private:
 	//Non public constructor
 	HelperFunctions();
