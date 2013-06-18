@@ -56,7 +56,7 @@ public:
 		int32_t xpos = s.find('x');
 		int32_t number = 0;
 		if(xpos == -1) try { number = std::stoll(s, 0, 10); } catch(...) {}
-		else if(xpos == 1) try { number = std::stoll(s, 0, 16); } catch(...) {}
+		else try { number = std::stoll(s, 0, 16); } catch(...) {}
 		return number;
 	}
 

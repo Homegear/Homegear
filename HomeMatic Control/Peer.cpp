@@ -64,8 +64,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 	uint32_t pos = 0;
 	address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	int32_t serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-	std::string serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
-	setSerialNumber(serialNumber); //Use setSerialNumber to also set ServiceMessages serial number
+	_serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
 	firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 	localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
@@ -107,7 +106,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 		}
 	}
 	uint32_t serializedServiceMessagesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	serviceMessages.reset(new ServiceMessages(serializedObject.substr(pos, serializedServiceMessagesSize)));
+	serviceMessages.reset(new ServiceMessages(_serialNumber, serializedObject.substr(pos, serializedServiceMessagesSize)));
 }
 
 void Peer::deleteFromDatabase(int32_t parentAddress)
@@ -257,6 +256,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	try
 	{
 		if(!rpcDevice) return;
+		if(packet->messageType() == 0) return; //Don't handle pairing packets, because equal_range returns all elements with "0" as argument
 		std::pair<std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator,std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByMessageType.equal_range((uint32_t)packet->messageType());
 		if(range.first == rpcDevice->framesByMessageType.end()) return;
 		std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator i = range.first;

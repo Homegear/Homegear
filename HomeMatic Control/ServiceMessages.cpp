@@ -3,6 +3,7 @@
 
 ServiceMessages::ServiceMessages(std::string peerSerialNumber, std::string serializedObject) : ServiceMessages(peerSerialNumber)
 {
+	_peerSerialNumber = peerSerialNumber;
 	if(serializedObject.empty()) return;
 	if(GD::debugLevel >= 5) std::cout << "Unserializing service message: " << serializedObject << std::endl;
 
@@ -39,7 +40,6 @@ bool ServiceMessages::set(std::string id, std::shared_ptr<RPC::RPCVariable> valu
 		else if(id == "CONFIG_PENDING") configPending = value->booleanValue;
 		else if(id == "LOWBAT") lowbat = value->booleanValue;
 		else return false;
-		return true;
 	}
 	catch(const std::exception& ex)
     {
@@ -53,6 +53,7 @@ bool ServiceMessages::set(std::string id, std::shared_ptr<RPC::RPCVariable> valu
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
+    return true;
 }
 
 std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
