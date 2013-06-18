@@ -30,7 +30,7 @@ void HomeMaticDevices::load()
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			std::shared_ptr<HomeMaticDevice> device;
-			HMDeviceTypes deviceType;
+			HMDeviceTypes deviceType = HMDeviceTypes::HMUNKNOWN;
 			std::string serializedObject;
 			uint8_t dutyCycleMessageCounter = 0;
 			for(std::map<uint32_t, std::shared_ptr<DataColumn>>::iterator col = row->second.begin(); col != row->second.end(); ++col)

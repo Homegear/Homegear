@@ -45,13 +45,14 @@ public:
 class Peer
 {
     public:
-		Peer() { serviceMessages = std::shared_ptr<ServiceMessages>(new ServiceMessages()); pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>()); }
+		Peer() { serviceMessages = std::shared_ptr<ServiceMessages>(new ServiceMessages("")); pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>()); }
 		Peer(std::string serializedObject, HomeMaticDevice* device);
 		virtual ~Peer() {}
 
 		std::shared_ptr<ServiceMessages> serviceMessages;
         int32_t address = 0;
-        std::string serialNumber = "";
+        std::string& getSerialNumber() { return _serialNumber; }
+        void setSerialNumber(std::string& serialNumber) { if(serialNumber.length() > 100) return; _serialNumber = serialNumber; serviceMessages->setPeerSerialNumber(serialNumber); }
         int32_t firmwareVersion = 0;
         int32_t remoteChannel = 0;
         int32_t localChannel = 0;
@@ -88,6 +89,7 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
+        std::string _serialNumber;
 };
 
 #endif // PEER_H

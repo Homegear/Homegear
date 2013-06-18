@@ -1,7 +1,7 @@
 #include "ServiceMessages.h"
 #include "GD.h"
 
-ServiceMessages::ServiceMessages(std::string serializedObject)
+ServiceMessages::ServiceMessages(std::string peerSerialNumber, std::string serializedObject) : ServiceMessages(peerSerialNumber)
 {
 	if(serializedObject.empty()) return;
 	if(GD::debugLevel >= 5) std::cout << "Unserializing service message: " << serializedObject << std::endl;

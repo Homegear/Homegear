@@ -459,7 +459,7 @@ void RPCServer::getFileDescriptor()
 	{
 		struct addrinfo hostInfo, *serverInfo;
 
-		int32_t fileDescriptor;
+		int32_t fileDescriptor = -1;
 		int32_t yes = 1;
 
 		memset(&hostInfo, 0, sizeof(hostInfo));
@@ -478,7 +478,7 @@ void RPCServer::getFileDescriptor()
 			break;
 		}
 		freeaddrinfo(serverInfo);
-		if(listen(fileDescriptor, _backlog) == -1) throw new Exception("Error: Server could not start listening.");
+		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1) throw new Exception("Error: Server could not start listening.");
 		_serverFileDescriptor = fileDescriptor;
     }
     catch(const std::exception& ex)

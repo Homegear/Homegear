@@ -127,7 +127,7 @@ std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firm
 	peer->address = address;
 	peer->firmwareVersion = firmwareVersion;
 	peer->deviceType = deviceType;
-	peer->serialNumber = serialNumber;
+	peer->setSerialNumber(serialNumber);
 	peer->remoteChannel = remoteChannel;
 	peer->messageCounter = messageCounter;
 	peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
@@ -176,7 +176,7 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 	{
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			std::cout << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->serialNumber << "\tDevice type: " << (uint32_t)i->second->deviceType << std::endl << std::dec;
+			std::cout << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: " << (uint32_t)i->second->deviceType << std::endl << std::dec;
 		}
 	}
 	else if(command == "select peer")
@@ -263,7 +263,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 	{
 		if(!peer->peers[1].empty()) return; //Already linked to a HM-CC-TC
 		int32_t hmcctcAddress = getUniqueAddress((0x39 << 16) + (peer->address & 0xFF00) + (peer->address & 0xFF));
-		std::string temp = peer->serialNumber.substr(3);
+		std::string temp = peer->getSerialNumber().substr(3);
 		std::string serialNumber = getUniqueSerialNumber("VCD", HelperFunctions::getNumber(temp));
 		GD::devices.add(new HM_CC_TC(serialNumber, hmcctcAddress));
 		std::shared_ptr<HomeMaticDevice> tc = GD::devices.get(hmcctcAddress);
@@ -337,13 +337,13 @@ void HomeMaticCentral::deletePeer(int32_t address)
 	{
 		std::shared_ptr<Peer> peer(_peers[address]);
 		std::shared_ptr<RPC::RPCVariable> deviceAddresses(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-		deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->serialNumber)));
+		deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->getSerialNumber())));
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 		{
-			deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->serialNumber + ":" + std::to_string(i->first))));
+			deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
 		GD::rpcClient.broadcastDeleteDevices(deviceAddresses);
-		if(_peersBySerial.find(peer->serialNumber) != _peersBySerial.end()) _peersBySerial.erase(peer->serialNumber);
+		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
 		peer->deleteFromDatabase(_address);
 		peer->deletePairedVirtualDevices();
 		_peers.erase(address);
@@ -742,7 +742,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 							peer->configCentral[channel][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter->size, false);
 							if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->configCentral[channel][(*i)->id].value << std::endl;
 						}
-						else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*i)->physicalParameter->list << " Parameter index: " << (*i)->index << std::endl;
+						else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->getSerialNumber() << " Channel: " << channel << " List: " << (*i)->physicalParameter->list << " Parameter index: " << (*i)->index << std::endl;
 					}
 				}
 			}
@@ -766,7 +766,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 								peer->configCentral[channel][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter->size, false);
 								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << std::endl;
 							}
-							else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->serialNumber << " Channel: " << channel << " List: " << (*j)->physicalParameter->list << " Parameter index: " << (*j)->index << std::endl;
+							else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->getSerialNumber() << " Channel: " << channel << " List: " << (*j)->physicalParameter->list << " Parameter index: " << (*j)->index << std::endl;
 						}
 					}
 				}
@@ -816,22 +816,22 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						if(i->second->hasTeam)
 						{
 							std::shared_ptr<Peer> team;
-							std::string serialNumber('*' + queue->peer->serialNumber);
+							std::string serialNumber('*' + queue->peer->getSerialNumber());
 							if(_peersBySerial.find(serialNumber) == _peersBySerial.end())
 							{
 								team = createTeam(queue->peer->address, queue->peer->deviceType, serialNumber);
 								team->rpcDevice = queue->peer->rpcDevice->team;
-								_peersBySerial[team->serialNumber] = team;
+								_peersBySerial[team->getSerialNumber()] = team;
 							}
-							else team = _peersBySerial['*' + queue->peer->serialNumber];
+							else team = _peersBySerial['*' + queue->peer->getSerialNumber()];
 							queue->peer->team.address = team->address;
-							queue->peer->team.serialNumber = team->serialNumber;
-							_peersBySerial[team->serialNumber]->teamChannels.push_back(std::pair<std::string, uint32_t>(queue->peer->serialNumber, i->first));
+							queue->peer->team.serialNumber = team->getSerialNumber();
+							_peersBySerial[team->getSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(queue->peer->getSerialNumber(), i->first));
 							break;
 						}
 					}
 					_peers[queue->peer->address] = queue->peer;
-					if(queue->peer->serialNumber.size() == 10) _peersBySerial[queue->peer->serialNumber] = queue->peer;
+					if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
 					std::cout << "Added device 0x" << std::hex << queue->peer->address << std::dec << "." << std::endl;
 					std::shared_ptr<RPC::RPCVariable> deviceDescriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 					deviceDescriptions->arrayValue = queue->peer->getDeviceDescription();

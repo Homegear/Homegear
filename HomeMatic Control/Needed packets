@@ -1,15 +1,1 @@
 sqlite3 libsqlite3-dev libncurses5 libncurses5-dev
-
-xmlrpc-c:
-
-apt-get install subversion (if not installed)
-apt-get install libcurl4-nss-dev (only needed if client is used)
-cd /usr/src
-svn checkout svn://svn.code.sf.net/p/xmlrpc-c/code/trunk xmlrpc-c-code
-cd xmlrpc-c-code
-./configure
-make
-make install
-
-open file /usr/local/include/xmlrpc-c/server_abyss.hpp and comment the following line (line 65):
-constrOpt & timeout           (unsigned int   const& arg);

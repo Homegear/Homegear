@@ -162,20 +162,20 @@ void HomeMaticDevice::loadPeersFromDatabase()
 		_peers[peer->address] = peer;
 		if(!peer->rpcDevice) continue;
 		_peers[peer->address] = peer;
-		if(!peer->serialNumber.empty()) _peersBySerial[peer->serialNumber] = peer;
+		if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 		if(!peer->team.serialNumber.empty())
 		{
 			if(_peersBySerial.find(peer->team.serialNumber) == _peersBySerial.end())
 			{
 				std::shared_ptr<Peer> team = createTeam(peer->address, peer->deviceType, peer->team.serialNumber);
 				team->rpcDevice = peer->rpcDevice->team;
-				_peersBySerial[team->serialNumber] = team;
+				_peersBySerial[team->getSerialNumber()] = team;
 			}
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 			{
 				if(i->second->hasTeam)
 				{
-					_peersBySerial[peer->team.serialNumber]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->serialNumber, i->first));
+					_peersBySerial[peer->team.serialNumber]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), i->first));
 					break;
 				}
 			}
@@ -380,7 +380,7 @@ std::shared_ptr<Peer> HomeMaticDevice::createTeam(int32_t address, HMDeviceTypes
 	std::shared_ptr<Peer> team(new Peer());
 	team->address = address;
 	team->deviceType = deviceType;
-	team->serialNumber = serialNumber;
+	team->setSerialNumber(serialNumber);
     return team;
 }
 

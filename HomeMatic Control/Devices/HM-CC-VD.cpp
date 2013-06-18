@@ -206,7 +206,7 @@ std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVers
     peer->messageCounter = 0;
     peer->remoteChannel = remoteChannel;
     if(deviceType == HMDeviceTypes::HMCCTC || deviceType == HMDeviceTypes::HMUNKNOWN) peer->localChannel = 1; else peer->localChannel = 0;
-    peer->serialNumber = serialNumber;
+    peer->setSerialNumber(serialNumber);
     return peer;
 }
 

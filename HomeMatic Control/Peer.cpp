@@ -64,7 +64,8 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 	uint32_t pos = 0;
 	address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	int32_t serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-	serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
+	std::string serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
+	setSerialNumber(serialNumber); //Use setSerialNumber to also set ServiceMessages serial number
 	firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 	localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
@@ -112,7 +113,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 void Peer::deleteFromDatabase(int32_t parentAddress)
 {
 	DataColumnVector data;
-	data.push_back(std::shared_ptr<DataColumn>(new DataColumn(serialNumber)));
+	data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
 	GD::db.executeCommand("DELETE FROM metadata WHERE objectID=?", data);
 
 	std::ostringstream command;
@@ -142,8 +143,8 @@ std::string Peer::serialize()
 	std::ostringstream stringstream;
 	stringstream << std::hex << std::uppercase << std::setfill('0');
 	stringstream << std::setw(8) << address;
-	stringstream << std::setw(4) << serialNumber.size();
-	stringstream << serialNumber;
+	stringstream << std::setw(4) << _serialNumber.size();
+	stringstream << _serialNumber;
 	stringstream << std::setw(8) << firmwareVersion;
 	stringstream << std::setw(2) << remoteChannel;
 	stringstream << std::setw(2) << localChannel;
@@ -282,11 +283,11 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					if(parameterSetChannel < 0) parameterSetChannel = (*k)->parentParameterSet->channel;
 					else if(parameterSetChannel != (*k)->parentParameterSet->channel)
 					{
-						if(GD::debugLevel >= 2) std::cout << "Error: Parameters from device device 0x" << std::hex << address << std::dec << " with serial number " << serialNumber << " have multiple channels. That is not allowed." << std::endl;
+						if(GD::debugLevel >= 2) std::cout << "Error: Parameters from device device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << " have multiple channels. That is not allowed." << std::endl;
 						continue;
 					}
 					valuesCentral[parameterSetChannel][(*k)->id].value = value;
-					if(GD::debugLevel >= 4) std::cout << "Info: " << (*k)->id << " of device 0x" << std::hex << address << std::dec << " with serial number " << serialNumber << " was set to " << value << "." << std::endl;
+					if(GD::debugLevel >= 4) std::cout << "Info: " << (*k)->id << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << " was set to " << value << "." << std::endl;
 					if(!valueKeys)
 					{
 						valueKeys.reset(new std::vector<std::string>());
@@ -316,7 +317,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		}
 		if(sendOK && parameterSetChannel > -1)
 		{
-			if(parameterSetChannel > -1) GD::rpcClient.broadcastEvent(serialNumber + ":" + std::to_string(parameterSetChannel), valueKeys, values);
+			if(parameterSetChannel > -1) GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(parameterSetChannel), valueKeys, values);
 		}
 	}
 	catch(const std::exception& ex)
@@ -348,7 +349,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 
 	if(channel == -1) //Base device
 	{
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", serialNumber)));
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", _serialNumber)));
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
 		RPC::RPCVariable* variable = description->structValue->back().get();
@@ -356,7 +357,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
 			if(i->second->hidden) continue;
-			variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(serialNumber + ":" + std::to_string(i->first))));
+			variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(i->first))));
 		}
 
 		if(firmwareVersion != 0)
@@ -396,7 +397,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
 		if(rpcChannel->hidden) return description;
 
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", serialNumber + ":" + std::to_string(channel))));
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", _serialNumber + ":" + std::to_string(channel))));
 
 		int32_t aesActive = 0;
 		if(configCentral.find(channel) != configCentral.end() && configCentral.at(channel).find("AES_ACTIVE") != configCentral.at(channel).end() && configCentral.at(channel).at("AES_ACTIVE").value != 0)
@@ -452,7 +453,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 			variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second->typeString())));
 		}
 
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", serialNumber)));
+		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", _serialNumber)));
 
 		if(!type.empty()) description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT_TYPE", type)));
 
@@ -473,7 +474,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 
 			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM_TAG", rpcChannel->teamTag)));
 		}
-		else if(!serialNumber.empty() && serialNumber[0] == '*' && !rpcChannel->teamTag.empty())
+		else if(!_serialNumber.empty() && _serialNumber[0] == '*' && !rpcChannel->teamTag.empty())
 		{
 			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM_TAG", rpcChannel->teamTag)));
 		}
@@ -1049,7 +1050,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return RPC::RPCVariable::createError(-6, "frame not found");
 		std::shared_ptr<RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 		valuesCentral[channel][valueKey].value = rpcParameter->convertToPacket(value);
-		if(GD::debugLevel >= 5) std::cout << "Debug: " << valueKey << " of device 0x" << std::hex << address << std::dec << " with serial number " << serialNumber << " was set to " << valuesCentral[channel][valueKey].value << "." << std::endl;
+		if(GD::debugLevel >= 5) std::cout << "Debug: " << valueKey << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << " was set to " << valuesCentral[channel][valueKey].value << "." << std::endl;
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
 		queue->noSending = true;
@@ -1075,7 +1076,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			}
 			//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
 			if(i->param == rpcParameter->physicalParameter->valueID) packet->setPosition(i->index, i->size, valuesCentral[channel][valueKey].value);
-			else if(GD::debugLevel >= 2) std::cout << "Error: Can't generate parameter packet, because the frame parameter does not equal the set parameter. Device: 0x" << std::hex << address << std::dec << " Serial number: " << serialNumber << " Frame: " << frame->id << std::endl;
+			else if(GD::debugLevel >= 2) std::cout << "Error: Can't generate parameter packet, because the frame parameter does not equal the set parameter. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frame->id << std::endl;
 		}
 		messageCounter++;
 		queue->push(packet);
