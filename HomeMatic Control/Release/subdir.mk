@@ -7,7 +7,9 @@ CPP_SRCS += \
 ../BidCoSMessage.cpp \
 ../BidCoSMessages.cpp \
 ../BidCoSPacket.cpp \
+../BidCoSPacketManager.cpp \
 ../BidCoSQueue.cpp \
+../BidCoSQueueManager.cpp \
 ../Cul.cpp \
 ../Database.cpp \
 ../Exception.cpp \
@@ -17,13 +19,16 @@ CPP_SRCS += \
 ../HomeMaticDevices.cpp \
 ../Log.cpp \
 ../Peer.cpp \
+../ServiceMessages.cpp \
 ../main.cpp 
 
 OBJS += \
 ./BidCoSMessage.o \
 ./BidCoSMessages.o \
 ./BidCoSPacket.o \
+./BidCoSPacketManager.o \
 ./BidCoSQueue.o \
+./BidCoSQueueManager.o \
 ./Cul.o \
 ./Database.o \
 ./Exception.o \
@@ -33,13 +38,16 @@ OBJS += \
 ./HomeMaticDevices.o \
 ./Log.o \
 ./Peer.o \
+./ServiceMessages.o \
 ./main.o 
 
 CPP_DEPS += \
 ./BidCoSMessage.d \
 ./BidCoSMessages.d \
 ./BidCoSPacket.d \
+./BidCoSPacketManager.d \
 ./BidCoSQueue.d \
+./BidCoSQueueManager.d \
 ./Cul.d \
 ./Database.d \
 ./Exception.d \
@@ -49,6 +57,7 @@ CPP_DEPS += \
 ./HomeMaticDevices.d \
 ./Log.d \
 ./Peer.d \
+./ServiceMessages.d \
 ./main.d 
 
 
@@ -56,7 +65,7 @@ CPP_DEPS += \
 %.o: ../%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -I/usr/local/include -O3 -Wall -c -fmessage-length=0 -std=c++11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -O3 -Wall -c -fmessage-length=0 -std=c++11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

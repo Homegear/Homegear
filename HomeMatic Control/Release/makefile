@@ -8,7 +8,7 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include XMLRPC/subdir.mk
+-include RPC/subdir.mk
 -include Devices/subdir.mk
 -include subdir.mk
 -include objects.mk
