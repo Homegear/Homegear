@@ -29,6 +29,8 @@ public:
 	std::string serialNumber;
 	int32_t channel = 0;
 	bool hidden = false;
+	std::string linkName;
+	std::string linkDescription;
 	std::shared_ptr<HomeMaticDevice> device;
 };
 

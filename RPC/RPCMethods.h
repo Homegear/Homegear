@@ -145,6 +145,7 @@ class RPCGetLinks : public RPCMethod
 public:
 	RPCGetLinks()
 	{
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
 		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString});
 		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcInteger});
 	}

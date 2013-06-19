@@ -65,8 +65,8 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 		std::string entry;
 		uint32_t pos = 0;
 		address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		int32_t serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		_serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
+		int32_t stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+		_serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize;
 		firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
@@ -77,8 +77,8 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 		messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		homegearFeatures = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
 		team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		if(serialNumberSize > 0) { team.serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize; }
+		stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+		if(stringSize > 0) { team.serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize; }
 		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
 		for(uint32_t i = 0; i < configSize; i++)
 		{
@@ -97,10 +97,14 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 				BasicPeer basicPeer;
 				basicPeer.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 				basicPeer.channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-				serialNumberSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-				basicPeer.serialNumber = serializedObject.substr(pos, serialNumberSize); pos += serialNumberSize;
+				stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+				basicPeer.serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize;
 				basicPeer.hidden = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
 				peers[channel].push_back(basicPeer);
+				stringSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				basicPeer.linkName = serializedObject.substr(pos, stringSize); pos += stringSize;
+				stringSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				basicPeer.linkDescription = serializedObject.substr(pos, stringSize); pos += stringSize;
 			}
 		}
 		uint32_t serializedServiceMessagesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -205,6 +209,10 @@ std::string Peer::serialize()
 			stringstream << std::setw(4) << j->serialNumber.size();
 			stringstream << j->serialNumber;
 			stringstream << std::setw(1) << j->hidden;
+			stringstream << std::setw(8) << j->linkName.size();
+			stringstream << j->linkName;
+			stringstream << std::setw(8) << j->linkDescription.size();
+			stringstream << j->linkDescription;
 		}
 	}
 	std::string serializedServiceMessages = serviceMessages->serialize();
@@ -754,11 +762,12 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags)
 			}
 			if(!isSource) return array;
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
-			std::shared_ptr<RPC::RPCVariable> element(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+			std::shared_ptr<RPC::RPCVariable> element;
 			for(std::vector<BasicPeer>::iterator i = peers[channel].begin(); i != peers[channel].end(); ++i)
 			{
 				std::shared_ptr<Peer> peer;
 				std::string peerSerial;
+				int32_t brokenFlags = 0;
 				if(i->serialNumber.empty() && central->getPeers()->find(i->address) != central->getPeers()->end())
 				{
 					i->serialNumber = central->getPeers()->at(i->address)->getSerialNumber();
@@ -768,10 +777,18 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags)
 				{
 					//Peer not paired to central
 					std::ostringstream stringstream;
-					stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << i->address << ':' << i->channel;
+					stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << i->address;
 					peerSerial = stringstream.str();
+					brokenFlags = 2; //LINK_FLAG_RECEIVER_BROKEN
 				}
-
+				if(brokenFlags == 0 && central->getPeers()->find(i->address) != central->getPeers()->end() && central->getPeers()->at(i->address)->serviceMessages->unreach) brokenFlags = 2;
+				if(serviceMessages->unreach) brokenFlags |= 1;
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DESCRIPTION", i->linkDescription)));
+				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", brokenFlags)));
+				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("Name", i->linkName)));
+				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RECEIVER", peerSerial + ":" + std::to_string(i->channel))));
+				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("SENDER", _serialNumber + ":" + channel)));
 			}
 		}
 		else
