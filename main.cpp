@@ -51,7 +51,7 @@ int main()
     try
     {
     	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
-			throw(new Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
+			throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
 
     	//Set rlimit for core dumps
     	struct rlimit coreLimits;
@@ -93,7 +93,7 @@ int main()
     	getcwd(path, 1024);
     	GD::workingDirectory = std::string(path);
 		ssize_t length = readlink("/proc/self/exe", path, sizeof(path) - 1);
-		if (length == -1) throw new Exception("Could not get executable path.");
+		if (length == -1) throw Exception("Could not get executable path.");
 		path[length] = '\0';
 		GD::executablePath = std::string(path);
 		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/"));

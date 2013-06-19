@@ -25,8 +25,9 @@ public:
 	BasicPeer(int32_t addr, std::string serial, bool hid) { address = addr; serialNumber = serial; hidden = hid; }
 	virtual ~BasicPeer() {}
 
-	int32_t address;
+	int32_t address = 0;
 	std::string serialNumber;
+	int32_t channel = 0;
 	bool hidden = false;
 	std::shared_ptr<HomeMaticDevice> device;
 };
@@ -84,6 +85,7 @@ class Peer
 
         std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
         std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);
+        std::shared_ptr<RPC::RPCVariable> getLink(int32_t channel, int32_t flags);
         std::shared_ptr<RPC::RPCVariable> getParamsetDescription(uint32_t channel, RPC::ParameterSet::Type::Enum type);
         std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type);
         std::shared_ptr<RPC::RPCVariable> getParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type);

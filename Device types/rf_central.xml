@@ -36,11 +36,7 @@
 						<set request="KEY_SIM_LONG"/>
 					</physical>
 				</parameter>
-				<parameter id="PRESS_SHORT" operations="write,event" loopback="true" control="BUTTON.SHORT">
-					<logical type="action"/>
-					<physical type="integer" interface="central_command" counter="SWITCH_COUNTER">
-						<set request="KEY_SIM_SHORT"/>
-					</physical>
+				<parameter id="PRESS_SHORT" operations="write,event" loopback="true" control="BUTTON.SHORT"><logical type="action"/><physical type="integer" interface="central_command" counter="SWITCH_COUNTER"><set request="KEY_SIM_SHORT"/></physical>
 				</parameter>
 				<parameter id="LEVEL" operations="write" control="NONE">
 					<logical type="float" min="0.0" max="1.0" default="0.0" unit="100%"/>

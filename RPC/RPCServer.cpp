@@ -468,17 +468,17 @@ void RPCServer::getFileDescriptor()
 		hostInfo.ai_socktype = SOCK_STREAM;
 		hostInfo.ai_flags = AI_PASSIVE;
 
-		if(getaddrinfo(0, _port.c_str(), &hostInfo, &serverInfo) != 0) throw new Exception("Error: Could not get address information.");
+		if(getaddrinfo(0, _port.c_str(), &hostInfo, &serverInfo) != 0) throw Exception("Error: Could not get address information.");
 
 		for(struct addrinfo *info = serverInfo; info != 0; info = info->ai_next) {
 			fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 			if(fileDescriptor == -1) continue;
-			if(setsockopt(fileDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw new Exception("Error: Could not set socket options.");
+			if(setsockopt(fileDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw Exception("Error: Could not set socket options.");
 			if(bind(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) continue;
 			break;
 		}
 		freeaddrinfo(serverInfo);
-		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1) throw new Exception("Error: Server could not start listening.");
+		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1) throw Exception("Error: Server could not start listening.");
 		_serverFileDescriptor = fileDescriptor;
     }
     catch(const std::exception& ex)

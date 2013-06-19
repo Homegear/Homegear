@@ -15,6 +15,7 @@ void Devices::load()
 	{
 		DIR* directory;
 		struct dirent* entry;
+		int32_t i = -1;
 		std::string deviceDir(GD::executablePath + "/Device types");
 		if((directory = opendir(deviceDir.c_str())) != 0)
 		{
@@ -24,9 +25,11 @@ void Devices::load()
 				{
 					try
 					{
+						if(i == -1) i = 0;
 						if(GD::debugLevel >= 5) std::cout << "Loading XML RPC device " << deviceDir << "/" << entry->d_name << std::endl;
 						std::shared_ptr<Device> device(new Device(deviceDir + "/" + entry->d_name));
 						if(device && device->loaded()) _devices.push_back(device);
+						i++;
 					}
 					catch(const std::exception& ex)
 					{
@@ -43,7 +46,9 @@ void Devices::load()
 				}
 			}
 		}
-		else throw(new Exception("Could not open directory \"Device types\"."));
+		else throw(Exception("Could not open directory \"Device types\"."));
+		if(i == -1) throw(Exception("No xml files found in \"Device types\"."));
+		if(i == 0) throw(Exception("Could not open any xml files in \"Device types\"."));
 	}
     catch(const std::exception& ex)
     {
@@ -52,6 +57,7 @@ void Devices::load()
     catch(const Exception& ex)
     {
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	exit(3);
     }
     catch(...)
     {

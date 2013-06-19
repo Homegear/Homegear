@@ -140,6 +140,17 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
+class RPCGetLinks : public RPCMethod
+{
+public:
+	RPCGetLinks()
+	{
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcInteger});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCGetMetadata : public RPCMethod
 {
 public:

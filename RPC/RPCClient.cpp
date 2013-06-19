@@ -52,10 +52,10 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		hostInfo.ai_socktype = SOCK_STREAM;
 
 		std::string ipAddress = server;
-		if(ipAddress.size() < 8) throw new Exception("Error: Server's address too short: " + ipAddress);
+		if(ipAddress.size() < 8) throw Exception("Error: Server's address too short: " + ipAddress);
 		if(ipAddress.substr(0, 7) == "http://") ipAddress = ipAddress.substr(7);
 
-		if(getaddrinfo(ipAddress.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0) throw new Exception("Error: Could not get address information.");
+		if(getaddrinfo(ipAddress.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0) throw Exception("Error: Could not get address information.");
 
 		int32_t fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 		if(fileDescriptor == -1)

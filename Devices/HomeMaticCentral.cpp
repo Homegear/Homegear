@@ -239,7 +239,7 @@ int32_t HomeMaticCentral::getUniqueAddress(int32_t seed)
 
 std::string HomeMaticCentral::getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber)
 {
-	if(seedPrefix.size() > 3) throw new Exception("Length of seedPrefix is too large.");
+	if(seedPrefix.size() > 3) throw Exception("Length of seedPrefix is too large.");
 	uint32_t i = 0;
 	int32_t numberSize = 10 - seedPrefix.size();
 	std::ostringstream stringstream;
@@ -271,6 +271,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 		BasicPeer hmcctc;
 		hmcctc.address = tc->address();
 		hmcctc.serialNumber = tc->serialNumber();
+		hmcctc.channel = 1;
 		hmcctc.hidden = true;
 		peer->peers[1].push_back(hmcctc);
 		peer->saveToDatabase(_address);
@@ -716,10 +717,10 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				int32_t peerAddress = (packet->payload()->at(i) << 16) + (packet->payload()->at(i + 1) << 8) + packet->payload()->at(i + 2);
 				if(peerAddress != 0)
 				{
-					int32_t peerChannel = packet->payload()->at(i + 3);
 					BasicPeer peer;
 					peer.address = peerAddress;
-					_peers[packet->senderAddress()]->peers[peerChannel].push_back(peer);
+					peer.channel = packet->payload()->at(i + 3);
+					_peers[packet->senderAddress()]->peers[sentPacket->payload()->at(0)].push_back(peer);
 				}
 			}
 		}
@@ -973,6 +974,40 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getInstallMode()
 	try
 	{
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_timeLeftInPairingMode));
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialNumber, int32_t channel, int32_t flags)
+{
+	try
+	{
+		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		if(serialNumber.empty())
+		{
+			for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+			{
+				array->arrayValue->push_back(getLink(i->second, channel, flags));
+			}
+		}
+		else
+		{
+			if(_peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
+			array->arrayValue->push_back(getLink(_peersBySerial[serialNumber], channel, flags));
+		}
+		return array;
 	}
 	catch(const std::exception& ex)
     {

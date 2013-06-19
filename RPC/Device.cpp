@@ -692,7 +692,7 @@ void Device::load(std::string xmlFilename)
 			doc.parse<parse_no_entity_translation>(buffer);
 			parseXML(doc.first_node("device"));
 		}
-		else throw new Exception("Error reading file " + xmlFilename + ". Error number: " + std::to_string(errno));
+		else throw Exception("Error reading file " + xmlFilename + ". Error number: " + std::to_string(errno));
 		_loaded = true;
 	}
 	catch(const std::exception& ex)
