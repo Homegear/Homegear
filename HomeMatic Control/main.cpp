@@ -2,6 +2,7 @@
 #include <ncurses.h>
 #include <execinfo.h>
 #include <signal.h>
+#include <sys/resource.h>
 #include <stdlib.h>
 #include <cmath>
 #include <vector>
@@ -17,13 +18,14 @@
 #include "GD.h"
 #include "HelperFunctions.h"
 
-void exceptionHandler(int32_t signal) {
-  void *stackTrace[10];
-  size_t length = backtrace(stackTrace, 10);
+void exceptionHandler(int32_t signalNumber) {
+  void *stackTrace[30];
+  size_t length = backtrace(stackTrace, 30);
 
-  std::cerr << "Error: Signal " << signal << ":" << std::endl;
-  backtrace_symbols_fd(stackTrace, length, 2);
-  exit(1);
+  std::cerr << "Error: Signal " << signalNumber << ". Backtrace:" << std::endl;
+  backtrace_symbols_fd(stackTrace, length, STDERR_FILENO);
+  signal(signalNumber, SIG_DFL);
+  kill(getpid(), signalNumber); //Generate core dump
 }
 
 int32_t getIntInput()
@@ -51,6 +53,17 @@ int main()
     	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
 			throw(new Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
 
+    	//Set rlimit for core dumps
+    	struct rlimit coreLimits;
+    	coreLimits.rlim_cur = coreLimits.rlim_max;
+    	setrlimit(RLIMIT_CORE, &coreLimits);
+
+    	//Analyze core dump with:
+    	//gdb Homegear core
+    	//where
+    	//thread apply all bt
+
+    	//Enable printing of backtraces
     	signal(SIGSEGV, exceptionHandler);
 
         /*int row,col;
