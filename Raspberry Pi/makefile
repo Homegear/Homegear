@@ -39,19 +39,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: HomeMatic\ Control
+all: Homegear
 
 # Tool invocations
-HomeMatic\ Control: $(OBJS) $(USER_OBJS)
+Homegear: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	arm-linux-gnueabihf-g++-4.7 -L"/home/sathya/git/HomeMaticControl/HomeMatic Control/ARM libraries" -o "HomeMatic Control" $(OBJS) $(USER_OBJS) $(LIBS)
+	arm-linux-gnueabihf-g++-4.7 -L"/home/sathya/git/Homegear/ARM libraries" -o "Homegear" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) "HomeMatic Control"
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) Homegear
 	-@echo ' '
 
 .PHONY: all clean dependents
