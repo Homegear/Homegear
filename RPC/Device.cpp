@@ -326,6 +326,61 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 	}
 }
 
+int64_t Parameter::getBytes(int32_t value)
+{
+	try
+	{
+		int64_t returnValue = 0;;
+		if(physicalParameter->size < 0)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Negative size not allowed." << std::endl;
+			return returnValue;
+		}
+		double i = physicalParameter->index;
+		i -= std::floor(i);
+		double byteIndex = std::floor(i);
+		if(byteIndex != i || physicalParameter->size < 0.8) //0.8 == 8 Bits
+		{
+			if(physicalParameter->size > 1)
+			{
+				if(GD::debugLevel >= 2) std::cout << "Error: Can't set partial byte index > 1." << std::endl;
+				return returnValue;
+			}
+			uint32_t bitSize = std::lround(physicalParameter->size * 10);
+			if(value < 0) //has sign?
+			{
+				value = value & _bitmask[bitSize];
+			}
+			returnValue = value << (std::lround(i * 10) % 10);
+		}
+		else
+		{
+			uint32_t bytes = (uint32_t)std::ceil(physicalParameter->size);
+			uint32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
+			if(bytes == 0) bytes = 1; //size is 0 - assume 1
+			returnValue = ((value >> ((bytes - 1) * 8)) & _bitmask[bitSize]) << ((bytes - 1) * 8);
+			for(uint32_t i = 1; i < bytes; i++)
+			{
+				returnValue |= (value >> ((bytes - i - 1) * 8)) << ((bytes - 1 - i) * 8);
+			}
+		}
+		return returnValue;
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return 0;
+}
+
 bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
 {
 	try

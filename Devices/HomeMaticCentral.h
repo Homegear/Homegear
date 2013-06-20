@@ -41,6 +41,7 @@ public:
 	void handleConfigParamResponse(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleReset(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
 	void sendEnableAES(int32_t address, int32_t channel);
+	void sendRequestConfig(int32_t address, uint8_t localChannel, uint8_t list = 0, int32_t remoteAddress = 0, uint8_t remoteChannel = 0);
 
 	std::shared_ptr<RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);
 	std::shared_ptr<RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel);
@@ -48,7 +49,7 @@ public:
 	std::shared_ptr<RPC::RPCVariable> getLinks(std::string serialNumber, int32_t channel, int32_t flags);
 	std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
 	std::shared_ptr<RPC::RPCVariable> getParamsetId(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
-	std::shared_ptr<RPC::RPCVariable> getParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
+	std::shared_ptr<RPC::RPCVariable> getParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber);
 	std::shared_ptr<RPC::RPCVariable> getServiceMessages();
 	std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
 	std::shared_ptr<RPC::RPCVariable> listDevices();

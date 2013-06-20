@@ -104,7 +104,7 @@ void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<Bid
 	try
 	{
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
-		queue->push(packets, true, true);
+		queue->push(packets, true, true, true);
 		if(_peers.find(deviceAddress) != _peers.end() && pushPendingBidCoSQueues) queue->push(_peers[deviceAddress]->pendingBidCoSQueues);
 	}
 	catch(const std::exception& ex)
@@ -262,18 +262,18 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 	try
 	{
 		int32_t hmcctcAddress = getUniqueAddress((0x39 << 16) + (peer->address & 0xFF00) + (peer->address & 0xFF));
-		if(!peer->peers[1].empty() && peer->peers[1].at(0).address != hmcctcAddress) return; //Already linked to a HM-CC-TC
+		if(peer->hasPeers(1) && !peer->getPeer(1, hmcctcAddress)) return; //Already linked to a HM-CC-TC
 		std::string temp = peer->getSerialNumber().substr(3);
 		std::string serialNumber = getUniqueSerialNumber("VCD", HelperFunctions::getNumber(temp));
 		GD::devices.add(new HM_CC_TC(serialNumber, hmcctcAddress));
 		std::shared_ptr<HomeMaticDevice> tc = GD::devices.get(hmcctcAddress);
 		tc->addPeer(peer);
-		BasicPeer hmcctc;
-		hmcctc.address = tc->address();
-		hmcctc.serialNumber = tc->serialNumber();
-		hmcctc.channel = 1;
-		hmcctc.hidden = true;
-		peer->peers[1].push_back(hmcctc);
+		std::shared_ptr<BasicPeer> hmcctc(new BasicPeer());
+		hmcctc->address = tc->address();
+		hmcctc->serialNumber = tc->serialNumber();
+		hmcctc->channel = 1;
+		hmcctc->hidden = true;
+		peer->addPeer(1, hmcctc);
 		peer->saveToDatabase(_address);
 
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, peer->address);
@@ -382,7 +382,7 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
 			peer->pendingBidCoSQueues->push(pendingQueue);
 			queue->push(peer->pendingBidCoSQueues);
 		}
-		else queue->push(pendingQueue, true, true);
+		else queue->push(pendingQueue, true, true, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -458,7 +458,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 			peer->pendingBidCoSQueues->push(pendingQueue);
 			queue->push(peer->pendingBidCoSQueues);
 		}
-		else queue->push(pendingQueue, true, true);
+		else queue->push(pendingQueue, true, true, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -547,7 +547,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			}
 			else peer = _peers[packet->senderAddress()].get();
 
-			if(!queue->peer->rpcDevice)
+			if(!peer->rpcDevice)
 			{
 				if(GD::debugLevel >= 3) std::cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
 				return;
@@ -599,13 +599,14 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			{
 				pendingQueue->serviceMessages = peer->serviceMessages;
 				peer->serviceMessages->configPending = true;
-				for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = peer->configCentral.begin(); i != peer->configCentral.end(); ++i)
+				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 				{
 					int32_t channel = i->first;
 					//Walk through all lists to request master config if necessary
-					for(std::map<RPC::ParameterSet::Type::Enum, std::shared_ptr<RPC::ParameterSet>>::iterator j = peer->rpcDevice->channels.at(channel)->parameterSets.begin(); j != peer->rpcDevice->channels.at(channel)->parameterSets.end(); ++j)
+					if(peer->rpcDevice->channels.at(channel)->parameterSets.find(RPC::ParameterSet::Type::Enum::master) != peer->rpcDevice->channels.at(channel)->parameterSets.end())
 					{
-						for(std::map<uint32_t, uint32_t>::iterator k = j->second->lists.begin(); k != j->second->lists.end(); ++k)
+						std::shared_ptr<RPC::ParameterSet> masterSet = peer->rpcDevice->channels.at(channel)->parameterSets[RPC::ParameterSet::Type::Enum::master];
+						for(std::map<uint32_t, uint32_t>::iterator k = masterSet->lists.begin(); k != masterSet->lists.end(); ++k)
 						{
 							payload.push_back(channel);
 							payload.push_back(0x04);
@@ -621,6 +622,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 							_messageCounter[0]++;
 						}
 					}
+
 					//Request peers if not received yet
 					if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) != peer->rpcDevice->channels[channel]->parameterSets.end() && peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link])
 					{
@@ -648,6 +650,57 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			return;
 		}
 		queue->push(peer->pendingBidCoSQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
+void HomeMaticCentral::sendRequestConfig(int32_t address, uint8_t localChannel, uint8_t list, int32_t remoteAddress, uint8_t remoteChannel)
+{
+	try
+	{
+		if(_peers.find(address) == _peers.end()) return;
+		Peer* peer = _peers[address].get();
+		bool oldQueue = true;
+		std::shared_ptr<BidCoSQueue> queue;
+		if(!_bidCoSQueueManager.get(address))
+		{
+			oldQueue = false;
+			queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, address);
+		}
+		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+		pendingQueue->noSending = true;
+
+		std::vector<uint8_t> payload;
+
+		//CONFIG_WRITE_INDEX
+		payload.push_back(localChannel);
+		payload.push_back(0x04);
+		payload.push_back(remoteAddress >> 16);
+		payload.push_back((remoteAddress >> 8) & 0xFF);
+		payload.push_back(remoteAddress & 0xFF);
+		payload.push_back(remoteChannel);
+		payload.push_back(list);
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+		pendingQueue->push(packet);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
+		payload.clear();
+		_messageCounter[0]++;
+
+		pendingQueue->serviceMessages = peer->serviceMessages;
+		peer->serviceMessages->configPending = true;
+		peer->pendingBidCoSQueues->push(pendingQueue);
+		if(!oldQueue) queue->push(peer->pendingBidCoSQueues);
 	}
 	catch(const std::exception& ex)
     {
@@ -712,15 +765,26 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
 		if(sentPacket && sentPacket->payload()->at(1) == 0x03) //Peer request
 		{
+			Peer* peer = _peers[packet->senderAddress()].get();
 			for(uint32_t i = 1; i < packet->payload()->size() - 1; i += 4)
 			{
 				int32_t peerAddress = (packet->payload()->at(i) << 16) + (packet->payload()->at(i + 1) << 8) + packet->payload()->at(i + 2);
 				if(peerAddress != 0)
 				{
-					BasicPeer peer;
-					peer.address = peerAddress;
-					peer.channel = packet->payload()->at(i + 3);
-					_peers[packet->senderAddress()]->peers[sentPacket->payload()->at(0)].push_back(peer);
+					std::shared_ptr<BasicPeer> newPeer(new BasicPeer());
+					newPeer->address = peerAddress;
+					newPeer->channel = packet->payload()->at(i + 3);
+					int32_t localChannel = sentPacket->payload()->at(0);
+					_peers[packet->senderAddress()]->addPeer(localChannel, newPeer);
+					if(peer->rpcDevice->channels.find(localChannel) == peer->rpcDevice->channels.end()) continue;
+					std::shared_ptr<RPC::DeviceChannel> channel = peer->rpcDevice->channels[localChannel];
+					if(channel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) == channel->parameterSets.end()) continue;
+					std::shared_ptr<RPC::ParameterSet> parameterSet = channel->parameterSets[RPC::ParameterSet::Type::Enum::link];
+					if(parameterSet->parameters.empty()) continue;
+					for(std::map<uint32_t, uint32_t>::iterator k = parameterSet->lists.begin(); k != parameterSet->lists.end(); ++k)
+					{
+						sendRequestConfig(peer->address, localChannel, k->first, newPeer->address, newPeer->channel);
+					}
 				}
 			}
 		}
@@ -728,25 +792,35 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		{
 			int32_t channel = sentPacket->payload()->at(0);
 			int32_t list = sentPacket->payload()->at(6);
+			int32_t remoteAddress = (sentPacket->payload()->at(2) << 16) + (sentPacket->payload()->at(3) << 8) + sentPacket->payload()->at(4);
+			RPC::ParameterSet::Type::Enum type = (remoteAddress != 0) ? RPC::ParameterSet::Type::link : RPC::ParameterSet::Type::master;
 			Peer* peer = _peers[packet->senderAddress()].get();
 			if(packet->controlByte() & 0x20)
 			{
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = startIndex + packet->payload()->size() - 3;
-				if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::master) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master])
+				if(peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
 				{
 					if(GD::debugLevel >= 2) std::cout << "Error: Received config for non existant parameter set." << std::endl;
 				}
 				else
 				{
-					std::vector<std::shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndices(startIndex, endIndex, list);
+					std::vector<std::shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[type]->getIndices(startIndex, endIndex, list);
 					for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
 					{
 						if(!(*i)->id.empty())
 						{
 							double position = ((*i)->physicalParameter->index - startIndex) + 2 + 9;
-							peer->configCentral[channel][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter->size, false);
-							if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->configCentral[channel][(*i)->id].value << std::endl;
+							if(type == RPC::ParameterSet::Type::master)
+							{
+								peer->configCentral[channel][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter->size, false);
+								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->configCentral[channel][(*i)->id].value << std::endl;
+							}
+							else if(peer->getPeer(channel, remoteAddress))
+							{
+								peer->linksCentral[channel][remoteAddress][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter->size, false);
+								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->linksCentral[channel][remoteAddress][(*i)->id].value << std::endl;
+							}
 						}
 						else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->getSerialNumber() << " Channel: " << channel << " List: " << (*i)->physicalParameter->list << " Parameter index: " << (*i)->index << std::endl;
 					}
@@ -754,7 +828,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			}
 			else
 			{
-				if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::master) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master])
+				if(peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
 				{
 					if(GD::debugLevel >= 2) std::cout << "Error: Received config for non existant parameter set." << std::endl;
 				}
@@ -763,14 +837,22 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 					for(uint32_t i = 1; i < packet->payload()->size() - 2; i += 2)
 					{
 						int32_t index = packet->payload()->at(i);
-						std::vector<std::shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::master]->getIndices(index, index, list);
+						std::vector<std::shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[type]->getIndices(index, index, list);
 						for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = packetParameters.begin(); j != packetParameters.end(); ++j)
 						{
 							if(!(*j)->id.empty())
 							{
 								double position = std::fmod((*j)->physicalParameter->index, 1) + 9 + i + 1;
-								peer->configCentral[channel][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter->size, false);
-								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << std::endl;
+								if(type == RPC::ParameterSet::Type::master)
+								{
+									peer->configCentral[channel][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter->size, false);
+									if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << std::endl;
+								}
+								else if(peer->getPeer(channel, remoteAddress))
+								{
+									peer->linksCentral[channel][remoteAddress][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter->size, false);
+									if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->linksCentral[channel][remoteAddress][(*j)->id].value << std::endl;
+								}
 							}
 							else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->getSerialNumber() << " Channel: " << channel << " List: " << (*j)->physicalParameter->list << " Parameter index: " << (*j)->index << std::endl;
 						}
@@ -1072,11 +1154,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string seri
 }
 
 
-std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber)
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamset(channel, type);
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamset(channel, type, remoteSerialNumber);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)

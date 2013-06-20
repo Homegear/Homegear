@@ -593,7 +593,7 @@ std::shared_ptr<RPCVariable> RPCGetParamset::invoke(std::shared_ptr<std::vector<
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getParamsetId. Please add a central device.");
 		}
 
-		return central->getParamset(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue));
+		return central->getParamset(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue), parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
     {

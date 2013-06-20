@@ -211,9 +211,9 @@ int main()
             }
             else if(input == "set verbosity")
             {
-            	std::cout << "Verbosity (0 - 5): ";
+            	std::cout << "Verbosity (0 - 8): ";
             	int32_t verbosity = getHexInput();
-            	if(verbosity < 0 || verbosity > 5) std::cout << "Invalid verbosity." << std::endl;
+            	if(verbosity < 0 || verbosity > 8) std::cout << "Invalid verbosity." << std::endl;
             	else
             	{
             		GD::debugLevel = verbosity;

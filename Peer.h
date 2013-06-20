@@ -64,9 +64,9 @@ class Peer
         std::unordered_map<int32_t, int32_t> config;
         std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
         std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> valuesCentral;
-        std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> linksCentral;
+        std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>> linksCentral;
         std::shared_ptr<RPC::Device> rpcDevice;
-        std::unordered_map<int32_t, std::vector<BasicPeer>> peers;
+
         BasicPeer team;
         std::vector<std::pair<std::string, uint32_t>> teamChannels;
         bool homegearFeatures = false;
@@ -75,12 +75,20 @@ class Peer
         std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>> pendingBidCoSQueues;
 
         void initializeCentralConfig();
+        void initializeLinkConfig(int32_t channel, int32_t address);
         std::string serialize();
         void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config);
+        void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>& config);
         void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
+        void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
         void deleteFromDatabase(int32_t parentAddress);
         void saveToDatabase(int32_t parentAddress);
         void deletePairedVirtualDevices();
+        bool hasPeers(int32_t channel) { if(peers.find(channel) == peers.end() || peers[channel].empty()) return false; else return true; }
+        void addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer);
+        std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address);
+        std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber);
+        void removePeer(int32_t channel, int32_t address);
 
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
@@ -90,13 +98,14 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> getLink(int32_t channel, int32_t flags, bool avoidDuplicates);
         std::shared_ptr<RPC::RPCVariable> getParamsetDescription(uint32_t channel, RPC::ParameterSet::Type::Enum type);
         std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type);
-        std::shared_ptr<RPC::RPCVariable> getParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type);
+        std::shared_ptr<RPC::RPCVariable> getParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber);
         std::shared_ptr<RPC::RPCVariable> getServiceMessages();
         std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
         std::shared_ptr<RPC::RPCVariable> putParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::shared_ptr<RPC::RPCVariable> variables);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
         std::string _serialNumber;
+        std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> peers;
 };
 
 #endif // PEER_H

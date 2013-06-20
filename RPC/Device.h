@@ -88,6 +88,7 @@ public:
 	{
 		enum Enum { none = 0, visible = 1, internal = 2, transform = 4, service = 8, sticky = 0x10 };
 	};
+	uint32_t _bitmask[8] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
 	ParameterSet* parentParameterSet = nullptr;
 	double index = 0;
 	double size = 0;
@@ -110,6 +111,7 @@ public:
 	bool checkCondition(int64_t value);
 	std::shared_ptr<RPC::RPCVariable> convertFromPacket(int32_t value);
 	int32_t convertToPacket(std::shared_ptr<RPC::RPCVariable> value);
+	int64_t getBytes(int32_t value);
 };
 
 class DeviceType

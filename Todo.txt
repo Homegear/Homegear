@@ -10,3 +10,5 @@
 - Correctly use linksCentral: One paramset for each linked peer.
 - Support for serial numbers in putParamset and getParamset
 - Delete peer from all devices it is linked to, when peer is reset
+- Peer.cpp: getLink - Add parameter sets
+- Implement putParamset for link parameter set

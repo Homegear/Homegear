@@ -112,10 +112,13 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
 		sendRPCResponseToClient(clientFileDescriptor, parameters->at(0), responseType);
 		return;
 	}
-	std::cout << "Method called: " << methodName << " Parameters:" << std::endl;
-	for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+	if(GD::debugLevel >= 4)
 	{
-		(*i)->print();
+		std::cout << "Method called: " << methodName << " Parameters:" << std::endl;
+		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+		{
+			(*i)->print();
+		}
 	}
 	if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(clientFileDescriptor, methodName, parameters, responseType);
 	else if(GD::debugLevel >= 3)
@@ -263,7 +266,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 		timeout.tv_sec = 20;
 		timeout.tv_usec = 0;*/
 
-		std::cout << "Listening for incoming packets from client number " << clientFileDescriptor << "." << std::endl;
+		if(GD::debugLevel >= 5) std::cout << "Listening for incoming packets from client number " << clientFileDescriptor << "." << std::endl;
 		while(!_stopServer)
 		{
 			/*fd_set readFileDescriptor;

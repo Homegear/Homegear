@@ -48,14 +48,20 @@ BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device) 
 	catch(const std::exception& ex)
     {
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	clear();
+    	_pendingQueues.reset();
     }
     catch(const Exception& ex)
     {
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	clear();
+    	_pendingQueues.reset();
     }
     catch(...)
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	clear();
+    	_pendingQueues.reset();
     }
 }
 
@@ -203,13 +209,13 @@ void BidCoSQueue::push(std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>
     }
 }
 
-void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmediately, bool clearPendingQueues)
+void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool pushImmediately, bool popImmediately, bool clearPendingQueues)
 {
 	try
 	{
 		if(!_pendingQueues || clearPendingQueues) _pendingQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
 		_pendingQueues->push(pendingQueue);
-		pushPendingQueue();
+		if(pushImmediately) pushPendingQueue();
 		if(popImmediately)
 		{
 			_pendingQueues->pop();
