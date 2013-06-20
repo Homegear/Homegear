@@ -452,30 +452,27 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 		int32_t direction = 0;
 		std::ostringstream linkSourceRoles;
 		std::ostringstream linkTargetRoles;
-		for(std::vector<std::shared_ptr<RPC::LinkRole>>::iterator j = rpcChannel->linkRoles.begin(); j != rpcChannel->linkRoles.end(); ++j)
+		for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->sourceNames.begin(); k != rpcChannel->linkRoles->sourceNames.end(); ++k)
 		{
-			for(std::vector<std::string>::iterator k = (*j)->sourceNames.begin(); k != (*j)->sourceNames.end(); ++k)
+			//Probably only one direction is supported, but just in case I use the "or"
+			if(!k->empty())
 			{
-				//Probably only one direction is supported, but just in case I use the "or"
-				if(!k->empty())
-				{
-					if(direction & 1) linkSourceRoles << " ";
-					linkSourceRoles << *k;
-					direction |= 1;
-				}
+				if(direction & 1) linkSourceRoles << " ";
+				linkSourceRoles << *k;
+				direction |= 1;
 			}
-			for(std::vector<std::string>::iterator k = (*j)->targetNames.begin(); k != (*j)->targetNames.end(); ++k)
-			{
-				//Probably only one direction is supported, but just in case I use the "or"
-				if(!k->empty())
-				{
-					if(direction & 2) linkTargetRoles << " ";
-					linkTargetRoles << *k;
-					direction |= 2;
-				}
-			}
-
 		}
+		for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->targetNames.begin(); k != rpcChannel->linkRoles->targetNames.end(); ++k)
+		{
+			//Probably only one direction is supported, but just in case I use the "or"
+			if(!k->empty())
+			{
+				if(direction & 2) linkTargetRoles << " ";
+				linkTargetRoles << *k;
+				direction |= 2;
+			}
+		}
+
 		//Overwrite direction when manually set
 		if(rpcChannel->direction != RPC::DeviceChannel::Direction::Enum::none) direction = (int32_t)rpcChannel->direction;
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DIRECTION", direction)));
@@ -742,35 +739,41 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamset(uint32_t channel, RPC::Param
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags)
+std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, bool avoidDuplicates)
 {
 	try
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<RPC::RPCVariable> element;
 		if(channel > -1)
 		{
 			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+			//Return if no peers are paired to the channel
 			if(peers.find(channel) == peers.end() || peers[channel].empty()) return array;
-			bool isSource = false;
-			for(std::vector<std::shared_ptr<RPC::LinkRole>>::iterator i = rpcDevice->channels[channel]->linkRoles.begin(); i != rpcDevice->channels[channel]->linkRoles.end(); ++i)
-			{
-				if(!(*i)->sourceNames.empty())
-				{
-					isSource = true;
-					continue;
-				}
-			}
-			if(!isSource) return array;
+
+			bool isSender = false;
+			//Return if there are no link roles defined
+			std::shared_ptr<RPC::LinkRole> linkRoles = rpcDevice->channels[channel]->linkRoles;
+			if(!linkRoles) return array;
+			if(!linkRoles->sourceNames.empty()) isSender = true;
+			else if(linkRoles->targetNames.empty()) return array;
+
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
-			std::shared_ptr<RPC::RPCVariable> element;
+			if(!central) return array; //central actually should always be set at this point
 			for(std::vector<BasicPeer>::iterator i = peers[channel].begin(); i != peers[channel].end(); ++i)
 			{
 				std::shared_ptr<Peer> peer;
+				if(central->getPeers()->find(i->address) != central->getPeers()->end()) peer = central->getPeers()->at(i->address);
+
+				//Don't continue if peer is sender and exists in central's peer array to avoid generation of duplicate results when requesting all links (only generate results when we are sender)
+				if(!isSender && peer && avoidDuplicates) return array;
+				//If we are receiver this point is only reached, when the sender is not paired to this central
+
 				std::string peerSerial;
 				int32_t brokenFlags = 0;
-				if(i->serialNumber.empty() && central->getPeers()->find(i->address) != central->getPeers()->end())
+				if(i->serialNumber.empty() && peer)
 				{
-					i->serialNumber = central->getPeers()->at(i->address)->getSerialNumber();
+					i->serialNumber = peer->getSerialNumber();
 					peerSerial = i->serialNumber;
 				}
 				else
@@ -779,7 +782,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags)
 					std::ostringstream stringstream;
 					stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << i->address;
 					peerSerial = stringstream.str();
-					brokenFlags = 2; //LINK_FLAG_RECEIVER_BROKEN
+					if(isSender) brokenFlags = 2; //LINK_FLAG_RECEIVER_BROKEN
+					else brokenFlags = 1; //LINK_FLAG_SENDER_BROKEN
 				}
 				if(brokenFlags == 0 && central->getPeers()->find(i->address) != central->getPeers()->end() && central->getPeers()->at(i->address)->serviceMessages->unreach) brokenFlags = 2;
 				if(serviceMessages->unreach) brokenFlags |= 1;
@@ -787,14 +791,28 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags)
 				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DESCRIPTION", i->linkDescription)));
 				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", brokenFlags)));
 				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("Name", i->linkName)));
-				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RECEIVER", peerSerial + ":" + std::to_string(i->channel))));
-				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("SENDER", _serialNumber + ":" + channel)));
+				if(isSender)
+				{
+					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RECEIVER", peerSerial + ":" + std::to_string(i->channel))));
+					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("SENDER", _serialNumber + ":" + std::to_string(channel))));
+				}
+				else
+				{
+					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RECEIVER", _serialNumber + ":" + std::to_string(channel))));
+					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("SENDER", peerSerial + ":" + std::to_string(i->channel))));
+				}
 			}
 		}
 		else
 		{
-
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			{
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+				element = getLink(i->first, flags, avoidDuplicates);
+				array->arrayValue->insert(array->arrayValue->end(), element->arrayValue->begin(), element->arrayValue->end());
+			}
 		}
+		return array;
 	}
 	catch(const std::exception& ex)
     {
@@ -1273,7 +1291,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 			{
 				HM_CC_TC* tc = (HM_CC_TC*)peers[1].at(0).device.get();
 				tc->setValveState(value->integerValue);
-				if(GD::debugLevel >= 4) std::cout << "Setting valve state of HM-CC-VD with address 0x" << address << " to " << value->integerValue << "%." << std::endl;
+				if(GD::debugLevel >= 4) std::cout << "Setting valve state of HM-CC-VD with address 0x" << std::hex << address << std::dec << " to " << value->integerValue << "%." << std::endl;
 				return true;
 			}
 		}

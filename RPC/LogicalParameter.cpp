@@ -64,7 +64,8 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node)
 		{
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
-			if(attributeName == "unit") unit = attributeValue;
+			if(attributeName == "type") {}
+			else if(attributeName == "unit") unit = attributeValue;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type enum: " << attributeName << std::endl;
 		}
 		int32_t index = 0;

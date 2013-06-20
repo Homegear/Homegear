@@ -995,17 +995,20 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialN
 	try
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<RPC::RPCVariable> element(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		if(serialNumber.empty())
 		{
-			for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+			for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 			{
-				array->arrayValue->push_back(getLink(i->second, channel, flags));
+				element = i->second->getLink(channel, flags, true);
+				array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
 			}
 		}
 		else
 		{
 			if(_peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
-			array->arrayValue->push_back(getLink(_peersBySerial[serialNumber], channel, flags));
+			element = _peersBySerial[serialNumber]->getLink(channel, flags, false);
+			array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
 		}
 		return array;
 	}

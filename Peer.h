@@ -87,7 +87,7 @@ class Peer
 
         std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
         std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);
-        std::shared_ptr<RPC::RPCVariable> getLink(int32_t channel, int32_t flags);
+        std::shared_ptr<RPC::RPCVariable> getLink(int32_t channel, int32_t flags, bool avoidDuplicates);
         std::shared_ptr<RPC::RPCVariable> getParamsetDescription(uint32_t channel, RPC::ParameterSet::Type::Enum type);
         std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type);
         std::shared_ptr<RPC::RPCVariable> getParamset(uint32_t channel, RPC::ParameterSet::Type::Enum type);

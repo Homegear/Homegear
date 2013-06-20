@@ -574,11 +574,12 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		{
 			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(index, channelNode));
 			if(parameterSets.find(parameterSet->type) == parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
-			else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add same parameter set type twice." << std::endl;
+			else if(GD::debugLevel >= 2) std::cerr << "Error: Tried to add same parameter set type twice." << std::endl;
 		}
 		else if(nodeName == "link_roles")
 		{
-			linkRoles.push_back(std::shared_ptr<LinkRole>(new LinkRole(channelNode)));
+			if(linkRoles && GD::debugLevel >=3) std::cout << "Warning: Multiple link roles are defined for channel " << index << "." << std::endl;
+			linkRoles.reset(new LinkRole(channelNode));
 		}
 		else if(nodeName == "enforce_link")
 		{

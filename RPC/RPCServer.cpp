@@ -293,7 +293,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				packetType = (buffer[3] == 0) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryResponse;
 				if(uBytesRead < 8) continue;
 				HelperFunctions::memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
-				if(GD::debugLevel >= 6) std::cout << "Receiving packet with size: " << dataSize << std::endl;
+				if(GD::debugLevel >= 6) std::cout << "Receiving binary rpc packet with size: " << dataSize << std::endl;
 				if(dataSize == 0) continue;
 				if(dataSize > 104857600)
 				{
@@ -340,7 +340,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 					else if(contentType && host && line.size() > 5 && line.substr(0, 5) == "<?xml")
 					{
 						packetType = PacketType::Enum::xmlRequest;
-						if(GD::debugLevel >= 6) std::cout << "Receiving packet with content size: " << dataSize << std::endl;
+						if(GD::debugLevel >= 6) std::cout << "Receiving xml rpc packet with content size: " << dataSize << std::endl;
 						if(dataSize > 104857600)
 						{
 							if(GD::debugLevel >= 2) std::cout << "Error: Packet with data larger than 100 MiB received." << std::endl;

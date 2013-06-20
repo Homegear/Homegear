@@ -438,7 +438,7 @@ std::shared_ptr<RPCVariable> RPCGetLinks::invoke(std::shared_ptr<std::vector<std
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getLinks. Please add a central device.");
 		}
 
-		return central->getLinks(serialNumber, channel, flags));
+		return central->getLinks(serialNumber, channel, flags);
 	}
 	catch(const std::exception& ex)
     {

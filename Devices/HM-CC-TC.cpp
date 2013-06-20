@@ -185,7 +185,10 @@ void HM_CC_TC::handleCLICommand(std::string command)
 
 void HM_CC_TC::setValveState(int32_t valveState)
 {
-	_newValveState = valveState * 256 / 100;
+	valveState *= 256;
+	//Round up if necessary. I don't use double for calculation, because hopefully this is faster.
+	if(valveState % 100 >= 50) valveState = (valveState / 100) + 1; else valveState /= 100;
+	_newValveState = valveState;
 	if(_newValveState > 255) _newValveState = 255;
 	if(_newValveState < 0) _newValveState = 0;
 }
@@ -233,25 +236,21 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		if(_stopDutyCycleThread) break;
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::cout << "Time mismatch: " << (timePassed + 10000 - cycleTime) << std::endl;
+		std::cout << "Correcting time mismatch of " << std::dec << (timePassed + 10000 - cycleTime) << "ms." << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 5000));
 		if(_stopDutyCycleThread) break;
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::cout << "Time mismatch: " << (timePassed + 5000 - cycleTime) << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 2000));
 		if(_stopDutyCycleThread) break;
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::cout << "Time mismatch: " << (timePassed + 2000 - cycleTime) << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 1000));
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::cout << "Time mismatch: " << (timePassed + 1000 - cycleTime) << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 500));
 
 		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::cout << "Time mismatch: " << (timePassed + 500 - cycleTime) << std::endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed));
 		if(_stopDutyCycleThread) break;
 
