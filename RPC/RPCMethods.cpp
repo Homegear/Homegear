@@ -418,18 +418,22 @@ std::shared_ptr<RPCVariable> RPCGetLinks::invoke(std::shared_ptr<std::vector<std
 		ParameterError::Enum error3 = checkParameters(parameters, std::vector<RPCVariableType>());
 		if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError && error3 != ParameterError::Enum::noError) return getError((error != ParameterError::Enum::noError) ? error : ((error2 != ParameterError::Enum::noError) ? error2 : error3));
 
-		int32_t channel = -1; //If no channel is defined take the base device's channel
+		int32_t channel = -1;
 		std::string serialNumber;
-		int32_t pos = parameters->at(0)->stringValue.find(':');
-		if(pos > -1)
-		{
-			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
-		}
-		else serialNumber = parameters->at(0)->stringValue;
-
+		int32_t pos = -1;
 		int32_t flags = 0;
-		if(parameters->size() == 3) flags = parameters->at(0)->integerValue;
+		if(parameters->size() > 0)
+		{
+			pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1)
+			{
+				serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+			}
+			else serialNumber = parameters->at(0)->stringValue;
+
+			if(parameters->size() == 3) flags = parameters->at(0)->integerValue;
+		}
 
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 		if(!central)

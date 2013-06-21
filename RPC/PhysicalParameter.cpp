@@ -12,6 +12,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "type") {
 			if(attributeValue == "integer") type = Type::Enum::typeInteger;
+			else if(attributeValue == "boolean") type = Type::Enum::typeBoolean;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown physical type: " << attributeValue << std::endl;
 		}
 		else if(attributeName == "interface")

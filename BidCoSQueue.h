@@ -66,10 +66,11 @@ class BidCoSQueue
         void push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet);
         void push(std::shared_ptr<BidCoSPacket> packet);
         void push(std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>& pendingBidCoSQueues);
-        void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool pushImmediately, bool popImmediately, bool clearPendingQueues);
+        void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool popImmediately, bool clearPendingQueues);
         BidCoSQueueEntry* front() { return &_queue.front(); }
         void pop();
         bool isEmpty() { return _queue.empty() && (!_pendingQueues || _pendingQueues->empty()); }
+        bool pendingQueuesEmpty() { return (!_pendingQueues || _pendingQueues->empty()); }
         void clear();
         void resend(uint32_t threadId);
         void startResendThread();

@@ -104,7 +104,7 @@ void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<Bid
 	try
 	{
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
-		queue->push(packets, true, true, true);
+		queue->push(packets, true, true);
 		if(_peers.find(deviceAddress) != _peers.end() && pushPendingBidCoSQueues) queue->push(_peers[deviceAddress]->pendingBidCoSQueues);
 	}
 	catch(const std::exception& ex)
@@ -318,7 +318,6 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer)
 	try
 	{
 		if(peer->deviceType == HMDeviceTypes::HMCCVD) addHomegearFeaturesHMCCVD(peer);
-		peer->homegearFeatures = true;
 	}
 	catch(const std::exception& ex)
     {
@@ -382,7 +381,7 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
 			peer->pendingBidCoSQueues->push(pendingQueue);
 			queue->push(peer->pendingBidCoSQueues);
 		}
-		else queue->push(pendingQueue, true, true, true);
+		else queue->push(pendingQueue, true, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -458,7 +457,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 			peer->pendingBidCoSQueues->push(pendingQueue);
 			queue->push(peer->pendingBidCoSQueues);
 		}
-		else queue->push(pendingQueue, true, true, true);
+		else queue->push(pendingQueue, true, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -672,8 +671,8 @@ void HomeMaticCentral::sendRequestConfig(int32_t address, uint8_t localChannel, 
 		if(_peers.find(address) == _peers.end()) return;
 		Peer* peer = _peers[address].get();
 		bool oldQueue = true;
-		std::shared_ptr<BidCoSQueue> queue;
-		if(!_bidCoSQueueManager.get(address))
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(address);
+		if(!queue)
 		{
 			oldQueue = false;
 			queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, address);
@@ -701,6 +700,7 @@ void HomeMaticCentral::sendRequestConfig(int32_t address, uint8_t localChannel, 
 		peer->serviceMessages->configPending = true;
 		peer->pendingBidCoSQueues->push(pendingQueue);
 		if(!oldQueue) queue->push(peer->pendingBidCoSQueues);
+		else if(queue->pendingQueuesEmpty()) queue->push(peer->pendingBidCoSQueues);
 	}
 	catch(const std::exception& ex)
     {
@@ -763,6 +763,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue) return;
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
+		bool multiplePackets = false;
 		if(sentPacket && sentPacket->payload()->at(1) == 0x03) //Peer request
 		{
 			Peer* peer = _peers[packet->senderAddress()].get();
@@ -795,7 +796,10 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			int32_t remoteAddress = (sentPacket->payload()->at(2) << 16) + (sentPacket->payload()->at(3) << 8) + sentPacket->payload()->at(4);
 			RPC::ParameterSet::Type::Enum type = (remoteAddress != 0) ? RPC::ParameterSet::Type::link : RPC::ParameterSet::Type::master;
 			Peer* peer = _peers[packet->senderAddress()].get();
-			if(packet->controlByte() & 0x20)
+			std::shared_ptr<RPC::RPCVariable> parametersToEnforce;
+			if(!peer->pairingComplete) parametersToEnforce.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+			if((packet->controlByte() & 0x20) && (packet->payload()->at(1) % 15 == 1)) multiplePackets = true;
+			if(multiplePackets)
 			{
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = startIndex + packet->payload()->size() - 3;
@@ -814,6 +818,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 							if(type == RPC::ParameterSet::Type::master)
 							{
 								peer->configCentral[channel][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter->size, false);
+								if(!peer->pairingComplete && (*i)->logicalParameter->enforce)
+								{
+									parametersToEnforce->structValue->push_back((*i)->logicalParameter->getEnforceValue());
+									parametersToEnforce->structValue->back()->name = (*i)->id;
+								}
 								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->configCentral[channel][(*i)->id].value << std::endl;
 							}
 							else if(peer->getPeer(channel, remoteAddress))
@@ -846,6 +855,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 								if(type == RPC::ParameterSet::Type::master)
 								{
 									peer->configCentral[channel][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter->size, false);
+									if(!peer->pairingComplete && (*j)->logicalParameter->enforce)
+									{
+										parametersToEnforce->structValue->push_back((*j)->logicalParameter->getEnforceValue());
+										parametersToEnforce->structValue->back()->name = (*j)->id;
+									}
 									if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << std::endl;
 								}
 								else if(peer->getPeer(channel, remoteAddress))
@@ -859,8 +873,9 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 					}
 				}
 			}
+			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, parametersToEnforce);
 		}
-		if(packet->controlByte() & 0x20) //Multiple config response packets
+		if(multiplePackets) //Multiple config response packets
 		{
 			//StealthyOK does not set sentPacket
 			sendStealthyOK(packet->messageCounter(), packet->senderAddress());
@@ -874,7 +889,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		if(queue->isEmpty())
 		{
 			if(!queue->peer) return;
-			if(!queue->peer->homegearFeatures) addHomegearFeatures(queue->peer);
+			if(!queue->peer->pairingComplete)
+			{
+				addHomegearFeatures(queue->peer);
+				queue->peer->pairingComplete = true;
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -1152,7 +1171,6 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string seri
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
-
 
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber)
 {

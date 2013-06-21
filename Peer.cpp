@@ -78,7 +78,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 		rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
 		if(!rpcDevice && GD::debugLevel >= 2) std::cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << std::endl;
 		messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		homegearFeatures = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+		pairingComplete = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
 		team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		if(stringSize > 0) { team.serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize; }
@@ -226,7 +226,7 @@ std::string Peer::serialize()
 	stringstream << std::setw(2) << localChannel;
 	stringstream << std::setw(8) << (int32_t)deviceType;
 	stringstream << std::setw(2) << (int32_t)messageCounter;
-	stringstream << std::setw(1) << (int32_t)homegearFeatures;
+	stringstream << std::setw(1) << (int32_t)pairingComplete;
 	stringstream << std::setw(8) << team.address;
 	stringstream << std::setw(4) << team.serialNumber.size();
 	stringstream << team.serialNumber;
@@ -422,7 +422,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9);
 			for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
 			{
-				if((int32_t)j->index >= (signed)packet->payload()->size()) continue;
+				if(((int32_t)j->index) - 9 >= (signed)packet->payload()->size()) continue;
 				int64_t value = packet->getPosition(j->index, j->size, j->isSigned);
 				if(j->constValue > -1)
 				{
@@ -866,18 +866,16 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 		{
 			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 			//Return if no peers are paired to the channel
-			if(peers.find(channel) == peers.end() || peers[channel].empty()) return array;
-
+			if(peers.find(channel) == peers.end() || peers.at(channel).empty()) return array;
 			bool isSender = false;
 			//Return if there are no link roles defined
-			std::shared_ptr<RPC::LinkRole> linkRoles = rpcDevice->channels[channel]->linkRoles;
+			std::shared_ptr<RPC::LinkRole> linkRoles = rpcDevice->channels.at(channel)->linkRoles;
 			if(!linkRoles) return array;
 			if(!linkRoles->sourceNames.empty()) isSender = true;
 			else if(linkRoles->targetNames.empty()) return array;
-
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 			if(!central) return array; //central actually should always be set at this point
-			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = peers[channel].begin(); i != peers[channel].end(); ++i)
+			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = peers.at(channel).begin(); i != peers.at(channel).end(); ++i)
 			{
 				std::shared_ptr<Peer> peer;
 				if(central->getPeers()->find((*i)->address) != central->getPeers()->end()) peer = central->getPeers()->at((*i)->address);
@@ -886,21 +884,24 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 				if(!isSender && peer && avoidDuplicates) return array;
 				//If we are receiver this point is only reached, when the sender is not paired to this central
 
-				std::string peerSerial;
+				std::string peerSerial = (*i)->serialNumber;
 				int32_t brokenFlags = 0;
-				if((*i)->serialNumber.empty() && peer)
+				if((*i)->serialNumber.empty())
 				{
-					(*i)->serialNumber = peer->getSerialNumber();
-					peerSerial = (*i)->serialNumber;
-				}
-				else
-				{
-					//Peer not paired to central
-					std::ostringstream stringstream;
-					stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << (*i)->address;
-					peerSerial = stringstream.str();
-					if(isSender) brokenFlags = 2; //LINK_FLAG_RECEIVER_BROKEN
-					else brokenFlags = 1; //LINK_FLAG_SENDER_BROKEN
+					if(peer)
+					{
+						(*i)->serialNumber = peer->getSerialNumber();
+						peerSerial = (*i)->serialNumber;
+					}
+					else
+					{
+						//Peer not paired to central
+						std::ostringstream stringstream;
+						stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << (*i)->address;
+						peerSerial = stringstream.str();
+						if(isSender) brokenFlags = 2; //LINK_FLAG_RECEIVER_BROKEN
+						else brokenFlags = 1; //LINK_FLAG_SENDER_BROKEN
+					}
 				}
 				if(brokenFlags == 0 && central->getPeers()->find((*i)->address) != central->getPeers()->end() && central->getPeers()->at((*i)->address)->serviceMessages->unreach) brokenFlags = 2;
 				if(serviceMessages->unreach) brokenFlags |= 1;
@@ -918,6 +919,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RECEIVER", _serialNumber + ":" + std::to_string(channel))));
 					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("SENDER", peerSerial + ":" + std::to_string((*i)->channel))));
 				}
+				array->arrayValue->push_back(element);
 			}
 		}
 		else

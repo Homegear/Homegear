@@ -209,13 +209,13 @@ void BidCoSQueue::push(std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>
     }
 }
 
-void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool pushImmediately, bool popImmediately, bool clearPendingQueues)
+void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmediately, bool clearPendingQueues)
 {
 	try
 	{
 		if(!_pendingQueues || clearPendingQueues) _pendingQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
 		_pendingQueues->push(pendingQueue);
-		if(pushImmediately) pushPendingQueue();
+		pushPendingQueue();
 		if(popImmediately)
 		{
 			_pendingQueues->pop();

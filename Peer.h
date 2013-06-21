@@ -69,7 +69,7 @@ class Peer
 
         BasicPeer team;
         std::vector<std::pair<std::string, uint32_t>> teamChannels;
-        bool homegearFeatures = false;
+        bool pairingComplete = false;
 
         //Has to be shared_ptr because Peer must be copyable
         std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>> pendingBidCoSQueues;

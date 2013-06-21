@@ -52,18 +52,20 @@ class ParameterConversion
 public:
 	struct Type
 	{
-		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap };
+		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime };
 	};
 	Type::Enum type = Type::Enum::none;
 	std::unordered_map<int32_t, int32_t> integerIntegerMapDevice;
 	std::unordered_map<int32_t, int32_t> integerIntegerMapParameter;
 	double factor = 0;
+	double factor2 = 0;
 	int32_t div = 0;
 	int32_t mul = 0;
 	int32_t threshold = 0;
 	int32_t valueFalse = 0;
 	int32_t valueTrue = 0;
 	double offset = 0;
+	double valueSize = 0;
 
 	ParameterConversion() {}
 	ParameterConversion(xml_node<>* node);

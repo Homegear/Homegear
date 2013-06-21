@@ -12,6 +12,7 @@ ParameterOption::ParameterOption(xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "default" && attributeValue == "true") isDefault = true;
+		else if(attributeName == "index") index = HelperFunctions::getNumber(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"option\": " << attributeName << std::endl;
 	}
 }
@@ -72,6 +73,11 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node)
 		for(xml_node<>* optionNode = node->first_node("option"); optionNode; optionNode = optionNode->next_sibling())
 		{
 			ParameterOption option(optionNode);
+			if(option.index > -1)
+			{
+				while((unsigned)option.index > options.size()) options.push_back(ParameterOption());
+				index = option.index;
+			}
 			options.push_back(option);
 			if(options.back().isDefault)
 			{

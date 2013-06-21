@@ -20,7 +20,7 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 {
 	try
 	{
-		if(_queues.find(address) != _queues.end() && _queues[address] && _queues[address]->thread) _queues[address]->stopThread = true;
+		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->thread) _queues.at(address)->stopThread = true;
 		if(_queues.find(address) != _queues.end()) _queues.erase(_queues.find(address));
 
 		std::shared_ptr<BidCoSQueueData> queueData(new BidCoSQueueData());
@@ -59,12 +59,12 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 	try
 	{
 		std::chrono::milliseconds sleepingTime(300);
-		while(_queues.find(address) != _queues.end() && _queues[address] && !_queues[address]->stopThread && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _queues[address]->lastAction + 1000)
+		while(_queues.find(address) != _queues.end() && _queues.at(address) && !_queues.at(address)->stopThread && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _queues.at(address)->lastAction + 1000)
 		{
 			std::this_thread::sleep_for(sleepingTime);
 		}
 		_queueMutex.lock();
-		if(_queues.find(address) != _queues.end() && _queues[address] && !_queues[address]->stopThread && _queues[address]->id == id)
+		if(_queues.find(address) != _queues.end() && _queues.at(address) && !_queues.at(address)->stopThread && _queues.at(address)->id == id)
 		{
 			if(GD::debugLevel >= 5) std::cout << "Deleting queue " << id << " for 0x" << std::hex << address << std::dec << std::endl;
 			_queues.erase(_queues.find(address));

@@ -102,6 +102,16 @@ std::shared_ptr<RPC::RPCVariable> ParameterConversion::fromPacket(int32_t value)
 		if(value == valueFalse) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(false));
 		if(value == valueTrue || value > threshold) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true));
 	}
+	else if(type == Type::Enum::floatConfigTime)
+	{
+		if(value < 0) return 0;
+		uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
+		bits += std::lround(valueSize * 10) % 10;
+		if(bits == 0) bits = 7;
+		uint32_t maxNumber = 1 << bits;
+		if((unsigned)value < maxNumber) std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((double)value * factor));
+		else return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((double)(value - maxNumber) * factor2));
+	}
 	return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value));
 }
 
@@ -109,7 +119,8 @@ int32_t ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 {
 	if(type == Type::Enum::none)
 	{
-		return value->integerValue;
+		if(value->type == RPCVariableType::rpcBoolean) return (int32_t)value->booleanValue;
+		else return value->integerValue;
 	}
 	else if(type == Type::Enum::floatIntegerScale)
 	{
@@ -139,6 +150,15 @@ int32_t ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		if(value->booleanValue) return valueTrue;
 		else return valueFalse;
 	}
+	else if(type == Type::Enum::floatConfigTime)
+	{
+		uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
+		bits += std::lround(valueSize * 10) % 10;
+		if(bits == 0) bits = 7;
+		uint32_t maxNumber = 1 << bits;
+		if(value->floatValue <= maxNumber - 1) return std::roundl(value->floatValue / factor);
+		else return maxNumber + std::roundl(value->floatValue / factor2);
+	}
 	return value->integerValue;
 }
 
@@ -154,8 +174,17 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "integer_integer_scale") type = Type::Enum::integerIntegerScale;
 			else if(attributeValue == "integer_integer_map") type = Type::Enum::integerIntegerMap;
 			else if(attributeValue == "boolean_integer") type = Type::Enum::booleanInteger;
+			else if(attributeValue == "float_configtime") type = Type::Enum::booleanInteger;
+			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown type for \"conversion\": " << attributeValue << std::endl;
 		}
-		else if(attributeName == "factor") factor = std::stod(attributeValue);
+		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "factors")
+		{
+			std::pair<std::string, std::string> factors = HelperFunctions::split(attributeValue, ',');
+			if(!factors.first.empty()) factor = HelperFunctions::getDouble(factors.first);
+			if(!factors.second.empty()) factor2 = HelperFunctions::getDouble(factors.second);
+		}
+		else if(attributeName == "value_size") valueSize = HelperFunctions::getDouble(attributeValue);
 		else if(attributeName == "threshold") threshold = std::stoll(attributeValue);
 		else if(attributeName == "false") valueFalse = std::stoll(attributeValue);
 		else if(attributeName == "true") valueTrue = std::stoll(attributeValue);
@@ -543,12 +572,66 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
 	}
-	for(xml_node<>* parameterNode = parameterSetNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
+	std::vector<std::pair<std::string, std::string>> enforce;
+	for(xml_node<>* parameterNode = parameterSetNode->first_node(); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
-		std::shared_ptr<Parameter> parameter(new Parameter(parameterNode, true));
-		parameters.push_back(parameter);
-		parameter->parentParameterSet = this;
-		if(parameter->physicalParameter->list < 9999) lists[parameter->physicalParameter->list] = 1;
+		std::string nodeName(parameterNode->name());
+		if(nodeName == "parameter")
+		{
+			std::shared_ptr<Parameter> parameter(new Parameter(parameterNode, true));
+			parameters.push_back(parameter);
+			parameter->parentParameterSet = this;
+			if(parameter->physicalParameter->list < 9999) lists[parameter->physicalParameter->list] = 1;
+		}
+		else if(nodeName == "enforce")
+		{
+			xml_attribute<>* attr1 = parameterNode->first_attribute("id");
+			xml_attribute<>* attr2 = parameterNode->first_attribute("value");
+			if(!attr1 || !attr2)
+			{
+				if(GD::debugLevel >= 3) std::cout << "Warning: Could not parse \"enforce\". Attribute id or value not set." << std::endl;
+				continue;
+			}
+			enforce.push_back(std::pair<std::string, std::string>(std::string(attr1->value()), std::string(attr2->value())));
+		}
+		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"paramset\": " << nodeName << std::endl;
+	}
+	for(std::vector<std::pair<std::string, std::string>>::iterator i = enforce.begin(); i != enforce.end(); ++i)
+	{
+		if(i->first.empty() || i->second.empty()) continue;
+		std::shared_ptr<Parameter> parameter = getParameter(i->first);
+		if(!parameter) continue;
+		parameter->logicalParameter->enforce = true;
+		if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
+		{
+			LogicalParameterInteger* logicalParameter = (LogicalParameterInteger*)parameter->logicalParameter.get();
+			logicalParameter->enforceValue = HelperFunctions::getNumber(i->second);
+		}
+		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean)
+		{
+			LogicalParameterBoolean* logicalParameter = (LogicalParameterBoolean*)parameter->logicalParameter.get();
+			if(HelperFunctions::toLower(i->second) == "true") logicalParameter->enforceValue = true;
+		}
+		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
+		{
+			LogicalParameterFloat* logicalParameter = (LogicalParameterFloat*)parameter->logicalParameter.get();
+			logicalParameter->enforceValue = HelperFunctions::getDouble(i->second);
+		}
+		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
+		{
+			LogicalParameterAction* logicalParameter = (LogicalParameterAction*)parameter->logicalParameter.get();
+			if(HelperFunctions::toLower(i->second) == "true") logicalParameter->enforceValue = true;
+		}
+		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
+		{
+			LogicalParameterEnum* logicalParameter = (LogicalParameterEnum*)parameter->logicalParameter.get();
+			logicalParameter->enforceValue = HelperFunctions::getNumber(i->second);
+		}
+		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeString)
+		{
+			LogicalParameterString* logicalParameter = (LogicalParameterString*)parameter->logicalParameter.get();
+			logicalParameter->enforceValue = i->second;
+		}
 	}
 }
 
