@@ -28,8 +28,6 @@ void HomeMaticCentral::init()
 		HomeMaticDevice::init();
 
 		_deviceType = HMDeviceTypes::HMCENTRAL;
-		//_dummyHMRCV50 = createPeer(_address, 0, HMDeviceTypes::HMRCV50, _serialNumber, 0, 0);
-		//if(!_dummyHMRCV50 && GD::debugLevel >= 2) std::cerr << "Error: Could not create dummy peer for central. Probably the rpc device was not found. Check if the device xml file \"rf_central.xml\" exists." << std::endl;
 	}
 	catch(const std::exception& ex)
     {
@@ -798,7 +796,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			Peer* peer = _peers[packet->senderAddress()].get();
 			std::shared_ptr<RPC::RPCVariable> parametersToEnforce;
 			if(!peer->pairingComplete) parametersToEnforce.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-			if((packet->controlByte() & 0x20) && (packet->payload()->at(1) % 15 == 1)) multiplePackets = true;
+			if((packet->controlByte() & 0x20) && (packet->payload()->at(0) == 3)) multiplePackets = true;
 			if(multiplePackets)
 			{
 				int32_t startIndex = packet->payload()->at(1);
@@ -873,7 +871,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 					}
 				}
 			}
-			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, parametersToEnforce);
+			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, "", -1, parametersToEnforce);
 		}
 		if(multiplePackets) //Multiple config response packets
 		{
@@ -1091,6 +1089,30 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getInstallMode()
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel)
+{
+	try
+	{
+		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		if(_peersBySerial.find(senderSerialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Device not found.");
+		return _peersBySerial[senderSerialNumber]->getLinkInfo(senderChannel, receiverSerialNumber, receiverChannel);
+	}
+	catch(const std::exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(const Exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(...)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialNumber, int32_t channel, int32_t flags)
 {
 	try
@@ -1150,11 +1172,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::string se
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::shared_ptr<RPC::RPCVariable> paramset)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> paramset)
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->putParamset(channel, type, paramset);
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
@@ -1172,11 +1194,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string seri
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamset(channel, type, remoteSerialNumber);
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamset(channel, type, remoteSerialNumber, remoteChannel);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)

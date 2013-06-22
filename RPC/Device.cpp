@@ -248,9 +248,13 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
 	{
 		return std::shared_ptr<RPCVariable>(new RPCVariable(value));
 	}
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.type == ParameterConversion::Type::none)
+	{
+		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable((bool)value));
+	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
-		return false;
+		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(false));
 	}
 	else
 	{

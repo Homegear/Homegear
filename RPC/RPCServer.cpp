@@ -349,7 +349,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 							if(GD::debugLevel >= 2) std::cout << "Error: Packet with data larger than 100 MiB received." << std::endl;
 							break;
 						}
-						packet.reset(new std::vector<char>(dataSize + 1));
+						packet.reset(new std::vector<char>());
 						uint32_t pos = (int32_t)stringstream.tellg() - line.length() - 1; //Don't count the new line after the header
 						int32_t restLength = uBytesRead - pos;
 						if(restLength < 1)
@@ -360,7 +360,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 						if((unsigned)restLength >= dataSize)
 						{
 							packet->insert(packet->begin() + packetLength, buffer + pos, buffer + pos + dataSize);
-							packet->at(dataSize) = '\0';
+							packet->push_back('\0');
 							packetLength = 0;
 							std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
 							t.detach();
@@ -393,7 +393,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
 					t.detach();
 					packetLength = 0;
-					packet->at(dataSize) = '\0';
+					packet->push_back('\0');
 				}
 			}
 		}

@@ -10,15 +10,6 @@
 - Correctly use linksCentral: One paramset for each linked peer.
 - Support for serial numbers in putParamset and getParamset
 - Delete peer from all devices it is linked to, when peer is reset
-
+- Delete metadata for all channels when peer is deleted
+- For some reason the shutter contact link parameter set is not shown in the HomeMatic configurator 
 Today:
-- Peer.cpp: getLink - Add parameter sets
-- Implement putParamset for link parameter set
-- Mutexmap in BidCoSPacketmanager to avoid erasing packet and accessing it at the same time. Maybe also for BidCoSQueue
-- Implement enforce:
-	1371826654965 Received: 100DA0011C69431484BF00050000000000
-	1371826655081 Received: 0A0D80021484BF1C694300
-	1371826655359 Received: 0D0EA0011C69431484BF00080901
-	1371826655478 Received: 0A0E80021484BF1C694300
-	1371826655753 Received: 0B0FA0011C69431484BF0006
-	1371826656073 Received: 0A0F80021484BF1C694300

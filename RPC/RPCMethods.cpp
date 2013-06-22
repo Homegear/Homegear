@@ -409,6 +409,60 @@ std::shared_ptr<RPCVariable> RPCGetKeyMismatchDevice::invoke(std::shared_ptr<std
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCGetLinkInfo::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		int32_t senderChannel = -1;
+		std::string senderSerialNumber;
+		int32_t receiverChannel = -1;
+		std::string receiverSerialNumber;
+		int32_t pos = -1;
+
+		pos = parameters->at(0)->stringValue.find(':');
+		if(pos > -1)
+		{
+			senderSerialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) senderChannel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+		}
+		else senderSerialNumber = parameters->at(0)->stringValue;
+
+		pos = parameters->at(1)->stringValue.find(':');
+		if(pos > -1)
+		{
+			receiverSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+			if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) receiverChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+		}
+		else receiverSerialNumber = parameters->at(1)->stringValue;
+
+
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getLinks. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method getLinks. Please add a central device.");
+		}
+
+		return central->getLinkInfo(senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel);
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCGetLinks::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
@@ -432,7 +486,7 @@ std::shared_ptr<RPCVariable> RPCGetLinks::invoke(std::shared_ptr<std::vector<std
 			}
 			else serialNumber = parameters->at(0)->stringValue;
 
-			if(parameters->size() == 3) flags = parameters->at(0)->integerValue;
+			if(parameters->size() == 2) flags = parameters->at(1)->integerValue;
 		}
 
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
@@ -580,15 +634,27 @@ std::shared_ptr<RPCVariable> RPCGetParamset::invoke(std::shared_ptr<std::vector<
 		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		uint32_t channel = 0;
+		int32_t channel = -1;
 		std::string serialNumber;
-		int32_t pos = parameters->at(0)->stringValue.find(':');
+		int32_t remoteChannel = -1;
+		std::string remoteSerialNumber;
+		int32_t pos = -1;
+
+		pos = parameters->at(0)->stringValue.find(':');
 		if(pos > -1)
 		{
 			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
 			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 		}
 		else serialNumber = parameters->at(0)->stringValue;
+
+		pos = parameters->at(1)->stringValue.find(':');
+		if(pos > -1)
+		{
+			remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+			if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+		}
+		else remoteSerialNumber = parameters->at(1)->stringValue;
 
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 		if(!central)
@@ -597,7 +663,9 @@ std::shared_ptr<RPCVariable> RPCGetParamset::invoke(std::shared_ptr<std::vector<
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getParamsetId. Please add a central device.");
 		}
 
-		return central->getParamset(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue), parameters->at(1)->stringValue);
+		ParameterSet::Type::Enum type = ParameterSet::typeFromString(parameters->at(1)->stringValue);
+		if(type == ParameterSet::Type::Enum::none) type = ParameterSet::Type::Enum::link;
+		return central->getParamset(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
 	}
 	catch(const std::exception& ex)
     {
@@ -828,15 +896,27 @@ std::shared_ptr<RPCVariable> RPCPutParamset::invoke(std::shared_ptr<std::vector<
 		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcStruct }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		uint32_t channel = 0;
+		int32_t channel = -1;
 		std::string serialNumber;
-		int32_t pos = parameters->at(0)->stringValue.find(':');
+		int32_t remoteChannel = -1;
+		std::string remoteSerialNumber;
+		int32_t pos = -1;
+
+		pos = parameters->at(0)->stringValue.find(':');
 		if(pos > -1)
 		{
 			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
 			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 		}
 		else serialNumber = parameters->at(0)->stringValue;
+
+		pos = parameters->at(1)->stringValue.find(':');
+		if(pos > -1)
+		{
+			remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+			if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+		}
+		else remoteSerialNumber = parameters->at(1)->stringValue;
 
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 		if(!central)
@@ -845,7 +925,9 @@ std::shared_ptr<RPCVariable> RPCPutParamset::invoke(std::shared_ptr<std::vector<
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getParamsetId. Please add a central device.");
 		}
 
-		return central->putParamset(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue), parameters->at(2));
+		ParameterSet::Type::Enum type = ParameterSet::typeFromString(parameters->at(1)->stringValue);
+		if(type == ParameterSet::Type::Enum::none) type = ParameterSet::Type::Enum::link;
+		return central->putParamset(serialNumber, channel, type, remoteSerialNumber, remoteChannel, parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {
