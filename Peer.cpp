@@ -74,8 +74,9 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device)
 		remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		countFromSysinfo = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
-		rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
+		rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, countFromSysinfo);
 		if(!rpcDevice && GD::debugLevel >= 2) std::cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << std::endl;
 		messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		pairingComplete = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
@@ -233,6 +234,7 @@ std::string Peer::serialize()
 	stringstream << std::setw(2) << remoteChannel;
 	stringstream << std::setw(2) << localChannel;
 	stringstream << std::setw(8) << (int32_t)deviceType;
+	stringstream << std::setw(4) << countFromSysinfo;
 	stringstream << std::setw(2) << (int32_t)messageCounter;
 	stringstream << std::setw(1) << (int32_t)pairingComplete;
 	stringstream << std::setw(8) << team.address;

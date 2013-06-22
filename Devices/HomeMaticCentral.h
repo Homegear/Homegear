@@ -43,6 +43,7 @@ public:
 	void sendEnableAES(int32_t address, int32_t channel);
 	void sendRequestConfig(int32_t address, uint8_t localChannel, uint8_t list = 0, int32_t remoteAddress = 0, uint8_t remoteChannel = 0);
 
+	std::shared_ptr<RPC::RPCVariable> addLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
 	std::shared_ptr<RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);
 	std::shared_ptr<RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel);
 	std::shared_ptr<RPC::RPCVariable> getInstallMode();
@@ -59,7 +60,7 @@ public:
 	std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on);
 	std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 protected:
-	std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter);
+	std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, int32_t index23);
 private:
 	//std::shared_ptr<Peer> _dummyHMRCV50;
 	std::shared_ptr<Peer> _currentPeer = nullptr;

@@ -119,7 +119,7 @@ void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<Bid
     }
 }
 
-std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
+std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, int32_t index23)
 {
 	std::shared_ptr<Peer> peer(new Peer());
 	peer->address = address;
@@ -128,8 +128,8 @@ std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firm
 	peer->setSerialNumber(serialNumber);
 	peer->remoteChannel = remoteChannel;
 	peer->messageCounter = messageCounter;
-	peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion);
-	if(!peer->rpcDevice) peer->rpcDevice = GD::rpcDevices.find(HMDeviceType::getString(deviceType));
+	peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, index23);
+	if(!peer->rpcDevice) peer->rpcDevice = GD::rpcDevices.find(HMDeviceType::getString(deviceType), index23);
 	if(!peer->rpcDevice) return std::shared_ptr<Peer>();
     return peer;
 }
@@ -538,7 +538,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 				serialNumber.push_back((char)packet->payload()->at(i));
 			if(_peers.find(packet->senderAddress()) == _peers.end())
 			{
-				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), serialNumber, 0, 0);
+				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), serialNumber, 0, 0, packet->payload()->at(16));
 				queue->peer->initializeCentralConfig();
 				peer = queue->peer.get();
 			}
@@ -970,6 +970,118 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
     {
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex, std::string name, std::string description)
+{
+	try
+	{
+		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		if(_peersBySerial.find(senderSerialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(_peersBySerial.find(receiverSerialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(senderChannelIndex < 0) senderChannelIndex = 0;
+		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
+		std::shared_ptr<Peer> sender = _peersBySerial.at(senderSerialNumber);
+		std::shared_ptr<Peer> receiver = _peersBySerial.at(receiverSerialNumber);
+		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Sender channel not found.");
+		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Receiver channel not found.");
+		std::shared_ptr<RPC::DeviceChannel> senderChannel = sender->rpcDevice->channels.at(senderChannelIndex);
+		std::shared_ptr<RPC::DeviceChannel> receiverChannel = receiver->rpcDevice->channels.at(receiverChannelIndex);
+		if(senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) RPC::RPCVariable::createError(-6, "Link not supported.");
+		bool validLink = false;
+		for(std::vector<std::string>::iterator i = senderChannel->linkRoles->sourceNames.begin(); i != senderChannel->linkRoles->sourceNames.end(); ++i)
+		{
+			for(std::vector<std::string>::iterator j = receiverChannel->linkRoles->targetNames.begin(); j != receiverChannel->linkRoles->targetNames.end(); ++j)
+			{
+				if(*i == *j)
+				{
+					validLink = true;
+					break;
+				}
+			}
+			if(validLink) break;
+		}
+
+		std::shared_ptr<BasicPeer> senderPeer(new BasicPeer());
+		senderPeer->address = sender->address;
+		senderPeer->channel = senderChannelIndex;
+		senderPeer->serialNumber = sender->getSerialNumber();
+		senderPeer->linkDescription = description;
+		senderPeer->linkName = name;
+
+		std::shared_ptr<BasicPeer> receiverPeer(new BasicPeer());
+		receiverPeer->address = receiver->address;
+		receiverPeer->channel = receiverChannelIndex;
+		receiverPeer->serialNumber = receiver->getSerialNumber();
+
+		sender->addPeer(senderChannelIndex, receiverPeer);
+		sender->saveToDatabase(_address);
+
+		receiver->addPeer(receiverChannelIndex, senderPeer);
+		receiver->saveToDatabase(_address);
+
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, sender->address);
+		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+		pendingQueue->noSending = true;
+
+		std::vector<uint8_t> payload;
+		//CONFIG_ADD_PEER
+		payload.push_back(senderChannelIndex);
+		payload.push_back(0x01);
+		payload.push_back(receiver->address >> 16);
+		payload.push_back((receiver->address >> 8) & 0xFF);
+		payload.push_back(receiver->address & 0xFF);
+		payload.push_back(receiverChannelIndex);
+		payload.push_back(0);
+		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, sender->address, payload));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		_messageCounter[0]++;
+
+		pendingQueue->serviceMessages = sender->serviceMessages;
+		sender->serviceMessages->configPending = true;
+		sender->pendingBidCoSQueues->push(pendingQueue);
+		queue->push(sender->pendingBidCoSQueues);
+
+
+		queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, receiver->address);
+		pendingQueue.reset(new BidCoSQueue(BidCoSQueueType::CONFIG));
+		pendingQueue->noSending = true;
+
+		payload.clear();
+		//CONFIG_ADD_PEER
+		payload.push_back(receiverChannelIndex);
+		payload.push_back(0x01);
+		payload.push_back(sender->address >> 16);
+		payload.push_back((sender->address >> 8) & 0xFF);
+		payload.push_back(sender->address & 0xFF);
+		payload.push_back(senderChannelIndex);
+		payload.push_back(0);
+		configPacket.reset(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, receiver->address, payload));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		_messageCounter[0]++;
+
+		pendingQueue->serviceMessages = receiver->serviceMessages;
+		receiver->serviceMessages->configPending = true;
+		receiver->pendingBidCoSQueues->push(pendingQueue);
+		queue->push(receiver->pendingBidCoSQueues);
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(const Exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(...)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string serialNumber, int32_t flags)

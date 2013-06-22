@@ -370,7 +370,7 @@ void HomeMaticDevice::handleWakeUp(int32_t messageCounter, std::shared_ptr<BidCo
 	sendOK(messageCounter, packet->senderAddress());
 }
 
-std::shared_ptr<Peer> HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
+std::shared_ptr<Peer> HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, int32_t index23)
 {
     return std::shared_ptr<Peer>(new Peer());
 }
@@ -497,7 +497,7 @@ void HomeMaticDevice::handleConfigPeerAdd(int32_t messageCounter, std::shared_pt
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
     if(_peers.find(address) == _peers.end())
     {
-        std::shared_ptr<Peer> peer = createPeer(address, -1, HMDeviceTypes::HMUNKNOWN, "", packet->payload()->at(5), 0);
+        std::shared_ptr<Peer> peer = createPeer(address, -1, HMDeviceTypes::HMUNKNOWN, "", packet->payload()->at(5), 0, -1);
         _peersMutex.lock();
         try
         {

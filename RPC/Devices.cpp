@@ -65,16 +65,28 @@ void Devices::load()
     }
 }
 
-std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVersion)
+std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo)
 {
 	try
 	{
+		std::shared_ptr<Device> partialMatch;
 		for(std::vector<std::shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
 			{
-				if((*j)->matches(deviceType, firmwareVersion)) return *i;
+				if((*j)->matches(deviceType, firmwareVersion))
+				{
+					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					else return *i;
+				}
 			}
+		}
+		if(partialMatch)
+		{
+			std::shared_ptr<Device> newDevice(&(*(partialMatch.get())));
+			newDevice->setCountFromSysinfo(countFromSysinfo);
+			_devices.push_back(newDevice);
+			return newDevice;
 		}
 	}
 	catch(const std::exception& ex)
@@ -92,16 +104,28 @@ std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwar
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(std::string typeID)
+std::shared_ptr<Device> Devices::find(std::string typeID, int32_t countFromSysinfo)
 {
 	try
 	{
+		std::shared_ptr<Device> partialMatch;
 		for(std::vector<std::shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
 			{
-				if((*j)->matches(typeID)) return *i;
+				if((*j)->matches(typeID))
+				{
+					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					else return *i;
+				}
 			}
+		}
+		if(partialMatch)
+		{
+			std::shared_ptr<Device> newDevice(&(*(partialMatch.get())));
+			newDevice->setCountFromSysinfo(countFromSysinfo);
+			_devices.push_back(newDevice);
+			return newDevice;
 		}
 	}
 	catch(const std::exception& ex)
@@ -119,16 +143,28 @@ std::shared_ptr<Device> Devices::find(std::string typeID)
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(std::shared_ptr<BidCoSPacket> packet)
+std::shared_ptr<Device> Devices::find(std::shared_ptr<BidCoSPacket> packet, int32_t countFromSysinfo)
 {
 	try
 	{
+		std::shared_ptr<Device> partialMatch;
 		for(std::vector<std::shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
 			{
-				if((*j)->matches(packet)) return *i;
+				if((*j)->matches(packet))
+				{
+					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					else return *i;
+				}
 			}
+		}
+		if(partialMatch)
+		{
+			std::shared_ptr<Device> newDevice(&(*(partialMatch.get())));
+			newDevice->setCountFromSysinfo(countFromSysinfo);
+			_devices.push_back(newDevice);
+			return newDevice;
 		}
 	}
 	catch(const std::exception& ex)

@@ -56,6 +56,7 @@ class Peer
         int32_t address = 0;
         std::string getSerialNumber() { return _serialNumber; }
         void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 100) return; _serialNumber = serialNumber; if(!serviceMessages) serviceMessages = std::shared_ptr<ServiceMessages>(new ServiceMessages(serialNumber)); else serviceMessages->setPeerSerialNumber(serialNumber); }
+        int32_t countFromSysinfo = 0;
         int32_t firmwareVersion = 0;
         int32_t remoteChannel = 0;
         int32_t localChannel = 0;

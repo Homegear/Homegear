@@ -29,7 +29,6 @@ void HomeMaticDevices::load()
 		DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
-			std::shared_ptr<HomeMaticDevice> device;
 			HMDeviceTypes deviceType = HMDeviceTypes::HMUNKNOWN;
 			std::string serializedObject;
 			uint8_t dutyCycleMessageCounter = 0;
@@ -49,6 +48,7 @@ void HomeMaticDevices::load()
 				}
 				else if(col->second->index == 4)
 				{
+					std::shared_ptr<HomeMaticDevice> device;
 					switch(deviceType)
 					{
 					case HMDeviceTypes::HMCCTC:
@@ -67,12 +67,11 @@ void HomeMaticDevices::load()
 					default:
 						break;
 					}
-					if(device != nullptr)
+					if(device)
 					{
 						device->unserialize(serializedObject, dutyCycleMessageCounter, col->second->intValue);
 						device->loadPeersFromDatabase();
 						_devices.push_back(device);
-						device = nullptr;
 					}
 				}
 			}

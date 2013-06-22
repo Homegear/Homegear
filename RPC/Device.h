@@ -267,6 +267,7 @@ public:
 	std::map<std::string, std::shared_ptr<DeviceFrame>> framesByID;
 	RXModes::Enum rxModes = RXModes::Enum::none;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
+	int32_t countFromSysinfoIndex = -1;
 	std::string deviceClass;
 	bool supportsAES = false;
 	bool peeringSysinfoExpectChannel = true;
@@ -276,8 +277,11 @@ public:
 	Device(std::string xmlFilename);
 	virtual ~Device();
 	std::shared_ptr<DeviceType> getType(HMDeviceTypes deviceType, int32_t firmwareVersion);
+	int32_t getCountFromSysinfo() { return _countFromSysinfo; }
+	void setCountFromSysinfo(int32_t countFromSysinfo);
 protected:
 	bool _loaded = false;
+	int32_t _countFromSysinfo = -1;
 
 	virtual void load(std::string xmlFilename);
 	virtual void parseXML(xml_node<>* node);

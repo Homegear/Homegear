@@ -372,7 +372,7 @@ void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddre
     HomeMaticDevice::sendConfigParams(messageCounter, destinationAddress, packet);
 }
 
-std::shared_ptr<Peer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter)
+std::shared_ptr<Peer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, int32_t index23)
 {
     std::shared_ptr<Peer> peer(new Peer());
     peer->address = address;
@@ -450,7 +450,7 @@ void HM_CC_TC::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidC
 			sendNOK(messageCounter, packet->senderAddress());
 			return;
 		}
-		std::shared_ptr<Peer> peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), "", packet->payload()->at(15), 0);
+		std::shared_ptr<Peer> peer = createPeer(packet->senderAddress(), (int32_t)packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), std::string(), (int32_t)packet->payload()->at(15), 0, (int32_t)packet->payload()->at(16));
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
 		queue->peer = peer;
 		queue->push(_messages->find(DIRECTIONOUT, 0x00, std::vector<std::pair<uint32_t, int32_t>>()), packet);

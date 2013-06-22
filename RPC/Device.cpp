@@ -924,10 +924,21 @@ void Device::parseXML(xml_node<>* node)
 					uint32_t index = 0;
 					std::shared_ptr<DeviceChannel> channel(new DeviceChannel(channelNode, index));
 					channel->parentDevice = this;
-					for(uint32_t i = index; i < index + channel->count; i ++)
+					for(uint32_t i = index; i < index + channel->count; i++)
 					{
 						if(channels.find(i) == channels.end()) channels[i] = channel;
 						else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add channel with the same index twice. Index: " << i << std::endl;
+					}
+					if(channel->countFromSysinfo)
+					{
+						if(countFromSysinfoIndex > -1 && GD::debugLevel >= 2) std::cout << "Error: count_from_sysinfo is defined for two channels. That is not allowed." << std::endl;
+						if(std::floor(channel->countFromSysinfo) != channel->countFromSysinfo && GD::debugLevel >= 2)
+						{
+							std::cout << "Error: count_from_sysinfo has to start with index 0 of a byte." << std::endl;
+							continue;
+						}
+						countFromSysinfoIndex = (int32_t)channel->countFromSysinfo;
+						if(countFromSysinfoIndex < -1) countFromSysinfoIndex = -1;
 					}
 				}
 			}
@@ -950,6 +961,42 @@ void Device::parseXML(xml_node<>* node)
 				team->parseXML(node);
 			}
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void Device::setCountFromSysinfo(int32_t countFromSysinfo)
+{
+	try
+	{
+		_countFromSysinfo = countFromSysinfo;
+		std::shared_ptr<DeviceChannel> channel;
+		uint32_t index = 0;
+		for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+		{
+			if(i->second->countFromSysinfo > -1)
+			{
+				index = i->first;
+				channel = i->second;
+				break;
+			}
+		}
+		for(uint32_t i = index; i < index + countFromSysinfo; i++)
+		{
+			if(channels.find(i) == channels.end()) channels[i] = channel;
+			else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add channel with the same index twice. Index: " << i << std::endl;
 		}
 	}
     catch(const std::exception& ex)

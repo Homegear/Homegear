@@ -77,6 +77,18 @@ private:
 	std::shared_ptr<RPCServer> _server;
 };
 
+class RPCAddLink : public RPCMethod
+{
+public:
+	RPCAddLink()
+	{
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCDeleteDevice : public RPCMethod
 {
 public:

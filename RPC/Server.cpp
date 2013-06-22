@@ -10,6 +10,7 @@ void Server::registerMethods()
 	_server->registerMethod("system.methodHelp", std::shared_ptr<RPCMethod>(new RPCSystemMethodHelp(_server)));
 	_server->registerMethod("system.methodSignature", std::shared_ptr<RPCMethod>(new RPCSystemMethodSignature(_server)));
 	_server->registerMethod("system.multicall", std::shared_ptr<RPCMethod>(new RPCSystemMulticall(_server)));
+	_server->registerMethod("addLink", std::shared_ptr<RPCMethod>(new RPCAddLink()));
 	_server->registerMethod("deleteDevice", std::shared_ptr<RPCMethod>(new RPCDeleteDevice()));
 	_server->registerMethod("deleteMetadata", std::shared_ptr<RPCMethod>(new RPCDeleteMetadata()));
 	_server->registerMethod("getAllMetadata", std::shared_ptr<RPCMethod>(new RPCGetAllMetadata()));
