@@ -93,9 +93,9 @@ std::shared_ptr<RPC::RPCVariable> ParameterConversion::fromPacket(int32_t value)
 			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value));
 		}
 	}
-	else if(type == Type::Enum::integerIntegerMap)
+	else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 	{
-		if(integerIntegerMapDevice.find(value) != integerIntegerMapDevice.end()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(integerIntegerMapDevice[value]));
+		if(integerValueMapDevice.find(value) != integerValueMapDevice.end()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(integerValueMapDevice[value]));
 	}
 	else if(type == Type::Enum::booleanInteger)
 	{
@@ -141,9 +141,9 @@ int32_t ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			return value->integerValue;
 		}
 	}
-	else if(type == Type::Enum::integerIntegerMap)
+	else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 	{
-		if(integerIntegerMapParameter.find(value->integerValue) != integerIntegerMapParameter.end()) return integerIntegerMapParameter[value->integerValue];
+		if(integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end()) return integerValueMapParameter[value->integerValue];
 	}
 	else if(type == Type::Enum::booleanInteger)
 	{
@@ -175,6 +175,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "integer_integer_map") type = Type::Enum::integerIntegerMap;
 			else if(attributeValue == "boolean_integer") type = Type::Enum::booleanInteger;
 			else if(attributeValue == "float_configtime") type = Type::Enum::booleanInteger;
+			else if(attributeValue == "option_integer") type = Type::Enum::optionInteger;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown type for \"conversion\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -196,7 +197,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 	for(xml_node<>* conversionNode = node->first_node(); conversionNode; conversionNode = conversionNode->next_sibling())
 	{
 		std::string nodeName(conversionNode->name());
-		if(nodeName == "value_map" && type == Type::Enum::integerIntegerMap)
+		if(nodeName == "value_map" && (type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger))
 		{
 			xml_attribute<>* attr1;
 			xml_attribute<>* attr2;
@@ -208,8 +209,8 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 				std::string attribute2(attr2->value());
 				int32_t deviceValue = HelperFunctions::getNumber(attribute1);
 				int32_t parameterValue = HelperFunctions::getNumber(attribute2);
-				integerIntegerMapDevice[deviceValue] = parameterValue;
-				integerIntegerMapParameter[parameterValue] = deviceValue;
+				integerValueMapDevice[deviceValue] = parameterValue;
+				integerValueMapParameter[parameterValue] = deviceValue;
 			}
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown subnode for \"conversion\": " << nodeName << std::endl;
@@ -499,9 +500,8 @@ DeviceType::DeviceType(xml_node<>* typeNode)
 	}
 }
 
-ParameterSet::ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode)
+ParameterSet::ParameterSet(xml_node<>* parameterSetNode)
 {
-	channel = channelNumber;
 	init(parameterSetNode);
 }
 
@@ -598,6 +598,16 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			}
 			enforce.push_back(std::pair<std::string, std::string>(std::string(attr1->value()), std::string(attr2->value())));
 		}
+		else if(nodeName == "subset")
+		{
+			xml_attribute<>* attr = parameterNode->first_attribute("ref");
+			if(!attr)
+			{
+				if(GD::debugLevel >= 3) std::cout << "Warning: Could not parse \"subset\". Attribute ref not set." << std::endl;
+				continue;
+			}
+			subsetReference = std::string(attr->value());
+		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"paramset\": " << nodeName << std::endl;
 	}
 	for(std::vector<std::pair<std::string, std::string>>::iterator i = enforce.begin(); i != enforce.end(); ++i)
@@ -664,14 +674,15 @@ EnforceLink::EnforceLink(xml_node<>* node)
 	{
 		std::string attributeName(attr->name());
 		std::string attributeValue(attr->value());
-		if(attributeName == "id" && attributeValue == "PEER_NEEDS_BURST") id = ID::Enum::peerNeedsBurst;
-		else if(attributeName == "value")
-		{
-			if(attributeValue == "true") value = 1;
-			else value = HelperFunctions::getNumber(attributeValue);
-		}
+		if(attributeName == "id") id = attributeValue;
+		else if(attributeName == "value") value = attributeValue;
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"enforce_link - value\": " << attributeName << std::endl;
 	}
+}
+
+std::shared_ptr<RPCVariable> EnforceLink::getValue(RPCVariableType type)
+{
+	return RPCVariable::fromString(value, type);
 }
 
 DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
@@ -714,7 +725,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		std::string nodeName(channelNode->name());
 		if(nodeName == "paramset")
 		{
-			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(index, channelNode));
+			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(channelNode));
 			if(parameterSets.find(parameterSet->type) == parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
 			else if(GD::debugLevel >= 2) std::cerr << "Error: Tried to add same parameter set type twice." << std::endl;
 		}
@@ -727,7 +738,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		{
 			for(xml_node<>* enforceLinkNode = channelNode->first_node("value"); enforceLinkNode; enforceLinkNode = enforceLinkNode->next_sibling("value"))
 			{
-				enforceLinks.push_back(std::shared_ptr<EnforceLink>(new EnforceLink(channelNode)));
+				enforceLinks.push_back(std::shared_ptr<EnforceLink>(new EnforceLink(enforceLinkNode)));
 			}
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
@@ -890,6 +901,7 @@ void Device::parseXML(xml_node<>* node)
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"device\": " << attributeName << std::endl;
 		}
 
+		std::map<std::string, std::shared_ptr<ParameterSet>> parameterSetDefinitions;
 		for(node = node->first_node(); node; node = node->next_sibling())
 		{
 			std::string nodeName(node->name());
@@ -916,6 +928,28 @@ void Device::parseXML(xml_node<>* node)
 					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
 				}
 				parameterSet->init(node);
+			}
+			else if(nodeName == "paramset_defs")
+			{
+				for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
+				{
+					std::string attributeName(attr->name());
+					std::string attributeValue(attr->value());
+					HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
+					if(attributeName == "id") parameterSet->id = attributeValue;
+					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset_defs\": " << attributeName << std::endl;
+				}
+
+				for(xml_node<>* paramsetNode = node->first_node(); paramsetNode; paramsetNode = paramsetNode->next_sibling())
+				{
+					std::string nodeName(paramsetNode->name());
+					if(nodeName == "paramset")
+					{
+						std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(paramsetNode));
+						parameterSetDefinitions[parameterSet->id] = parameterSet;
+					}
+					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"paramset_defs\": " << nodeName << std::endl;
+				}
 			}
 			else if(nodeName == "channels")
 			{
@@ -951,16 +985,25 @@ void Device::parseXML(xml_node<>* node)
 					framesByID[frame->id] = frame;
 				}
 			}
-			else if(nodeName == "paramset_defs")
-			{
-				if(node->first_node() != nullptr && GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"paramset_defs\"" << std::endl;
-			}
 			else if(nodeName == "team")
 			{
 				team.reset(new Device());
 				team->parseXML(node);
 			}
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
+		}
+		if(parameterSetDefinitions.empty()) return;
+		for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+		{
+			for(std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>::iterator j = i->second->parameterSets.begin(); j != i->second->parameterSets.end(); ++j)
+			{
+				if(j->second->subsetReference.empty() || parameterSetDefinitions.find(j->second->subsetReference) == parameterSetDefinitions.end()) continue;
+				std::shared_ptr<ParameterSet> parameterSet(new ParameterSet());
+				*parameterSet = *parameterSetDefinitions.at(j->second->subsetReference);
+				parameterSet->type = j->second->type;
+				parameterSet->id = j->second->id;
+				i->second->parameterSets[parameterSet->type] = parameterSet;
+			}
 		}
 	}
     catch(const std::exception& ex)

@@ -302,7 +302,6 @@ void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			_messageCounter[packet->senderAddress()] = packet->messageCounter();
 			message->invokeMessageHandlerIncoming(packet);
 		}
-		if(!message && packet->destinationAddress() == _address && GD::debugLevel >= 3) std::cout << "Warning: Could not process message. Unknown message type: " << packet->hexString() << std::endl;
 	}
 	catch(const std::exception& ex)
 	{

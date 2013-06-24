@@ -51,6 +51,7 @@ public:
 	static std::shared_ptr<RPCVariable> createError(int32_t faultCode, std::string faultString);
 	void print();
 	static std::string getTypeString(RPCVariableType type);
+	static std::shared_ptr<RPCVariable> fromString(std::string value, RPCVariableType type);
 private:
 	void print(std::shared_ptr<RPCVariable>, std::string indent);
 	void printStruct(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> rpcStruct, std::string indent);

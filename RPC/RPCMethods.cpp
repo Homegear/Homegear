@@ -1013,6 +1013,60 @@ std::shared_ptr<RPCVariable> RPCPutParamset::invoke(std::shared_ptr<std::vector<
     return RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+std::shared_ptr<RPCVariable> RPCRemoveLink::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		int32_t senderChannel = -1;
+		std::string senderSerialNumber;
+		int32_t receiverChannel = -1;
+		std::string receiverSerialNumber;
+		int32_t pos = -1;
+
+		pos = parameters->at(0)->stringValue.find(':');
+		if(pos > -1)
+		{
+			senderSerialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) senderChannel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+		}
+		else senderSerialNumber = parameters->at(0)->stringValue;
+
+		pos = parameters->at(1)->stringValue.find(':');
+		if(pos > -1)
+		{
+			receiverSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+			if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) receiverChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+		}
+		else receiverSerialNumber = parameters->at(1)->stringValue;
+
+
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getLinks. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method getLinks. Please add a central device.");
+		}
+
+		return central->removeLink(senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel);
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
@@ -1027,6 +1081,71 @@ std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vect
 			return RPCVariable::createError(-32500, ": Could not execute RPC method setInstallMode. Please add a central device.");
 		}
 		return central->setInstallMode(parameters->at(0)->booleanValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPCVariable> RPCSetLinkInfo::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		ParameterError::Enum error2 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError) return getError((error != ParameterError::Enum::noError) ? error : error2);
+
+		int32_t senderChannel = -1;
+		std::string senderSerialNumber;
+		int32_t receiverChannel = -1;
+		std::string receiverSerialNumber;
+		int32_t pos = -1;
+
+		pos = parameters->at(0)->stringValue.find(':');
+		if(pos > -1)
+		{
+			senderSerialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) senderChannel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+		}
+		else senderSerialNumber = parameters->at(0)->stringValue;
+
+		pos = parameters->at(1)->stringValue.find(':');
+		if(pos > -1)
+		{
+			receiverSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+			if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) receiverChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+		}
+		else receiverSerialNumber = parameters->at(1)->stringValue;
+
+		if(parameters->at(2)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "Name has more than 250 characters.");
+		std::string	name = parameters->at(2)->stringValue;
+
+		std::string description;
+		if(parameters->size() > 3)
+		{
+			if(parameters->at(3)->stringValue.size() > 1000) return RPC::RPCVariable::createError(-32602, "Description has more than 1000 characters.");
+			description = parameters->at(3)->stringValue;
+		}
+
+
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getLinks. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method getLinks. Please add a central device.");
+		}
+
+		return central->setLinkInfo(senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel, name, description);
 	}
 	catch(const std::exception& ex)
     {

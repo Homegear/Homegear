@@ -57,7 +57,7 @@ void HelperFunctions::printBinary(std::shared_ptr<std::vector<char>> data)
 	stringstream << std::hex << std::setfill('0') << std::uppercase;
 	for(std::vector<char>::iterator i = data->begin(); i != data->end(); ++i)
 	{
-		stringstream << std::setw(2) << (int32_t)(*i);
+		stringstream << std::setw(2) << (int32_t)((uint8_t)(*i));
 	}
 	stringstream << std::dec;
 	std::cout << stringstream.str() << std::endl;

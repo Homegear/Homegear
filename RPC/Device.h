@@ -52,11 +52,11 @@ class ParameterConversion
 public:
 	struct Type
 	{
-		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime };
+		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger };
 	};
 	Type::Enum type = Type::Enum::none;
-	std::unordered_map<int32_t, int32_t> integerIntegerMapDevice;
-	std::unordered_map<int32_t, int32_t> integerIntegerMapParameter;
+	std::unordered_map<int32_t, int32_t> integerValueMapDevice;
+	std::unordered_map<int32_t, int32_t> integerValueMapParameter;
 	double factor = 0;
 	double factor2 = 0;
 	int32_t div = 0;
@@ -140,14 +140,14 @@ public:
 	{
 		enum Enum { none = 0, master = 1, values = 2, link = 3 };
 	};
-	int32_t channel = 0;
 	Type::Enum type = Type::Enum::none;
 	std::string id;
 	std::vector<std::shared_ptr<Parameter>> parameters;
 	std::map<uint32_t, uint32_t> lists;
+	std::string subsetReference;
 
 	ParameterSet() {}
-	ParameterSet(int32_t channelNumber, xml_node<>* parameterSetNode);
+	ParameterSet(xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
 	std::vector<std::shared_ptr<Parameter>> getIndices(int32_t startIndex, int32_t endIndex, int32_t list);
@@ -161,16 +161,13 @@ public:
 class EnforceLink
 {
 public:
-	struct ID
-	{
-		enum Enum { none = 0, peerNeedsBurst = 1 };
-	};
-	ID::Enum id = ID::Enum::none;
-	int32_t value = 0;
+	std::string id;
+	std::string value;
 
 	EnforceLink() {}
 	EnforceLink(xml_node<>* parameterSetNode);
 	virtual ~EnforceLink() {}
+	std::shared_ptr<RPCVariable> getValue(RPCVariableType type);
 };
 
 class LinkRole

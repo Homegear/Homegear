@@ -440,15 +440,11 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				}
 				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
 				{
-					if(channel > -1 && (*k)->parentParameterSet->channel != channel) continue;
+					parameterSetChannel = (channel < 0) ? 0 : channel;
+					if(rpcDevice->channels.find(parameterSetChannel) == rpcDevice->channels.end()) continue;
+					if(rpcDevice->channels.at(parameterSetChannel)->parameterSets.at((*k)->parentParameterSet->type).get() != (*k)->parentParameterSet) continue;
 					if((*k)->physicalParameter->valueID != j->param) continue;
-					//channel often is -1
-					if(parameterSetChannel < 0) parameterSetChannel = (*k)->parentParameterSet->channel;
-					else if(parameterSetChannel != (*k)->parentParameterSet->channel)
-					{
-						if(GD::debugLevel >= 2) std::cout << "Error: Parameters from device device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << " have multiple channels. That is not allowed." << std::endl;
-						continue;
-					}
+
 					valuesCentral[parameterSetChannel][(*k)->id].value = value;
 					if(GD::debugLevel >= 4) std::cout << "Info: " << (*k)->id << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << " was set to " << value << "." << std::endl;
 					if(!valueKeys)
@@ -686,7 +682,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetId(uint32_t channel, RPC::Par
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables)
+std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool onlyPushing)
 {
 	try
 	{
@@ -782,7 +778,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 
 			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
 			pendingBidCoSQueues->push(queue);
-			if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePackets(address, queue, true);
+			if(!onlyPushing && !(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePackets(address, queue, true);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
 		else if(type == RPC::ParameterSet::Type::Enum::values)
@@ -995,6 +991,33 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkInfo(int32_t senderChannel, std::
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> Peer::setLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description)
+{
+	try
+	{
+		if(peers.find(senderChannel) == peers.end()) return RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
+		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverSerialNumber);
+		if(!remotePeer) return RPC::RPCVariable::createError(-2, "No peer found for sender channel and receiver serial number.");
+		if(remotePeer->channel != receiverChannel)  RPC::RPCVariable::createError(-2, "No peer found for receiver channel.");
+		remotePeer->linkDescription = description;
+		remotePeer->linkName = name;
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(const Exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(...)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, bool avoidDuplicates)
 {
 	try
@@ -1018,16 +1041,18 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 			{
 				std::shared_ptr<Peer> peer;
 				if(central->getPeers()->find((*i)->address) != central->getPeers()->end()) peer = central->getPeers()->at((*i)->address);
+				bool peerKnowsMe = false;
+				if(peer && peer->getPeer((*i)->channel, address)) peerKnowsMe = true;
 
 				//Don't continue if peer is sender and exists in central's peer array to avoid generation of duplicate results when requesting all links (only generate results when we are sender)
-				if(!isSender && peer && avoidDuplicates) return array;
+				if(!isSender && peerKnowsMe && avoidDuplicates) return array;
 				//If we are receiver this point is only reached, when the sender is not paired to this central
 
 				std::string peerSerial = (*i)->serialNumber;
 				int32_t brokenFlags = 0;
 				if((*i)->serialNumber.empty())
 				{
-					if(peer)
+					if(peerKnowsMe)
 					{
 						(*i)->serialNumber = peer->getSerialNumber();
 						peerSerial = (*i)->serialNumber;

@@ -83,7 +83,8 @@ std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwar
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(&(*(partialMatch.get())));
+			std::shared_ptr<Device> newDevice(new Device());
+			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
 			return newDevice;
@@ -122,7 +123,8 @@ std::shared_ptr<Device> Devices::find(std::string typeID, int32_t countFromSysin
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(&(*(partialMatch.get())));
+			std::shared_ptr<Device> newDevice(new Device());
+			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
 			return newDevice;
@@ -161,7 +163,8 @@ std::shared_ptr<Device> Devices::find(std::shared_ptr<BidCoSPacket> packet, int3
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(&(*(partialMatch.get())));
+			std::shared_ptr<Device> newDevice(new Device());
+			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
 			return newDevice;
