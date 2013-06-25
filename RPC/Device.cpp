@@ -68,87 +68,77 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 	}
 }
 
-std::shared_ptr<RPC::RPCVariable> ParameterConversion::fromPacket(int32_t value)
+void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 {
-	if(type == Type::Enum::none)
+	if(type == Type::Enum::floatIntegerScale)
 	{
-		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value));
-	}
-	else if(type == Type::Enum::floatIntegerScale)
-	{
-		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((double)value / factor) - offset));
+		value->type = RPCVariableType::rpcFloat;
+		value->floatValue = ((double)value->integerValue / factor) - offset;
 	}
 	else if(type == Type::Enum::integerIntegerScale)
 	{
-		if(div > 0)
-		{
-			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value * div));
-		}
-		else if(mul > 0)
-		{
-			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value / mul));
-		}
-		else
-		{
-			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value));
-		}
+		value->type = RPCVariableType::rpcInteger;
+		if(div > 0) value->integerValue *= div;
+		else if(mul > 0) value->integerValue /= mul;
 	}
 	else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 	{
-		if(integerValueMapDevice.find(value) != integerValueMapDevice.end()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(integerValueMapDevice[value]));
+		if(integerValueMapDevice.find(value->integerValue) != integerValueMapDevice.end()) value->integerValue = integerValueMapDevice[value->integerValue];
 	}
 	else if(type == Type::Enum::booleanInteger)
 	{
-		if(value == valueFalse) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(false));
-		if(value == valueTrue || value > threshold) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true));
+		value->type = RPCVariableType::rpcBoolean;
+		if(value->integerValue == valueFalse) value->booleanValue = false;
+		if(value->integerValue == valueTrue || value->integerValue > threshold) value->booleanValue = true;;
 	}
 	else if(type == Type::Enum::floatConfigTime)
 	{
-		if(value < 0) return 0;
+		value->type = RPCVariableType::rpcFloat;
+		if(value < 0)
+		{
+			value->floatValue = 0;
+			return;
+		}
 		uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
 		bits += std::lround(valueSize * 10) % 10;
 		if(bits == 0) bits = 7;
 		uint32_t maxNumber = 1 << bits;
-		if((unsigned)value < maxNumber) std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((double)value * factor));
-		else return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((double)(value - maxNumber) * factor2));
+		if((unsigned)value->integerValue < maxNumber) value->floatValue = value->integerValue * factor;
+		else value->floatValue = (value->integerValue - maxNumber) * factor2;
 	}
-	return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value));
+	else if(type == Type::Enum::integerTinyFloat)
+	{
+		value->type = RPCVariableType::rpcInteger;
+		int32_t mantissa = (value->integerValue >> mantissaStart) & ((1 << mantissaSize) - 1);
+		int32_t exponent = (value->integerValue >> exponentStart) & ((1 << exponentSize) - 1);
+		value->integerValue = mantissa * (1 << exponent);
+	}
 }
 
-int32_t ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
+void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 {
 	if(type == Type::Enum::none)
 	{
-		if(value->type == RPCVariableType::rpcBoolean) return (int32_t)value->booleanValue;
-		else return value->integerValue;
+		if(value->type == RPCVariableType::rpcBoolean) value->integerValue = (int32_t)value->booleanValue;
 	}
 	else if(type == Type::Enum::floatIntegerScale)
 	{
-		return std::lround((value->floatValue + offset) * factor);
+		value->integerValue = std::lround((value->floatValue + offset) * factor);
 	}
 	else if(type == Type::Enum::integerIntegerScale)
 	{
-		if(div > 0)
-		{
-			return value->integerValue / div;
-		}
-		else if(mul > 0)
-		{
-			return value->integerValue * mul;
-		}
-		else
-		{
-			return value->integerValue;
-		}
+		if(div > 0) value->integerValue /= div;
+		else if(mul > 0) value->integerValue *= mul;
 	}
 	else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 	{
-		if(integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end()) return integerValueMapParameter[value->integerValue];
+		if(integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end()) value->integerValue = integerValueMapParameter[value->integerValue];
 	}
 	else if(type == Type::Enum::booleanInteger)
 	{
-		if(value->booleanValue) return valueTrue;
-		else return valueFalse;
+		if(valueTrue == 0 && valueFalse == 0) value->integerValue = (int32_t)value->booleanValue;
+		else if(value->booleanValue) value->integerValue = valueTrue;
+		else value->integerValue = valueFalse;
 	}
 	else if(type == Type::Enum::floatConfigTime)
 	{
@@ -156,10 +146,24 @@ int32_t ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		bits += std::lround(valueSize * 10) % 10;
 		if(bits == 0) bits = 7;
 		uint32_t maxNumber = 1 << bits;
-		if(value->floatValue <= maxNumber - 1) return std::roundl(value->floatValue / factor);
-		else return maxNumber + std::roundl(value->floatValue / factor2);
+		if(value->floatValue <= maxNumber - 1) value->integerValue = std::roundl(value->floatValue / factor);
+		else value->integerValue = maxNumber + std::roundl(value->floatValue / factor2);
 	}
-	return value->integerValue;
+	else if(type == Type::Enum::integerTinyFloat)
+	{
+		int64_t maxMantissa = ((1 << mantissaSize) - 1);
+		int64_t maxExponent = ((1 << exponentSize) - 1);
+		int64_t exponent = 0;
+		while(value->integerValue >= maxMantissa)
+		{
+			value->integerValue = value->integerValue >> 1;
+			exponent++;
+		}
+		if(exponent > maxExponent) exponent = maxExponent;
+		exponent = exponent << exponentStart;
+		value->integerValue = (value->integerValue << mantissaStart) | exponent;
+	}
+	value->type = RPCVariableType::rpcInteger;
 }
 
 ParameterConversion::ParameterConversion(xml_node<>* node)
@@ -176,6 +180,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "boolean_integer") type = Type::Enum::booleanInteger;
 			else if(attributeValue == "float_configtime") type = Type::Enum::booleanInteger;
 			else if(attributeValue == "option_integer") type = Type::Enum::optionInteger;
+			else if(attributeValue == "integer_tinyfloat") type = Type::Enum::integerTinyFloat;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown type for \"conversion\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -186,12 +191,16 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			if(!factors.second.empty()) factor2 = HelperFunctions::getDouble(factors.second);
 		}
 		else if(attributeName == "value_size") valueSize = HelperFunctions::getDouble(attributeValue);
-		else if(attributeName == "threshold") threshold = std::stoll(attributeValue);
-		else if(attributeName == "false") valueFalse = std::stoll(attributeValue);
-		else if(attributeName == "true") valueTrue = std::stoll(attributeValue);
-		else if(attributeName == "div") div = std::stoll(attributeValue);
-		else if(attributeName == "mul") mul = std::stoll(attributeValue);
-		else if(attributeName == "offset") offset = std::stod(attributeValue);
+		else if(attributeName == "threshold") threshold = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "false") valueFalse = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "true") valueTrue = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "div") div = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "mul") mul = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "offset") offset = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "mantissa_start") mantissaStart = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "mantissa_size") mantissaSize = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "exponent_start") exponentStart = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "exponent_size") exponentSize = HelperFunctions::getNumber(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"conversion\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* conversionNode = node->first_node(); conversionNode; conversionNode = conversionNode->next_sibling())
@@ -249,7 +258,7 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
 	{
 		return std::shared_ptr<RPCVariable>(new RPCVariable(value));
 	}
-	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.type == ParameterConversion::Type::none)
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.empty())
 	{
 		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable((bool)value));
 	}
@@ -259,7 +268,12 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
 	}
 	else
 	{
-		return conversion.fromPacket(value);
+		std::shared_ptr<RPCVariable> variable(new RPCVariable(value));
+		for(std::vector<std::shared_ptr<ParameterConversion>>::reverse_iterator i = conversion.rbegin(); i != conversion.rend(); ++i)
+		{
+			(*i)->fromPacket(variable);
+		}
+		return variable;
 	}
 	return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(value));
 }
@@ -276,7 +290,13 @@ int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 	}
 	else
 	{
-		return conversion.toPacket(value);
+		std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
+		*variable = *value;
+		for(std::vector<std::shared_ptr<ParameterConversion>>::iterator i = conversion.begin(); i != conversion.end(); ++i)
+		{
+			(*i)->toPacket(variable);
+		}
+		return variable->integerValue;
 	}
 	return value->integerValue;
 }
@@ -350,7 +370,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		}
 		else if(nodeName == "conversion")
 		{
-			conversion = ParameterConversion(parameterNode);
+			conversion.push_back(std::shared_ptr<ParameterConversion>(new ParameterConversion(parameterNode)));
 		}
 		else if(nodeName == "description")
 		{

@@ -52,7 +52,7 @@ class ParameterConversion
 public:
 	struct Type
 	{
-		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger };
+		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat };
 	};
 	Type::Enum type = Type::Enum::none;
 	std::unordered_map<int32_t, int32_t> integerValueMapDevice;
@@ -66,12 +66,16 @@ public:
 	int32_t valueTrue = 0;
 	double offset = 0;
 	double valueSize = 0;
+	int32_t mantissaStart = 5;
+	int32_t mantissaSize = 11;
+	int32_t exponentStart = 0;
+	int32_t exponentSize = 5;
 
 	ParameterConversion() {}
 	ParameterConversion(xml_node<>* node);
 	virtual ~ParameterConversion() {}
-	std::shared_ptr<RPCVariable> fromPacket(int32_t value);
-	int32_t toPacket(std::shared_ptr<RPCVariable> value);
+	void fromPacket(std::shared_ptr<RPCVariable> value);
+	void toPacket(std::shared_ptr<RPCVariable> value);
 };
 
 class Parameter
@@ -104,7 +108,7 @@ public:
 	std::string control;
 	std::shared_ptr<LogicalParameter> logicalParameter;
 	std::shared_ptr<PhysicalParameter> physicalParameter;
-	ParameterConversion conversion;
+	std::vector<std::shared_ptr<ParameterConversion>> conversion;
 	ParameterDescription description;
 
 	Parameter() { logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger()); physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter()); }
