@@ -262,14 +262,14 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 		uint32_t uBytesRead;
 		uint32_t dataSize = 0;
 		PacketType::Enum packetType;
-		/*struct timeval timeout;
+		struct timeval timeout;
 		timeout.tv_sec = 20;
-		timeout.tv_usec = 0;*/
+		timeout.tv_usec = 0;
 
 		if(GD::debugLevel >= 5) std::cout << "Listening for incoming packets from client number " << clientFileDescriptor << "." << std::endl;
 		while(!_stopServer)
 		{
-			/*fd_set readFileDescriptor;
+			fd_set readFileDescriptor;
 			FD_ZERO(&readFileDescriptor);
 			FD_SET(clientFileDescriptor, &readFileDescriptor);
 			bytesRead = select(clientFileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
@@ -280,7 +280,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				close(clientFileDescriptor);
 				if(GD::debugLevel >= 5) std::cout << "Connection to client number " << clientFileDescriptor << " closed." << std::endl;
 				return;
-			}*/
+			}
 
 			bytesRead = read(clientFileDescriptor, buffer, bufferMax);
 			if(bytesRead <= 0)

@@ -14,9 +14,20 @@ class ServiceMessages;
 #include <thread>
 #include <mutex>
 
+#include "delegate.hpp"
 #include "Exception.h"
 
 enum class QueueEntryType { UNDEFINED, MESSAGE, PACKET };
+
+class CallbackFunctionParameter
+{
+public:
+	std::vector<int64_t> integers;
+	std::vector<std::string> strings;
+
+	CallbackFunctionParameter() {}
+	virtual ~CallbackFunctionParameter() {}
+};
 
 class BidCoSQueueEntry {
 protected:
@@ -48,7 +59,7 @@ class BidCoSQueue
         int32_t resendCounter = 0;
         uint32_t _resendThreadId = 0;
         bool _workingOnPendingQueue = false;
-
+        void (HomeMaticDevice::*_queueProcessed)() = nullptr;
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
     public:
@@ -58,6 +69,9 @@ class BidCoSQueue
         std::shared_ptr<ServiceMessages> serviceMessages;
         HomeMaticDevice* device = nullptr;
         std::shared_ptr<Peer> peer;
+        std::shared_ptr<CallbackFunctionParameter> callbackParameter;
+        delegate<void (std::shared_ptr<CallbackFunctionParameter>)> queueEmptyCallback;
+        bool burst = false;
         BidCoSQueueType getQueueType() { return _queueType; }
         std::deque<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
@@ -76,6 +90,7 @@ class BidCoSQueue
         void startResendThread();
         void send(std::shared_ptr<BidCoSPacket> packet);
         void keepAlive();
+        void longKeepAlive();
         std::string serialize();
 
         BidCoSQueue();

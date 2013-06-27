@@ -9,14 +9,29 @@
 #include <memory>
 #include <queue>
 #include <mutex>
+#include <thread>
 
+class CallbackFunctionParameter;
 class HomeMaticDevice;
 class BidCoSQueue;
 class BidCoSMessages;
 
+#include "delegate.hpp"
 #include "RPC/Device.h"
 #include "RPC/RPCVariable.h"
 #include "ServiceMessages.h"
+
+class VariableToReset
+{
+public:
+	uint32_t channel;
+	std::string key;
+	int64_t value;
+	int64_t resetTime;
+
+	VariableToReset() {}
+	virtual ~VariableToReset() {}
+};
 
 class BasicPeer
 {
@@ -48,9 +63,9 @@ public:
 class Peer
 {
     public:
-		Peer() { serviceMessages = std::shared_ptr<ServiceMessages>(new ServiceMessages("")); pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>()); }
+		Peer();
 		Peer(std::string serializedObject, HomeMaticDevice* device);
-		virtual ~Peer() {}
+		virtual ~Peer();
 
 		std::shared_ptr<ServiceMessages> serviceMessages;
         int32_t address = 0;
@@ -85,12 +100,14 @@ class Peer
         void deleteFromDatabase(int32_t parentAddress);
         void saveToDatabase(int32_t parentAddress);
         void deletePairedVirtualDevices();
-        bool hasPeers(int32_t channel) { if(peers.find(channel) == peers.end() || peers[channel].empty()) return false; else return true; }
+        bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
         void addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer);
         std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address);
         std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber);
         void removePeer(int32_t channel, int32_t address);
+        void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
 
+        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, int64_t>& values);
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 
@@ -107,8 +124,13 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool onlyPushing = false);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
+        bool _stopWorkerThread = true;
+        std::thread _workerThread;
         std::string _serialNumber;
-        std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> peers;
+        std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
+        std::mutex _variablesToResetMutex;
+        std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
+        void worker();
 };
 
 #endif // PEER_H

@@ -282,6 +282,9 @@ int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 {
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
 	{
+		LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
+		if(value->integerValue > parameter->max) return parameter->max;
+		if(value->integerValue < parameter->min) return parameter->min;
 		return value->integerValue;
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
@@ -290,6 +293,18 @@ int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 	}
 	else
 	{
+		if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
+		{
+			LogicalParameterFloat* parameter = (LogicalParameterFloat*)logicalParameter.get();
+			if(value->floatValue > parameter->max) value->floatValue = parameter->max;
+			if(value->floatValue < parameter->min) value->floatValue = parameter->min;
+		}
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
+		{
+			LogicalParameterInteger* parameter = (LogicalParameterInteger*)logicalParameter.get();
+			if(value->integerValue > parameter->max) value->integerValue = parameter->max;
+			if(value->integerValue < parameter->min) value->integerValue = parameter->min;
+		}
 		std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
 		*variable = *value;
 		for(std::vector<std::shared_ptr<ParameterConversion>>::iterator i = conversion.begin(); i != conversion.end(); ++i)
@@ -318,12 +333,30 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 			else if(attributeValue == "l") booleanOperator = BooleanOperator::Enum::l;
 			else if(attributeValue == "ge") booleanOperator = BooleanOperator::Enum::ge;
 			else if(attributeValue == "le") booleanOperator = BooleanOperator::Enum::le;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"parameter\": " << attributeName << std::endl;
+			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "const_value") constValue = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "param") param = attributeValue;
+		else if(attributeName == "PARAM") additionalParameter = attributeValue;
 		else if(attributeName == "control") control = attributeValue;
+		else if(attributeName == "type")
+		{
+			if(attributeValue == "integer") type = PhysicalParameter::Type::Enum::typeInteger;
+			else if(attributeValue == "boolean") type = PhysicalParameter::Type::Enum::typeBoolean;
+			else if(attributeValue == "option") type = PhysicalParameter::Type::Enum::typeOption;
+			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute value for \"type\" in node \"parameter\": " << attributeValue << std::endl;
+		}
+		else if(attributeName == "omit_if")
+		{
+			if(type != PhysicalParameter::Type::Enum::typeInteger)
+			{
+				if(GD::debugLevel >= 3) std::cout << "Warning: \"omit_if\" is only supported for type \"integer\" in node \"parameter\"." << std::endl;
+				continue;
+			}
+			omitIfSet = true;
+			omitIf = HelperFunctions::getNumber(attributeValue);
+		}
 		else if(attributeName == "operations")
 		{
 			std::stringstream stream(attributeValue);
@@ -351,6 +384,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 				else if(element == "sticky") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::sticky);
 			}
 		}
+		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"parameter\": " << attributeName << std::endl;
 	}
 	if(checkForID && id.empty() && GD::debugLevel >= 2)
 	{
@@ -836,6 +870,7 @@ Device::Device(std::string xmlFilename) : Device()
 		{
 			if(!*j) continue;
 			if(!(*j)->physicalParameter->getRequest.empty() && framesByID.find((*j)->physicalParameter->getRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->getRequest]->associatedValues.push_back(*j);
+			if(!(*j)->physicalParameter->setRequest.empty() && framesByID.find((*j)->physicalParameter->setRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->setRequest]->associatedValues.push_back(*j);
 			for(std::vector<std::string>::iterator k = (*j)->physicalParameter->eventFrames.begin(); k != (*j)->physicalParameter->eventFrames.end(); ++k)
 			{
 				if(framesByID.find(*k) != framesByID.end()) framesByID[*k]->associatedValues.push_back(*j);
@@ -1023,6 +1058,10 @@ void Device::parseXML(xml_node<>* node)
 				parameterSet->type = j->second->type;
 				parameterSet->id = j->second->id;
 				i->second->parameterSets[parameterSet->type] = parameterSet;
+				for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
+				{
+					(*i)->parentParameterSet = parameterSet.get();
+				}
 			}
 		}
 	}

@@ -73,7 +73,7 @@ std::string BidCoSPacket::hexString()
 	{
 		std::ostringstream stringStream;
 		stringStream << std::hex << std::uppercase << std::setfill('0') << std::setw(2);
-		stringStream << std::setw(2) << (int32_t)_length;
+		stringStream << std::setw(2) << (9 + _payload.size());
 		stringStream << std::setw(2) << (int32_t)_messageCounter;
 		stringStream << std::setw(2) << (int32_t)_controlByte;
 		stringStream << std::setw(2) << (int32_t)_messageType;
@@ -254,6 +254,7 @@ void BidCoSPacket::setPosition(double index, double size, int64_t value)
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
+    _length = 9 + _payload.size();
 }
 
 int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)

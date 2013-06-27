@@ -268,8 +268,6 @@ LogicalParameterString::LogicalParameterString(xml_node<>* node)
 				defaultValue = attributeValue;
 				defaultValueExists = true;
 			}
-			else if(attributeName == "min") min = attributeValue;
-			else if(attributeName == "max") max = attributeValue;
 			else if(attributeName == "unit") unit = attributeValue;
 			else if(attributeName != "type" && GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type boolean: " << attributeName << std::endl;
 		}

@@ -11,5 +11,5 @@
 - Support for serial numbers in putParamset and getParamset
 - Delete peer from all devices it is linked to, when peer is reset
 - Delete metadata for all channels when peer is deleted
-- For some reason the shutter contact link parameter set is not shown in the HomeMatic configurator 
+- For some reason the shutter contact link parameter set is not shown in the HomeMatic configurator
 Today:

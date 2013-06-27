@@ -196,7 +196,6 @@ void HM_CC_TC::setValveState(int32_t valveState)
 void HM_CC_TC::startDutyCycle(int64_t lastDutyCycleEvent)
 {
 	_dutyCycleThread = new std::thread(&HM_CC_TC::dutyCycleThread, this, lastDutyCycleEvent);
-	_dutyCycleThread->detach();
 }
 
 void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)

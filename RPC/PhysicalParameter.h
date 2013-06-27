@@ -22,7 +22,7 @@ public:
 	};
 	struct Interface
 	{
-		enum Enum { none, command, centralCommand, internal, config };
+		enum Enum { none, command, centralCommand, internal, config, store };
 	};
 	Type::Enum type = Type::Enum::none;
 	Interface::Enum interface = Interface::none;
@@ -35,6 +35,8 @@ public:
 	std::string setRequest;
 	std::string counter;
 	std::vector<std::string> eventFrames;
+	std::vector<std::string> resetAfterSend;
+	bool isVolatile = false;
 
 	PhysicalParameter() {}
 	PhysicalParameter(xml_node<>* node);

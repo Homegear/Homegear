@@ -17,6 +17,7 @@ class BidCoSPacket
         //Properties
         uint8_t length();
         uint8_t messageCounter();
+        void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
         uint8_t controlByte();
         uint8_t messageType();
         int32_t messageSubtype();

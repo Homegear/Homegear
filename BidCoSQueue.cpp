@@ -101,14 +101,44 @@ void BidCoSQueue::resend(uint32_t threadId)
 				i++;
 			}
 		}
-		//Sleep for 175 ms
-		i = 0;
-		sleepingTime = std::chrono::milliseconds(25);
-		while(!_stopResendThread && i < 7)
+		if(resendCounter < 2)
 		{
-			std::this_thread::sleep_for(sleepingTime);
-			i++;
+			//Sleep for 175 ms
+			i = 0;
+			sleepingTime = std::chrono::milliseconds(25);
+			while(!_stopResendThread && i < 7)
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				i++;
+			}
 		}
+		//only when burst = true
+		else if(resendCounter >= 2 && resendCounter < 6)
+		{
+			longKeepAlive();
+			//Sleep for 1000 ms
+			i = 0;
+			sleepingTime = std::chrono::milliseconds(50);
+			while(!_stopResendThread && i < 20)
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				i++;
+			}
+		}
+		//only when burst = true
+		else
+		{
+			longKeepAlive();
+			//Sleep for 5000 ms
+			i = 0;
+			sleepingTime = std::chrono::milliseconds(200);
+			while(!_stopResendThread && i < 25)
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				i++;
+			}
+		}
+
 		if(!_stopResendThread)
 		{
 			_queueMutex.lock();
@@ -128,6 +158,12 @@ void BidCoSQueue::resend(uint32_t threadId)
 				}
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread
 				if(resendCounter < 1) //This actually means that the message will be sent three times all together if there is no response
+				{
+					resendCounter++;
+					send = std::thread(&BidCoSQueue::startResendThread, this);
+					send.detach();
+				}
+				else if(burst && resendCounter < 10)
 				{
 					resendCounter++;
 					send = std::thread(&BidCoSQueue::startResendThread, this);
@@ -414,6 +450,9 @@ void BidCoSQueue::pushPendingQueue()
 		if(!_pendingQueues || _pendingQueues->empty()) return;
 		_queueType = _pendingQueues->front()->getQueueType();
 		serviceMessages = _pendingQueues->front()->serviceMessages;
+		queueEmptyCallback = _pendingQueues->front()->queueEmptyCallback;
+		callbackParameter = _pendingQueues->front()->callbackParameter;
+		burst = _pendingQueues->front()->burst;
 		while(!_pendingQueues->empty() && _pendingQueues->front()->isEmpty())
 		{
 			if(GD::debugLevel >= 5) std::cout << "Debug: Empty queue was pushed." << std::endl;
@@ -467,6 +506,11 @@ void BidCoSQueue::keepAlive()
 	if(lastAction != nullptr) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
+void BidCoSQueue::longKeepAlive()
+{
+	if(lastAction != nullptr) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 5000;
+}
+
 void BidCoSQueue::pop()
 {
 	try
@@ -478,6 +522,7 @@ void BidCoSQueue::pop()
 		_queueMutex.lock();
 		_queue.pop_front();
 		if(_queue.empty()) {
+			if(queueEmptyCallback && callbackParameter) queueEmptyCallback(callbackParameter);
 			if(_workingOnPendingQueue) _pendingQueues->pop();
 			if(!_pendingQueues || (_pendingQueues && _pendingQueues->empty()))
 			{

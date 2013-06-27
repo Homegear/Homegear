@@ -60,8 +60,9 @@ void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)
 	}
 	catch(const std::exception& ex)
     {
-		if(std::string(ex.what()) == "_Map_base::at" && GD::debugLevel < 5) return; //ignore
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		std::string what(ex.what());
+		if(what == "_Map_base::at" && GD::debugLevel < 5) return; //ignore
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << what << std::endl;
     }
     catch(const Exception& ex)
     {

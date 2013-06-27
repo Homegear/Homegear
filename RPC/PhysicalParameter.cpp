@@ -21,6 +21,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			else if(attributeValue == "central_command") interface = Interface::Enum::centralCommand;
 			else if(attributeValue == "internal") interface = Interface::Enum::internal;
 			else if(attributeValue == "config") interface = Interface::Enum::config;
+			else if(attributeValue == "store") interface = Interface::Enum::store;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown interface for \"physical\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "value_id") valueID = attributeValue;
@@ -39,6 +40,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		}
 		else if(attributeName == "size") size = HelperFunctions::getDouble(attributeValue);
 		else if(attributeName == "counter") counter = attributeValue;
+		else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"physical\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* physicalNode = node->first_node(); physicalNode; physicalNode = physicalNode->next_sibling())
@@ -48,18 +50,24 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		if(nodeName == "set")
 		{
 			attr = physicalNode->first_attribute("request");
-			if(attr != nullptr) setRequest = std::string(attr->value());
+			if(attr) setRequest = std::string(attr->value());
 		}
 		else if(nodeName == "get")
 		{
 			attr = physicalNode->first_attribute("request");
-			if(attr != nullptr) getRequest = std::string(attr->value());
+			if(attr) getRequest = std::string(attr->value());
 		}
 		else if(nodeName == "event")
 		{
 			attr = physicalNode->first_attribute("frame");
-			if(attr != nullptr) eventFrames.push_back(std::string(attr->value()));
+			if(attr) eventFrames.push_back(std::string(attr->value()));
 		}
+		else if(nodeName == "reset_after_send")
+		{
+			attr = physicalNode->first_attribute("param");
+			if(attr) resetAfterSend.push_back(std::string(attr->value()));
+		}
+		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node for \"physical\": " << nodeName << std::endl;
 	}
 }
 

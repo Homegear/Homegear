@@ -102,14 +102,18 @@ public:
 	BooleanOperator::Enum booleanOperator = BooleanOperator::Enum::e;
 	Operations::Enum operations = (Operations::Enum)3;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
+	PhysicalParameter::Type::Enum type = PhysicalParameter::Type::Enum::none;
 	int32_t constValue = -1;
 	std::string id;
 	std::string param;
+	std::string additionalParameter;
 	std::string control;
 	std::shared_ptr<LogicalParameter> logicalParameter;
 	std::shared_ptr<PhysicalParameter> physicalParameter;
 	std::vector<std::shared_ptr<ParameterConversion>> conversion;
 	ParameterDescription description;
+	bool omitIfSet = false;
+	int32_t omitIf = 0;
 
 	Parameter() { logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger()); physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter()); }
 	Parameter(xml_node<>* node, bool checkForID = false);
@@ -266,7 +270,7 @@ public:
 	std::vector<std::shared_ptr<DeviceType>> supportedTypes;
 	std::multimap<uint32_t, std::shared_ptr<DeviceFrame>> framesByMessageType;
 	std::map<std::string, std::shared_ptr<DeviceFrame>> framesByID;
-	RXModes::Enum rxModes = RXModes::Enum::none;
+	RXModes::Enum rxModes = RXModes::Enum::config;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	int32_t countFromSysinfoIndex = -1;
 	std::string deviceClass;

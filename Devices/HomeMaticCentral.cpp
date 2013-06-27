@@ -72,6 +72,52 @@ std::string HomeMaticCentral::serialize()
 	return  stringstream.str();
 }
 
+void HomeMaticCentral::worker()
+{
+	std::chrono::milliseconds sleepingTime(7000);
+	int32_t lastPeer;
+	lastPeer = 0;
+	while(!_stopWorkerThread)
+	{
+		try
+		{
+			std::this_thread::sleep_for(sleepingTime);
+			if(!_peers.empty())
+			{
+				if(lastPeer == 0) lastPeer = _peers.begin()->first;
+				//_peers.at(lastPeer)->saveToDatabase(_address);
+				std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator peer = _peers.find(lastPeer);
+				if(peer != _peers.end())
+				{
+					peer++;
+					if((peer == _peers.end() || !peer->second) && !_peers.empty())
+					{
+						peer = _peers.begin();
+						lastPeer = peer->first;
+					}
+				}
+				else if(!_peers.empty())
+				{
+					peer = _peers.begin();
+					lastPeer = peer->first;
+				}
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		}
+		catch(const Exception& ex)
+		{
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		}
+		catch(...)
+		{
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+		}
+	}
+}
+
 void HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
@@ -568,7 +614,9 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			payload.push_back(0);
 			payload.push_back(0x08);
 			payload.push_back(0x02);
-			payload.push_back(0x01);
+			std::shared_ptr<RPC::Parameter> internalKeysVisible = peer->rpcDevice->parameterSet->getParameter("INTERNAL_KEYS_VISIBLE");
+			if(internalKeysVisible) payload.push_back(internalKeysVisible->getBytes(1) | 0x01);
+			else payload.push_back(0x01);
 			payload.push_back(0x0A);
 			payload.push_back(_address >> 16);
 			payload.push_back(0x0B);
@@ -762,6 +810,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		if(!queue) return;
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
 		bool multiplePackets = false;
+		bool multiPacketEnd = false;
 		if(sentPacket && sentPacket->payload()->at(1) == 0x03) //Peer request
 		{
 			Peer* peer = _peers[packet->senderAddress()].get();
@@ -786,6 +835,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 					}
 				}
 			}
+			if(packet->controlByte() & 0x20) sendOK(packet->messageCounter(), peer->address);
 		}
 		else if(sentPacket && sentPacket->payload()->at(1) == 0x04) //Config request
 		{
@@ -797,7 +847,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			std::shared_ptr<RPC::RPCVariable> parametersToEnforce;
 			if(!peer->pairingComplete) parametersToEnforce.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 			if((packet->controlByte() & 0x20) && (packet->payload()->at(0) == 3)) multiplePackets = true;
-			if(multiplePackets)
+			//Some devices have a payload size of 3
+			if(multiplePackets && packet->payload()->size() == 3 && packet->payload()->at(1) == 0 && packet->payload()->at(2) == 0) multiPacketEnd = true;
+			//And some a payload size of 2
+			if(multiplePackets && packet->payload()->size() == 2 && packet->payload()->at(1) == 0) multiPacketEnd = true;
+			if(multiplePackets && !multiPacketEnd)
 			{
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = startIndex + packet->payload()->size() - 3;
@@ -833,7 +887,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 					}
 				}
 			}
-			else
+			else if(!multiPacketEnd)
 			{
 				if(peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
 				{
@@ -873,7 +927,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			}
 			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, "", -1, parametersToEnforce);
 		}
-		if(multiplePackets) //Multiple config response packets
+		if(multiplePackets && !multiPacketEnd) //Multiple config response packets
 		{
 			//StealthyOK does not set sentPacket
 			sendStealthyOK(packet->messageCounter(), packet->senderAddress());
@@ -882,6 +936,8 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		}
 		else
 		{
+			//Sometimes the peer requires an ok after the end packet
+			if(multiPacketEnd && (packet->controlByte() & 0x20)) sendOK(packet->messageCounter(), packet->senderAddress());
 			queue->pop(); //Messages are not popped by default.
 		}
 		if(queue->isEmpty())

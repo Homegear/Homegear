@@ -57,6 +57,7 @@ class HomeMaticDevice
         virtual std::shared_ptr<BidCoSMessages> getMessages() { return _messages; }
         virtual void handleCLICommand(std::string command);
         virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet);
+        std::shared_ptr<BidCoSPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }
 
         virtual void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet) {}
         virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
@@ -88,6 +89,8 @@ class HomeMaticDevice
         virtual void sendDutyCycleResponse(int32_t destinationAddress);
         virtual void sendRequestConfig(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet) {}
     protected:
+        bool _stopWorkerThread = false;
+        std::thread _workerThread;
         int32_t _address;
         std::string _serialNumber;
         int32_t _firmwareVersion = 0;
@@ -117,6 +120,7 @@ class HomeMaticDevice
 
         virtual std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, int32_t index23);
         virtual std::shared_ptr<Peer> createTeam(int32_t address, HMDeviceTypes deviceType, std::string serialNumber);
+        virtual void worker();
 
         virtual void init();
         virtual void setUpBidCoSMessages();

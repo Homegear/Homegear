@@ -46,6 +46,7 @@ public:
 	virtual ~LogicalParameter() {}
 	static std::shared_ptr<LogicalParameter> fromXML(xml_node<>* node);
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid)); }
+	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid)); }
 };
 
 class LogicalParameterInteger : public LogicalParameter
@@ -61,6 +62,7 @@ public:
 	LogicalParameterInteger(xml_node<>* node);
 	virtual ~LogicalParameterInteger() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
+	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
 };
 
 class LogicalParameterFloat : public LogicalParameter
@@ -76,6 +78,7 @@ public:
 	LogicalParameterFloat(xml_node<>* node);
 	virtual ~LogicalParameterFloat() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
+	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
 };
 
 class LogicalParameterEnum : public LogicalParameter
@@ -91,6 +94,7 @@ public:
 	virtual ~LogicalParameterEnum() {}
 	std::vector<ParameterOption> options;
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
+	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
 };
 
 class LogicalParameterBoolean : public LogicalParameter
@@ -105,6 +109,7 @@ public:
 	LogicalParameterBoolean(xml_node<>* node);
 	virtual ~LogicalParameterBoolean() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
+	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
 };
 
 class LogicalParameterString : public LogicalParameter
@@ -119,6 +124,7 @@ public:
 	LogicalParameterString(xml_node<>* node);
 	virtual ~LogicalParameterString() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
+	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
 };
 
 class LogicalParameterAction : public LogicalParameter
@@ -133,6 +139,7 @@ public:
 	LogicalParameterAction(xml_node<>* node);
 	virtual ~LogicalParameterAction() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
+	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
 };
 
 } /* namespace XMLRPC */
