@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <memory>
 
 #include "rapidxml.hpp"
 
@@ -13,12 +14,24 @@ using namespace rapidxml;
 
 namespace RPC {
 
+class PhysicalParameterEvent
+{
+public:
+	std::string frame;
+	bool dominoEvent = false;
+	int32_t dominoEventValue;
+	std::string dominoEventDelayID;
+
+	PhysicalParameterEvent() {}
+	virtual ~PhysicalParameterEvent() {}
+};
+
 class PhysicalParameter
 {
 public:
 	struct Type
 	{
-		enum Enum { none, typeBoolean, typeInteger, typeOption };
+		enum Enum { none, typeBoolean, typeInteger, typeOption, typeString };
 	};
 	struct Interface
 	{
@@ -34,9 +47,10 @@ public:
 	std::string getRequest;
 	std::string setRequest;
 	std::string counter;
-	std::vector<std::string> eventFrames;
+	std::vector<std::shared_ptr<PhysicalParameterEvent>> eventFrames;
 	std::vector<std::string> resetAfterSend;
 	bool isVolatile = false;
+	std::string id;
 
 	PhysicalParameter() {}
 	PhysicalParameter(xml_node<>* node);

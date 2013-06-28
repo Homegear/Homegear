@@ -58,7 +58,12 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		else if(attributeName == "type") type = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "subtype") subtype = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
-		else if(attributeName == "channel_field") channelField = std::stoll(attributeValue);
+		else if(attributeName == "channel_field")
+		{
+			std::pair<std::string, std::string> splitString = HelperFunctions::split(attributeValue, ':');
+			channelField = HelperFunctions::getNumber(splitString.first);
+			//Currently I'm ignoring the size
+		}
 		else if(attributeName == "fixed_channel") fixedChannel = HelperFunctions::getNumber(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"frame\": " << attributeName << std::endl;
 	}
@@ -79,7 +84,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 	{
 		value->type = RPCVariableType::rpcInteger;
 		if(div > 0) value->integerValue *= div;
-		else if(mul > 0) value->integerValue /= mul;
+		if(mul > 0) value->integerValue /= mul;
 	}
 	else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 	{
@@ -110,6 +115,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 	{
 		value->type = RPCVariableType::rpcInteger;
 		int32_t mantissa = (value->integerValue >> mantissaStart) & ((1 << mantissaSize) - 1);
+		if(mantissaSize == 0) mantissa = 1;
 		int32_t exponent = (value->integerValue >> exponentStart) & ((1 << exponentSize) - 1);
 		value->integerValue = mantissa * (1 << exponent);
 	}
@@ -127,8 +133,9 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 	}
 	else if(type == Type::Enum::integerIntegerScale)
 	{
+		if(mul > 0) value->integerValue *= mul;
+		//mul and div can be set, so no else if
 		if(div > 0) value->integerValue /= div;
-		else if(mul > 0) value->integerValue *= mul;
 	}
 	else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 	{
@@ -153,15 +160,20 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 	{
 		int64_t maxMantissa = ((1 << mantissaSize) - 1);
 		int64_t maxExponent = ((1 << exponentSize) - 1);
+		int64_t mantissa = value->integerValue;
 		int64_t exponent = 0;
-		while(value->integerValue >= maxMantissa)
+		if(maxMantissa > 0)
 		{
-			value->integerValue = value->integerValue >> 1;
-			exponent++;
+			while(value->integerValue >= maxMantissa)
+			{
+				mantissa = mantissa >> 1;
+				exponent++;
+			}
 		}
+		if(mantissa > maxMantissa) mantissa = maxMantissa;
 		if(exponent > maxExponent) exponent = maxExponent;
 		exponent = exponent << exponentStart;
-		value->integerValue = (value->integerValue << mantissaStart) | exponent;
+		value->integerValue = (mantissa << mantissaStart) | exponent;
 	}
 	value->type = RPCVariableType::rpcInteger;
 }
@@ -181,6 +193,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "float_configtime") type = Type::Enum::booleanInteger;
 			else if(attributeValue == "option_integer") type = Type::Enum::optionInteger;
 			else if(attributeValue == "integer_tinyfloat") type = Type::Enum::integerTinyFloat;
+			else if(attributeValue == "toggle") type = Type::Enum::toggle;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown type for \"conversion\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -197,6 +210,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 		else if(attributeName == "div") div = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "mul") mul = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "offset") offset = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "value") stringValue = attributeValue;
 		else if(attributeName == "mantissa_start") mantissaStart = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "mantissa_size") mantissaSize = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "exponent_start") exponentStart = HelperFunctions::getNumber(attributeValue);
@@ -307,9 +321,16 @@ int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 		}
 		std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
 		*variable = *value;
-		for(std::vector<std::shared_ptr<ParameterConversion>>::iterator i = conversion.begin(); i != conversion.end(); ++i)
+		if(conversion.empty())
 		{
-			(*i)->toPacket(variable);
+			if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean) variable->integerValue = (int32_t)variable->booleanValue;
+		}
+		else
+		{
+			for(std::vector<std::shared_ptr<ParameterConversion>>::iterator i = conversion.begin(); i != conversion.end(); ++i)
+			{
+				(*i)->toPacket(variable);
+			}
 		}
 		return variable->integerValue;
 	}
@@ -340,6 +361,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		else if(attributeName == "param") param = attributeValue;
 		else if(attributeName == "PARAM") additionalParameter = attributeValue;
 		else if(attributeName == "control") control = attributeValue;
+		else if(attributeName == "loopback") { if(attributeValue == "true") loopback = true; }
 		else if(attributeName == "type")
 		{
 			if(attributeValue == "integer") type = PhysicalParameter::Type::Enum::typeInteger;
@@ -762,6 +784,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		else if(attributeName == "class") channelClass = attributeValue;
 		else if(attributeName == "type") type = attributeValue;
 		else if(attributeName == "hidden") { if(attributeValue == "true") hidden = true; }
+		else if(attributeName == "autoregister") { if(attributeValue == "true") autoregister = true; }
 		else if(attributeName == "count") count = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
@@ -871,9 +894,9 @@ Device::Device(std::string xmlFilename) : Device()
 			if(!*j) continue;
 			if(!(*j)->physicalParameter->getRequest.empty() && framesByID.find((*j)->physicalParameter->getRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->getRequest]->associatedValues.push_back(*j);
 			if(!(*j)->physicalParameter->setRequest.empty() && framesByID.find((*j)->physicalParameter->setRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->setRequest]->associatedValues.push_back(*j);
-			for(std::vector<std::string>::iterator k = (*j)->physicalParameter->eventFrames.begin(); k != (*j)->physicalParameter->eventFrames.end(); ++k)
+			for(std::vector<std::shared_ptr<PhysicalParameterEvent>>::iterator k = (*j)->physicalParameter->eventFrames.begin(); k != (*j)->physicalParameter->eventFrames.end(); ++k)
 			{
-				if(framesByID.find(*k) != framesByID.end()) framesByID[*k]->associatedValues.push_back(*j);
+				if(framesByID.find((*k)->frame) != framesByID.end()) framesByID[(*k)->frame]->associatedValues.push_back(*j);
 			}
 		}
 	}
@@ -895,10 +918,11 @@ void Device::load(std::string xmlFilename)
 			fileStream.seekg(0, std::ios::end);
 			length = fileStream.tellg();
 			fileStream.seekg(0, std::ios::beg);
-			char buffer[length];
+			char buffer[length + 1];
 			fileStream.read(&buffer[0], length);
 			fileStream.close();
-			doc.parse<parse_no_entity_translation>(buffer);
+			buffer[length] = '\0';
+			doc.parse<parse_no_entity_translation | parse_validate_closing_tags>(buffer);
 			parseXML(doc.first_node("device"));
 		}
 		else throw Exception("Error reading file " + xmlFilename + ". Error number: " + std::to_string(errno));

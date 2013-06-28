@@ -269,7 +269,8 @@ LogicalParameterString::LogicalParameterString(xml_node<>* node)
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else if(attributeName != "type" && GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type boolean: " << attributeName << std::endl;
+			else if(attributeName == "use_default_on_failure") {} //ignore, not necessary - all values are initialized
+			else if(attributeName != "type" && GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type string: " << attributeName << std::endl;
 		}
 	}
     catch(const std::exception& ex)

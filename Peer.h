@@ -28,6 +28,7 @@ public:
 	std::string key;
 	int64_t value;
 	int64_t resetTime;
+	bool isDominoEvent = false;
 
 	VariableToReset() {}
 	virtual ~VariableToReset() {}
@@ -107,7 +108,7 @@ class Peer
         void removePeer(int32_t channel, int32_t address);
         void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
 
-        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, int64_t>& values);
+        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, int64_t>& values);
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 

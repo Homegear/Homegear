@@ -5,6 +5,7 @@ class CallbackFunctionParameter;
 
 void Peer::initializeCentralConfig()
 {
+	std::cout << "Hi" << std::endl;
 	if(!rpcDevice)
 	{
 		if(GD::debugLevel >= 3) std::cout << "Warning: Tried to initialize peer's central config without xmlrpcDevice being set." << std::endl;
@@ -22,6 +23,7 @@ void Peer::initializeCentralConfig()
 				{
 					parameter = RPCConfigurationParameter();
 					parameter.rpcParameter = *j;
+					parameter.value = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 					configCentral[i->first][(*j)->id] = parameter;
 				}
 			}
@@ -35,11 +37,13 @@ void Peer::initializeCentralConfig()
 				{
 					parameter = RPCConfigurationParameter();
 					parameter.rpcParameter = *j;
+					parameter.value = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 					valuesCentral[i->first][(*j)->id] = parameter;
 				}
 			}
 		}
 	}
+	std::cout << "Moin" << std::endl;
 }
 
 void Peer::initializeLinkConfig(int32_t channel, int32_t address)
@@ -53,6 +57,7 @@ void Peer::initializeLinkConfig(int32_t channel, int32_t address)
 		{
 			parameter = RPCConfigurationParameter();
 			parameter.rpcParameter = *j;
+			parameter.value = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 			linksCentral[channel][address][(*j)->id] = parameter;
 		}
 	}
@@ -171,7 +176,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 
 void Peer::worker()
 {
-	std::chrono::milliseconds sleepingTime(5000);
+	std::chrono::milliseconds sleepingTime(3000);
 	std::vector<uint32_t> positionsToDelete;
 	std::vector<std::shared_ptr<VariableToReset>> variablesToReset;
 	int32_t index;
@@ -188,7 +193,7 @@ void Peer::worker()
 				_variablesToResetMutex.lock();
 				for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = _variablesToReset.begin(); i != _variablesToReset.end(); ++i)
 				{
-					if((*i)->resetTime + 10000 <= time)
+					if((*i)->resetTime + 5000 <= time)
 					{
 						variablesToReset.push_back(*i);
 						positionsToDelete.push_back(index);
@@ -198,8 +203,19 @@ void Peer::worker()
 				_variablesToResetMutex.unlock();
 				for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = variablesToReset.begin(); i != variablesToReset.end(); ++i)
 				{
-					std::shared_ptr<RPC::RPCVariable> rpcValue = valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->value);
-					setValue((*i)->channel, (*i)->key, rpcValue);
+					if((*i)->isDominoEvent)
+					{
+						valuesCentral.at((*i)->channel).at((*i)->key).value = (*i)->value;
+						std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
+						std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->value) });
+						if(GD::debugLevel >= 4) std::cout << "Info: Domino event: " << (*i)->key << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << " was set to " << (*i)->value << "." << std::endl;
+						GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
+					}
+					else
+					{
+						std::shared_ptr<RPC::RPCVariable> rpcValue = valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->value);
+						setValue((*i)->channel, (*i)->key, rpcValue);
+					}
 				}
 				_variablesToResetMutex.lock();
 				for(std::vector<uint32_t>::reverse_iterator i = positionsToDelete.rbegin(); i != positionsToDelete.rend(); ++i)
@@ -495,7 +511,7 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 	}
 }
 
-void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, int64_t>& values)
+void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, int64_t>& values)
 {
 	try
 	{
@@ -516,15 +532,26 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, uint32_t& p
 			int32_t channelIndex = frame->channelField;
 			int32_t channel = -1;
 			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9);
+			frameID = frame->id;
+
 			for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
 			{
-				if(((int32_t)j->index) - 9 >= (signed)packet->payload()->size()) continue;
-				int64_t value = packet->getPosition(j->index, j->size, j->isSigned);
-
-				if(j->constValue > -1)
+				int64_t value = 0;
+				if(j->size > 0 && j->index > 0)
 				{
-					if(value != j->constValue) break; else continue;
+					if(((int32_t)j->index) - 9 >= (signed)packet->payload()->size()) continue;
+					value = packet->getPosition(j->index, j->size, j->isSigned);
+
+					if(j->constValue > -1)
+					{
+						if(value != j->constValue) break; else continue;
+					}
 				}
+				else if(j->constValue > -1)
+				{
+					value = j->constValue;
+				}
+				else continue;
 				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
 				{
 					parameterSetChannel = (channel < 0) ? 0 : channel;
@@ -559,12 +586,14 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		uint32_t parameterSetChannel = 0;
 		std::map<std::string, int64_t> values;
 		RPC::ParameterSet::Type::Enum parameterSetType;
-		getValuesFromPacket(packet, parameterSetChannel, parameterSetType, values);
+		std::string frameID;
+		getValuesFromPacket(packet, frameID, parameterSetChannel, parameterSetType, values);
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 
 		std::map<std::string, int64_t> sentValues;
 		std::shared_ptr<BidCoSPacket> sentPacket;
+		std::string sentFrameID;
 		if(packet->messageType() == 0x02) //ACK packet: Check if all values were set correctly. If not set value again
 		{
 			sentPacket = GD::devices.getCentral()->getSentPacket(address);
@@ -572,7 +601,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			{
 				uint32_t sentParameterSetChannel = 0;
 				RPC::ParameterSet::Type::Enum sentParameterSetType;
-				getValuesFromPacket(sentPacket, sentParameterSetChannel, sentParameterSetType, sentValues);
+				getValuesFromPacket(sentPacket, sentFrameID, sentParameterSetChannel, sentParameterSetType, sentValues);
 			}
 		}
 
@@ -588,7 +617,51 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			{
 				if(GD::debugLevel >= 4) std::cout << "Info: " << i->first << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << " was set to " << i->second << "." << std::endl;
 				valueKeys->push_back(i->first);
-				rpcValues->push_back(rpcDevice->channels.at(parameterSetChannel)->parameterSets.at(parameterSetType)->getParameter(i->first)->convertFromPacket(i->second));
+				std::shared_ptr<RPC::Parameter> parameter = rpcDevice->channels.at(parameterSetChannel)->parameterSets.at(parameterSetType)->getParameter(i->first);
+				rpcValues->push_back(parameter->convertFromPacket(i->second));
+				for(std::vector<std::shared_ptr<RPC::PhysicalParameterEvent>>::iterator j = parameter->physicalParameter->eventFrames.begin(); j != parameter->physicalParameter->eventFrames.end(); ++j)
+				{
+					if((*j)->frame == frameID)
+					{
+						if((*j)->dominoEvent)
+						{
+							if(!_variablesToReset.empty())
+							{
+								_variablesToResetMutex.lock();
+								for(std::vector<std::shared_ptr<VariableToReset>>::iterator k = _variablesToReset.begin(); k != _variablesToReset.end(); ++k)
+								{
+									if((*k)->channel == parameterSetChannel && (*k)->key == i->first)
+									{
+										if(GD::debugLevel >= 5) std::cerr << "Debug: Deleting element from _variablesToReset. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frameID << std::endl;
+										_variablesToReset.erase(k);
+										break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
+									}
+								}
+								_variablesToResetMutex.unlock();
+							}
+							std::shared_ptr<RPC::Parameter> delayParameter = rpcDevice->channels.at(parameterSetChannel)->parameterSets.at(parameterSetType)->getParameter((*j)->dominoEventDelayID);
+							if(!delayParameter) continue;
+							int64_t delay = delayParameter->convertFromPacket(valuesCentral[parameterSetChannel][(*j)->dominoEventDelayID].value)->integerValue;
+							if(delay < 0) continue; //0 is allowed. When 0 the parameter will be reset immediately
+							int64_t time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+							std::shared_ptr<VariableToReset> variable(new VariableToReset);
+							variable->channel = parameterSetChannel;
+							variable->value = (*j)->dominoEventValue;
+							variable->resetTime = time + (delay * 1000);
+							variable->key = i->first;
+							variable->isDominoEvent = true;
+							_variablesToResetMutex.lock();
+							_variablesToReset.push_back(variable);
+							_variablesToResetMutex.unlock();
+							if(_stopWorkerThread)
+							{
+								_stopWorkerThread = false;
+								_workerThread = std::thread(&Peer::worker, this);
+							}
+						}
+						break;
+					}
+				}
 			}
 		}
 		if(resendPacket && sentPacket)
@@ -842,7 +915,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 	try
 	{
 		if(channel < 0) channel = 0;
-		if(remoteChannel < 0) channel = 0;
+		if(remoteChannel < 0) remoteChannel = 0;
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(type == RPC::ParameterSet::Type::none) type = RPC::ParameterSet::Type::link;
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
@@ -1846,6 +1919,16 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		}
 		else if(rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::command) return RPC::RPCVariable::createError(-6, "Parameter is not settable.");
+		if(!rpcParameter->conversion.empty() && rpcParameter->conversion.at(0)->type == RPC::ParameterConversion::Type::Enum::toggle)
+		{
+			std::string toggleKey = rpcParameter->conversion.at(0)->stringValue;
+			if(toggleKey.empty()) return RPC::RPCVariable::createError(-6, "No toggle parameter specified (parameter attribute value is empty).");
+			if(valuesCentral[channel].find(toggleKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Toggle parameter not found.");
+			if(valuesCentral[channel][toggleKey].rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeBoolean) return RPC::RPCVariable::createError(-6, "Toggle parameter has to be of type boolean.");
+			std::shared_ptr<RPC::RPCVariable> toggleValue = valuesCentral[channel][toggleKey].rpcParameter->convertFromPacket(valuesCentral[channel][toggleKey].value);
+			toggleValue->booleanValue = !toggleValue->booleanValue;
+			return setValue(channel, toggleKey, toggleValue);
+		}
 		std::string setRequest = rpcParameter->physicalParameter->setRequest;
 		if(setRequest.empty()) return RPC::RPCVariable::createError(-6, "parameter is read only");
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return RPC::RPCVariable::createError(-6, "frame not found");
@@ -1910,7 +1993,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 					}
 					_variablesToResetMutex.unlock();
 				}
-				if(!value->booleanValue) continue;
+				if(!value->booleanValue || valuesCentral[channel][i->additionalParameter].value == 0) continue;
 				std::shared_ptr<CallbackFunctionParameter> parameters(new CallbackFunctionParameter());
 				parameters->integers.push_back(channel);
 				parameters->integers.push_back(0); //false = off

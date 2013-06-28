@@ -54,7 +54,6 @@ namespace RPC
 			std::mutex _stateMutex;
 			std::vector<int32_t> _fileDescriptors;
 			std::vector<std::thread> _readThreads;
-			std::mutex _sendMutex;
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;
 			RPCDecoder _rpcDecoder;
 			RPCEncoder _rpcEncoder;

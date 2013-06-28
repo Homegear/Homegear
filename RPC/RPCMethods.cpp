@@ -786,15 +786,15 @@ std::shared_ptr<RPCVariable> RPCGetValue::invoke(std::shared_ptr<std::vector<std
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
+		std::string serialNumber;
+		uint32_t channel = 0;
 		int32_t pos = parameters->at(0)->stringValue.find(':');
-		if(pos != 10 || parameters->at(0)->stringValue.size() < 12)
+		if(pos > -1)
 		{
-			if(GD::debugLevel >= 3) std::cout << "Warning: Wrong serial number format in getValue." << std::endl;
-			return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 		}
-
-		std::string serialNumber = parameters->at(0)->stringValue.substr(0, 10);
-		uint32_t channel = std::stol(parameters->at(0)->stringValue.substr(11));
+		else serialNumber = parameters->at(0)->stringValue;
 
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 		if(!central)
@@ -1211,16 +1211,17 @@ std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcVariant }));
-		if(error != ParameterError::Enum::noError) return getError(error);
+		ParameterError::Enum error2 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError) return getError((error != ParameterError::Enum::noError) ? error : error2);
+		std::string serialNumber;
+		uint32_t channel = 0;
 		int32_t pos = parameters->at(0)->stringValue.find(':');
-		if(pos != 10 || parameters->at(0)->stringValue.size() < 12)
+		if(pos > -1)
 		{
-			if(GD::debugLevel >= 3) std::cout << "Warning: Wrong serial number format in setValue." << std::endl;
-			return RPC::RPCVariable::createError(-2, "Wrong serial number format.");
+			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 		}
-
-		std::string serialNumber = parameters->at(0)->stringValue.substr(0, 10);
-		uint32_t channel = std::stol(parameters->at(0)->stringValue.substr(11));
+		else serialNumber = parameters->at(0)->stringValue;
 
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 		if(!central)
@@ -1228,7 +1229,10 @@ std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std
 			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method setValue. Please add a central device." << std::endl;
 			return RPCVariable::createError(-32500, ": Could not execute RPC method setValue. Please add a central device.");
 		}
-		return central->setValue(serialNumber, channel, parameters->at(1)->stringValue, parameters->at(2));
+		std::shared_ptr<RPC::RPCVariable> value;
+		if(parameters->size() == 3) value = parameters->at(2);
+		else value.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+		return central->setValue(serialNumber, channel, parameters->at(1)->stringValue, value);
 	}
 	catch(const std::exception& ex)
     {

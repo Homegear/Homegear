@@ -52,7 +52,7 @@ class ParameterConversion
 public:
 	struct Type
 	{
-		enum Enum { none, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat };
+		enum Enum { none, toggle, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat };
 	};
 	Type::Enum type = Type::Enum::none;
 	std::unordered_map<int32_t, int32_t> integerValueMapDevice;
@@ -70,6 +70,7 @@ public:
 	int32_t mantissaSize = 11;
 	int32_t exponentStart = 0;
 	int32_t exponentSize = 5;
+	std::string stringValue;
 
 	ParameterConversion() {}
 	ParameterConversion(xml_node<>* node);
@@ -114,6 +115,7 @@ public:
 	ParameterDescription description;
 	bool omitIfSet = false;
 	int32_t omitIf = 0;
+	bool loopback = false;
 
 	Parameter() { logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger()); physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter()); }
 	Parameter(xml_node<>* node, bool checkForID = false);
@@ -209,6 +211,7 @@ public:
 	bool hasTeam = false;
 	bool aesDefault = false;
 	bool hidden = false;
+	bool autoregister = false;
 	double countFromSysinfo = -1;
 	double countFromSysinfoSize = 1;
 	std::string teamTag;

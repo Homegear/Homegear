@@ -811,7 +811,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
 		bool multiplePackets = false;
 		bool multiPacketEnd = false;
-		if(sentPacket && sentPacket->payload()->at(1) == 0x03) //Peer request
+		if(sentPacket && sentPacket->payload()->at(1) == 0x03 && sentPacket->payload()->at(0) == packet->payload()->at(0)) //Peer request
 		{
 			Peer* peer = _peers[packet->senderAddress()].get();
 			for(uint32_t i = 1; i < packet->payload()->size() - 1; i += 4)

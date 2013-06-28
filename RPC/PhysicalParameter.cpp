@@ -13,6 +13,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		if(attributeName == "type") {
 			if(attributeValue == "integer") type = Type::Enum::typeInteger;
 			else if(attributeValue == "boolean") type = Type::Enum::typeBoolean;
+			else if(attributeValue == "string") type = Type::Enum::typeString;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown physical type: " << attributeValue << std::endl;
 		}
 		else if(attributeName == "interface")
@@ -41,6 +42,8 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		else if(attributeName == "size") size = HelperFunctions::getDouble(attributeValue);
 		else if(attributeName == "counter") counter = attributeValue;
 		else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
+		else if(attributeName == "id") { id = attributeValue; }
+		else if(attributeName == "save_on_change") {} //not necessary, all values are saved on change
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"physical\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* physicalNode = node->first_node(); physicalNode; physicalNode = physicalNode->next_sibling())
@@ -60,7 +63,29 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		else if(nodeName == "event")
 		{
 			attr = physicalNode->first_attribute("frame");
-			if(attr) eventFrames.push_back(std::string(attr->value()));
+			if(!attr) continue;
+			std::shared_ptr<PhysicalParameterEvent> event(new PhysicalParameterEvent());
+			event->frame = std::string(attr->value());
+			if(type == Type::Enum::typeInteger)
+			{
+				for(xml_node<>* eventNode = physicalNode->first_node(); eventNode; eventNode = eventNode->next_sibling())
+				{
+					std::string eventNodeName(eventNode->name());
+					if(eventNodeName == "domino_event")
+					{
+						xml_attribute<>* attr1 = eventNode->first_attribute("value");
+						xml_attribute<>* attr2 = eventNode->first_attribute("delay_id");
+						if(!attr1 || !attr2) continue;
+						event->dominoEvent = true;
+						std::string eventValue = std::string(attr1->value());
+						event->dominoEventValue = HelperFunctions::getNumber(eventValue);
+						event->dominoEventDelayID = std::string(attr2->value());
+					}
+					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node for \"physical\\event\": " << eventNodeName << std::endl;
+				}
+			}
+			else if(GD::debugLevel >= 3) std::cout << "Warning: domino_event is only supported for physical type integer." << std::endl;
+			eventFrames.push_back(event);
 		}
 		else if(nodeName == "reset_after_send")
 		{

@@ -48,24 +48,43 @@ void RPCServer::mainThread()
 	int32_t clientFileDescriptor;
 	while(!_stopServer)
 	{
-		clientFileDescriptor = getClientFileDescriptor();
-		if(clientFileDescriptor < 0)
+		try
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-			continue;
-		}
-		if(clientFileDescriptor > _maxConnections)
-		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Client connection rejected, because there are too many clients connected to me." << std::endl;
-			close(clientFileDescriptor);
-			continue;
-		}
-		_stateMutex.lock();
-		_fileDescriptors.push_back(clientFileDescriptor);
-		_stateMutex.unlock();
+			clientFileDescriptor = getClientFileDescriptor();
+			if(clientFileDescriptor < 0)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				continue;
+			}
+			if(clientFileDescriptor > _maxConnections)
+			{
+				if(GD::debugLevel >= 2) std::cout << "Error: Client connection rejected, because there are too many clients connected to me." << std::endl;
+				shutdown(clientFileDescriptor, 0);
+				close(clientFileDescriptor);
+				continue;
+			}
+			_stateMutex.lock();
+			_fileDescriptors.push_back(clientFileDescriptor);
+			_stateMutex.unlock();
 
-		_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
-		_readThreads.back().detach();
+			_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
+			_readThreads.back().detach();
+		}
+		catch(const std::exception& ex)
+		{
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			_stateMutex.unlock();
+		}
+		catch(const Exception& ex)
+		{
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			_stateMutex.unlock();
+		}
+		catch(...)
+		{
+			std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+			_stateMutex.unlock();
+		}
 	}
 	close(_serverFileDescriptor);
 	_serverFileDescriptor = -1;
@@ -75,26 +94,21 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 {
 	try
 	{
-		if(!data) return;
-		_sendMutex.lock();
+		if(!data || data->empty()) return;
 		int32_t ret = send(clientFileDescriptor, &data->at(0), data->size(), 0);
 		if(closeConnection) shutdown(clientFileDescriptor, 1);
-		_sendMutex.unlock();
 		if(ret != (signed)data->size() && GD::debugLevel >= 3) std::cout << "Warning: Error sending data to client." << std::endl;
 	}
     catch(const std::exception& ex)
     {
-    	_sendMutex.unlock();
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
-    	_sendMutex.unlock();
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
-    	_sendMutex.unlock();
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
 }
@@ -399,6 +413,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 		}
 		//This point is only reached, when stopServer is true
 		removeClientFileDescriptor(clientFileDescriptor);
+		shutdown(clientFileDescriptor, 0);
 		close(clientFileDescriptor);
 	}
     catch(const std::exception& ex)
@@ -476,6 +491,10 @@ void RPCServer::getFileDescriptor()
 		for(struct addrinfo *info = serverInfo; info != 0; info = info->ai_next) {
 			fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 			if(fileDescriptor == -1) continue;
+			if(!(fcntl(fileDescriptor, F_GETFL) & O_NONBLOCK))
+			{
+				if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK) < 0) throw Exception("Error: Could not set socket options.");
+			}
 			if(setsockopt(fileDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw Exception("Error: Could not set socket options.");
 			if(bind(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) continue;
 			break;
@@ -486,17 +505,14 @@ void RPCServer::getFileDescriptor()
     }
     catch(const std::exception& ex)
     {
-    	_sendMutex.unlock();
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
-    	_sendMutex.unlock();
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
-    	_sendMutex.unlock();
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
 }
