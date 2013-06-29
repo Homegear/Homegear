@@ -153,11 +153,40 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 			uint32_t queueLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 			if(queueLength > 6)
 			{
-				pendingBidCoSQueues->push(std::shared_ptr<BidCoSQueue>(new BidCoSQueue(serializedObject.substr(pos, queueLength), device))); pos += queueLength;
-				std::shared_ptr<BidCoSQueue> queue = pendingBidCoSQueues->back();
+				std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(serializedObject.substr(pos, queueLength), device)); pos += queueLength;
 				queue->noSending = true;
 				if(queue->getQueueType() == BidCoSQueueType::UNPAIRING || queue->getQueueType() == BidCoSQueueType::CONFIG) queue->serviceMessages = serviceMessages;
+				bool hasCallbackFunction = std::stol(serializedObject.substr(pos, 1)); pos += 1;
+				if(hasCallbackFunction)
+				{
+					std::shared_ptr<CallbackFunctionParameter> parameters(new CallbackFunctionParameter());
+					parameters->integers.push_back(std::stoll(serializedObject.substr(pos, 4), 0, 16)); pos += 4;
+					uint32_t keyLength = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+					parameters->strings.push_back(serializedObject.substr(pos, keyLength)); pos += keyLength;
+					parameters->integers.push_back(std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
+					parameters->integers.push_back(std::stoll(serializedObject.substr(pos, 8), 0, 16) * 1000); pos += 8;
+					queue->callbackParameter = parameters;
+					queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<Peer, &Peer::addVariableToResetCallback>(this);
+				}
+				pendingBidCoSQueues->push(queue);
 			}
+		}
+		uint32_t variablesToResetSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t i = 0; i < variablesToResetSize; i++)
+		{
+			std::shared_ptr<VariableToReset> variable(new VariableToReset());
+			variable->channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+			uint32_t keyLength = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+			variable->key = serializedObject.substr(pos, keyLength); pos += keyLength;
+			variable->value = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			variable->resetTime = std::stoll(serializedObject.substr(pos, 8), 0, 16) * 1000; pos += 8;
+			variable->isDominoEvent = std::stol(serializedObject.substr(pos, 1)); pos += 1;
+			_variablesToReset.push_back(variable);
+		}
+		if(!_variablesToReset.empty())
+		{
+			_stopWorkerThread = false;
+			_workerThread = std::thread(&Peer::worker, this);
 		}
 	}
 	catch(const std::exception& ex)
@@ -380,10 +409,31 @@ std::string Peer::serialize()
 	stringstream << std::setw(8) << pendingBidCoSQueues->size();
 	while(!pendingBidCoSQueues->empty())
 	{
-		std::string bidCoSQueue = pendingBidCoSQueues->front()->serialize();
+		std::shared_ptr<BidCoSQueue> queue = pendingBidCoSQueues->front();
+		std::string bidCoSQueue = queue->serialize();
 		stringstream << std::setw(8) << bidCoSQueue.size();
 		stringstream << bidCoSQueue;
+		bool hasCallbackFunction = (queue->callbackParameter && queue->callbackParameter->integers.size() == 3 && queue->callbackParameter->strings.size() == 1);
+		stringstream << std::setw(1) << (int32_t)hasCallbackFunction;
+		if(hasCallbackFunction)
+		{
+			stringstream << std::setw(4) << queue->callbackParameter->integers.at(0);
+			stringstream << std::setw(4) << queue->callbackParameter->strings.at(0).size();
+			stringstream << queue->callbackParameter->strings.at(0);
+			stringstream << std::setw(8) << queue->callbackParameter->integers.at(1);
+			stringstream << std::setw(8) << (queue->callbackParameter->integers.at(2) / 1000);
+		}
 		pendingBidCoSQueues->pop();
+	}
+	stringstream << std::setw(8) << _variablesToReset.size();
+	for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = _variablesToReset.begin(); i != _variablesToReset.end(); ++i)
+	{
+		stringstream << std::setw(4) << (*i)->channel;
+		stringstream << std::setw(4) << (*i)->key.size();
+		stringstream << (*i)->key;
+		stringstream << std::setw(8) << (*i)->value;
+		stringstream << std::setw(8) << ((*i)->resetTime / 1000);
+		stringstream << std::setw(1) << (int32_t)(*i)->isDominoEvent;
 	}
 	stringstream << std::dec;
 	return stringstream.str();
@@ -578,9 +628,66 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string
     }
 }
 
+void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::string& frameID, uint32_t channel)
+{
+	try
+	{
+		if(!parameter->hasDominoEvents) return;
+		for(std::vector<std::shared_ptr<RPC::PhysicalParameterEvent>>::iterator j = parameter->physicalParameter->eventFrames.begin(); j != parameter->physicalParameter->eventFrames.end(); ++j)
+		{
+			if((*j)->frame != frameID) continue;
+			if(!(*j)->dominoEvent) continue;
+			if(!_variablesToReset.empty())
+			{
+				_variablesToResetMutex.lock();
+				for(std::vector<std::shared_ptr<VariableToReset>>::iterator k = _variablesToReset.begin(); k != _variablesToReset.end(); ++k)
+				{
+					if((*k)->channel == channel && (*k)->key == parameter->id)
+					{
+						if(GD::debugLevel >= 5) std::cerr << "Debug: Deleting element " << parameter->id << " from _variablesToReset. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frameID << std::endl;
+						_variablesToReset.erase(k);
+						break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
+					}
+				}
+				_variablesToResetMutex.unlock();
+			}
+			std::shared_ptr<RPC::Parameter> delayParameter = rpcDevice->channels.at(channel)->parameterSets.at(RPC::ParameterSet::Type::Enum::values)->getParameter((*j)->dominoEventDelayID);
+			if(!delayParameter) continue;
+			int64_t delay = delayParameter->convertFromPacket(valuesCentral[channel][(*j)->dominoEventDelayID].value)->integerValue;
+			if(delay < 0) continue; //0 is allowed. When 0 the parameter will be reset immediately
+			int64_t time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+			std::shared_ptr<VariableToReset> variable(new VariableToReset);
+			variable->channel = channel;
+			variable->value = (*j)->dominoEventValue;
+			variable->resetTime = time + (delay * 1000);
+			variable->key = parameter->id;
+			variable->isDominoEvent = true;
+			_variablesToResetMutex.lock();
+			_variablesToReset.push_back(variable);
+			_variablesToResetMutex.unlock();
+			if(_stopWorkerThread)
+			{
+				_stopWorkerThread = false;
+				_workerThread = std::thread(&Peer::worker, this);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
 void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
-
 	try
 	{
 		uint32_t parameterSetChannel = 0;
@@ -617,53 +724,16 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			{
 				if(GD::debugLevel >= 4) std::cout << "Info: " << i->first << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << " was set to " << i->second << "." << std::endl;
 				valueKeys->push_back(i->first);
-				std::shared_ptr<RPC::Parameter> parameter = rpcDevice->channels.at(parameterSetChannel)->parameterSets.at(parameterSetType)->getParameter(i->first);
-				rpcValues->push_back(parameter->convertFromPacket(i->second));
-				for(std::vector<std::shared_ptr<RPC::PhysicalParameterEvent>>::iterator j = parameter->physicalParameter->eventFrames.begin(); j != parameter->physicalParameter->eventFrames.end(); ++j)
-				{
-					if((*j)->frame == frameID)
-					{
-						if((*j)->dominoEvent)
-						{
-							if(!_variablesToReset.empty())
-							{
-								_variablesToResetMutex.lock();
-								for(std::vector<std::shared_ptr<VariableToReset>>::iterator k = _variablesToReset.begin(); k != _variablesToReset.end(); ++k)
-								{
-									if((*k)->channel == parameterSetChannel && (*k)->key == i->first)
-									{
-										if(GD::debugLevel >= 5) std::cerr << "Debug: Deleting element from _variablesToReset. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frameID << std::endl;
-										_variablesToReset.erase(k);
-										break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
-									}
-								}
-								_variablesToResetMutex.unlock();
-							}
-							std::shared_ptr<RPC::Parameter> delayParameter = rpcDevice->channels.at(parameterSetChannel)->parameterSets.at(parameterSetType)->getParameter((*j)->dominoEventDelayID);
-							if(!delayParameter) continue;
-							int64_t delay = delayParameter->convertFromPacket(valuesCentral[parameterSetChannel][(*j)->dominoEventDelayID].value)->integerValue;
-							if(delay < 0) continue; //0 is allowed. When 0 the parameter will be reset immediately
-							int64_t time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-							std::shared_ptr<VariableToReset> variable(new VariableToReset);
-							variable->channel = parameterSetChannel;
-							variable->value = (*j)->dominoEventValue;
-							variable->resetTime = time + (delay * 1000);
-							variable->key = i->first;
-							variable->isDominoEvent = true;
-							_variablesToResetMutex.lock();
-							_variablesToReset.push_back(variable);
-							_variablesToResetMutex.unlock();
-							if(_stopWorkerThread)
-							{
-								_stopWorkerThread = false;
-								_workerThread = std::thread(&Peer::worker, this);
-							}
-						}
-						break;
-					}
-				}
+				rpcValues->push_back(rpcDevice->channels.at(parameterSetChannel)->parameterSets.at(parameterSetType)->getParameter(i->first)->convertFromPacket(i->second));
 			}
 		}
+
+		//We have to do this in a seperate loop, because all parameters need to be set first
+		for(std::map<std::string, int64_t>::iterator i = values.begin(); i != values.end(); ++i)
+		{
+			handleDominoEvent(rpcDevice->channels.at(parameterSetChannel)->parameterSets.at(parameterSetType)->getParameter(i->first), frameID, parameterSetChannel);
+		}
+
 		if(resendPacket && sentPacket)
 		{
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
@@ -1880,6 +1950,7 @@ void Peer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter>
 	{
 		if(parameters->integers.size() != 3) return;
 		if(parameters->strings.size() != 1) return;
+		if(GD::debugLevel >= 5) std::cerr << "Debug: addVariableToResetCallback invoked for parameter " << parameters->strings.at(0) << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << "." << std::endl;
 		std::shared_ptr<VariableToReset> variable(new VariableToReset);
 		variable->channel = parameters->integers.at(0);
 		variable->value = parameters->integers.at(1);

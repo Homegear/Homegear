@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <ncurses.h>
+//#include <ncurses.h>
 #include <execinfo.h>
 #include <signal.h>
 #include <sys/resource.h>

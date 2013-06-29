@@ -423,6 +423,14 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		else if(nodeName == "physical")
 		{
 			physicalParameter.reset(new PhysicalParameter(parameterNode));
+			for(std::vector<std::shared_ptr<PhysicalParameterEvent>>::iterator i = physicalParameter->eventFrames.begin(); i != physicalParameter->eventFrames.end(); ++i)
+			{
+				if((*i)->dominoEvent)
+				{
+					hasDominoEvents = true;
+					break;
+				}
+			}
 		}
 		else if(nodeName == "conversion")
 		{

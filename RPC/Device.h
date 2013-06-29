@@ -116,6 +116,7 @@ public:
 	bool omitIfSet = false;
 	int32_t omitIf = 0;
 	bool loopback = false;
+	bool hasDominoEvents = false;
 
 	Parameter() { logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger()); physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter()); }
 	Parameter(xml_node<>* node, bool checkForID = false);
