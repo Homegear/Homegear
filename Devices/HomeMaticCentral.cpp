@@ -85,7 +85,7 @@ void HomeMaticCentral::worker()
 			if(!_peers.empty())
 			{
 				if(lastPeer == 0) lastPeer = _peers.begin()->first;
-				//_peers.at(lastPeer)->saveToDatabase(_address);
+				_peers.at(lastPeer)->saveToDatabase(_address);
 				std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator peer = _peers.find(lastPeer);
 				if(peer != _peers.end())
 				{

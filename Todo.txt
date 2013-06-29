@@ -13,4 +13,5 @@
 - Delete metadata for all channels when peer is deleted
 - For some reason the shutter contact link parameter set is not shown in the HomeMatic configurator
 - Address specific mutexes in BidCoSPacketManager
+- Don't pair device in central when there is no xml file.
 Today:
