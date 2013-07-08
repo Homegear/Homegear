@@ -157,6 +157,7 @@ void BidCoSQueue::resend(uint32_t threadId)
 					send.detach();
 				}
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread
+				if(_stopResendThread) return;
 				if(resendCounter < 1) //This actually means that the message will be sent three times all together if there is no response
 				{
 					resendCounter++;
@@ -377,7 +378,19 @@ void BidCoSQueue::startResendThread()
 	{
 		if(noSending) return;
 		_queueMutex.lock();
-		uint8_t controlByte = (_queue.front().getType() == QueueEntryType::MESSAGE) ? _queue.front().getMessage()->getControlByte() : _queue.front().getPacket()->controlByte();
+		uint8_t controlByte = 0;
+		if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage())
+		{
+			controlByte = _queue.front().getMessage()->getControlByte();
+		}
+		else if(_queue.front().getPacket())
+		{
+			controlByte = _queue.front().getPacket()->controlByte();
+		}
+		else
+		{
+			if(GD::debugLevel >= 2) std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << "Packet or message pointer is empty." << std::endl;
+		}
 		_queueMutex.unlock();
 		if(!(controlByte & 0x02) && (controlByte & 0x20)) //Resend when no response?
 		{
