@@ -5,7 +5,6 @@ class CallbackFunctionParameter;
 
 void Peer::initializeCentralConfig()
 {
-	std::cout << "Hi" << std::endl;
 	if(!rpcDevice)
 	{
 		if(GD::debugLevel >= 3) std::cout << "Warning: Tried to initialize peer's central config without xmlrpcDevice being set." << std::endl;
@@ -43,7 +42,6 @@ void Peer::initializeCentralConfig()
 			}
 		}
 	}
-	std::cout << "Moin" << std::endl;
 }
 
 void Peer::initializeLinkConfig(int32_t channel, int32_t address)

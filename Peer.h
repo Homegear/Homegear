@@ -24,10 +24,10 @@ class BidCoSMessages;
 class VariableToReset
 {
 public:
-	uint32_t channel;
+	uint32_t channel = 0;
 	std::string key;
-	int64_t value;
-	int64_t resetTime;
+	int64_t value = 0;
+	int64_t resetTime = 0;
 	bool isDominoEvent = false;
 
 	VariableToReset() {}
