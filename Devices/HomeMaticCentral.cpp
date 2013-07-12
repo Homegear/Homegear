@@ -811,7 +811,8 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
 		bool multiplePackets = false;
 		bool multiPacketEnd = false;
-		if(sentPacket && sentPacket->payload()->at(1) == 0x03 && sentPacket->payload()->at(0) == packet->payload()->at(0)) //Peer request
+		//Peer request
+		if(sentPacket && sentPacket->payload()->at(1) == 0x03 && sentPacket->payload()->at(0) == packet->payload()->at(0))
 		{
 			Peer* peer = _peers[packet->senderAddress()].get();
 			for(uint32_t i = 1; i < packet->payload()->size() - 1; i += 4)
@@ -1446,6 +1447,28 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinkInfo(std::string send
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinkPeers(std::string serialNumber, int32_t channel)
+{
+	try
+	{
+		if(_peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		return _peersBySerial[serialNumber]->getLinkPeers(channel);
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialNumber, int32_t channel, int32_t flags)
