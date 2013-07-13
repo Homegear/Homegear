@@ -1545,6 +1545,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel,
 {
 	try
 	{
+		if(channel < -1) channel = 0;
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "unknown channel");
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "unknown parameter set");
 
