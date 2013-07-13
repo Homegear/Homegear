@@ -100,9 +100,9 @@ int main()
     	GD::db.init(GD::executablePath + "/db.sql");
 
         GD::cul.init("/dev/ttyACM0");
-        if(!GD::cul.isOpen()) return -1;
         if(GD::debugLevel >= 4) std::cout << "Start listening for BidCoS packets..." << std::endl;
         GD::cul.startListening();
+        if(!GD::cul.isOpen()) return -1;
         if(GD::debugLevel >= 4) std::cout << "Loading XML RPC devices..." << std::endl;
         GD::rpcDevices.load();
         if(GD::debugLevel >= 4) std::cout << "Loading devices..." << std::endl;
