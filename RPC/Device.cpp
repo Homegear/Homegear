@@ -854,7 +854,7 @@ Device::Device(std::string xmlFilename) : Device()
 	parameter->id = "PAIRED_TO_CENTRAL";
 	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::hidden;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeBoolean;
 	parameter->physicalParameter->valueID = "PAIRED_TO_CENTRAL";
 	parameter->physicalParameter->list = 0;
@@ -865,7 +865,7 @@ Device::Device(std::string xmlFilename) : Device()
 	parameter->id = "CENTRAL_ADDRESS_BYTE_1";
 	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::hidden;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
 	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
 	parameter->physicalParameter->list = 0;
@@ -876,7 +876,7 @@ Device::Device(std::string xmlFilename) : Device()
 	parameter->id = "CENTRAL_ADDRESS_BYTE_2";
 	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::hidden;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
 	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_2";
 	parameter->physicalParameter->list = 0;
@@ -887,7 +887,7 @@ Device::Device(std::string xmlFilename) : Device()
 	parameter->id = "CENTRAL_ADDRESS_BYTE_3";
 	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::hidden;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
 	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
 	parameter->physicalParameter->list = 0;
