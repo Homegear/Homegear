@@ -34,6 +34,7 @@ class Cul
         void addHomeMaticDevice(HomeMaticDevice*);
         void removeHomeMaticDevice(HomeMaticDevice*);
         void sendPacket(std::shared_ptr<BidCoSPacket> packet);
+        bool isOpen() { return _fileDescriptor > -1; }
     protected:
     private:
         std::list<HomeMaticDevice*> _homeMaticDevices;
