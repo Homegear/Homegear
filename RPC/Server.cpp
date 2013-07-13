@@ -18,6 +18,7 @@ void Server::registerMethods()
 	_server->registerMethod("getInstallMode", std::shared_ptr<RPCMethod>(new RPCGetInstallMode()));
 	_server->registerMethod("getKeyMismatchDevice", std::shared_ptr<RPCMethod>(new RPCGetKeyMismatchDevice()));
 	_server->registerMethod("getLinkInfo", std::shared_ptr<RPCMethod>(new RPCGetLinkInfo()));
+	_server->registerMethod("getLinkPeers", std::shared_ptr<RPCMethod>(new RPCGetLinkPeers()));
 	_server->registerMethod("getLinks", std::shared_ptr<RPCMethod>(new RPCGetLinks()));
 	_server->registerMethod("getMetadata", std::shared_ptr<RPCMethod>(new RPCGetMetadata()));
 	_server->registerMethod("getParamset", std::shared_ptr<RPCMethod>(new RPCGetParamset()));

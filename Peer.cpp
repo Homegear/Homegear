@@ -275,7 +275,8 @@ void Peer::worker()
 
 void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 {
-	if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
+	//Allow unknown channel for myself. Needed e. g. for switches.
+	if(peer->address != address && rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 	_peers[channel].push_back(peer);
 	initializeLinkConfig(channel, peer->address);
 }
@@ -1209,7 +1210,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamset(int32_t channel, RPC::Parame
 		std::shared_ptr<RPC::RPCVariable> variables(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
 		std::shared_ptr<BasicPeer> remotePeer;
-		if(!remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber);
+		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber);
+		if(remotePeer && remotePeer->channel != remoteChannel)  return RPC::RPCVariable::createError(-2, "Unknown remote channel");
+
 		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
 		{
 			if((*i)->id.empty()) continue;
@@ -1319,18 +1322,14 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel)
 	try
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-		std::shared_ptr<RPC::RPCVariable> element;
 		if(channel > -1)
 		{
 			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 			//Return if no peers are paired to the channel
 			if(_peers.find(channel) == _peers.end() || _peers.at(channel).empty()) return array;
-			bool isSender = false;
 			//Return if there are no link roles defined
 			std::shared_ptr<RPC::LinkRole> linkRoles = rpcDevice->channels.at(channel)->linkRoles;
 			if(!linkRoles) return array;
-			if(!linkRoles->sourceNames.empty()) isSender = true;
-			else if(linkRoles->targetNames.empty()) return array;
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 			if(!central) return array; //central actually should always be set at this point
 			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
@@ -1340,12 +1339,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel)
 				bool peerKnowsMe = false;
 				if(peer && peer->getPeer((*i)->channel, address)) peerKnowsMe = true;
 
-				//Don't continue if peer is sender and exists in central's peer array to avoid generation of duplicate results when requesting all links (only generate results when we are sender)
-				if(!isSender && peerKnowsMe && avoidDuplicates) return array;
-				//If we are receiver this point is only reached, when the sender is not paired to this central
-
 				std::string peerSerial = (*i)->serialNumber;
-				int32_t brokenFlags = 0;
 				if((*i)->serialNumber.empty())
 				{
 					if(peerKnowsMe)
@@ -1353,101 +1347,28 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel)
 						(*i)->serialNumber = peer->getSerialNumber();
 						peerSerial = (*i)->serialNumber;
 					}
-					else if((*i)->address == address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
+					/*else if((*i)->address == address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
 					{
 						(*i)->serialNumber = _serialNumber;
 						peerSerial = (*i)->serialNumber;
-						if(isSender) brokenFlags = 2 | 4; //LINK_FLAG_RECEIVER_BROKEN | PEER_IS_ME
-						else brokenFlags = 1 | 4; //LINK_FLAG_SENDER_BROKEN | PEER_IS_ME
-					}
+					}*/
 					else
 					{
 						//Peer not paired to central
 						std::ostringstream stringstream;
 						stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << (*i)->address;
 						peerSerial = stringstream.str();
-						if(isSender) brokenFlags = 2; //LINK_FLAG_RECEIVER_BROKEN
-						else brokenFlags = 1; //LINK_FLAG_SENDER_BROKEN
 					}
 				}
-				if(brokenFlags == 0 && central->getPeers()->find((*i)->address) != central->getPeers()->end() && central->getPeers()->at((*i)->address)->serviceMessages->unreach) brokenFlags = 2;
-				if(serviceMessages->unreach) brokenFlags |= 1;
-				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DESCRIPTION", (*i)->linkDescription)));
-				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", brokenFlags)));
-				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("NAME", (*i)->linkName)));
-				if(isSender)
-				{
-					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RECEIVER", peerSerial + ":" + std::to_string((*i)->channel))));
-					if(flags & 4)
-					{
-						std::shared_ptr<RPC::RPCVariable> paramset;
-						if(!(brokenFlags & 2) && peer) paramset = peer->getParamset((*i)->channel, RPC::ParameterSet::Type::Enum::link, _serialNumber, channel);
-						else paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						if(paramset->errorStruct) paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						paramset->name = "RECEIVER_PARAMSET";
-						element->structValue->push_back(paramset);
-					}
-					if(flags & 16)
-					{
-						std::shared_ptr<RPC::RPCVariable> description;
-						if(!(brokenFlags & 2) && peer) description = peer->getDeviceDescription((*i)->channel);
-						else description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						if(description->errorStruct) description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						description->name = "RECEIVER_DESCRIPTION";
-						element->structValue->push_back(description);
-					}
-					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("SENDER", _serialNumber + ":" + std::to_string(channel))));
-					if(flags & 2)
-					{
-						std::shared_ptr<RPC::RPCVariable> paramset;
-						if(!(brokenFlags & 1)) paramset = getParamset(channel, RPC::ParameterSet::Type::Enum::link, peerSerial, (*i)->channel);
-						else paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						if(paramset->errorStruct) paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						paramset->name = "SENDER_PARAMSET";
-						element->structValue->push_back(paramset);
-					}
-					if(flags & 8)
-					{
-						std::shared_ptr<RPC::RPCVariable> description;
-						if(!(brokenFlags & 1)) description = getDeviceDescription(channel);
-						else description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						if(description->errorStruct) description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						description->name = "SENDER_DESCRIPTION";
-						element->structValue->push_back(description);
-					}
-				}
-				else //When sender is broken
-				{
-					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RECEIVER", _serialNumber + ":" + std::to_string(channel))));
-					if(flags & 4)
-					{
-						std::shared_ptr<RPC::RPCVariable> paramset;
-						//Sender is broken, so just insert empty paramset
-						paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						paramset->name = "RECEIVER_PARAMSET";
-						element->structValue->push_back(paramset);
-					}
-					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("SENDER", peerSerial + ":" + std::to_string((*i)->channel))));
-					if(flags & 2)
-					{
-						std::shared_ptr<RPC::RPCVariable> paramset;
-						//Sender is broken, so just insert empty paramset
-						paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						paramset->name = "SENDER_PARAMSET";
-						element->structValue->push_back(paramset);
-					}
-				}
-				array->arrayValue->push_back(element);
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel))));
 			}
 		}
 		else
 		{
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 			{
-				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-				element = getLink(i->first, flags, avoidDuplicates);
-				array->arrayValue->insert(array->arrayValue->end(), element->arrayValue->begin(), element->arrayValue->end());
+				std::shared_ptr<RPC::RPCVariable> linkPeers = getLinkPeers(i->first);
+				array->arrayValue->insert(array->arrayValue->end(), linkPeers->arrayValue->begin(), linkPeers->arrayValue->end());
 			}
 		}
 		return array;
@@ -1506,13 +1427,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 						(*i)->serialNumber = peer->getSerialNumber();
 						peerSerial = (*i)->serialNumber;
 					}
-					else if((*i)->address == address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
+					/*else if((*i)->address == address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
 					{
 						(*i)->serialNumber = _serialNumber;
 						peerSerial = (*i)->serialNumber;
 						if(isSender) brokenFlags = 2 | 4; //LINK_FLAG_RECEIVER_BROKEN | PEER_IS_ME
 						else brokenFlags = 1 | 4; //LINK_FLAG_SENDER_BROKEN | PEER_IS_ME
-					}
+					}*/
 					else
 					{
 						//Peer not paired to central
@@ -1620,12 +1541,17 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel, RPC::ParameterSet::Type::Enum type)
+std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
 {
 	try
 	{
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "unknown channel");
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "unknown parameter set");
+
+		std::shared_ptr<BasicPeer> remotePeer;
+		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber);
+		if(remotePeer && remotePeer->channel != remoteChannel)  return RPC::RPCVariable::createError(-2, "Unknown remote channel");
+
 		std::shared_ptr<RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
 		std::shared_ptr<RPC::RPCVariable> descriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));

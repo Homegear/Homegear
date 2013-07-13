@@ -667,9 +667,14 @@ std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<s
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
-		uint32_t channel = 0; //If no channel is defined take the base device's channel
+
+		int32_t channel = -1;
 		std::string serialNumber;
-		int32_t pos = parameters->at(0)->stringValue.find(':');
+		int32_t remoteChannel = -1;
+		std::string remoteSerialNumber;
+		int32_t pos = -1;
+
+		pos = parameters->at(0)->stringValue.find(':');
 		if(pos > -1)
 		{
 			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
@@ -677,13 +682,25 @@ std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<s
 		}
 		else serialNumber = parameters->at(0)->stringValue;
 
+		pos = parameters->at(1)->stringValue.find(':');
+		if(pos > -1)
+		{
+			remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+			if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+		}
+		else remoteSerialNumber = parameters->at(1)->stringValue;
+
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 		if(!central)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getParamsetDescription. Please add a central device." << std::endl;
-			return RPCVariable::createError(-32500, ": Could not execute RPC method getParamsetDescription. Please add a central device.");
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getParamsetId. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method getParamsetId. Please add a central device.");
 		}
-		return central->getParamsetDescription(serialNumber, channel, ParameterSet::typeFromString(parameters->at(1)->stringValue));
+
+		ParameterSet::Type::Enum type = ParameterSet::typeFromString(parameters->at(1)->stringValue);
+		if(type == ParameterSet::Type::Enum::none) type = ParameterSet::Type::Enum::link;
+
+		return central->getParamsetDescription(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
 	}
 	catch(const std::exception& ex)
     {
