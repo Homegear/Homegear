@@ -44,8 +44,9 @@ void Peer::initializeCentralConfig()
 	}
 }
 
-void Peer::initializeLinkConfig(int32_t channel, int32_t address)
+void Peer::initializeLinkConfig(int32_t channel, int32_t peerAddress, int32_t remoteChannel)
 {
+	if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 	if(rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
 	std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
 	RPCConfigurationParameter parameter;
@@ -56,7 +57,7 @@ void Peer::initializeLinkConfig(int32_t channel, int32_t address)
 			parameter = RPCConfigurationParameter();
 			parameter.rpcParameter = *j;
 			parameter.value = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-			linksCentral[channel][address][(*j)->id] = parameter;
+			linksCentral[channel][address][remoteChannel][(*j)->id] = parameter;
 		}
 	}
 }
@@ -276,13 +277,15 @@ void Peer::worker()
 void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 {
 	//Allow unknown channel for myself. Needed e. g. for switches.
-	if(peer->address != address && rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
+	if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 	_peers[channel].push_back(peer);
-	initializeLinkConfig(channel, peer->address);
+	initializeLinkConfig(channel, peer->address, peer->channel);
 }
 
-std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, std::string serialNumber)
+std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel)
 {
+	if(_peers.find(channel) == _peers.end()) return std::shared_ptr<BasicPeer>();
+
 	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 	{
 		if((*i)->serialNumber.empty())
@@ -293,16 +296,16 @@ std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, std::string serialNumb
 				(*i)->serialNumber = central->getPeers()->at((*i)->address)->getSerialNumber();
 			}
 		}
-		if((*i)->serialNumber == serialNumber) return *i;
+		if((*i)->serialNumber == serialNumber && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
 	}
 	return std::shared_ptr<BasicPeer>();
 }
 
-std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, int32_t address)
+std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, int32_t address, int32_t remoteChannel)
 {
 	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 	{
-		if((*i)->address == address) return *i;
+		if((*i)->address == address && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
 	}
 	return std::shared_ptr<BasicPeer>();
 }
@@ -468,36 +471,41 @@ void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<
 	}
 }
 
-void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>& config)
+void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config)
 {
 	stringstream << std::setw(8) << config.size();
-	for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>::const_iterator i = config.begin(); i != config.end(); ++i)
+	for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>::const_iterator i = config.begin(); i != config.end(); ++i)
 	{
 		stringstream << std::setw(8) << i->first;
 		stringstream << std::setw(8) << i->second.size();
-		for(std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+		for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 		{
 			stringstream << std::setw(8) << j->first;
 			stringstream << std::setw(8) << j->second.size();
-			for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
+			for(std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
 			{
-				if(!k->second.rpcParameter)
+				stringstream << std::setw(8) << k->first;
+				stringstream << std::setw(8) << k->second.size();
+				for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator l = k->second.begin(); l != k->second.end(); ++l)
 				{
-					if(GD::debugLevel >= 1) std::cout << "Critical: Parameter has no corresponding RPC parameter. Writing dummy data. Device: " << address << " Channel: " << i->first << std::endl;
-					stringstream << std::setw(8) << 0;
-					stringstream << std::setw(8) << 0;
-					stringstream << std::setw(1) << 0;
-					continue;
+					if(!l->second.rpcParameter)
+					{
+						if(GD::debugLevel >= 1) std::cout << "Critical: Parameter has no corresponding RPC parameter. Writing dummy data. Device: " << address << " Channel: " << i->first << std::endl;
+						stringstream << std::setw(8) << 0;
+						stringstream << std::setw(8) << 0;
+						stringstream << std::setw(1) << 0;
+						continue;
+					}
+					if(l->second.rpcParameter->id.size() == 0 && GD::debugLevel >= 2)
+					{
+						std::cout << "Error: Parameter has no id." << std::endl;
+					}
+					stringstream << std::setw(8) << l->second.rpcParameter->id.size();
+					stringstream << l->second.rpcParameter->id;
+					//Four bytes should be enough. Probably even two bytes would be sufficient.
+					stringstream << std::setw(8) << l->second.value;
+					stringstream << std::setw(1) << (int32_t)l->second.changed;
 				}
-				if(k->second.rpcParameter->id.size() == 0 && GD::debugLevel >= 2)
-				{
-					std::cout << "Error: Parameter has no id." << std::endl;
-				}
-				stringstream << std::setw(8) << k->second.rpcParameter->id.size();
-				stringstream << k->second.rpcParameter->id;
-				//Four bytes should be enough. Probably even two bytes would be sufficient.
-				stringstream << std::setw(8) << k->second.value;
-				stringstream << std::setw(1) << (int32_t)k->second.changed;
 			}
 		}
 	}
@@ -528,7 +536,7 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 	}
 }
 
-void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos)
+void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos)
 {
 	uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
 	for(uint32_t i = 0; i < configSize; i++)
@@ -538,23 +546,29 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 		for(uint32_t j = 0; j < peerCount; j++)
 		{
 			int32_t address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			uint32_t parameterCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			for(uint32_t k = 0; k < parameterCount; k++)
+			uint32_t channelCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			for(uint32_t k = 0; k < channelCount; k++)
 			{
-				uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				if(idLength == 0 && GD::debugLevel >= 1) std::cout << "Critical: Added central config parameter without id. Device: 0x" << std::hex << address << std::dec << " Channel: " << channel;
-				std::string id = serializedObject.substr(pos, idLength); pos += idLength;
-				RPCConfigurationParameter* parameter = &config[channel][address][id];
-				parameter->value = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				parameter->changed = (bool)std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-				if(rpcDevice == nullptr)
+				int32_t remoteChannel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				uint32_t parameterCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				for(uint32_t l = 0; l < parameterCount; l++)
 				{
-					if(GD::debugLevel >= 1) std::cout << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec;
-					continue;
+					uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+					if(idLength == 0 && GD::debugLevel >= 1) std::cout << "Critical: Added central config parameter without id. Device: 0x" << std::hex << address << std::dec << " Channel: " << channel;
+					std::string id = serializedObject.substr(pos, idLength); pos += idLength;
+					RPCConfigurationParameter* parameter = &config[channel][address][remoteChannel][id];
+					parameter->value = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+					parameter->changed = (bool)std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+					if(rpcDevice == nullptr)
+					{
+						if(GD::debugLevel >= 1) std::cout << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec;
+						continue;
+					}
+					parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
+					//Clean up - delete if the peer doesn't exist anymore
+					if(!getPeer(channel, address, remoteChannel)) config[channel][address].erase(remoteChannel);
+					if(config[channel][address].empty()) config[channel].erase(address);
 				}
-				parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
-				//Clean up - delete if the peer doesn't exist anymore
-				if(!getPeer(channel, address)) config[channel].erase(address);
 			}
 		}
 	}
@@ -999,6 +1013,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				int64_t value = 0;
 				if(configCentral[channel].find((*i)->name) == configCentral[channel].end()) continue;
 				RPCConfigurationParameter* parameter = &configCentral[channel][(*i)->name];
+				if(!parameter->rpcParameter) continue;
+				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
 				value = parameter->rpcParameter->convertToPacket(*i);
 				parameter->value = value;
 				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " set to 0x" << std::hex << value << std::dec << "." << std::endl;
@@ -1089,18 +1105,20 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 		else if(type == RPC::ParameterSet::Type::Enum::link)
 		{
 			std::shared_ptr<BasicPeer> remotePeer;
-			if(!remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber);
+			if(!remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
 			if(!remotePeer) return RPC::RPCVariable::createError(-3, "Not paired to this peer.");
-			if(remotePeer->channel != remoteChannel) RPC::RPCVariable::createError(-3, "Unknown remote channel.");
 			if(linksCentral[channel].find(remotePeer->address) == linksCentral[channel].end()) RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+			if(linksCentral[channel][address].find(remotePeer->channel) == linksCentral[channel][address].end()) RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 
 			std::map<int32_t, std::map<int32_t, uint8_t>> changedParameters;
 			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if((*i)->name.empty()) continue;
 				int64_t value = 0;
-				if(linksCentral[channel][remotePeer->address].find((*i)->name) == linksCentral[channel][remotePeer->address].end()) continue;
-				RPCConfigurationParameter* parameter = &linksCentral[channel][remotePeer->address][(*i)->name];
+				if(linksCentral[channel][remotePeer->address][remotePeer->channel].find((*i)->name) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;
+				RPCConfigurationParameter* parameter = &linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->name];
+				if(!parameter->rpcParameter) continue;
+				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
 				value = parameter->rpcParameter->convertToPacket(*i);
 				parameter->value = value;
 				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " set to 0x" << std::hex << value << std::dec << "." << std::endl;
@@ -1210,8 +1228,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamset(int32_t channel, RPC::Parame
 		std::shared_ptr<RPC::RPCVariable> variables(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
 		std::shared_ptr<BasicPeer> remotePeer;
-		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber);
-		if(remotePeer && remotePeer->channel != remoteChannel)  return RPC::RPCVariable::createError(-2, "Unknown remote channel");
+		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
 
 		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
 		{
@@ -1233,9 +1250,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamset(int32_t channel, RPC::Parame
 			else if(remotePeer)
 			{
 				if(linksCentral.find(channel) == linksCentral.end()) continue;
-				if(linksCentral[channel][remotePeer->address].find((*i)->id) == linksCentral[channel][remotePeer->address].end()) continue;
+				if(linksCentral[channel][remotePeer->address][remotePeer->channel].find((*i)->id) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;
 				if(remotePeer->channel != remoteChannel) continue;
-				element = linksCentral[channel][remotePeer->address][(*i)->id].rpcParameter->convertFromPacket(linksCentral[channel][remotePeer->address][(*i)->id].value);
+				element = linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->id].rpcParameter->convertFromPacket(linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->id].value);
 			}
 			else element = RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 
@@ -1337,7 +1354,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel)
 				std::shared_ptr<Peer> peer;
 				if(central->getPeers()->find((*i)->address) != central->getPeers()->end()) peer = central->getPeers()->at((*i)->address);
 				bool peerKnowsMe = false;
-				if(peer && peer->getPeer((*i)->channel, address)) peerKnowsMe = true;
+				if(peer && peer->getPeer(channel, address)) peerKnowsMe = true;
 
 				std::string peerSerial = (*i)->serialNumber;
 				if((*i)->serialNumber.empty())
@@ -1412,7 +1429,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 				std::shared_ptr<Peer> peer;
 				if(central->getPeers()->find((*i)->address) != central->getPeers()->end()) peer = central->getPeers()->at((*i)->address);
 				bool peerKnowsMe = false;
-				if(peer && peer->getPeer((*i)->channel, address)) peerKnowsMe = true;
+				if(peer && peer->getPeer(channel, address)) peerKnowsMe = true;
 
 				//Don't continue if peer is sender and exists in central's peer array to avoid generation of duplicate results when requesting all links (only generate results when we are sender)
 				if(!isSender && peerKnowsMe && avoidDuplicates) return array;
@@ -1443,6 +1460,12 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 						if(isSender) brokenFlags = 2; //LINK_FLAG_RECEIVER_BROKEN
 						else brokenFlags = 1; //LINK_FLAG_SENDER_BROKEN
 					}
+				}
+				//Relevent for switches
+				if(peerSerial == _serialNumber && rpcDevice->channels.find((*i)->channel) == rpcDevice->channels.end())
+				{
+					if(isSender) brokenFlags = 2 | 4; //LINK_FLAG_RECEIVER_BROKEN | PEER_IS_ME
+					else brokenFlags = 1 | 4; //LINK_FLAG_SENDER_BROKEN | PEER_IS_ME
 				}
 				if(brokenFlags == 0 && central->getPeers()->find((*i)->address) != central->getPeers()->end() && central->getPeers()->at((*i)->address)->serviceMessages->unreach) brokenFlags = 2;
 				if(serviceMessages->unreach) brokenFlags |= 1;
@@ -1550,11 +1573,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set");
 
 		std::shared_ptr<BasicPeer> remotePeer;
-		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber);
-		if(remotePeer && remotePeer->channel != remoteChannel)  return RPC::RPCVariable::createError(-2, "Unknown remote channel");
+		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
 
 		std::shared_ptr<RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
-		std::cout << "Bla: " << parameterSet->parameters.size() << std::endl;
 		std::shared_ptr<RPC::RPCVariable> descriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		std::shared_ptr<RPC::RPCVariable> element;

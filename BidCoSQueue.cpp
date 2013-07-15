@@ -461,7 +461,9 @@ void BidCoSQueue::pushPendingQueue()
 	try
 	{
 		if(!_pendingQueues || _pendingQueues->empty()) return;
-		std::shared_ptr<BidCoSQueue> queue = _pendingQueues->front();
+		std::shared_ptr<BidCoSQueue> queue;
+		while(_pendingQueues && !queue && !_pendingQueues->empty()) queue = _pendingQueues->front();
+		if(!queue) return;
 		_queueType = queue->getQueueType();
 		serviceMessages = queue->serviceMessages;
 		queueEmptyCallback = queue->queueEmptyCallback;

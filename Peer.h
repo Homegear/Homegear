@@ -81,7 +81,7 @@ class Peer
         std::unordered_map<int32_t, int32_t> config;
         std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
         std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> valuesCentral;
-        std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>> linksCentral;
+        std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>> linksCentral;
         std::shared_ptr<RPC::Device> rpcDevice;
 
         BasicPeer team;
@@ -92,19 +92,19 @@ class Peer
         std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>> pendingBidCoSQueues;
 
         void initializeCentralConfig();
-        void initializeLinkConfig(int32_t channel, int32_t address);
+        void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel);
         std::string serialize();
         void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config);
-        void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>& config);
+        void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config);
         void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
-        void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
+        void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
         void deleteFromDatabase(int32_t parentAddress);
         void saveToDatabase(int32_t parentAddress);
         void deletePairedVirtualDevices();
         bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
         void addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer);
-        std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address);
-        std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber);
+        std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address, int32_t remoteChannel = -1);
+        std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel = -1);
         void removePeer(int32_t channel, int32_t address);
         void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
 

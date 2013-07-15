@@ -276,6 +276,11 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
 	{
 		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable((bool)value));
 	}
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
+	{
+		LogicalParameterString* parameter = (LogicalParameterString*)logicalParameter.get();
+		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(parameter->defaultValue));
+	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
 		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(false));
@@ -852,9 +857,9 @@ Device::Device(std::string xmlFilename) : Device()
 
 	std::shared_ptr<Parameter> parameter(new Parameter());
 	parameter->id = "PAIRED_TO_CENTRAL";
-	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
+	parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::hidden;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeBoolean;
 	parameter->physicalParameter->valueID = "PAIRED_TO_CENTRAL";
 	parameter->physicalParameter->list = 0;
@@ -863,9 +868,9 @@ Device::Device(std::string xmlFilename) : Device()
 
 	parameter.reset(new Parameter());
 	parameter->id = "CENTRAL_ADDRESS_BYTE_1";
-	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
+	parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::hidden;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
 	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
 	parameter->physicalParameter->list = 0;
@@ -874,9 +879,9 @@ Device::Device(std::string xmlFilename) : Device()
 
 	parameter.reset(new Parameter());
 	parameter->id = "CENTRAL_ADDRESS_BYTE_2";
-	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
+	parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::hidden;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
 	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_2";
 	parameter->physicalParameter->list = 0;
@@ -885,9 +890,9 @@ Device::Device(std::string xmlFilename) : Device()
 
 	parameter.reset(new Parameter());
 	parameter->id = "CENTRAL_ADDRESS_BYTE_3";
-	parameter->uiFlags = Parameter::UIFlags::Enum::internal;
+	parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
 	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::hidden;
+	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
 	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
 	parameter->physicalParameter->list = 0;

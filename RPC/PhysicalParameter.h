@@ -35,7 +35,7 @@ public:
 	};
 	struct Interface
 	{
-		enum Enum { none, command, centralCommand, internal, config, store, hidden };
+		enum Enum { none, command, centralCommand, internal, config, store };
 	};
 	Type::Enum type = Type::Enum::none;
 	Interface::Enum interface = Interface::none;

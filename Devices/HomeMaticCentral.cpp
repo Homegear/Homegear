@@ -843,6 +843,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			int32_t channel = sentPacket->payload()->at(0);
 			int32_t list = sentPacket->payload()->at(6);
 			int32_t remoteAddress = (sentPacket->payload()->at(2) << 16) + (sentPacket->payload()->at(3) << 8) + sentPacket->payload()->at(4);
+			int32_t remoteChannel = sentPacket->payload()->at(5);
 			RPC::ParameterSet::Type::Enum type = (remoteAddress != 0) ? RPC::ParameterSet::Type::link : RPC::ParameterSet::Type::master;
 			Peer* peer = _peers[packet->senderAddress()].get();
 			std::shared_ptr<RPC::RPCVariable> parametersToEnforce;
@@ -878,10 +879,10 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 								}
 								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->configCentral[channel][(*i)->id].value << std::endl;
 							}
-							else if(peer->getPeer(channel, remoteAddress))
+							else if(peer->getPeer(channel, remoteAddress, remoteChannel))
 							{
-								peer->linksCentral[channel][remoteAddress][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter->size, false);
-								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->linksCentral[channel][remoteAddress][(*i)->id].value << std::endl;
+								peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id].value = packet->getPosition(position, (*i)->physicalParameter->size, false);
+								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set to " << peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id].value << std::endl;
 							}
 						}
 						else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->getSerialNumber() << " Channel: " << channel << " List: " << (*i)->physicalParameter->list << " Parameter index: " << (*i)->index << std::endl;
@@ -915,10 +916,10 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 									}
 									if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->configCentral[channel][(*j)->id].value << std::endl;
 								}
-								else if(peer->getPeer(channel, remoteAddress))
+								else if(peer->getPeer(channel, remoteAddress, remoteChannel))
 								{
-									peer->linksCentral[channel][remoteAddress][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter->size, false);
-									if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->linksCentral[channel][remoteAddress][(*j)->id].value << std::endl;
+									peer->linksCentral[channel][remoteAddress][remoteChannel][(*j)->id].value = packet->getPosition(position, (*j)->physicalParameter->size, false);
+									if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set to " << peer->linksCentral[channel][remoteAddress][remoteChannel][(*j)->id].value << std::endl;
 								}
 							}
 							else if(GD::debugLevel >= 2) std::cout << "Error: Device tried to set parameter without id. Device: " << std::hex << peer->address << std::dec << " Serial number: " << peer->getSerialNumber() << " Channel: " << channel << " List: " << (*j)->physicalParameter->list << " Parameter index: " << (*j)->index << std::endl;
