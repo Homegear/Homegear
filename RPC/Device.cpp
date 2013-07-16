@@ -278,8 +278,7 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 	{
-		LogicalParameterString* parameter = (LogicalParameterString*)logicalParameter.get();
-		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(parameter->defaultValue));
+		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(std::to_string(value)));
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
@@ -309,6 +308,11 @@ int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
 		return true;
+	}
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
+	{
+		//String is only supported when it is a number (like UI_HINT)
+		return HelperFunctions::getNumber(value->stringValue);
 	}
 	else
 	{

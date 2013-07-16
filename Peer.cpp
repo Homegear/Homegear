@@ -1014,7 +1014,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				if(configCentral[channel].find((*i)->name) == configCentral[channel].end()) continue;
 				RPCConfigurationParameter* parameter = &configCentral[channel][(*i)->name];
 				if(!parameter->rpcParameter) continue;
-				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
 				value = parameter->rpcParameter->convertToPacket(*i);
 				parameter->value = value;
 				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " set to 0x" << std::hex << value << std::dec << "." << std::endl;
@@ -1022,6 +1021,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				int32_t list = parameter->rpcParameter->physicalParameter->list;
 				if(list == 9999) list = 0;
 				value = parameter->rpcParameter->getBytes(value);
+				//Only send to device when parameter is of type config
+				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
 				if(changedParameters[list].find(intIndex) == changedParameters[list].end()) changedParameters[list][intIndex] = value;
 				else changedParameters[list][intIndex] |= value;
 			}
@@ -1118,7 +1119,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				if(linksCentral[channel][remotePeer->address][remotePeer->channel].find((*i)->name) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;
 				RPCConfigurationParameter* parameter = &linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->name];
 				if(!parameter->rpcParameter) continue;
-				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
 				value = parameter->rpcParameter->convertToPacket(*i);
 				parameter->value = value;
 				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " set to 0x" << std::hex << value << std::dec << "." << std::endl;
@@ -1126,6 +1126,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				int32_t list = parameter->rpcParameter->physicalParameter->list;
 				if(list == 9999) list = 0;
 				value = parameter->rpcParameter->getBytes(value);
+				//Only send to device when parameter is of type config
+				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
 				if(changedParameters[list].find(intIndex) == changedParameters[list].end()) changedParameters[list][intIndex] = value;
 				else changedParameters[list][intIndex] |= value;
 			}
