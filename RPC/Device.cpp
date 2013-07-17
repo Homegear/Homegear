@@ -104,12 +104,48 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 			value->floatValue = 0;
 			return;
 		}
-		uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
-		bits += std::lround(valueSize * 10) % 10;
-		if(bits == 0) bits = 7;
-		uint32_t maxNumber = 1 << bits;
-		if((unsigned)value->integerValue < maxNumber) value->floatValue = value->integerValue * factor;
-		else value->floatValue = (value->integerValue - maxNumber) * factor2;
+		if(valueSize > 0)
+		{
+			uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
+			bits += std::lround(valueSize * 10) % 10;
+			if(bits == 0) bits = 7;
+			uint32_t maxNumber = 1 << bits;
+			if((unsigned)value->integerValue < maxNumber) value->floatValue = value->integerValue * factor;
+			else value->floatValue = (value->integerValue - maxNumber) * factor2;
+		}
+		else
+		{
+			int32_t factorIndex = (value->integerValue & 0xFF) >> 5;
+			double factor = 0;
+			switch(factorIndex)
+			{
+			case 0:
+				factor = 0.1;
+				break;
+			case 1:
+				factor = 1;
+				break;
+			case 2:
+				factor = 5;
+				break;
+			case 3:
+				factor = 10;
+				break;
+			case 4:
+				factor = 60;
+				break;
+			case 5:
+				factor = 300;
+				break;
+			case 6:
+				factor = 600;
+				break;
+			case 7:
+				factor = 3600;
+				break;
+			}
+			value->floatValue = (value->integerValue & 0x1F) * factor;
+		}
 	}
 	else if(type == Type::Enum::integerTinyFloat)
 	{
@@ -149,12 +185,31 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 	}
 	else if(type == Type::Enum::floatConfigTime)
 	{
-		uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
-		bits += std::lround(valueSize * 10) % 10;
-		if(bits == 0) bits = 7;
-		uint32_t maxNumber = 1 << bits;
-		if(value->floatValue <= maxNumber - 1) value->integerValue = std::roundl(value->floatValue / factor);
-		else value->integerValue = maxNumber + std::roundl(value->floatValue / factor2);
+		if(valueSize > 0)
+		{
+			uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
+			bits += std::lround(valueSize * 10) % 10;
+			if(bits == 0) bits = 7;
+			uint32_t maxNumber = 1 << bits;
+			if(value->floatValue <= maxNumber - 1) value->integerValue = std::roundl(value->floatValue / factor);
+			else value->integerValue = maxNumber + std::roundl(value->floatValue / factor2);
+		}
+		else
+		{
+			int32_t factorIndex = 0;
+			double factor = 0.1;
+			if(value->floatValue < 0) value->floatValue = 0;
+			if(value->floatValue <= 3.1) { factorIndex = 0; factor = 0.1; }
+			else if(value->floatValue <= 31) { factorIndex = 1; factor = 1; }
+			else if(value->floatValue <= 155) { factorIndex = 2; factor = 5; }
+			else if(value->floatValue <= 310) { factorIndex = 3; factor = 10; }
+			else if(value->floatValue <= 1860) { factorIndex = 4; factor = 60; }
+			else if(value->floatValue <= 9300) { factorIndex = 5; factor = 300; }
+			else if(value->floatValue <= 18600) { factorIndex = 6; factor = 600; }
+			else { factorIndex = 7; factor = 3600; }
+
+			value->integerValue = ((factorIndex << 5) | std::lround(value->floatValue / factor)) & 0xFF;
+		}
 	}
 	else if(type == Type::Enum::integerTinyFloat)
 	{
@@ -190,7 +245,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "integer_integer_scale") type = Type::Enum::integerIntegerScale;
 			else if(attributeValue == "integer_integer_map") type = Type::Enum::integerIntegerMap;
 			else if(attributeValue == "boolean_integer") type = Type::Enum::booleanInteger;
-			else if(attributeValue == "float_configtime") type = Type::Enum::booleanInteger;
+			else if(attributeValue == "float_configtime") type = Type::Enum::floatConfigTime;
 			else if(attributeValue == "option_integer") type = Type::Enum::optionInteger;
 			else if(attributeValue == "integer_tinyfloat") type = Type::Enum::integerTinyFloat;
 			else if(attributeValue == "toggle") type = Type::Enum::toggle;
@@ -319,7 +374,10 @@ int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
 		{
 			LogicalParameterFloat* parameter = (LogicalParameterFloat*)logicalParameter.get();
-			if(value->floatValue > parameter->max) value->floatValue = parameter->max;
+			if(value->floatValue > parameter->max)
+			{
+				if(parameter->defaultValue <= parameter->max || value->floatValue > parameter->defaultValue) value->floatValue = parameter->max;
+			}
 			if(value->floatValue < parameter->min) value->floatValue = parameter->min;
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
