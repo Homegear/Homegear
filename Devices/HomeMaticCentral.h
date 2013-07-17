@@ -31,6 +31,7 @@ public:
 	void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
 	void handleCLICommand(std::string command);
 	virtual void enqueuePackets(int32_t deviceAddress, std::shared_ptr<BidCoSQueue> packets, bool pushPendingBidCoSQueues = false);
+	virtual void enqueuePendingQueues(int32_t deviceAddress);
 	int32_t getUniqueAddress(int32_t seed);
 	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
 	void addHomegearFeatures(std::shared_ptr<Peer> peer);

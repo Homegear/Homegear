@@ -251,6 +251,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmedi
 	try
 	{
 		if(!_pendingQueues || clearPendingQueues) _pendingQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
+		if(!pendingQueue) return;
 		_pendingQueues->push(pendingQueue);
 		pushPendingQueue();
 		if(popImmediately)

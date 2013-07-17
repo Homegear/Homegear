@@ -143,6 +143,28 @@ void HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
     }
 }
 
+void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
+{
+	try
+	{
+		if(_peers.find(deviceAddress) == _peers.end()) return;
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
+		queue->push(_peers[deviceAddress]->pendingBidCoSQueues);
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
 void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<BidCoSQueue> packets, bool pushPendingBidCoSQueues)
 {
 	try
