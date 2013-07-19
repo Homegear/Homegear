@@ -90,7 +90,7 @@ void startDaemon()
 		if(pid < 0) exit(1);
 		if(pid > 0) exit(0);
 		//Set process permission
-		umask(0);
+		umask(S_IWGRP | S_IWOTH);
 		//Set child processes id
 		sid = setsid();
 		if(sid < 0) exit(1);

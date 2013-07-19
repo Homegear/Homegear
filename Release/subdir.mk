@@ -20,6 +20,7 @@ CPP_SRCS += \
 ../Log.cpp \
 ../Peer.cpp \
 ../ServiceMessages.cpp \
+../Settings.cpp \
 ../main.cpp 
 
 OBJS += \
@@ -39,6 +40,7 @@ OBJS += \
 ./Log.o \
 ./Peer.o \
 ./ServiceMessages.o \
+./Settings.o \
 ./main.o 
 
 CPP_DEPS += \
@@ -58,6 +60,7 @@ CPP_DEPS += \
 ./Log.d \
 ./Peer.d \
 ./ServiceMessages.d \
+./Settings.d \
 ./main.d 
 
 
