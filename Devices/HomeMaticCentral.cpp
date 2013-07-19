@@ -51,9 +51,6 @@ void HomeMaticCentral::setUpBidCoSMessages()
 	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
 
 	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
-	/********** TEST - DON'T FORGET TO SWITCH BACK COMMENTS **********/
-	//_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x10, this, ACCESSPAIREDTOSENDER, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamResponse)));
-	/********** TEST END **********/
 
 	_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x3F, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleTimeRequest)));
 }
@@ -82,6 +79,7 @@ void HomeMaticCentral::worker()
 		try
 		{
 			std::this_thread::sleep_for(sleepingTime);
+			if(_stopWorkerThread) return;
 			if(!_peers.empty())
 			{
 				if(lastPeer == 0) lastPeer = _peers.begin()->first;
@@ -788,46 +786,6 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 {
 	try
 	{
-		/********** TEST - DON'T FORGET TO REMOVE SOURCE CODE **********/
-		/*if(packet->payload()->size() == 4 && packet->payload()->at(0) == 0x06 && packet->payload()->at(1) == 0x01 && packet->payload()->at(2) == 0xC8)
-		{
-			_messageCounter[0] = 0x2F;
-			if(_peers.find(packet->senderAddress()) == _peers.end()) return;
-			std::shared_ptr<Peer> peer = _peers[packet->senderAddress()];
-
-			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, packet->senderAddress());
-
-			std::vector<uint8_t> payload;
-			//CONFIG_START
-			payload.push_back(0x01);
-			payload.push_back(0x0E);
-			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
-
-			//CONFIG_WRITE_INDEX
-			payload.push_back(0x04);
-			payload.push_back(0x0E);
-			payload.push_back(0x98);
-			payload.push_back(0x3E);
-			payload.push_back(0x70);
-			payload.push_back(0x11);
-			payload.push_back(0x2C);
-			payload.push_back(0);
-			configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x02, _address, packet->senderAddress(), payload));
-			queue->push(configPacket);
-			//queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-			return;
-		}
-		else
-		{
-			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
-			if(!queue) return;
-			queue->pop();
-			return;
-		}*/
-		/********** TEST END **********/
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue) return;
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
@@ -1340,6 +1298,39 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
 			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = i->second->getDeviceDescription();
+			if(!descriptions) continue;
+			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
+			{
+				array->arrayValue->push_back(*j);
+			}
+		}
+		return array;
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listTeams()
+{
+	try
+	{
+		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+
+		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+		{
+			if(i->first.empty() || i->first.at(0) != '*') continue; //only add unknown devices
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = i->second->getDeviceDescription();
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)

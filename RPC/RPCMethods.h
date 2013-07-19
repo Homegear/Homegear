@@ -276,6 +276,16 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
+class RPCListTeams : public RPCMethod
+{
+public:
+	RPCListTeams()
+	{
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCLogLevel : public RPCMethod
 {
 public:

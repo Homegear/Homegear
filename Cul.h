@@ -45,6 +45,7 @@ class Cul
         bool _stopCallbackThread;
         std::string _lockfile;
         std::mutex _sendMutex;
+        bool _stopped = false;
 
         void openDevice();
         void closeDevice();

@@ -214,6 +214,7 @@ void Peer::worker()
 		try
 		{
 			std::this_thread::sleep_for(sleepingTime);
+			if(_stopWorkerThread) return;
 			time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 			if(!_variablesToReset.empty())
 			{
@@ -336,10 +337,36 @@ void Peer::deleteFromDatabase(int32_t parentAddress)
 
 void Peer::saveToDatabase(int32_t parentAddress)
 {
-	deleteFromDatabase(parentAddress);
-	std::ostringstream command;
-	command << "INSERT INTO peers VALUES(" << parentAddress << "," << address << ",'" <<  serialize() << "')";
-	GD::db.executeCommand(command.str());
+	try
+	{
+		std::ostringstream command;
+		command << "SELECT 1 FROM peers WHERE parent=" << std::dec << parentAddress << " AND address=" << address;
+		DataTable result = GD::db.executeCommand(command.str());
+		if(result.empty())
+		{
+			std::ostringstream command2;
+			command2 << "INSERT INTO peers VALUES(" << parentAddress << "," << address << ",'" <<  serialize() << "')";
+			GD::db.executeCommand(command2.str());
+		}
+		else
+		{
+			std::ostringstream command2;
+			command2 << "UPDATE peers SET serializedObject='" <<  serialize() << "' WHERE parent=" << std::dec << parentAddress << " AND address=" << address;
+			GD::db.executeCommand(command2.str());
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void Peer::deletePairedVirtualDevices()

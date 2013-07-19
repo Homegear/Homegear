@@ -14,15 +14,18 @@ class HomeMaticDevices;
 #include "RPC/Server.h"
 #include "RPC/Client.h"
 #include "RPC/Devices.h"
+#include "Settings.h"
 
 class GD {
 public:
+	static std::string configPath;
 	static std::string workingDirectory;
 	static std::string executablePath;
 	static HomeMaticDevices devices;
 	static RPC::Server rpcServer;
 	static RPC::Client rpcClient;
 	static RPC::Devices rpcDevices;
+	static Settings settings;
 	static Database db;
 	static Cul cul;
 	static int32_t debugLevel;

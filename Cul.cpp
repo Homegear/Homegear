@@ -236,6 +236,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
 {
     try
     {
+    	if(_stopped) return;
         if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _culDevice));
         int32_t bytesWritten = 0;
         int32_t i;
@@ -305,6 +306,7 @@ void Cul::startListening()
 		writeToDevice("Ar\r\n", false);
 		_listenThread = std::thread(&Cul::listen, this);
 		_listenThread.detach();
+		_stopped = false;
 	}
     catch(const std::exception& ex)
     {
@@ -324,6 +326,7 @@ void Cul::stopListening()
 {
 	try
 	{
+		_stopped = true;
 		if(_listenThread.joinable())
 		{
 			_stopCallbackThread = true;

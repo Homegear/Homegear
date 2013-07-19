@@ -12,12 +12,10 @@ RPCServer::RPCServer()
 RPCServer::~RPCServer()
 {
 	stop();
-	if(GD::debugLevel >= 4) std::cout << "XML RPC Server successfully shut down." << std::endl;
 }
 
 void RPCServer::start()
 {
-
 	_mainThread = std::thread(&RPCServer::mainThread, this);
 	_mainThread.detach();
 }
@@ -485,22 +483,41 @@ void RPCServer::getFileDescriptor()
 		hostInfo.ai_family = AF_UNSPEC;
 		hostInfo.ai_socktype = SOCK_STREAM;
 		hostInfo.ai_flags = AI_PASSIVE;
+		char buffer[100];
+		std::string port = std::to_string(GD::settings.rpcPort());
 
-		if(getaddrinfo(0, _port.c_str(), &hostInfo, &serverInfo) != 0) throw Exception("Error: Could not get address information.");
+		if(getaddrinfo(GD::settings.rpcInterface().c_str(), port.c_str(), &hostInfo, &serverInfo) != 0) throw Exception("Error: Could not get address information.");
 
-		for(struct addrinfo *info = serverInfo; info != 0; info = info->ai_next) {
-			fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+		bool bound = false;
+		for(struct addrinfo *info = serverInfo; info != 0; info = info->ai_next)
+		{
+			fileDescriptor = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
 			if(fileDescriptor == -1) continue;
 			if(!(fcntl(fileDescriptor, F_GETFL) & O_NONBLOCK))
 			{
 				if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK) < 0) throw Exception("Error: Could not set socket options.");
 			}
 			if(setsockopt(fileDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw Exception("Error: Could not set socket options.");
-			if(bind(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1) continue;
+			if(bind(fileDescriptor, info->ai_addr, info->ai_addrlen) == -1) continue;
+			std::string address;
+			switch (info->ai_family)
+			{
+				case AF_INET:
+				  inet_ntop (info->ai_family, &((struct sockaddr_in *) info->ai_addr)->sin_addr, buffer, 100);
+				  address = std::string(buffer);
+				  break;
+				case AF_INET6:
+				  inet_ntop (info->ai_family, &((struct sockaddr_in6 *) info->ai_addr)->sin6_addr, buffer, 100);
+				  address = std::string(buffer);
+				  break;
+			}
+			if(GD::debugLevel >= 4) std::cout << "Info: RPC Server started listening on address " << address << std::endl;
+			bound = true;
 			break;
 		}
 		freeaddrinfo(serverInfo);
-		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1) throw Exception("Error: Server could not start listening.");
+		if(!bound && fileDescriptor > -1) close(fileDescriptor);
+		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1 || !bound) throw Exception("Error: Server could not start listening.");
 		_serverFileDescriptor = fileDescriptor;
     }
     catch(const std::exception& ex)

@@ -118,11 +118,20 @@ void HomeMaticDevices::save()
 		{
 			(*i)->savePeersToDatabase();
 			std::ostringstream command;
-			command << "DELETE FROM devices WHERE address=" << std::dec << (*i)->address();
-			GD::db.executeCommand(command.str());
-			std::ostringstream command2;
-			command2 << "INSERT INTO devices VALUES(" << (*i)->address() << "," << (uint32_t)(*i)->deviceType() << ",'" << (*i)->serialize() << "'," << (int32_t)(*i)->messageCounter()->at(1) << "," << (*i)->lastDutyCycleEvent() << ")";
-			GD::db.executeCommand(command2.str());
+			command << "SELECT 1 FROM devices WHERE address=" << std::dec << (*i)->address();
+			DataTable result = GD::db.executeCommand(command.str());
+			if(result.empty())
+			{
+				std::ostringstream command2;
+				command2 << "INSERT INTO devices VALUES(" << (*i)->address() << "," << (uint32_t)(*i)->deviceType() << ",'" << (*i)->serialize() << "'," << (int32_t)(*i)->messageCounter()->at(1) << "," << (*i)->lastDutyCycleEvent() << ")";
+				GD::db.executeCommand(command2.str());
+			}
+			else
+			{
+				std::ostringstream command2;
+				command2 << "UPDATE devices SET serializedObject='" << (*i)->serialize() << "',dutyCycleMessageCounter=" << (int32_t)(*i)->messageCounter()->at(1) << ",lastDutyCycle=" << (*i)->lastDutyCycleEvent() << " WHERE address=" << std::dec << (*i)->address();
+				GD::db.executeCommand(command2.str());
+			}
 		}
 	}
 	catch(const std::exception& ex)

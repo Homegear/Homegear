@@ -994,6 +994,34 @@ std::shared_ptr<RPCVariable> RPCListDevices::invoke(std::shared_ptr<std::vector<
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCListTeams::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method listDevices. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method listDevices. Please add a central device.");
+		}
+		return central->listTeams();
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCLogLevel::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try

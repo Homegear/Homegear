@@ -1,6 +1,7 @@
 #include "GD.h"
 
 Cul GD::cul;
+std::string GD::configPath = "";
 std::string GD::workingDirectory = "";
 std::string GD::executablePath = "";
 HomeMaticDevices GD::devices;
@@ -10,3 +11,4 @@ RPC::Devices GD::rpcDevices;
 int32_t GD::debugLevel = 7;
 int32_t GD::rpcLogLevel = 1;
 bool GD::bigEndian = false;
+Settings GD::settings;

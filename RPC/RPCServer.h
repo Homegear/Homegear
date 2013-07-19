@@ -47,7 +47,6 @@ namespace RPC
 		private:
 			bool _stopServer = false;
 			std::thread _mainThread;
-			std::string _port = "2001";
 			int32_t _backlog = 10;
 			int32_t _serverFileDescriptor = 0;
 			int32_t _maxConnections = 100;

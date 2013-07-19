@@ -233,12 +233,9 @@ void HomeMaticDevice::savePeersToDatabase()
 {
 	try
 	{
-		deletePeersFromDatabase();
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			std::ostringstream command;
-			command << "INSERT INTO peers VALUES(" << _address << "," << i->first << ",'" <<  i->second->serialize() << "')";
-			GD::db.executeCommand(command.str());
+			i->second->saveToDatabase(_address);
 		}
 	}
 	catch(const std::exception& ex)

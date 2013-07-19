@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <memory>
+#include <sys/stat.h>
 
 #include "Cul.h"
 #include "Devices/HM-SD.h"
@@ -28,6 +29,31 @@ void exceptionHandler(int32_t signalNumber) {
   kill(getpid(), signalNumber); //Generate core dump
 }
 
+void killHandler(int32_t signalNumber)
+{
+	try
+	{
+		std::cout << "Stopping Homegear..." << std::endl;
+		GD::rpcServer.stop();
+		GD::rpcClient.reset();
+		GD::cul.stopListening();
+		GD::devices.save();
+		exit(0);
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
 int32_t getIntInput()
 {
 	std::string input;
@@ -46,10 +72,84 @@ int32_t getHexInput()
     return intInput;
 }
 
-int main()
+void printHelp()
+{
+	std::cout << "Usage: Homegear [OPTIONS]" << std::endl << std::endl;
+	std::cout << "Option\t\tMeaning" << std::endl;
+	std::cout << "--help\t\tShow this help" << std::endl;
+	std::cout << "-c <path>\tSpecify path to config file" << std::endl;
+	std::cout << "-d\t\tRun as daemon" << std::endl;
+}
+
+void startDaemon()
+{
+	try
+	{
+		pid_t pid, sid;
+		pid = fork();
+		if(pid < 0) exit(1);
+		if(pid > 0) exit(0);
+		//Set process permission
+		umask(0);
+		//Set child processes id
+		sid = setsid();
+		if(sid < 0) exit(1);
+		//Set root directory as working directory (always available)
+		if((chdir("/")) < 0) exit(1);
+
+		close(STDIN_FILENO);
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+int main(int argc, char* argv[])
 {
     try
     {
+    	bool startAsDaemon = false;
+    	for(int32_t i = 1; i < argc; i++)
+    	{
+    		std::string arg(argv[i]);
+    		if(arg == "--help")
+    		{
+    			printHelp();
+    			exit(0);
+    		}
+    		else if(arg == "-c")
+    		{
+    			if(i + 1 < argc)
+    			{
+    				GD::configPath = std::string(argv[i + 1]);
+    				if(GD::debugLevel >= 5) std::cout << "Debug: Config file path set to " << GD::configPath << std::endl;
+    				i++;
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+    		}
+    		else if(arg == "-d")
+    		{
+    			startAsDaemon = true;
+    		}
+    		else
+    		{
+    			printHelp();
+    			exit(1);
+    		}
+    	}
     	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
 			throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
 
@@ -65,6 +165,7 @@ int main()
 
     	//Enable printing of backtraces
     	signal(SIGSEGV, exceptionHandler);
+    	signal(SIGTERM, killHandler);
 
         /*int row,col;
         WINDOW* mainWindow = initscr();
@@ -84,6 +185,7 @@ int main()
         endwin();
         //delscreen for all screens!!!
         return 0;*/
+    	if(startAsDaemon) startDaemon();
 
     	std::shared_ptr<HomeMaticDevice> currentDevice;
 
@@ -97,9 +199,16 @@ int main()
 		path[length] = '\0';
 		GD::executablePath = std::string(path);
 		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/"));
-    	GD::db.init(GD::executablePath + "/db.sql");
+		if(GD::configPath.empty()) GD::configPath = "/etc/Homegear/main.conf";
+		GD::settings.load(GD::configPath);
+		if(startAsDaemon)
+		{
+			std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout);
+			std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr);
+		}
+    	GD::db.init(GD::settings.databasePath());
 
-        GD::cul.init("/dev/ttyACM0");
+        GD::cul.init(GD::settings.culDevice());
         if(GD::debugLevel >= 4) std::cout << "Start listening for BidCoS packets..." << std::endl;
         GD::cul.startListening();
         if(!GD::cul.isOpen()) return -1;
@@ -240,6 +349,11 @@ int main()
         GD::rpcClient.reset();
         GD::cul.stopListening();
         GD::devices.save();
+        if(startAsDaemon)
+        {
+        	fclose(stdout);
+        	fclose(stderr);
+        }
         return 0;
     }
     catch(const std::exception& ex)
