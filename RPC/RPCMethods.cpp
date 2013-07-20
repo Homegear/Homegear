@@ -1297,6 +1297,60 @@ std::shared_ptr<RPCVariable> RPCSetMetadata::invoke(std::shared_ptr<std::vector<
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCSetTeam::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+		ParameterError::Enum error2 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError) return getError((error != ParameterError::Enum::noError) ? error : error2);
+
+		int32_t deviceChannel = -1;
+		std::string deviceSerialNumber;
+		int32_t teamChannel = -1;
+		std::string teamSerialNumber;
+		int32_t pos = -1;
+
+		pos = parameters->at(0)->stringValue.find(':');
+		if(pos > -1)
+		{
+			deviceSerialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) deviceChannel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+		}
+		else deviceSerialNumber = parameters->at(0)->stringValue;
+
+		pos = parameters->at(1)->stringValue.find(':');
+		if(pos > -1)
+		{
+			teamSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+			if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) teamChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+		}
+		else teamSerialNumber = parameters->at(1)->stringValue;
+
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getLinks. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method getLinks. Please add a central device.");
+		}
+
+		return central->setTeam(deviceSerialNumber, deviceChannel, teamSerialNumber, teamChannel);
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try

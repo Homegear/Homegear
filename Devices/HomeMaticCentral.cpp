@@ -984,6 +984,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 							else team = _peersBySerial['*' + queue->peer->getSerialNumber()];
 							queue->peer->team.address = team->address;
 							queue->peer->team.serialNumber = team->getSerialNumber();
+							queue->peer->team.channel = i->first;
 							_peersBySerial[team->getSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(queue->peer->getSerialNumber(), i->first));
 							break;
 						}
@@ -1339,6 +1340,109 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listTeams()
 			}
 		}
 		return array;
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel)
+{
+	try
+	{
+		if(channel < 0) channel = 0;
+		if(teamChannel < 0) teamChannel = 0;
+		if(_peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		std::shared_ptr<Peer> peer = _peersBySerial.at(serialNumber);
+		if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(!peer->rpcDevice->channels[channel]->hasTeam) return RPC::RPCVariable::createError(-6, "Channel does not support teams.");
+		if(teamSerialNumber.empty()) //Reset team to default
+		{
+			if(!peer->team.serialNumber.empty() && peer->team.serialNumber.substr(1) == peer->getSerialNumber() && peer->team.channel == channel)
+			{
+				//Team already is default
+				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+			}
+			if(!peer->team.serialNumber.empty() && _peersBySerial.find(peer->team.serialNumber) != _peersBySerial.end())
+			{
+				std::shared_ptr<Peer> oldTeam = _peersBySerial[peer->team.serialNumber];
+				//Remove peer from old team
+				for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
+				{
+					if(i->first == peer->getSerialNumber() && i->second == peer->team.channel)
+					{
+						oldTeam->teamChannels.erase(i);
+						break;
+					}
+				}
+				//Delete team if there are no peers anymore
+				if(oldTeam->teamChannels.empty()) _peersBySerial.erase(oldTeam->getSerialNumber());
+			}
+
+			int32_t newChannel = -1;
+			//Get first channel which has a team
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+			{
+				if(i->second->hasTeam) newChannel = i->first;
+			}
+			if(newChannel < 0) return RPC::RPCVariable::createError(-6, "There are no team channels for this device.");
+			std::shared_ptr<Peer> team;
+			std::string newSerialNumber('*' + peer->getSerialNumber());
+			if(_peersBySerial.find(newSerialNumber) == _peersBySerial.end())
+			{
+				team = createTeam(peer->address, peer->deviceType, newSerialNumber);
+				team->rpcDevice = peer->rpcDevice->team;
+				_peersBySerial[newSerialNumber] = team;
+			}
+			else team = _peersBySerial['*' + peer->getSerialNumber()];
+			peer->team.address = team->address;
+			peer->team.serialNumber = team->getSerialNumber();
+			peer->team.channel = newChannel;
+			_peersBySerial[team->getSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), newChannel));
+		}
+		else //Set new team
+		{
+			if(!peer->team.serialNumber.empty() && peer->team.serialNumber == teamSerialNumber && peer->team.channel == teamChannel)
+			{
+				//Peer already is member of this team
+				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+			}
+			if(_peersBySerial.find(teamSerialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Team does not exist.");
+			std::shared_ptr<Peer> team = _peersBySerial[teamSerialNumber];
+			if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown team channel.");
+			if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return RPC::RPCVariable::createError(-6, "Peer channel is not compatible to team channel.");
+
+			if(!peer->team.serialNumber.empty() && _peersBySerial.find(peer->team.serialNumber) != _peersBySerial.end())
+			{
+				std::shared_ptr<Peer> oldTeam = _peersBySerial[peer->team.serialNumber];
+				//Remove peer from old team
+				for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
+				{
+					if(i->first == peer->getSerialNumber() && i->second == peer->team.channel)
+					{
+						oldTeam->teamChannels.erase(i);
+						break;
+					}
+				}
+				//Delete team if there are no peers anymore
+				if(oldTeam->teamChannels.empty()) _peersBySerial.erase(oldTeam->getSerialNumber());
+			}
+
+			peer->team.address = team->address;
+			peer->team.serialNumber = team->getSerialNumber();
+			peer->team.channel = channel;
+			_peersBySerial[team->getSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
+		}
 	}
 	catch(const std::exception& ex)
     {

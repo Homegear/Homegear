@@ -131,6 +131,7 @@ int main(int argc, char* argv[])
     			if(i + 1 < argc)
     			{
     				GD::configPath = std::string(argv[i + 1]);
+    				if(!GD::configPath.empty() && GD::configPath[GD::configPath.size() - 1] != '/') GD::configPath.push_back('/');
     				if(GD::debugLevel >= 5) std::cout << "Debug: Config file path set to " << GD::configPath << std::endl;
     				i++;
     			}
@@ -198,9 +199,9 @@ int main(int argc, char* argv[])
 		if (length == -1) throw Exception("Could not get executable path.");
 		path[length] = '\0';
 		GD::executablePath = std::string(path);
-		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/"));
-		if(GD::configPath.empty()) GD::configPath = "/etc/Homegear/main.conf";
-		GD::settings.load(GD::configPath);
+		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
+		if(GD::configPath.empty()) GD::configPath = "/etc/Homegear/";
+		GD::settings.load(GD::configPath + "main.conf");
 		if(startAsDaemon)
 		{
 			std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout);

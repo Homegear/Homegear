@@ -36,6 +36,7 @@ void Server::registerMethods()
 	_server->registerMethod("setInstallMode", std::shared_ptr<RPCMethod>(new RPCSetInstallMode()));
 	_server->registerMethod("setLinkInfo", std::shared_ptr<RPCMethod>(new RPCSetLinkInfo()));
 	_server->registerMethod("setMetadata", std::shared_ptr<RPCMethod>(new RPCSetMetadata()));
+	_server->registerMethod("setTeam", std::shared_ptr<RPCMethod>(new RPCSetTeam()));
 	_server->registerMethod("setValue", std::shared_ptr<RPCMethod>(new RPCSetValue()));
 }
 

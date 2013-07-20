@@ -114,6 +114,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 		messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		pairingComplete = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
 		team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		team.channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		if(stringSize > 0) { team.serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize; }
 		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
@@ -402,6 +403,7 @@ std::string Peer::serialize()
 	stringstream << std::setw(2) << (int32_t)messageCounter;
 	stringstream << std::setw(1) << (int32_t)pairingComplete;
 	stringstream << std::setw(8) << team.address;
+	stringstream << std::setw(4) << team.channel;
 	stringstream << std::setw(4) << team.serialNumber.size();
 	stringstream << team.serialNumber;
 	stringstream << std::setw(8) << config.size();

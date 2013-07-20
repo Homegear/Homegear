@@ -16,7 +16,7 @@ void Devices::load()
 		DIR* directory;
 		struct dirent* entry;
 		int32_t i = -1;
-		std::string deviceDir(GD::executablePath + "/Device types");
+		std::string deviceDir(GD::configPath + "Device types");
 		if((directory = opendir(deviceDir.c_str())) != 0)
 		{
 			while((entry = readdir(directory)) != 0)
@@ -46,9 +46,9 @@ void Devices::load()
 				}
 			}
 		}
-		else throw(Exception("Could not open directory \"Device types\"."));
-		if(i == -1) throw(Exception("No xml files found in \"Device types\"."));
-		if(i == 0) throw(Exception("Could not open any xml files in \"Device types\"."));
+		else throw(Exception("Could not open directory \"" + GD::configPath + "Device types\"."));
+		if(i == -1) throw(Exception("No xml files found in \"" + GD::configPath + "Device types\"."));
+		if(i == 0) throw(Exception("Could not open any xml files in \"" + GD::configPath + "Device types\"."));
 	}
     catch(const std::exception& ex)
     {
