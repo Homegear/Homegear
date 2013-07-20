@@ -1,71 +1,82 @@
-#!/bin/bash
-#
-# Daemon Name: Homegear
-#  
-# chkconfig: - 58 74
-# description: Homegear init script
+#!/bin/sh
 
 ### BEGIN INIT INFO
-# Provides:             Homegear
-# Required-Start:       $local_fs $remote_fs
-# Required-Stop:        $local_fs $remote_fs
-# Default-Start:        2 3 4 5
-# Default-Stop:			0 1 6
-# Short-Description:    Homegear
+# Provides:		Homegear
+# Required-Start:	$network $remote_fs $syslog
+# Required-Stop:	$network $remote_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 1 6
+# Short-Description:	Start Homegear
 ### END INIT INFO
 
-# Source function library.
-. /etc/init.d/functions
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-# Source networking configuration.
-. /etc/sysconfig/myconfig
+. /lib/lsb/init-functions
 
-prog=Homegear
-lockfile=/var/lock/subsys/$prog
+DAEMON=/usr/sbin/Homegear
+PIDFILE=/var/run/Homegear.pid
 
-start() { 
-    #Make some checks for requirements before continuing
-    [ "$NETWORKING" = "no" ] && exit 1
-    [ -x /usr/sbin/$prog ] || exit 5
+test -x $DAEMON || exit 5
 
-    # Start our daemon daemon
-    echo -n $"Starting $prog: "
-    daemon --pidfile /var/run/${proc}.pid $prog -d
-    RETVAL=$?
-    echo
+if [ -r /etc/default/Homegear ]; then
+        . /etc/default/Homegear
+fi
 
-    #If all is well touch the lock file
-    [ $RETVAL -eq 0 ] && touch $lockfile
-    return $RETVAL
+HOMEGEAR_OPTS="$HOMEGEAR_OPTS -d"
+
+LOCKFILE=/var/lock/Homegear
+
+lock_homegear() {
+        if [ -x /usr/bin/lockfile-create ]; then
+                lockfile-create $LOCKFILE
+                lockfile-touch $LOCKFILE &
+                LOCKTOUCHPID="$!"
+        fi
 }
 
-stop() {
-    echo -n $"Shutting down $prog: "
-    killproc $prog
-    RETVAL=$?
-    echo
-
-    #If all is well remove the lockfile
-    [ $RETVAL -eq 0 ] && rm -f $lockfile
-    return $RETVAL
+unlock_homegear() {
+        if [ -x /usr/bin/lockfile-create ] ; then
+                kill $LOCKTOUCHPID
+                lockfile-remove $LOCKFILE
+        fi
 }
 
-# See how we were called.
-case "$1" in
-  start)
-        start
-        ;;
-  stop)
-        stop
-        ;;
-  status)
-        status $prog
-        ;;
-  restart)
-        stop
-        start
-        ;;
-   *)
-        echo $"Usage: $0 {start|stop|status|restart}"
-        exit 2
+RUNASUSER=homegear
+RUNASGROUP=homegear
+
+case $1 in
+        start)
+                log_daemon_msg "Starting Homegear" "Homegear"
+                lock_homegear
+                start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- $HOMEGEAR_OPTS
+                status=$?
+                unlock_homegear
+                log_end_msg $status
+                ;;
+        stop)
+                log_daemon_msg "Stopping Homegear" "Homegear"
+                start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+                log_end_msg $?
+                rm -f $PIDFILE
+                ;;
+        restart|force-reload)
+                $0 stop && sleep 2 && $0 start
+                ;;
+        try-restart)
+                if $0 status >/dev/null; then
+                        $0 restart
+                else
+                        exit 0
+                fi
+                ;;
+        reload)
+                exit 3
+                ;;
+        status)
+                status_of_proc $DAEMON "Homegear"
+                ;;
+        *)
+                echo "Usage: $0 {start|stop|restart|try-restart|force-reload|status}"
+                exit 2
+                ;;
 esac

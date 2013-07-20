@@ -1379,7 +1379,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 				//Remove peer from old team
 				for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
 				{
-					if(i->first == peer->getSerialNumber() && i->second == peer->team.channel)
+					if(i->first == peer->getSerialNumber() && (signed)i->second == peer->team.channel)
 					{
 						oldTeam->teamChannels.erase(i);
 						break;
@@ -1428,7 +1428,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 				//Remove peer from old team
 				for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
 				{
-					if(i->first == peer->getSerialNumber() && i->second == peer->team.channel)
+					if(i->first == peer->getSerialNumber() && (signed)i->second == peer->team.channel)
 					{
 						oldTeam->teamChannels.erase(i);
 						break;

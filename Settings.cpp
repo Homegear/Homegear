@@ -11,7 +11,7 @@ void Settings::reset()
 {
 	_rpcInterface = "0.0.0.0";
 	_culDevice = "/dev/ttyACM0";
-	_databasePath = GD::executablePath + "/db.sql";
+	_databasePath = GD::executablePath + "db.sql";
 	_logfilePath = "/var/log/Homegear/homegear.log";
 }
 
@@ -78,7 +78,7 @@ void Settings::load(std::string filename)
 				else if(name == "databasepath")
 				{
 					_databasePath = value;
-					if(_databasePath.empty()) _databasePath = GD::executablePath + "/db.sql";
+					if(_databasePath.empty()) _databasePath = GD::executablePath + "db.sql";
 					if(GD::debugLevel >= 5) std::cout << "Debug: databasePath set to " << _databasePath << std::endl;
 				}
 				else if(name == "culdevice")

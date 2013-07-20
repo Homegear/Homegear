@@ -303,10 +303,10 @@ void Cul::startListening()
 		stopListening();
 		openDevice();
 		if(_fileDescriptor == -1) throw(Exception("Couldn't listen to CUL device, because the file descriptor is not valid: " + _culDevice));
+		_stopped = false;
 		writeToDevice("Ar\r\n", false);
 		_listenThread = std::thread(&Cul::listen, this);
 		_listenThread.detach();
-		_stopped = false;
 	}
     catch(const std::exception& ex)
     {
