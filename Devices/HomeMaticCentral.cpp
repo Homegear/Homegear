@@ -410,6 +410,21 @@ void HomeMaticCentral::deletePeer(int32_t address)
 		}
 		GD::rpcClient.broadcastDeleteDevices(deviceAddresses);
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+		if(!peer->team.serialNumber.empty() && _peersBySerial.find(peer->team.serialNumber) != _peersBySerial.end())
+		{
+			std::shared_ptr<Peer> team = _peersBySerial[peer->team.serialNumber];
+			//Remove peer from team
+			for(std::vector<std::pair<std::string, uint32_t>>::iterator i = team->teamChannels.begin(); i != team->teamChannels.end(); ++i)
+			{
+				if(i->first == peer->getSerialNumber() && (signed)i->second == peer->team.channel)
+				{
+					team->teamChannels.erase(i);
+					break;
+				}
+			}
+			//Delete team if there are no peers anymore
+			if(team->teamChannels.empty()) _peersBySerial.erase(team->getSerialNumber());
+		}
 		peer->deleteFromDatabase(_address);
 		peer->deletePairedVirtualDevices();
 		_peers.erase(address);
@@ -605,6 +620,11 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			if(_peers.find(packet->senderAddress()) == _peers.end())
 			{
 				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), serialNumber, 0, 0, packet->payload()->at(16));
+				if(!queue->peer)
+				{
+					if(GD::debugLevel >= 3) std::cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
+					return;
+				}
 				queue->peer->initializeCentralConfig();
 				peer = queue->peer.get();
 			}
@@ -663,7 +683,6 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			if((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::config) && _peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
 			{
 				pendingQueue->serviceMessages = peer->serviceMessages;
-				peer->serviceMessages->configPending = true;
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 				{
 					int32_t channel = i->first;
@@ -700,7 +719,12 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 						_messageCounter[0]++;
 					}
 				}
-				if(!pendingQueue->isEmpty()) peer->pendingBidCoSQueues->push(pendingQueue);
+				if(pendingQueue->isEmpty()) peer->serviceMessages->configPending = false;
+				else
+				{
+					peer->serviceMessages->configPending = true;
+					peer->pendingBidCoSQueues->push(pendingQueue);
+				}
 			}
 		}
 		else
@@ -1254,7 +1278,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(serialNumber.empty() || _peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(serialNumber[0] == '*') return RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
 		std::shared_ptr<Peer> peer = _peersBySerial[serialNumber];
 
 		bool defer = flags & 0x04;
@@ -1443,6 +1468,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 			peer->team.channel = channel;
 			_peersBySerial[team->getSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
 		}
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {

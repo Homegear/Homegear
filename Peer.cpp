@@ -85,6 +85,7 @@ Peer::~Peer()
 
 Peer::Peer()
 {
+	rpcDevice.reset();
 	serviceMessages = std::shared_ptr<ServiceMessages>(new ServiceMessages(""));
 	pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>());
 }
@@ -93,6 +94,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 {
 	try
 	{
+		rpcDevice.reset();
 		pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>());
 		if(serializedObject.empty()) return;
 		if(GD::debugLevel >= 5) std::cout << "Unserializing peer: " << serializedObject << std::endl;
