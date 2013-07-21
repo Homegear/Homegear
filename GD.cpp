@@ -2,6 +2,7 @@
 
 Cul GD::cul;
 std::string GD::configPath = "";
+std::string GD::pidfilePath = "";
 std::string GD::workingDirectory = "";
 std::string GD::executablePath = "";
 HomeMaticDevices GD::devices;

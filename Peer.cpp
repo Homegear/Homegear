@@ -2068,6 +2068,17 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				return true;
 			}
 		}
+		else if(deviceType == HMDeviceTypes::HMSECSD && valueKey == "STATE")
+		{
+			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+			std::vector<uint8_t> payload;
+			payload.push_back(0x01);
+			payload.push_back(0x01);
+			payload.push_back(0xC8);
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(address), 0x94, 0x41, address, address, payload));
+			central->messageCounter()->at(address)++;
+			central->sendBurstPacket(packet, address, true);
+		}
 	}
 	catch(const std::exception& ex)
     {

@@ -355,7 +355,6 @@ void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 {
-	_sentPackets.set(packet->destinationAddress(), packet);
 	std::shared_ptr<BidCoSPacketInfo> packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
 	if(packetInfo)
 	{
@@ -365,7 +364,36 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 		packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 	else if(GD::debugLevel >= 7) std::cout << "Sending packet " << packet->hexString() << " immediately, because it seems it is no response (no packet information found)." << std::endl;
+	_sentPackets.set(packet->destinationAddress(), packet);
 	GD::cul.sendPacket(packet);
+}
+
+void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int32_t peerAddress, bool useCentralMessageCounter, bool isThread)
+{
+	if(!isThread)
+	{
+		std::thread t(&HomeMaticDevice::sendBurstPacket, this, packet, peerAddress, useCentralMessageCounter, true);
+		t.detach();
+		return;
+	}
+	if(_peers.find(peerAddress) == _peers.end()) return;
+	std::shared_ptr<Peer> peer = _peers[peerAddress];
+	for(uint32_t i = 0; i < 8; i++)
+	{
+		_sentPackets.set(packet->destinationAddress(), packet);
+		GD::cul.sendPacket(packet);
+		if(useCentralMessageCounter)
+		{
+			packet->setMessageCounter(_messageCounter[peerAddress]);
+			_messageCounter[peerAddress]++;
+		}
+		else
+		{
+			packet->setMessageCounter(peer->messageCounter);
+			peer->messageCounter++;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+	}
 }
 
 void HomeMaticDevice::handleReset(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)

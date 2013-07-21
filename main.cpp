@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <sys/stat.h>
+#include <sys/file.h>
 
 #include "Cul.h"
 #include "Devices/HM-SD.h"
@@ -141,6 +142,20 @@ int main(int argc, char* argv[])
     				exit(1);
     			}
     		}
+    		else if(arg == "-p")
+    		{
+    			if(i + 1 < argc)
+    			{
+    				GD::pidfilePath = std::string(argv[i + 1]);
+    				if(GD::debugLevel >= 5) std::cout << "Debug: PID file path set to " << GD::pidfilePath << std::endl;
+    				i++;
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+    		}
     		else if(arg == "-d")
     		{
     			startAsDaemon = true;
@@ -187,6 +202,35 @@ int main(int argc, char* argv[])
         //delscreen for all screens!!!
         return 0;*/
     	if(startAsDaemon) startDaemon();
+
+    	//Create PID file
+    	try
+    	{
+			if(!GD::pidfilePath.empty())
+			{
+				int32_t pidfile = open(GD::pidfilePath.c_str(), O_CREAT | O_RDWR, 0666);
+				int32_t rc = flock(pidfile, LOCK_EX | LOCK_NB);
+				if(rc && errno == EWOULDBLOCK)
+				{
+					std::cerr << "Error: Homegear is already running - Can't lock PID file." << std::endl;
+				}
+				std::string pid(std::to_string(getpid()));
+				write(pidfile, pid.c_str(), pid.size());
+				close(pidfile);
+			}
+		}
+		catch(const std::exception& ex)
+		{
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		}
+		catch(const Exception& ex)
+		{
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		}
+		catch(...)
+		{
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+		}
 
     	std::shared_ptr<HomeMaticDevice> currentDevice;
 
