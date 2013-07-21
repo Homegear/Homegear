@@ -85,6 +85,7 @@ class Peer
         std::shared_ptr<RPC::Device> rpcDevice;
 
         BasicPeer team;
+        int32_t teamChannel = -1;
         std::vector<std::pair<std::string, uint32_t>> teamChannels;
         bool pairingComplete = false;
 

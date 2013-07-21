@@ -48,7 +48,7 @@ case $1 in
         start)
                 log_daemon_msg "Starting Homegear" "Homegear"
                 lock_homegear
-                start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- $HOMEGEAR_OPTS
+                start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $HOMEGEAR_OPTS
                 status=$?
                 unlock_homegear
                 log_end_msg $status

@@ -326,7 +326,6 @@ void Cul::stopListening()
 {
 	try
 	{
-		_stopped = true;
 		if(_listenThread.joinable())
 		{
 			_stopCallbackThread = true;
@@ -340,6 +339,7 @@ void Cul::stopListening()
 			writeToDevice("Ar\r\n", false);
 			closeDevice();
 		}
+		_stopped = true;
 	}
 	catch(const std::exception& ex)
     {

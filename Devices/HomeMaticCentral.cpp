@@ -1391,6 +1391,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		std::shared_ptr<Peer> peer = _peersBySerial.at(serialNumber);
 		if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(!peer->rpcDevice->channels[channel]->hasTeam) return RPC::RPCVariable::createError(-6, "Channel does not support teams.");
+		int32_t oldTeamAddress = peer->team.address;
 		if(teamSerialNumber.empty()) //Reset team to default
 		{
 			if(!peer->team.serialNumber.empty() && peer->team.serialNumber.substr(1) == peer->getSerialNumber() && peer->team.channel == channel)
@@ -1468,6 +1469,28 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 			peer->team.channel = channel;
 			_peersBySerial[team->getSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
 		}
+		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+		queue->noSending = true;
+		peer->serviceMessages->configPending = true;
+		queue->serviceMessages = peer->serviceMessages;
+
+		std::vector<uint8_t> payload;
+		payload.push_back(channel);
+		payload.push_back(0x02);
+		payload.push_back(oldTeamAddress >> 16);
+		payload.push_back((oldTeamAddress >> 8) & 0xFF);
+		payload.push_back(oldTeamAddress & 0xFF);
+		//payload.push_back();
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(address), 0x94, 0x41, address, address, payload));
+		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+
+		if(!peer->pendingBidCoSQueues) peer->pendingBidCoSQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
+		peer->pendingBidCoSQueues->push(queue);
+		if(!(peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp))
+		{
+			enqueuePendingQueues(peer->address);
+		}
+		else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
