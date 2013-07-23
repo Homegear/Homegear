@@ -128,8 +128,8 @@ void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<Bid
     {
         std::chrono::milliseconds sleepingTime(2); //Seems very short, but the real valve drive also sends the next packet after 2 ms already
         std::this_thread::sleep_for(sleepingTime);
-        _messageCounter[packet->senderAddress()]++; //This is the message counter which was used for pairing
-        sendConfigParamsType2(_messageCounter[packet->senderAddress()], packet->senderAddress());
+        _messageCounter[0]++;
+        sendConfigParamsType2(_messageCounter[0], packet->senderAddress());
         _justPairedToOrThroughCentral = false;
     }
 }

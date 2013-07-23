@@ -208,6 +208,7 @@ void HomeMaticDevice::loadPeersFromDatabase()
 			{
 				std::shared_ptr<Peer> team = createTeam(peer->team.address, peer->deviceType, peer->team.serialNumber);
 				team->rpcDevice = peer->rpcDevice->team;
+				team->initializeCentralConfig();
 				_peersBySerial[team->getSerialNumber()] = team;
 			}
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
@@ -252,6 +253,34 @@ void HomeMaticDevice::savePeersToDatabase()
     }
 }
 
+/*void HomeMaticDevice::cleanUpMessageCounters()
+{
+	try
+	{
+		std::vector<int32_t> countersToDelete;
+		for(std::unordered_map<int32_t, uint8_t>::iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
+		{
+			if(_peers.find(i->first) == _peers.end()) countersToDelete.push_back(i->first);
+		}
+		for(std::vector<int32_t>::iterator i = countersToDelete.begin(); i != countersToDelete.end(); ++i)
+		{
+			_messageCounter.erase(*i);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}*/
+
 std::string HomeMaticDevice::serialize()
 {
 	std::ostringstream stringstream;
@@ -261,6 +290,7 @@ std::string HomeMaticDevice::serialize()
 	if(_serialNumber.size() != 10) stringstream << "0000000000"; else stringstream << _serialNumber;
 	stringstream << std::setw(2) << _firmwareVersion;
 	stringstream << std::setw(8) << _centralAddress;
+	//cleanUpMessageCounters();
 	stringstream << std::setw(8) << _messageCounter.size();
 	for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
 	{
@@ -335,7 +365,6 @@ void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		if(message && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
 		{
 			if(GD::debugLevel >= 6) std::cout << "Device " << std::hex << _address << ": Access granted for packet " << packet->hexString() << std::dec << std::endl;
-			_messageCounter[packet->senderAddress()] = packet->messageCounter();
 			message->invokeMessageHandlerIncoming(packet);
 		}
 	}
@@ -384,8 +413,8 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 		GD::cul.sendPacket(packet);
 		if(useCentralMessageCounter)
 		{
-			packet->setMessageCounter(_messageCounter[peerAddress]);
-			_messageCounter[peerAddress]++;
+			packet->setMessageCounter(_messageCounter[0]);
+			_messageCounter[0]++;
 		}
 		else
 		{

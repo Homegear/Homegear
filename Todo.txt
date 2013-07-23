@@ -5,13 +5,5 @@
 - Peer.cpp - getDeviceDescription: Add GROUP
 - Peer.cpp - getLinks: Process flag GL_FLAG_GROUP
 - Check device type and serial number on repairing
-- RPC Server/Central: paramset_defs
-- RPC Server: Store sysinfo and handle count_from_sysinfo
-- Correctly use linksCentral: One paramset for each linked peer.
-- Support for serial numbers in putParamset and getParamset
 - Delete peer from all devices it is linked to, when peer is reset
-- Delete metadata for all channels when peer is deleted
-- For some reason the shutter contact link parameter set is not shown in the HomeMatic configurator
-- Address specific mutexes in BidCoSPacketManager
-- Don't pair device in central when there is no xml file.
 Today:

@@ -115,6 +115,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 		if(!rpcDevice && GD::debugLevel >= 2) std::cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << std::endl;
 		messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		pairingComplete = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+		teamChannel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		team.channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
@@ -282,6 +283,14 @@ void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 {
 	//Allow unknown channel for myself. Needed e. g. for switches.
 	if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
+	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+	{
+		if((*i)->address == peer->address && (*i)->channel == peer->channel)
+		{
+			_peers[channel].erase(i);
+			break;
+		}
+	}
 	_peers[channel].push_back(peer);
 	initializeLinkConfig(channel, peer->address, peer->channel);
 }
@@ -404,6 +413,7 @@ std::string Peer::serialize()
 	stringstream << std::setw(4) << countFromSysinfo;
 	stringstream << std::setw(2) << (int32_t)messageCounter;
 	stringstream << std::setw(1) << (int32_t)pairingComplete;
+	stringstream << std::setw(4) << teamChannel;
 	stringstream << std::setw(8) << team.address;
 	stringstream << std::setw(4) << team.channel;
 	stringstream << std::setw(4) << team.serialNumber.size();
@@ -2064,6 +2074,9 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 			}
 			if(_peers[1].at(0)->device)
 			{
+				std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
+				if(!rpcParameter) return false;
+				valuesCentral[channel][valueKey].value = rpcParameter->convertToPacket(value);
 				HM_CC_TC* tc = (HM_CC_TC*)_peers[1].at(0)->device.get();
 				tc->setValveState(value->integerValue);
 				if(GD::debugLevel >= 4) std::cout << "Setting valve state of HM-CC-VD with address 0x" << std::hex << address << std::dec << " to " << value->integerValue << "%." << std::endl;
@@ -2072,14 +2085,27 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 		}
 		else if(deviceType == HMDeviceTypes::HMSECSD && valueKey == "STATE")
 		{
+			std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
+			if(!rpcParameter) return false;
+			valuesCentral[channel][valueKey].value = rpcParameter->convertToPacket(value);
+
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 			std::vector<uint8_t> payload;
 			payload.push_back(0x01);
-			payload.push_back(0x01);
-			payload.push_back(0xC8);
-			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(address), 0x94, 0x41, address, address, payload));
-			central->messageCounter()->at(address)++;
+			if(value->booleanValue)
+			{
+				payload.push_back(0x01);
+				payload.push_back(0xC8);
+			}
+			else
+			{
+				payload.push_back(0x02);
+				payload.push_back(0x01);
+			}
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x41, 0x123456, address, payload));
+			central->messageCounter()->at(0)++;
 			central->sendBurstPacket(packet, address, true);
+			return true;
 		}
 	}
 	catch(const std::exception& ex)
@@ -2137,6 +2163,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		if(setHomegearValue(channel, valueKey, value)) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
 		std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
+		if(!rpcParameter) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
 		if(rpcParameter->physicalParameter->interface == RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			valuesCentral[channel][valueKey].value = rpcParameter->convertToPacket(value);

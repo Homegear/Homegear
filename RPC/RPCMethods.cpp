@@ -316,18 +316,16 @@ std::shared_ptr<RPCVariable> RPCDeleteMetadata::invoke(std::shared_ptr<std::vect
 		if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError) return getError((error != ParameterError::Enum::noError) ? error : error2);
 		if(parameters->at(0)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "objectID has more than 250 characters.");
 		if(parameters->size() > 1 && parameters->at(1)->stringValue.size() > 250) return RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
+		std::string dataID;
+		if(parameters->size() > 1) dataID = parameters->at(1)->stringValue;
 
-		DataColumnVector data;
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameters->at(0)->stringValue)));
-		std::string command("DELETE FROM metadata WHERE objectID=?");
-		if(parameters->size() > 1)
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central)
 		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameters->at(1)->stringValue)));
-			command.append(" AND dataID=?");
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getDeviceDescription. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method getDeviceDescription. Please add a central device.");
 		}
-		GD::db.executeCommand(command, data);
-
-		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+		return GD::devices.getCentral()->deleteMetadata(parameters->at(0)->stringValue, dataID);
 	}
 	catch(const std::exception& ex)
     {
@@ -1319,13 +1317,16 @@ std::shared_ptr<RPCVariable> RPCSetTeam::invoke(std::shared_ptr<std::vector<std:
 		}
 		else deviceSerialNumber = parameters->at(0)->stringValue;
 
-		pos = parameters->at(1)->stringValue.find(':');
-		if(pos > -1)
+		if(parameters->size() > 1)
 		{
-			teamSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
-			if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) teamChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+			pos = parameters->at(1)->stringValue.find(':');
+			if(pos > -1)
+			{
+				teamSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+				if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) teamChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+			}
+			else teamSerialNumber = parameters->at(1)->stringValue;
 		}
-		else teamSerialNumber = parameters->at(1)->stringValue;
 
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 		if(!central)
