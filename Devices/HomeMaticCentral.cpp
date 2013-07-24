@@ -82,7 +82,7 @@ void HomeMaticCentral::worker()
 			if(_stopWorkerThread) return;
 			if(!_peers.empty())
 			{
-				if(lastPeer == 0) lastPeer = _peers.begin()->first;
+				if(lastPeer == 0 || _peers.find(lastPeer) == _peers.end()) lastPeer = _peers.begin()->first;
 				_peers.at(lastPeer)->saveToDatabase(_address);
 				std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator peer = _peers.find(lastPeer);
 				if(peer != _peers.end())
@@ -116,13 +116,19 @@ void HomeMaticCentral::worker()
 	}
 }
 
-void HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
+bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		HomeMaticDevice::packetReceived(packet);
+		bool handled = HomeMaticDevice::packetReceived(packet);
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
+			if(handled && i->first == packet->senderAddress())
+			{
+				//Don't pass packet to peer if a queue exists
+				std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(i->first);
+				if(queue) return true; //Packet is handled by queue. Don't check if queue is empty!
+			}
 			std::thread t(&Peer::packetReceived, i->second.get(), packet);
 			t.detach();
 		}
@@ -139,6 +145,7 @@ void HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
     {
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
+    return false;
 }
 
 void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
@@ -197,6 +204,7 @@ std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firm
 	peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, index23);
 	if(!peer->rpcDevice) peer->rpcDevice = GD::rpcDevices.find(HMDeviceType::getString(deviceType), index23);
 	if(!peer->rpcDevice) return std::shared_ptr<Peer>();
+	if(peer->rpcDevice->countFromSysinfoIndex > -1) peer->countFromSysinfo = index23;
     return peer;
 }
 
@@ -627,7 +635,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 				serialNumber.push_back((char)packet->payload()->at(i));
 			if(_peers.find(packet->senderAddress()) == _peers.end())
 			{
-				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), serialNumber, 0, 0, packet->payload()->at(16));
+				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), serialNumber, 0, 0, packet->payload()->at(14));
 				if(!queue->peer)
 				{
 					if(GD::debugLevel >= 3) std::cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
@@ -821,10 +829,15 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue) return;
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
+		if(sentPacket && sentPacket->payload()->size() < 2)
+		{
+			std::cerr << "Error in handleConfigParamResponse: Payload of sent packet is too small." << std::endl;
+			return;
+		}
 		bool multiplePackets = false;
 		bool multiPacketEnd = false;
 		//Peer request
-		if(sentPacket && sentPacket->payload()->at(1) == 0x03 && sentPacket->payload()->at(0) == packet->payload()->at(0))
+		if(sentPacket && sentPacket->payload()->at(1) == 0x03)
 		{
 			Peer* peer = _peers[packet->senderAddress()].get();
 			for(uint32_t i = 1; i < packet->payload()->size() - 1; i += 4)
@@ -938,6 +951,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 						}
 					}
 				}
+				if(packet->controlByte() & 0x20) sendOK(packet->messageCounter(), peer->address);
 			}
 			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, "", -1, parametersToEnforce);
 		}

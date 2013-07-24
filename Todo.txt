@@ -2,8 +2,9 @@
 - Device: Pairing by serial
 - Central: Is configuration sent to device after inserting batteries? / Handle device start up
 - Device: Don't allow pairing to two masters
-- Peer.cpp - getDeviceDescription: Add GROUP
-- Peer.cpp - getLinks: Process flag GL_FLAG_GROUP
 - Check device type and serial number on repairing
 - Delete peer from all devices it is linked to, when peer is reset
+- If device support teams detect teams through peer request on pairing:
+		1374684305216 Received: 0B04A0011C69431D18490103
+		1374684305348 Received: 1204A0101D18491C6943011C295C0100000000 (1C295C:01 is team) 
 Today:

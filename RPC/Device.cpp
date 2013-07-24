@@ -864,6 +864,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
 		else if(attributeName == "team_tag") teamTag = attributeValue;
+		else if(attributeName == "paired") { if(attributeValue == "true") paired = true; }
 		else if(attributeName == "count_from_sysinfo")
 		{
 			std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, ':');
@@ -1194,7 +1195,7 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
 				break;
 			}
 		}
-		for(uint32_t i = index; i < index + countFromSysinfo; i++)
+		for(uint32_t i = index + 1; i < index + countFromSysinfo; i++)
 		{
 			if(channels.find(i) == channels.end()) channels[i] = channel;
 			else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add channel with the same index twice. Index: " << i << std::endl;

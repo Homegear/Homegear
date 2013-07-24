@@ -38,7 +38,7 @@ class HomeMaticDevice
         HomeMaticDevice();
         HomeMaticDevice(std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
-        virtual void packetReceived(std::shared_ptr<BidCoSPacket> packet);
+        virtual bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
         virtual void addPeer(std::shared_ptr<Peer> peer) { if(_peers.find(peer->address) == _peers.end()) _peers[peer->address] = peer; }
         virtual void deletePeersFromDatabase();

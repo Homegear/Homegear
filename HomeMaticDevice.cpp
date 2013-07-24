@@ -356,7 +356,7 @@ bool HomeMaticDevice::pairDevice(int32_t timeout)
     return true;
 }
 
-void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
+bool HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -366,6 +366,7 @@ void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		{
 			if(GD::debugLevel >= 6) std::cout << "Device " << std::hex << _address << ": Access granted for packet " << packet->hexString() << std::dec << std::endl;
 			message->invokeMessageHandlerIncoming(packet);
+			return true;
 		}
 	}
 	catch(const std::exception& ex)
@@ -380,11 +381,23 @@ void HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
     {
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
+    return false;
 }
 
 void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 {
-	std::shared_ptr<BidCoSPacketInfo> packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
+	std::shared_ptr<BidCoSPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
+	_sentPackets.set(packet->destinationAddress(), packet);
+	if(packetInfo)
+	{
+		int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
+		if(timeDifference < 90)
+		{
+			packetInfo->time += 90 - timeDifference; //Set to sending time
+			std::this_thread::sleep_for(std::chrono::milliseconds(90 - timeDifference));
+		}
+	}
+	packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
 	if(packetInfo)
 	{
 		int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
@@ -393,7 +406,6 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 		packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 	else if(GD::debugLevel >= 7) std::cout << "Sending packet " << packet->hexString() << " immediately, because it seems it is no response (no packet information found)." << std::endl;
-	_sentPackets.set(packet->destinationAddress(), packet);
 	GD::cul.sendPacket(packet);
 }
 

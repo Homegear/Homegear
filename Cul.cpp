@@ -386,6 +386,11 @@ void Cul::listen()
     {
         while(!_stopCallbackThread)
         {
+        	if(_stopped)
+        	{
+        		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        		continue;
+        	}
         	std::string packetHex = readFromDevice();
         	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + CUL "A")
         	{
