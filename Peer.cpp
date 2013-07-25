@@ -837,7 +837,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 		if(resendPacket && sentPacket)
 		{
-			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
 			queue->noSending = true;
 			serviceMessages->configPending = true;
 			queue->serviceMessages = serviceMessages;
@@ -2199,18 +2199,19 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 			std::vector<uint8_t> payload;
+			payload.push_back(0x00);
 			payload.push_back(0x01);
-			if(value->booleanValue)
+			/*if(value->booleanValue)
 			{
-				payload.push_back(0x02);
+				payload.push_back(0x01);
 				payload.push_back(0xC8);
 			}
 			else
 			{
-				payload.push_back(0x02);
 				payload.push_back(0x01);
-			}
-			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x41, address, address, payload));
+				payload.push_back(0x01);
+			}*/
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x40, 0x1C295C, central->address(), payload));
 			central->messageCounter()->at(0)++;
 			central->sendBurstPacket(packet, address, true);
 			return true;
@@ -2295,10 +2296,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		valuesCentral[channel][valueKey].value = rpcParameter->convertToPacket(value);
 		if(GD::debugLevel >= 5) std::cout << "Debug: " << valueKey << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << ":" << channel << " was set to " << valuesCentral[channel][valueKey].value << "." << std::endl;
 
-		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
 		queue->noSending = true;
-		serviceMessages->configPending = true;
-		queue->serviceMessages = serviceMessages;
 
 		std::vector<uint8_t> payload;
 		if(frame->subtype > -1 && frame->subtypeIndex >= 9)

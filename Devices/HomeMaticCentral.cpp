@@ -125,9 +125,8 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		{
 			if(handled && i->first == packet->senderAddress())
 			{
-				//Don't pass packet to peer if a queue exists
-				std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(i->first);
-				if(queue) return true; //Packet is handled by queue. Don't check if queue is empty!
+				std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+				if(queue && queue->getQueueType() != BidCoSQueueType::PEER) return true; //Packet is handled by queue. Don't check if queue is empty!
 			}
 			std::thread t(&Peer::packetReceived, i->second.get(), packet);
 			t.detach();

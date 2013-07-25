@@ -9,19 +9,16 @@ BidCoSQueueData::BidCoSQueueData()
 
 BidCoSQueueManager::~BidCoSQueueManager()
 {
-	for(std::unordered_map<int32_t, std::shared_ptr<BidCoSQueueData>>::iterator i = _queues.begin(); i != _queues.end(); ++i)
-	{
-		i->second->stopThread = true;
-	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for threads to finish
+	std::this_thread::sleep_for(std::chrono::milliseconds(1500)); //Wait for threads to finish
 }
 
 std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* device, BidCoSQueueType queueType, int32_t address)
 {
 	try
 	{
-		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->thread) _queues.at(address)->stopThread = true;
+		_queueMutex.lock();
 		if(_queues.find(address) != _queues.end()) _queues.erase(_queues.find(address));
+		_queueMutex.unlock();
 
 		std::shared_ptr<BidCoSQueueData> queueData(new BidCoSQueueData());
 		queueData->queue->setQueueType(queueType);
@@ -38,18 +35,18 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-        _queueMutex.unlock();
     }
     catch(const Exception& ex)
     {
+    	_queueMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-        _queueMutex.unlock();
     }
     catch(...)
     {
+    	_queueMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
-        _queueMutex.unlock();
     }
     return std::shared_ptr<BidCoSQueue>();
 }
@@ -58,13 +55,24 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 {
 	try
 	{
-		std::chrono::milliseconds sleepingTime(300);
-		while(_queues.find(address) != _queues.end() && _queues.at(address) && !_queues.at(address)->stopThread && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _queues.at(address)->lastAction + 1000)
+		std::chrono::milliseconds sleepingTime(400);
+		while(true)
 		{
-			std::this_thread::sleep_for(sleepingTime);
+			_queueMutex.lock();
+			if(_queues.find(address) != _queues.end() && _queues.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _queues.at(address)->lastAction + 1000)
+			{
+				_queueMutex.unlock();
+				std::this_thread::sleep_for(sleepingTime);
+			}
+			else
+			{
+				_queueMutex.unlock();
+				break;
+			}
 		}
+
 		_queueMutex.lock();
-		if(_queues.find(address) != _queues.end() && _queues.at(address) && !_queues.at(address)->stopThread && _queues.at(address)->id == id)
+		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
 		{
 			if(GD::debugLevel >= 5) std::cout << "Deleting queue " << id << " for 0x" << std::hex << address << std::dec << std::endl;
 			_queues.erase(_queues.find(address));
@@ -73,18 +81,18 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-        _queueMutex.unlock();
     }
     catch(const Exception& ex)
     {
+    	_queueMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-        _queueMutex.unlock();
     }
     catch(...)
     {
+    	_queueMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
-        _queueMutex.unlock();
     }
 }
 
@@ -100,18 +108,18 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-        _queueMutex.unlock();
     }
     catch(const Exception& ex)
     {
+    	_queueMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-        _queueMutex.unlock();
     }
     catch(...)
     {
+    	_queueMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
-        _queueMutex.unlock();
     }
     return std::shared_ptr<BidCoSQueue>();
 }

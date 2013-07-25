@@ -419,7 +419,7 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 	}
 	if(_peers.find(peerAddress) == _peers.end()) return;
 	std::shared_ptr<Peer> peer = _peers[peerAddress];
-	for(uint32_t i = 0; i < 8; i++)
+	for(uint32_t i = 0; i < 160; i++)
 	{
 		_sentPackets.set(packet->destinationAddress(), packet);
 		GD::cul.sendPacket(packet);
@@ -433,7 +433,7 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 			packet->setMessageCounter(peer->messageCounter);
 			peer->messageCounter++;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		std::this_thread::sleep_for(std::chrono::milliseconds(111));
 	}
 }
 

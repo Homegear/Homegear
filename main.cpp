@@ -80,6 +80,7 @@ void printHelp()
 	std::cout << "--help\t\tShow this help" << std::endl;
 	std::cout << "-c <path>\tSpecify path to config file" << std::endl;
 	std::cout << "-d\t\tRun as daemon" << std::endl;
+	std::cout << "-p <pid path>\tSpecify path to process id file" << std::endl;
 }
 
 void startDaemon()
@@ -133,7 +134,6 @@ int main(int argc, char* argv[])
     			{
     				GD::configPath = std::string(argv[i + 1]);
     				if(!GD::configPath.empty() && GD::configPath[GD::configPath.size() - 1] != '/') GD::configPath.push_back('/');
-    				if(GD::debugLevel >= 5) std::cout << "Debug: Config file path set to " << GD::configPath << std::endl;
     				i++;
     			}
     			else
@@ -147,7 +147,6 @@ int main(int argc, char* argv[])
     			if(i + 1 < argc)
     			{
     				GD::pidfilePath = std::string(argv[i + 1]);
-    				if(GD::debugLevel >= 5) std::cout << "Debug: PID file path set to " << GD::pidfilePath << std::endl;
     				i++;
     			}
     			else

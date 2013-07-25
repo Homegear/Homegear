@@ -44,14 +44,14 @@ all: Homegear
 # Tool invocations
 Homegear: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
-	@echo 'Invoking: GCC C++ Linker'
-	arm-linux-gnueabihf-g++-4.7 -L"/home/sathya/git/Homegear/ARM libraries" -o "Homegear" $(OBJS) $(USER_OBJS) $(LIBS)
+	@echo 'Invoking: Cross G++ Linker'
+	arm-linux-gnueabihf-g++ -L"/home/sathya/git/Homegear/ARM libraries" -o "Homegear" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) Homegear
+	-$(RM) $(C++_DEPS)$(OBJS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) Homegear
 	-@echo ' '
 
 .PHONY: all clean dependents

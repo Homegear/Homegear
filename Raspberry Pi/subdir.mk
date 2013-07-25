@@ -20,6 +20,7 @@ CPP_SRCS += \
 ../Log.cpp \
 ../Peer.cpp \
 ../ServiceMessages.cpp \
+../Settings.cpp \
 ../main.cpp 
 
 OBJS += \
@@ -39,6 +40,7 @@ OBJS += \
 ./Log.o \
 ./Peer.o \
 ./ServiceMessages.o \
+./Settings.o \
 ./main.o 
 
 CPP_DEPS += \
@@ -58,14 +60,15 @@ CPP_DEPS += \
 ./Log.d \
 ./Peer.d \
 ./ServiceMessages.d \
+./Settings.d \
 ./main.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
 %.o: ../%.cpp
 	@echo 'Building file: $<'
-	@echo 'Invoking: GCC C++ Compiler'
-	arm-linux-gnueabihf-g++-4.7 -I"/home/sathya/git/Homegear/ARM headers" -O3 -Wall -c -fmessage-length=0 -std=c++11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	@echo 'Invoking: Cross G++ Compiler'
+	arm-linux-gnueabihf-g++ -I"/home/sathya/git/Homegear/ARM headers" -O3 -Wall -c -fmessage-length=0 -std=c++11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

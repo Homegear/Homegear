@@ -258,8 +258,8 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		sched_param schedParam;
 		int policy;
 		pthread_getschedparam(sendDutyCyclePacketThread.native_handle(), &policy, &schedParam);
-		schedParam.sched_priority = 99;
-		if(!pthread_setschedparam(sendDutyCyclePacketThread.native_handle(), policy, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+		schedParam.sched_priority = 49;
+		if(!pthread_setschedparam(sendDutyCyclePacketThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 		sendDutyCyclePacketThread.detach();
 
 		_lastDutyCycleEvent = nextDutyCycleEvent;
