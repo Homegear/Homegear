@@ -216,6 +216,7 @@ public:
 	bool paired = false;
 	double countFromSysinfo = -1;
 	double countFromSysinfoSize = 1;
+
 	std::string teamTag;
 	std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>> parameterSets;
 	std::shared_ptr<LinkRole> linkRoles;
