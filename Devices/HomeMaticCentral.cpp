@@ -120,6 +120,12 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
+		std::shared_ptr<Peer> peer;
+		if(_peers.find(packet->senderAddress()) != _peers.end())
+		{
+			peer = _peers[packet->senderAddress()];
+			std::cerr << peer->pendingBidCoSQueues->size() << std::endl;
+		}
 		bool handled = HomeMaticDevice::packetReceived(packet);
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
@@ -191,7 +197,7 @@ void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<Bid
     }
 }
 
-std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, int32_t index23)
+std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	std::shared_ptr<Peer> peer(new Peer());
 	peer->address = address;
@@ -200,11 +206,11 @@ std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firm
 	peer->setSerialNumber(serialNumber);
 	peer->remoteChannel = remoteChannel;
 	peer->messageCounter = messageCounter;
-	peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, index23);
-	if(!peer->rpcDevice) peer->rpcDevice = GD::rpcDevices.find(HMDeviceType::getString(deviceType), index23);
+	peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, packet);
+	if(!peer->rpcDevice) peer->rpcDevice = GD::rpcDevices.find(HMDeviceType::getString(deviceType), packet);
 	if(!peer->rpcDevice) return std::shared_ptr<Peer>();
-	if(peer->rpcDevice->countFromSysinfoIndex > -1) peer->countFromSysinfo = index23;
-    return peer;
+	if(peer->rpcDevice->countFromSysinfoIndex > -1) peer->countFromSysinfo = peer->rpcDevice->getCountFromSysinfo();
+	return peer;
 }
 
 void HomeMaticCentral::handleCLICommand(std::string command)
@@ -260,6 +266,15 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 			_currentPeer = _peers[address];
 			std::cout << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->deviceType << " selected." << std::dec << std::endl;
 		}
+	}
+	else if(command == "channel count")
+	{
+		if(!_currentPeer)
+		{
+			std::cout << "No peer selected." << std::endl;
+			return;
+		}
+		std::cout << "Peer has " << _currentPeer->rpcDevice->channels.size() << " channels." << std::endl;
 	}
 	else if(command == "pending queues info")
 	{
@@ -634,7 +649,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 				serialNumber.push_back((char)packet->payload()->at(i));
 			if(_peers.find(packet->senderAddress()) == _peers.end())
 			{
-				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), serialNumber, 0, 0, packet->payload()->at(14));
+				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), serialNumber, 0, 0, packet);
 				if(!queue->peer)
 				{
 					if(GD::debugLevel >= 3) std::cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
@@ -753,6 +768,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			if(GD::debugLevel >= 2) std::cout << "Error: Peer is nullptr. This shouldn't have happened. Something went very wrong." << std::endl;
 			return;
 		}
+		if(GD::debugLevel >= 4 && peer->pendingBidCoSQueues && !peer->pendingBidCoSQueues->empty()) std::cout << "Info: Pushing pending queues." << std::endl;
 		queue->push(peer->pendingBidCoSQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
 	}
 	catch(const std::exception& ex)

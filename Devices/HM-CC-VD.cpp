@@ -197,7 +197,7 @@ void HM_CC_VD::sendConfigParamsType2(int32_t messageCounter, int32_t destination
     sendPacket(config);
 }
 
-std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, int32_t index23)
+std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
     std::shared_ptr<Peer> peer(new Peer());
     peer->address = address;

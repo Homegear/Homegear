@@ -215,6 +215,7 @@ void BidCoSPacket::setPosition(double index, double size, int64_t value)
 				return;
 			}
 			uint32_t bitSize = std::lround(size * 10);
+			if(bitSize > 8) bitSize = 8;
 			while((signed)_payload.size() - 1 < intByteIndex)
 			{
 				_payload.push_back(0);
@@ -234,6 +235,7 @@ void BidCoSPacket::setPosition(double index, double size, int64_t value)
 				_payload.push_back(0);
 			}
 			uint32_t bitSize = std::lround(size * 10) % 10;
+			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
 			_payload.at(intByteIndex) = (value >> ((bytes - 1) * 8)) & _bitmask[bitSize];
 			for(uint32_t i = 1; i < bytes; i++)
@@ -294,6 +296,7 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 		{
 			uint32_t bytes = (uint32_t)std::ceil(size);
 			uint32_t bitSize = std::lround(size * 10) % 10;
+			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
 			result = (_payload.at(index) & _bitmask[bitSize]) << ((bytes - 1) * 8);
 			for(uint32_t i = 1; i < bytes; i++)

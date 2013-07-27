@@ -765,6 +765,7 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 			variable->isDominoEvent = true;
 			_variablesToResetMutex.lock();
 			_variablesToReset.push_back(variable);
+			if(GD::debugLevel >= 5) std::cout << "Debug: " << parameter->id << " will be reset in " << ((variable->resetTime - time) / 1000)  << "s." << std::endl;
 			_variablesToResetMutex.unlock();
 			if(_stopWorkerThread)
 			{

@@ -75,6 +75,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 
 void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 {
+	if(!value) return;
 	if(type == Type::Enum::floatIntegerScale)
 	{
 		value->type = RPCVariableType::rpcFloat;
@@ -159,6 +160,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 
 void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 {
+	if(!value) return;
 	if(type == Type::Enum::none)
 	{
 		if(value->type == RPCVariableType::rpcBoolean) value->integerValue = (int32_t)value->booleanValue;
@@ -353,6 +355,7 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
 
 int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 {
+	if(!value) return 0;
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
 	{
 		LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
@@ -362,7 +365,7 @@ int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
-		return true;
+		return 200;
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 	{
@@ -406,6 +409,8 @@ int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 
 Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 {
+	logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger());
+	physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter());
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
 		std::string attributeName(attr->name());
@@ -532,6 +537,7 @@ int64_t Parameter::getBytes(int32_t value)
 				return returnValue;
 			}
 			uint32_t bitSize = std::lround(physicalParameter->size * 10);
+			if(bitSize > 8) bitSize = 8;
 			if(value < 0) //has sign?
 			{
 				value = value & _bitmask[bitSize];
@@ -542,6 +548,7 @@ int64_t Parameter::getBytes(int32_t value)
 		{
 			uint32_t bytes = (uint32_t)std::ceil(physicalParameter->size);
 			uint32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
+			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
 			returnValue = ((value >> ((bytes - 1) * 8)) & _bitmask[bitSize]) << ((bytes - 1) * 8);
 			for(uint32_t i = 1; i < bytes; i++)
@@ -868,8 +875,24 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		else if(attributeName == "count_from_sysinfo")
 		{
 			std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, ':');
-			if(!splitValue.first.empty()) countFromSysinfo = HelperFunctions::getDouble(splitValue.first);
-			if(!splitValue.second.empty()) countFromSysinfoSize = HelperFunctions::getDouble(splitValue.second);
+			if(!splitValue.first.empty())
+			{
+				countFromSysinfo = HelperFunctions::getDouble(splitValue.first);
+				if(countFromSysinfo < 9)
+				{
+					if(GD::debugLevel >= 2) std::cerr << "Error: count_from_sysinfo has to be >= 9." << std::endl;
+					countFromSysinfo = -1;
+				}
+			}
+			if(!splitValue.second.empty())
+			{
+				countFromSysinfoSize = HelperFunctions::getDouble(splitValue.second);
+				if(countFromSysinfoSize > 1)
+				{
+					if(GD::debugLevel >= 2) std::cerr << "Error: The size of count_from_sysinfo has to be <= 1." << std::endl;
+					countFromSysinfoSize = 1;
+				}
+			}
 		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"channel\": " << attributeName << std::endl;
 	}
@@ -1127,7 +1150,9 @@ void Device::parseXML(xml_node<>* node)
 							continue;
 						}
 						countFromSysinfoIndex = (int32_t)channel->countFromSysinfo;
+						countFromSysinfoSize = channel->countFromSysinfoSize;
 						if(countFromSysinfoIndex < -1) countFromSysinfoIndex = -1;
+						if(countFromSysinfoSize <= 0) countFromSysinfoSize = 1;
 					}
 				}
 			}
@@ -1177,6 +1202,33 @@ void Device::parseXML(xml_node<>* node)
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
+}
+
+int32_t Device::getCountFromSysinfo(std::shared_ptr<BidCoSPacket> packet)
+{
+	try
+	{
+		if(!packet) return -1;
+		uint32_t bitSize = 8;
+		if(countFromSysinfoSize < 1) bitSize = std::lround(countFromSysinfoSize * 10);
+		if(bitSize > 8) bitSize = 8;
+		int32_t bitMask = (1 << bitSize) - 1;
+		if(countFromSysinfoIndex > -1 && ((uint32_t)(countFromSysinfoIndex - 9) < packet->payload()->size())) return packet->payload()->at(countFromSysinfoIndex - 9) & bitMask;
+		return -1;
+	}
+    catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return -1;
 }
 
 void Device::setCountFromSysinfo(int32_t countFromSysinfo)

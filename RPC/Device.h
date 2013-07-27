@@ -279,6 +279,7 @@ public:
 	RXModes::Enum rxModes = RXModes::Enum::config;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	int32_t countFromSysinfoIndex = -1;
+	double countFromSysinfoSize = 1;
 	std::string deviceClass;
 	bool supportsAES = false;
 	bool peeringSysinfoExpectChannel = true;
@@ -289,6 +290,7 @@ public:
 	virtual ~Device();
 	std::shared_ptr<DeviceType> getType(HMDeviceTypes deviceType, int32_t firmwareVersion);
 	int32_t getCountFromSysinfo() { return _countFromSysinfo; }
+	int32_t getCountFromSysinfo(std::shared_ptr<BidCoSPacket> packet);
 	void setCountFromSysinfo(int32_t countFromSysinfo);
 protected:
 	bool _loaded = false;

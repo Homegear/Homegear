@@ -65,6 +65,48 @@ void Devices::load()
     }
 }
 
+std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVersion, std::shared_ptr<BidCoSPacket> packet)
+{
+	try
+	{
+		std::shared_ptr<Device> partialMatch;
+		int32_t countFromSysinfo = 0;
+		for(std::vector<std::shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		{
+			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
+			{
+				if((*j)->matches(deviceType, firmwareVersion))
+				{
+					countFromSysinfo = (*i)->getCountFromSysinfo(packet);
+					if((*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					else return *i;
+				}
+			}
+		}
+		if(partialMatch)
+		{
+			std::shared_ptr<Device> newDevice(new Device());
+			*newDevice = *partialMatch;
+			newDevice->setCountFromSysinfo(countFromSysinfo);
+			_devices.push_back(newDevice);
+			return newDevice;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return nullptr;
+}
+
 std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo)
 {
 	try
@@ -92,31 +134,33 @@ std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwar
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+     std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+     std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+     std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(std::string typeID, int32_t countFromSysinfo)
+std::shared_ptr<Device> Devices::find(std::string typeID, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
 		std::shared_ptr<Device> partialMatch;
+		int32_t countFromSysinfo = 0;
 		for(std::vector<std::shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
 			{
 				if((*j)->matches(typeID))
 				{
-					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					countFromSysinfo = (*i)->getCountFromSysinfo(packet);
+					if((*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
 					else return *i;
 				}
 			}
@@ -145,18 +189,20 @@ std::shared_ptr<Device> Devices::find(std::string typeID, int32_t countFromSysin
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(std::shared_ptr<BidCoSPacket> packet, int32_t countFromSysinfo)
+std::shared_ptr<Device> Devices::find(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
 		std::shared_ptr<Device> partialMatch;
+		int32_t countFromSysinfo = 0;
 		for(std::vector<std::shared_ptr<Device>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
 			{
 				if((*j)->matches(packet))
 				{
-					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					countFromSysinfo = (*i)->getCountFromSysinfo(packet);
+					if((*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
 					else return *i;
 				}
 			}
