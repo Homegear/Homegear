@@ -87,7 +87,7 @@ Peer::Peer()
 {
 	rpcDevice.reset();
 	serviceMessages = std::shared_ptr<ServiceMessages>(new ServiceMessages(""));
-	pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>());
+	pendingBidCoSQueues = std::shared_ptr<std::deque<std::shared_ptr<BidCoSQueue>>>(new std::deque<std::shared_ptr<BidCoSQueue>>());
 	team.address = 0;
 }
 
@@ -96,7 +96,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 	try
 	{
 		rpcDevice.reset();
-		pendingBidCoSQueues = std::shared_ptr<std::queue<std::shared_ptr<BidCoSQueue>>>(new std::queue<std::shared_ptr<BidCoSQueue>>());
+		pendingBidCoSQueues = std::shared_ptr<std::deque<std::shared_ptr<BidCoSQueue>>>(new std::deque<std::shared_ptr<BidCoSQueue>>());
 		if(serializedObject.empty()) return;
 		if(GD::debugLevel >= 5) std::cout << "Unserializing peer: " << serializedObject << std::endl;
 
@@ -172,7 +172,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 					queue->callbackParameter = parameters;
 					queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<Peer, &Peer::addVariableToResetCallback>(this);
 				}
-				pendingBidCoSQueues->push(queue);
+				pendingBidCoSQueues->push_back(queue);
 			}
 		}
 		uint32_t variablesToResetSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -467,7 +467,7 @@ std::string Peer::serialize()
 			stringstream << std::setw(8) << queue->callbackParameter->integers.at(1);
 			stringstream << std::setw(8) << (queue->callbackParameter->integers.at(2) / 1000);
 		}
-		pendingBidCoSQueues->pop();
+		pendingBidCoSQueues->pop_front();
 	}
 	stringstream << std::setw(8) << _variablesToReset.size();
 	for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = _variablesToReset.begin(); i != _variablesToReset.end(); ++i)
@@ -852,8 +852,8 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePackets(address, queue, true);
 			else
 			{
-				if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
-				pendingBidCoSQueues->push(queue);
+				if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::deque<std::shared_ptr<BidCoSQueue>>());
+				pendingBidCoSQueues->push_back(queue);
 				if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 			}
 		}
@@ -1201,8 +1201,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				messageCounter++;
 			}
 
-			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
-			pendingBidCoSQueues->push(queue);
+			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::deque<std::shared_ptr<BidCoSQueue>>());
+			pendingBidCoSQueues->push_back(queue);
 			if(!onlyPushing && !(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
@@ -1307,8 +1307,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				messageCounter++;
 			}
 
-			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
-			pendingBidCoSQueues->push(queue);
+			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::deque<std::shared_ptr<BidCoSQueue>>());
+			pendingBidCoSQueues->push_back(queue);
 			if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
@@ -2388,8 +2388,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		messageCounter++;
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::queue<std::shared_ptr<BidCoSQueue>>());
-		pendingBidCoSQueues->push(queue);
+		if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::deque<std::shared_ptr<BidCoSQueue>>());
+		pendingBidCoSQueues->push_back(queue);
 		if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp))
 		{
 			if(valueKey == "STATE") queue->burst = true;
