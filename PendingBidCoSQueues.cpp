@@ -10,6 +10,7 @@ PendingBidCoSQueues::PendingBidCoSQueues(std::string serializedObject, Peer* pee
 	try
 	{
 		if(GD::debugLevel >= 5) std::cout << "Unserializing pending BidCoS queues: " << serializedObject << std::endl;
+		if(serializedObject.empty()) return;
 
 		_queuesMutex.lock();
 		std::istringstream stringstream(serializedObject);
