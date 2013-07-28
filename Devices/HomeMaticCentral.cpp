@@ -1396,7 +1396,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listTeams()
 
 		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
-			if(i->first.empty() || i->first.at(0) != '*') continue; //only add unknown devices
+			if(i->first.empty() || i->first.at(0) != '*') continue;
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = i->second->getDeviceDescription();
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)

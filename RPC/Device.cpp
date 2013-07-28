@@ -766,6 +766,33 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			}
 			subsetReference = std::string(attr->value());
 		}
+		else if(nodeName == "default_values")
+		{
+			xml_attribute<>* attr = parameterNode->first_attribute("function");
+			if(!attr)
+			{
+				if(GD::debugLevel >= 3) std::cout << "Warning: Could not parse \"subset\". Attribute ref not set." << std::endl;
+				continue;
+			}
+			std::string function = std::string(attr->value());
+			if(function.empty()) continue;
+			for(xml_node<>* defaultValueNode = parameterNode->first_node(); defaultValueNode; defaultValueNode = defaultValueNode->next_sibling())
+			{
+				std::string nodeName(defaultValueNode->name());
+				if(nodeName == "value")
+				{
+					xml_attribute<>* attr1 = defaultValueNode->first_attribute("id");
+					xml_attribute<>* attr2 = defaultValueNode->first_attribute("value");
+					if(!attr1 || !attr2)
+					{
+						if(GD::debugLevel >= 3) std::cout << "Warning: Could not parse \"value\" (in default_values). Attribute id or value not set." << std::endl;
+						continue;
+					}
+					defaultValues[function].push_back(std::pair<std::string, std::string>(std::string(attr1->value()), std::string(attr2->value())));
+				}
+				else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"default_values\": " << nodeName << std::endl;
+			}
+		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"paramset\": " << nodeName << std::endl;
 	}
 	for(std::vector<std::pair<std::string, std::string>>::iterator i = enforce.begin(); i != enforce.end(); ++i)
@@ -872,6 +899,17 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
 		else if(attributeName == "team_tag") teamTag = attributeValue;
 		else if(attributeName == "paired") { if(attributeValue == "true") paired = true; }
+		else if(attributeName == "function") function = attributeValue;
+		else if(attributeName == "pair_function")
+		{
+			if(attributeValue.size() != 2)
+			{
+				if(GD::debugLevel >= 3) std::cout << "Warning: pair_function does not consist of two functions." << std::endl;
+				continue;
+			}
+			pairFunction1 = attributeValue.substr(0, 1);
+			pairFunction2 = attributeValue.substr(1, 1);
+		}
 		else if(attributeName == "count_from_sysinfo")
 		{
 			std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, ':');

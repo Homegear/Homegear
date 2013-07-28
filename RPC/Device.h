@@ -144,6 +144,7 @@ public:
 	bool matches(HMDeviceTypes deviceType, uint32_t firmwareVersion);
 };
 
+typedef std::vector<std::pair<std::string, std::string>> DefaultValue;
 class ParameterSet
 {
 public:
@@ -154,6 +155,7 @@ public:
 	Type::Enum type = Type::Enum::none;
 	std::string id;
 	std::vector<std::shared_ptr<Parameter>> parameters;
+	std::map<std::string, DefaultValue> defaultValues;
 	std::map<uint32_t, uint32_t> lists;
 	std::string subsetReference;
 
@@ -216,7 +218,9 @@ public:
 	bool paired = false;
 	double countFromSysinfo = -1;
 	double countFromSysinfoSize = 1;
-
+	std::string function;
+	std::string pairFunction1;
+	std::string pairFunction2;
 	std::string teamTag;
 	std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>> parameterSets;
 	std::shared_ptr<LinkRole> linkRoles;
