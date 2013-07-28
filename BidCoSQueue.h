@@ -16,6 +16,7 @@ class ServiceMessages;
 
 #include "delegate.hpp"
 #include "Exception.h"
+#include "PendingBidCoSQueues.h"
 
 enum class QueueEntryType { UNDEFINED, MESSAGE, PACKET };
 
@@ -51,7 +52,7 @@ class BidCoSQueue
 {
     protected:
         std::deque<BidCoSQueueEntry> _queue;
-        std::shared_ptr<std::deque<std::shared_ptr<BidCoSQueue>>> _pendingQueues;
+        std::shared_ptr<PendingBidCoSQueues> _pendingQueues;
         std::mutex _queueMutex;
         BidCoSQueueType _queueType;
         bool _stopResendThread = false;
@@ -79,7 +80,7 @@ class BidCoSQueue
         void push(std::shared_ptr<BidCoSMessage> message);
         void push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet);
         void push(std::shared_ptr<BidCoSPacket> packet);
-        void push(std::shared_ptr<std::deque<std::shared_ptr<BidCoSQueue>>>& pendingBidCoSQueues);
+        void push(std::shared_ptr<PendingBidCoSQueues>& pendingBidCoSQueues);
         void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool popImmediately, bool clearPendingQueues);
         BidCoSQueueEntry* front() { return &_queue.front(); }
         void pop();

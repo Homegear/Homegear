@@ -86,8 +86,8 @@ Peer::~Peer()
 Peer::Peer()
 {
 	rpcDevice.reset();
-	serviceMessages = std::shared_ptr<ServiceMessages>(new ServiceMessages(""));
-	pendingBidCoSQueues = std::shared_ptr<std::deque<std::shared_ptr<BidCoSQueue>>>(new std::deque<std::shared_ptr<BidCoSQueue>>());
+	serviceMessages.reset(new ServiceMessages(""));
+	pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 	team.address = 0;
 }
 
@@ -96,7 +96,8 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 	try
 	{
 		rpcDevice.reset();
-		pendingBidCoSQueues = std::shared_ptr<std::deque<std::shared_ptr<BidCoSQueue>>>(new std::deque<std::shared_ptr<BidCoSQueue>>());
+		serviceMessages.reset(new ServiceMessages(""));
+		pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 		if(serializedObject.empty()) return;
 		if(GD::debugLevel >= 5) std::cout << "Unserializing peer: " << serializedObject << std::endl;
 
@@ -152,29 +153,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 		uint32_t serializedServiceMessagesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		serviceMessages.reset(new ServiceMessages(_serialNumber, serializedObject.substr(pos, serializedServiceMessagesSize))); pos += serializedServiceMessagesSize;
 		uint32_t pendingQueuesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < pendingQueuesSize; i++)
-		{
-			uint32_t queueLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			if(queueLength > 6)
-			{
-				std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(serializedObject.substr(pos, queueLength), device)); pos += queueLength;
-				queue->noSending = true;
-				if(queue->getQueueType() == BidCoSQueueType::UNPAIRING || queue->getQueueType() == BidCoSQueueType::CONFIG) queue->serviceMessages = serviceMessages;
-				bool hasCallbackFunction = std::stol(serializedObject.substr(pos, 1)); pos += 1;
-				if(hasCallbackFunction)
-				{
-					std::shared_ptr<CallbackFunctionParameter> parameters(new CallbackFunctionParameter());
-					parameters->integers.push_back(std::stoll(serializedObject.substr(pos, 4), 0, 16)); pos += 4;
-					uint32_t keyLength = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-					parameters->strings.push_back(serializedObject.substr(pos, keyLength)); pos += keyLength;
-					parameters->integers.push_back(std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-					parameters->integers.push_back(std::stoll(serializedObject.substr(pos, 8), 0, 16) * 1000); pos += 8;
-					queue->callbackParameter = parameters;
-					queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<Peer, &Peer::addVariableToResetCallback>(this);
-				}
-				pendingBidCoSQueues->push_back(queue);
-			}
-		}
+		pendingBidCoSQueues.reset(new PendingBidCoSQueues(serializedObject.substr(pos, pendingQueuesSize), this, device)); pos += pendingQueuesSize;
 		uint32_t variablesToResetSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		for(uint32_t i = 0; i < variablesToResetSize; i++)
 		{
@@ -185,7 +164,27 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 			variable->value = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 			variable->resetTime = std::stoll(serializedObject.substr(pos, 8), 0, 16) * 1000; pos += 8;
 			variable->isDominoEvent = std::stol(serializedObject.substr(pos, 1)); pos += 1;
-			_variablesToReset.push_back(variable);
+			try
+			{
+				_variablesToResetMutex.lock();
+				_variablesToReset.push_back(variable);
+				_variablesToResetMutex.unlock();
+			}
+			catch(const std::exception& ex)
+			{
+				_variablesToResetMutex.unlock();
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			}
+			catch(const Exception& ex)
+			{
+				_variablesToResetMutex.unlock();
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			}
+			catch(...)
+			{
+				_variablesToResetMutex.unlock();
+				std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+			}
 		}
 		if(!_variablesToReset.empty())
 		{
@@ -264,18 +263,18 @@ void Peer::worker()
 		}
 		catch(const std::exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 			_variablesToResetMutex.unlock();
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 		}
 		catch(const Exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 			_variablesToResetMutex.unlock();
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 		}
 		catch(...)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 			_variablesToResetMutex.unlock();
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 		}
 	}
 }
@@ -402,85 +401,105 @@ void Peer::deletePairedVirtualDevices()
 
 std::string Peer::serialize()
 {
-	std::ostringstream stringstream;
-	stringstream << std::hex << std::uppercase << std::setfill('0');
-	stringstream << std::setw(8) << address;
-	stringstream << std::setw(4) << _serialNumber.size();
-	stringstream << _serialNumber;
-	stringstream << std::setw(8) << firmwareVersion;
-	stringstream << std::setw(2) << remoteChannel;
-	stringstream << std::setw(2) << localChannel;
-	stringstream << std::setw(8) << (int32_t)deviceType;
-	stringstream << std::setw(4) << countFromSysinfo;
-	stringstream << std::setw(2) << (int32_t)messageCounter;
-	stringstream << std::setw(1) << (int32_t)pairingComplete;
-	stringstream << std::setw(8) << teamChannel;
-	stringstream << std::setw(8) << team.address;
-	stringstream << std::setw(8) << team.channel;
-	stringstream << std::setw(4) << team.serialNumber.size();
-	stringstream << team.serialNumber;
-	stringstream << std::setw(8) << config.size();
-	for(std::unordered_map<int32_t, int32_t>::const_iterator i = config.begin(); i != config.end(); ++i)
+	try
 	{
-		stringstream << std::setw(8) << i->first;
-		stringstream << std::setw(8) << i->second;
-	}
-	stringstream << std::setw(8) << _peers.size();
-	for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
-	{
-		stringstream << std::setw(8) << i->first;
-		stringstream << std::setw(8) << i->second.size();
-		for(std::vector<std::shared_ptr<BasicPeer>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+		std::ostringstream stringstream;
+		stringstream << std::hex << std::uppercase << std::setfill('0');
+		stringstream << std::setw(8) << address;
+		stringstream << std::setw(4) << _serialNumber.size();
+		stringstream << _serialNumber;
+		stringstream << std::setw(8) << firmwareVersion;
+		stringstream << std::setw(2) << remoteChannel;
+		stringstream << std::setw(2) << localChannel;
+		stringstream << std::setw(8) << (int32_t)deviceType;
+		stringstream << std::setw(4) << countFromSysinfo;
+		stringstream << std::setw(2) << (int32_t)messageCounter;
+		stringstream << std::setw(1) << (int32_t)pairingComplete;
+		stringstream << std::setw(8) << teamChannel;
+		stringstream << std::setw(8) << team.address;
+		stringstream << std::setw(8) << team.channel;
+		stringstream << std::setw(4) << team.serialNumber.size();
+		stringstream << team.serialNumber;
+		stringstream << std::setw(8) << config.size();
+		for(std::unordered_map<int32_t, int32_t>::const_iterator i = config.begin(); i != config.end(); ++i)
 		{
-			if(!*j) continue;
-			stringstream << std::setw(8) << (*j)->address;
-			stringstream << std::setw(4) << (*j)->channel;
-			stringstream << std::setw(4) << (*j)->serialNumber.size();
-			stringstream << (*j)->serialNumber;
-			stringstream << std::setw(1) << (*j)->hidden;
-			stringstream << std::setw(8) << (*j)->linkName.size();
-			stringstream << (*j)->linkName;
-			stringstream << std::setw(8) << (*j)->linkDescription.size();
-			stringstream << (*j)->linkDescription;
+			stringstream << std::setw(8) << i->first;
+			stringstream << std::setw(8) << i->second;
 		}
-	}
-	serializeConfig(stringstream, configCentral);
-	serializeConfig(stringstream, valuesCentral);
-	serializeConfig(stringstream, linksCentral);
-	std::string serializedServiceMessages = serviceMessages->serialize();
-	stringstream << std::setw(8) << serializedServiceMessages.length();
-	stringstream << serializedServiceMessages;
-	stringstream << std::setw(8) << pendingBidCoSQueues->size();
-	while(!pendingBidCoSQueues->empty())
-	{
-		std::shared_ptr<BidCoSQueue> queue = pendingBidCoSQueues->front();
-		std::string bidCoSQueue = queue->serialize();
-		stringstream << std::setw(8) << bidCoSQueue.size();
-		stringstream << bidCoSQueue;
-		bool hasCallbackFunction = (queue->callbackParameter && queue->callbackParameter->integers.size() == 3 && queue->callbackParameter->strings.size() == 1);
-		stringstream << std::setw(1) << (int32_t)hasCallbackFunction;
-		if(hasCallbackFunction)
+		stringstream << std::setw(8) << _peers.size();
+		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			stringstream << std::setw(4) << queue->callbackParameter->integers.at(0);
-			stringstream << std::setw(4) << queue->callbackParameter->strings.at(0).size();
-			stringstream << queue->callbackParameter->strings.at(0);
-			stringstream << std::setw(8) << queue->callbackParameter->integers.at(1);
-			stringstream << std::setw(8) << (queue->callbackParameter->integers.at(2) / 1000);
+			stringstream << std::setw(8) << i->first;
+			stringstream << std::setw(8) << i->second.size();
+			for(std::vector<std::shared_ptr<BasicPeer>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				if(!*j) continue;
+				stringstream << std::setw(8) << (*j)->address;
+				stringstream << std::setw(4) << (*j)->channel;
+				stringstream << std::setw(4) << (*j)->serialNumber.size();
+				stringstream << (*j)->serialNumber;
+				stringstream << std::setw(1) << (*j)->hidden;
+				stringstream << std::setw(8) << (*j)->linkName.size();
+				stringstream << (*j)->linkName;
+				stringstream << std::setw(8) << (*j)->linkDescription.size();
+				stringstream << (*j)->linkDescription;
+			}
 		}
-		pendingBidCoSQueues->pop_front();
+		serializeConfig(stringstream, configCentral);
+		serializeConfig(stringstream, valuesCentral);
+		serializeConfig(stringstream, linksCentral);
+		std::string serializedServiceMessages = serviceMessages->serialize();
+		stringstream << std::setw(8) << serializedServiceMessages.length();
+		stringstream << serializedServiceMessages;
+		std::string serializedPendingQueues = pendingBidCoSQueues->serialize();
+		stringstream << std::setw(8) << serializedPendingQueues.length();
+		stringstream << serializedPendingQueues;
+		try
+		{
+			_variablesToResetMutex.lock();
+			stringstream << std::setw(8) << _variablesToReset.size();
+			for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = _variablesToReset.begin(); i != _variablesToReset.end(); ++i)
+			{
+				stringstream << std::setw(4) << (*i)->channel;
+				stringstream << std::setw(4) << (*i)->key.size();
+				stringstream << (*i)->key;
+				stringstream << std::setw(8) << (*i)->value;
+				stringstream << std::setw(8) << ((*i)->resetTime / 1000);
+				stringstream << std::setw(1) << (int32_t)(*i)->isDominoEvent;
+			}
+			_variablesToResetMutex.unlock();
+		}
+		catch(const std::exception& ex)
+		{
+			_variablesToResetMutex.unlock();
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		}
+		catch(const Exception& ex)
+		{
+			_variablesToResetMutex.unlock();
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		}
+		catch(...)
+		{
+			_variablesToResetMutex.unlock();
+			std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+		}
+		stringstream << std::dec;
+		return stringstream.str();
 	}
-	stringstream << std::setw(8) << _variablesToReset.size();
-	for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = _variablesToReset.begin(); i != _variablesToReset.end(); ++i)
-	{
-		stringstream << std::setw(4) << (*i)->channel;
-		stringstream << std::setw(4) << (*i)->key.size();
-		stringstream << (*i)->key;
-		stringstream << std::setw(8) << (*i)->value;
-		stringstream << std::setw(8) << ((*i)->resetTime / 1000);
-		stringstream << std::setw(1) << (int32_t)(*i)->isDominoEvent;
-	}
-	stringstream << std::dec;
-	return stringstream.str();
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+	return "";
 }
 
 void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config)
@@ -852,8 +871,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePackets(address, queue, true);
 			else
 			{
-				if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::deque<std::shared_ptr<BidCoSQueue>>());
-				pendingBidCoSQueues->push_back(queue);
+				pendingBidCoSQueues->push(queue);
 				if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 			}
 		}
@@ -1131,8 +1149,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
 				int32_t list = parameter->rpcParameter->physicalParameter->list;
 				if(list == 9999) list = 0;
-				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = value;
-				else allParameters[list][intIndex] |= value;
+				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = parameter->rpcParameter->getBytes(value);
+				else allParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
 				//Continue when value is unchanged except parameter is of the same index as a changed one.
 				if(parameter->value == value)
 				{
@@ -1211,8 +1229,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				messageCounter++;
 			}
 
-			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::deque<std::shared_ptr<BidCoSQueue>>());
-			pendingBidCoSQueues->push_back(queue);
+			pendingBidCoSQueues->push(queue);
 			if(!onlyPushing && !(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
@@ -1317,8 +1334,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				messageCounter++;
 			}
 
-			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::deque<std::shared_ptr<BidCoSQueue>>());
-			pendingBidCoSQueues->push_back(queue);
+			pendingBidCoSQueues->push(queue);
 			if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
@@ -2398,8 +2414,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		messageCounter++;
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new std::deque<std::shared_ptr<BidCoSQueue>>());
-		pendingBidCoSQueues->push_back(queue);
+		pendingBidCoSQueues->push(queue);
 		if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp))
 		{
 			if(valueKey == "STATE") queue->burst = true;

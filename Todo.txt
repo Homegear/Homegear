@@ -10,8 +10,6 @@
 - Add "functions"
 - Add service messages
 - Automatically add spy device and central if they don't exist
-- Change serialize() in Peer so pendingBidCoSQueues are not popped and add Mutexes to pendingBidCoSQueues and VariablesToReset
-	=> Reenable worker in HomeMaticCentral
 Today:
 
 Questions:

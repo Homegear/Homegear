@@ -11,6 +11,7 @@
 #include <mutex>
 #include <thread>
 
+class PendingBidCoSQueues;
 class CallbackFunctionParameter;
 class HomeMaticDevice;
 class BidCoSQueue;
@@ -89,8 +90,7 @@ class Peer
         std::vector<std::pair<std::string, uint32_t>> teamChannels;
         bool pairingComplete = false;
 
-        //Has to be shared_ptr because Peer must be copyable
-        std::shared_ptr<std::deque<std::shared_ptr<BidCoSQueue>>> pendingBidCoSQueues;
+        std::shared_ptr<PendingBidCoSQueues> pendingBidCoSQueues;
 
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel);

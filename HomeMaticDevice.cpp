@@ -23,7 +23,7 @@ void HomeMaticDevice::init()
 		_messageCounter[1] = 0; //Duty cycle message counter
 
 		setUpBidCoSMessages();
-		//_workerThread = std::thread(&HomeMaticDevice::worker, this);
+		_workerThread = std::thread(&HomeMaticDevice::worker, this);
 		_initialized = true;
 	}
 	catch(const std::exception& ex)

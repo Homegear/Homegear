@@ -225,7 +225,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet)
     }
 }
 
-void BidCoSQueue::push(std::shared_ptr<std::deque<std::shared_ptr<BidCoSQueue>>>& pendingQueues)
+void BidCoSQueue::push(std::shared_ptr<PendingBidCoSQueues>& pendingQueues)
 {
 	try
 	{
@@ -250,13 +250,14 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmedi
 {
 	try
 	{
-		if(!_pendingQueues || clearPendingQueues) _pendingQueues.reset(new std::deque<std::shared_ptr<BidCoSQueue>>());
+		if(!_pendingQueues) _pendingQueues.reset(new PendingBidCoSQueues());
+		if(clearPendingQueues) _pendingQueues->clear();
 		if(!pendingQueue) return;
-		_pendingQueues->push_back(pendingQueue);
+		_pendingQueues->push(pendingQueue);
 		pushPendingQueue();
 		if(popImmediately)
 		{
-			_pendingQueues->pop_front();
+			_pendingQueues->pop();
 			_workingOnPendingQueue = false;
 		}
 	}
@@ -465,7 +466,7 @@ void BidCoSQueue::pushPendingQueue()
 		while(!_pendingQueues->empty() && _pendingQueues->front()->isEmpty())
 		{
 			if(GD::debugLevel >= 5) std::cout << "Debug: Empty queue was pushed." << std::endl;
-			_pendingQueues->pop_front();
+			_pendingQueues->pop();
 		}
 		if(_pendingQueues->empty()) return;
 		std::shared_ptr<BidCoSQueue> queue;
@@ -539,7 +540,7 @@ void BidCoSQueue::pop()
 		_queue.pop_front();
 		if(_queue.empty()) {
 			if(queueEmptyCallback && callbackParameter) queueEmptyCallback(callbackParameter);
-			if(_workingOnPendingQueue) _pendingQueues->pop_front();
+			if(_workingOnPendingQueue) _pendingQueues->pop();
 			if(!_pendingQueues || (_pendingQueues && _pendingQueues->empty()))
 			{
 				_stopResendThread = true;

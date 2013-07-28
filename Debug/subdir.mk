@@ -19,6 +19,7 @@ CPP_SRCS += \
 ../HomeMaticDevices.cpp \
 ../Log.cpp \
 ../Peer.cpp \
+../PendingBidCoSQueues.cpp \
 ../ServiceMessages.cpp \
 ../Settings.cpp \
 ../main.cpp 
@@ -39,6 +40,7 @@ OBJS += \
 ./HomeMaticDevices.o \
 ./Log.o \
 ./Peer.o \
+./PendingBidCoSQueues.o \
 ./ServiceMessages.o \
 ./Settings.o \
 ./main.o 
@@ -59,6 +61,7 @@ CPP_DEPS += \
 ./HomeMaticDevices.d \
 ./Log.d \
 ./Peer.d \
+./PendingBidCoSQueues.d \
 ./ServiceMessages.d \
 ./Settings.d \
 ./main.d 
