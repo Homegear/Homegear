@@ -120,12 +120,6 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		std::shared_ptr<Peer> peer;
-		if(_peers.find(packet->senderAddress()) != _peers.end())
-		{
-			peer = _peers[packet->senderAddress()];
-			std::cerr << peer->pendingBidCoSQueues->size() << std::endl;
-		}
 		bool handled = HomeMaticDevice::packetReceived(packet);
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
@@ -1988,6 +1982,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool on)
 		_timeLeftInPairingMode = 0;
 		if(on)
 		{
+			_timeLeftInPairingMode = 60; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
 			_pairingModeThread = std::thread(&HomeMaticCentral::pairingModeTimer, this);
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));

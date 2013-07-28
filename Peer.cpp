@@ -1117,6 +1117,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 		if(type == RPC::ParameterSet::Type::Enum::master)
 		{
 			std::map<int32_t, std::map<int32_t, uint8_t>> changedParameters;
+			//allParameters is necessary to temporarily store all values. It is used to set changedParameters.
+			//This is necessary when there are multiple variables per index and not all of them are changed.
+			std::map<int32_t, std::map<int32_t, uint8_t>> allParameters;
 			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if((*i)->name.empty()) continue;
@@ -1125,17 +1128,24 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				RPCConfigurationParameter* parameter = &configCentral[channel][(*i)->name];
 				if(!parameter->rpcParameter) continue;
 				value = parameter->rpcParameter->convertToPacket(*i);
-				if(parameter->value == value) continue;
-				parameter->value = value;
-				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " set to 0x" << std::hex << value << std::dec << "." << std::endl;
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
 				int32_t list = parameter->rpcParameter->physicalParameter->list;
 				if(list == 9999) list = 0;
+				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = value;
+				else allParameters[list][intIndex] |= value;
+				//Continue when value is unchanged except parameter is of the same index as a changed one.
+				if(parameter->value == value)
+				{
+					if(changedParameters[list].find(intIndex) != changedParameters[list].end()) changedParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
+					continue;
+				}
+				parameter->value = value;
+				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " set to 0x" << std::hex << value << std::dec << "." << std::endl;
 				value = parameter->rpcParameter->getBytes(value);
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
-				if(changedParameters[list].find(intIndex) == changedParameters[list].end()) changedParameters[list][intIndex] = value;
-				else changedParameters[list][intIndex] |= value;
+				if(changedParameters[list].find(intIndex) == changedParameters[list].end()) changedParameters[list][intIndex] = allParameters[list][intIndex];
+				changedParameters[list][intIndex] |= value;
 			}
 
 			if(changedParameters.empty() || changedParameters.begin()->second.empty()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
