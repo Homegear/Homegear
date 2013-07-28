@@ -97,7 +97,7 @@ std::shared_ptr<BidCoSPacket> BidCoSPacketManager::get(int32_t address)
 	{
 		_packetMutex.lock();
 		//Make a copy to make sure, the element exists
-		std::shared_ptr<BidCoSPacket> packet((_packets.find(address) != _packets.end()) ? _packets[address]->packet : nullptr);
+		std::shared_ptr<BidCoSPacket> packet((_packets.find(address) != _packets.end()) ? _packets[address]->packet : std::shared_ptr<BidCoSPacket>());
 		_packetMutex.unlock();
 		return packet;
 	}

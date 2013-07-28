@@ -849,24 +849,27 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		if(sentPacket && sentPacket->payload()->at(1) == 0x03)
 		{
 			Peer* peer = _peers[packet->senderAddress()].get();
-			for(uint32_t i = 1; i < packet->payload()->size() - 1; i += 4)
+			if(packet->payload()->size() >= 5)
 			{
-				int32_t peerAddress = (packet->payload()->at(i) << 16) + (packet->payload()->at(i + 1) << 8) + packet->payload()->at(i + 2);
-				if(peerAddress != 0)
+				for(uint32_t i = 1; i < packet->payload()->size() - 1; i += 4)
 				{
-					std::shared_ptr<BasicPeer> newPeer(new BasicPeer());
-					newPeer->address = peerAddress;
-					newPeer->channel = packet->payload()->at(i + 3);
-					int32_t localChannel = sentPacket->payload()->at(0);
-					_peers[packet->senderAddress()]->addPeer(localChannel, newPeer);
-					if(peer->rpcDevice->channels.find(localChannel) == peer->rpcDevice->channels.end()) continue;
-					std::shared_ptr<RPC::DeviceChannel> channel = peer->rpcDevice->channels[localChannel];
-					if(channel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) == channel->parameterSets.end()) continue;
-					std::shared_ptr<RPC::ParameterSet> parameterSet = channel->parameterSets[RPC::ParameterSet::Type::Enum::link];
-					if(parameterSet->parameters.empty()) continue;
-					for(std::map<uint32_t, uint32_t>::iterator k = parameterSet->lists.begin(); k != parameterSet->lists.end(); ++k)
+					int32_t peerAddress = (packet->payload()->at(i) << 16) + (packet->payload()->at(i + 1) << 8) + packet->payload()->at(i + 2);
+					if(peerAddress != 0)
 					{
-						sendRequestConfig(peer->address, localChannel, k->first, newPeer->address, newPeer->channel);
+						std::shared_ptr<BasicPeer> newPeer(new BasicPeer());
+						newPeer->address = peerAddress;
+						newPeer->channel = packet->payload()->at(i + 3);
+						int32_t localChannel = sentPacket->payload()->at(0);
+						_peers[packet->senderAddress()]->addPeer(localChannel, newPeer);
+						if(peer->rpcDevice->channels.find(localChannel) == peer->rpcDevice->channels.end()) continue;
+						std::shared_ptr<RPC::DeviceChannel> channel = peer->rpcDevice->channels[localChannel];
+						if(channel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) == channel->parameterSets.end()) continue;
+						std::shared_ptr<RPC::ParameterSet> parameterSet = channel->parameterSets[RPC::ParameterSet::Type::Enum::link];
+						if(parameterSet->parameters.empty()) continue;
+						for(std::map<uint32_t, uint32_t>::iterator k = parameterSet->lists.begin(); k != parameterSet->lists.end(); ++k)
+						{
+							sendRequestConfig(peer->address, localChannel, k->first, newPeer->address, newPeer->channel);
+						}
 					}
 				}
 			}
