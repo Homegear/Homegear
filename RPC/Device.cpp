@@ -281,8 +281,8 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 		{
 			xml_attribute<>* attr1;
 			xml_attribute<>* attr2;
-			attr1 = node->first_attribute("device_value");
-			attr2 = node->first_attribute("parameter_value");
+			attr1 = conversionNode->first_attribute("device_value");
+			attr2 = conversionNode->first_attribute("parameter_value");
 			if(attr1 != nullptr && attr2 != nullptr)
 			{
 				std::string attribute1(attr1->value());
@@ -325,7 +325,7 @@ bool Parameter::checkCondition(int64_t value)
 
 std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
 {
-	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
+	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 	{
 		return std::shared_ptr<RPCVariable>(new RPCVariable(value));
 	}
@@ -392,7 +392,7 @@ int32_t Parameter::convertToPacket(std::string value)
 int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 {
 	if(!value) return 0;
-	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
+	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 	{
 		LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
 		if(value->integerValue > parameter->max) return parameter->max;

@@ -196,7 +196,7 @@ std::string Cul::readFromDevice()
 			{
 				case 0:
 					if(GD::debugLevel >= 3) std::cout << "Warning: Reading from CUL device timed out: " + _culDevice << std::endl;
-					break;
+					continue;
 				case -1:
 					throw(Exception("Error reading from CUL device: " + _culDevice));
 					break;
@@ -240,20 +240,20 @@ void Cul::writeToDevice(std::string data, bool printSending)
         if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _culDevice));
         int32_t bytesWritten = 0;
         int32_t i;
-        struct timeval timeout;
-        timeout.tv_sec = 0;
-        timeout.tv_usec = 200000;
-        fd_set writeFileDescriptor;
+        //struct timeval timeout;
+        //timeout.tv_sec = 0;
+        //timeout.tv_usec = 200000;
+        //fd_set writeFileDescriptor;
         if(GD::debugLevel > 3 && printSending)
         {
             std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << data.substr(2, data.size() - 4) << std::endl;
         }
         _sendMutex.lock();
-        FD_ZERO(&writeFileDescriptor);
-        FD_SET(_fileDescriptor, &writeFileDescriptor);
+        //FD_ZERO(&writeFileDescriptor);
+        //FD_SET(_fileDescriptor, &writeFileDescriptor);
         while(bytesWritten < (signed)data.length())
         {
-            i = select(_fileDescriptor + 1, NULL, &writeFileDescriptor, NULL, &timeout);
+            /*i = select(_fileDescriptor + 1, NULL, &writeFileDescriptor, NULL, &timeout);
             switch(i)
             {
                 case 0:
@@ -267,7 +267,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
                 default:
                     throw(Exception("Error writing to CUL device (2): " + _culDevice));
 
-            }
+            }*/
             i = write(_fileDescriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
             if(i == -1)
             {

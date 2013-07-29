@@ -880,8 +880,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				//As the peer request is popped already, queue it again.
 				//Example from HM-LC-Sw1PBU-FM:
 				//1375093199833 Sending: 1072A001FD00011BD5D100040000000000
-				//1375093199988 Received: 1472A0101BD5D1FD00010202810AFD0B000C0115FF <= not a multi packet response
-				//1375093200079 Sending: 0A728002FD00011BD5D100 <= After the ok we are not expecting another packet
+				//1375093199988 Received: 1472A0101BD5D1FD0001s0 <= After the ok we are not expecting another packet
 				//1375093200171 Sending: 0B73A001FD00011BD5D10103 <= So we are sending the peer request
 				//1375093200227 Received: 0C73A0101BD5D1FD0001030000 <= And a little later receive multiPacketEnd unexpectedly
 				std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
@@ -1176,21 +1175,36 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		sender->serviceMessages->configPending = true;
 		sender->pendingBidCoSQueues->push(pendingQueue);
 
-		if(!receiverChannel->enforceLinks.empty() && senderChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) != senderChannel->parameterSets.end())
+		if(senderChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) != senderChannel->parameterSets.end())
 		{
-			std::shared_ptr<RPC::ParameterSet> linkset = senderChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::link);
+			//Send config with applied functions
 			std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-			for(std::vector<std::shared_ptr<RPC::EnforceLink>>::iterator i = receiverChannel->enforceLinks.begin(); i != receiverChannel->enforceLinks.end(); ++i)
+			std::unordered_map<std::string, RPCConfigurationParameter>* linkConfig = &sender->linksCentral.at(senderChannelIndex).at(receiver->address).at(receiverChannelIndex);
+			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator i = linkConfig->begin(); i != linkConfig->end(); ++i)
 			{
-				std::shared_ptr<RPC::Parameter> parameter = linkset->getParameter((*i)->id);
-				if(parameter)
-				{
-					paramset->structValue->push_back((*i)->getValue((RPC::RPCVariableType)parameter->logicalParameter->type));
-					paramset->structValue->back()->name = (*i)->id;
-				}
+				paramset->structValue->push_back(i->second.rpcParameter->convertFromPacket(i->second.value));
+				paramset->structValue->back()->name = i->first;
 			}
 			//putParamset pushes the packets on pendingQueues, but does not send immediately
-			sender->putParamset(senderChannelIndex, RPC::ParameterSet::Type::Enum::link, receiverSerialNumber, receiverChannelIndex, paramset, true);
+			sender->putParamset(senderChannelIndex, RPC::ParameterSet::Type::Enum::link, receiverSerialNumber, receiverChannelIndex, paramset, true, true);
+
+			//Send enforce link parameters
+			if(!receiverChannel->enforceLinks.empty())
+			{
+				std::shared_ptr<RPC::ParameterSet> linkset = senderChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::link);
+				paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+				for(std::vector<std::shared_ptr<RPC::EnforceLink>>::iterator i = receiverChannel->enforceLinks.begin(); i != receiverChannel->enforceLinks.end(); ++i)
+				{
+					std::shared_ptr<RPC::Parameter> parameter = linkset->getParameter((*i)->id);
+					if(parameter)
+					{
+						paramset->structValue->push_back((*i)->getValue((RPC::RPCVariableType)parameter->logicalParameter->type));
+						paramset->structValue->back()->name = (*i)->id;
+					}
+				}
+				//putParamset pushes the packets on pendingQueues, but does not send immediately
+				sender->putParamset(senderChannelIndex, RPC::ParameterSet::Type::Enum::link, receiverSerialNumber, receiverChannelIndex, paramset, true, true);
+			}
 		}
 
 		queue->push(sender->pendingBidCoSQueues);
@@ -1218,21 +1232,35 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		receiver->serviceMessages->configPending = true;
 		receiver->pendingBidCoSQueues->push(pendingQueue);
 
-		if(!senderChannel->enforceLinks.empty() && receiverChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) != receiverChannel->parameterSets.end())
+		if(receiverChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) != receiverChannel->parameterSets.end())
 		{
-			std::shared_ptr<RPC::ParameterSet> linkset = receiverChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::link);
+			//Send config with applied functions
 			std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-			for(std::vector<std::shared_ptr<RPC::EnforceLink>>::iterator i = senderChannel->enforceLinks.begin(); i != senderChannel->enforceLinks.end(); ++i)
+			std::unordered_map<std::string, RPCConfigurationParameter>* linkConfig = &receiver->linksCentral.at(receiverChannelIndex).at(sender->address).at(senderChannelIndex);
+			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator i = linkConfig->begin(); i != linkConfig->end(); ++i)
 			{
-				std::shared_ptr<RPC::Parameter> parameter = linkset->getParameter((*i)->id);
-				if(parameter)
-				{
-					paramset->structValue->push_back((*i)->getValue((RPC::RPCVariableType)parameter->logicalParameter->type));
-					paramset->structValue->back()->name = (*i)->id;
-				}
+				paramset->structValue->push_back(i->second.rpcParameter->convertFromPacket(i->second.value));
+				paramset->structValue->back()->name = i->first;
 			}
 			//putParamset pushes the packets on pendingQueues, but does not send immediately
-			receiver->putParamset(receiverChannelIndex, RPC::ParameterSet::Type::Enum::link, senderSerialNumber, senderChannelIndex, paramset, true);
+			receiver->putParamset(receiverChannelIndex, RPC::ParameterSet::Type::Enum::link, senderSerialNumber, senderChannelIndex, paramset, true, true);
+
+			if(!senderChannel->enforceLinks.empty())
+			{
+				std::shared_ptr<RPC::ParameterSet> linkset = receiverChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::link);
+				paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+				for(std::vector<std::shared_ptr<RPC::EnforceLink>>::iterator i = senderChannel->enforceLinks.begin(); i != senderChannel->enforceLinks.end(); ++i)
+				{
+					std::shared_ptr<RPC::Parameter> parameter = linkset->getParameter((*i)->id);
+					if(parameter)
+					{
+						paramset->structValue->push_back((*i)->getValue((RPC::RPCVariableType)parameter->logicalParameter->type));
+						paramset->structValue->back()->name = (*i)->id;
+					}
+				}
+				//putParamset pushes the packets on pendingQueues, but does not send immediately
+				receiver->putParamset(receiverChannelIndex, RPC::ParameterSet::Type::Enum::link, senderSerialNumber, senderChannelIndex, paramset, true, true);
+			}
 		}
 
 		queue->push(receiver->pendingBidCoSQueues);
@@ -1265,6 +1293,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
 		std::shared_ptr<Peer> sender = _peersBySerial.at(senderSerialNumber);
 		std::shared_ptr<Peer> receiver = _peersBySerial.at(receiverSerialNumber);
+		if(!sender->rpcDevice || !receiver->rpcDevice) return RPC::RPCVariable::createError(-32500, "Sender or receiver does have a RPC device.");
 		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Sender channel not found.");
 		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Receiver channel not found.");
 		if(!sender->getPeer(senderChannelIndex, receiver->address) && !receiver->getPeer(receiverChannelIndex, sender->address)) return RPC::RPCVariable::createError(-6, "Devices are not paired to each other.");

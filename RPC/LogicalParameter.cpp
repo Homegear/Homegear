@@ -78,6 +78,7 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node)
 				while((unsigned)option.index > options.size()) options.push_back(ParameterOption());
 				index = option.index;
 			}
+			else option.index = index;
 			options.push_back(option);
 			if(options.back().isDefault)
 			{

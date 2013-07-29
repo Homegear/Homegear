@@ -59,7 +59,7 @@ void Peer::initializeLinkConfig(int32_t channel, int32_t peerAddress, int32_t re
 				parameter = RPCConfigurationParameter();
 				parameter.rpcParameter = *j;
 				parameter.value = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-				linksCentral[channel][address][remoteChannel][(*j)->id] = parameter;
+				linksCentral[channel][peerAddress][remoteChannel][(*j)->id] = parameter;
 			}
 		}
 		applyConfigFunction(channel, peerAddress, remoteChannel);
@@ -102,9 +102,10 @@ void Peer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t rem
 		}
 		if(function.empty()) return;
 		if(linkSet->defaultValues.find(function) == linkSet->defaultValues.end()) return;
+		if(GD::debugLevel >= 4) std::cout << "Info: Device 0x" << std::hex << address << ": Applying function " << function << "." << std::endl;
 		for(RPC::DefaultValue::iterator j = linkSet->defaultValues.at(function).begin(); j != linkSet->defaultValues.at(function).end(); ++j)
 		{
-			RPCConfigurationParameter* parameter = &linksCentral[channel][address][remoteChannel][j->first];
+			RPCConfigurationParameter* parameter = &linksCentral[channel][peerAddress][remoteChannel][j->first];
 			if(!parameter->rpcParameter) continue;
 			parameter->value = parameter->rpcParameter->convertToPacket(j->second);
 		}
@@ -342,7 +343,6 @@ void Peer::worker()
 
 void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 {
-	//Allow unknown channel for myself. Needed e. g. for switches.
 	if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 	{
@@ -391,6 +391,7 @@ void Peer::removePeer(int32_t channel, int32_t address)
 		if((*i)->address == address)
 		{
 			_peers[channel].erase(i);
+			if(linksCentral[channel].find(address) == linksCentral[channel].end()) return;
 			linksCentral[channel].erase(linksCentral[channel].find(address));
 			return;
 		}
@@ -1208,7 +1209,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetId(uint32_t channel, RPC::Par
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool onlyPushing)
+std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool sendUnchanged, bool onlyPushing )
 {
 	try
 	{
@@ -1239,7 +1240,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = parameter->rpcParameter->getBytes(value);
 				else allParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
 				//Continue when value is unchanged except parameter is of the same index as a changed one.
-				if(parameter->value == value)
+				if(parameter->value == value && !sendUnchanged)
 				{
 					if(changedParameters[list].find(intIndex) != changedParameters[list].end()) changedParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
 					continue;
@@ -1337,6 +1338,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			if(linksCentral[channel][address].find(remotePeer->channel) == linksCentral[channel][address].end()) RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 
 			std::map<int32_t, std::map<int32_t, uint8_t>> changedParameters;
+			//allParameters is necessary to temporarily store all values. It is used to set changedParameters.
+			//This is necessary when there are multiple variables per index and not all of them are changed.
+			std::map<int32_t, std::map<int32_t, uint8_t>> allParameters;
 			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if((*i)->name.empty()) continue;
@@ -1345,16 +1349,23 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				RPCConfigurationParameter* parameter = &linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->name];
 				if(!parameter->rpcParameter) continue;
 				value = parameter->rpcParameter->convertToPacket(*i);
-				if(parameter->value == value) continue;
-				parameter->value = value;
-				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " set to 0x" << std::hex << value << std::dec << "." << std::endl;
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
 				int32_t list = parameter->rpcParameter->physicalParameter->list;
 				if(list == 9999) list = 0;
+				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = parameter->rpcParameter->getBytes(value);
+				else allParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
+				//Continue when value is unchanged except parameter is of the same index as a changed one.
+				if(parameter->value == value && !sendUnchanged)
+				{
+					if(changedParameters[list].find(intIndex) != changedParameters[list].end()) changedParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
+					continue;
+				}
+				parameter->value = value;
+				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " set to 0x" << std::hex << value << std::dec << "." << std::endl;
 				value = parameter->rpcParameter->getBytes(value);
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
-				if(changedParameters[list].find(intIndex) == changedParameters[list].end()) changedParameters[list][intIndex] = value;
+				if(changedParameters[list].find(intIndex) == changedParameters[list].end()) changedParameters[list][intIndex] = allParameters[list][intIndex];
 				else changedParameters[list][intIndex] |= value;
 			}
 
@@ -1420,9 +1431,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				payload.clear();
 				messageCounter++;
 			}
-
 			pendingBidCoSQueues->push(queue);
-			if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
+			if(!onlyPushing && !(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
