@@ -189,6 +189,42 @@ void BidCoSQueue::resend(uint32_t threadId)
     }
 }
 
+void BidCoSQueue::push_front(std::shared_ptr<BidCoSPacket> packet)
+{
+	try
+	{
+		BidCoSQueueEntry entry;
+		entry.setPacket(packet, true);
+		if(!noSending)
+		{
+			_queue.push_front(entry);
+			resendCounter = 0;
+			if(!noSending)
+			{
+				std::thread send(&BidCoSQueue::send, this, entry.getPacket());
+				send.detach();
+				startResendThread();
+			}
+		}
+		else
+		{
+			_queue.push_front(entry);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
 void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet)
 {
 	try

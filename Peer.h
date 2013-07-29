@@ -94,6 +94,7 @@ class Peer
 
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel);
+        void applyConfigFunction(int32_t channel, int32_t address, int32_t remoteChannel);
         std::string serialize();
         void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config);
         void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config);
@@ -113,6 +114,7 @@ class Peer
         void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, int64_t>& values);
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
+        int32_t getChannelGroupedWith(int32_t channel);
 
         std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
         std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);

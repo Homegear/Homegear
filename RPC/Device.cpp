@@ -353,6 +353,42 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
 	return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(value));
 }
 
+int32_t Parameter::convertToPacket(std::string value)
+{
+	std::shared_ptr<RPCVariable> convertedValue;
+	if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
+	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
+	{
+		if(HelperFunctions::isNumber(value)) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
+		else //value is id of enum element
+		{
+			LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
+			for(std::vector<ParameterOption>::iterator i = parameter->options.begin(); i != parameter->options.end(); ++i)
+			{
+				if(i->id == value)
+				{
+					convertedValue.reset(new RPCVariable(i->index));
+					break;
+				}
+			}
+			if(!convertedValue) convertedValue.reset(new RPCVariable(0));
+		}
+	}
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean || logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
+	{
+		convertedValue.reset(new RPCVariable(false));
+		if(HelperFunctions::toLower(value) == "true") convertedValue->booleanValue = true;
+	}
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) convertedValue.reset(new RPCVariable(HelperFunctions::getDouble(value)));
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) convertedValue.reset(new RPCVariable(value));
+	if(!convertedValue)
+	{
+		if(GD::debugLevel >= 3) std::cout << "Warning: Could not convert parameter " << id << " from String." << std::endl;
+		return 0;
+	}
+	return convertToPacket(convertedValue);
+}
+
 int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 {
 	if(!value) return 0;

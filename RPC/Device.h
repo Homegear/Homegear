@@ -124,6 +124,7 @@ public:
 	bool checkCondition(int64_t value);
 	std::shared_ptr<RPC::RPCVariable> convertFromPacket(int32_t value);
 	int32_t convertToPacket(std::shared_ptr<RPC::RPCVariable> value);
+	int32_t convertToPacket(std::string value);
 	int64_t getBytes(int32_t value);
 };
 

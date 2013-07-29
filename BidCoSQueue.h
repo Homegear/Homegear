@@ -79,6 +79,7 @@ class BidCoSQueue
 
         void push(std::shared_ptr<BidCoSMessage> message);
         void push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet);
+        void push_front(std::shared_ptr<BidCoSPacket> packet);
         void push(std::shared_ptr<BidCoSPacket> packet);
         void push(std::shared_ptr<PendingBidCoSQueues>& pendingBidCoSQueues);
         void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool popImmediately, bool clearPendingQueues);

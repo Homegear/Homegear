@@ -46,20 +46,81 @@ void Peer::initializeCentralConfig()
 
 void Peer::initializeLinkConfig(int32_t channel, int32_t peerAddress, int32_t remoteChannel)
 {
-	if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
-	if(rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
-	std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
-	RPCConfigurationParameter parameter;
-	for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = linkSet->parameters.begin(); j != linkSet->parameters.end(); ++j)
+	try
 	{
-		if(!(*j)->id.empty())
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
+		if(rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
+		std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
+		RPCConfigurationParameter parameter;
+		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = linkSet->parameters.begin(); j != linkSet->parameters.end(); ++j)
 		{
-			parameter = RPCConfigurationParameter();
-			parameter.rpcParameter = *j;
-			parameter.value = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-			linksCentral[channel][address][remoteChannel][(*j)->id] = parameter;
+			if(!(*j)->id.empty())
+			{
+				parameter = RPCConfigurationParameter();
+				parameter.rpcParameter = *j;
+				parameter.value = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+				linksCentral[channel][address][remoteChannel][(*j)->id] = parameter;
+			}
+		}
+		applyConfigFunction(channel, peerAddress, remoteChannel);
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void Peer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t remoteChannel)
+{
+	try
+	{
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
+		if(rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
+		std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central) return; //Shouldn't happen
+		std::shared_ptr<Peer> remotePeer;
+		if(central->getPeers()->find(peerAddress) != central->getPeers()->end()) remotePeer = central->getPeers()->at(peerAddress);
+		if(!remotePeer || !remotePeer->rpcDevice) return; //Shouldn't happen
+		if(remotePeer->rpcDevice->channels.find(remoteChannel) == remotePeer->rpcDevice->channels.end()) return;
+		std::shared_ptr<RPC::DeviceChannel> remoteRPCChannel = remotePeer->rpcDevice->channels.at(remoteChannel);
+		int32_t groupedWith = getChannelGroupedWith(channel);
+		std::string function;
+		if(groupedWith == -1 && !remoteRPCChannel->function.empty()) function = remoteRPCChannel->function;
+		if(groupedWith > -1)
+		{
+			if(groupedWith > channel && !remoteRPCChannel->pairFunction1.empty()) function = remoteRPCChannel->pairFunction1;
+			else if(groupedWith < channel && !remoteRPCChannel->pairFunction2.empty()) function = remoteRPCChannel->pairFunction2;
+		}
+		if(function.empty()) return;
+		if(linkSet->defaultValues.find(function) == linkSet->defaultValues.end()) return;
+		for(RPC::DefaultValue::iterator j = linkSet->defaultValues.at(function).begin(); j != linkSet->defaultValues.at(function).end(); ++j)
+		{
+			RPCConfigurationParameter* parameter = &linksCentral[channel][address][remoteChannel][j->first];
+			if(!parameter->rpcParameter) continue;
+			parameter->value = parameter->rpcParameter->convertToPacket(j->second);
 		}
 	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 Peer::~Peer()
@@ -681,6 +742,47 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
     }
 }
 
+int32_t Peer::getChannelGroupedWith(int32_t channel)
+{
+	try
+	{
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return -1;
+		if(rpcDevice->channels.at(channel)->paired)
+		{
+			uint32_t firstGroupChannel = 0;
+			//Find first channel of group
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			{
+				if(i->second->paired)
+				{
+					firstGroupChannel = i->first;
+					break;
+				}
+			}
+			uint32_t groupedWith = 0;
+			if((channel - firstGroupChannel) % 2 == 0) groupedWith = channel + 1; //Grouped with next channel
+			else groupedWith = channel - 1; //Grouped with last channel
+			if(rpcDevice->channels.find(groupedWith) != rpcDevice->channels.end())
+			{
+				return groupedWith;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+	return -1;
+}
+
 void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, int64_t>& values)
 {
 	try
@@ -1016,25 +1118,10 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)rpcChannel->uiFlags)));
 
-		if(rpcChannel->paired)
+		int32_t groupedWith = getChannelGroupedWith(channel);
+		if(groupedWith > -1)
 		{
-			uint32_t firstGroupChannel = 0;
-			//Find first channel of group
-			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
-			{
-				if(i->second->paired)
-				{
-					firstGroupChannel = i->first;
-					break;
-				}
-			}
-			uint32_t groupedWith = 0;
-			if((channel - firstGroupChannel) % 2 == 0) groupedWith = channel + 1; //Grouped with next channel
-			else groupedWith = channel - 1; //Grouped with last channel
-			if(rpcDevice->channels.find(groupedWith) != rpcDevice->channels.end())
-			{
-				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("GROUP", _serialNumber + ":" + std::to_string(groupedWith))));
-			}
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("GROUP", _serialNumber + ":" + std::to_string(groupedWith))));
 		}
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INDEX", channel)));
@@ -1688,24 +1775,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 				std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
 				if(rpcChannel->paired)
 				{
-					uint32_t firstGroupChannel = 0;
-					//Find first channel of group
-					for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
-					{
-						if(i->second->paired)
-						{
-							firstGroupChannel = i->first;
-							break;
-						}
-					}
-					uint32_t groupedWith = 0;
-					if((channel - firstGroupChannel) % 2 == 0) groupedWith = channel + 1; //Grouped with next channel
-					else groupedWith = channel - 1; //Grouped with last channel
-
 					element = getLink(channel, flags & 0xFFFFFFFE, avoidDuplicates);
 					array->arrayValue->insert(array->arrayValue->end(), element->arrayValue->begin(), element->arrayValue->end());
 
-					if(rpcDevice->channels.find(groupedWith) != rpcDevice->channels.end())
+					int32_t groupedWith = getChannelGroupedWith(channel);
+					if(groupedWith > -1)
 					{
 						element = getLink(groupedWith, flags & 0xFFFFFFFE, avoidDuplicates);
 						array->arrayValue->insert(array->arrayValue->end(), element->arrayValue->begin(), element->arrayValue->end());

@@ -52,6 +52,12 @@ public:
 		return number;
 	}
 
+	static bool isNumber(std::string &s)
+	{
+		try { std::stoll(s, 0, 10); } catch(...) { return false; }
+		return true;
+	}
+
 	static int32_t getNumber(std::string &s)
 	{
 		int32_t xpos = s.find('x');

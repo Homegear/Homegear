@@ -874,6 +874,23 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				}
 			}
 			if(packet->controlByte() & 0x20) sendOK(packet->messageCounter(), peer->address);
+			if(packet->payload()->size() >= 2 && packet->payload()->at(0) == 0x03 && packet->payload()->at(1) == 0x00)
+			{
+				//multiPacketEnd was received unexpectedly. Because of the delay it was received after the peer request packet was sent.
+				//As the peer request is popped already, queue it again.
+				//Example from HM-LC-Sw1PBU-FM:
+				//1375093199833 Sending: 1072A001FD00011BD5D100040000000000
+				//1375093199988 Received: 1472A0101BD5D1FD00010202810AFD0B000C0115FF <= not a multi packet response
+				//1375093200079 Sending: 0A728002FD00011BD5D100 <= After the ok we are not expecting another packet
+				//1375093200171 Sending: 0B73A001FD00011BD5D10103 <= So we are sending the peer request
+				//1375093200227 Received: 0C73A0101BD5D1FD0001030000 <= And a little later receive multiPacketEnd unexpectedly
+				std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+				if(queue)
+				{
+					queue->push_front(sentPacket);
+					return;
+				}
+			}
 		}
 		else if(sentPacket && sentPacket->payload()->at(1) == 0x04) //Config request
 		{
