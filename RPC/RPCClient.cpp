@@ -219,7 +219,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		}
 		shutdown(fileDescriptor, 0);
 		close(fileDescriptor);
-		std::cout << "Received packet from server " << server << " on port " << port << ": " << std::endl << response << std::endl;
+		if(GD::debugLevel >= 5) std::cout << "Debug: Received packet from server " << server << " on port " << port << ": " << std::endl << response << std::endl;
 		return response;
     }
     catch(const std::exception& ex)

@@ -1293,7 +1293,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 						queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 						payload.clear();
 						messageCounter++;
-						payload.push_back(i->first);
+						payload.push_back(channel);
 						payload.push_back(0x08);
 					}
 				}
@@ -1407,7 +1407,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 						queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 						payload.clear();
 						messageCounter++;
-						payload.push_back(i->first);
+						payload.push_back(channel);
 						payload.push_back(0x08);
 					}
 				}
@@ -1432,7 +1432,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
+			if(!onlyPushing && !(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -1922,7 +1922,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 
 				if(parameter->defaultValueExists)
 				{
-					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
 					element->name = "DEFAULT";
 					element->stringValue = parameter->defaultValue;
 					description->structValue->push_back(element);

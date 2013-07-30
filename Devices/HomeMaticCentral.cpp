@@ -1262,7 +1262,18 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		}
 
 		queue->push(receiver->pendingBidCoSQueues);
-		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+
+		//Check, if channel is part of a group and if that's the case add link for the grouped channel
+		int32_t channelGroupedWith = sender->getChannelGroupedWith(senderChannelIndex);
+		//I'm assuming that senderChannelIndex is always the first of the two grouped channels
+		if(channelGroupedWith > senderChannelIndex)
+		{
+			return addLink(senderSerialNumber, channelGroupedWith, receiverSerialNumber, receiverChannelIndex, name, description);
+		}
+		else
+		{
+			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+		}
 	}
 	catch(const std::exception& ex)
 	{
