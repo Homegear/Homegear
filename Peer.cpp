@@ -92,17 +92,17 @@ void Peer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t rem
 		if(!remotePeer || !remotePeer->rpcDevice) return; //Shouldn't happen
 		if(remotePeer->rpcDevice->channels.find(remoteChannel) == remotePeer->rpcDevice->channels.end()) return;
 		std::shared_ptr<RPC::DeviceChannel> remoteRPCChannel = remotePeer->rpcDevice->channels.at(remoteChannel);
-		int32_t groupedWith = getChannelGroupedWith(channel);
+		int32_t groupedWith = remotePeer->getChannelGroupedWith(remoteChannel);
 		std::string function;
 		if(groupedWith == -1 && !remoteRPCChannel->function.empty()) function = remoteRPCChannel->function;
 		if(groupedWith > -1)
 		{
-			if(groupedWith > channel && !remoteRPCChannel->pairFunction1.empty()) function = remoteRPCChannel->pairFunction1;
-			else if(groupedWith < channel && !remoteRPCChannel->pairFunction2.empty()) function = remoteRPCChannel->pairFunction2;
+			if(groupedWith > remoteChannel && !remoteRPCChannel->pairFunction1.empty()) function = remoteRPCChannel->pairFunction1;
+			else if(groupedWith < remoteChannel && !remoteRPCChannel->pairFunction2.empty()) function = remoteRPCChannel->pairFunction2;
 		}
 		if(function.empty()) return;
 		if(linkSet->defaultValues.find(function) == linkSet->defaultValues.end()) return;
-		if(GD::debugLevel >= 4) std::cout << "Info: Device 0x" << std::hex << address << ": Applying function " << function << "." << std::endl;
+		if(GD::debugLevel >= 4) std::cout << "Info: Device 0x" << std::hex << address << std::dec << ": Applying channel function " << function << "." << std::endl;
 		for(RPC::DefaultValue::iterator j = linkSet->defaultValues.at(function).begin(); j != linkSet->defaultValues.at(function).end(); ++j)
 		{
 			RPCConfigurationParameter* parameter = &linksCentral[channel][peerAddress][remoteChannel][j->first];
@@ -343,6 +343,7 @@ void Peer::worker()
 
 void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 {
+	//Allow unknown channel for myself. Needed e. g. for switches.
 	if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 	{
@@ -391,8 +392,7 @@ void Peer::removePeer(int32_t channel, int32_t address)
 		if((*i)->address == address)
 		{
 			_peers[channel].erase(i);
-			if(linksCentral[channel].find(address) == linksCentral[channel].end()) return;
-			linksCentral[channel].erase(linksCentral[channel].find(address));
+			if(linksCentral[channel].find(address) != linksCentral[channel].end()) linksCentral[channel].erase(linksCentral[channel].find(address));
 			return;
 		}
 	}
@@ -867,7 +867,7 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 				{
 					if((*k)->channel == channel && (*k)->key == parameter->id)
 					{
-						if(GD::debugLevel >= 5) std::cerr << "Debug: Deleting element " << parameter->id << " from _variablesToReset. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frameID << std::endl;
+						if(GD::debugLevel >= 5) std::cout << "Debug: Deleting element " << parameter->id << " from _variablesToReset. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frameID << std::endl;
 						_variablesToReset.erase(k);
 						break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
 					}
@@ -1209,7 +1209,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetId(uint32_t channel, RPC::Par
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool sendUnchanged, bool onlyPushing )
+std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged, bool onlyPushing)
 {
 	try
 	{
@@ -1240,7 +1240,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = parameter->rpcParameter->getBytes(value);
 				else allParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
 				//Continue when value is unchanged except parameter is of the same index as a changed one.
-				if(parameter->value == value && !sendUnchanged)
+				if(parameter->value == value && !putUnchanged)
 				{
 					if(changedParameters[list].find(intIndex) != changedParameters[list].end()) changedParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
 					continue;
@@ -1354,8 +1354,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				if(list == 9999) list = 0;
 				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = parameter->rpcParameter->getBytes(value);
 				else allParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
-				//Continue when value is unchanged except parameter is of the same index as a changed one.
-				if(parameter->value == value && !sendUnchanged)
+				if(parameter->value == value && !putUnchanged)
 				{
 					if(changedParameters[list].find(intIndex) != changedParameters[list].end()) changedParameters[list][intIndex] |= parameter->rpcParameter->getBytes(value);
 					continue;
@@ -1431,8 +1430,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				payload.clear();
 				messageCounter++;
 			}
+
 			pendingBidCoSQueues->push(queue);
-			if(!onlyPushing && !(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
+			if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -1497,7 +1497,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamset(int32_t channel, RPC::Parame
 			if(element->type == RPC::RPCVariableType::rpcVoid) continue;
 			element->name = (*i)->id;
 			variables->structValue->push_back(element);
-
 		}
 		return variables;
 	}

@@ -37,6 +37,7 @@ void Database::openDatabase(std::string databasePath)
 void Database::closeDatabase()
 {
     sqlite3_close(_database);
+    _database = nullptr;
 }
 
 void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
@@ -110,6 +111,7 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 	DataTable dataRows;
 	try
 	{
+		if(!_database) return dataRows;
 		if(GD::debugLevel >= 5) std::cout << "Executing SQL command: " << command << std::endl;
 		_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
@@ -173,6 +175,7 @@ DataTable Database::executeCommand(std::string command)
     DataTable dataRows;
     try
     {
+    	if(!_database) return dataRows;
     	if(GD::debugLevel >= 5) std::cout << "Executing SQL command: " << command << std::endl;
     	_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
