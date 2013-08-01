@@ -193,8 +193,8 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			bits += std::lround(valueSize * 10) % 10;
 			if(bits == 0) bits = 7;
 			uint32_t maxNumber = 1 << bits;
-			if(value->floatValue <= maxNumber - 1) value->integerValue = std::roundl(value->floatValue / factor);
-			else value->integerValue = maxNumber + std::roundl(value->floatValue / factor2);
+			if(value->floatValue <= maxNumber - 1) value->integerValue = std::lround(value->floatValue / factor);
+			else value->integerValue = maxNumber + std::lround(value->floatValue / factor2);
 		}
 		else
 		{
@@ -297,7 +297,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 	}
 }
 
-bool Parameter::checkCondition(int64_t value)
+bool Parameter::checkCondition(int32_t value)
 {
 	switch(booleanOperator)
 	{
@@ -323,20 +323,20 @@ bool Parameter::checkCondition(int64_t value)
 	return false;
 }
 
-std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
+std::shared_ptr<RPCVariable> Parameter::convertFromPacket(std::vector<uint8_t> data)
 {
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 	{
-		return std::shared_ptr<RPCVariable>(new RPCVariable(value));
+		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger, data));
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.empty())
 	{
-		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable((bool)value));
+		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcBoolean, data));
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 	{
-		if(value == -1) return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
-		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(std::to_string(value)));
+		if(data.at(0) == 0xFF) return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
+		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(std::to_string(data.at(0))));
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
@@ -344,17 +344,33 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(int32_t value)
 	}
 	else
 	{
-		std::shared_ptr<RPCVariable> variable(new RPCVariable(value));
+		std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcInteger, data));
+		if(isSigned && data.size() <= 4)
+		{
+			int32_t byteIndex = data.size() - std::lround(std::ceil(physicalParameter->size));
+			int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
+			int32_t signPosition = 0;
+			if(bitSize == 0) signPosition = 7;
+			else
+			{
+				signPosition = bitSize - 1;
+			}
+			if(data.at(byteIndex) & (1 << signPosition))
+			{
+				int32_t bits = (std::lround(std::floor(physicalParameter->size)) * 8) + bitSize;
+				variable->integerValue -= (1 << bits);
+			}
+		}
 		for(std::vector<std::shared_ptr<ParameterConversion>>::reverse_iterator i = conversion.rbegin(); i != conversion.rend(); ++i)
 		{
 			(*i)->fromPacket(variable);
 		}
 		return variable;
 	}
-	return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(value));
+	return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger, data));
 }
 
-int32_t Parameter::convertToPacket(std::string value)
+std::vector<uint8_t> Parameter::convertToPacket(std::string value)
 {
 	std::shared_ptr<RPCVariable> convertedValue;
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
@@ -385,30 +401,30 @@ int32_t Parameter::convertToPacket(std::string value)
 	if(!convertedValue)
 	{
 		if(GD::debugLevel >= 3) std::cout << "Warning: Could not convert parameter " << id << " from String." << std::endl;
-		return 0;
+		return std::vector<uint8_t>();
 	}
 	return convertToPacket(convertedValue);
 }
 
-int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
+std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 {
-	if(!value) return 0;
+	std::vector<uint8_t> data;
+	if(!value) return data;
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 	{
 		LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
-		if(value->integerValue > parameter->max) return parameter->max;
-		if(value->integerValue < parameter->min) return parameter->min;
-		return value->integerValue;
+		if(value->integerValue > parameter->max) value->integerValue = parameter->max;
+		if(value->integerValue < parameter->min) value->integerValue = parameter->min;
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
-		return 200;
+		value->integerValue = 200;
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 	{
 		//String is only supported when it is a number (like UI_HINT)
-		if(value->stringValue.empty()) return -1;
-		return HelperFunctions::getNumber(value->stringValue);
+		if(value->stringValue.empty()) value->integerValue = 0xFF;
+		int32_t integerValue = HelperFunctions::getNumber(value->stringValue);
 	}
 	else
 	{
@@ -440,9 +456,24 @@ int32_t Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 				(*i)->toPacket(variable);
 			}
 		}
-		return variable->integerValue;
+		value->integerValue = variable->integerValue;
 	}
-	return value->integerValue;
+	if(physicalParameter->type != PhysicalParameter::Type::Enum::typeString)
+	{
+		//Crop to size. Most importantly for negative numbers
+		uint32_t byteSize = std::lround(std::floor(physicalParameter->size));
+		int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
+		if(byteSize >= 4)
+		{
+			byteSize = 4;
+			bitSize = 0;
+		}
+		int32_t valueMask = 0xFFFFFFFF >> ((4 - byteSize) * 8) - bitSize;
+		value->integerValue &= valueMask;
+	}
+
+	HelperFunctions::memcpyBigEndian(data, value->integerValue);
+	return data;
 }
 
 Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
@@ -554,15 +585,17 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 	}
 }
 
-int64_t Parameter::getBytes(int32_t value)
+void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 {
 	try
 	{
-		int64_t returnValue = 0;;
+		if(data.size() > 4) return;
+		int32_t value = 0;
+		HelperFunctions::memcpyBigEndian(value, data);
 		if(physicalParameter->size < 0)
 		{
 			if(GD::debugLevel >= 2) std::cout << "Error: Negative size not allowed." << std::endl;
-			return returnValue;
+			return;
 		}
 		double i = physicalParameter->index;
 		i -= std::floor(i);
@@ -572,29 +605,13 @@ int64_t Parameter::getBytes(int32_t value)
 			if(physicalParameter->size > 1)
 			{
 				if(GD::debugLevel >= 2) std::cout << "Error: Can't set partial byte index > 1." << std::endl;
-				return returnValue;
+				return;
 			}
 			uint32_t bitSize = std::lround(physicalParameter->size * 10);
 			if(bitSize > 8) bitSize = 8;
-			if(value < 0) //has sign?
-			{
-				value = value & _bitmask[bitSize];
-			}
-			returnValue = value << (std::lround(i * 10) % 10);
+			data.clear();
+			data.push_back(value << (std::lround(i * 10) % 10));
 		}
-		else
-		{
-			uint32_t bytes = (uint32_t)std::ceil(physicalParameter->size);
-			uint32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
-			if(bitSize > 8) bitSize = 8;
-			if(bytes == 0) bytes = 1; //size is 0 - assume 1
-			returnValue = ((value >> ((bytes - 1) * 8)) & _bitmask[bitSize]) << ((bytes - 1) * 8);
-			for(uint32_t i = 1; i < bytes; i++)
-			{
-				returnValue |= (value >> ((bytes - i - 1) * 8)) << ((bytes - 1 - i) * 8);
-			}
-		}
-		return returnValue;
 	}
 	catch(const std::exception& ex)
     {
@@ -608,7 +625,6 @@ int64_t Parameter::getBytes(int32_t value)
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
-    return 0;
 }
 
 bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
@@ -663,7 +679,10 @@ bool DeviceType::matches(std::shared_ptr<BidCoSPacket> packet)
 		if(parameters.empty()) return false;
 		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
-			if(!i->checkCondition(packet->getPosition(i->index, i->size, i->isSigned))) return false;
+			int32_t intValue = 0;
+			std::vector<uint8_t> data = packet->getPosition(i->index, i->size);
+			HelperFunctions::memcpyBigEndian(intValue, data);
+			if(!i->checkCondition(intValue)) return false;
 		}
 		return true;
 	}

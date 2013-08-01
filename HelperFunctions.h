@@ -79,7 +79,10 @@ public:
 		return bint.c[0] == 1;
 	}
 
-	static void memcpyBigEndian(char* to, char* from, uint32_t length);
+	static void memcpyBigEndian(char* to, char* from, const uint32_t& length);
+	static void memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length);
+	static void memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from);
+	static void memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from);
 	static void printBinary(std::shared_ptr<std::vector<char>> data);
 private:
 	//Non public constructor

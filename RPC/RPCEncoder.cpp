@@ -112,7 +112,7 @@ void RPCEncoder::encodeFloat(std::shared_ptr<std::vector<char>>& packet, std::sh
 		exponent++;
 	}
 	if(variable->floatValue < 0) temp *= -1;
-	int32_t mantissa = std::roundl(temp * 0x40000000);
+	int32_t mantissa = std::lround(temp * 0x40000000);
 	char data[8];
 	HelperFunctions::memcpyBigEndian(data, (char*)&mantissa, 4);
 	HelperFunctions::memcpyBigEndian(data + 4, (char*)&exponent, 4);

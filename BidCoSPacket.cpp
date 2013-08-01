@@ -190,7 +190,7 @@ int32_t BidCoSPacket::getInt(std::string hexString)
 	return 0;
 }
 
-void BidCoSPacket::setPosition(double index, double size, int64_t value)
+void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& value)
 {
 	try
 	{
@@ -208,6 +208,7 @@ void BidCoSPacket::setPosition(double index, double size, int64_t value)
 		double byteIndex = std::floor(index);
 		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
 		{
+			if(value.empty()) value.push_back(0);
 			int32_t intByteIndex = byteIndex;
 			if(size > 1)
 			{
@@ -220,11 +221,7 @@ void BidCoSPacket::setPosition(double index, double size, int64_t value)
 			{
 				_payload.push_back(0);
 			}
-			if(value < 0) //has sign?
-			{
-				value = value & _bitmask[bitSize];
-			}
-			_payload.at(intByteIndex) |= value << (std::lround(index * 10) % 10);
+			_payload.at(intByteIndex) |= value.at(value.size() - 1) << (std::lround(index * 10) % 10);
 		}
 		else
 		{
@@ -234,13 +231,17 @@ void BidCoSPacket::setPosition(double index, double size, int64_t value)
 			{
 				_payload.push_back(0);
 			}
+			while(value.size() < bytes)
+			{
+				value.push_back(0);
+			}
 			uint32_t bitSize = std::lround(size * 10) % 10;
 			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
-			_payload.at(intByteIndex) = (value >> ((bytes - 1) * 8)) & _bitmask[bitSize];
+			_payload.at(intByteIndex) = value.at(0) & _bitmask[bitSize];
 			for(uint32_t i = 1; i < bytes; i++)
 			{
-				_payload.at(intByteIndex + i) = (value >> ((bytes - i - 1) * 8));
+				_payload.at(intByteIndex + i) = value.at(i);
 			}
 		}
 	}
@@ -259,24 +260,24 @@ void BidCoSPacket::setPosition(double index, double size, int64_t value)
     _length = 9 + _payload.size();
 }
 
-int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
+std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size)
 {
+	std::vector<uint8_t> result;
 	try
 	{
 		if(size < 0)
 		{
 			if(GD::debugLevel >= 2) std::cout << "Error: Negative negative size not allowed." << std::endl;
-			return 0;
+			return result;
 		}
 		if(index < 9)
 		{
 			if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 9 requested." << std::endl;
-			return 0;
+			return result;
 		}
 		index -= 9;
 		double byteIndex = std::floor(index);
-		if(byteIndex >= _payload.size()) return 0;
-		int64_t result = 0;
+		if(byteIndex >= _payload.size()) return result;
 		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
 		{
 			if(size > 1)
@@ -286,11 +287,7 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 			}
 			//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
 			uint32_t bitSize = std::lround(size * 10);
-			result = (_payload.at(byteIndex) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize];
-			if(isSigned && (result & (1 << (bitSize - 1)))) //has sign?
-			{
-				result -= (1 << bitSize);
-			}
+			result.push_back((_payload.at(byteIndex) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
 		}
 		else
 		{
@@ -298,25 +295,10 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
 			uint32_t bitSize = std::lround(size * 10) % 10;
 			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
-			result = (_payload.at(index) & _bitmask[bitSize]) << ((bytes - 1) * 8);
+			result.push_back(_payload.at(index) & _bitmask[bitSize]);
 			for(uint32_t i = 1; i < bytes; i++)
 			{
-				result += _payload.at(index + i) << ((bytes - i - 1) * 8);
-			}
-			if(isSigned)
-			{
-				uint32_t bits = (uint32_t)std::floor(size) * 8;
-				uint32_t signPosition = 0;
-				if(bitSize == 0) signPosition = 7; //Full bytes are used
-				else
-				{
-					signPosition = bitSize - 1;
-					bits += bitSize;
-				}
-				if(_payload.at(index) & (1 << signPosition)) //has sign?
-				{
-					result -= (1 << bits);
-				}
+				result.push_back(_payload.at(index + i));
 			}
 		}
 		return result;
@@ -333,5 +315,5 @@ int64_t BidCoSPacket::getPosition(double index, double size, bool isSigned)
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
-    return -1;
+    return result;
 }

@@ -12,7 +12,7 @@ HelperFunctions::~HelperFunctions() {
 
 }
 
-void HelperFunctions::memcpyBigEndian(char* to, char* from, uint32_t length)
+void HelperFunctions::memcpyBigEndian(char* to, char* from, const uint32_t& length)
 {
 	if(GD::bigEndian) memcpy(to, from, length);
 	else
@@ -23,6 +23,27 @@ void HelperFunctions::memcpyBigEndian(char* to, char* from, uint32_t length)
 			to[i] = from[last - i];
 		}
 	}
+}
+
+void HelperFunctions::memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length)
+{
+	memcpyBigEndian((char*)to, (char*)from, length);
+}
+
+void HelperFunctions::memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from)
+{
+	to = 0; //Necessary if length is < 4
+	uint32_t length = from.size();
+	if(length > 4) length = 4;
+	if(GD::bigEndian) memcpyBigEndian(((uint8_t*)&to) + (4 - length), &from.at(0), length);
+	else memcpyBigEndian(((uint8_t*)&to), &from.at(0), length);
+}
+
+void HelperFunctions::memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from)
+{
+	if(!to.empty()) to.clear();
+	to.resize(4, 0);
+	memcpyBigEndian(&to.at(0), (uint8_t*)&from, 4);
 }
 
 std::pair<std::string, std::string> HelperFunctions::split(std::string string, char delimiter)

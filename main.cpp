@@ -200,6 +200,7 @@ int main(int argc, char* argv[])
         endwin();
         //delscreen for all screens!!!
         return 0;*/
+
     	if(startAsDaemon) startDaemon();
 
     	//Create PID file

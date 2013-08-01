@@ -27,7 +27,7 @@ class VariableToReset
 public:
 	uint32_t channel = 0;
 	std::string key;
-	int64_t value = 0;
+	std::vector<uint8_t> data;
 	int64_t resetTime = 0;
 	bool isDominoEvent = false;
 
@@ -58,8 +58,7 @@ public:
 	virtual ~RPCConfigurationParameter() {}
 
 	std::shared_ptr<RPC::Parameter> rpcParameter;
-	bool changed = false;
-	int64_t value = 0;
+	std::vector<uint8_t> data;
 };
 
 class Peer
@@ -111,7 +110,7 @@ class Peer
         void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
 
         void handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::string& frameID, uint32_t channel);
-        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, int64_t>& values);
+        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, std::vector<uint8_t>>& values);
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
         int32_t getChannelGroupedWith(int32_t channel);

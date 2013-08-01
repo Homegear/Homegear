@@ -34,8 +34,8 @@ class BidCoSPacket
         /** Default destructor */
         virtual ~BidCoSPacket();
         void import(std::string, bool removeFirstCharacter = true);
-        int64_t getPosition(double index, double size, bool isSigned);
-        void setPosition(double index, double size, int64_t value);
+        std::vector<uint8_t> getPosition(double index, double size);
+        void setPosition(double index, double size, std::vector<uint8_t>& value);
     protected:
     private:
         uint8_t _length = 0;

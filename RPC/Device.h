@@ -121,11 +121,11 @@ public:
 	Parameter() { logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger()); physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter()); }
 	Parameter(xml_node<>* node, bool checkForID = false);
 	virtual ~Parameter() {}
-	bool checkCondition(int64_t value);
-	std::shared_ptr<RPC::RPCVariable> convertFromPacket(int32_t value);
-	int32_t convertToPacket(std::shared_ptr<RPC::RPCVariable> value);
-	int32_t convertToPacket(std::string value);
-	int64_t getBytes(int32_t value);
+	bool checkCondition(int32_t value);
+	std::shared_ptr<RPC::RPCVariable> convertFromPacket(std::vector<uint8_t> data);
+	std::vector<uint8_t> convertToPacket(std::shared_ptr<RPC::RPCVariable> value);
+	std::vector<uint8_t> convertToPacket(std::string value);
+	void adjustBitPosition(std::vector<uint8_t>& data);
 };
 
 class DeviceType
