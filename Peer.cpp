@@ -660,27 +660,21 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 			{
 				uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 				std::string id;
-				int64_t value = 0;
-				bool changed;
 				if(idLength == 0 && GD::debugLevel >= 1) std::cout << "Critical: Added central config parameter without id. Device: 0x" << std::hex << address << std::dec << " Channel: " << channel << std::endl;
-				if(idLength > 0) id = serializedObject.substr(pos, idLength); pos += idLength;
-				value = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				changed = (bool)std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-				if(idLength > 0)
+				if(idLength > 0) { id = serializedObject.substr(pos, idLength); pos += idLength; }
+				else id = "Parameter" + std::to_string(k);
+				RPCConfigurationParameter* parameter = &config[channel][id];
+				uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				for(uint32_t l = 0; l < dataSize; l++)
 				{
-					RPCConfigurationParameter* parameter = &config[channel][id];
-					uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-					for(uint32_t l = 0; l < dataSize; l++)
-					{
-						parameter->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
-					}
-					if(!rpcDevice)
-					{
-						if(GD::debugLevel >= 1) std::cerr << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec << std::endl;
-						continue;
-					}
-					parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
+					parameter->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
 				}
+				if(!rpcDevice)
+				{
+					if(GD::debugLevel >= 1) std::cerr << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec << std::endl;
+					continue;
+				}
+				parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
 			}
 		}
 	}
@@ -719,27 +713,21 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 					{
 						uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 						std::string id;
-						int64_t value = 0;
-						bool changed;
 						if(idLength == 0 && GD::debugLevel >= 1) std::cerr << "Critical: Added central config parameter without id. Device: 0x" << std::hex << address << std::dec << " Channel: " << channel << std::endl;
-						if(idLength > 0) id = serializedObject.substr(pos, idLength); pos += idLength;
-						value = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-						changed = (bool)std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-						if(idLength > 0)
+						if(idLength > 0) { id = serializedObject.substr(pos, idLength); pos += idLength; }
+						else id = "Parameter" + std::to_string(l);
+						RPCConfigurationParameter* parameter = &config[channel][address][remoteChannel][id];
+						uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+						for(uint32_t m = 0; m < dataSize; m++)
 						{
-							RPCConfigurationParameter* parameter = &config[channel][address][remoteChannel][id];
-							uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-							for(uint32_t m = 0; m < dataSize; m++)
-							{
-								parameter->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
-							}
-							if(!rpcDevice)
-							{
-								if(GD::debugLevel >= 1) std::cerr << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec << std::endl;
-								continue;
-							}
-							parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
+							parameter->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
 						}
+						if(!rpcDevice)
+						{
+							if(GD::debugLevel >= 1) std::cerr << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec << std::endl;
+							continue;
+						}
+						parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
 						//Clean up - delete if the peer doesn't exist anymore
 						if(!getPeer(channel, address, remoteChannel)) config[channel][address].erase(remoteChannel);
 						if(config[channel][address].empty()) config[channel].erase(address);
@@ -747,6 +735,96 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 				}
 			}
 		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void Peer::printConfig()
+{
+	try
+	{
+		std::cout << "MASTER" << std::endl;
+		std::cout << "{" << std::endl;
+		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator i = configCentral.begin(); i != configCentral.end(); ++i)
+		{
+			std::cout << "\t" << "Channel: " << std::dec << i->first << std::endl;
+			std::cout << "\t{" << std::endl;
+			for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				std::cout << "\t\t[" << j->first << "]: ";
+				if(!j->second.rpcParameter) std::cout << "No RPC parameter";
+				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
+				{
+					std::cout << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
+				}
+				std::cout << std::endl;
+			}
+			std::cout << "\t}" << std::endl;
+		}
+		std::cout << "}" << std::endl << std::endl;
+
+		std::cout << "VALUES" << std::endl;
+		std::cout << "{" << std::endl;
+		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator i = valuesCentral.begin(); i != valuesCentral.end(); ++i)
+		{
+			std::cout << "\t" << "Channel: " << std::dec << i->first << std::endl;
+			std::cout << "\t{" << std::endl;
+			for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				std::cout << "\t\t[" << j->first << "]: ";
+				if(!j->second.rpcParameter) std::cout << "No RPC parameter";
+				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
+				{
+					std::cout << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
+				}
+				std::cout << std::endl;
+			}
+			std::cout << "\t}" << std::endl;
+		}
+		std::cout << "}" << std::endl << std::endl;
+
+		std::cout << "LINK" << std::endl;
+		std::cout << "{" << std::endl;
+		for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>::const_iterator i = linksCentral.begin(); i != linksCentral.end(); ++i)
+		{
+			std::cout << "\t" << "Channel: " << std::dec << i->first << std::endl;
+			std::cout << "\t{" << std::endl;
+			for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				std::cout << "\t\t" << "Address: " << std::hex << "0x" << j->first << std::endl;
+				std::cout << "\t\t{" << std::endl;
+				for(std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
+				{
+					std::cout << "\t\t\t" << "Remote channel: " << std::dec << k->first << std::endl;
+					std::cout << "\t\t\t{" << std::endl;
+					for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator l = k->second.begin(); l != k->second.end(); ++l)
+					{
+						std::cout << "\t\t\t\t[" << l->first << "]: ";
+						if(!l->second.rpcParameter) std::cout << "No RPC parameter";
+						for(std::vector<uint8_t>::const_iterator m = l->second.data.begin(); m != l->second.data.end(); ++m)
+						{
+							std::cout << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*m << " ";
+						}
+						std::cout << std::endl;
+					}
+					std::cout << "\t\t\t}" << std::endl;
+				}
+				std::cout << "\t\t}" << std::endl;
+			}
+			std::cout << "\t}" << std::endl;
+		}
+		std::cout << "}" << std::endl << std::endl;
 	}
 	catch(const std::exception& ex)
     {
@@ -1255,15 +1333,16 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				RPCConfigurationParameter* parameter = &configCentral[channel][(*i)->name];
 				if(!parameter->rpcParameter) continue;
 				value = parameter->rpcParameter->convertToPacket(*i);
-				parameter->rpcParameter->adjustBitPosition(value);
+				std::vector<uint8_t> shiftedValue = value;
+				parameter->rpcParameter->adjustBitPosition(shiftedValue);
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
 				int32_t list = parameter->rpcParameter->physicalParameter->list;
 				if(list == 9999) list = 0;
-				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = value;
+				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = shiftedValue;
 				else
 				{
 					uint32_t index = 0;
-					for(std::vector<uint8_t>::iterator j = value.begin(); j != value.end(); ++j)
+					for(std::vector<uint8_t>::iterator j = shiftedValue.begin(); j != shiftedValue.end(); ++j)
 					{
 						if(index >= allParameters[list][intIndex].size()) allParameters[list][intIndex].push_back(0);
 						allParameters[list][intIndex].at(index) |= *j;
@@ -1314,7 +1393,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 					{
 						payload.push_back(*k);
 					}
-					if(payload.size() == 16)
+					if(payload.size() >= 15)
 					{
 						configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
 						queue->push(configPacket);
@@ -1377,7 +1456,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				RPCConfigurationParameter* parameter = &linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->name];
 				if(!parameter->rpcParameter) continue;
 				value = parameter->rpcParameter->convertToPacket(*i);
-				parameter->rpcParameter->adjustBitPosition(value);
+				std::vector<uint8_t> shiftedValue = value;
+				parameter->rpcParameter->adjustBitPosition(shiftedValue);
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
 				int32_t list = parameter->rpcParameter->physicalParameter->list;
 				if(list == 9999) list = 0;
@@ -1385,7 +1465,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				else
 				{
 					uint32_t index = 0;
-					for(std::vector<uint8_t>::iterator j = value.begin(); j != value.end(); ++j)
+					for(std::vector<uint8_t>::iterator j = shiftedValue.begin(); j != shiftedValue.end(); ++j)
 					{
 						if(index >= allParameters[list][intIndex].size()) allParameters[list][intIndex].push_back(0);
 						allParameters[list][intIndex].at(index) |= *j;
@@ -1436,7 +1516,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 					{
 						payload.push_back(*k);
 					}
-					if(payload.size() == 16)
+					if(payload.size() >= 15)
 					{
 						configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
 						queue->push(configPacket);

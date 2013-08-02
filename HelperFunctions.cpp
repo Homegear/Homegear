@@ -33,6 +33,7 @@ void HelperFunctions::memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t
 void HelperFunctions::memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from)
 {
 	to = 0; //Necessary if length is < 4
+	if(from.empty()) return;
 	uint32_t length = from.size();
 	if(length > 4) length = 4;
 	if(GD::bigEndian) memcpyBigEndian(((uint8_t*)&to) + (4 - length), &from.at(0), length);
@@ -42,8 +43,14 @@ void HelperFunctions::memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from)
 void HelperFunctions::memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from)
 {
 	if(!to.empty()) to.clear();
-	to.resize(4, 0);
-	memcpyBigEndian(&to.at(0), (uint8_t*)&from, 4);
+	int32_t length = 4;
+	if(from < 0) length = 4;
+	else if(from < 256) length = 1;
+	else if(from < 65536) length = 2;
+	else if(from < 16777216) length = 3;
+	to.resize(length, 0);
+	if(GD::bigEndian) memcpyBigEndian(&to.at(0), (uint8_t*)&from + (4 - length), length);
+	else memcpyBigEndian(&to.at(0), (uint8_t*)&from, length);
 }
 
 std::pair<std::string, std::string> HelperFunctions::split(std::string string, char delimiter)

@@ -323,7 +323,7 @@ bool Parameter::checkCondition(int32_t value)
 	return false;
 }
 
-std::shared_ptr<RPCVariable> Parameter::convertFromPacket(std::vector<uint8_t> data)
+std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint8_t>& data)
 {
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 	{
@@ -335,8 +335,12 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(std::vector<uint8_t> d
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 	{
-		if(data.at(0) == 0xFF) return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
-		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(std::to_string(data.at(0))));
+		if(!data.empty())
+		{
+			std::string string(&data.at(0), &data.at(0) + data.size());
+			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(string));
+		}
+		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
@@ -422,9 +426,10 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 	{
-		//String is only supported when it is a number (like UI_HINT)
-		if(value->stringValue.empty()) value->integerValue = 0xFF;
-		int32_t integerValue = HelperFunctions::getNumber(value->stringValue);
+		if(value->stringValue.size() > 0)
+		{
+			data.insert(data.end(), value->stringValue.begin(), value->stringValue.end());
+		}
 	}
 	else
 	{
@@ -468,11 +473,10 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 			byteSize = 4;
 			bitSize = 0;
 		}
-		int32_t valueMask = 0xFFFFFFFF >> ((4 - byteSize) * 8) - bitSize;
+		int32_t valueMask = 0xFFFFFFFF >> (((4 - byteSize) * 8) - bitSize);
 		value->integerValue &= valueMask;
+		HelperFunctions::memcpyBigEndian(data, value->integerValue);
 	}
-
-	HelperFunctions::memcpyBigEndian(data, value->integerValue);
 	return data;
 }
 
@@ -589,7 +593,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 {
 	try
 	{
-		if(data.size() > 4) return;
+		if(data.size() > 4 || data.empty()) return;
 		int32_t value = 0;
 		HelperFunctions::memcpyBigEndian(value, data);
 		if(physicalParameter->size < 0)
@@ -607,8 +611,6 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 				if(GD::debugLevel >= 2) std::cout << "Error: Can't set partial byte index > 1." << std::endl;
 				return;
 			}
-			uint32_t bitSize = std::lround(physicalParameter->size * 10);
-			if(bitSize > 8) bitSize = 8;
 			data.clear();
 			data.push_back(value << (std::lround(i * 10) % 10));
 		}

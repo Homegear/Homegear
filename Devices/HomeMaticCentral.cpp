@@ -270,6 +270,15 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 		}
 		std::cout << "Peer has " << _currentPeer->rpcDevice->channels.size() << " channels." << std::endl;
 	}
+	else if(command == "print config")
+	{
+		if(!_currentPeer)
+		{
+			std::cout << "No peer selected." << std::endl;
+			return;
+		}
+		_currentPeer->printConfig();
+	}
 	else if(command == "pending queues info")
 	{
 		if(!_currentPeer)

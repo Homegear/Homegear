@@ -39,7 +39,17 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			}
 			index += HelperFunctions::getNumber(splitValue.first);
 		}
-		else if(attributeName == "size") size = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "size")
+		{
+			std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, '.');
+			size = 0;
+			if(!splitValue.second.empty())
+			{
+				size += HelperFunctions::getNumber(splitValue.second);
+				size /= 10;
+			}
+			size += HelperFunctions::getNumber(splitValue.first);
+		}
 		else if(attributeName == "counter") counter = attributeValue;
 		else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
 		else if(attributeName == "id") { id = attributeValue; }
