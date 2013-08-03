@@ -940,6 +940,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 							double position = ((*i)->physicalParameter->index - startIndex) + 2 + 9;
 							if(type == RPC::ParameterSet::Type::master)
 							{
+								//This is not working if one parameter is split over two or more packets.
 								peer->configCentral[channel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size);
 								if(!peer->pairingComplete && (*i)->logicalParameter->enforce)
 								{
