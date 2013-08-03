@@ -722,14 +722,15 @@ ParameterSet::ParameterSet(xml_node<>* parameterSetNode)
 	init(parameterSetNode);
 }
 
-std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(int32_t startIndex, int32_t endIndex, int32_t list)
+std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(uint32_t startIndex, uint32_t endIndex, int32_t list)
 {
 	std::vector<std::shared_ptr<Parameter>> filteredParameters;
 	if(list < 0) return filteredParameters;
 	for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 	{
 		if((*i)->physicalParameter->list != (unsigned)list) continue;
-		if((*i)->physicalParameter->index >= startIndex && std::floor((*i)->physicalParameter->index) <= endIndex) filteredParameters.push_back(*i);
+		//if((*i)->physicalParameter->index >= startIndex && std::floor((*i)->physicalParameter->index) <= endIndex) filteredParameters.push_back(*i);
+		if((*i)->physicalParameter->endIndex >= startIndex && (*i)->physicalParameter->startIndex <= endIndex) filteredParameters.push_back(*i);
 	}
 	return filteredParameters;
 }

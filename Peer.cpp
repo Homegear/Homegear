@@ -1388,20 +1388,22 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				payload.push_back(0x08);
 				for(std::map<int32_t, std::vector<uint8_t>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 				{
-					payload.push_back(j->first);
+					int32_t index = j->first;
 					for(std::vector<uint8_t>::iterator k = j->second.begin(); k != j->second.end(); ++k)
 					{
+						payload.push_back(index);
 						payload.push_back(*k);
-					}
-					if(payload.size() >= 15)
-					{
-						configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
-						queue->push(configPacket);
-						queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-						payload.clear();
-						messageCounter++;
-						payload.push_back(channel);
-						payload.push_back(0x08);
+						index++;
+						if(payload.size() == 16)
+						{
+							configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+							queue->push(configPacket);
+							queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+							payload.clear();
+							messageCounter++;
+							payload.push_back(channel);
+							payload.push_back(0x08);
+						}
 					}
 				}
 				if(payload.size() > 2)
@@ -1458,10 +1460,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				value = parameter->rpcParameter->convertToPacket(*i);
 				std::vector<uint8_t> shiftedValue = value;
 				parameter->rpcParameter->adjustBitPosition(shiftedValue);
+				std::cerr << "Moin1 " << (*i)->name << " " << shiftedValue.size();
+				if(!shiftedValue.empty()) std::cerr << " " << (int32_t)shiftedValue.at(0);
+				std::cerr << std::endl;
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
 				int32_t list = parameter->rpcParameter->physicalParameter->list;
 				if(list == 9999) list = 0;
-				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = value;
+				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = shiftedValue;
 				else
 				{
 					uint32_t index = 0;
@@ -1479,6 +1484,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
+				std::cerr << "Moin2 " << (*i)->name << " " << changedParameters[list][intIndex].size();
+				if(!changedParameters[list][intIndex].empty()) std::cerr << " " << (int32_t)changedParameters[list][intIndex].at(0);
+				std::cerr << std::endl;
 			}
 
 			if(changedParameters.empty() || changedParameters.begin()->second.empty()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -1511,20 +1519,22 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				payload.push_back(0x08);
 				for(std::map<int32_t, std::vector<uint8_t>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 				{
-					payload.push_back(j->first);
+					int32_t index = j->first;
 					for(std::vector<uint8_t>::iterator k = j->second.begin(); k != j->second.end(); ++k)
 					{
+						payload.push_back(index);
 						payload.push_back(*k);
-					}
-					if(payload.size() >= 15)
-					{
-						configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
-						queue->push(configPacket);
-						queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-						payload.clear();
-						messageCounter++;
-						payload.push_back(channel);
-						payload.push_back(0x08);
+						index++;
+						if(payload.size() == 16)
+						{
+							configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+							queue->push(configPacket);
+							queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+							payload.clear();
+							messageCounter++;
+							payload.push_back(channel);
+							payload.push_back(0x08);
+						}
 					}
 				}
 				if(payload.size() > 2)

@@ -56,6 +56,10 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		else if(attributeName == "save_on_change") {} //not necessary, all values are saved on change
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"physical\": " << attributeName << std::endl;
 	}
+	startIndex = std::lround(std::floor(index));
+	int32_t intDiff = std::lround(std::floor(size)) - 1;
+	if(intDiff < 0) intDiff = 0;
+	endIndex = startIndex + intDiff;
 	for(xml_node<>* physicalNode = node->first_node(); physicalNode; physicalNode = physicalNode->next_sibling())
 	{
 		std::string nodeName(physicalNode->name());

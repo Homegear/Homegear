@@ -268,21 +268,28 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size)
 		if(size < 0)
 		{
 			if(GD::debugLevel >= 2) std::cout << "Error: Negative negative size not allowed." << std::endl;
+			result.push_back(0);
 			return result;
 		}
 		if(index < 9)
 		{
 			if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 9 requested." << std::endl;
+			result.push_back(0);
 			return result;
 		}
 		index -= 9;
 		double byteIndex = std::floor(index);
-		if(byteIndex >= _payload.size()) return result;
+		if(byteIndex >= _payload.size())
+		{
+			result.push_back(0);
+			return result;
+		}
 		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
 		{
 			if(size > 1)
 			{
 				if(GD::debugLevel >= 2) std::cout << "Error: Partial byte index > 1 requested." << std::endl;
+				result.push_back(0);
 				return result;
 			}
 			//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
@@ -301,6 +308,7 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size)
 				result.push_back(_payload.at(index + i));
 			}
 		}
+		if(result.empty()) result.push_back(0);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -315,5 +323,6 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size)
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
+    result.push_back(0);
     return result;
 }

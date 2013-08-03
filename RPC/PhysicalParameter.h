@@ -41,6 +41,8 @@ public:
 	Interface::Enum interface = Interface::none;
 	uint32_t list = 9999;
 	double index = 0;
+	uint32_t startIndex = 0;
+	uint32_t endIndex = 0;
 	double size = 1.0;
 	std::string valueID;
 	bool noInit = false;

@@ -975,19 +975,30 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 							if(!(*j)->id.empty())
 							{
 								double position = std::fmod((*j)->physicalParameter->index, 1) + 9 + i + 1;
+								double size = (*j)->physicalParameter->size;
+								if(size > 1.0) size = 1.0; //Reading more than one byte doesn't make any sense
+								uint8_t data = packet->getPosition(position, size).at(0);
+								RPCConfigurationParameter* configParam = nullptr;
 								if(type == RPC::ParameterSet::Type::master)
 								{
-									peer->configCentral[channel][(*j)->id].data = packet->getPosition(position, (*j)->physicalParameter->size);
+									configParam = &peer->configCentral[channel][(*j)->id];
+								}
+								else if(peer->getPeer(channel, remoteAddress, remoteChannel))
+								{
+									configParam = &peer->linksCentral[channel][remoteAddress][remoteChannel][(*j)->id];
+								}
+								if(configParam)
+								{
+									while(index - (*j)->physicalParameter->startIndex >= configParam->data.size())
+									{
+										configParam->data.push_back(0);
+									}
+									configParam->data.at(index - (*j)->physicalParameter->startIndex) = data;
 									if(!peer->pairingComplete && (*j)->logicalParameter->enforce)
 									{
 										parametersToEnforce->structValue->push_back((*j)->logicalParameter->getEnforceValue());
 										parametersToEnforce->structValue->back()->name = (*j)->id;
 									}
-									if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set." << std::endl;
-								}
-								else if(peer->getPeer(channel, remoteAddress, remoteChannel))
-								{
-									peer->linksCentral[channel][remoteAddress][remoteChannel][(*j)->id].data = packet->getPosition(position, (*j)->physicalParameter->size);
 									if(GD::debugLevel >= 5) std::cout << "Parameter " << (*j)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*j)->physicalParameter->index) << " and packet index " << std::to_string(position) << " was set." << std::endl;
 								}
 							}

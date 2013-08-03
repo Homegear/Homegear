@@ -164,7 +164,7 @@ public:
 	ParameterSet(xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	void init(xml_node<>* parameterSetNode);
-	std::vector<std::shared_ptr<Parameter>> getIndices(int32_t startIndex, int32_t endIndex, int32_t list);
+	std::vector<std::shared_ptr<Parameter>> getIndices(uint32_t startIndex, uint32_t endIndex, int32_t list);
 	std::shared_ptr<Parameter> getIndex(double index);
 	std::shared_ptr<Parameter> getParameter(std::string id);
 	std::vector<std::shared_ptr<Parameter>> getParameters(std::string );
