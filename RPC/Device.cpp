@@ -430,6 +430,7 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 		if(value->stringValue.size() > 0)
 		{
 			data.insert(data.end(), value->stringValue.begin(), value->stringValue.end());
+			if(data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
 		}
 	}
 	else
