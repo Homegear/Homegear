@@ -59,10 +59,18 @@ class BidCoSQueue
         std::shared_ptr<std::thread> _resendThread;
         int32_t resendCounter = 0;
         uint32_t _resendThreadId = 0;
+        bool _stopPopWaitThread = false;
+        uint32_t _popWaitThreadId = 0;
+        std::shared_ptr<std::thread> _popWaitThread;
         bool _workingOnPendingQueue = false;
         void (HomeMaticDevice::*_queueProcessed)() = nullptr;
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
+        void resend(uint32_t threadId);
+        void startResendThread();
+        void stopResendThread();
+        void popWaitThread(uint32_t threadId, uint32_t waitingTime);
+        void stopPopWaitThread();
     public:
         uint32_t id = 0;
         int64_t* lastAction = nullptr;
@@ -85,11 +93,10 @@ class BidCoSQueue
         void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool popImmediately, bool clearPendingQueues);
         BidCoSQueueEntry* front() { return &_queue.front(); }
         void pop();
+        void popWait(uint32_t waitingTime);
         bool isEmpty() { return _queue.empty() && (!_pendingQueues || _pendingQueues->empty()); }
         bool pendingQueuesEmpty() { return (!_pendingQueues || _pendingQueues->empty()); }
         void clear();
-        void resend(uint32_t threadId);
-        void startResendThread();
         void send(std::shared_ptr<BidCoSPacket> packet);
         void keepAlive();
         void longKeepAlive();

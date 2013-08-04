@@ -122,7 +122,7 @@ public:
 	Parameter(xml_node<>* node, bool checkForID = false);
 	virtual ~Parameter() {}
 	bool checkCondition(int32_t value);
-	std::shared_ptr<RPC::RPCVariable> convertFromPacket(const std::vector<uint8_t>& data);
+	std::shared_ptr<RPC::RPCVariable> convertFromPacket(const std::vector<uint8_t>& data, bool isEvent = false);
 	std::vector<uint8_t> convertToPacket(std::shared_ptr<RPC::RPCVariable> value);
 	std::vector<uint8_t> convertToPacket(std::string value);
 	void adjustBitPosition(std::vector<uint8_t>& data);
@@ -252,6 +252,7 @@ public:
 	int32_t subtype = -1;
 	int32_t subtypeIndex = -1;
 	int32_t channelField = -1;
+	double channelFieldSize = 1.0;
 	int32_t fixedChannel = -1;
 	std::vector<Parameter> parameters;
 	std::vector<std::shared_ptr<Parameter>> associatedValues;

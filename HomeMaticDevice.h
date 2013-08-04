@@ -45,6 +45,7 @@ class HomeMaticDevice
         virtual void loadPeersFromDatabase();
         virtual void savePeersToDatabase();
         virtual void setLowBattery(bool);
+        virtual void setChannelCount(uint32_t channelCount) {}
         virtual bool pairDevice(int32_t timeout);
         virtual bool isInPairingMode() { return _pairing; }
         virtual int32_t getCentralAddress();
@@ -75,6 +76,7 @@ class HomeMaticDevice
         virtual void handleWakeUp(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
         virtual void handleSetPoint(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
         virtual void handleSetValveState(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
+        virtual void handleStateChange(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
         virtual void handleTimeRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 
         virtual void sendPairingRequest();

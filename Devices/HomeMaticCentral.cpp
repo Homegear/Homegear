@@ -402,11 +402,92 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
     }
 }
 
+void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer)
+{
+	try
+	{
+		int32_t actorAddress = getUniqueAddress((0x04 << 16) + (peer->address & 0xFF00) + (peer->address & 0xFF));
+		if(peer->hasPeers(1) && !peer->getPeer(1, actorAddress)) return; //Already linked to an actor
+		std::string temp = peer->getSerialNumber().substr(3);
+		std::string serialNumber = getUniqueSerialNumber("VSW", HelperFunctions::getNumber(temp));
+		GD::devices.add(new HM_LC_SWX_FM(serialNumber, actorAddress));
+		std::shared_ptr<HomeMaticDevice> sw = GD::devices.get(actorAddress);
+		uint32_t channelCount = peer->rpcDevice->channels.size();
+		sw->setChannelCount(channelCount);
+		sw->addPeer(peer);
+
+		std::shared_ptr<BasicPeer> switchPeer;
+
+		for(uint32_t i = 1; i < channelCount; i++)
+		{
+			switchPeer.reset(new BasicPeer());
+			switchPeer->address = sw->address();
+			switchPeer->serialNumber = sw->serialNumber();
+			switchPeer->channel = i;
+			switchPeer->hidden = true;
+			peer->addPeer(i, switchPeer);
+		}
+
+		peer->saveToDatabase(_address);
+
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, peer->address);
+		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+		pendingQueue->noSending = true;
+
+		std::vector<uint8_t> payload;
+		//CONFIG_ADD_PEER
+		for(uint32_t i = 1; i < channelCount; i++)
+		{
+			payload.clear();
+			payload.push_back(i);
+			payload.push_back(0x01);
+			payload.push_back(actorAddress >> 16);
+			payload.push_back((actorAddress >> 8) & 0xFF);
+			payload.push_back(actorAddress & 0xFF);
+			payload.push_back(i);
+			payload.push_back(0);
+			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->address, payload));
+			pendingQueue->push(configPacket);
+			pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+			_messageCounter[0]++;
+		}
+
+		pendingQueue->serviceMessages = peer->serviceMessages;
+		peer->serviceMessages->configPending = true;
+		peer->pendingBidCoSQueues->push(pendingQueue);
+		queue->push(peer->pendingBidCoSQueues);
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
 void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer)
 {
 	try
 	{
+		if(GD::debugLevel >= 5) std::cout << "Debug: Adding homegear features. Device type: 0x" << std::hex << (int32_t)peer->deviceType << std::dec << std::endl;
 		if(peer->deviceType == HMDeviceTypes::HMCCVD) addHomegearFeaturesHMCCVD(peer);
+		else if(peer->deviceType == HMDeviceTypes::HMPB4DISWM ||
+				peer->deviceType == HMDeviceTypes::HMRC4 ||
+				peer->deviceType == HMDeviceTypes::HMRC4B ||
+				peer->deviceType == HMDeviceTypes::HMRCP1 ||
+				peer->deviceType == HMDeviceTypes::HMRCSEC3 ||
+				peer->deviceType == HMDeviceTypes::HMRCSEC3B ||
+				peer->deviceType == HMDeviceTypes::HMRCKEY3 ||
+				peer->deviceType == HMDeviceTypes::HMRCKEY3B ||
+				peer->deviceType == HMDeviceTypes::HMPB4WM ||
+				peer->deviceType == HMDeviceTypes::HMPB2WM) addHomegearFeaturesSwitch(peer);
+		else if(GD::debugLevel >= 5) std::cout << "Debug: No homegear features to add." << std::endl;
 	}
 	catch(const std::exception& ex)
     {
@@ -852,18 +933,20 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 	{
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue) return;
+		std::shared_ptr<Peer> peer = _peers[packet->senderAddress()];
+		if(!peer) return;
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
 		if(sentPacket && sentPacket->payload()->size() < 2)
 		{
 			std::cerr << "Error in handleConfigParamResponse: Payload of sent packet is too small." << std::endl;
 			return;
 		}
-		bool multiplePackets = false;
+		bool continuousData = false;
+		bool multiPacket = false;
 		bool multiPacketEnd = false;
 		//Peer request
 		if(sentPacket && sentPacket->payload()->at(1) == 0x03)
 		{
-			Peer* peer = _peers[packet->senderAddress()].get();
 			if(packet->payload()->size() >= 5)
 			{
 				for(uint32_t i = 1; i < packet->payload()->size() - 1; i += 4)
@@ -914,15 +997,15 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			int32_t remoteAddress = (sentPacket->payload()->at(2) << 16) + (sentPacket->payload()->at(3) << 8) + sentPacket->payload()->at(4);
 			int32_t remoteChannel = sentPacket->payload()->at(5);
 			RPC::ParameterSet::Type::Enum type = (remoteAddress != 0) ? RPC::ParameterSet::Type::link : RPC::ParameterSet::Type::master;
-			Peer* peer = _peers[packet->senderAddress()].get();
 			std::shared_ptr<RPC::RPCVariable> parametersToEnforce;
 			if(!peer->pairingComplete) parametersToEnforce.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-			if((packet->controlByte() & 0x20) && (packet->payload()->at(0) == 3)) multiplePackets = true;
+			if((packet->controlByte() & 0x20) && (packet->payload()->at(0) == 3)) continuousData = true;
+			if(!continuousData && (packet->payload()->at(packet->payload()->size() - 2) != 0 || packet->payload()->at(packet->payload()->size() - 1) != 0)) multiPacket = true;
 			//Some devices have a payload size of 3
-			if(multiplePackets && packet->payload()->size() == 3 && packet->payload()->at(1) == 0 && packet->payload()->at(2) == 0) multiPacketEnd = true;
+			if(continuousData && packet->payload()->size() == 3 && packet->payload()->at(1) == 0 && packet->payload()->at(2) == 0) multiPacketEnd = true;
 			//And some a payload size of 2
-			if(multiplePackets && packet->payload()->size() == 2 && packet->payload()->at(1) == 0) multiPacketEnd = true;
-			if(multiplePackets && !multiPacketEnd)
+			if(continuousData && packet->payload()->size() == 2 && packet->payload()->at(1) == 0) multiPacketEnd = true;
+			if(continuousData && !multiPacketEnd)
 			{
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = startIndex + packet->payload()->size() - 3;
@@ -967,7 +1050,8 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				}
 				else
 				{
-					for(uint32_t i = 1; i < packet->payload()->size() - 2; i += 2)
+					int32_t length = multiPacket ? packet->payload()->size() : packet->payload()->size() - 2;
+					for(uint32_t i = 1; i < length; i += 2)
 					{
 						int32_t index = packet->payload()->at(i);
 						std::vector<std::shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[type]->getIndices(index, index, list);
@@ -1007,11 +1091,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 						}
 					}
 				}
-				if(packet->controlByte() & 0x20) sendOK(packet->messageCounter(), peer->address);
+				if(!multiPacket && (packet->controlByte() & 0x20)) sendOK(packet->messageCounter(), peer->address);
 			}
 			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, "", -1, parametersToEnforce);
 		}
-		if(multiplePackets && !multiPacketEnd) //Multiple config response packets
+		if((continuousData || multiPacket) && !multiPacketEnd && (packet->controlByte() & 0x20)) //Multiple config response packets
 		{
 			//StealthyOK does not set sentPacket
 			sendStealthyOK(packet->messageCounter(), packet->senderAddress());
@@ -1026,11 +1110,10 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		}
 		if(queue->isEmpty())
 		{
-			if(!queue->peer) return;
-			if(!queue->peer->pairingComplete)
+			if(!peer->pairingComplete)
 			{
-				addHomegearFeatures(queue->peer);
-				queue->peer->pairingComplete = true;
+				addHomegearFeatures(peer);
+				peer->pairingComplete = true;
 			}
 		}
 	}

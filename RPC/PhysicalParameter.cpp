@@ -22,6 +22,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			else if(attributeValue == "central_command") interface = Interface::Enum::centralCommand;
 			else if(attributeValue == "internal") interface = Interface::Enum::internal;
 			else if(attributeValue == "config") interface = Interface::Enum::config;
+			else if(attributeValue == "config_string") interface = Interface::Enum::configString;
 			else if(attributeValue == "store") interface = Interface::Enum::store;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown interface for \"physical\": " << attributeValue << std::endl;
 		}

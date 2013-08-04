@@ -587,7 +587,6 @@ void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<
 				if(GD::debugLevel >= 1) std::cout << "Critical: Parameter " << j->first << " has no corresponding RPC parameter. Writing dummy data. Device: 0x" << std::hex << address << std::dec << " Channel: " << i->first << std::endl;
 				stringstream << std::setw(8) << 0;
 				stringstream << std::setw(8) << 0;
-				stringstream << std::setw(1) << 0;
 				continue;
 			}
 			if(j->second.rpcParameter->id.size() == 0 && GD::debugLevel >= 2)
@@ -627,7 +626,6 @@ void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<
 						if(GD::debugLevel >= 1) std::cout << "Critical: Parameter " << l->first << " has no corresponding RPC parameter. Writing dummy data. Device: 0x" << std::hex << address << std::dec << " Channel: " << i->first << std::endl;
 						stringstream << std::setw(8) << 0;
 						stringstream << std::setw(8) << 0;
-						stringstream << std::setw(1) << 0;
 						continue;
 					}
 					if(l->second.rpcParameter->id.size() == 0 && GD::debugLevel >= 2)
@@ -651,7 +649,7 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 {
 	try
 	{
-		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
+		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		for(uint32_t i = 0; i < configSize; i++)
 		{
 			uint32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -696,7 +694,7 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 {
 	try
 	{
-		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
+		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		for(uint32_t i = 0; i < configSize; i++)
 		{
 			uint32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -901,7 +899,7 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string
 			if(frame->subtype > -1 && frame->subtypeIndex >= 9 && (signed)packet->payload()->size() > (frame->subtypeIndex - 9) && packet->payload()->at(frame->subtypeIndex - 9) != (unsigned)frame->subtype) continue;
 			int32_t channelIndex = frame->channelField;
 			int32_t channel = -1;
-			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9);
+			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9) & (0xFF >> (8 - std::lround(frame->channelFieldSize * 10) % 10));
 			frameID = frame->id;
 
 			for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
@@ -1045,9 +1043,9 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			}
 			else
 			{
-				if(GD::debugLevel >= 4) std::cout << "Info: " << i->first << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << ":" << parameterSetChannel << " was set." << std::endl;
+				if(GD::debugLevel >= 4) std::cout << "Info: " << i->first << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << ":" << parameterSetChannel << " was set to 0x" << HelperFunctions::getHexString(i->second) << "." << std::endl;
 				valueKeys->push_back(i->first);
-				rpcValues->push_back(rpcDevice->channels.at(parameterSetChannel)->parameterSets.at(parameterSetType)->getParameter(i->first)->convertFromPacket(i->second));
+				rpcValues->push_back(rpcDevice->channels.at(parameterSetChannel)->parameterSets.at(parameterSetType)->getParameter(i->first)->convertFromPacket(i->second, true));
 			}
 		}
 
@@ -1352,9 +1350,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				//Continue when value is unchanged except parameter is of the same index as a changed one.
 				if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
-				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " was set." << std::endl;
+				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " was set to 0x" << HelperFunctions::getHexString(allParameters[list][intIndex]) << "." << std::endl;
 				//Only send to device when parameter is of type config
-				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
+				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
 			}
 
@@ -1482,7 +1480,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				parameter->data = value;
 				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " was set." << std::endl;
 				//Only send to device when parameter is of type config
-				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config) continue;
+				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
 				std::cerr << "Moin2 " << (*i)->name << " " << changedParameters[list][intIndex].size();
 				if(!changedParameters[list][intIndex].empty()) std::cerr << " " << (int32_t)changedParameters[list][intIndex].at(0);
@@ -2518,6 +2516,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		else if(rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::command) return RPC::RPCVariable::createError(-6, "Parameter is not settable.");
 		if(!rpcParameter->conversion.empty() && rpcParameter->conversion.at(0)->type == RPC::ParameterConversion::Type::Enum::toggle)
 		{
+			//Handle toggle parameter
 			std::string toggleKey = rpcParameter->conversion.at(0)->stringValue;
 			if(toggleKey.empty()) return RPC::RPCVariable::createError(-6, "No toggle parameter specified (parameter attribute value is empty).");
 			if(valuesCentral[channel].find(toggleKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Toggle parameter not found.");

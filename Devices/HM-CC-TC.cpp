@@ -159,9 +159,10 @@ std::string HM_CC_TC::serialize()
 
 void HM_CC_TC::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
-	HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
+	int32_t baseLength = std::stoll(serializedObject.substr(0, 8), 0, 16);
+	HomeMaticDevice::unserialize(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
 
-	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
+	uint32_t pos = 8 + baseLength;
 	_currentDutyCycleDeviceAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	_temperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 	_setPointTemperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;

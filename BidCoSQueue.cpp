@@ -71,6 +71,7 @@ BidCoSQueue::~BidCoSQueue()
 	{
 		_stopResendThread = true;
 		if(_resendThread && _resendThread->joinable()) _resendThread->join();
+		stopPopWaitThread();
 	}
 	catch(const std::exception& ex)
     {
@@ -388,6 +389,82 @@ void BidCoSQueue::push_front(std::shared_ptr<BidCoSPacket> packet)
     }
 }
 
+void BidCoSQueue::stopPopWaitThread()
+{
+	try
+	{
+		if(!_popWaitThread) return;
+		_stopPopWaitThread = true;
+		if(_popWaitThread && _popWaitThread->joinable()) _popWaitThread->join();
+		_stopPopWaitThread = false;
+		_popWaitThread.reset();
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void BidCoSQueue::popWait(uint32_t waitingTime)
+{
+	try
+	{
+		stopResendThread();
+		stopPopWaitThread();
+		_popWaitThread.reset(new std::thread(&BidCoSQueue::popWaitThread, this, _popWaitThreadId++, waitingTime));
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void BidCoSQueue::popWaitThread(uint32_t threadId, uint32_t waitingTime)
+{
+	try
+	{
+		std::chrono::milliseconds sleepingTime(25);
+		uint32_t i = 0;
+		while(!_stopPopWaitThread && i < waitingTime)
+		{
+			std::this_thread::sleep_for(sleepingTime);
+			i += 25;
+		}
+		if(!_stopPopWaitThread)
+		{
+			pop();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
 void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
@@ -395,6 +472,30 @@ void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet)
 		if(noSending) return;
 		if(device != nullptr) device->sendPacket(packet);
 		else if(GD::debugLevel >= 2) std::cout << "Error: Device pointer of queue " << id << " is null." << std::endl;
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void BidCoSQueue::stopResendThread()
+{
+	try
+	{
+		if(!_resendThread) return;
+		_stopResendThread = true;
+		if(_resendThread && _resendThread->joinable()) _resendThread->join();
+		_stopResendThread = false;
+		_resendThread.reset();
 	}
 	catch(const std::exception& ex)
     {
@@ -432,9 +533,7 @@ void BidCoSQueue::startResendThread()
 		_queueMutex.unlock();
 		if(!(controlByte & 0x02) && (controlByte & 0x20)) //Resend when no response?
 		{
-			_stopResendThread = true;
-			if(_resendThread && _resendThread->joinable()) _resendThread->join();
-			_stopResendThread = false;
+			stopResendThread();
 			_resendThread.reset(new std::thread(&BidCoSQueue::resend, this, _resendThreadId++));
 		}
 	}
@@ -570,6 +669,7 @@ void BidCoSQueue::pop()
 	{
 		keepAlive();
 		if(GD::debugLevel >= 5) std::cout << "Popping from BidCoSQueue: " << id << std::endl;
+		if(_popWaitThread && _popWaitThread->joinable()) _stopPopWaitThread = true;
 		if(_resendThread && _resendThread->joinable()) _stopResendThread = true;
 		if(_queue.empty()) return;
 		_queueMutex.lock();

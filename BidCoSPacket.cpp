@@ -233,6 +233,7 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 			}
 			while(value.size() < bytes)
 			{
+				//To really work this would have to be a push_front. But as multibyte values are probably not needed anyway, who cares?
 				value.push_back(0);
 			}
 			uint32_t bitSize = std::lround(size * 10) % 10;

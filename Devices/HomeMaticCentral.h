@@ -9,6 +9,7 @@
 class BidCoSPacket;
 
 #include "HM-CC-TC.h"
+#include "HM-LC-SwX-FM.h"
 #include "../HomeMaticDevice.h"
 #include "../RPC/RPCVariable.h"
 
@@ -36,6 +37,7 @@ public:
 	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
 	void addHomegearFeatures(std::shared_ptr<Peer> peer);
 	void addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer);
+	void addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer);
 
 	void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);

@@ -54,6 +54,9 @@ void HomeMaticDevices::load()
 					case HMDeviceTypes::HMCCTC:
 						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_TC());
 						break;
+					case HMDeviceTypes::HMLCSW1FM:
+						device = std::shared_ptr<HomeMaticDevice>(new HM_LC_SWX_FM());
+						break;
 					case HMDeviceTypes::HMCCVD:
 						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_VD());
 						break;

@@ -91,6 +91,7 @@ OBJECTS := \
 	$(OBJDIR)/BidCoSPacket.o \
 	$(OBJDIR)/Exception.o \
 	$(OBJDIR)/Settings.o \
+	$(OBJDIR)/HM-LC-SwX-FM.o \
 	$(OBJDIR)/HM-CC-TC.o \
 	$(OBJDIR)/HomeMaticCentral.o \
 	$(OBJDIR)/HM-SD.o \
@@ -229,6 +230,9 @@ $(OBJDIR)/Exception.o: Exception.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Settings.o: Settings.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HM-LC-SwX-FM.o: Devices/HM-LC-SwX-FM.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HM-CC-TC.o: Devices/HM-CC-TC.cpp

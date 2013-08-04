@@ -62,7 +62,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		{
 			std::pair<std::string, std::string> splitString = HelperFunctions::split(attributeValue, ':');
 			channelField = HelperFunctions::getNumber(splitString.first);
-			//Currently I'm ignoring the size
+			if(!splitString.second.empty()) channelFieldSize = HelperFunctions::getDouble(splitString.second);
 		}
 		else if(attributeName == "fixed_channel") fixedChannel = HelperFunctions::getNumber(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"frame\": " << attributeName << std::endl;
@@ -323,7 +323,7 @@ bool Parameter::checkCondition(int32_t value)
 	return false;
 }
 
-std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint8_t>& data)
+std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint8_t>& data, bool isEvent)
 {
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 	{
@@ -344,7 +344,8 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
-		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(false));
+		if(isEvent) return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(true));
+		else return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(false));
 	}
 	else
 	{

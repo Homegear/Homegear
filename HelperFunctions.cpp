@@ -90,3 +90,15 @@ void HelperFunctions::printBinary(std::shared_ptr<std::vector<char>> data)
 	stringstream << std::dec;
 	std::cout << stringstream.str() << std::endl;
 }
+
+std::string HelperFunctions::getHexString(const std::vector<uint8_t>& data)
+{
+	std::ostringstream stringstream;
+	stringstream << std::hex << std::setfill('0') << std::uppercase;
+	for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
+	{
+		stringstream << std::setw(2) << (int32_t)(*i);
+	}
+	stringstream << std::dec;
+	return stringstream.str();
+}
