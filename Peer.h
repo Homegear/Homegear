@@ -64,14 +64,14 @@ public:
 class Peer
 {
     public:
-		Peer();
-		Peer(std::string serializedObject, HomeMaticDevice* device);
+		Peer(bool centralFeatures);
+		Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFeatures);
 		virtual ~Peer();
 
 		std::shared_ptr<ServiceMessages> serviceMessages;
         int32_t address = 0;
         std::string getSerialNumber() { return _serialNumber; }
-        void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 100) return; _serialNumber = serialNumber; if(!serviceMessages) serviceMessages = std::shared_ptr<ServiceMessages>(new ServiceMessages(serialNumber)); else serviceMessages->setPeerSerialNumber(serialNumber); }
+        void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 100) return; _serialNumber = serialNumber; }
         int32_t countFromSysinfo = 0;
         int32_t firmwareVersion = 0;
         int32_t remoteChannel = 0;
@@ -91,6 +91,7 @@ class Peer
 
         std::shared_ptr<PendingBidCoSQueues> pendingBidCoSQueues;
 
+        void stopThreads();
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel);
         void applyConfigFunction(int32_t channel, int32_t address, int32_t remoteChannel);
@@ -108,6 +109,7 @@ class Peer
         std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel = -1);
         void removePeer(int32_t channel, int32_t address);
         void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
+        void setRSSI(uint8_t rssi);
 
         void handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::string& frameID, uint32_t channel);
         void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, std::vector<uint8_t>>& values);
@@ -115,6 +117,8 @@ class Peer
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
         int32_t getChannelGroupedWith(int32_t channel);
         void printConfig();
+        void setLastPacketReceived();
+        uint32_t getLastPacketReceived() { return _lastPacketReceived; }
 
         std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
         std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);
@@ -130,13 +134,17 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
+        bool _centralFeatures = false;
+        uint32_t _lastPacketReceived = 0;
+        uint32_t _lastRSSI = 0;
         bool _stopWorkerThread = true;
-        std::thread _workerThread;
+        std::shared_ptr<std::thread> _workerThread;
         std::string _serialNumber;
         std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
         std::mutex _variablesToResetMutex;
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
         void worker();
+        void setRSSIThread(uint8_t rssi);
 };
 
 #endif // PEER_H

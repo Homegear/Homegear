@@ -23,7 +23,7 @@ void HomeMaticDevice::init()
 		_messageCounter[1] = 0; //Duty cycle message counter
 
 		setUpBidCoSMessages();
-		_workerThread = std::thread(&HomeMaticDevice::worker, this);
+		_workerThread.reset(new std::thread(&HomeMaticDevice::worker, this));
 		_initialized = true;
 	}
 	catch(const std::exception& ex)
@@ -97,10 +97,9 @@ HomeMaticDevice::~HomeMaticDevice()
 {
 	try
 	{
-		if(GD::debugLevel >= 5) std::cout << "Removing device from CUL event queue..." << std::endl;
+		if(GD::debugLevel >= 5) std::cout << "Removing device 0x" << std::hex << _address << std::dec << " from CUL event queue..." << std::endl;
 		GD::cul.removeHomeMaticDevice(this);
-		_stopWorkerThread = true;
-		if(_workerThread.joinable()) _workerThread.join();
+		stopThreads();
 	}
     catch(const std::exception& ex)
     {
@@ -117,11 +116,49 @@ HomeMaticDevice::~HomeMaticDevice()
 
 }
 
+void HomeMaticDevice::stopThreads()
+{
+	try
+	{
+		_bidCoSQueueManager.dispose(false);
+		_receivedPackets.dispose(false);
+		_sentPackets.dispose(false);
+
+		_peersMutex.lock();
+		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+		{
+			std::thread stop(&Peer::stopThreads, i->second.get());
+			stop.detach();
+		}
+		_peersMutex.unlock();
+
+		if(!_workerThread) return;
+		_stopWorkerThread = true;
+		if(_workerThread->joinable())
+		{
+			if(GD::debugLevel >= 5) std::cout << "Waiting for worker thread of device 0x" << std::hex << _address << std::dec << "..." << std::endl;
+			_workerThread->join();
+			_workerThread.reset();
+		}
+	}
+    catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
 void HomeMaticDevice::worker()
 {
 	try
 	{
-
 	}
     catch(const std::exception& ex)
     {
@@ -197,8 +234,7 @@ void HomeMaticDevice::loadPeersFromDatabase()
 	for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 	{
 		if(row->second.at(2)->textValue.empty()) continue;
-		std::shared_ptr<Peer> peer(new Peer(row->second.at(2)->textValue, this));
-		_peers[peer->address] = peer;
+		std::shared_ptr<Peer> peer(new Peer(row->second.at(2)->textValue, this, isCentral()));
 		if(!peer->rpcDevice) continue;
 		_peers[peer->address] = peer;
 		if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
@@ -494,12 +530,12 @@ void HomeMaticDevice::handleWakeUp(int32_t messageCounter, std::shared_ptr<BidCo
 
 std::shared_ptr<Peer> HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
-    return std::shared_ptr<Peer>(new Peer());
+    return std::shared_ptr<Peer>(new Peer(isCentral()));
 }
 
 std::shared_ptr<Peer> HomeMaticDevice::createTeam(int32_t address, HMDeviceTypes deviceType, std::string serialNumber)
 {
-	std::shared_ptr<Peer> team(new Peer());
+	std::shared_ptr<Peer> team(new Peer(isCentral()));
 	team->address = address;
 	team->deviceType = deviceType;
 	team->setSerialNumber(serialNumber);
@@ -682,7 +718,7 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, std::shared_ptr<
 		if(_pairing)
 		{
 			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRINGCENTRAL, packet->senderAddress());
-			std::shared_ptr<Peer> peer(new Peer());
+			std::shared_ptr<Peer> peer(new Peer(isCentral()));
 			peer->address = packet->senderAddress();
 			peer->deviceType = HMDeviceTypes::HMRCV50;
 			peer->messageCounter = 0x00; //Unknown at this point

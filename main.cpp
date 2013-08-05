@@ -1,3 +1,5 @@
+#define VERSION "0.0.1"
+
 #include <algorithm>
 //#include <ncurses.h>
 #include <execinfo.h>
@@ -81,6 +83,7 @@ void printHelp()
 	std::cout << "-c <path>\tSpecify path to config file" << std::endl;
 	std::cout << "-d\t\tRun as daemon" << std::endl;
 	std::cout << "-p <pid path>\tSpecify path to process id file" << std::endl;
+	std::cout << "-v\t\tPrint program version" << std::endl;
 }
 
 void startDaemon()
@@ -158,6 +161,11 @@ int main(int argc, char* argv[])
     		else if(arg == "-d")
     		{
     			startAsDaemon = true;
+    		}
+    		else if(arg == "-v")
+    		{
+    			std::cout << "Homegear version " << VERSION << std::endl;
+    			exit(0);
     		}
     		else
     		{

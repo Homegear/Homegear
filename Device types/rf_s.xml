@@ -73,7 +73,38 @@
 		<channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
 			<paramset type="MASTER" id="maint_ch_master"></paramset>
 			<paramset type="VALUES" id="maint_ch_values">
-				<parameter id="UNREACH" operations="read,event" ui_flags="service"><logical type="boolean"/><physical type="integer" interface="internal" value_id="UNREACH"/></parameter><parameter id="STICKY_UNREACH" operations="read,write,event" ui_flags="service,sticky"><logical type="boolean"/><physical type="integer" interface="internal" value_id="STICKY_UNREACH"/></parameter><parameter id="CONFIG_PENDING" operations="read,event" ui_flags="service"><logical type="boolean"/><physical type="integer" interface="internal" value_id="CONFIG_PENDING"/></parameter><parameter id="LOWBAT" operations="read,event" ui_flags="service"><logical type="boolean"/><physical type="integer" interface="internal" value_id="LOWBAT"/></parameter><parameter id="DUTYCYCLE" operations="read,event" ui_flags="service"><logical type="boolean"/><physical type="integer" interface="internal" value_id="DUTYCYCLE"/></parameter><parameter id="RSSI_DEVICE" operations="read,event"><logical type="integer"/><physical type="integer" interface="internal" value_id="RSSI_DEVICE"/></parameter><parameter id="RSSI_PEER" operations="read,event"><logical type="integer"/><physical type="integer" interface="internal" value_id="RSSI_PEER"/></parameter><parameter id="AES_KEY" operations="read" ui_flags="invisible"><logical type="integer" min="0" max="127"/><physical type="integer" interface="internal" value_id="AES_KEY"/></parameter>
+				<parameter id="UNREACH" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="UNREACH"/>
+				</parameter>
+				<parameter id="STICKY_UNREACH" operations="read,write,event" ui_flags="service,sticky">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="STICKY_UNREACH"/>
+				</parameter>
+				<parameter id="CONFIG_PENDING" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
+				</parameter>
+				<parameter id="LOWBAT" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="LOWBAT"/>
+				</parameter>
+				<parameter id="DUTYCYCLE" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="DUTYCYCLE"/>
+				</parameter>
+				<parameter id="RSSI_DEVICE" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="internal" value_id="RSSI_DEVICE"/>
+				</parameter>
+				<parameter id="RSSI_PEER" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+				</parameter>
+				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+					<logical type="integer" min="0" max="127"/>
+					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+				</parameter>
 			</paramset>
 		</channel>
 		<channel index="1" type="SWITCH" count_from_sysinfo="23.0:1.0">

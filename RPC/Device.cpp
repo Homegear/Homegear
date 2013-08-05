@@ -251,6 +251,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "option_integer") type = Type::Enum::optionInteger;
 			else if(attributeValue == "integer_tinyfloat") type = Type::Enum::integerTinyFloat;
 			else if(attributeValue == "toggle") type = Type::Enum::toggle;
+			else if(attributeValue == "action_key_counter") type = Type::Enum::none;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown type for \"conversion\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -272,6 +273,9 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 		else if(attributeName == "mantissa_size") mantissaSize = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "exponent_start") exponentStart = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "exponent_size") exponentSize = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "sim_counter") {}
+		else if(attributeName == "on") on = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "off") off = HelperFunctions::getNumber(attributeValue);
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"conversion\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* conversionNode = node->first_node(); conversionNode; conversionNode = conversionNode->next_sibling())
@@ -346,6 +350,21 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 	{
 		if(isEvent) return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(true));
 		else return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(false));
+	}
+	else if(id == "RSSI_DEVICE" || id == "RSSI_PEER")
+	{
+		//From CC1100 manual page 37:
+		//1) Read the RSSI status register
+		//2) Convert the reading from a hexadecimal
+		//number to a decimal number (RSSI_dec)
+		//3) If RSSI_dec ≥ 128 then RSSI_dBm =
+		//(RSSI_dec - 256)/2 – RSSI_offset
+		//4) Else if RSSI_dec < 128 then RSSI_dBm =
+		//(RSSI_dec)/2 – RSSI_offset
+		std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcInteger, data));
+		if(variable->integerValue >= 128) variable->integerValue = ((variable->integerValue - 256) / 2) - 74;
+		else variable->integerValue = (variable->integerValue / 2) - 74;
+		return variable;
 	}
 	else
 	{
@@ -509,6 +528,9 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		else if(attributeName == "PARAM") additionalParameter = attributeValue;
 		else if(attributeName == "control") control = attributeValue;
 		else if(attributeName == "loopback") { if(attributeValue == "true") loopback = true; }
+		else if(attributeName == "hidden") { if(attributeValue == "true") hidden = true; } //Ignored actually
+		else if(attributeName == "default") {} //Not necessary and not used
+		else if(attributeName == "burst_suppression") {} //Ignored, not sure, what it is for exactly
 		else if(attributeName == "type")
 		{
 			if(attributeValue == "integer") type = PhysicalParameter::Type::Enum::typeInteger;
@@ -581,7 +603,8 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		}
 		else if(nodeName == "conversion")
 		{
-			conversion.push_back(std::shared_ptr<ParameterConversion>(new ParameterConversion(parameterNode)));
+			std::shared_ptr<ParameterConversion> parameterConversion(new ParameterConversion(parameterNode));
+			if(parameterConversion && parameterConversion->type != ParameterConversion::Type::Enum::none) conversion.push_back(parameterConversion);
 		}
 		else if(nodeName == "description")
 		{
@@ -794,6 +817,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			type = typeFromString(attributeValue);
 			if(GD::debugLevel >= 3 && type == Type::Enum::none) std::cout << "Warning: Unknown parameter set type: " << attributeValue << std::endl;
 		}
+		else if(attributeName == "link") {} //Ignored
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
 	}
 	std::vector<std::pair<std::string, std::string>> enforce;

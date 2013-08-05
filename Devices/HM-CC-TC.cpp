@@ -132,11 +132,11 @@ void HM_CC_TC::setUpBidCoSMessages()
 
 HM_CC_TC::~HM_CC_TC()
 {
-	stopDutyCycle();
 }
 
-void HM_CC_TC::stopDutyCycle()
+void HM_CC_TC::stopThreads()
 {
+	HomeMaticDevice::stopThreads();
 	_stopDutyCycleThread = true;
 	if(GD::debugLevel >= 5) std::cout << "Stopping duty cycle..." << std::endl;
 	if(_dutyCycleThread != nullptr && _dutyCycleThread->joinable())	_dutyCycleThread->join();
@@ -374,7 +374,7 @@ void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddre
 
 std::shared_ptr<Peer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
-    std::shared_ptr<Peer> peer(new Peer());
+    std::shared_ptr<Peer> peer(new Peer(false));
     peer->address = address;
     peer->firmwareVersion = firmwareVersion;
     peer->deviceType = deviceType;

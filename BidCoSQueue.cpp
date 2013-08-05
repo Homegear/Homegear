@@ -3,7 +3,6 @@
 
 BidCoSQueue::BidCoSQueue() : _queueType(BidCoSQueueType::EMPTY)
 {
-	peer = std::shared_ptr<Peer>(new Peer());
 }
 
 BidCoSQueue::BidCoSQueue(BidCoSQueueType queueType) : BidCoSQueue()
@@ -685,7 +684,7 @@ void BidCoSQueue::pop()
 				_queueMutex.unlock();
 				if(serviceMessages && (_queueType == BidCoSQueueType::UNPAIRING || _queueType == BidCoSQueueType::CONFIG))
 				{
-					serviceMessages->configPending = false;
+					serviceMessages->setConfigPending(false);
 					serviceMessages.reset();
 				}
 				return;

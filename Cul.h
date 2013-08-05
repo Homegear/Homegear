@@ -37,6 +37,7 @@ class Cul
         bool isOpen() { return _fileDescriptor > -1; }
     protected:
     private:
+        std::mutex _homeMaticDevicesMutex;
         std::list<HomeMaticDevice*> _homeMaticDevices;
         int32_t _fileDescriptor = -1;
         std::string _culDevice;

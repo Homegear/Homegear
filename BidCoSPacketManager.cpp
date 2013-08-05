@@ -6,15 +6,17 @@ BidCoSPacketInfo::BidCoSPacketInfo()
 	time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-BidCoSPacketManager::~BidCoSPacketManager()
+void BidCoSPacketManager::dispose(bool wait)
 {
-	std::this_thread::sleep_for(std::chrono::milliseconds(1500)); //Wait for threads to finish
+	_disposing = true;
+	if(wait) std::this_thread::sleep_for(std::chrono::milliseconds(1500)); //Wait for threads to finish
 }
 
 void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& packet)
 {
 	try
 	{
+		if(_disposing) return;
 		_packetMutex.lock();
 		if(_packets.find(address) != _packets.end()) _packets.erase(_packets.find(address));
 		_packetMutex.unlock();
@@ -54,7 +56,7 @@ void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)
 		while(true)
 		{
 			_packetMutex.lock();
-			if(_packets.find(address) != _packets.end() && _packets.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _packets.at(address)->time + 1000)
+			if(_packets.find(address) != _packets.end() && _packets.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _packets.at(address)->time + 1000 && !_disposing)
 			{
 				_packetMutex.unlock();
 				std::this_thread::sleep_for(sleepingTime);
@@ -95,9 +97,10 @@ std::shared_ptr<BidCoSPacket> BidCoSPacketManager::get(int32_t address)
 {
 	try
 	{
+		if(_disposing) return std::shared_ptr<BidCoSPacket>();
 		_packetMutex.lock();
 		//Make a copy to make sure, the element exists
-		std::shared_ptr<BidCoSPacket> packet((_packets.find(address) != _packets.end()) ? _packets[address]->packet : std::shared_ptr<BidCoSPacket>());
+		std::shared_ptr<BidCoSPacket> packet((_packets.find(address) != _packets.end()) ? _packets[address]->packet : nullptr);
 		_packetMutex.unlock();
 		return packet;
 	}
@@ -123,6 +126,7 @@ std::shared_ptr<BidCoSPacketInfo> BidCoSPacketManager::getInfo(int32_t address)
 {
 	try
 	{
+		if(_disposing) return std::shared_ptr<BidCoSPacketInfo>();
 		//Make a copy to make sure, the element exists
 		_packetMutex.lock();
 		std::shared_ptr<BidCoSPacketInfo> info((_packets.find(address) != _packets.end()) ? _packets[address] : nullptr);
@@ -151,6 +155,7 @@ void BidCoSPacketManager::keepAlive(int32_t address)
 {
 	try
 	{
+		if(_disposing) return;
 		_packetMutex.lock();
 		if(_packets.find(address) != _packets.end()) _packets[address]->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		_packetMutex.unlock();

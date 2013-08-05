@@ -7,15 +7,17 @@ BidCoSQueueData::BidCoSQueueData()
 	lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-BidCoSQueueManager::~BidCoSQueueManager()
+void BidCoSQueueManager::dispose(bool wait)
 {
-	std::this_thread::sleep_for(std::chrono::milliseconds(1500)); //Wait for threads to finish
+	_disposing = true;
+	if(wait) std::this_thread::sleep_for(std::chrono::milliseconds(1500)); //Wait for threads to finish
 }
 
 std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* device, BidCoSQueueType queueType, int32_t address)
 {
 	try
 	{
+		if(_disposing) return std::shared_ptr<BidCoSQueue>();
 		_queueMutex.lock();
 		if(_queues.find(address) != _queues.end()) _queues.erase(_queues.find(address));
 		_queueMutex.unlock();
@@ -59,7 +61,7 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 		while(true)
 		{
 			_queueMutex.lock();
-			if(_queues.find(address) != _queues.end() && _queues.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _queues.at(address)->lastAction + 1000)
+			if(_queues.find(address) != _queues.end() && _queues.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _queues.at(address)->lastAction + 1000 && !_disposing)
 			{
 				_queueMutex.unlock();
 				std::this_thread::sleep_for(sleepingTime);
@@ -100,6 +102,7 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)
 {
 	try
 	{
+		if(_disposing) return std::shared_ptr<BidCoSQueue>();
 		_queueMutex.lock();
 		//Make a copy to make sure, the element exists
 		std::shared_ptr<BidCoSQueue> queue((_queues.find(address) != _queues.end()) ? _queues[address]->queue : std::shared_ptr<BidCoSQueue>());

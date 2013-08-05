@@ -94,29 +94,29 @@ void HomeMaticDevices::load()
     }
 }
 
-void HomeMaticDevices::stopDutyCycles()
+void HomeMaticDevices::stopThreads()
 {
 	for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 	{
-		std::thread stop(&HomeMaticDevices::stopDutyCycle, this, (*i));
+		std::thread stop(&HomeMaticDevices::stopThreadsThread, this, (*i));
 		stop.detach();
 	}
 	std::this_thread::sleep_for(std::chrono::milliseconds(8000));
 }
 
-void HomeMaticDevices::stopDutyCycle(std::shared_ptr<HomeMaticDevice> device)
+void HomeMaticDevices::stopThreadsThread(std::shared_ptr<HomeMaticDevice> device)
 {
-	device->stopDutyCycle();
+	device->stopThreads();
 }
 
 void HomeMaticDevices::save()
 {
 	try
 	{
-		std::cout << "Waiting for duty cycles to stop..." << std::endl;
+		std::cout << "Waiting for duty cycles and worker threads to stop..." << std::endl;
 		//The stopping is necessary, because there is a small time gap between setting "_lastDutyCycleEvent" and the duty cycle message counter.
-		//If saving takes place within this gap, the paired duty cycle devices are out of sync after restart of this program.
-		stopDutyCycles();
+		//If saving takes place within this gap, the paired duty cycle devices are out of sync after restart of the program.
+		stopThreads();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			(*i)->savePeersToDatabase();

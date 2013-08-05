@@ -10,7 +10,9 @@
 - Add service messages
 - Automatically add spy device and central if they don't exist
 - Add parameter for SIM_COUNTER
+- UNREACH for non cyclic_timeout devices
 Today:
 
 Questions:
 - How are smoke detector packets timed?
+- AES handshakes

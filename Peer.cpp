@@ -129,8 +129,7 @@ Peer::~Peer()
 {
 	try
 	{
-		_stopWorkerThread = true;
-		if(_workerThread.joinable()) _workerThread.join();
+		stopThreads();
 	}
 	catch(const std::exception& ex)
     {
@@ -146,21 +145,48 @@ Peer::~Peer()
     }
 }
 
-Peer::Peer()
-{
-	rpcDevice.reset();
-	serviceMessages.reset(new ServiceMessages(""));
-	pendingBidCoSQueues.reset(new PendingBidCoSQueues());
-	team.address = 0;
-}
-
-Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
+void Peer::stopThreads()
 {
 	try
 	{
-		rpcDevice.reset();
-		serviceMessages.reset(new ServiceMessages(""));
+		if(!_workerThread) return;
+		_stopWorkerThread = true;
+		if(_workerThread->joinable()) _workerThread->join();
+		_workerThread.reset();
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+Peer::Peer(bool centralFeatures)
+{
+	_centralFeatures = centralFeatures;
+	_lastPacketReceived = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	rpcDevice.reset();
+	team.address = 0;
+	if(centralFeatures)
+	{
+		serviceMessages.reset(new ServiceMessages(this));
 		pendingBidCoSQueues.reset(new PendingBidCoSQueues());
+		_stopWorkerThread = false;
+		_workerThread.reset(new std::thread(&Peer::worker, this));
+	}
+}
+
+Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFeatures) : Peer(centralFeatures)
+{
+	try
+	{
 		if(serializedObject.empty()) return;
 		if(GD::debugLevel >= 5) std::cout << "Unserializing peer: " << serializedObject << std::endl;
 
@@ -214,9 +240,9 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 		unserializeConfig(serializedObject, valuesCentral, RPC::ParameterSet::Type::values, pos);
 		unserializeConfig(serializedObject, linksCentral, RPC::ParameterSet::Type::link, pos);
 		uint32_t serializedServiceMessagesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		serviceMessages.reset(new ServiceMessages(_serialNumber, serializedObject.substr(pos, serializedServiceMessagesSize))); pos += serializedServiceMessagesSize;
+		if(_centralFeatures) serviceMessages.reset(new ServiceMessages(this, serializedObject.substr(pos, serializedServiceMessagesSize))); pos += serializedServiceMessagesSize;
 		uint32_t pendingQueuesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		pendingBidCoSQueues.reset(new PendingBidCoSQueues(serializedObject.substr(pos, pendingQueuesSize), this, device)); pos += pendingQueuesSize;
+		if(_centralFeatures) pendingBidCoSQueues.reset(new PendingBidCoSQueues(serializedObject.substr(pos, pendingQueuesSize), this, device)); pos += pendingQueuesSize;
 		uint32_t variablesToResetSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		for(uint32_t i = 0; i < variablesToResetSize; i++)
 		{
@@ -253,11 +279,6 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 				std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
 			}
 		}
-		if(!_variablesToReset.empty())
-		{
-			_stopWorkerThread = false;
-			_workerThread = std::thread(&Peer::worker, this);
-		}
 	}
 	catch(const std::exception& ex)
     {
@@ -275,6 +296,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device) : Peer()
 
 void Peer::worker()
 {
+	if(!_centralFeatures) return;
 	std::chrono::milliseconds sleepingTime(3000);
 	std::vector<uint32_t> positionsToDelete;
 	std::vector<std::shared_ptr<VariableToReset>> variablesToReset;
@@ -327,6 +349,7 @@ void Peer::worker()
 				positionsToDelete.clear();
 				variablesToReset.clear();
 			}
+			serviceMessages->checkUnreach();
 		}
 		catch(const std::exception& ex)
 		{
@@ -515,12 +538,20 @@ std::string Peer::serialize()
 		serializeConfig(stringstream, configCentral);
 		serializeConfig(stringstream, valuesCentral);
 		serializeConfig(stringstream, linksCentral);
-		std::string serializedServiceMessages = serviceMessages->serialize();
-		stringstream << std::setw(8) << serializedServiceMessages.length();
-		stringstream << serializedServiceMessages;
-		std::string serializedPendingQueues = pendingBidCoSQueues->serialize();
-		stringstream << std::setw(8) << serializedPendingQueues.length();
-		stringstream << serializedPendingQueues;
+		if(_centralFeatures && serviceMessages)
+		{
+			std::string serializedServiceMessages = serviceMessages->serialize();
+			stringstream << std::setw(8) << serializedServiceMessages.length();
+			stringstream << serializedServiceMessages;
+		}
+		else stringstream << std::setw(8) << 0;
+		if(_centralFeatures && pendingBidCoSQueues)
+		{
+			std::string serializedPendingQueues = pendingBidCoSQueues->serialize();
+			stringstream << std::setw(8) << serializedPendingQueues.length();
+			stringstream << serializedPendingQueues;
+		}
+		else stringstream << std::setw(8) << 0;
 		try
 		{
 			_variablesToResetMutex.lock();
@@ -986,11 +1017,70 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 			_variablesToReset.push_back(variable);
 			if(GD::debugLevel >= 5) std::cout << "Debug: " << parameter->id << " will be reset in " << ((variable->resetTime - time) / 1000)  << "s." << std::endl;
 			_variablesToResetMutex.unlock();
-			if(_stopWorkerThread)
+			if(!_workerThread || !_workerThread->joinable())
 			{
 				_stopWorkerThread = false;
-				_workerThread = std::thread(&Peer::worker, this);
+				_workerThread.reset(new std::thread(&Peer::worker, this));
 			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void Peer::setLastPacketReceived()
+{
+	_lastPacketReceived = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+void Peer::setRSSI(uint8_t rssi)
+{
+	try
+	{
+		if(!_centralFeatures) return;
+		std::thread t(&Peer::setRSSIThread, this, rssi);
+		t.detach();
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void Peer::setRSSIThread(uint8_t rssi)
+{
+	try
+	{
+		uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		if(valuesCentral.at(0).find("RSSI_DEVICE") != valuesCentral.at(0).end() && (time - _lastRSSI) > 10)
+		{
+			_lastRSSI = time;
+			RPCConfigurationParameter* parameter = &valuesCentral.at(0).at("RSSI_DEVICE");
+			parameter->data.at(0) = rssi;
+
+			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({"RSSI_DEVICE"}));
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
+			rpcValues->push_back(parameter->rpcParameter->convertFromPacket(parameter->data));
+
+			GD::rpcClient.broadcastEvent(_serialNumber + ":0", valueKeys, rpcValues);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1011,6 +1101,11 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
+		if(!_centralFeatures) return;
+		if(packet->senderAddress() != address) return;
+		setLastPacketReceived();
+		setRSSI(packet->rssi());
+		serviceMessages->endUnreach();
 		uint32_t parameterSetChannel = 0;
 		std::map<std::string, std::vector<uint8_t>> values;
 		RPC::ParameterSet::Type::Enum parameterSetType;
@@ -1059,7 +1154,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		{
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
 			queue->noSending = true;
-			serviceMessages->configPending = true;
+			serviceMessages->setConfigPending(true);
 			queue->serviceMessages = serviceMessages;
 			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 			*packet = *sentPacket;
@@ -1310,6 +1405,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 {
 	try
 	{
+		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
@@ -1360,7 +1456,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 			queue->noSending = true;
-			serviceMessages->configPending = true;
+			serviceMessages->setConfigPending(true);
 			queue->serviceMessages = serviceMessages;
 			std::vector<uint8_t> payload;
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
@@ -1491,7 +1587,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 			queue->noSending = true;
-			serviceMessages->configPending = true;
+			if(serviceMessages) serviceMessages->setConfigPending(true);
 			queue->serviceMessages = serviceMessages;
 			std::vector<uint8_t> payload;
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
@@ -1769,6 +1865,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 {
 	try
 	{
+		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		std::shared_ptr<RPC::RPCVariable> element;
 		bool groupFlag = false;
@@ -1829,8 +1926,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 					if(isSender) brokenFlags = 2 | 4; //LINK_FLAG_RECEIVER_BROKEN | PEER_IS_ME
 					else brokenFlags = 1 | 4; //LINK_FLAG_SENDER_BROKEN | PEER_IS_ME
 				}
-				if(brokenFlags == 0 && central->getPeers()->find((*i)->address) != central->getPeers()->end() && central->getPeers()->at((*i)->address)->serviceMessages->unreach) brokenFlags = 2;
-				if(serviceMessages->unreach) brokenFlags |= 1;
+				if(brokenFlags == 0 && central->getPeers()->find((*i)->address) != central->getPeers()->end() && central->getPeers()->at((*i)->address)->serviceMessages->getUnreach()) brokenFlags = 2;
+				if(serviceMessages->getUnreach()) brokenFlags |= 1;
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DESCRIPTION", (*i)->linkDescription)));
 				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", brokenFlags)));
@@ -2501,6 +2598,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 {
 	try
 	{
+		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return RPC::RPCVariable::createError(-5, "Value key is empty.");
 		if(channel == 0 && serviceMessages->set(valueKey, value)) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		if(valuesCentral.find(channel) == valuesCentral.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
@@ -2520,9 +2618,22 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			std::string toggleKey = rpcParameter->conversion.at(0)->stringValue;
 			if(toggleKey.empty()) return RPC::RPCVariable::createError(-6, "No toggle parameter specified (parameter attribute value is empty).");
 			if(valuesCentral[channel].find(toggleKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Toggle parameter not found.");
-			if(valuesCentral[channel][toggleKey].rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeBoolean) return RPC::RPCVariable::createError(-6, "Toggle parameter has to be of type boolean.");
-			std::shared_ptr<RPC::RPCVariable> toggleValue = valuesCentral[channel][toggleKey].rpcParameter->convertFromPacket(valuesCentral[channel][toggleKey].data);
-			toggleValue->booleanValue = !toggleValue->booleanValue;
+			RPCConfigurationParameter* toggleParam = &valuesCentral[channel][toggleKey];
+			std::shared_ptr<RPC::RPCVariable> toggleValue;
+			if(toggleParam->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeBoolean)
+			{
+				toggleValue = toggleParam->rpcParameter->convertFromPacket(toggleParam->data);
+				toggleValue->booleanValue = !toggleValue->booleanValue;
+			}
+			else if(toggleParam->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeInteger ||
+					toggleParam->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeFloat)
+			{
+				int32_t currentToggleValue = (int32_t)toggleParam->data.at(0);
+				if(currentToggleValue != toggleParam->rpcParameter->conversion.at(0)->on) toggleParam->data.at(0) = toggleParam->rpcParameter->conversion.at(0)->on;
+				else toggleParam->data.at(0) = toggleParam->rpcParameter->conversion.at(0)->off;
+				toggleValue = toggleParam->rpcParameter->convertFromPacket(toggleParam->data);
+			}
+			else return RPC::RPCVariable::createError(-6, "Toggle parameter has to be of type boolean, float or integer.");
 			return setValue(channel, toggleKey, toggleValue);
 		}
 		std::string setRequest = rpcParameter->physicalParameter->setRequest;
@@ -2599,10 +2710,10 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				parameters->strings.push_back(rpcParameter->physicalParameter->valueID);
 				queue->callbackParameter = parameters;
 				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<Peer, &Peer::addVariableToResetCallback>(this);
-				if(_stopWorkerThread)
+				if(!_workerThread || !_workerThread->joinable())
 				{
 					_stopWorkerThread = false;
-					_workerThread = std::thread(&Peer::worker, this);
+					_workerThread.reset(new std::thread(&Peer::worker, this));
 				}
 			}
 		}

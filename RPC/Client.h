@@ -4,6 +4,8 @@
 #include <map>
 #include <thread>
 #include <vector>
+#include <mutex>
+#include <chrono>
 
 #include "RPCClient.h"
 
@@ -29,7 +31,7 @@ public:
 	};
 
 	Client() { _servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>()); }
-	virtual ~Client() {}
+	virtual ~Client();
 
 	void broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values);
 	void listDevices(std::pair<std::string, std::string> address);
@@ -43,6 +45,7 @@ public:
 	void reset();
 private:
 	RPCClient _client;
+	std::mutex _serversMutex;
 	std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> _servers;
 };
 

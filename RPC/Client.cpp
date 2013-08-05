@@ -3,33 +3,58 @@
 
 namespace RPC
 {
+Client::~Client()
+{
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+}
+
 void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values)
 {
-	if(!valueKeys || !values || valueKeys->size() != values->size()) return;
-	std::string methodName("event"); //We can't just create the methods RPCVariable with new RPCVariable("methodName", "event") because "event" is not a string object. That's way we create the string object here.
-	for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+	try
 	{
-		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
-		std::shared_ptr<RPCVariable> array(new RPCVariable(RPCVariableType::rpcArray));
-		std::shared_ptr<RPCVariable> method;
-		for(uint32_t i = 0; i < valueKeys->size(); i++)
+		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
+		std::string methodName("event"); //We can't just create the methods RPCVariable with new RPCVariable("methodName", "event") because "event" is not a string object. That's way we create the string object here.
+		_serversMutex.lock();
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
-			method.reset(new RPCVariable(RPCVariableType::rpcStruct));
-			array->arrayValue->push_back(method);
-			method->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("methodName", methodName)));
-			std::shared_ptr<RPCVariable> params(new RPCVariable(RPCVariableType::rpcArray));
-			method->structValue->push_back(params);
-			params->name = "params";
-			params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
-			params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(deviceAddress)));
-			params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(valueKeys->at(i))));
-			params->arrayValue->push_back(values->at(i));
+			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
+			std::shared_ptr<RPCVariable> array(new RPCVariable(RPCVariableType::rpcArray));
+			std::shared_ptr<RPCVariable> method;
+			for(uint32_t i = 0; i < valueKeys->size(); i++)
+			{
+				method.reset(new RPCVariable(RPCVariableType::rpcStruct));
+				array->arrayValue->push_back(method);
+				method->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("methodName", methodName)));
+				std::shared_ptr<RPCVariable> params(new RPCVariable(RPCVariableType::rpcArray));
+				method->structValue->push_back(params);
+				params->name = "params";
+				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
+				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(deviceAddress)));
+				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(valueKeys->at(i))));
+				params->arrayValue->push_back(values->at(i));
+			}
+			parameters->push_back(array);
+			//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even if there is only one value.
+			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "system.multicall", parameters);
+			t.detach();
 		}
-		parameters->push_back(array);
-		//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even if there is only one value.
-		std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "system.multicall", parameters);
-		t.detach();
+		_serversMutex.unlock();
 	}
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void Client::listDevices(std::pair<std::string, std::string> address)
@@ -96,82 +121,229 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 
 void Client::broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions)
 {
-	if(!deviceDescriptions) return;
-	std::string methodName("newDevices");
-	for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+	try
 	{
-		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
-		parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
-		parameters->push_back(deviceDescriptions);
-		std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "newDevices", parameters);
-		t.detach();
+		if(!deviceDescriptions) return;
+		_serversMutex.lock();
+		std::string methodName("newDevices");
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		{
+			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
+			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
+			parameters->push_back(deviceDescriptions);
+			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "newDevices", parameters);
+			t.detach();
+		}
+		_serversMutex.unlock();
 	}
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses)
 {
-	if(!deviceAddresses) return;
-	for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+	try
 	{
-		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
-		parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
-		parameters->push_back(deviceAddresses);
-		std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "deleteDevices", parameters);
-		t.detach();
+		if(!deviceAddresses) return;
+		_serversMutex.lock();
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		{
+			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
+			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
+			parameters->push_back(deviceAddresses);
+			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "deleteDevices", parameters);
+			t.detach();
+		}
+		_serversMutex.unlock();
 	}
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void Client::broadcastUpdateDevices(std::string address, Hint::Enum hint)
 {
-	if(!address.empty()) return;
-	std::string methodName("deleteDevices");
-	for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+	try
 	{
-		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
-		parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
-		parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(address)));
-		parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)hint)));
-		std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "updateDevices", parameters);
-		t.detach();
+		if(!address.empty()) return;
+		_serversMutex.lock();
+		std::string methodName("deleteDevices");
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
+		{
+			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
+			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
+			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(address)));
+			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)hint)));
+			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "updateDevices", parameters);
+			t.detach();
+		}
+		_serversMutex.unlock();
 	}
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void Client::reset()
 {
-	_servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>());
+	try
+	{
+		_serversMutex.lock();
+		_servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>());
+		_serversMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void Client::addServer(std::pair<std::string, std::string> address, std::string id)
 {
-	for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+	try
 	{
-		if((*i)->address == address) return;
+		_serversMutex.lock();
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+		{
+			if((*i)->address == address)
+			{
+				_serversMutex.unlock();
+				return;
+			}
+		}
+		std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
+		server->address = address;
+		server->id = id;
+		_servers->push_back(server);
+		_serversMutex.unlock();
 	}
-	std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
-	server->address = address;
-	server->id = id;
-	_servers->push_back(server);
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void Client::removeServer(std::pair<std::string, std::string> server)
 {
-	for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+	try
 	{
-		if((*i)->address == server)
+		_serversMutex.lock();
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
 		{
-			_servers->erase(i);
-			return;
+			if((*i)->address == server)
+			{
+				_servers->erase(i);
+				_serversMutex.unlock();
+				return;
+			}
 		}
+		_serversMutex.unlock();
 	}
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 std::shared_ptr<RemoteRPCServer> Client::getServer(std::pair<std::string, std::string> address)
 {
-	for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+	try
 	{
-		if((*i)->address == address) return *i;
+		_serversMutex.lock();
+		std::shared_ptr<RemoteRPCServer> server;
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+		{
+			if((*i)->address == address) server = *i;
+		}
+		_serversMutex.unlock();
+		return server;
 	}
-	return std::shared_ptr<RemoteRPCServer>();
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return std::shared_ptr<RemoteRPCServer>();
 }
 
 } /* namespace RPC */

@@ -130,7 +130,7 @@
 					<physical type="integer" interface="command" value_id="NEXT_TRANSMISSION">
 						<event frame="EVENT"/>
 					</physical>
-					<conversion type="integer_integer_scale" mul="107" div="100"/>
+					<conversion type="integer_integer_scale" mul="100" div="110"/>
 					<conversion type="integer_tinyfloat" mantissa_size="0" exponent_size="4"/>
 				</parameter>
 				<parameter id="MOTION" operations="read,event">

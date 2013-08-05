@@ -124,11 +124,19 @@ void BidCoSPacket::import(std::string packet, bool removeFirstCharacter)
 
 		uint32_t tailLength = 0;
 		if(packet.back() == '\n') tailLength = 2;
+		uint32_t endIndex = startIndex + 2 + (_length * 2);
+		if(endIndex >= packet.size())
+		{
+			if(GD::debugLevel >= 4) std::cout << "Info: Packet is shorter than value of packet length byte: " << packet << std::endl;
+			endIndex = packet.size() - 1;
+		}
 		_payload.clear();
-		for(uint32_t i = startIndex + 20; i < packet.length() - tailLength; i+=2)
+		uint32_t i;
+		for(i = startIndex + 20; i < endIndex; i+=2)
 		{
 			_payload.push_back(getByte(packet.substr(i, 2)));
 		}
+		if(i < packet.size() - tailLength) _rssi = getByte(packet.substr(i, 2));
 	}
 	catch(const std::exception& ex)
     {

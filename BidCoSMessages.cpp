@@ -1,15 +1,5 @@
 #include "BidCoSMessages.h"
 
-BidCoSMessages::BidCoSMessages()
-{
-    //ctor
-}
-
-BidCoSMessages::~BidCoSMessages()
-{
-    //dtor
-}
-
 void BidCoSMessages::add(std::shared_ptr<BidCoSMessage> message)
 {
 	try

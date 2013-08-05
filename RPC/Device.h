@@ -71,6 +71,8 @@ public:
 	int32_t exponentStart = 0;
 	int32_t exponentSize = 5;
 	std::string stringValue;
+	int32_t on = 200;
+	int32_t off = 0;
 
 	ParameterConversion() {}
 	ParameterConversion(xml_node<>* node);
@@ -100,6 +102,7 @@ public:
 	double index = 0;
 	double size = 0;
 	bool isSigned = false;
+	bool hidden = false;
 	BooleanOperator::Enum booleanOperator = BooleanOperator::Enum::e;
 	Operations::Enum operations = (Operations::Enum)3;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;

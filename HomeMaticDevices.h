@@ -22,8 +22,9 @@ public:
 	std::vector<std::shared_ptr<HomeMaticDevice>>* getDevices() { return &_devices; }
 	void load();
 	void save();
-	void stopDutyCycles();
-	void stopDutyCycle(std::shared_ptr<HomeMaticDevice> device);
+	void stopThreads();
+	void stopThreadsThread(std::shared_ptr<HomeMaticDevice> device);
+
 private:
 	std::vector<std::shared_ptr<HomeMaticDevice>> _devices;
 	std::shared_ptr<HomeMaticCentral> _central;

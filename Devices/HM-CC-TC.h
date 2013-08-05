@@ -20,7 +20,7 @@ class HM_CC_TC : public HomeMaticDevice
         void setValveState(int32_t valveState);
         int32_t getNewValueState() { return _newValveState; }
         void handleCLICommand(std::string command);
-        void stopDutyCycle();
+        void stopThreads();
 
         void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
         void handleConfigParamResponse(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);

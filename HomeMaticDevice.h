@@ -34,6 +34,8 @@ class HomeMaticDevice
         HMDeviceTypes deviceType();
         std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
         virtual int64_t lastDutyCycleEvent() { return _lastDutyCycleEvent; }
+        virtual bool isCentral() { return _deviceType == HMDeviceTypes::HMCENTRAL; }
+        virtual void stopThreads();
 
         HomeMaticDevice();
         HomeMaticDevice(std::string serialNumber, int32_t address);
@@ -51,7 +53,6 @@ class HomeMaticDevice
         virtual int32_t getCentralAddress();
         virtual std::unordered_map<int32_t, std::shared_ptr<Peer>>* getPeers();
         virtual int32_t calculateCycleLength(uint8_t messageCounter);
-        virtual void stopDutyCycle() {};
         virtual std::string serialize();
         virtual void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         virtual int32_t getHexInput();
@@ -93,7 +94,7 @@ class HomeMaticDevice
         virtual void sendRequestConfig(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet) {}
     protected:
         bool _stopWorkerThread = false;
-        std::thread _workerThread;
+        std::shared_ptr<std::thread> _workerThread;
         int32_t _address;
         std::string _serialNumber;
         int32_t _firmwareVersion = 0;
@@ -124,7 +125,6 @@ class HomeMaticDevice
         virtual std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>());
         virtual std::shared_ptr<Peer> createTeam(int32_t address, HMDeviceTypes deviceType, std::string serialNumber);
         virtual void worker();
-        //virtual void cleanUpMessageCounters();
 
         virtual void init();
         virtual void setUpBidCoSMessages();

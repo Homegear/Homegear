@@ -55,6 +55,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
 		else if(attributeName == "id") { id = attributeValue; }
 		else if(attributeName == "save_on_change") {} //not necessary, all values are saved on change
+		else if(attributeName == "mask") {} //not necessary, defined through size and index
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"physical\": " << attributeName << std::endl;
 	}
 	startIndex = std::lround(std::floor(index));

@@ -23,12 +23,52 @@ Cul::~Cul()
 
 void Cul::addHomeMaticDevice(HomeMaticDevice* device)
 {
-    _homeMaticDevices.push_back(device);
+	try
+	{
+		_homeMaticDevicesMutex.lock();
+		_homeMaticDevices.push_back(device);
+		_homeMaticDevicesMutex.unlock();
+    }
+    catch(const std::exception& ex)
+    {
+    	_homeMaticDevicesMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_homeMaticDevicesMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_homeMaticDevicesMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 void Cul::removeHomeMaticDevice(HomeMaticDevice* device)
 {
-    _homeMaticDevices.remove(device);
+	try
+	{
+		_homeMaticDevicesMutex.lock();
+		_homeMaticDevices.remove(device);
+		_homeMaticDevicesMutex.unlock();
+    }
+    catch(const std::exception& ex)
+    {
+    	_homeMaticDevicesMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_homeMaticDevicesMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_homeMaticDevicesMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)
@@ -72,7 +112,7 @@ void Cul::openDevice()
 	{
 		if(_fileDescriptor != -1) closeDevice();
 
-		_lockfile = "/var/lock/" + _culDevice.substr(_culDevice.find_last_of('/')) + ".lock";
+		_lockfile = "/var/lock" + _culDevice.substr(_culDevice.find_last_of('/')) + ".lock";
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 		if(lockfileDescriptor == -1)
 		{
@@ -304,7 +344,12 @@ void Cul::startListening()
 		openDevice();
 		if(_fileDescriptor == -1) throw(Exception("Couldn't listen to CUL device, because the file descriptor is not valid: " + _culDevice));
 		_stopped = false;
+		writeToDevice("Ax\r\n", false);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		writeToDevice("X20\r\n", false);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		writeToDevice("Ar\r\n", false);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		_listenThread = std::thread(&Cul::listen, this);
 		_listenThread.detach();
 	}
@@ -359,23 +404,28 @@ void Cul::callCallback(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
+		_homeMaticDevicesMutex.lock();
 		for(std::list<HomeMaticDevice*>::const_iterator i = _homeMaticDevices.begin(); i != _homeMaticDevices.end(); ++i)
 		{
 			//Don't filter destination addresses here! Some devices need to receive packets not directed to them.
 			std::thread received(&HomeMaticDevice::packetReceived, (*i), packet);
 			received.detach();
 		}
+		_homeMaticDevicesMutex.unlock();
 	}
     catch(const std::exception& ex)
     {
+    	_homeMaticDevicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
+    	_homeMaticDevicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
+    	_homeMaticDevicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
 }

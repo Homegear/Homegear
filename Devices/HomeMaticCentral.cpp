@@ -126,7 +126,13 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			if(handled && i->first == packet->senderAddress())
 			{
 				std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
-				if(queue && queue->getQueueType() != BidCoSQueueType::PEER) return true; //Packet is handled by queue. Don't check if queue is empty!
+				if(queue && queue->getQueueType() != BidCoSQueueType::PEER)
+				{
+					i->second->setLastPacketReceived();
+					i->second->serviceMessages->endUnreach();
+					i->second->setRSSI(packet->rssi());
+					return true; //Packet is handled by queue. Don't check if queue is empty!
+				}
 			}
 			std::thread t(&Peer::packetReceived, i->second.get(), packet);
 			t.detach();
@@ -193,7 +199,7 @@ void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<Bid
 
 std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
-	std::shared_ptr<Peer> peer(new Peer());
+	std::shared_ptr<Peer> peer(new Peer(true));
 	peer->address = address;
 	peer->firmwareVersion = firmwareVersion;
 	peer->deviceType = deviceType;
@@ -384,7 +390,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 		_messageCounter[0]++;
 
 		pendingQueue->serviceMessages = peer->serviceMessages;
-		peer->serviceMessages->configPending = true;
+		peer->serviceMessages->setConfigPending(true);
 		peer->pendingBidCoSQueues->push(pendingQueue);
 		queue->push(peer->pendingBidCoSQueues);
 	}
@@ -431,13 +437,14 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer)
 		peer->saveToDatabase(_address);
 
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, peer->address);
-		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
-		pendingQueue->noSending = true;
 
 		std::vector<uint8_t> payload;
 		//CONFIG_ADD_PEER
 		for(uint32_t i = 1; i < channelCount; i++)
 		{
+			std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+			pendingQueue->noSending = true;
+
 			payload.clear();
 			payload.push_back(i);
 			payload.push_back(0x01);
@@ -450,11 +457,11 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer)
 			pendingQueue->push(configPacket);
 			pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			_messageCounter[0]++;
+			pendingQueue->serviceMessages = peer->serviceMessages;
+			peer->serviceMessages->setConfigPending(true);
+			peer->pendingBidCoSQueues->push(pendingQueue);
 		}
 
-		pendingQueue->serviceMessages = peer->serviceMessages;
-		peer->serviceMessages->configPending = true;
-		peer->pendingBidCoSQueues->push(pendingQueue);
 		queue->push(peer->pendingBidCoSQueues);
 	}
 	catch(const std::exception& ex)
@@ -569,7 +576,7 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
 		if(defer)
 		{
 			pendingQueue->serviceMessages = peer->serviceMessages;
-			peer->serviceMessages->configPending = true;
+			peer->serviceMessages->setConfigPending(true);
 			while(!peer->pendingBidCoSQueues->empty()) peer->pendingBidCoSQueues->pop();
 			peer->pendingBidCoSQueues->push(pendingQueue);
 			queue->push(peer->pendingBidCoSQueues);
@@ -645,7 +652,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 		if(defer)
 		{
 			pendingQueue->serviceMessages = peer->serviceMessages;
-			peer->serviceMessages->configPending = true;
+			peer->serviceMessages->setConfigPending(true);
 			while(!peer->pendingBidCoSQueues->empty()) peer->pendingBidCoSQueues->pop();
 			peer->pendingBidCoSQueues->push(pendingQueue);
 			queue->push(peer->pendingBidCoSQueues);
@@ -798,13 +805,13 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			payload.clear();
 			_messageCounter[0]++;
 
-			std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
-			pendingQueue->noSending = true;
 			if((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::config) && _peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
 			{
-				pendingQueue->serviceMessages = peer->serviceMessages;
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 				{
+					std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+					pendingQueue->noSending = true;
+					pendingQueue->serviceMessages = peer->serviceMessages;
 					int32_t channel = i->first;
 					//Walk through all lists to request master config if necessary
 					if(peer->rpcDevice->channels.at(channel)->parameterSets.find(RPC::ParameterSet::Type::Enum::master) != peer->rpcDevice->channels.at(channel)->parameterSets.end())
@@ -838,12 +845,12 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 						payload.clear();
 						_messageCounter[0]++;
 					}
-				}
-				if(pendingQueue->isEmpty()) peer->serviceMessages->configPending = false;
-				else
-				{
-					peer->serviceMessages->configPending = true;
-					peer->pendingBidCoSQueues->push(pendingQueue);
+
+					if(!pendingQueue->isEmpty())
+					{
+						peer->serviceMessages->setConfigPending(true);
+						peer->pendingBidCoSQueues->push(pendingQueue);
+					}
 				}
 			}
 		}
@@ -853,13 +860,16 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			peer = _peers[packet->senderAddress()].get();
 			queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, packet->senderAddress());
 		}
+
 		if(peer == nullptr)
 		{
 			if(GD::debugLevel >= 2) std::cout << "Error: Peer is nullptr. This shouldn't have happened. Something went very wrong." << std::endl;
 			return;
 		}
+
 		if(GD::debugLevel >= 4 && peer->pendingBidCoSQueues && !peer->pendingBidCoSQueues->empty()) std::cout << "Info: Pushing pending queues." << std::endl;
 		queue->push(peer->pendingBidCoSQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
+
 	}
 	catch(const std::exception& ex)
     {
@@ -908,7 +918,7 @@ void HomeMaticCentral::sendRequestConfig(int32_t address, uint8_t localChannel, 
 		_messageCounter[0]++;
 
 		pendingQueue->serviceMessages = peer->serviceMessages;
-		peer->serviceMessages->configPending = true;
+		peer->serviceMessages->setConfigPending(true);
 		peer->pendingBidCoSQueues->push(pendingQueue);
 		if(!oldQueue) queue->push(peer->pendingBidCoSQueues);
 		else if(queue->pendingQueuesEmpty()) queue->push(peer->pendingBidCoSQueues);
@@ -1138,7 +1148,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue) return;
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
-		if(packet->payload()->at(0) == 0x80)
+		if(packet->payload()->at(0) == 0x80 || packet->payload()->at(0) == 0x84)
 		{
 			if(GD::debugLevel >= 2)
 			{
@@ -1154,6 +1164,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 			{
 				if(_peers.find(packet->senderAddress()) == _peers.end())
 				{
+					if(!queue->peer) return;
 					for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = queue->peer->rpcDevice->channels.begin(); i != queue->peer->rpcDevice->channels.end(); ++i)
 					{
 						if(i->second->hasTeam)
@@ -1283,7 +1294,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		_messageCounter[0]++;
 
 		pendingQueue->serviceMessages = sender->serviceMessages;
-		sender->serviceMessages->configPending = true;
+		sender->serviceMessages->setConfigPending(true);
 		sender->pendingBidCoSQueues->push(pendingQueue);
 
 		if(senderChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) != senderChannel->parameterSets.end())
@@ -1338,7 +1349,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		_messageCounter[0]++;
 
 		pendingQueue->serviceMessages = receiver->serviceMessages;
-		receiver->serviceMessages->configPending = true;
+		receiver->serviceMessages->setConfigPending(true);
 		receiver->pendingBidCoSQueues->push(pendingQueue);
 
 		if(receiverChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) != receiverChannel->parameterSets.end())
@@ -1438,7 +1449,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		_messageCounter[0]++;
 
 		pendingQueue->serviceMessages = sender->serviceMessages;
-		sender->serviceMessages->configPending = true;
+		sender->serviceMessages->setConfigPending(true);
 		sender->pendingBidCoSQueues->push(pendingQueue);
 		queue->push(sender->pendingBidCoSQueues);
 
@@ -1461,7 +1472,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		_messageCounter[0]++;
 
 		pendingQueue->serviceMessages = receiver->serviceMessages;
-		receiver->serviceMessages->configPending = true;
+		receiver->serviceMessages->setConfigPending(true);
 		receiver->pendingBidCoSQueues->push(pendingQueue);
 		queue->push(receiver->pendingBidCoSQueues);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -1695,7 +1706,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		}
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		queue->noSending = true;
-		peer->serviceMessages->configPending = true;
+		peer->serviceMessages->setConfigPending(true);
 		queue->serviceMessages = peer->serviceMessages;
 
 		std::vector<uint8_t> payload;

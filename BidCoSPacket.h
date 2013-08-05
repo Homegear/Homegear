@@ -24,6 +24,7 @@ class BidCoSPacket
         int32_t senderAddress();
         int32_t destinationAddress();
         int32_t channel();
+        uint8_t rssi() { return _rssi; }
         std::vector<uint8_t>* payload();
         std::string hexString();
 
@@ -46,6 +47,7 @@ class BidCoSPacket
         uint32_t _destinationAddress = 0;
         std::vector<uint8_t> _payload;
         uint32_t _bitmask[8] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
+        uint8_t _rssi = 0;
 
         uint8_t getByte(std::string);
         int32_t getInt(std::string);
