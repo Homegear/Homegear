@@ -1265,7 +1265,6 @@ std::shared_ptr<RPCVariable> RPCSetMetadata::invoke(std::shared_ptr<std::vector<
 
 		DataTable rows = GD::db.executeCommand("SELECT COUNT(*) FROM metadata");
 		if(rows.size() == 0 || rows.at(0).size() == 0) return RPCVariable::createError(-32500, "Error counting metadata in database.");
-		std::cout << "Metadata rows: " << rows.at(0).at(0)->intValue << std::endl;
 		if(rows.at(0).at(0)->intValue > 1000000) return RPCVariable::createError(-32500, "Reached limit of 1000000 metadata entries. Please delete metadata before adding new entries.");
 
 		DataColumnVector data;
