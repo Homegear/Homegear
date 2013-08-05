@@ -271,7 +271,11 @@ void ServiceMessages::setConfigPendingThread(bool value)
 			_configPending = value;
 			//Sleep for two seconds before setting values. This is necessary so HomeMatic Config does not think,
 			//the paremeters weren't received.
-			if(_configPending) std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+			if(_configPending)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+				if(!_configPending) return; //Was changed during sleeping
+			}
 
 			if(_peer->valuesCentral.at(0).find("CONFIG_PENDING") != _peer->valuesCentral.at(0).end())
 			{

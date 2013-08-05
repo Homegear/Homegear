@@ -701,6 +701,7 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 				if(!rpcDevice)
 				{
 					if(GD::debugLevel >= 1) std::cerr << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec << std::endl;
+					config[channel].erase(id);
 					continue;
 				}
 				parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
@@ -754,6 +755,7 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 						if(!rpcDevice)
 						{
 							if(GD::debugLevel >= 1) std::cerr << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec << std::endl;
+							config[channel][address][remoteChannel].erase(id);
 							continue;
 						}
 						parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
@@ -1554,7 +1556,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				value = parameter->rpcParameter->convertToPacket(*i);
 				std::vector<uint8_t> shiftedValue = value;
 				parameter->rpcParameter->adjustBitPosition(shiftedValue);
-				std::cerr << "Moin1 " << (*i)->name << " " << shiftedValue.size();
 				if(!shiftedValue.empty()) std::cerr << " " << (int32_t)shiftedValue.at(0);
 				std::cerr << std::endl;
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
@@ -1578,7 +1579,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
-				std::cerr << "Moin2 " << (*i)->name << " " << changedParameters[list][intIndex].size();
 				if(!changedParameters[list][intIndex].empty()) std::cerr << " " << (int32_t)changedParameters[list][intIndex].at(0);
 				std::cerr << std::endl;
 			}
