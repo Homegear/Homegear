@@ -64,7 +64,11 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 			channelField = HelperFunctions::getNumber(splitString.first);
 			if(!splitString.second.empty()) channelFieldSize = HelperFunctions::getDouble(splitString.second);
 		}
-		else if(attributeName == "fixed_channel") fixedChannel = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "fixed_channel")
+		{
+			if(attributeValue == "*") fixedChannel = -2;
+			else fixedChannel = HelperFunctions::getNumber(attributeValue);
+		}
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"frame\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))

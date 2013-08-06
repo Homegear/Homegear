@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
+<!-- Modified from original
+	Changes: 
+	- Added event to parameter INHIBIT
+-->
 <device version="18" supports_aes="true">
 	<supported_types>
 		<type name="radio-controlled socket adapter switch actuator 1-channel" id="HM-LC-Sw1-Pl" priority="2">
@@ -182,6 +186,7 @@
 				<logical type="boolean"/>
 				<physical type="integer" interface="command" value_id="INHIBIT">
 					<set request="SET_LOCK"/>
+					<event frame="INFO_POWERON"/>
 				</physical>
 			</parameter>
 			<parameter id="WORKING" operations="read,event" ui_flags="internal">

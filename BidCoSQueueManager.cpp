@@ -77,7 +77,16 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
 		{
 			if(GD::debugLevel >= 5) std::cout << "Deleting queue " << id << " for 0x" << std::hex << address << std::dec << std::endl;
-			_queues.erase(_queues.find(address));
+			std::shared_ptr<BidCoSQueueData> queue = _queues.at(address);
+			_queues.erase(address);
+			if(!queue->queue->isEmpty())
+			{
+				std::shared_ptr<Peer> peer = queue->queue->peer;
+				if(peer && peer->rpcDevice && !(peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp))
+				{
+					peer->serviceMessages->setUnreach(true);
+				}
+			}
 		}
 		_queueMutex.unlock();
 	}

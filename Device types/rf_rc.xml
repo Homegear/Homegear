@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
+<!-- Modified from original
+	Changes:
+	- Added parameter for TEST_COUNTER
+	- Added parameter for SIM_COUNTER
+-->
 <device version="6" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
 	<supported_types>
 		<type name="HM Remote 4 buttons" id="HM-RC-4" priority="2">
@@ -135,6 +140,20 @@
 					<set request="KEY_SIM_LONG"/>
 				</physical>
 				<conversion type="action_key_counter" sim_counter="SIM_COUNTER"/>
+			</parameter>
+			<parameter id="TEST_COUNTER" operations="read,event">
+				<logical type="integer"/>
+				<physical type="integer" interface="command" value_id="TEST_COUNTER">
+					<event frame="KEY_EVENT_SHORT" auth_violate_policy="reject"/>
+					<event frame="KEY_EVENT_LONG" auth_violate_policy="reject"/>
+				</physical>
+			</parameter>
+			<parameter id="SIM_COUNTER" operations="read,event">
+				<logical type="integer"/>
+				<physical type="integer" interface="command" value_id="SIM_COUNTER">
+					<event frame="KEY_SIM_SHORT"/>
+					<event frame="KEY_SIM_LONG"/>
+				</physical>
 			</parameter>
 			<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
 				<logical type="action"/>

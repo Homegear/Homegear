@@ -158,8 +158,12 @@ void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
 	try
 	{
 		if(_peers.find(deviceAddress) == _peers.end()) return;
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
-		queue->push(_peers[deviceAddress]->pendingBidCoSQueues);
+		std::shared_ptr<Peer> peer = _peers[deviceAddress];
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(deviceAddress);
+		if(!queue) queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
+		if(!queue) return;
+		if(!queue->peer) queue->peer = peer;
+		if(queue->pendingQueuesEmpty()) queue->push(peer->pendingBidCoSQueues);
 	}
 	catch(const std::exception& ex)
     {

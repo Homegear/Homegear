@@ -10,6 +10,7 @@
 #include <queue>
 #include <mutex>
 #include <thread>
+#include <list>
 
 class PendingBidCoSQueues;
 class CallbackFunctionParameter;
@@ -93,7 +94,7 @@ class Peer
 
         void stopThreads();
         void initializeCentralConfig();
-        void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel);
+        void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel, bool useConfigFunction);
         void applyConfigFunction(int32_t channel, int32_t address, int32_t remoteChannel);
         std::string serialize();
         void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config);
@@ -112,7 +113,7 @@ class Peer
         void setRSSI(uint8_t rssi);
 
         void handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::string& frameID, uint32_t channel);
-        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, uint32_t& parameterSetChannel, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, std::vector<uint8_t>>& values);
+        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, std::list<uint32_t>& paramsetChannels, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, std::vector<uint8_t>>& values);
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
         int32_t getChannelGroupedWith(int32_t channel);

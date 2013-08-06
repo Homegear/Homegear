@@ -112,7 +112,7 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 	try
 	{
 		if(!_database) return dataRows;
-		if(GD::debugLevel >= 5) std::cout << "Executing SQL command: " << command << std::endl;
+		if(GD::debugLevel >= 8) std::cout << "Executing SQL command: " << command << std::endl;
 		_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
 		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
@@ -176,7 +176,7 @@ DataTable Database::executeCommand(std::string command)
     try
     {
     	if(!_database) return dataRows;
-    	if(GD::debugLevel >= 5) std::cout << "Executing SQL command: " << command << std::endl;
+    	if(GD::debugLevel >= 8) std::cout << "Executing SQL command: " << command << std::endl;
     	_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
 		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);

@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
             else if(input == "test")
             {
             	std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-            	packet->import("1A1A84001DA44E00000020003A4A45513035353433303758010100", false);
+            	packet->import("0E3D82021DA44D1D8F45010150163845", false);
             	GD::devices.getCentral()->packetReceived(packet);
             }
             else if(input == "create device" || input == "add device")
@@ -402,6 +402,7 @@ int main(int argc, char* argv[])
         GD::rpcClient.reset();
         GD::cul.stopListening();
         GD::devices.save();
+        std::cout << "Shutdown complete." << std::endl;
         if(startAsDaemon)
         {
         	fclose(stdout);

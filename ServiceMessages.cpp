@@ -3,50 +3,89 @@
 
 ServiceMessages::ServiceMessages(Peer* peer, std::string serializedObject) : ServiceMessages(peer)
 {
-	if(serializedObject.empty()) return;
-	if(GD::debugLevel >= 5) std::cout << "Unserializing service message: " << serializedObject << std::endl;
+	try
+	{
+		if(serializedObject.empty()) return;
+		if(GD::debugLevel >= 5) std::cout << "Unserializing service message: " << serializedObject << std::endl;
 
-	std::istringstream stringstream(serializedObject);
-	uint32_t pos = 0;
-	_unreach = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
-	_stickyUnreach = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
-	_configPending = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
-	_lowbat = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
-	_rssiDevice = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	_rssiPeer = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		std::istringstream stringstream(serializedObject);
+		uint32_t pos = 0;
+		_unreach = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+		_stickyUnreach = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+		_configPending = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+		_lowbat = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+		int32_t errorSize = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		for(uint32_t i = 0; i < errorSize; i++)
+		{
+			int32_t channel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+			_errors[channel] = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 std::string ServiceMessages::serialize()
 {
-	std::ostringstream stringstream;
-	stringstream << std::hex << std::uppercase << std::setfill('0');
-	stringstream << std::setw(1) << (int32_t)_unreach;
-	stringstream << std::setw(1) << (int32_t)_stickyUnreach;
-	stringstream << std::setw(1) << (int32_t)_configPending;
-	stringstream << std::setw(1) << (int32_t)_lowbat;
-	stringstream << std::setw(8) << _rssiDevice;
-	stringstream << std::setw(8) << _rssiPeer;
-	stringstream << std::dec;
-	return stringstream.str();
+	try
+	{
+		std::ostringstream stringstream;
+		stringstream << std::hex << std::uppercase << std::setfill('0');
+		stringstream << std::setw(1) << (int32_t)_unreach;
+		stringstream << std::setw(1) << (int32_t)_stickyUnreach;
+		stringstream << std::setw(1) << (int32_t)_configPending;
+		stringstream << std::setw(1) << (int32_t)_lowbat;
+		stringstream << std::setw(2) << (int32_t)_errors.size();
+		for(std::map<uint32_t, uint8_t>::const_iterator i = _errors.begin(); i != _errors.end(); ++i)
+		{
+			stringstream << std::setw(2) << i->first;
+			stringstream << std::setw(2) << (int32_t)i->second;
+		}
+		stringstream << std::dec;
+		return stringstream.str();
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return "";
 }
 
-bool ServiceMessages::set(std::string id, std::shared_ptr<RPC::RPCVariable> value)
+bool ServiceMessages::set(std::string id, bool value)
 {
 	try
 	{
-		if(id == "UNREACH") _unreach = value->booleanValue;
-		else if(id == "STICKY_UNREACH") _stickyUnreach = value->booleanValue;
-		else if(id == "CONFIG_PENDING") _configPending = value->booleanValue;
-		else if(id == "LOWBAT") _lowbat = value->booleanValue;
+		if(id == "UNREACH" && value != _unreach) _unreach = value;
+		else if(id == "STICKY_UNREACH" && value != _stickyUnreach) _stickyUnreach = value;
+		else if(id == "CONFIG_PENDING" && value != _configPending) _configPending = value;
+		else if(id == "LOWBAT" && value != _lowbat) _lowbat = value;
 		else return false;
 
 		if(_peer->valuesCentral.at(0).find(id) != _peer->valuesCentral.at(0).end())
 		{
-			_peer->valuesCentral.at(0).at(id).data.at(0) = (uint8_t)value->booleanValue;
+			_peer->valuesCentral.at(0).at(id).data.at(0) = (uint8_t)value;
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({id}));
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
-			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value->booleanValue)));
+			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
 
 			GD::rpcClient.broadcastEvent(_peer->getSerialNumber() + ":0", valueKeys, rpcValues);
 		}
@@ -64,6 +103,32 @@ bool ServiceMessages::set(std::string id, std::shared_ptr<RPC::RPCVariable> valu
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
     return true;
+}
+
+void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
+{
+	try
+	{
+		if(id == "ERROR")
+		{
+			if(_errors.find(channel) != _errors.end() && value == 0) _errors.erase(channel);
+			if(value > 0) _errors[channel] = value;
+		}
+
+		//RPC Broadcast is done in peer's packetReceived
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
@@ -102,6 +167,15 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":0")));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("LOWBAT"))));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
+			serviceMessages->arrayValue->push_back(array);
+		}
+		for(std::map<uint32_t, uint8_t>::const_iterator i = _errors.begin(); i != _errors.end(); ++i)
+		{
+			if(i->second == 0) continue;
+			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":" + std::to_string(i->first))));
+			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("ERROR"))));
+			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)i->second)));
 			serviceMessages->arrayValue->push_back(array);
 		}
 		return serviceMessages;
@@ -213,6 +287,7 @@ void ServiceMessages::endUnreachThread()
 		if(_unreach == true)
 		{
 			_unreach = false;
+			_unreachResendCounter = 0;
 
 			if(_peer->valuesCentral.at(0).find("UNREACH") != _peer->valuesCentral.at(0).end())
 			{
@@ -284,6 +359,82 @@ void ServiceMessages::setConfigPendingThread(bool value)
 				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({"CONFIG_PENDING"}));
 				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 				rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
+
+				GD::rpcClient.broadcastEvent(_peer->getSerialNumber() + ":0", valueKeys, rpcValues);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void ServiceMessages::setUnreach(bool value)
+{
+	try
+	{
+		std::thread t(&ServiceMessages::setUnreachThread, this, value);
+		t.detach();
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+void ServiceMessages::setUnreachThread(bool value)
+{
+	try
+	{
+		if(!_peer) return;
+		if(value != _unreach)
+		{
+			if(value == true && _unreachResendCounter < 3 && _peer->rpcDevice && !(_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && !_peer->pendingBidCoSQueues->empty())
+			{
+				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+				if(central)
+				{
+					if(GD::debugLevel >= 4) std::cout << "Info: Queue is not finished (device: 0x" << std::hex << _peer->address << std::dec << "). Retrying (" << _unreachResendCounter << ")..." << std::endl;
+					central->enqueuePendingQueues(_peer->address);
+					_unreachResendCounter++;
+					return;
+				}
+			}
+			_unreach = value;
+
+			if(value && GD::debugLevel >= 4) std::cout << "Info: Device 0x" << std::hex << _peer->address << std::dec << " is unreachable." << std::endl;
+			if(_peer->valuesCentral.at(0).find("UNREACH") != _peer->valuesCentral.at(0).end())
+			{
+				_peer->valuesCentral.at(0).at("UNREACH").data.at(0) = (uint8_t)value;
+
+				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({"UNREACH"}));
+				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
+				rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
+
+				if(_unreach && _peer->valuesCentral.at(0).find("STICKY_UNREACH") != _peer->valuesCentral.at(0).end())
+				{
+					_peer->valuesCentral.at(0).at("STICKY_UNREACH").data.at(0) = (uint8_t)value;
+
+					valueKeys->push_back("STICKY_UNREACH");
+					rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
+				}
 
 				GD::rpcClient.broadcastEvent(_peer->getSerialNumber() + ":0", valueKeys, rpcValues);
 			}
