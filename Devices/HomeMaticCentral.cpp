@@ -1259,13 +1259,13 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addDevice(std::string serial
 		payload.push_back(0x01);
 		payload.push_back(serialNumber.size());
 		payload.insert(payload.end(), serialNumber.begin(), serialNumber.end());
-		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x00, 0x84, 0x01, _address, 0, payload));
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0, 0x84, 0x01, _address, 0, payload));
 
 		int32_t i = 0;
 		while(_peersBySerial.find(serialNumber) == _peersBySerial.end() && i < 3)
 		{
-			//packet->setMessageCounter(_messageCounter[0]);
-			//_messageCounter[0]++;
+			packet->setMessageCounter(_messageCounter[0]);
+			_messageCounter[0]++;
 			std::thread t(&HomeMaticDevice::sendPacket, this, packet);
 			t.detach();
 			std::this_thread::sleep_for(std::chrono::milliseconds(3000));
