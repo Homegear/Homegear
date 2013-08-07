@@ -10,6 +10,7 @@
 #include "Devices/HM-CC-VD.h"
 #include "Devices/HM-CC-TC.h"
 #include "Devices/HM-SD.h"
+#include "HelperFunctions.h"
 
 HomeMaticDevices::HomeMaticDevices()
 {
@@ -27,6 +28,7 @@ void HomeMaticDevices::load()
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS devices (address INTEGER, deviceTYPE INTEGER, serializedObject TEXT, dutyCycleMessageCounter INTEGER, lastDutyCycle INTEGER)");
 		DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
+		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			HMDeviceTypes deviceType = HMDeviceTypes::HMUNKNOWN;
@@ -65,6 +67,7 @@ void HomeMaticDevices::load()
 						device = _central;
 						break;
 					case HMDeviceTypes::HMSD:
+						spyDeviceExists = true;
 						device = std::shared_ptr<HomeMaticDevice>(new HM_SD());
 						break;
 					default:
@@ -79,6 +82,8 @@ void HomeMaticDevices::load()
 				}
 			}
 		}
+		if(!_central) createCentral();
+		if(!spyDeviceExists) createSpyDevice();
 	}
 	catch(const std::exception& ex)
     {
@@ -92,6 +97,95 @@ void HomeMaticDevices::load()
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
+}
+
+void HomeMaticDevices::createSpyDevice()
+{
+	try
+	{
+		if(!_central) return;
+
+		int32_t seed = 0xfe0000 + HelperFunctions::getRandomNumber(1, 500);
+
+		int32_t address = _central->getUniqueAddress(seed);
+		std::string serialNumber(_central->getUniqueSerialNumber("VSD", HelperFunctions::getRandomNumber(1, 9999999)));
+
+		add(new HM_SD(serialNumber, address));
+		std::cout << "Created HM_SD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+
+void HomeMaticDevices::createCentral()
+{
+	try
+	{
+		if(_central) return;
+
+		int32_t address = getUniqueAddress(0xfd);
+		std::string serialNumber(getUniqueSerialNumber("VCL"));
+
+		add(new HomeMaticCentral(serialNumber, address));
+		std::cout << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
+int32_t HomeMaticDevices::getUniqueAddress(uint8_t firstByte)
+{
+	int32_t prefix = firstByte << 16;
+	int32_t seed = HelperFunctions::getRandomNumber(1, 9999);
+	uint32_t i = 0;
+	while(get(prefix + seed) && i++ < 10000)
+	{
+		seed += 13;
+		if(seed > 9999) seed -= 10000;
+	}
+	return prefix + seed;
+}
+
+std::string HomeMaticDevices::getUniqueSerialNumber(std::string seedPrefix)
+{
+	if(seedPrefix.size() != 3) throw Exception("seedPrefix must have a size of 3.");
+	uint32_t i = 0;
+	int32_t seedNumber = HelperFunctions::getRandomNumber(1, 9999999);
+	std::ostringstream stringstream;
+	stringstream << seedPrefix << std::setw(7) << std::setfill('0') << std::dec << seedNumber;
+	std::string temp2 = stringstream.str();
+	while(get(temp2) && i++ < 100000)
+	{
+		stringstream.str(std::string());
+		stringstream.clear();
+		seedNumber += 73;
+		if(seedNumber > 9999999) seedNumber -= 10000000;
+		std::ostringstream stringstream;
+		stringstream << seedPrefix << std::setw(7) << std::setfill('0') << std::dec << seedNumber;
+		temp2 = stringstream.str();
+	}
+	return temp2;
 }
 
 void HomeMaticDevices::stopThreads()

@@ -1150,6 +1150,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	{
 		if(!_centralFeatures) return;
 		if(packet->senderAddress() != address) return;
+		if(!rpcDevice) return;
 		setLastPacketReceived();
 		setRSSI(packet->rssi());
 		serviceMessages->endUnreach();
@@ -1158,6 +1159,8 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		RPC::ParameterSet::Type::Enum parameterSetType;
 		std::string frameID;
 		getValuesFromPacket(packet, frameID, paramsetChannels, parameterSetType, values);
+		std::shared_ptr<RPC::DeviceFrame> frame;
+		if(!frameID.empty()) frame = rpcDevice->framesByID.at(frameID);
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 
@@ -1176,6 +1179,30 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			}
 		}
 
+		//Check for low battery
+		//If values is not empty, packet is valid
+		if(rpcDevice->hasBattery && !values.empty() && !packet->payload()->empty() && frame)
+		{
+			bool hasLowbatBit = true;
+			//Three things to check to see if position 9.7 is used: channelField, subtypeIndex and parameter indices
+			if(frame->channelField == 9 && frame->channelFieldSize >= 0.8) hasLowbatBit = false;
+			else if(frame->subtypeIndex == 9) hasLowbatBit = false;
+			for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
+			{
+				if(j->index >= 9 && j->index < 10)
+				{
+					//fmod is needed for sizes > 1 (e. g. for frame WEATHER_EVENT)
+					if((j->index + std::fmod(j->size, 1)) >= 9.8) hasLowbatBit = false;
+				}
+			}
+
+			if(hasLowbatBit)
+			{
+				if(packet->payload()->at(0) & 0x80) serviceMessages->set("LOWBAT", true);
+				else serviceMessages->set("LOWBAT", false);
+			}
+		}
+
 		bool resendPacket = false;
 		for(std::map<std::string, std::vector<uint8_t>>::iterator i = values.begin(); i != values.end(); ++i)
 		{
@@ -1190,6 +1217,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					RPC::LogicalParameterEnum* logicalParameter = (RPC::LogicalParameterEnum*)parameter->rpcParameter->logicalParameter.get();
 					serviceMessages->set(i->first, i->second.at(0), *j);
 				}
+
 				if(sentValues.find(i->first) != sentValues.end())
 				{
 					if(sentValues.at(i->first) != i->second) resendPacket = true;
@@ -1225,7 +1253,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			if(GD::debugLevel >= 4) std::cout << "Info: Resending values for device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << ", because they were not set correctly." << std::endl;
 			queue->push(sentPacket);
 			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-			if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePackets(address, queue, true);
+			if(rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) GD::devices.getCentral()->enqueuePackets(address, queue, true);
 			else
 			{
 				pendingBidCoSQueues->push(queue);
@@ -1249,7 +1277,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 			GD::devices.getCentral()->enqueuePackets(address, queue, true);
 		}
-		else if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
+		else if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
 		{
 			GD::devices.getCentral()->enqueuePendingQueues(address);
 		}
@@ -1590,7 +1618,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(!onlyPushing && !(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
+			if(!onlyPushing && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::always)) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
 		else if(type == RPC::ParameterSet::Type::Enum::values)
@@ -1715,7 +1743,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(!onlyPushing && !(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) GD::devices.getCentral()->enqueuePendingQueues(address);
+			if(!onlyPushing && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::always)) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -2605,7 +2633,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				payload.push_back(0x01);
 				payload.push_back(0x01);
 			}*/
-			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x40, 0x1C295C, central->address(), payload));
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x40, 0x1C295C, 0x1C295C, payload));
 			central->messageCounter()->at(0)++;
 			central->sendBurstPacket(packet, address, true);
 			return true;
@@ -2802,7 +2830,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		pendingBidCoSQueues->push(queue);
-		if(!(rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp))
+		if(rpcDevice->rxModes & RPC::Device::RXModes::Enum::always)
 		{
 			if(valueKey == "STATE") queue->burst = true;
 			GD::devices.getCentral()->enqueuePendingQueues(address);

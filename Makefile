@@ -25,8 +25,6 @@ help:
 	@echo "CONFIGURATIONS:"
 	@echo "   debug"
 	@echo "   release"
-	@echo "   debug_rpi"
-	@echo "   release_rpi"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "   all (default)"

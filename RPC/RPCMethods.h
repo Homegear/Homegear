@@ -77,6 +77,16 @@ private:
 	std::shared_ptr<RPCServer> _server;
 };
 
+class RPCAddDevice : public RPCMethod
+{
+public:
+	RPCAddDevice()
+	{
+		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCAddLink : public RPCMethod
 {
 public:

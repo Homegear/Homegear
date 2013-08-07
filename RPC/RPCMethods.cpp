@@ -208,6 +208,46 @@ std::shared_ptr<RPCVariable> RPCSystemMulticall::invoke(std::shared_ptr<std::vec
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCAddDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::string serialNumber;
+
+		int32_t pos = parameters->at(0)->stringValue.find(':');
+		if(pos > -1)
+		{
+			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+		}
+		else serialNumber = parameters->at(0)->stringValue;
+
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Could not execute RPC method getLinks. Please add a central device." << std::endl;
+			return RPCVariable::createError(-32500, ": Could not execute RPC method getLinks. Please add a central device.");
+		}
+
+		return central->addDevice(serialNumber);
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCAddLink::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try

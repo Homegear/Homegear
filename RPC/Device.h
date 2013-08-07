@@ -217,6 +217,7 @@ public:
 	uint32_t count = 1;
 	bool hasTeam = false;
 	bool aesDefault = false;
+	bool aesAlways = false;
 	bool hidden = false;
 	bool autoregister = false;
 	bool paired = false;
@@ -274,10 +275,11 @@ public:
 	};
 	struct RXModes
 	{
-		enum Enum { none = 0, config = 1, wakeUp = 2 };
+		enum Enum { none = 0, config = 1, wakeUp = 2, burst = 4, always = 8 };
 	};
 
 	bool loaded() { return _loaded; }
+	bool hasBattery = false;
 	uint32_t version = 0;
 	uint32_t cyclicTimeout = 0;
 	std::shared_ptr<ParameterSet> parameterSet;
@@ -285,7 +287,7 @@ public:
 	std::vector<std::shared_ptr<DeviceType>> supportedTypes;
 	std::multimap<uint32_t, std::shared_ptr<DeviceFrame>> framesByMessageType;
 	std::map<std::string, std::shared_ptr<DeviceFrame>> framesByID;
-	RXModes::Enum rxModes = RXModes::Enum::config;
+	RXModes::Enum rxModes = RXModes::Enum::always;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	int32_t countFromSysinfoIndex = -1;
 	double countFromSysinfoSize = 1;

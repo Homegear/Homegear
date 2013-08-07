@@ -12,6 +12,13 @@ HelperFunctions::~HelperFunctions() {
 
 }
 
+int32_t HelperFunctions::getRandomNumber(int32_t min, int32_t max)
+{
+	std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
+	std::uniform_int_distribution<int32_t> distribution(min, max);
+	return distribution(generator);
+}
+
 void HelperFunctions::memcpyBigEndian(char* to, char* from, const uint32_t& length)
 {
 	if(GD::bigEndian) memcpy(to, from, length);

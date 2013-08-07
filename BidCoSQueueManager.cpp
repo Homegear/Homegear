@@ -82,7 +82,7 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 			if(!queue->queue->isEmpty())
 			{
 				std::shared_ptr<Peer> peer = queue->queue->peer;
-				if(peer && peer->rpcDevice && !(peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp))
+				if(peer && peer->rpcDevice && (peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always))
 				{
 					peer->serviceMessages->setUnreach(true);
 				}

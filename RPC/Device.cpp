@@ -453,8 +453,8 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 		if(value->stringValue.size() > 0)
 		{
 			data.insert(data.end(), value->stringValue.begin(), value->stringValue.end());
-			if(data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
 		}
+		if(data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
 	}
 	else
 	{
@@ -539,6 +539,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		{
 			if(attributeValue == "integer") type = PhysicalParameter::Type::Enum::typeInteger;
 			else if(attributeValue == "boolean") type = PhysicalParameter::Type::Enum::typeBoolean;
+			else if(attributeValue == "string") type = PhysicalParameter::Type::Enum::typeString;
 			else if(attributeValue == "option") type = PhysicalParameter::Type::Enum::typeOption;
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute value for \"type\" in node \"parameter\": " << attributeValue << std::endl;
 		}
@@ -987,6 +988,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		else if(attributeName == "count") count = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
+		else if(attributeName == "aes_always") { if(attributeValue == "true") aesDefault = true; }
 		else if(attributeName == "team_tag") teamTag = attributeValue;
 		else if(attributeName == "paired") { if(attributeValue == "true") paired = true; }
 		else if(attributeName == "function") function = attributeValue;
@@ -1183,12 +1185,18 @@ void Device::parseXML(xml_node<>* node)
 			{
 				std::stringstream stream(attributeValue);
 				std::string element;
+				rxModes = RXModes::Enum::none;
 				while(std::getline(stream, element, ','))
 				{
 					HelperFunctions::toLower(HelperFunctions::trim(element));
 					if(element == "wakeup") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::wakeUp);
 					else if(element == "config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::config);
+					else if(element == "burst") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::burst);
+					else if(element == "always") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::always);
+					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown rx mode for \"device\": " << element << std::endl;
 				}
+				if(rxModes == RXModes::Enum::none) rxModes = RXModes::Enum::always;
+				if(rxModes != RXModes::Enum::always) hasBattery = true;
 			}
 			else if(attributeName == "class")
 			{

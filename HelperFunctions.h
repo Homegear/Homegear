@@ -15,6 +15,7 @@
 #include <iostream>
 #include <string>
 #include <memory>
+#include <random>
 
 class HelperFunctions {
 public:
@@ -78,6 +79,8 @@ public:
 
 		return bint.c[0] == 1;
 	}
+
+	static int32_t getRandomNumber(int32_t min, int32_t max);
 
 	static void memcpyBigEndian(char* to, char* from, const uint32_t& length);
 	static void memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length);

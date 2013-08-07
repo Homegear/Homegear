@@ -332,13 +332,14 @@ int32_t HomeMaticCentral::getUniqueAddress(int32_t seed)
 	while((_peers.find(seed) != _peers.end() || GD::devices.get(seed)) && i++ < 200000)
 	{
 		seed += 9345;
+		if(seed > 16777215) seed -= 16777216;
 	}
 	return seed;
 }
 
 std::string HomeMaticCentral::getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber)
 {
-	if(seedPrefix.size() > 3) throw Exception("Length of seedPrefix is too large.");
+	if(seedPrefix.size() > 3) throw Exception("seedPrefix is too long.");
 	uint32_t i = 0;
 	int32_t numberSize = 10 - seedPrefix.size();
 	std::ostringstream stringstream;
@@ -349,8 +350,9 @@ std::string HomeMaticCentral::getUniqueSerialNumber(std::string seedPrefix, uint
 		stringstream.str(std::string());
 		stringstream.clear();
 		seedNumber += 73;
+		if(seedNumber > 9999999) seedNumber -= 10000000;
 		std::ostringstream stringstream;
-		stringstream << "VCD" << std::setw(numberSize) << std::setfill('0') << std::dec << seedNumber;
+		stringstream << seedPrefix << std::setw(numberSize) << std::setfill('0') << std::dec << seedNumber;
 		temp2 = stringstream.str();
 	}
 	return temp2;
@@ -730,8 +732,29 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 {
 	try
 	{
-		if(packet->destinationAddress() != 0) return;
+		if(packet->destinationAddress() != 0 && packet->destinationAddress() != _address) return;
+		if(packet->payload()->size() < 17)
+		{
+			if(GD::debugLevel >= 2) std::cout << "Error: Pairing packet is too small (payload size has to be at least 17)." << std::endl;
+			return;
+		}
+
+		std::string serialNumber;
+		for(uint32_t i = 3; i < 13; i++)
+			serialNumber.push_back((char)packet->payload()->at(i));
+		HMDeviceTypes deviceType = (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2));
+
 		Peer* peer = nullptr;
+		if(_peers.find(packet->senderAddress()) != _peers.end())
+		{
+			peer = _peers[packet->senderAddress()].get();
+			if(peer->getSerialNumber() != serialNumber || peer->deviceType != deviceType)
+			{
+				if(GD::debugLevel >= 2) std::cout << "Error: Pairing packet rejected, because a peer with the same address but different serial number or device type is already paired to this central." << std::endl;
+				return;
+			}
+		}
+
 		std::vector<uint8_t> payload;
 
 		std::shared_ptr<BidCoSQueue> queue;
@@ -739,12 +762,9 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 		{
 			queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
 
-			std::string serialNumber;
-			for(uint32_t i = 3; i < 13; i++)
-				serialNumber.push_back((char)packet->payload()->at(i));
-			if(_peers.find(packet->senderAddress()) == _peers.end())
+			if(!peer)
 			{
-				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2)), serialNumber, 0, 0, packet);
+				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), deviceType, serialNumber, 0, 0, packet);
 				if(!queue->peer)
 				{
 					if(GD::debugLevel >= 3) std::cout << "Warning: Device type not supported. Sender address 0x" << std::hex << packet->senderAddress() << std::dec << "." << std::endl;
@@ -753,7 +773,6 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 				queue->peer->initializeCentralConfig();
 				peer = queue->peer.get();
 			}
-			else peer = _peers[packet->senderAddress()].get();
 
 			if(!peer->rpcDevice)
 			{
@@ -809,7 +828,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			payload.clear();
 			_messageCounter[0]++;
 
-			if((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::config) && _peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
+			if(((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::config) || (peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always)) && _peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
 			{
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 				{
@@ -858,16 +877,12 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 				}
 			}
 		}
-		else
-		{
-			if(_peers.find(packet->senderAddress()) == _peers.end()) return;
-			peer = _peers[packet->senderAddress()].get();
-			queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, packet->senderAddress());
-		}
+		//not in pairing mode
+		else queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, packet->senderAddress());
 
-		if(peer == nullptr)
+		if(!peer)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Peer is nullptr. This shouldn't have happened. Something went very wrong." << std::endl;
+			if(GD::debugLevel >= 2) std::cout << "Error handling pairing packet: Peer is nullptr. This shouldn't have happened. Something went very wrong." << std::endl;
 			return;
 		}
 
@@ -1228,6 +1243,62 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
     {
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addDevice(std::string serialNumber)
+{
+	try
+	{
+		bool oldPairingModeState = _pairing;
+		if(!_pairing) _pairing = true;
+
+		if(serialNumber.empty()) return RPC::RPCVariable::createError(-2, "Serial number is empty.");
+		if(serialNumber.size() > 10) return RPC::RPCVariable::createError(-2, "Serial number is too long.");
+
+		std::vector<uint8_t> payload;
+		payload.push_back(0x01);
+		payload.push_back(serialNumber.size());
+		payload.insert(payload.end(), serialNumber.begin(), serialNumber.end());
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x00, 0x84, 0x01, _address, 0, payload));
+
+		int32_t i = 0;
+		while(_peersBySerial.find(serialNumber) == _peersBySerial.end() && i < 3)
+		{
+			//packet->setMessageCounter(_messageCounter[0]);
+			//_messageCounter[0]++;
+			std::thread t(&HomeMaticDevice::sendPacket, this, packet);
+			t.detach();
+			std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+			i++;
+		}
+
+		_pairing = oldPairingModeState;
+
+		if(_peersBySerial.find(serialNumber) == _peersBySerial.end())
+		{
+			return RPC::RPCVariable::createError(-1, "No response from device.");
+		}
+		else
+		{
+			return _peersBySerial[serialNumber]->getDeviceDescription(-1);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		_peersMutex.unlock();
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(const Exception& ex)
+	{
+		_peersMutex.unlock();
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(...)
+	{
+		_peersMutex.unlock();
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex, std::string name, std::string description)
@@ -1743,7 +1814,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		}
 
 		peer->pendingBidCoSQueues->push(queue);
-		if(!(peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp)) enqueuePendingQueues(peer->address);
+		if(peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) enqueuePendingQueues(peer->address);
 		else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}

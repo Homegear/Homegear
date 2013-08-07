@@ -28,6 +28,11 @@ public:
 private:
 	std::vector<std::shared_ptr<HomeMaticDevice>> _devices;
 	std::shared_ptr<HomeMaticCentral> _central;
+
+	int32_t getUniqueAddress(uint8_t firstByte);
+	std::string getUniqueSerialNumber(std::string seedPrefix);
+	void createCentral();
+	void createSpyDevice();
 };
 
 #endif /* HOMEMATICDEVICES_H_ */

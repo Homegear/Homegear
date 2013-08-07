@@ -46,6 +46,7 @@ public:
 	void sendEnableAES(int32_t address, int32_t channel);
 	void sendRequestConfig(int32_t address, uint8_t localChannel, uint8_t list = 0, int32_t remoteAddress = 0, uint8_t remoteChannel = 0);
 
+	std::shared_ptr<RPC::RPCVariable> addDevice(std::string serialNumber);
 	std::shared_ptr<RPC::RPCVariable> addLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
 	std::shared_ptr<RPC::RPCVariable> removeLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
 	std::shared_ptr<RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);

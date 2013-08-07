@@ -307,6 +307,9 @@ int main(int argc, char* argv[])
             	packet->import("0E3D82021DA44D1D8F45010150163845", false);
             	GD::devices.getCentral()->packetReceived(packet);
             }
+            else if(input == "test2")
+            {
+            }
             else if(input == "create device" || input == "add device")
             {
             	std::cout << "Please enter a 3 byte address for the device in hexadecimal format (e. g. 3A0001): ";
