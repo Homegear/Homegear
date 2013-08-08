@@ -25,6 +25,7 @@ help:
 	@echo "CONFIGURATIONS:"
 	@echo "   debug"
 	@echo "   release"
+	@echo "   profiling"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "   all (default)"

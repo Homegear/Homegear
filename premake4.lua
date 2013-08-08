@@ -32,7 +32,7 @@ newplatform {
 
 -- A solution contains projects, and defines the available configurations
 solution "Homegear"
-   configurations { "Debug", "Release" }
+   configurations { "Debug", "Release", "Profiling" }
  
    configuration { "linux", "gmake" }
       buildoptions { "-std=c++11" }
@@ -61,3 +61,10 @@ solution "Homegear"
          defines { "NDEBUG" }
          flags { "Optimize" }
          targetdir "bin/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "bin/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }

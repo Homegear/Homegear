@@ -20,7 +20,6 @@ public:
 	uint32_t id = 0;
 	int64_t time;
 	std::shared_ptr<BidCoSPacket> packet;
-	std::shared_ptr<std::thread> thread;
 };
 
 class BidCoSPacketManager

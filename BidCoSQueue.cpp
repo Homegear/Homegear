@@ -68,8 +68,7 @@ BidCoSQueue::~BidCoSQueue()
 {
 	try
 	{
-		_stopResendThread = true;
-		if(_resendThread && _resendThread->joinable()) _resendThread->join();
+		stopResendThread();
 		stopPopWaitThread();
 	}
 	catch(const std::exception& ex)
@@ -394,9 +393,12 @@ void BidCoSQueue::stopPopWaitThread()
 	{
 		if(!_popWaitThread) return;
 		_stopPopWaitThread = true;
-		if(_popWaitThread && _popWaitThread->joinable()) _popWaitThread->join();
+		if(_popWaitThread && _popWaitThread->joinable())
+		{
+			_popWaitThread->join();
+			_popWaitThread.reset();
+		}
 		_stopPopWaitThread = false;
-		_popWaitThread.reset();
 	}
 	catch(const std::exception& ex)
     {
@@ -492,9 +494,12 @@ void BidCoSQueue::stopResendThread()
 	{
 		if(!_resendThread) return;
 		_stopResendThread = true;
-		if(_resendThread && _resendThread->joinable()) _resendThread->join();
+		if(_resendThread && _resendThread->joinable())
+		{
+			_resendThread->join();
+			_resendThread.reset();
+		}
 		_stopResendThread = false;
-		_resendThread.reset();
 	}
 	catch(const std::exception& ex)
     {

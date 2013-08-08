@@ -28,8 +28,8 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		queueData->queue->lastAction = &queueData->lastAction;
 		queueData->queue->id = _id++;
 		queueData->id = queueData->queue->id;
-		queueData->thread = std::shared_ptr<std::thread>(new std::thread(&BidCoSQueueManager::resetQueue, this, address, queueData->id));
-		queueData->thread->detach();
+		std::thread t(&BidCoSQueueManager::resetQueue, this, address, queueData->id);
+		t.detach();
 		_queueMutex.lock();
 		_queues.insert(std::pair<int32_t, std::shared_ptr<BidCoSQueueData>>(address, queueData));
 		_queueMutex.unlock();

@@ -80,37 +80,51 @@ void HomeMaticCentral::worker()
 		{
 			std::this_thread::sleep_for(sleepingTime);
 			if(_stopWorkerThread) return;
-			if(!_peers.empty())
+			if(_peersMutex.try_lock_for(std::chrono::milliseconds(100)))
 			{
-				if(lastPeer == 0 || _peers.find(lastPeer) == _peers.end()) lastPeer = _peers.begin()->first;
-				_peers.at(lastPeer)->saveToDatabase(_address);
-				std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator peer = _peers.find(lastPeer);
-				if(peer != _peers.end())
+				if(!_peers.empty())
 				{
-					peer++;
-					if((peer == _peers.end() || !peer->second) && !_peers.empty())
+					if(lastPeer == 0 || _peers.find(lastPeer) == _peers.end()) lastPeer = _peers.begin()->first;
+					_peersMutex.unlock();
+
+					std::shared_ptr<Peer> peer(getPeer(lastPeer));
+					if(peer) peer->saveToDatabase(_address);
+
+					_peersMutex.lock();
+					std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator nextPeer = _peers.find(lastPeer);
+					if(nextPeer != _peers.end())
 					{
-						peer = _peers.begin();
-						lastPeer = peer->first;
+						nextPeer++;
+						if((nextPeer == _peers.end() || !nextPeer->second) && !_peers.empty())
+						{
+							nextPeer = _peers.begin();
+							lastPeer = nextPeer->first;
+						}
+					}
+					else if(!_peers.empty())
+					{
+						nextPeer = _peers.begin();
+						lastPeer = nextPeer->first;
 					}
 				}
-				else if(!_peers.empty())
-				{
-					peer = _peers.begin();
-					lastPeer = peer->first;
-				}
+				_peersMutex.unlock();
 			}
+			std::thread t(&HomeMaticDevice::checkForDeadlock, this);
+			t.detach();
 		}
 		catch(const std::exception& ex)
 		{
+			_peersMutex.unlock();
 			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 		}
 		catch(const Exception& ex)
 		{
+			_peersMutex.unlock();
 			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 		}
 		catch(...)
 		{
+			_peersMutex.unlock();
 			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 		}
 	}
@@ -121,22 +135,20 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	try
 	{
 		bool handled = HomeMaticDevice::packetReceived(packet);
-		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
+		if(!peer) return false;
+		if(handled)
 		{
-			if(handled && i->first == packet->senderAddress())
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+			if(queue && queue->getQueueType() != BidCoSQueueType::PEER)
 			{
-				std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
-				if(queue && queue->getQueueType() != BidCoSQueueType::PEER)
-				{
-					i->second->setLastPacketReceived();
-					i->second->serviceMessages->endUnreach();
-					i->second->setRSSI(packet->rssi());
-					return true; //Packet is handled by queue. Don't check if queue is empty!
-				}
+				peer->setLastPacketReceived();
+				peer->serviceMessages->endUnreach();
+				peer->setRSSI(packet->rssi());
+				return true; //Packet is handled by queue. Don't check if queue is empty!
 			}
-			std::thread t(&Peer::packetReceived, i->second.get(), packet);
-			t.detach();
 		}
+		peer->packetReceived(packet);
 	}
 	catch(const std::exception& ex)
     {
@@ -157,8 +169,8 @@ void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
 {
 	try
 	{
-		if(_peers.find(deviceAddress) == _peers.end()) return;
-		std::shared_ptr<Peer> peer = _peers[deviceAddress];
+		std::shared_ptr<Peer> peer = getPeer(deviceAddress);
+		if(!peer) return;
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(deviceAddress);
 		if(!queue) queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
 		if(!queue) return;
@@ -185,7 +197,11 @@ void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<Bid
 	{
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, deviceAddress);
 		queue->push(packets, true, true);
-		if(_peers.find(deviceAddress) != _peers.end() && pushPendingBidCoSQueues) queue->push(_peers[deviceAddress]->pendingBidCoSQueues);
+		if(pushPendingBidCoSQueues)
+		{
+			std::shared_ptr<Peer> peer(getPeer(deviceAddress));
+			if(peer) queue->push(peer->pendingBidCoSQueues);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -234,7 +250,7 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 		std::string input;
 		std::cout << "Please enter the devices address: ";
 		int32_t address = getHexInput();
-		if(_peers.find(address) == _peers.end()) std::cout << "This device is not paired to this central." << std::endl;
+		if(!peerExists(address)) std::cout << "This device is not paired to this central." << std::endl;
 		else
 		{
 			std::cout << "Unpairing device 0x" << std::hex << address << std::dec << std::endl;
@@ -246,7 +262,7 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 		std::string input;
 		std::cout << "Please enter the devices address: ";
 		int32_t address = getHexInput();
-		if(_peers.find(address) == _peers.end()) std::cout << "This device is not paired to this central." << std::endl;
+		if(!peerExists(address)) std::cout << "This device is not paired to this central." << std::endl;
 		else
 		{
 			std::cout << "Enabling AES for device device 0x" << std::hex << address << std::dec << std::endl;
@@ -255,21 +271,38 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 	}
 	else if(command == "list peers")
 	{
-		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		try
 		{
-			std::cout << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: " << (uint32_t)i->second->deviceType << std::endl << std::dec;
+			_peersMutex.lock();
+			for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+			{
+				std::cout << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: " << (uint32_t)i->second->deviceType << std::endl << std::dec;
+			}
+			_peersMutex.unlock();
+		}
+		catch(const std::exception& ex)
+		{
+			_peersMutex.unlock();
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		}
+		catch(const Exception& ex)
+		{
+			_peersMutex.unlock();
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		}
+		catch(...)
+		{
+			_peersMutex.unlock();
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 		}
 	}
 	else if(command == "select peer")
 	{
 		std::cout << "Please enter the devices address: ";
 		int32_t address = getHexInput();
-		if(_peers.find(address) == _peers.end()) std::cout << "This device is not paired to this central." << std::endl;
-		else
-		{
-			_currentPeer = _peers[address];
-			std::cout << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->deviceType << " selected." << std::dec << std::endl;
-		}
+		_currentPeer = getPeer(address);
+		if(!_currentPeer) std::cout << "This device is not paired to this central." << std::endl;
+		else std::cout << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->deviceType << " selected." << std::dec << std::endl;
 	}
 	else if(command == "channel count")
 	{
@@ -328,34 +361,65 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 
 int32_t HomeMaticCentral::getUniqueAddress(int32_t seed)
 {
-	uint32_t i = 0;
-	while((_peers.find(seed) != _peers.end() || GD::devices.get(seed)) && i++ < 200000)
+	try
 	{
-		seed += 9345;
-		if(seed > 16777215) seed -= 16777216;
+		uint32_t i = 0;
+		while((_peers.find(seed) != _peers.end() || GD::devices.get(seed)) && i++ < 200000)
+		{
+			seed += 9345;
+			if(seed > 16777215) seed -= 16777216;
+		}
 	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 	return seed;
 }
 
 std::string HomeMaticCentral::getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber)
 {
-	if(seedPrefix.size() > 3) throw Exception("seedPrefix is too long.");
-	uint32_t i = 0;
-	int32_t numberSize = 10 - seedPrefix.size();
-	std::ostringstream stringstream;
-	stringstream << seedPrefix << std::setw(numberSize) << std::setfill('0') << std::dec << seedNumber;
-	std::string temp2 = stringstream.str();
-	while((_peersBySerial.find(temp2) != _peersBySerial.end() || GD::devices.get(temp2)) && i++ < 100000)
+	try
 	{
-		stringstream.str(std::string());
-		stringstream.clear();
-		seedNumber += 73;
-		if(seedNumber > 9999999) seedNumber -= 10000000;
+		if(seedPrefix.size() > 3) throw Exception("seedPrefix is too long.");
+		uint32_t i = 0;
+		int32_t numberSize = 10 - seedPrefix.size();
 		std::ostringstream stringstream;
 		stringstream << seedPrefix << std::setw(numberSize) << std::setfill('0') << std::dec << seedNumber;
-		temp2 = stringstream.str();
+		std::string temp2 = stringstream.str();
+		while((_peersBySerial.find(temp2) != _peersBySerial.end() || GD::devices.get(temp2)) && i++ < 100000)
+		{
+			stringstream.str(std::string());
+			stringstream.clear();
+			seedNumber += 73;
+			if(seedNumber > 9999999) seedNumber -= 10000000;
+			std::ostringstream stringstream;
+			stringstream << seedPrefix << std::setw(numberSize) << std::setfill('0') << std::dec << seedNumber;
+			temp2 = stringstream.str();
+		}
+		return temp2;
 	}
-	return temp2;
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+	return "";
 }
 
 void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
@@ -369,6 +433,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 		GD::devices.add(new HM_CC_TC(serialNumber, hmcctcAddress));
 		std::shared_ptr<HomeMaticDevice> tc = GD::devices.get(hmcctcAddress);
 		tc->addPeer(peer);
+		tc->saveToDatabase();
 		std::shared_ptr<BasicPeer> hmcctc(new BasicPeer());
 		hmcctc->address = tc->address();
 		hmcctc->serialNumber = tc->serialNumber();
@@ -427,6 +492,7 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer)
 		uint32_t channelCount = peer->rpcDevice->channels.size();
 		sw->setChannelCount(channelCount);
 		sw->addPeer(peer);
+		sw->saveToDatabase();
 
 		std::shared_ptr<BasicPeer> switchPeer;
 
@@ -518,9 +584,10 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer)
 
 void HomeMaticCentral::deletePeer(int32_t address)
 {
-	if(_peers.find(address) != _peers.end())
+	try
 	{
-		std::shared_ptr<Peer> peer(_peers[address]);
+		std::shared_ptr<Peer> peer(getPeer(address));
+		if(!peer) return;
 		std::shared_ptr<RPC::RPCVariable> deviceAddresses(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->getSerialNumber())));
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
@@ -536,35 +603,40 @@ void HomeMaticCentral::deletePeer(int32_t address)
 				deleteMetadata(peer->getSerialNumber() + ':' + std::to_string(i->first));
 			}
 		}
+		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
-		if(!peer->team.serialNumber.empty() && _peersBySerial.find(peer->team.serialNumber) != _peersBySerial.end())
-		{
-			std::shared_ptr<Peer> team = _peersBySerial[peer->team.serialNumber];
-			//Remove peer from team
-			for(std::vector<std::pair<std::string, uint32_t>>::iterator i = team->teamChannels.begin(); i != team->teamChannels.end(); ++i)
-			{
-				if(i->first == peer->getSerialNumber() && (signed)i->second == peer->teamChannel)
-				{
-					team->teamChannels.erase(i);
-					break;
-				}
-			}
-			//Delete team if there are no peers anymore
-			if(team->teamChannels.empty()) _peersBySerial.erase(team->getSerialNumber());
-		}
+		_peersMutex.unlock();
+		removePeerFromTeam(peer);
 		peer->deleteFromDatabase(_address);
 		peer->deletePairedVirtualDevices();
+		_peersMutex.lock();
 		_peers.erase(address);
+		_peersMutex.unlock();
 		std::cout << "Removed device 0x" << std::hex << address << std::dec << std::endl;
 	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 void HomeMaticCentral::reset(int32_t address, bool defer)
 {
 	try
 	{
-		if(_peers.find(address) == _peers.end()) return;
-		Peer* peer = _peers[address].get();
+		std::shared_ptr<Peer> peer(getPeer(address));
+		if(!peer) return;
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, address);
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
@@ -607,8 +679,8 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 {
 	try
 	{
-		if(_peers.find(address) == _peers.end()) return;
-		Peer* peer = _peers[address].get();
+		std::shared_ptr<Peer> peer(getPeer(address));
+		if(!peer) return;
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, address);
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
@@ -681,8 +753,8 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 
 void HomeMaticCentral::sendEnableAES(int32_t address, int32_t channel)
 {
-	if(_peers.find(address) == _peers.end()) return;
-	std::shared_ptr<Peer> peer = _peers[address];
+	std::shared_ptr<Peer> peer(getPeer(address));
+	if(!peer) return;
 
 	std::vector<uint8_t> payload;
 
@@ -744,15 +816,11 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			serialNumber.push_back((char)packet->payload()->at(i));
 		HMDeviceTypes deviceType = (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2));
 
-		Peer* peer = nullptr;
-		if(_peers.find(packet->senderAddress()) != _peers.end())
+		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
+		if(peer && (peer->getSerialNumber() != serialNumber || peer->deviceType != deviceType))
 		{
-			peer = _peers[packet->senderAddress()].get();
-			if(peer->getSerialNumber() != serialNumber || peer->deviceType != deviceType)
-			{
-				if(GD::debugLevel >= 2) std::cout << "Error: Pairing packet rejected, because a peer with the same address but different serial number or device type is already paired to this central." << std::endl;
-				return;
-			}
+			if(GD::debugLevel >= 2) std::cout << "Error: Pairing packet rejected, because a peer with the same address but different serial number or device type is already paired to this central." << std::endl;
+			return;
 		}
 
 		std::vector<uint8_t> payload;
@@ -771,7 +839,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 					return;
 				}
 				queue->peer->initializeCentralConfig();
-				peer = queue->peer.get();
+				peer = queue->peer;
 			}
 
 			if(!peer->rpcDevice)
@@ -828,7 +896,8 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			payload.clear();
 			_messageCounter[0]++;
 
-			if(((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::config) || (peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always)) && _peers.find(packet->senderAddress()) == _peers.end()) //Only request config when peer is not already paired to central
+			//Don't check for rxModes here! rxModes can be anything.
+			if(!peerExists(packet->senderAddress())) //Only request config when peer is not already paired to central
 			{
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 				{
@@ -857,8 +926,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 						}
 					}
 
-					//Request peers if not received yet
-					if(peer->rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) != peer->rpcDevice->channels[channel]->parameterSets.end() && peer->rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link])
+					if(peer->rpcDevice->channels[channel]->linkRoles && (!peer->rpcDevice->channels[channel]->linkRoles->sourceNames.empty() || !peer->rpcDevice->channels[channel]->linkRoles->targetNames.empty()))
 					{
 						payload.push_back(channel);
 						payload.push_back(0x03);
@@ -908,8 +976,8 @@ void HomeMaticCentral::sendRequestConfig(int32_t address, uint8_t localChannel, 
 {
 	try
 	{
-		if(_peers.find(address) == _peers.end()) return;
-		Peer* peer = _peers[address].get();
+		std::shared_ptr<Peer> peer(getPeer(address));
+		if(!peer) return;
 		bool oldQueue = true;
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(address);
 		if(!queue)
@@ -962,19 +1030,14 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 	{
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue) return;
-		std::shared_ptr<Peer> peer = _peers[packet->senderAddress()];
+		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
 		if(!peer) return;
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
-		if(sentPacket && sentPacket->payload()->size() < 2)
-		{
-			std::cerr << "Error in handleConfigParamResponse: Payload of sent packet is too small." << std::endl;
-			return;
-		}
 		bool continuousData = false;
 		bool multiPacket = false;
 		bool multiPacketEnd = false;
 		//Peer request
-		if(sentPacket && sentPacket->payload()->at(1) == 0x03)
+		if(sentPacket && sentPacket->payload()->size() >= 2 && sentPacket->payload()->at(1) == 0x03)
 		{
 			if(packet->payload()->size() >= 5)
 			{
@@ -983,19 +1046,33 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 					int32_t peerAddress = (packet->payload()->at(i) << 16) + (packet->payload()->at(i + 1) << 8) + packet->payload()->at(i + 2);
 					if(peerAddress != 0)
 					{
-						std::shared_ptr<BasicPeer> newPeer(new BasicPeer());
-						newPeer->address = peerAddress;
-						newPeer->channel = packet->payload()->at(i + 3);
 						int32_t localChannel = sentPacket->payload()->at(0);
-						_peers[packet->senderAddress()]->addPeer(localChannel, newPeer);
-						if(peer->rpcDevice->channels.find(localChannel) == peer->rpcDevice->channels.end()) continue;
-						std::shared_ptr<RPC::DeviceChannel> channel = peer->rpcDevice->channels[localChannel];
-						if(channel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) == channel->parameterSets.end()) continue;
-						std::shared_ptr<RPC::ParameterSet> parameterSet = channel->parameterSets[RPC::ParameterSet::Type::Enum::link];
-						if(parameterSet->parameters.empty()) continue;
-						for(std::map<uint32_t, uint32_t>::iterator k = parameterSet->lists.begin(); k != parameterSet->lists.end(); ++k)
+						std::shared_ptr<RPC::DeviceChannel> rpcChannel = peer->rpcDevice->channels[localChannel];
+						int32_t remoteChannel = packet->payload()->at(i + 3);
+						if(rpcChannel->hasTeam) //Peer is team
 						{
-							sendRequestConfig(peer->address, localChannel, k->first, newPeer->address, newPeer->channel);
+							//Don't add team if address is peer's, because then the team already exists
+							if(peerAddress != peer->address)
+							{
+								if(GD::debugLevel >= 4) std::cout << "Info: Adding peer 0x" << std::hex << peer->address << " to team with address 0x" << peerAddress << std::dec << "." << std::endl;
+								addPeerToTeam(peer, localChannel, peerAddress, remoteChannel);
+							}
+						}
+						else //Normal peer
+						{
+							std::shared_ptr<BasicPeer> newPeer(new BasicPeer());
+							newPeer->address = peerAddress;
+							newPeer->channel = remoteChannel;
+							peer->addPeer(localChannel, newPeer);
+							if(peer->rpcDevice->channels.find(localChannel) == peer->rpcDevice->channels.end()) continue;
+
+							if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) == rpcChannel->parameterSets.end()) continue;
+							std::shared_ptr<RPC::ParameterSet> parameterSet = rpcChannel->parameterSets[RPC::ParameterSet::Type::Enum::link];
+							if(parameterSet->parameters.empty()) continue;
+							for(std::map<uint32_t, uint32_t>::iterator k = parameterSet->lists.begin(); k != parameterSet->lists.end(); ++k)
+							{
+								sendRequestConfig(peer->address, localChannel, k->first, newPeer->address, newPeer->channel);
+							}
 						}
 					}
 				}
@@ -1019,7 +1096,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				}
 			}
 		}
-		else if(sentPacket && sentPacket->payload()->at(1) == 0x04) //Config request
+		else if(sentPacket && sentPacket->payload()->size() >= 7 && sentPacket->payload()->at(1) == 0x04) //Config request
 		{
 			int32_t channel = sentPacket->payload()->at(0);
 			int32_t list = sentPacket->payload()->at(6);
@@ -1160,6 +1237,179 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
     }
 }
 
+void HomeMaticCentral::resetTeam(std::shared_ptr<Peer> peer, uint32_t channel)
+{
+	try
+	{
+		removePeerFromTeam(peer);
+
+		std::shared_ptr<Peer> team;
+		std::string serialNumber('*' + peer->getSerialNumber());
+		_peersMutex.lock();
+		if(_peersBySerial.find(serialNumber) == _peersBySerial.end())
+		{
+			_peersMutex.unlock();
+			team = createTeam(peer->address, peer->deviceType, serialNumber);
+			team->rpcDevice = peer->rpcDevice->team;
+			team->initializeCentralConfig();
+			_peersMutex.lock();
+			_peersBySerial[team->getSerialNumber()] = team;
+		}
+		else team = _peersBySerial['*' + peer->getSerialNumber()];
+		_peersMutex.unlock();
+		peer->team.address = team->address;
+		peer->team.serialNumber = team->getSerialNumber();
+		peer->teamChannel = channel;
+		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator j = team->rpcDevice->channels.begin(); j != team->rpcDevice->channels.end(); ++j)
+		{
+			if(j->second->teamTag == peer->rpcDevice->channels.at(channel)->teamTag)
+			{
+				peer->team.channel = j->first;
+				break;
+			}
+		}
+		team->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
+	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
+void HomeMaticCentral::addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel, int32_t teamAddress, uint32_t teamChannel)
+{
+	try
+	{
+		std::shared_ptr<Peer> teamPeer(getPeer(teamAddress));
+		if(teamPeer)
+		{
+			//Team should be known
+			addPeerToTeam(peer, channel, teamChannel, '*' + teamPeer->getSerialNumber());
+		}
+		else
+		{
+			removePeerFromTeam(peer);
+
+			peer->team.address = teamAddress;
+			peer->teamChannel = channel;
+			peer->team.channel = teamChannel;
+			peer->team.serialNumber.clear();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
+void HomeMaticCentral::addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel, uint32_t teamChannel, std::string teamSerialNumber)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersBySerial.find(teamSerialNumber) == _peersBySerial.end() || !_peersBySerial.at(teamSerialNumber))
+		{
+			_peersMutex.unlock();
+			return;
+		}
+		std::shared_ptr<Peer> team = _peersBySerial[teamSerialNumber];
+		_peersMutex.unlock();
+		if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return;
+		if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return;
+
+		removePeerFromTeam(peer);
+
+		peer->team.address = team->address;
+		peer->team.serialNumber = teamSerialNumber;
+		peer->teamChannel = channel;
+		peer->team.channel = teamChannel;
+		team->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
+	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
+void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<Peer> peer)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(peer->team.serialNumber.empty() || _peersBySerial.find(peer->team.serialNumber) == _peersBySerial.end())
+		{
+			_peersMutex.unlock();
+			return;
+		}
+		std::shared_ptr<Peer> oldTeam = _peersBySerial[peer->team.serialNumber];
+		_peersMutex.unlock();
+		//Remove peer from old team
+		for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
+		{
+			if(i->first == peer->getSerialNumber() && (signed)i->second == peer->teamChannel)
+			{
+				oldTeam->teamChannels.erase(i);
+				break;
+			}
+		}
+		//Delete team if there are no peers anymore
+		if(oldTeam->teamChannels.empty())
+		{
+			_peersMutex.lock();
+			_peersBySerial.erase(oldTeam->getSerialNumber());
+			_peersMutex.unlock();
+		}
+		peer->team.serialNumber.clear();
+		peer->team.address = 0;
+		peer->team.channel = 0;
+	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
 void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
@@ -1181,41 +1431,78 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 		{
 			if(sentPacket && sentPacket->messageType() == 0x01 && sentPacket->payload()->at(0) == 0x00 && sentPacket->payload()->at(1) == 0x06)
 			{
-				if(_peers.find(packet->senderAddress()) == _peers.end())
+				if(!peerExists(packet->senderAddress()))
 				{
 					if(!queue->peer) return;
+					try
+					{
+						_peersMutex.lock();
+						_peers[queue->peer->address] = queue->peer;
+						if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
+						_peersMutex.unlock();
+					}
+					catch(const std::exception& ex)
+					{
+						_peersMutex.unlock();
+						std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+					}
+					catch(const Exception& ex)
+					{
+						_peersMutex.unlock();
+						std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+					}
+					catch(...)
+					{
+						_peersMutex.unlock();
+						std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+					}
+					std::cout << "Added peer 0x" << std::hex << queue->peer->address << std::dec << "." << std::endl;
 					for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = queue->peer->rpcDevice->channels.begin(); i != queue->peer->rpcDevice->channels.end(); ++i)
 					{
 						if(i->second->hasTeam)
 						{
-							std::shared_ptr<Peer> team;
-							std::string serialNumber('*' + queue->peer->getSerialNumber());
-							if(_peersBySerial.find(serialNumber) == _peersBySerial.end())
+							if(GD::debugLevel >= 4) std::cout << "Info: Creating team for channel " << i->first << "." << std::endl;
+							resetTeam(queue->peer, i->first);
+							//Check if a peer exists with this devices team and if yes add it to the team.
+							//As the serial number of the team was unknown up to this point, this couldn't
+							//be done before.
+							try
 							{
-								team = createTeam(queue->peer->address, queue->peer->deviceType, serialNumber);
-								team->rpcDevice = queue->peer->rpcDevice->team;
-								team->initializeCentralConfig();
-								_peersBySerial[team->getSerialNumber()] = team;
-							}
-							else team = _peersBySerial['*' + queue->peer->getSerialNumber()];
-							queue->peer->team.address = team->address;
-							queue->peer->team.serialNumber = team->getSerialNumber();
-							queue->peer->teamChannel = i->first;
-							for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator j = team->rpcDevice->channels.begin(); j != team->rpcDevice->channels.end(); ++j)
-							{
-								if(j->second->teamTag == i->second->teamTag)
+								std::vector<std::shared_ptr<Peer>> peers;
+								_peersMutex.lock();
+								for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::const_iterator j = _peers.begin(); j != _peers.end(); ++j)
 								{
-									queue->peer->team.channel = j->first;
-									break;
+									if(j->second->team.address == queue->peer->address && j->second->address != queue->peer->address)
+									{
+										//Needed to avoid deadlocks
+										peers.push_back(j->second);
+									}
+								}
+								_peersMutex.unlock();
+								for(std::vector<std::shared_ptr<Peer>>::iterator j = peers.begin(); j != peers.end(); ++j)
+								{
+									if(GD::debugLevel >= 4) std::cout << "Info: Adding device 0x" << std::hex << (*j)->address << std::dec << " to team " << queue->peer->team.serialNumber << "." << std::endl;
+									addPeerToTeam(*j, (*j)->teamChannel, (*j)->team.channel, queue->peer->team.serialNumber);
 								}
 							}
-							_peersBySerial[team->getSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(queue->peer->getSerialNumber(), i->first));
+							catch(const std::exception& ex)
+							{
+								_peersMutex.unlock();
+								std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+							}
+							catch(const Exception& ex)
+							{
+								_peersMutex.unlock();
+								std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+							}
+							catch(...)
+							{
+								_peersMutex.unlock();
+								std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+							}
 							break;
 						}
 					}
-					_peers[queue->peer->address] = queue->peer;
-					if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
-					std::cout << "Added device 0x" << std::hex << queue->peer->address << std::dec << "." << std::endl;
 					std::shared_ptr<RPC::RPCVariable> deviceDescriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 					deviceDescriptions->arrayValue = queue->peer->getDeviceDescription();
 					GD::rpcClient.broadcastNewDevices(deviceDescriptions);
@@ -1262,40 +1549,39 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addDevice(std::string serial
 		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0, 0x84, 0x01, _address, 0, payload));
 
 		int32_t i = 0;
-		while(_peersBySerial.find(serialNumber) == _peersBySerial.end() && i < 3)
+		std::shared_ptr<Peer> peer;
+		while(!peer && i < 3)
 		{
 			packet->setMessageCounter(_messageCounter[0]);
 			_messageCounter[0]++;
 			std::thread t(&HomeMaticDevice::sendPacket, this, packet);
 			t.detach();
 			std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+			peer = getPeerBySerial(serialNumber);
 			i++;
 		}
 
 		_pairing = oldPairingModeState;
 
-		if(_peersBySerial.find(serialNumber) == _peersBySerial.end())
+		if(!peer)
 		{
 			return RPC::RPCVariable::createError(-1, "No response from device.");
 		}
 		else
 		{
-			return _peersBySerial[serialNumber]->getDeviceDescription(-1);
+			return peer->getDeviceDescription(-1);
 		}
 	}
 	catch(const std::exception& ex)
 	{
-		_peersMutex.unlock();
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 	catch(const Exception& ex)
 	{
-		_peersMutex.unlock();
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 	}
 	catch(...)
 	{
-		_peersMutex.unlock();
 		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -1307,12 +1593,12 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 	{
 		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
 		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
-		if(_peersBySerial.find(senderSerialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(_peersBySerial.find(receiverSerialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		std::shared_ptr<Peer> sender = getPeerBySerial(senderSerialNumber);
+		std::shared_ptr<Peer> receiver = getPeerBySerial(receiverSerialNumber);
+		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
-		std::shared_ptr<Peer> sender = _peersBySerial.at(senderSerialNumber);
-		std::shared_ptr<Peer> receiver = _peersBySerial.at(receiverSerialNumber);
 		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Sender channel not found.");
 		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Receiver channel not found.");
 		std::shared_ptr<RPC::DeviceChannel> senderChannel = sender->rpcDevice->channels.at(senderChannelIndex);
@@ -1492,12 +1778,12 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 	{
 		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
 		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
-		if(_peersBySerial.find(senderSerialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Sender device not found.");
-		if(_peersBySerial.find(receiverSerialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		std::shared_ptr<Peer> sender = getPeerBySerial(senderSerialNumber);
+		std::shared_ptr<Peer> receiver = getPeerBySerial(receiverSerialNumber);
+		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
-		std::shared_ptr<Peer> sender = _peersBySerial.at(senderSerialNumber);
-		std::shared_ptr<Peer> receiver = _peersBySerial.at(receiverSerialNumber);
 		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Sender channel not found.");
 		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Receiver channel not found.");
 		if(!sender->getPeer(senderChannelIndex, receiver->address) && !receiver->getPeer(receiverChannelIndex, sender->address)) return RPC::RPCVariable::createError(-6, "Devices are not paired to each other.");
@@ -1571,20 +1857,30 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
 {
 	try
 	{
-		if(serialNumber.empty() || _peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(serialNumber.empty()) return RPC::RPCVariable::createError(-2, "Unknown device.");
 		if(serialNumber[0] == '*') return RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
-		std::shared_ptr<Peer> peer = _peersBySerial[serialNumber];
+		std::shared_ptr<Peer> peer = getPeerBySerial(serialNumber);
+		if(!peer) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+		int32_t address = peer->address;
 
 		bool defer = flags & 0x04;
 		bool force = flags & 0x02;
 		//Reset
-		if(flags & 0x01) reset(peer->address, defer);
-		else unpair(peer->address, defer);
+		if(flags & 0x01)
+		{
+			std::thread t(&HomeMaticCentral::reset, this, address, defer);
+			t.detach();
+		}
+		else
+		{
+			std::thread t(&HomeMaticCentral::unpair, this, address, defer);
+			t.detach();
+		}
 		//Force delete
-		if(force) deletePeer(peer->address);
+		if(force) deletePeer(address);
+		else std::this_thread::sleep_for(std::chrono::milliseconds(1200));
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		if(!defer && !force && _peersBySerial.find(serialNumber) != _peersBySerial.end()) return RPC::RPCVariable::createError(-1, "No answer from device.");
+		if(!defer && !force && peerExists(address)) return RPC::RPCVariable::createError(-1, "No answer from device.");
 
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
@@ -1614,6 +1910,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 
+		_peersMutex.lock();
 		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
 			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
@@ -1624,18 +1921,22 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 				array->arrayValue->push_back(*j);
 			}
 		}
+		_peersMutex.unlock();
 		return array;
 	}
 	catch(const std::exception& ex)
     {
+		_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
+    	_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
+    	_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -1647,6 +1948,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listTeams()
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 
+		_peersMutex.lock();
 		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
 			if(i->first.empty() || i->first.at(0) != '*') continue;
@@ -1657,18 +1959,22 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listTeams()
 				array->arrayValue->push_back(*j);
 			}
 		}
+		_peersMutex.unlock();
 		return array;
 	}
 	catch(const std::exception& ex)
     {
+		_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
+    	_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
+    	_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -1680,8 +1986,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 	{
 		if(channel < 0) channel = 0;
 		if(teamChannel < 0) teamChannel = 0;
-		if(_peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
-		std::shared_ptr<Peer> peer = _peersBySerial.at(serialNumber);
+		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 		if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(!peer->rpcDevice->channels[channel]->hasTeam) return RPC::RPCVariable::createError(-6, "Channel does not support teams.");
 		int32_t oldTeamAddress = peer->team.address;
@@ -1693,57 +1999,20 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 				//Team already is default
 				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 			}
-			if(!peer->team.serialNumber.empty() && _peersBySerial.find(peer->team.serialNumber) != _peersBySerial.end())
-			{
-				std::shared_ptr<Peer> oldTeam = _peersBySerial[peer->team.serialNumber];
-				//Remove peer from old team
-				for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
-				{
-					if(i->first == peer->getSerialNumber() && (signed)i->second == peer->teamChannel)
-					{
-						oldTeam->teamChannels.erase(i);
-						break;
-					}
-				}
-				//Delete team if there are no peers anymore
-				if(oldTeam->teamChannels.empty()) _peersBySerial.erase(oldTeam->getSerialNumber());
-			}
 
 			int32_t newChannel = -1;
-			std::string teamTag;
 			//Get first channel which has a team
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 			{
 				if(i->second->hasTeam)
 				{
 					newChannel = i->first;
-					teamTag = i->second->teamTag;
 					break;
 				}
 			}
 			if(newChannel < 0) return RPC::RPCVariable::createError(-6, "There are no team channels for this device.");
-			std::shared_ptr<Peer> team;
-			std::string newSerialNumber('*' + peer->getSerialNumber());
-			if(_peersBySerial.find(newSerialNumber) == _peersBySerial.end())
-			{
-				team = createTeam(peer->address, peer->deviceType, newSerialNumber);
-				team->rpcDevice = peer->rpcDevice->team;
-				team->initializeCentralConfig();
-				_peersBySerial[newSerialNumber] = team;
-			}
-			else team = _peersBySerial['*' + peer->getSerialNumber()];
-			peer->team.address = team->address;
-			peer->team.serialNumber = team->getSerialNumber();
-			peer->teamChannel = newChannel;
-			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = team->rpcDevice->channels.begin(); i != team->rpcDevice->channels.end(); ++i)
-			{
-				if(i->second->teamTag == teamTag)
-				{
-					peer->team.channel = i->first;
-					break;
-				}
-			}
-			_peersBySerial[team->getSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), newChannel));
+
+			resetTeam(peer, newChannel);
 		}
 		else //Set new team
 		{
@@ -1752,32 +2021,13 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 				//Peer already is member of this team
 				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 			}
-			if(_peersBySerial.find(teamSerialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Team does not exist.");
-			std::shared_ptr<Peer> team = _peersBySerial[teamSerialNumber];
+			//Don't create team if not existent!
+			std::shared_ptr<Peer> team = getPeerBySerial(teamSerialNumber);
+			if(!team) return RPC::RPCVariable::createError(-2, "Team does not exist.");
 			if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown team channel.");
 			if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return RPC::RPCVariable::createError(-6, "Peer channel is not compatible to team channel.");
 
-			if(!peer->team.serialNumber.empty() && _peersBySerial.find(peer->team.serialNumber) != _peersBySerial.end())
-			{
-				std::shared_ptr<Peer> oldTeam = _peersBySerial[peer->team.serialNumber];
-				//Remove peer from old team
-				for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
-				{
-					if(i->first == peer->getSerialNumber() && (signed)i->second == peer->teamChannel)
-					{
-						oldTeam->teamChannels.erase(i);
-						break;
-					}
-				}
-				//Delete team if there are no peers anymore
-				if(oldTeam->teamChannels.empty()) _peersBySerial.erase(oldTeam->getSerialNumber());
-			}
-
-			peer->team.address = team->address;
-			peer->team.serialNumber = team->getSerialNumber();
-			peer->teamChannel = channel;
-			peer->team.channel = teamChannel;
-			_peersBySerial[team->getSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
+			addPeerToTeam(peer, channel, teamChannel, teamSerialNumber);
 		}
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		queue->noSending = true;
@@ -1837,9 +2087,10 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescription(std::st
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 
-		return _peersBySerial[serialNumber]->getDeviceDescription(channel);
+		return peer->getDeviceDescription(channel);
 	}
 	catch(const std::exception& ex)
     {
@@ -1883,15 +2134,17 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setLinkInfo(std::string send
 	{
 		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
 		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		std::shared_ptr<Peer> sender(getPeerBySerial(senderSerialNumber));
+		std::shared_ptr<Peer> receiver(getPeerBySerial(receiverSerialNumber));
 		std::shared_ptr<RPC::RPCVariable> result1;
 		std::shared_ptr<RPC::RPCVariable> result2;
-		if(_peersBySerial.find(senderSerialNumber) != _peersBySerial.end())
+		if(sender)
 		{
-			result1 = _peersBySerial[senderSerialNumber]->setLinkInfo(senderChannel, receiverSerialNumber, receiverChannel, name, description);
+			result1 = sender->setLinkInfo(senderChannel, receiverSerialNumber, receiverChannel, name, description);
 		}
-		if(_peersBySerial.find(receiverSerialNumber) != _peersBySerial.end())
+		if(receiver)
 		{
-			result2 = _peersBySerial[receiverSerialNumber]->setLinkInfo(receiverChannel, senderSerialNumber, senderChannel, name, description);
+			result2 = receiver->setLinkInfo(receiverChannel, senderSerialNumber, senderChannel, name, description);
 		}
 		if(!result1 || !result2) RPC::RPCVariable::createError(-2, "At least one device was not found.");
 		if(result1->errorStruct) return result1;
@@ -1919,12 +2172,14 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinkInfo(std::string send
 	{
 		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
 		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
-		if(_peersBySerial.find(senderSerialNumber) == _peersBySerial.end())
+		std::shared_ptr<Peer> sender(getPeerBySerial(senderSerialNumber));
+		std::shared_ptr<Peer> receiver(getPeerBySerial(receiverSerialNumber));
+		if(!sender)
 		{
-			if(_peersBySerial.find(receiverSerialNumber) != _peersBySerial.end()) return _peersBySerial[receiverSerialNumber]->getLinkInfo(receiverChannel, senderSerialNumber, senderChannel);
+			if(receiver) return receiver->getLinkInfo(receiverChannel, senderSerialNumber, senderChannel);
 			else return RPC::RPCVariable::createError(-2, "Both devices not found.");
 		}
-		else return _peersBySerial[senderSerialNumber]->getLinkInfo(senderChannel, receiverSerialNumber, receiverChannel);
+		else return sender->getLinkInfo(senderChannel, receiverSerialNumber, receiverChannel);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1945,8 +2200,9 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinkPeers(std::string ser
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
-		return _peersBySerial[serialNumber]->getLinkPeers(channel);
+		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		return peer->getLinkPeers(channel);
 	}
 	catch(const std::exception& ex)
     {
@@ -1971,16 +2227,37 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialN
 		std::shared_ptr<RPC::RPCVariable> element(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		if(serialNumber.empty())
 		{
-			for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+			try
 			{
-				element = i->second->getLink(channel, flags, true);
-				array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
+				_peersMutex.lock();
+				for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+				{
+					element = i->second->getLink(channel, flags, true);
+					array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
+				}
+				_peersMutex.unlock();
+			}
+			catch(const std::exception& ex)
+			{
+				_peersMutex.unlock();
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			}
+			catch(const Exception& ex)
+			{
+				_peersMutex.unlock();
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			}
+			catch(...)
+			{
+				_peersMutex.unlock();
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 			}
 		}
 		else
 		{
-			if(_peersBySerial.find(serialNumber) == _peersBySerial.end()) return RPC::RPCVariable::createError(-2, "Unknown device.");
-			element = _peersBySerial[serialNumber]->getLink(channel, flags, false);
+			std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+			if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+			element = peer->getLink(channel, flags, false);
 			array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
 		}
 		return array;
@@ -2004,7 +2281,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::string se
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamsetId(channel, type);
+		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		if(peer) return peer->getParamsetId(channel, type);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
@@ -2026,7 +2304,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string seri
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
+		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		if(peer) return peer->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
@@ -2048,7 +2327,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string seri
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamset(channel, type, remoteSerialNumber, remoteChannel);
+		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		if(peer) return peer->getParamset(channel, type, remoteSerialNumber, remoteChannel);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
@@ -2070,7 +2350,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
+		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
@@ -2093,24 +2374,29 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getServiceMessages()
 	try
 	{
 		std::shared_ptr<RPC::RPCVariable> serviceMessages(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		_peersMutex.lock();
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			if(!i->second) continue;
 			std::shared_ptr<RPC::RPCVariable> messages = i->second->getServiceMessages();
 			if(!messages->arrayValue->empty()) serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(), messages->arrayValue->begin(), messages->arrayValue->end());
 		}
+		_peersMutex.unlock();
 		return serviceMessages;
 	}
 	catch(const std::exception& ex)
     {
+		_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
+    	_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
+    	_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -2120,7 +2406,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getValue(std::string serialN
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->getValue(channel, valueKey);
+		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		if(peer) return peer->getValue(channel, valueKey);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
@@ -2142,7 +2429,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setValue(std::string serialN
 {
 	try
 	{
-		if(_peersBySerial.find(serialNumber) != _peersBySerial.end()) return _peersBySerial[serialNumber]->setValue(channel, valueKey, value);
+		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		if(peer) return peer->setValue(channel, valueKey, value);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)

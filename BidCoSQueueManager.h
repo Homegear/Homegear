@@ -15,7 +15,6 @@ class BidCoSQueueData
 public:
 	uint32_t id = 0;
 	std::shared_ptr<BidCoSQueue> queue;
-	std::shared_ptr<std::thread> thread;
 	int64_t lastAction;
 
 	BidCoSQueueData();

@@ -88,8 +88,7 @@ void Peer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t rem
 		std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 		if(!central) return; //Shouldn't happen
-		std::shared_ptr<Peer> remotePeer;
-		if(central->getPeers()->find(peerAddress) != central->getPeers()->end()) remotePeer = central->getPeers()->at(peerAddress);
+		std::shared_ptr<Peer> remotePeer(central->getPeer(peerAddress));
 		if(!remotePeer || !remotePeer->rpcDevice) return; //Shouldn't happen
 		if(remotePeer->rpcDevice->channels.find(remoteChannel) == remotePeer->rpcDevice->channels.end()) return;
 		std::shared_ptr<RPC::DeviceChannel> remoteRPCChannel = remotePeer->rpcDevice->channels.at(remoteChannel);
@@ -306,9 +305,10 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 void Peer::worker()
 {
 	if(!_centralFeatures) return;
-	std::chrono::milliseconds sleepingTime(3000);
+	std::chrono::milliseconds sleepingTime(300);
 	std::vector<uint32_t> positionsToDelete;
 	std::vector<std::shared_ptr<VariableToReset>> variablesToReset;
+	int32_t wakeUpIndex = 0;
 	int32_t index;
 	int64_t time;
 	while(!_stopWorkerThread)
@@ -316,6 +316,12 @@ void Peer::worker()
 		try
 		{
 			std::this_thread::sleep_for(sleepingTime);
+			if(wakeUpIndex < 10)
+			{
+				wakeUpIndex++;
+				continue;
+			}
+			else wakeUpIndex = 0;
 			if(_stopWorkerThread) return;
 			time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 			if(!_variablesToReset.empty())
@@ -403,9 +409,10 @@ std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, std::string serialNumb
 		if((*i)->serialNumber.empty())
 		{
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
-			if(central && central->getPeers()->find((*i)->address) != central->getPeers()->end())
+			if(central)
 			{
-				(*i)->serialNumber = central->getPeers()->at((*i)->address)->getSerialNumber();
+				std::shared_ptr<Peer> peer(central->getPeer((*i)->address));
+				if(peer) (*i)->serialNumber = peer->getSerialNumber();
 			}
 		}
 		if((*i)->serialNumber == serialNumber && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
@@ -1898,8 +1905,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel)
 			if(!central) return array; //central actually should always be set at this point
 			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
 			{
-				std::shared_ptr<Peer> peer;
-				if(central->getPeers()->find((*i)->address) != central->getPeers()->end()) peer = central->getPeers()->at((*i)->address);
+				std::shared_ptr<Peer> peer(central->getPeer((*i)->address));
 				bool peerKnowsMe = false;
 				if(peer && peer->getPeer(channel, address)) peerKnowsMe = true;
 
@@ -1976,10 +1982,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 			if(!central) return array; //central actually should always be set at this point
 			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
 			{
-				std::shared_ptr<Peer> peer;
-				if(central->getPeers()->find((*i)->address) != central->getPeers()->end()) peer = central->getPeers()->at((*i)->address);
+				std::shared_ptr<Peer> remotePeer(central->getPeer((*i)->address));
 				bool peerKnowsMe = false;
-				if(peer && peer->getPeer(channel, address)) peerKnowsMe = true;
+				if(remotePeer && remotePeer->getPeer(channel, address)) peerKnowsMe = true;
 
 				//Don't continue if peer is sender and exists in central's peer array to avoid generation of duplicate results when requesting all links (only generate results when we are sender)
 				if(!isSender && peerKnowsMe && avoidDuplicates) return array;
@@ -1991,7 +1996,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 				{
 					if(peerKnowsMe)
 					{
-						(*i)->serialNumber = peer->getSerialNumber();
+						(*i)->serialNumber = remotePeer->getSerialNumber();
 						peerSerial = (*i)->serialNumber;
 					}
 					/*else if((*i)->address == address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
@@ -2017,7 +2022,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 					if(isSender) brokenFlags = 2 | 4; //LINK_FLAG_RECEIVER_BROKEN | PEER_IS_ME
 					else brokenFlags = 1 | 4; //LINK_FLAG_SENDER_BROKEN | PEER_IS_ME
 				}
-				if(brokenFlags == 0 && central->getPeers()->find((*i)->address) != central->getPeers()->end() && central->getPeers()->at((*i)->address)->serviceMessages->getUnreach()) brokenFlags = 2;
+				if(brokenFlags == 0 && remotePeer && remotePeer->serviceMessages->getUnreach()) brokenFlags = 2;
 				if(serviceMessages->getUnreach()) brokenFlags |= 1;
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DESCRIPTION", (*i)->linkDescription)));
@@ -2029,7 +2034,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 					if(flags & 4)
 					{
 						std::shared_ptr<RPC::RPCVariable> paramset;
-						if(!(brokenFlags & 2) && peer) paramset = peer->getParamset((*i)->channel, RPC::ParameterSet::Type::Enum::link, _serialNumber, channel);
+						if(!(brokenFlags & 2) && remotePeer) paramset = remotePeer->getParamset((*i)->channel, RPC::ParameterSet::Type::Enum::link, _serialNumber, channel);
 						else paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						if(paramset->errorStruct) paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						paramset->name = "RECEIVER_PARAMSET";
@@ -2038,7 +2043,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 					if(flags & 16)
 					{
 						std::shared_ptr<RPC::RPCVariable> description;
-						if(!(brokenFlags & 2) && peer) description = peer->getDeviceDescription((*i)->channel);
+						if(!(brokenFlags & 2) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel);
 						else description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						if(description->errorStruct) description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						description->name = "RECEIVER_DESCRIPTION";

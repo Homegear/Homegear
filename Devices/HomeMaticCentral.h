@@ -28,6 +28,10 @@ public:
 	void setUpBidCoSMessages();
 	void setUpConfig() {}
 	void deletePeer(int32_t address);
+	void addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel, uint32_t teamChannel, std::string teamSerialNumber);
+	void addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel, int32_t address, uint32_t teamChannel);
+	void removePeerFromTeam(std::shared_ptr<Peer> peer);
+	void resetTeam(std::shared_ptr<Peer> peer, uint32_t channel);
 	std::string serialize();
 	void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
 	void handleCLICommand(std::string command);

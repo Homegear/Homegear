@@ -117,7 +117,8 @@ void HM_CC_VD::handleCLICommand(std::string command)
 void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
     HomeMaticDevice::handleDutyCyclePacket(messageCounter, packet);
-    if(_peers[packet->senderAddress()]->deviceType != HMDeviceTypes::HMCCTC) return;
+    std::shared_ptr<Peer> peer = getPeer(packet->senderAddress());
+    if(!peer || peer->deviceType != HMDeviceTypes::HMCCTC) return;
     int32_t oldValveState = _valveState;
     _valveState = (packet->payload()->at(1) * 100) / 256;
     std::cout << "0x" << std::setw(6) << std::hex << _address << std::dec;
@@ -136,6 +137,8 @@ void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<Bid
 
 void HM_CC_VD::sendDutyCycleResponse(int32_t destinationAddress, unsigned char oldValveState, unsigned char adjustmentCommand)
 {
+	std::shared_ptr<Peer> peer = getPeer(destinationAddress);
+	if(!peer) return;
     HomeMaticDevice::sendDutyCycleResponse(destinationAddress);
 
     std::vector<uint8_t> payload;
@@ -172,7 +175,7 @@ void HM_CC_VD::sendDutyCycleResponse(int32_t destinationAddress, unsigned char o
 
     payload.push_back(byte3);
     payload.push_back(0x37);
-    sendOKWithPayload(_peers[destinationAddress]->messageCounter, destinationAddress, payload, true);
+    sendOKWithPayload(peer->messageCounter, destinationAddress, payload, true);
 }
 
 void HM_CC_VD::sendConfigParamsType2(int32_t messageCounter, int32_t destinationAddress)
@@ -220,10 +223,35 @@ void HM_CC_VD::reset()
 
 void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
-    HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
+	try
+	{
+		HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
 
-    int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
-    _peers[address]->deviceType = HMDeviceTypes::HMCCTC;
+		int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
+		_peersMutex.lock();
+		if(_peers.size() > 20)
+		{
+			_peersMutex.unlock();
+			return;
+		}
+		_peers[address]->deviceType = HMDeviceTypes::HMCCTC;
+		_peersMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 void HM_CC_VD::setValveDriveBlocked(bool valveDriveBlocked)

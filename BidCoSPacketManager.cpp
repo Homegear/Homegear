@@ -24,8 +24,8 @@ void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& pa
 		std::shared_ptr<BidCoSPacketInfo> info(new BidCoSPacketInfo());
 		info->packet = packet;
 		info->id = _id++;
-		info->thread = std::shared_ptr<std::thread>(new std::thread(&BidCoSPacketManager::deletePacket, this, address, info->id));
-		info->thread->detach();
+		std::thread t(&BidCoSPacketManager::deletePacket, this, address, info->id);
+		t.detach();
 		_packetMutex.lock();
 		_packets.insert(std::pair<int32_t, std::shared_ptr<BidCoSPacketInfo>>(address, info));
 		if(GD::debugLevel >= 3 && _packets.at(address) && _packets.at(address)->id != info->id) std::cerr << "Warning: Inserted packet has wrong id." << std::endl;
@@ -70,16 +70,14 @@ void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)
 		_packetMutex.lock();
 		if(_packets.find(address) != _packets.end() && _packets.at(address) && _packets.at(address)->id == id)
 		{
-			_packets.erase(_packets.find(address));
+			_packets.erase(address);
 		}
 		_packetMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
 		_packetMutex.unlock();
-		std::string what(ex.what());
-		if(what == "_Map_base::at" && GD::debugLevel < 5) return; //ignore
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << what << std::endl;
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {

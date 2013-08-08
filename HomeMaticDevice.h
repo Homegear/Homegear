@@ -36,6 +36,7 @@ class HomeMaticDevice
         virtual int64_t lastDutyCycleEvent() { return _lastDutyCycleEvent; }
         virtual bool isCentral() { return _deviceType == HMDeviceTypes::HMCENTRAL; }
         virtual void stopThreads();
+        virtual void checkForDeadlock();
 
         HomeMaticDevice();
         HomeMaticDevice(std::string serialNumber, int32_t address);
@@ -43,15 +44,18 @@ class HomeMaticDevice
         virtual bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
         virtual void addPeer(std::shared_ptr<Peer> peer) { if(_peers.find(peer->address) == _peers.end()) _peers[peer->address] = peer; }
+        bool peerExists(int32_t address);
+        std::shared_ptr<Peer> getPeer(int32_t address);
+        std::shared_ptr<Peer> getPeerBySerial(std::string serialNumber);
         virtual void deletePeersFromDatabase();
         virtual void loadPeersFromDatabase();
         virtual void savePeersToDatabase();
+        virtual void saveToDatabase();
         virtual void setLowBattery(bool);
         virtual void setChannelCount(uint32_t channelCount) {}
         virtual bool pairDevice(int32_t timeout);
         virtual bool isInPairingMode() { return _pairing; }
         virtual int32_t getCentralAddress();
-        virtual std::unordered_map<int32_t, std::shared_ptr<Peer>>* getPeers();
         virtual int32_t calculateCycleLength(uint8_t messageCounter);
         virtual std::string serialize();
         virtual void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
@@ -108,7 +112,7 @@ class HomeMaticDevice
         std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>> _config;
         std::unordered_map<int32_t, std::shared_ptr<Peer>> _peers;
         std::unordered_map<std::string, std::shared_ptr<Peer>> _peersBySerial;
-        std::mutex _peersMutex;
+        std::recursive_timed_mutex _peersMutex;
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
         bool _pairing = false;
@@ -129,7 +133,6 @@ class HomeMaticDevice
         virtual void init();
         virtual void setUpBidCoSMessages();
         virtual void setUpConfig();
-
 
         virtual void reset();
     private:

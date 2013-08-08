@@ -352,7 +352,7 @@ void ServiceMessages::setConfigPendingThread(bool value)
 				if(!_configPending) return; //Was changed during sleeping
 			}
 
-			if(_peer->valuesCentral.at(0).find("CONFIG_PENDING") != _peer->valuesCentral.at(0).end())
+			if(_peer && _peer->valuesCentral.at(0).find("CONFIG_PENDING") != _peer->valuesCentral.at(0).end())
 			{
 				_peer->valuesCentral.at(0).at("CONFIG_PENDING").data.at(0) = (uint8_t)value;
 

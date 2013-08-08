@@ -71,6 +71,28 @@ ifeq ($(config),release)
   endef
 endif
 
+ifeq ($(config),profiling)
+  OBJDIR     = obj/Profiling
+  TARGETDIR  = bin/Profiling
+  TARGET     = $(TARGETDIR)/Homegear
+  DEFINES   += -DNDEBUG
+  INCLUDES  += 
+  CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -l pthread -l sqlite3 -pg
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
 OBJECTS := \
 	$(OBJDIR)/BidCoSMessage.o \
 	$(OBJDIR)/main.o \

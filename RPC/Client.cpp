@@ -106,6 +106,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 	std::shared_ptr<RemoteRPCServer> server = getServer(address);
 	if(!server) return;
 	std::shared_ptr<RPCVariable> devices = GD::devices.getCentral()->listDevices(server->knownDevices);
+	if(devices->arrayValue->empty()) return;
 	std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>{ std::shared_ptr<RPCVariable>(new RPCVariable(server->id)), devices });
 	std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "newDevices", parameters);
 	if(result->errorStruct)

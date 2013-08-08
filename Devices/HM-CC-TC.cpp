@@ -330,9 +330,9 @@ int32_t HM_CC_TC::getAdjustmentCommand()
 
 int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 {
-	_peersMutex.lock(); //I already had the problem that _peers was accessed while a peer was being deleted from it
 	try
 	{
+		_peersMutex.lock();
 		if(_peers.size() == 0)
 		{
 			_peersMutex.unlock();
@@ -355,7 +355,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 			{
 				_currentDutyCycleDeviceAddress = j->first;
 				_peersMutex.unlock();
-				return j->first;
+				return _currentDutyCycleDeviceAddress;
 			}
 		}
 	}
@@ -406,14 +406,34 @@ void HM_CC_TC::handleSetValveState(int32_t messageCounter, std::shared_ptr<BidCo
 
 void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
-    HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
+	try
+	{
+		HomeMaticDevice::handleConfigPeerAdd(messageCounter, packet);
 
-    uint8_t channel = packet->payload()->at(0);
-    int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
-    if(channel == 2)
+		uint8_t channel = packet->payload()->at(0);
+		int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
+		if(channel == 2 && _peers.size() < 20)
+		{
+			_peersMutex.lock();
+			_peers[address]->deviceType = HMDeviceTypes::HMCCVD;
+			_peersMutex.unlock();
+			if(GD::debugLevel >= 5) std::cout << "Added HM-CC-VD with address 0x" << std::hex << address << std::dec << std::endl;
+		}
+	}
+	catch(const std::exception& ex)
     {
-    	_peers[address]->deviceType = HMDeviceTypes::HMCCVD;
-    	if(GD::debugLevel >= 5) std::cout << "Added HM-CC-VD with address 0x" << std::hex << address << std::dec << std::endl;
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
 }
 
@@ -471,9 +491,13 @@ void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, std::shared_ptr
 		HomeMaticDevice::handleConfigParamResponse(messageCounter, packet);
 
 		_currentList = packet->payload()->at(6);
+		std::shared_ptr<Peer> peer = getPeer(packet->senderAddress());
+		if(!peer) return;
 		for(int i = 7; i < (signed)packet->payload()->size() - 2; i+=2)
 		{
-			_peers[packet->senderAddress()]->config[packet->payload()->at(i)] = packet->payload()->at(i + 1);
+			int32_t index = packet->payload()->at(i);
+			if(peer->config.find(index) == peer->config.end()) continue;
+			peer->config.at(index) = packet->payload()->at(i + 1);
 			std::cout << "0x" << std::setw(6) << std::hex << _address;
 			std::cout << ": Config of device 0x" << std::setw(6) << packet->senderAddress() << " at index " << std::setw(2) << (int32_t)(packet->payload()->at(i)) << " set to " << std::setw(2) << (int32_t)(packet->payload()->at(i + 1)) << std::dec << std::endl;
 		}
@@ -516,12 +540,30 @@ void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> p
 		queue->pop(); //Messages are not popped by default.
 		if(queue->getQueueType() == BidCoSQueueType::PAIRING)
 		{
+			_peersMutex.lock();
+			if(_peers.size() > 20)
+			{
+				_peersMutex.unlock();
+				return;
+			}
 			_peers[queue->peer->address] = queue->peer;
+			_peersMutex.unlock();
 			_pairing = false;
 		}
 	}
 	catch(const std::exception& ex)
-	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-	}
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }

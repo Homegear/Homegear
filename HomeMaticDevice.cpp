@@ -155,6 +155,31 @@ void HomeMaticDevice::stopThreads()
     }
 }
 
+void HomeMaticDevice::checkForDeadlock()
+{
+	try
+	{
+		if(!_peersMutex.try_lock_for(std::chrono::seconds(5)))
+		{
+			if(GD::debugLevel >= 1) std::cerr << "Critical: _peersMutex is deadlocked. Unlocking... This might crash the program." << std::endl;
+			_peersMutex.unlock();
+		}
+		else _peersMutex.unlock();
+	}
+    catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
 void HomeMaticDevice::worker()
 {
 	try
@@ -226,37 +251,91 @@ void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycl
 	}
 }
 
+void HomeMaticDevice::saveToDatabase()
+{
+	try
+	{
+		std::ostringstream command;
+		command << "SELECT 1 FROM devices WHERE address=" << std::dec << _address;
+		DataTable result = GD::db.executeCommand(command.str());
+		if(result.empty())
+		{
+			std::ostringstream command2;
+			command2 << "INSERT INTO devices VALUES(" << _address << "," << (uint32_t)_deviceType << ",'" << serialize() << "'," << (int32_t)_messageCounter.at(1) << "," << _lastDutyCycleEvent << ")";
+			GD::db.executeCommand(command2.str());
+		}
+		else
+		{
+			std::ostringstream command2;
+			command2 << "UPDATE devices SET serializedObject='" << serialize() << "',dutyCycleMessageCounter=" << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent << " WHERE address=" << std::dec << _address;
+			GD::db.executeCommand(command2.str());
+		}
+	}
+    catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
 void HomeMaticDevice::loadPeersFromDatabase()
 {
-	std::ostringstream command;
-	command << "SELECT * FROM peers WHERE parent=" << std::dec << std::to_string(_address);
-	DataTable rows = GD::db.executeCommand(command.str());
-	for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+	try
 	{
-		if(row->second.at(2)->textValue.empty()) continue;
-		std::shared_ptr<Peer> peer(new Peer(row->second.at(2)->textValue, this, isCentral()));
-		if(!peer->rpcDevice) continue;
-		_peers[peer->address] = peer;
-		if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-		if(!peer->team.serialNumber.empty())
+		_peersMutex.lock();
+		std::ostringstream command;
+		command << "SELECT * FROM peers WHERE parent=" << std::dec << std::to_string(_address);
+		DataTable rows = GD::db.executeCommand(command.str());
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
-			if(_peersBySerial.find(peer->team.serialNumber) == _peersBySerial.end())
+			if(row->second.at(2)->textValue.empty()) continue;
+			std::shared_ptr<Peer> peer(new Peer(row->second.at(2)->textValue, this, isCentral()));
+			if(!peer->rpcDevice) continue;
+			_peers[peer->address] = peer;
+			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+			if(!peer->team.serialNumber.empty())
 			{
-				std::shared_ptr<Peer> team = createTeam(peer->team.address, peer->deviceType, peer->team.serialNumber);
-				team->rpcDevice = peer->rpcDevice->team;
-				team->initializeCentralConfig();
-				_peersBySerial[team->getSerialNumber()] = team;
-			}
-			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
-			{
-				if(i->second->hasTeam)
+				if(_peersBySerial.find(peer->team.serialNumber) == _peersBySerial.end())
 				{
-					_peersBySerial[peer->team.serialNumber]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), peer->team.channel));
-					break;
+					std::shared_ptr<Peer> team = createTeam(peer->team.address, peer->deviceType, peer->team.serialNumber);
+					team->rpcDevice = peer->rpcDevice->team;
+					team->initializeCentralConfig();
+					_peersBySerial[team->getSerialNumber()] = team;
+				}
+				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+				{
+					if(i->second->hasTeam)
+					{
+						_peersBySerial[peer->team.serialNumber]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), peer->team.channel));
+						break;
+					}
 				}
 			}
 		}
+		_peersMutex.unlock();
 	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 void HomeMaticDevice::deletePeersFromDatabase()
@@ -270,21 +349,26 @@ void HomeMaticDevice::savePeersToDatabase()
 {
 	try
 	{
+		_peersMutex.lock();
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			i->second->saveToDatabase(_address);
 		}
+		_peersMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
+		_peersMutex.unlock();
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
+    	_peersMutex.unlock();
     	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
+    	_peersMutex.unlock();
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
 }
@@ -453,8 +537,8 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 		t.detach();
 		return;
 	}
-	if(_peers.find(peerAddress) == _peers.end()) return;
-	std::shared_ptr<Peer> peer = _peers[peerAddress];
+	std::shared_ptr<Peer> peer = getPeer(peerAddress);
+	if(!peer) return;
 	for(uint32_t i = 0; i < 3; i++)
 	{
 		_sentPackets.set(packet->destinationAddress(), packet);
@@ -498,11 +582,31 @@ void HomeMaticDevice::handleReset(int32_t messageCounter, std::shared_ptr<BidCoS
 
 void HomeMaticDevice::reset()
 {
-    _messageCounter.clear();
-    _centralAddress = 0;
-    _pairing = false;
-    _justPairedToOrThroughCentral = false;
-    _peers.clear();
+	try
+	{
+		_messageCounter.clear();
+		_centralAddress = 0;
+		_pairing = false;
+		_justPairedToOrThroughCentral = false;
+		_peersMutex.lock();
+		_peers.clear();
+		_peersMutex.unlock();
+    }
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 void HomeMaticDevice::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
@@ -521,21 +625,26 @@ void HomeMaticDevice::handlePairingRequest(int32_t messageCounter, std::shared_p
 				return;
 			}
 			if(_bidCoSQueueManager.get(packet->senderAddress()) == nullptr) return;
+			_peersMutex.lock();
 			_peers[packet->senderAddress()] = _bidCoSQueueManager.get(packet->senderAddress())->peer;
+			_peersMutex.unlock();
 			_pairing = false;
 			sendOK(messageCounter, packet->senderAddress());
 		}
 	}
 	catch(const std::exception& ex)
     {
+		_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
+    	_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
+    	_peersMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
 }
@@ -561,7 +670,7 @@ std::shared_ptr<Peer> HomeMaticDevice::createTeam(int32_t address, HMDeviceTypes
 
 void HomeMaticDevice::handleConfigRequestPeers(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
-    if(_peers.find(packet->senderAddress()) == _peers.end() || packet->destinationAddress() != _address) return;
+    if(!peerExists(packet->senderAddress()) || packet->destinationAddress() != _address) return;
     sendPeerList(messageCounter, packet->senderAddress(), packet->payload()->at(0));
 }
 
@@ -570,7 +679,7 @@ void HomeMaticDevice::handleConfigPeerDelete(int32_t messageCounter, std::shared
 	try
 	{
 		int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
-		if(_peers.find(address) == _peers.end()) return;
+		if(!peerExists(address)) return;
 		std::cout << "0x" << std::setw(6) << std::hex << _address;
 		std::cout << ": Unpaired from peer 0x" << address << std::dec << std::endl;
 		sendOK(messageCounter, packet->senderAddress());
@@ -702,7 +811,7 @@ void HomeMaticDevice::handleTimeRequest(int32_t messageCounter, std::shared_ptr<
 void HomeMaticDevice::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
     int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
-    if(_peers.find(address) == _peers.end())
+    if(!peerExists(address))
     {
         std::shared_ptr<Peer> peer = createPeer(address, -1, HMDeviceTypes::HMUNKNOWN, "", packet->payload()->at(5), 0);
         _peersMutex.lock();
@@ -767,13 +876,15 @@ void HomeMaticDevice::handleConfigWriteIndex(int32_t messageCounter, std::shared
 	if(packet->payload()->at(2) == 0x02 && packet->payload()->at(3) == 0x00)
     {
         std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, packet->senderAddress());
-        queue->peer = _peers[packet->senderAddress()];
+        queue->peer = getPeer(packet->senderAddress());
         queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x08), std::pair<uint32_t, int32_t>(0x02, 0x02), std::pair<uint32_t, int32_t>(0x03, 0x00) }));
         queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x06) }));
     }
 	uint32_t channel = packet->payload()->at(0);
 	for(int i = 2; i < (signed)packet->payload()->size(); i+=2)
 	{
+		int32_t index = (int32_t)packet->payload()->at(i);
+		if(_config.find(channel) == _config.end() || _config.at(channel).find(_currentList) == _config.at(channel).end() || _config.at(channel).at(_currentList).find(index) == _config.at(channel).at(_currentList).end()) continue;
 		_config[channel][_currentList][(int32_t)packet->payload()->at(i)] = packet->payload()->at(i + 1);
 		std::cout << "0x" << std::setw(6) << std::hex << _address;
 		std::cout << ": Config at index " << std::setw(2) << (int32_t)(packet->payload()->at(i)) << " set to " << std::setw(2) << (int32_t)(packet->payload()->at(i + 1)) << std::dec << std::endl;
@@ -783,23 +894,43 @@ void HomeMaticDevice::handleConfigWriteIndex(int32_t messageCounter, std::shared
 
 void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAddress, int32_t channel)
 {
-    std::vector<uint8_t> payload;
-    payload.push_back(0x01); //I think it's always channel 1
-    for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+	try
+	{
+		std::vector<uint8_t> payload;
+		payload.push_back(0x01); //I think it's always channel 1
+		_peersMutex.lock();
+		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+		{
+			if(i->second->deviceType == HMDeviceTypes::HMRCV50) continue;
+			if(i->second->localChannel != channel) continue;
+			payload.push_back(i->first >> 16);
+			payload.push_back((i->first >> 8) & 0xFF);
+			payload.push_back(i->first & 0xFF);
+			payload.push_back(i->second->remoteChannel); //Channel
+		}
+		_peersMutex.unlock();
+		payload.push_back(0x00);
+		payload.push_back(0x00);
+		payload.push_back(0x00);
+		payload.push_back(0x00);
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
+		sendPacket(packet);
+	}
+	catch(const std::exception& ex)
     {
-        if(i->second->deviceType == HMDeviceTypes::HMRCV50) continue;
-        if(i->second->localChannel != channel) continue;
-        payload.push_back(i->first >> 16);
-        payload.push_back((i->first >> 8) & 0xFF);
-        payload.push_back(i->first & 0xFF);
-        payload.push_back(i->second->remoteChannel); //Channel
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
-    payload.push_back(0x00);
-    payload.push_back(0x00);
-    payload.push_back(0x00);
-    payload.push_back(0x00);
-    std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
-    sendPacket(packet);
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destinationAddress)
@@ -928,8 +1059,7 @@ void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinati
 	if(_config[channel][_currentList].size() >= 8)
 	{
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, destinationAddress);
-		//Actually destinationAddress should always be in _peers at this point
-		if(_peers.find(destinationAddress) != _peers.end()) queue->peer = _peers[destinationAddress];
+		queue->peer = getPeer(destinationAddress);
 
 		//Add request config packet in case the request is being repeated
 		queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x04) }));
@@ -1052,9 +1182,96 @@ void HomeMaticDevice::setLowBattery(bool lowBattery)
 
 void HomeMaticDevice::sendDutyCycleResponse(int32_t destinationAddress) {}
 
-std::unordered_map<int32_t, std::shared_ptr<Peer>>* HomeMaticDevice::getPeers()
+bool HomeMaticDevice::peerExists(int32_t address)
 {
-    return &_peers;
+	try
+	{
+		_peersMutex.lock();
+		if(_peers.find(address) != _peers.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
+		_peersMutex.unlock();
+		return false;
+	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
+std::shared_ptr<Peer> HomeMaticDevice::getPeer(int32_t address)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peers.find(address) != _peers.end())
+		{
+			std::shared_ptr<Peer> peer(_peers.at(address));
+			_peersMutex.unlock();
+			return peer;
+		}
+		_peersMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return std::shared_ptr<Peer>();
+}
+
+std::shared_ptr<Peer> HomeMaticDevice::getPeerBySerial(std::string serialNumber)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
+		{
+			std::shared_ptr<Peer> peer(_peersBySerial.at(serialNumber));
+			_peersMutex.unlock();
+			return peer;
+		}
+		_peersMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return std::shared_ptr<Peer>();
 }
 
 int32_t HomeMaticDevice::getCentralAddress()

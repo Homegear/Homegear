@@ -142,8 +142,6 @@ bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, std::share
 		if(_device == nullptr || !packet) return false;
 
 		int32_t access = _device->isInPairingMode() ? _accessPairing : _access;
-		Peer* currentPeer = _device->isInPairingMode() ? ((queue && queue->peer && queue->peer->address == packet->senderAddress()) ? queue->peer.get() : nullptr) : nullptr;
-		if(!currentPeer) currentPeer = ((_device->getPeers()->find(packet->senderAddress()) == _device->getPeers()->end()) ? nullptr : _device->getPeers()->at(packet->senderAddress()).get());
 		if(access == NOACCESS) return false;
 		if(queue && !queue->isEmpty())
 		{
@@ -163,10 +161,12 @@ bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, std::share
 		{
 			return true;
 		}
-		if((access & ACCESSPAIREDTOSENDER) && currentPeer == nullptr)
+		if(access & ACCESSPAIREDTOSENDER)
 		{
-			//std::cout << "Access denied, because device is not paired with sender: " << packet->hexString() << std::endl;
-			return false;
+			std::shared_ptr<Peer> currentPeer;
+			if(_device->isInPairingMode() && queue && queue->peer && queue->peer->address == packet->senderAddress()) currentPeer = queue->peer;
+			if(!currentPeer) currentPeer = _device->getPeer(packet->senderAddress());
+			if(!currentPeer) return false;
 		}
 		if((access & ACCESSCENTRAL) && _device->getCentralAddress() != packet->senderAddress())
 		{
