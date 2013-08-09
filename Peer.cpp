@@ -365,6 +365,7 @@ void Peer::worker()
 				variablesToReset.clear();
 			}
 			serviceMessages->checkUnreach();
+			if(serviceMessages->getConfigPending() && pendingBidCoSQueues && pendingBidCoSQueues->empty()) serviceMessages->setConfigPending(false);
 		}
 		catch(const std::exception& ex)
 		{
