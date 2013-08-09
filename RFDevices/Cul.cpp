@@ -1,74 +1,27 @@
 #include "Cul.h"
-#include "GD.h"
+#include "../GD.h"
+
+namespace RF
+{
 
 Cul::Cul()
 {
 
 }
 
-Cul::Cul(std::string culDevice)
+void Cul::init(std::string rfDevice)
 {
-    _culDevice = culDevice;
-}
-
-void Cul::init(std::string culDevice)
-{
-	_culDevice = culDevice;
+	_rfDevice = rfDevice;
 }
 
 Cul::~Cul()
 {
+	if(_listenThread.joinable())
+	{
+		_stopCallbackThread = true;
+		_listenThread.join();
+	}
     closeDevice();
-}
-
-void Cul::addHomeMaticDevice(HomeMaticDevice* device)
-{
-	try
-	{
-		_homeMaticDevicesMutex.lock();
-		_homeMaticDevices.push_back(device);
-		_homeMaticDevicesMutex.unlock();
-    }
-    catch(const std::exception& ex)
-    {
-    	_homeMaticDevicesMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(const Exception& ex)
-    {
-    	_homeMaticDevicesMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(...)
-    {
-    	_homeMaticDevicesMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
-    }
-}
-
-void Cul::removeHomeMaticDevice(HomeMaticDevice* device)
-{
-	try
-	{
-		_homeMaticDevicesMutex.lock();
-		_homeMaticDevices.remove(device);
-		_homeMaticDevicesMutex.unlock();
-    }
-    catch(const std::exception& ex)
-    {
-    	_homeMaticDevicesMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(const Exception& ex)
-    {
-    	_homeMaticDevicesMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(...)
-    {
-    	_homeMaticDevicesMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
-    }
 }
 
 void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)
@@ -86,7 +39,7 @@ void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 			deviceWasClosed = true;
 			openDevice();
 		}
-		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _culDevice));
+		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _rfDevice));
 
 		writeToDevice("As" + packet->hexString() + "\r\n", true);
 
@@ -112,7 +65,7 @@ void Cul::openDevice()
 	{
 		if(_fileDescriptor != -1) closeDevice();
 
-		_lockfile = "/var/lock" + _culDevice.substr(_culDevice.find_last_of('/')) + ".lock";
+		_lockfile = "/var/lock" + _rfDevice.substr(_rfDevice.find_last_of('/')) + ".lock";
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 		if(lockfileDescriptor == -1)
 		{
@@ -121,7 +74,7 @@ void Cul::openDevice()
 			int processID = 0;
 			std::ifstream lockfileStream(_lockfile.c_str());
 			lockfileStream >> processID;
-			if(kill(processID, 0) == 0) throw(Exception("CUL device is in use: " + _culDevice));
+			if(kill(processID, 0) == 0) throw(Exception("CUL device is in use: " + _rfDevice));
 			unlink(_lockfile.c_str());
 			lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 			if(lockfileDescriptor == -1) throw(Exception("Couldn't create lockfile " + _lockfile));
@@ -131,9 +84,9 @@ void Cul::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = open(_culDevice.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+		_fileDescriptor = open(_rfDevice.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
 
-		if(_fileDescriptor == -1) throw(Exception("Couldn't open CUL device: " + _culDevice));
+		if(_fileDescriptor == -1) throw(Exception("Couldn't open CUL device: " + _rfDevice));
 
 		setupDevice();
 	}
@@ -188,15 +141,15 @@ void Cul::setupDevice()
 		term.c_cc[VTIME] = 0;
 		cfsetispeed(&term, B9600);
 		cfsetospeed(&term, B9600);
-		if(tcflush(_fileDescriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CUL device " + _culDevice));
-		if(tcsetattr(_fileDescriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CUL device settings: " + _culDevice));
+		if(tcflush(_fileDescriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CUL device " + _rfDevice));
+		if(tcsetattr(_fileDescriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CUL device settings: " + _rfDevice));
 
 		int flags = fcntl(_fileDescriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))
 		{
 			if(fcntl(_fileDescriptor, F_SETFL, flags | O_NONBLOCK) == -1)
 			{
-				throw(Exception("Couldn't set CUL device to non blocking mode: " + _culDevice));
+				throw(Exception("Couldn't set CUL device to non blocking mode: " + _rfDevice));
 			}
 		}
 	}
@@ -218,7 +171,7 @@ std::string Cul::readFromDevice()
 {
 	try
 	{
-		if(_fileDescriptor == -1) throw(Exception("Couldn't read from CUL device, because the file descriptor is not valid: " + _culDevice));
+		if(_fileDescriptor == -1) throw(Exception("Couldn't read from CUL device, because the file descriptor is not valid: " + _rfDevice));
 		std::string packet;
 		int32_t i;
 		char localBuffer[1];
@@ -235,15 +188,15 @@ std::string Cul::readFromDevice()
 			switch(i)
 			{
 				case 0:
-					if(GD::debugLevel >= 3) std::cout << "Warning: Reading from CUL device timed out: " + _culDevice << std::endl;
+					if(GD::debugLevel >= 3) std::cout << "Warning: Reading from CUL device timed out: " + _rfDevice << std::endl;
 					continue;
 				case -1:
-					throw(Exception("Error reading from CUL device: " + _culDevice));
+					throw(Exception("Error reading from CUL device: " + _rfDevice));
 					break;
 				case 1:
 					break;
 				default:
-					throw(Exception("Error reading from CUL device: " + _culDevice));
+					throw(Exception("Error reading from CUL device: " + _rfDevice));
 
 			}
 
@@ -251,7 +204,7 @@ std::string Cul::readFromDevice()
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				throw(Exception("Error reading from CUL device: " + _culDevice));
+				throw(Exception("Error reading from CUL device: " + _rfDevice));
 			}
 			packet.push_back(localBuffer[0]);
 		}
@@ -277,7 +230,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
     try
     {
     	if(_stopped) return;
-        if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _culDevice));
+        if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _rfDevice));
         int32_t bytesWritten = 0;
         int32_t i;
         //struct timeval timeout;
@@ -312,7 +265,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
             if(i == -1)
             {
                 if(errno == EAGAIN) continue;
-                throw(Exception("Error writing to CUL device (3, " + std::to_string(errno) + "): " + _culDevice));
+                throw(Exception("Error writing to CUL device (3, " + std::to_string(errno) + "): " + _rfDevice));
             }
             bytesWritten += i;
         }
@@ -342,7 +295,7 @@ void Cul::startListening()
 	{
 		stopListening();
 		openDevice();
-		if(_fileDescriptor == -1) throw(Exception("Couldn't listen to CUL device, because the file descriptor is not valid: " + _culDevice));
+		if(_fileDescriptor == -1) throw(Exception("Couldn't listen to CUL device, because the file descriptor is not valid: " + _rfDevice));
 		_stopped = false;
 		writeToDevice("Ax\r\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -351,7 +304,6 @@ void Cul::startListening()
 		writeToDevice("Ar\r\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		_listenThread = std::thread(&Cul::listen, this);
-		_listenThread.detach();
 	}
     catch(const std::exception& ex)
     {
@@ -400,36 +352,6 @@ void Cul::stopListening()
     }
 }
 
-void Cul::callCallback(std::shared_ptr<BidCoSPacket> packet)
-{
-	try
-	{
-		_homeMaticDevicesMutex.lock();
-		for(std::list<HomeMaticDevice*>::const_iterator i = _homeMaticDevices.begin(); i != _homeMaticDevices.end(); ++i)
-		{
-			//Don't filter destination addresses here! Some devices need to receive packets not directed to them.
-			std::thread received(&HomeMaticDevice::packetReceived, (*i), packet);
-			received.detach();
-		}
-		_homeMaticDevicesMutex.unlock();
-	}
-    catch(const std::exception& ex)
-    {
-    	_homeMaticDevicesMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(const Exception& ex)
-    {
-    	_homeMaticDevicesMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
-    }
-    catch(...)
-    {
-    	_homeMaticDevicesMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
-    }
-}
-
 void Cul::listen()
 {
     try
@@ -463,4 +385,6 @@ void Cul::listen()
     {
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
+}
+
 }

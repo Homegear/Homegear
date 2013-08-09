@@ -1,6 +1,6 @@
 #include "GD.h"
 
-Cul GD::cul;
+std::shared_ptr<RF::RFDevice> GD::rfDevice;
 std::string GD::configPath = "";
 std::string GD::pidfilePath = "";
 std::string GD::workingDirectory = "";

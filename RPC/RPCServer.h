@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <utility>
 
+#include <fcntl.h>
+#include <unistd.h>
 #include <cstring>
 #include <arpa/inet.h>
 #include <netdb.h>

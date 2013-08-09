@@ -26,7 +26,7 @@ newplatform {
     gcc = {
         cc = "arm-linux-gnueabihf-gcc",
         cxx = "arm-linux-gnueabihf-g++",
-        cppflags = "-MMD -D_GLIBCXX_USE_NANOSLEEP"
+        cppflags = "-MMD -D_GLIBCXX_USE_NANOSLEEP -DTI_CC1100"
     }
 }
 
@@ -51,6 +51,7 @@ solution "Homegear"
       files { "*.h", "*.cpp" }
       files { "./Devices/*.h", "./Devices/*.cpp" }
       files { "./RPC/*.h", "./RPC/*.cpp" }
+      files { "./RFDevices/*.h", "./RFDevices/*.cpp" }
  
       configuration "Debug"
          defines { "DEBUG" }

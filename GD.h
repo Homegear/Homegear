@@ -1,7 +1,6 @@
 #ifndef GD_H_
 #define GD_H_
 
-class Cul;
 class Database;
 class HomeMaticDevices;
 
@@ -9,7 +8,7 @@ class HomeMaticDevices;
 #include <string>
 
 #include "Database.h"
-#include "Cul.h"
+#include "RFDevices/RFDevice.h"
 #include "HomeMaticDevices.h"
 #include "RPC/Server.h"
 #include "RPC/Client.h"
@@ -28,7 +27,7 @@ public:
 	static RPC::Devices rpcDevices;
 	static Settings settings;
 	static Database db;
-	static Cul cul;
+	static std::shared_ptr<RF::RFDevice> rfDevice;
 	static int32_t debugLevel;
 	static int32_t rpcLogLevel;
 	static bool bigEndian;

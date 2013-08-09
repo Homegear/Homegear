@@ -9,10 +9,10 @@
 #include <cmath>
 #include <vector>
 #include <memory>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/file.h>
 
-#include "Cul.h"
 #include "Devices/HM-SD.h"
 #include "Devices/HM-CC-VD.h"
 #include "Devices/HM-CC-TC.h"
@@ -39,7 +39,7 @@ void killHandler(int32_t signalNumber)
 		std::cout << "Stopping Homegear..." << std::endl;
 		GD::rpcServer.stop();
 		GD::rpcClient.reset();
-		GD::cul.stopListening();
+		GD::rfDevice->stopListening();
 		GD::devices.save();
 		exit(0);
 	}
@@ -261,10 +261,12 @@ int main(int argc, char* argv[])
 		}
     	GD::db.init(GD::settings.databasePath());
 
-        GD::cul.init(GD::settings.culDevice());
+    	GD::rfDevice = RF::RFDevice::create(GD::settings.rfDeviceType());
+        GD::rfDevice->init(GD::settings.rfDevice());
+        if(!GD::rfDevice) return -1;
         if(GD::debugLevel >= 4) std::cout << "Start listening for BidCoS packets..." << std::endl;
-        GD::cul.startListening();
-        if(!GD::cul.isOpen()) return -1;
+        GD::rfDevice->startListening();
+        if(!GD::rfDevice->isOpen()) return -1;
         if(GD::debugLevel >= 4) std::cout << "Loading XML RPC devices..." << std::endl;
         GD::rpcDevices.load();
         if(GD::debugLevel >= 4) std::cout << "Loading devices..." << std::endl;
@@ -403,7 +405,7 @@ int main(int argc, char* argv[])
         //Stop rpc server and client before saving
         GD::rpcServer.stop();
         GD::rpcClient.reset();
-        GD::cul.stopListening();
+        GD::rfDevice->stopListening();
         GD::devices.save();
         std::cout << "Shutdown complete." << std::endl;
         if(startAsDaemon)

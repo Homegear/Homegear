@@ -2,7 +2,6 @@
 #define HM_SD_H
 
 #include "../HomeMaticDevice.h"
-#include "../Cul.h"
 
 enum class FilterType {SenderAddress, DestinationAddress, DeviceType, MessageType};
 

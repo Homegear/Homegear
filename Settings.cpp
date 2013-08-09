@@ -10,7 +10,8 @@ Settings::Settings()
 void Settings::reset()
 {
 	_rpcInterface = "0.0.0.0";
-	_culDevice = "/dev/ttyACM0";
+	_rfDeviceType = "cul";
+	_rfDevice = "/dev/ttyACM0";
 	_databasePath = GD::executablePath + "db.sql";
 	_logfilePath = "/var/log/Homegear/homegear.log";
 }
@@ -81,11 +82,18 @@ void Settings::load(std::string filename)
 					if(_databasePath.empty()) _databasePath = GD::executablePath + "db.sql";
 					if(GD::debugLevel >= 5) std::cout << "Debug: databasePath set to " << _databasePath << std::endl;
 				}
-				else if(name == "culdevice")
+				else if(name == "rfdevicetype")
 				{
-					_culDevice = value;
-					if(_culDevice.empty()) _culDevice = "/dev/ttyACM0";
-					if(GD::debugLevel >= 5) std::cout << "Debug: culDevice set to " << _culDevice << std::endl;
+					HelperFunctions::toLower(value);
+					_rfDeviceType = value;
+					if(_rfDeviceType.empty()) _rfDeviceType = "cul";
+					if(GD::debugLevel >= 5) std::cout << "Debug: rfDeviceType set to " << _rfDeviceType << std::endl;
+				}
+				else if(name == "rfdevice")
+				{
+					_rfDevice = value;
+					if(_rfDevice.empty()) _rfDevice = "/dev/ttyACM0";
+					if(GD::debugLevel >= 5) std::cout << "Debug: rfDevice set to " << _rfDevice << std::endl;
 				}
 				else if(name == "logfilepath")
 				{

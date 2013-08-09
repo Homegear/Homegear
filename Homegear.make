@@ -32,11 +32,11 @@ ifeq ($(config),debug)
   TARGETDIR  = bin/Debug
   TARGET     = $(TARGETDIR)/Homegear
   DEFINES   += -DDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -l pthread -l sqlite3
+  LDFLAGS   += -LARM\ libraries -l pthread -l sqlite3
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -54,11 +54,11 @@ ifeq ($(config),release)
   TARGETDIR  = bin/Release
   TARGET     = $(TARGETDIR)/Homegear
   DEFINES   += -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -l pthread -l sqlite3
+  LDFLAGS   += -LARM\ libraries -s -l pthread -l sqlite3
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -76,11 +76,83 @@ ifeq ($(config),profiling)
   TARGETDIR  = bin/Profiling
   TARGET     = $(TARGETDIR)/Homegear
   DEFINES   += -DNDEBUG
-  INCLUDES  += 
+  INCLUDES  += -IARM\ headers
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -l pthread -l sqlite3 -pg
+  LDFLAGS   += -LARM\ libraries -l pthread -l sqlite3 -pg
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),debug_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Debug
+  TARGETDIR  = bin/Debug
+  TARGET     = $(TARGETDIR)/Homegear
+  DEFINES   += -DDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -DTI_CC1100 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -l pthread -l sqlite3
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),release_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Release
+  TARGETDIR  = bin/Release
+  TARGET     = $(TARGETDIR)/Homegear
+  DEFINES   += -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -DTI_CC1100 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -s -l pthread -l sqlite3
+  RESFLAGS  += $(DEFINES) $(INCLUDES) 
+  LIBS      += 
+  LDDEPS    += 
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  define PREBUILDCMDS
+  endef
+  define PRELINKCMDS
+  endef
+  define POSTBUILDCMDS
+  endef
+endif
+
+ifeq ($(config),profiling_rpi)
+  CC         = arm-linux-gnueabihf-gcc
+  CXX        = arm-linux-gnueabihf-g++
+  OBJDIR     = obj/rpi/Profiling
+  TARGETDIR  = bin/Profiling
+  TARGET     = $(TARGETDIR)/Homegear
+  DEFINES   += -DNDEBUG
+  INCLUDES  += -IARM\ headers
+  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -DTI_CC1100 -MP $(DEFINES) $(INCLUDES)
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
+  CXXFLAGS  += $(CFLAGS) 
+  LDFLAGS   += -LARM\ libraries -l pthread -l sqlite3 -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -104,7 +176,6 @@ OBJECTS := \
 	$(OBJDIR)/HelperFunctions.o \
 	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/BidCoSQueue.o \
-	$(OBJDIR)/Cul.o \
 	$(OBJDIR)/BidCoSPacketManager.o \
 	$(OBJDIR)/BidCoSMessages.o \
 	$(OBJDIR)/Database.o \
@@ -133,6 +204,9 @@ OBJECTS := \
 	$(OBJDIR)/Devices.o \
 	$(OBJDIR)/LogicalParameter.o \
 	$(OBJDIR)/PhysicalParameter.o \
+	$(OBJDIR)/RFDevice.o \
+	$(OBJDIR)/TICC1100.o \
+	$(OBJDIR)/Cul.o \
 
 RESOURCES := \
 
@@ -227,9 +301,6 @@ $(OBJDIR)/ServiceMessages.o: ServiceMessages.cpp
 $(OBJDIR)/BidCoSQueue.o: BidCoSQueue.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Cul.o: Cul.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BidCoSPacketManager.o: BidCoSPacketManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -312,6 +383,15 @@ $(OBJDIR)/LogicalParameter.o: RPC/LogicalParameter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhysicalParameter.o: RPC/PhysicalParameter.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RFDevice.o: RFDevices/RFDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/TICC1100.o: RFDevices/TICC1100.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Cul.o: RFDevices/Cul.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

@@ -7,6 +7,7 @@
 #include <vector>
 #include <list>
 
+#include <unistd.h>
 #include <cstring>
 #include <arpa/inet.h>
 #include <netdb.h>

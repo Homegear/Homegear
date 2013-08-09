@@ -1251,8 +1251,6 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		{
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
 			queue->noSending = true;
-			serviceMessages->setConfigPending(true);
-			queue->serviceMessages = serviceMessages;
 			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 			*packet = *sentPacket;
 			packet->setMessageCounter(messageCounter);

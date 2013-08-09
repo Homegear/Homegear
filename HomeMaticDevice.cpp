@@ -17,7 +17,7 @@ void HomeMaticDevice::init()
 		_messages = std::shared_ptr<BidCoSMessages>(new BidCoSMessages());
 		_deviceType = HMDeviceTypes::HMUNKNOWN;
 
-		GD::cul.addHomeMaticDevice(this);
+		GD::rfDevice->addHomeMaticDevice(this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
 		_messageCounter[1] = 0; //Duty cycle message counter
@@ -98,7 +98,7 @@ HomeMaticDevice::~HomeMaticDevice()
 	try
 	{
 		if(GD::debugLevel >= 5) std::cout << "Removing device 0x" << std::hex << _address << std::dec << " from CUL event queue..." << std::endl;
-		GD::cul.removeHomeMaticDevice(this);
+		GD::rfDevice->removeHomeMaticDevice(this);
 		stopThreads();
 	}
     catch(const std::exception& ex)
@@ -526,7 +526,7 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 		packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 	else if(GD::debugLevel >= 7) std::cout << "Sending packet " << packet->hexString() << " immediately, because it seems it is no response (no packet information found)." << std::endl;
-	GD::cul.sendPacket(packet);
+	GD::rfDevice->sendPacket(packet);
 }
 
 void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int32_t peerAddress, bool useCentralMessageCounter, bool isThread)
@@ -542,7 +542,7 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 	for(uint32_t i = 0; i < 3; i++)
 	{
 		_sentPackets.set(packet->destinationAddress(), packet);
-		GD::cul.sendPacket(packet);
+		GD::rfDevice->sendPacket(packet);
 		if(useCentralMessageCounter)
 		{
 			packet->setMessageCounter(_messageCounter[0]);
@@ -559,7 +559,7 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 	for(uint32_t i = 0; i < 3; i++)
 	{
 		_sentPackets.set(packet->destinationAddress(), packet);
-		GD::cul.sendPacket(packet);
+		GD::rfDevice->sendPacket(packet);
 		if(useCentralMessageCounter)
 		{
 			packet->setMessageCounter(_messageCounter[0]);
@@ -945,7 +945,7 @@ void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destination
 		payload.push_back(0x00);
 		std::this_thread::sleep_for(std::chrono::milliseconds(90));
 		std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(messageCounter, 0x80, 0x02, _address, destinationAddress, payload));
-		GD::cul.sendPacket(ok);
+		GD::rfDevice->sendPacket(ok);
 	}
 	catch(const std::exception& ex)
     {

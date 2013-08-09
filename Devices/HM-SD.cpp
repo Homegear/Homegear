@@ -110,7 +110,7 @@ bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
             packet->import(lengthHex + packetHex.substr(2, 2) + i->response, false);
             std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
             std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response: " << '\n';
-            GD::cul.sendPacket(packet);
+            GD::rfDevice->sendPacket(packet);
         }
     }
     return false;

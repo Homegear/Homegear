@@ -1,7 +1,6 @@
 #ifndef HOMEMATICDEVICE_H
 #define HOMEMATICDEVICE_H
 
-class Cul;
 class BidCoSPacket;
 class BidCoSMessages;
 enum class BidCoSQueueType;
@@ -11,7 +10,6 @@ enum class BidCoSQueueType;
 #include "Peer.h"
 #include "BidCoSMessage.h"
 #include "BidCoSMessages.h"
-#include "Cul.h"
 #include "BidCoSQueueManager.h"
 #include "BidCoSPacketManager.h"
 

@@ -10,6 +10,7 @@ class BidCoSQueue;
 #include <map>
 #include <memory>
 
+#include "BidCoSPacket.h"
 #include "HomeMaticDevice.h"
 
 enum MessageAccess { NOACCESS = 0x00, ACCESSPAIREDTOSENDER = 0x01, ACCESSDESTISME = 0x02, ACCESSCENTRAL = 0x04, ACCESSUNPAIRING = 0x08, FULLACCESS = 0x80 };
