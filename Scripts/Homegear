@@ -46,6 +46,17 @@ RUNASGROUP=homegear
 
 case $1 in
         start)
+        		if test -e /dev/spidev0.0; then
+        			chown root:$RUNASGROUP /dev/spidev0.0
+        			chmod 660 /dev/spidev0.0
+        		fi
+
+				if test -d /sys/class/gpio; then
+					if test ! -d /sys/class/gpio/gpio22; then echo 22 > /sys/class/gpio/export; fi
+					echo in > /sys/class/gpio/gpio22/direction
+					echo both > /sys/class/gpio/gpio22/edge
+					if test ! -d /sys/class/gpio/gpio22; then echo Could not export gpio22; fi
+				fi
                 log_daemon_msg "Starting Homegear" "Homegear"
                 lock_homegear
                 start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $HOMEGEAR_OPTS

@@ -1,10 +1,6 @@
 #ifndef RFDEVICE_H_
 #define RFDEVICE_H_
 
-#ifdef TI_CC1100
-class TICC1100;
-#endif
-
 #include "../Exception.h"
 #include "../HomeMaticDevice.h"
 
