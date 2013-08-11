@@ -151,7 +151,7 @@ void Peer::stopThreads()
 		if(!_workerThread) return;
 		_stopWorkerThread = true;
 		if(_workerThread->joinable()) _workerThread->join();
-		_workerThread = std::shared_ptr<std::thread>();
+		_workerThread.reset();
 	}
 	catch(const std::exception& ex)
     {

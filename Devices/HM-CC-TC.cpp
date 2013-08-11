@@ -30,15 +30,15 @@ void HM_CC_TC::init()
 
 int64_t HM_CC_TC::calculateLastDutyCycleEvent()
 {
-	int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	if(now - _lastDutyCycleEvent > 1800000) return -1; //Duty cycle is out of sync anyway so don't bother to calculate
+	int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	if(now - _lastDutyCycleEvent > 1800000000) return -1; //Duty cycle is out of sync anyway so don't bother to calculate
 	int64_t nextDutyCycleEvent = _lastDutyCycleEvent;
 	int64_t lastDutyCycleEvent = _lastDutyCycleEvent;
 	_messageCounter[1]--; //The saved message counter is the current one, but the calculation has to use the last one
-	while(nextDutyCycleEvent < now + 25000)
+	while(nextDutyCycleEvent < now + 25000000)
 	{
 		lastDutyCycleEvent = nextDutyCycleEvent;
-		nextDutyCycleEvent = lastDutyCycleEvent + (calculateCycleLength(_messageCounter[1]) * 250);
+		nextDutyCycleEvent = lastDutyCycleEvent + (calculateCycleLength(_messageCounter[1]) * 250000);
 		_messageCounter[1]++;
 	}
 	if(GD::debugLevel >= 5) std::cout << "Setting last duty cycle event to: " << lastDutyCycleEvent << std::endl;
@@ -138,8 +138,6 @@ void HM_CC_TC::stopThreads()
 {
 	HomeMaticDevice::stopThreads();
 	_stopDutyCycleThread = true;
-	if(GD::debugLevel >= 5) std::cout << "Stopping duty cycle..." << std::endl;
-	if(_dutyCycleThread != nullptr && _dutyCycleThread->joinable())	_dutyCycleThread->join();
 }
 
 std::string HM_CC_TC::serialize()
@@ -201,19 +199,19 @@ void HM_CC_TC::startDutyCycle(int64_t lastDutyCycleEvent)
 
 void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 {
-	int64_t nextDutyCycleEvent = (lastDutyCycleEvent == -1) ? std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() : lastDutyCycleEvent;
+	int64_t nextDutyCycleEvent = (lastDutyCycleEvent == -1) ? std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() : lastDutyCycleEvent;
 	_lastDutyCycleEvent = nextDutyCycleEvent;
-	int64_t timePassed;
+	int64_t timePoint;
 	int64_t cycleTime;
 	int32_t cycleLength = calculateCycleLength(_messageCounter[1] - 1); //The calculation has to use the last message counter
-	_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250;
+	_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250000;
 	_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
 	if(GD::debugLevel >= 5 && _dutyCycleCounter > 0) std::cout << "Skipping " << (_dutyCycleCounter * 250) << " ms of duty cycle." << std::endl;
 	while(!_stopDutyCycleThread)
 	{
-		cycleTime = cycleLength * 250;
+		cycleTime = cycleLength * 250000;
 		nextDutyCycleEvent += cycleTime;
-		if(GD::debugLevel >= 5) std::cout << "Next duty cycle: " << nextDutyCycleEvent << " (in " << cycleTime << " ms) with message counter 0x" << std::hex << (int32_t)_messageCounter[1] << std::dec << std::endl;
+		if(GD::debugLevel >= 5) std::cout << "Next duty cycle: " << (nextDutyCycleEvent / 1000) << " (in " << (cycleTime / 1000) << " ms) with message counter 0x" << std::hex << (int32_t)_messageCounter[1] << std::dec << std::endl;
 		std::chrono::milliseconds sleepingTime(2000);
 		while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
 		{
@@ -235,31 +233,21 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		}
 		if(_stopDutyCycleThread) break;
 
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::cout << "Correcting time mismatch of " << std::dec << (timePassed + 10000 - cycleTime) << "ms." << std::endl;
-		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 5000));
+		timePoint = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		std::cout << "Correcting time mismatch of " << std::dec << ((nextDutyCycleEvent - 10000000 - timePoint) / 1000) << "ms." << std::endl;
+		std::this_thread::sleep_for(std::chrono::microseconds(nextDutyCycleEvent - timePoint - 5000000));
 		if(_stopDutyCycleThread) break;
 
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 2000));
+		timePoint = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		std::this_thread::sleep_for(std::chrono::microseconds(nextDutyCycleEvent - timePoint - 2000000));
 		if(_stopDutyCycleThread) break;
 
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 1000));
-
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed - 500));
-
-		timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent;
-		std::this_thread::sleep_for(std::chrono::milliseconds(cycleTime - timePassed));
-		if(_stopDutyCycleThread) break;
-
-		std::thread sendDutyCyclePacketThread(&HM_CC_TC::sendDutyCyclePacket, this, _messageCounter[1]);
+		std::thread sendDutyCyclePacketThread(&HM_CC_TC::sendDutyCyclePacket, this, _messageCounter[1], nextDutyCycleEvent);
 
 		sched_param schedParam;
 		int policy;
 		pthread_getschedparam(sendDutyCyclePacketThread.native_handle(), &policy, &schedParam);
-		schedParam.sched_priority = 49;
+		schedParam.sched_priority = 99;
 		if(!pthread_setschedparam(sendDutyCyclePacketThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 		sendDutyCyclePacketThread.detach();
 
@@ -285,11 +273,10 @@ void HM_CC_TC::sendDutyCycleBroadcast()
 	sendPacket(packet);
 }
 
-void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter)
+void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 {
 	try
 	{
-		int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		int32_t address = getNextDutyCycleDeviceAddress();
 		if(GD::debugLevel >= 5)	std::cout << "Next HM-CC-VD is 0x" << std::hex << address << std::dec << std::endl;
 		if(address < 1)
@@ -301,7 +288,35 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter)
 		payload.push_back(getAdjustmentCommand());
 		payload.push_back(_newValveState);
 		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA2, 0x58, _address, address, payload));
-		sendPacket(packet);
+		int64_t nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 1000000) * 1000;
+		int32_t seconds = nanoseconds / 1000000000;
+		nanoseconds -= seconds * 1000000000;
+		struct timespec timeToSleep;
+		timeToSleep.tv_sec = seconds;
+		timeToSleep.tv_nsec = nanoseconds;
+		nanosleep(&timeToSleep, NULL);
+
+		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 500000) * 1000;
+		timeToSleep.tv_sec = 0;
+		timeToSleep.tv_nsec = nanoseconds;
+		nanosleep(&timeToSleep, NULL);
+
+		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 100000) * 1000;
+		timeToSleep.tv_nsec = nanoseconds;
+		nanosleep(&timeToSleep, NULL);
+
+		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 30000) * 1000;
+		timeToSleep.tv_nsec = nanoseconds;
+		nanosleep(&timeToSleep, NULL);
+
+		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count()) * 1000;
+		timeToSleep.tv_nsec = nanoseconds;
+		nanosleep(&timeToSleep, NULL);
+		if(_stopDutyCycleThread) return;
+
+		int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+		GD::rfDevice->sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - timePoint;
 		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << std::endl;

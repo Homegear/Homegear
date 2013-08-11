@@ -4,6 +4,7 @@
 #ifdef TI_CC1100
 
 #include "TICC1100.h"
+#include "../GD.h"
 
 namespace RF
 {
@@ -14,9 +15,9 @@ TICC1100::TICC1100()
 
 	_config =
 	{
-		0x06, //00: IOCFG2 (GDO2_CFG)
+		0x46, //00: IOCFG2 (GDO2_CFG)
 		0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
-		0x05, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
+		0x2E, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
 		0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
 		0xE9, //04: SYNC1
 		0xCA, //05: SYNC0
@@ -34,26 +35,26 @@ TICC1100::TICC1100()
 		0x93, //11: MDMCFG3
 		0x03, //12: MDMCFG2
 		0x22, //13: MDMCFG1
-		0xB9, //14: MDMCFG0
+		0xF8, //14: MDMCFG0
 		0x34, //15: DEVIATN
-		0x1C, //16: MCSM2
-		0x03, //17: MCSM1: IDLE when packet has been received, RX after sending
+		0x07, //16: MCSM2
+		0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
 		0x18, //18: MCSM0
 		0x16, //19: FOCCFG
 		0x6C, //1A: BSCFG
 		0x43, //1B: AGCCTRL2
 		0x40, //1C: AGCCTRL1
 		0x91, //1D: AGCCTRL0
-		0x2F, //1E: WOREVT1
+		0x87, //1E: WOREVT1
 		0x6B, //1F: WOREVT0
 		0xF8, //20: WORCRTL
 		0x56, //21: FREND1
 		0x10, //22: FREND0
-		0xAC, //23: FSCAL3
-		0x0C, //24: FSCAL2
-		0x39, //25: FSCAL1
+		0xA9, //23: FSCAL3
+		0x0A, //24: FSCAL2
+		0x00, //25: FSCAL1
 		0x11, //26: FSCAL0
-		0x51, //27: RCCTRL1
+		0x41, //27: RCCTRL1
 		0x00, //28: RCCTRL0
 	};
 
@@ -270,6 +271,75 @@ void TICC1100::setupDevice()
 
 void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 {
+	try
+	{
+		if(_fileDescriptor == -1) return;
+
+		std::vector<uint8_t> decodedPacket = packet->byteArray();
+		std::vector<uint8_t> encodedPacket(decodedPacket.size());
+		encodedPacket[0] = decodedPacket[0];
+		encodedPacket[1] = (~decodedPacket[1]) ^ 0x89;
+		uint32_t i = 2;
+		for(; i < decodedPacket[0]; i++)
+		{
+			encodedPacket[i] = (encodedPacket[i - 1] + 0xDC) ^ decodedPacket[i];
+		}
+		encodedPacket[i] = decodedPacket[i] ^ decodedPacket[2];
+
+		_txMutex.lock();
+		_sending = true;
+		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		sendCommandStrobe(CommandStrobes::Enum::SFTX);
+		writeRegisters(Registers::Enum::FIFO, encodedPacket);
+		sendCommandStrobe(CommandStrobes::Enum::STX);
+
+		if(GD::debugLevel >= 4) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << packet->hexString() << std::endl;
+
+		struct pollfd pollstruct {
+			(int)_gpioDescriptor,
+			(short)(POLLPRI | POLLERR),
+			(short)0
+		};
+
+		int32_t pollResult;
+		int32_t bytesRead;
+		std::vector<char> readBuffer({'0'});
+		for(uint32_t i = 0; i < 5; i++)
+		{
+			pollResult = poll(&pollstruct, 1, 50);
+			if(pollResult > 0)
+			{
+				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::to_string(errno));
+				bytesRead = read(_gpioDescriptor, &readBuffer[0], 1);
+				if(!bytesRead || readBuffer.at(0) == 0x30) continue; //Packet is being received. Wait for GDO high
+				if(GD::debugLevel >= 5) std::cout << "Debug: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ": Packet successfully sent." << std::endl;
+				break;
+			}
+			else if(pollResult < 0)
+			{
+				throw Exception("Could not poll gpio: " + std::to_string(errno));
+			}
+			//timeout
+			else if(pollResult == 0) continue;
+			if(i == 4 && GD::debugLevel >= 3) std::cerr << "Warning: Sending of packet timed out." << std::endl;
+		}
+		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		sendCommandStrobe(CommandStrobes::Enum::SRX);
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    _sending = false;
+	_txMutex.unlock();
 }
 
 void TICC1100::readwrite(std::vector<uint8_t>& data)
@@ -277,23 +347,22 @@ void TICC1100::readwrite(std::vector<uint8_t>& data)
 	try
 	{
 		_sendMutex.lock();
-		std::cout << "Writing: " << std::hex << std::uppercase << std::setfill('0');
-		for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
-		{
-			std::cout << std::setw(2) << (int32_t)*i << " ";
-		}
-		std::cout << std::endl;
 		_transfer.tx_buf = (uint64_t)&data[0];
 		_transfer.rx_buf = (uint64_t)&data[0];
 		_transfer.len = (uint32_t)data.size();
-		struct spi_ioc_transfer tr = { (uint64_t)&data[0], (uint64_t)&data[0], (uint32_t)data.size(), (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
-		if(!ioctl(_fileDescriptor, SPI_IOC_MESSAGE(1), &tr)) throw(Exception("Couldn't write to device " + _rfDevice));
-		std::cout << "Response: " << std::hex << std::uppercase << std::setfill('0');
+		/*std::cout << "Sending: " << std::hex << std::setfill('0');
 		for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
 		{
-			std::cout << std::setw(2) << (int32_t)*i << " ";
+			std::cout << std::setw(2) << (int32_t)*i;
 		}
-		std::cout << std::endl;
+		std::cout << std::dec << std::endl;*/
+		if(!ioctl(_fileDescriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(Exception("Couldn't write to device " + _rfDevice));
+		/*std::cout << "Received: " << std::hex << std::setfill('0');
+		for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
+		{
+			std::cout << std::setw(2) << (int32_t)*i;
+		}
+		std::cout << std::dec << std::endl;*/
 		_sendMutex.unlock();
 	}
 	catch(const std::exception& ex)
@@ -373,7 +442,7 @@ std::vector<uint8_t> TICC1100::readRegisters(Registers::Enum startAddress, uint8
 	{
 		if(_fileDescriptor == -1) return std::vector<uint8_t>();
 		std::vector<uint8_t> data({(uint8_t)(startAddress | RegisterBitmasks::Enum::READ_BURST)});
-		for(uint32_t i = 0; i < count; i++) data.push_back(0);
+		data.resize(count + 1, 0);
 		for(uint32_t i = 0; i < 5; i++)
 		{
 			readwrite(data);
@@ -433,7 +502,7 @@ uint8_t TICC1100::writeRegister(Registers::Enum registerAddress, uint8_t value, 
     return 0;
 }
 
-void TICC1100::writeRegisters(Registers::Enum startAddress, std::vector<uint8_t> values)
+void TICC1100::writeRegisters(Registers::Enum startAddress, std::vector<uint8_t>& values)
 {
 	try
 	{
@@ -487,14 +556,58 @@ uint8_t TICC1100::sendCommandStrobe(CommandStrobes::Enum commandStrobe)
     return 0;
 }
 
-void TICC1100::enableTX()
+void TICC1100::enableRX(bool flushRXFIFO)
 {
 	try
 	{
 		if(_fileDescriptor == -1) return;
-
-		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		_txMutex.lock();
+		if(flushRXFIFO) sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
+		_txMutex.unlock();
+	}
+    catch(const std::exception& ex)
+    {
+    	_txMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	_txMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	_txMutex.unlock();
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+}
+
+void TICC1100::initChip()
+{
+	try
+	{
+		if(_fileDescriptor == -1)
+		{
+			if(GD::debugLevel >= 2) std::cerr << "Error: Could not initialize TI CC1100. The spi device's file descriptor is not valid." << std::endl;
+			return;
+		}
+		reset();
+
+		int32_t index = 0;
+		for(std::vector<uint8_t>::const_iterator i = _config.begin(); i != _config.end(); ++i)
+		{
+			writeRegister((Registers::Enum)index, *i, true);
+			index++;
+		}
+		writeRegister(Registers::Enum::TEST2, 0x81, true); //Determined by SmartRF Studio
+		writeRegister(Registers::Enum::TEST1, 0x35, true); //Determined by SmartRF Studio
+		writeRegister(Registers::Enum::PATABLE, 0xC3, true);
+
+		sendCommandStrobe(CommandStrobes::Enum::SFRX);
+		usleep(20);
+
+		enableRX(true);
 	}
     catch(const std::exception& ex)
     {
@@ -510,12 +623,14 @@ void TICC1100::enableTX()
     }
 }
 
-void TICC1100::enableRX()
+void TICC1100::reset()
 {
 	try
 	{
 		if(_fileDescriptor == -1) return;
-		sendCommandStrobe(CommandStrobes::Enum::SRX);
+		sendCommandStrobe(CommandStrobes::Enum::SRES);
+
+		usleep(70); //Measured on HM-CC-VD
 	}
     catch(const std::exception& ex)
     {
@@ -529,6 +644,29 @@ void TICC1100::enableRX()
     {
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
+}
+
+bool TICC1100::crcOK()
+{
+	try
+	{
+		if(_fileDescriptor == -1) return false;
+		std::vector<uint8_t> result = readRegisters(Registers::Enum::LQI, 1);
+		if((result.size() == 2) && (result.at(1) & 0x80)) return true;
+	}
+    catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return false;
 }
 
 void TICC1100::startListening()
@@ -541,82 +679,9 @@ void TICC1100::startListening()
 		if(_fileDescriptor == -1) throw(Exception("Couldn't listen to rf device, because the file descriptor is not valid: " + _rfDevice));
 		_stopped = false;
 
-		/*std::vector<uint8_t> result = readRegisters(Registers::Enum::IOCFG2, 41);
-		for(std::vector<uint8_t>::const_iterator i = result.begin(); i != result.end(); ++i)
-		{
-			std::cout << std::hex << std::setw(2) << (int32_t)*i << std::endl;
-		}
+		initChip();
 
-		closeDevice();
-		exit(0);*/
-
-		std::vector<uint8_t> data;
-		data.push_back(CommandStrobes::Enum::SRES);
-		readwrite(data);
-
-		usleep(1000);
-
-		if(!checkStatus(sendCommandStrobe(CommandStrobes::Enum::SIDLE), Status::Enum::IDLE)) throw Exception("Could not enter idle state.");
-		writeRegisters(Registers::Enum::IOCFG2, _config);
-		writeRegister(Registers::Enum::TEST2, 0x81, true); //Determined by SmartRF Studio
-		writeRegister(Registers::Enum::TEST1, 0x35, true); //Determined by SmartRF Studio
-		writeRegister(Registers::Enum::PATABLE, 0xC3, true);
-
-		usleep(1000);
-
-		sendCommandStrobe(CommandStrobes::Enum::SCAL);
-
-		usleep(1000);
-
-		enableRX();
-
-		//Test
-		struct pollfd pollstruct {
-			(int)_gpioDescriptor,
-			(short)(POLLPRI | POLLERR),
-			(short)0
-		};
-
-		int32_t pollResult;
-		int32_t bytesRead;
-		std::vector<char> readBuffer({'0'});
-		while(true)
-		{
-			pollResult = poll(&pollstruct, 1, 1000);
-			if(pollResult > 0)
-			{
-				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::to_string(errno));
-				bytesRead = read(_gpioDescriptor, &readBuffer[0], 1);
-				std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << "Bla: " << (int32_t)pollResult << " " << (int32_t)readBuffer.at(0) << std::endl;
-				if(!bytesRead || readBuffer.at(0) == 0x30) continue;
-				usleep(20);
-				sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-				usleep(20);
-				std::vector<uint8_t> result = readRegisters(Registers::Enum::LQI, 1);
-				if(!result.empty()) std::cout << "Result: " << (int32_t)result.at(1) << std::endl;
-				uint8_t firstByte = readRegister(Registers::Enum::FIFO);
-				std::cout << "Result: " << (int32_t)(firstByte & 0x7F) << std::endl;
-				usleep(20);
-				sendCommandStrobe(CommandStrobes::Enum::SFRX);
-				usleep(20);
-				sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-				usleep(20);
-				sendCommandStrobe(CommandStrobes::Enum::SNOP);
-				usleep(100000);
-				enableRX();
-			}
-			else if(pollResult < 0)
-			{
-				throw Exception("Could not poll gpio: " + std::to_string(errno));
-			}
-			//timeout
-			else if(pollResult == 0) continue;
-		}
-
-		closeDevice();
-		exit(0);
-		//End Test
-
+		_stopCallbackThread = false;
 		_listenThread = std::thread(&TICC1100::listen, this);
 	}
     catch(const std::exception& ex)
@@ -643,12 +708,7 @@ void TICC1100::stopListening()
 			_listenThread.join();
 		}
 		_stopCallbackThread = false;
-		if(_fileDescriptor != -1)
-		{
-
-
-			closeDevice();
-		}
+		if(_fileDescriptor != -1) closeDevice();
 		_stopped = true;
 	}
 	catch(const std::exception& ex)
@@ -669,6 +729,17 @@ void TICC1100::listen()
 {
     try
     {
+    	struct pollfd pollstruct {
+			(int)_gpioDescriptor,
+			(short)(POLLPRI | POLLERR),
+			(short)0
+		};
+
+		int32_t pollResult;
+		int32_t bytesRead;
+		std::vector<char> readBuffer({'0'});
+		bool firstPacket = true;
+
         while(!_stopCallbackThread)
         {
         	if(_stopped)
@@ -677,8 +748,44 @@ void TICC1100::listen()
         		continue;
         	}
 
+			pollResult = poll(&pollstruct, 1, 1000);
+			if(pollResult > 0 && !_sending)
+			{
+				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::to_string(errno));
+				bytesRead = read(_gpioDescriptor, &readBuffer[0], 1);
+				if(!bytesRead || readBuffer.at(0) == 0x30) continue; //Packet is being received. Wait for GDO high
+				if(crcOK())
+				{
+					uint8_t firstByte = readRegister(Registers::Enum::FIFO);
+					std::vector<uint8_t> encodedData = readRegisters(Registers::Enum::FIFO, firstByte + 1); //Read packet + RSSI
+					std::vector<uint8_t> decodedData(encodedData.size());
+					if(encodedData.size() >= 9 && encodedData.size() < 40) //Ignore too big packets. The first packet after initializing for example.
+					{
+						decodedData[0] = firstByte;
+						decodedData[1] = (~encodedData[1]) ^ 0x89;
+						uint32_t i = 2;
+						for(; i < firstByte; i++)
+						{
+							decodedData[i] = (encodedData[i - 1] + 0xDC) ^ encodedData[i];
+						}
+						decodedData[i] = encodedData[i] ^ decodedData[2];
+						decodedData[i + 1] = encodedData[i + 1]; //RSSI
 
-        }
+						std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(decodedData, true));
+						std::thread t(&TICC1100::callCallback, this, packet);
+						t.detach();
+					}
+				}
+
+				enableRX(true);
+			}
+			else if(pollResult < 0)
+			{
+				throw Exception("Could not poll gpio: " + std::to_string(errno));
+			}
+			//timeout
+			else if(pollResult == 0) continue;
+		}
     }
     catch(const std::exception& ex)
     {

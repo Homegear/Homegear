@@ -192,6 +192,8 @@ protected:
 	int32_t _fileDescriptor = -1;
 	int32_t _gpioDescriptor = -1;
 	struct spi_ioc_transfer _transfer;
+	std::mutex _txMutex;
+	bool _sending = false;
 
 	void setupDevice();
 	void setGPIOMode(int32_t gpio, GPIOModes::Enum mode);
@@ -201,13 +203,15 @@ protected:
     void closeDevice();
     void listen();
     void readwrite(std::vector<uint8_t>& data);
-    void enableRX();
-    void enableTX();
+    void reset();
+    void initChip();
+    void enableRX(bool flushRXFIFO);
+    bool crcOK();
     uint8_t sendCommandStrobe(CommandStrobes::Enum commandStrobe);
     uint8_t readRegister(Registers::Enum registerAddress);
     std::vector<uint8_t> readRegisters(Registers::Enum startAddress, uint8_t count);
     uint8_t writeRegister(Registers::Enum registerAddress, uint8_t value, bool check = false);
-    void writeRegisters(Registers::Enum startAddress, std::vector<uint8_t> values);
+    void writeRegisters(Registers::Enum startAddress, std::vector<uint8_t>& values);
     bool checkStatus(uint8_t statusByte, Status::Enum status);
 };
 

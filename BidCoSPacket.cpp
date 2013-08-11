@@ -88,15 +88,53 @@ std::string BidCoSPacket::hexString()
 	}
 	return "";
 }
+
+std::vector<uint8_t> BidCoSPacket::byteArray()
+{
+	try
+	{
+		std::vector<uint8_t> data;
+		data.push_back(9 + _payload.size());
+		data.push_back(_messageCounter);
+		data.push_back(_controlByte);
+		data.push_back(_messageType);
+		data.push_back(_senderAddress >> 16);
+		data.push_back((_senderAddress >> 8) & 0xFF);
+		data.push_back(_senderAddress & 0xFF);
+		data.push_back(_destinationAddress >> 16);
+		data.push_back((_destinationAddress >> 8) & 0xFF);
+		data.push_back(_destinationAddress & 0xFF);
+		data.insert(data.end(), _payload.begin(), _payload.end());
+		return data;
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    return std::vector<uint8_t>();
+}
 //End of properties
 
 BidCoSPacket::BidCoSPacket()
 {
 }
 
-BidCoSPacket::BidCoSPacket(std::string packet)
+BidCoSPacket::BidCoSPacket(std::string& packet)
 {
     import(packet);
+}
+
+BidCoSPacket::BidCoSPacket(std::vector<uint8_t>& packet, bool rssiByte)
+{
+	import(packet, rssiByte);
 }
 
 BidCoSPacket::BidCoSPacket(uint8_t messageCounter, uint8_t controlByte, uint8_t messageType, int32_t senderAddress, int32_t destinationAddress, std::vector<uint8_t> payload)
@@ -109,8 +147,42 @@ BidCoSPacket::~BidCoSPacket()
 {
 }
 
+void BidCoSPacket::import(std::vector<uint8_t>& packet, bool rssiByte)
+{
+	try
+	{
+		if(packet.size() < 10) return;
+		_length = packet[0];
+		_messageCounter = packet[1];
+		_controlByte = packet[2];
+		_messageType = packet[3];
+		_senderAddress = (packet[4] << 16) + (packet[5] << 8) + packet[6];
+		_destinationAddress = (packet[7] << 16) + (packet[8] << 8) + packet[9];
+		_payload.clear();
+		if(packet.size() == 10) return;
+		if(rssiByte)
+		{
+			_payload.insert(_payload.end(), packet.begin() + 10, packet.end() - 1);
+			_rssi = packet.back();
+		}
+		else _payload.insert(_payload.end(), packet.begin() + 10, packet.end());
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
 //Packet looks like A...DATA...\r\n
-void BidCoSPacket::import(std::string packet, bool removeFirstCharacter)
+void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 {
 	try
 	{

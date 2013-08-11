@@ -28,7 +28,8 @@ BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device) 
 			{
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 				uint32_t packetLength = std::stoi(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-				packet->import(serializedObject.substr(pos, packetLength), false); pos += packetLength;
+				std::string packetString(serializedObject.substr(pos, packetLength));
+				packet->import(packetString, false); pos += packetLength;
 				entry->setPacket(packet, false);
 			}
 			int32_t messageExists = std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
@@ -89,9 +90,9 @@ void BidCoSQueue::resend(uint32_t threadId)
 {
 	try
 	{
-		//Add 90 milliseconds after pushing the packet, otherwise for responses the first resend is 90 ms too early. If the queue is not generated as a response, the resend is 90 ms too late. But so what?
+		//Add 100 milliseconds after pushing the packet, otherwise for responses the first resend is 100 ms too early. If the queue is not generated as a response, the resend is 90 ms too late. But so what?
 		int32_t i = 0;
-		std::chrono::milliseconds sleepingTime(30);
+		std::chrono::milliseconds sleepingTime(33);
 		if(resendCounter == 0)
 		{
 			while(!_stopResendThread && i < 3)
@@ -580,7 +581,7 @@ void BidCoSQueue::sleepAndPushPendingQueue()
 {
 	try
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(90));
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		pushPendingQueue();
 	}
 	catch(const std::exception& ex)

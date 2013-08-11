@@ -107,7 +107,8 @@ bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
             std::stringstream stringstream;
             stringstream << std::hex << std::setw(2) << (i->response.size() / 2) + 1;
             std::string lengthHex = stringstream.str();
-            packet->import(lengthHex + packetHex.substr(2, 2) + i->response, false);
+            std::string packetString(lengthHex + packetHex.substr(2, 2) + i->response);
+            packet->import(packetString, false);
             std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
             std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response: " << '\n';
             GD::rfDevice->sendPacket(packet);

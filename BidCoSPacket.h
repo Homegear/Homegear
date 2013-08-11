@@ -27,14 +27,17 @@ class BidCoSPacket
         uint8_t rssi() { return _rssi; }
         std::vector<uint8_t>* payload();
         std::string hexString();
+        std::vector<uint8_t> byteArray();
 
         /** Default constructor */
         BidCoSPacket();
-        BidCoSPacket(std::string);
+        BidCoSPacket(std::string&);
+        BidCoSPacket(std::vector<uint8_t>&, bool rssiByte);
         BidCoSPacket(uint8_t, uint8_t, uint8_t, int32_t, int32_t, std::vector<uint8_t>);
         /** Default destructor */
         virtual ~BidCoSPacket();
-        void import(std::string, bool removeFirstCharacter = true);
+        void import(std::string&, bool removeFirstCharacter = true);
+        void import(std::vector<uint8_t>&, bool rssiByte);
         std::vector<uint8_t> getPosition(double index, double size);
         void setPosition(double index, double size, std::vector<uint8_t>& value);
     protected:

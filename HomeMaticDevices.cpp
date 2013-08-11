@@ -315,6 +315,7 @@ bool HomeMaticDevices::remove(int32_t address)
 				std::ostringstream command;
 				command << "DELETE FROM devices WHERE address=" << std::dec << address;
 				GD::db.executeCommand(command.str());
+				_devicesMutex.unlock();
 				return true;
 			}
 		}

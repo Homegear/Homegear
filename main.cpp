@@ -306,7 +306,8 @@ int main(int argc, char* argv[])
             else if(input == "test")
             {
             	std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-            	packet->import("0E3D82021DA44D1D8F45010150163845", false);
+            	std::string packetString("0E3D82021DA44D1D8F45010150163845");
+            	packet->import(packetString, false);
             	GD::devices.getCentral()->packetReceived(packet);
             }
             else if(input == "test2")

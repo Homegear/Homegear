@@ -54,7 +54,7 @@ class HM_CC_TC : public HomeMaticDevice
         void sendRequestConfig(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet);
         void sendConfigParams(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet);
         void sendDutyCycleBroadcast();
-        void sendDutyCyclePacket(uint8_t messageCounter);
+        void sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime);
         void startDutyCycle(int64_t lastDutyCycleEvent);
         void dutyCycleThread(int64_t lastDutyCycleEvent);
         void setUpConfig();
