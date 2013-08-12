@@ -29,7 +29,7 @@ class Cul  : public RFDevice
         virtual ~Cul();
         void startListening();
         void stopListening();
-        void sendPacket(std::shared_ptr<BidCoSPacket> packet);
+        void sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA = false);
         bool isOpen() { return _fileDescriptor > -1; }
     protected:
         int32_t _fileDescriptor = -1;

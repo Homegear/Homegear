@@ -24,7 +24,7 @@ Cul::~Cul()
     closeDevice();
 }
 
-void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)
+void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA)
 {
 	try
 	{
@@ -40,6 +40,11 @@ void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 			openDevice();
 		}
 		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _rfDevice));
+		if(packet->payload()->size() > 54)
+		{
+			if(GD::debugLevel >= 2) std::cerr << "Tried to send packet larger than 64 bytes. That is not supported." << std::endl;
+			return;
+		}
 
 		writeToDevice("As" + packet->hexString() + "\r\n", true);
 

@@ -71,7 +71,7 @@ case $1 in
                 rm -f $PIDFILE
                 ;;
         restart|force-reload)
-                $0 stop && sleep 2 && $0 start
+                $0 stop && sleep 15 && $0 start
                 ;;
         try-restart)
                 if $0 status >/dev/null; then

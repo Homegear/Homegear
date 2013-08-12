@@ -23,7 +23,7 @@ public:
 	virtual void stopListening() {}
 	virtual void addHomeMaticDevice(HomeMaticDevice*);
 	virtual void removeHomeMaticDevice(HomeMaticDevice*);
-	virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet) {}
+	virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA = false) {}
 	virtual bool isOpen() { return false; }
 protected:
 	std::mutex _homeMaticDevicesMutex;

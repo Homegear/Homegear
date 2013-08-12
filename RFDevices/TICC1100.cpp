@@ -13,7 +13,7 @@ TICC1100::TICC1100()
 {
 	_transfer =  { (uint64_t)0, (uint64_t)0, (uint32_t)0, (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
 
-	_config =
+	_config = //Read from HM-CC-VD
 	{
 		0x46, //00: IOCFG2 (GDO2_CFG)
 		0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
@@ -269,11 +269,16 @@ void TICC1100::setupDevice()
     }
 }
 
-void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
+void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA)
 {
 	try
 	{
 		if(_fileDescriptor == -1) return;
+		if(packet->payload()->size() > 54)
+		{
+			if(GD::debugLevel >= 2) std::cerr << "Tried to send packet larger than 64 bytes. That is not supported." << std::endl;
+			return;
+		}
 
 		std::vector<uint8_t> decodedPacket = packet->byteArray();
 		std::vector<uint8_t> encodedPacket(decodedPacket.size());
@@ -289,9 +294,30 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 		_txMutex.lock();
 		_sending = true;
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		if(CCA)
+		{
+			writeRegister(Registers::Enum::PKTCTRL1, 0x4C);
+			writeRegister(Registers::Enum::AGCCTRL1, 0x68);
+			writeRegister(Registers::Enum::WOREVT1, 0x2F);
+			sendCommandStrobe(CommandStrobes::Enum::SFRX);
+			sendCommandStrobe(CommandStrobes::Enum::SRX);
+
+			for(uint32_t i = 0; i < 5500; i++)
+			{
+				readRegisters(Registers::Enum::PKTSTATUS, 1).at(1);
+				usleep(100);
+			}
+
+			sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		}
 		sendCommandStrobe(CommandStrobes::Enum::SFTX);
+		if(CCA)
+		{
+			sendCommandStrobe(CommandStrobes::Enum::STX);
+			usleep(361000);
+		}
 		writeRegisters(Registers::Enum::FIFO, encodedPacket);
-		sendCommandStrobe(CommandStrobes::Enum::STX);
+		if(!CCA) sendCommandStrobe(CommandStrobes::Enum::STX);
 
 		if(GD::debugLevel >= 4) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << packet->hexString() << std::endl;
 
@@ -324,6 +350,12 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 			if(i == 4 && GD::debugLevel >= 3) std::cerr << "Warning: Sending of packet timed out." << std::endl;
 		}
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		if(CCA) //Reset registers to original values
+		{
+			writeRegister(Registers::Enum::PKTCTRL1, 0x0C);
+			writeRegister(Registers::Enum::AGCCTRL1, 0x40);
+			writeRegister(Registers::Enum::WOREVT1, 0x87);
+		}
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
 	}
 	catch(const std::exception& ex)
@@ -600,6 +632,7 @@ void TICC1100::initChip()
 			writeRegister((Registers::Enum)index, *i, true);
 			index++;
 		}
+		writeRegister(Registers::Enum::FSTEST, 0x59, true);
 		writeRegister(Registers::Enum::TEST2, 0x81, true); //Determined by SmartRF Studio
 		writeRegister(Registers::Enum::TEST1, 0x35, true); //Determined by SmartRF Studio
 		writeRegister(Registers::Enum::PATABLE, 0xC3, true);

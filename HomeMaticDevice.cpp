@@ -542,7 +542,7 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 	for(uint32_t i = 0; i < 3; i++)
 	{
 		_sentPackets.set(packet->destinationAddress(), packet);
-		GD::rfDevice->sendPacket(packet);
+		GD::rfDevice->sendPacket(packet, true);
 		if(useCentralMessageCounter)
 		{
 			packet->setMessageCounter(_messageCounter[0]);
@@ -553,13 +553,13 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 			packet->setMessageCounter(peer->messageCounter);
 			peer->messageCounter++;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(934));
+		//std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 	}
 	std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 	for(uint32_t i = 0; i < 3; i++)
 	{
 		_sentPackets.set(packet->destinationAddress(), packet);
-		GD::rfDevice->sendPacket(packet);
+		GD::rfDevice->sendPacket(packet, true);
 		if(useCentralMessageCounter)
 		{
 			packet->setMessageCounter(_messageCounter[0]);
@@ -570,7 +570,7 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 			packet->setMessageCounter(peer->messageCounter);
 			peer->messageCounter++;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(934));
+		//std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 	}
 }
 

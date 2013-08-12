@@ -210,7 +210,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 	while(!_stopDutyCycleThread)
 	{
 		cycleTime = cycleLength * 250000;
-		nextDutyCycleEvent += cycleTime;
+		nextDutyCycleEvent += cycleTime + 1000; //Add 1ms every cycle. This is very important! Without it, 20% of the packets are sent too early.
 		if(GD::debugLevel >= 5) std::cout << "Next duty cycle: " << (nextDutyCycleEvent / 1000) << " (in " << (cycleTime / 1000) << " ms) with message counter 0x" << std::hex << (int32_t)_messageCounter[1] << std::dec << std::endl;
 		std::chrono::milliseconds sleepingTime(2000);
 		while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
