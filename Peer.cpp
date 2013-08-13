@@ -210,6 +210,11 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 		team.channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		if(stringSize > 0) { team.serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize; }
+		uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t i = 0; i < dataSize; i++)
+		{
+			team.data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
+		}
 		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
 		for(uint32_t i = 0; i < configSize; i++)
 		{
@@ -233,6 +238,11 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 				basicPeer->linkName = serializedObject.substr(pos, stringSize); pos += stringSize;
 				stringSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 				basicPeer->linkDescription = serializedObject.substr(pos, stringSize); pos += stringSize;
+				dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				for(uint32_t k = 0; k < dataSize; k++)
+				{
+					team.data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
+				}
 			}
 		}
 		unserializeConfig(serializedObject, configCentral, RPC::ParameterSet::Type::master, pos);
@@ -249,7 +259,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 			variable->channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 			uint32_t keyLength = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 			variable->key = serializedObject.substr(pos, keyLength); pos += keyLength;
-			uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 			for(uint32_t j = 0; j < dataSize; j++)
 			{
 				variable->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
@@ -527,6 +537,11 @@ std::string Peer::serialize()
 		stringstream << std::setw(8) << team.channel;
 		stringstream << std::setw(4) << team.serialNumber.size();
 		stringstream << team.serialNumber;
+		stringstream << std::setw(8) << team.data.size();
+		for(std::vector<uint8_t>::iterator i = team.data.begin(); i != team.data.end(); ++i)
+		{
+			stringstream << std::setw(2) << (int32_t)(*i);
+		}
 		stringstream << std::setw(8) << config.size();
 		for(std::unordered_map<int32_t, int32_t>::const_iterator i = config.begin(); i != config.end(); ++i)
 		{
@@ -550,6 +565,11 @@ std::string Peer::serialize()
 				stringstream << (*j)->linkName;
 				stringstream << std::setw(8) << (*j)->linkDescription.size();
 				stringstream << (*j)->linkDescription;
+				stringstream << std::setw(8) << (*j)->data.size();
+				for(std::vector<uint8_t>::iterator k = (*j)->data.begin(); k != (*j)->data.end(); ++k)
+				{
+					stringstream << std::setw(2) << (int32_t)(*k);
+				}
 			}
 		}
 		serializeConfig(stringstream, configCentral);
@@ -1259,7 +1279,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			if(GD::debugLevel >= 4) std::cout << "Info: Resending values for device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << ", because they were not set correctly." << std::endl;
 			queue->push(sentPacket);
 			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-			if(rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) GD::devices.getCentral()->enqueuePackets(address, queue, true);
+			if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) GD::devices.getCentral()->enqueuePackets(address, queue, true);
 			else
 			{
 				pendingBidCoSQueues->push(queue);
@@ -1283,7 +1303,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 			GD::devices.getCentral()->enqueuePackets(address, queue, true);
 		}
-		else if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
+		else if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
 		{
 			GD::devices.getCentral()->enqueuePendingQueues(address);
 		}
@@ -1624,7 +1644,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(!onlyPushing && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::always)) GD::devices.getCentral()->enqueuePendingQueues(address);
+			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
 		else if(type == RPC::ParameterSet::Type::Enum::values)
@@ -1749,7 +1769,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(!onlyPushing && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::always)) GD::devices.getCentral()->enqueuePendingQueues(address);
+			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -2617,30 +2637,56 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				return true;
 			}
 		}
-		else if(deviceType == HMDeviceTypes::HMSECSD && valueKey == "STATE")
+		else if(deviceType == HMDeviceTypes::HMSECSD)
 		{
-			std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
-			if(!rpcParameter) return false;
-			valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
+			if(valueKey == "STATE")
+			{
+				std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
+				if(!rpcParameter) return false;
+				valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
 
-			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
-			std::vector<uint8_t> payload;
-			payload.push_back(0x00);
-			payload.push_back(0x01);
-			/*if(value->booleanValue)
-			{
+				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+				std::shared_ptr<Peer> associatedPeer = central->getPeer(address);
+				if(!associatedPeer)
+				{
+					if(GD::debugLevel >= 2) std::cerr << "Error: Could not handle \"STATE\", because the main team peer is not paired to this central." << std::endl;
+					return false;
+				}
+				if(associatedPeer->team.data.empty()) associatedPeer->team.data.push_back(0);
+				std::vector<uint8_t> payload;
 				payload.push_back(0x01);
-				payload.push_back(0xC8);
+				payload.push_back(associatedPeer->team.data.at(0));
+				associatedPeer->team.data.at(0)++;
+				if(value->booleanValue) payload.push_back(0xC8);
+				else payload.push_back(0x01);
+				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x41, address, central->address(), payload));
+				central->messageCounter()->at(0)++;
+				central->sendBurstPacket(packet, address, true);
+				return true;
 			}
-			else
+			else if(valueKey == "INSTALL_TEST")
 			{
-				payload.push_back(0x01);
-				payload.push_back(0x01);
-			}*/
-			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x40, 0x1C295C, 0x1C295C, payload));
-			central->messageCounter()->at(0)++;
-			central->sendBurstPacket(packet, address, true);
-			return true;
+				std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
+				if(!rpcParameter) return false;
+				valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
+
+				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+				std::shared_ptr<Peer> associatedPeer = central->getPeer(address);
+				if(!associatedPeer)
+				{
+					if(GD::debugLevel >= 2) std::cerr << "Error: Could not handle \"INSTALL_TEST\", because the main team peer is not paired to this central." << std::endl;
+					return false;
+				}
+				if(associatedPeer->team.data.empty()) associatedPeer->team.data.push_back(0);
+				std::vector<uint8_t> payload;
+				payload.push_back(0x00);
+				payload.push_back(associatedPeer->team.data.at(0));
+				associatedPeer->team.data.at(0)++;
+				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x40, address, central->address(), payload));
+				central->messageCounter()->at(0)++;
+				central->sendBurstPacket(packet, address, true);
+				return true;
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -2774,8 +2820,24 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 					if(i->additionalParameter != "ON_TIME" || value->booleanValue) packet->setPosition(i->index, i->size, valuesCentral[channel][i->additionalParameter].data);
 				}
 			}
-			else if(i->param == rpcParameter->physicalParameter->valueID) packet->setPosition(i->index, i->size, valuesCentral[channel][valueKey].data);
-			else if(GD::debugLevel >= 2) std::cerr << "Error: Can't generate parameter packet, because the frame parameter does not equal the set parameter. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frame->id << std::endl;
+			//param sometimes is ambiguous (e. g. LEVEL of HM-CC-TC), so don't search and use the given parameter when possible
+			else if(i->param == rpcParameter->physicalParameter->valueID || i->param == rpcParameter->physicalParameter->id) packet->setPosition(i->index, i->size, valuesCentral[channel][valueKey].data);
+			//Search for all other parameters
+			else
+			{
+				bool paramFound = false;
+				for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
+				{
+					//Only compare id. Till now looking for value_id was not necessary.
+					if(i->param == j->second.rpcParameter->physicalParameter->id)
+					{
+						packet->setPosition(i->index, i->size, j->second.data);
+						paramFound = true;
+						break;
+					}
+				}
+				if(!paramFound && GD::debugLevel >= 2) std::cerr << "Error constructing packet. param \"" << i->param << "\" not found. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frame->id << std::endl;
+			}
 			if(i->additionalParameter == "ON_TIME")
 			{
 				if(rpcParameter->physicalParameter->valueID != "STATE" || rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeBoolean)
@@ -2834,7 +2896,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		pendingBidCoSQueues->push(queue);
-		if(rpcDevice->rxModes & RPC::Device::RXModes::Enum::always)
+		if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))
 		{
 			if(valueKey == "STATE") queue->burst = true;
 			GD::devices.getCentral()->enqueuePendingQueues(address);

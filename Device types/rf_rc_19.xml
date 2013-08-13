@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
+<!-- Modified from original
+	Changes:
+	- Added parameter for TEST_COUNTER
+	- Added parameter for SIM_COUNTER
+	- COMMA in frame DISPLAY commented out
+-->
 <device version="10" rx_modes="CONFIG,BURST" peering_sysinfo_expect_channel="false" supports_aes="true">
 	<supported_types>
 		<type name="HM Remote 19 buttons" id="HM-RC-19" priority="2">
@@ -99,6 +105,20 @@
 					</physical>
 					<conversion type="action_key_counter" sim_counter="SIM_COUNTER"/>
 				</parameter>
+				<parameter id="TEST_COUNTER" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="command" value_id="TEST_COUNTER">
+						<event frame="KEY_EVENT_SHORT" auth_violate_policy="reject"/>
+						<event frame="KEY_EVENT_LONG" auth_violate_policy="reject"/>
+					</physical>
+				</parameter>
+				<parameter id="SIM_COUNTER" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="command" value_id="SIM_COUNTER">
+						<event frame="KEY_SIM_SHORT"/>
+						<event frame="KEY_SIM_LONG"/>
+					</physical>
+				</parameter>
 				<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
 					<logical type="action"/>
 					<physical type="integer" interface="command" value_id="TEST_COUNTER">
@@ -129,6 +149,20 @@
 						<event frame="KEY_EVENT_LONG" auth_violate_policy="reject"/>
 					</physical>
 					<conversion type="action_key_counter"/>
+				</parameter>
+				<parameter id="TEST_COUNTER" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="command" value_id="TEST_COUNTER">
+						<event frame="KEY_EVENT_SHORT" auth_violate_policy="reject"/>
+						<event frame="KEY_EVENT_LONG" auth_violate_policy="reject"/>
+					</physical>
+				</parameter>
+				<parameter id="SIM_COUNTER" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="command" value_id="SIM_COUNTER">
+						<event frame="KEY_SIM_SHORT"/>
+						<event frame="KEY_SIM_LONG"/>
+					</physical>
 				</parameter>
 				<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
 					<logical type="action"/>
@@ -368,7 +402,7 @@
 			<parameter type="integer" index="17.0" size="0.1" param="CLOCK"/>
 			<parameter type="integer" index="17.1" size="0.1" param="ARROW_UP"/>
 			<parameter type="integer" index="17.2" size="0.1" param="ARROW_DOWN"/>
-			<parameter type="integer" index="17.3" size="0.1" param="COMMA"/>
+			<!--<parameter type="integer" index="17.3" size="0.1" param="COMMA"/>-->
 			<parameter type="integer" index="17.4" size="0.4" param="UNIT"/>
 			<parameter type="integer" index="18.0" size="0.2" param="BEEP"/>
 			<parameter type="integer" index="18.2" size="0.2" param="BACKLIGHT"/>

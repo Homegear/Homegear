@@ -2064,7 +2064,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		}
 
 		peer->pendingBidCoSQueues->push(queue);
-		if(peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) enqueuePendingQueues(peer->address);
+		if((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) enqueuePendingQueues(peer->address);
 		else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}

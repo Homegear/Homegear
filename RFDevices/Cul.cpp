@@ -24,7 +24,7 @@ Cul::~Cul()
     closeDevice();
 }
 
-void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA)
+void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool sendToDeviceInWOR)
 {
 	try
 	{
@@ -45,6 +45,7 @@ void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA)
 			if(GD::debugLevel >= 2) std::cerr << "Tried to send packet larger than 64 bytes. That is not supported." << std::endl;
 			return;
 		}
+		if(sendToDeviceInWOR && GD::debugLevel >= 2) std::cerr << "Error: Sending packets to devices in Wake on Radio mode is not supported by the CUL." << std::endl;
 
 		writeToDevice("As" + packet->hexString() + "\r\n", true);
 

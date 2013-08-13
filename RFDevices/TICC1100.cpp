@@ -269,7 +269,7 @@ void TICC1100::setupDevice()
     }
 }
 
-void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA)
+void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool sendToDeviceInWOR)
 {
 	try
 	{
@@ -294,9 +294,9 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA)
 		_txMutex.lock();
 		_sending = true;
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-		if(CCA)
+		if(sendToDeviceInWOR)
 		{
-			writeRegister(Registers::Enum::PKTCTRL1, 0x4C);
+			/*writeRegister(Registers::Enum::PKTCTRL1, 0x4C);
 			writeRegister(Registers::Enum::AGCCTRL1, 0x68);
 			writeRegister(Registers::Enum::WOREVT1, 0x2F);
 			sendCommandStrobe(CommandStrobes::Enum::SFRX);
@@ -308,16 +308,16 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA)
 				usleep(100);
 			}
 
-			sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+			sendCommandStrobe(CommandStrobes::Enum::SIDLE);*/
 		}
 		sendCommandStrobe(CommandStrobes::Enum::SFTX);
-		if(CCA)
+		if(sendToDeviceInWOR)
 		{
 			sendCommandStrobe(CommandStrobes::Enum::STX);
-			usleep(361000);
+			usleep(360000);
 		}
 		writeRegisters(Registers::Enum::FIFO, encodedPacket);
-		if(!CCA) sendCommandStrobe(CommandStrobes::Enum::STX);
+		if(!sendToDeviceInWOR) sendCommandStrobe(CommandStrobes::Enum::STX);
 
 		if(GD::debugLevel >= 4) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << packet->hexString() << std::endl;
 
@@ -348,13 +348,6 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA)
 			//timeout
 			else if(pollResult == 0) continue;
 			if(i == 4 && GD::debugLevel >= 3) std::cerr << "Warning: Sending of packet timed out." << std::endl;
-		}
-		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-		if(CCA) //Reset registers to original values
-		{
-			writeRegister(Registers::Enum::PKTCTRL1, 0x0C);
-			writeRegister(Registers::Enum::AGCCTRL1, 0x40);
-			writeRegister(Registers::Enum::WOREVT1, 0x87);
 		}
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
 	}

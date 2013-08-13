@@ -406,7 +406,7 @@ void ServiceMessages::setUnreachThread(bool value)
 		if(!_peer) return;
 		if(value != _unreach)
 		{
-			if(value == true && _unreachResendCounter < 3 && _peer->rpcDevice && (_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) && !_peer->pendingBidCoSQueues->empty())
+			if(value == true && _unreachResendCounter < 3 && _peer->rpcDevice && ((_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && !_peer->pendingBidCoSQueues->empty())
 			{
 				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 				if(central)

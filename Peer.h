@@ -50,6 +50,7 @@ public:
 	std::string linkName;
 	std::string linkDescription;
 	std::shared_ptr<HomeMaticDevice> device;
+	std::vector<uint8_t> data;
 };
 
 class RPCConfigurationParameter

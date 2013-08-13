@@ -177,7 +177,7 @@ public:
 
 	void startListening();
 	void stopListening();
-	void sendPacket(std::shared_ptr<BidCoSPacket> packet, bool CCA = false);
+	void sendPacket(std::shared_ptr<BidCoSPacket> packet, bool sendToDeviceInWOR = false);
 	bool isOpen() { return _fileDescriptor > -1; }
 protected:
 	//const int32_t BCM2708_PERI_BASE = 0x20000000;
