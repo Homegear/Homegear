@@ -16,10 +16,16 @@
 #include <string>
 #include <memory>
 #include <random>
+#include <chrono>
 
 class HelperFunctions {
 public:
 	virtual ~HelperFunctions();
+
+	static inline int64_t getTime()
+	{
+		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	}
 
 	static inline std::string &ltrim(std::string &s)
 	{

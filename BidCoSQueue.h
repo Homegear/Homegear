@@ -57,7 +57,7 @@ class BidCoSQueue
         BidCoSQueueType _queueType;
         bool _stopResendThread = false;
         std::shared_ptr<std::thread> _resendThread;
-        int32_t resendCounter = 0;
+        int32_t _resendCounter = 0;
         uint32_t _resendThreadId = 0;
         bool _stopPopWaitThread = false;
         uint32_t _popWaitThreadId = 0;
@@ -66,12 +66,13 @@ class BidCoSQueue
         void (HomeMaticDevice::*_queueProcessed)() = nullptr;
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
-        void resend(uint32_t threadId);
+        void resend(uint32_t threadId, bool burst);
         void startResendThread();
         void stopResendThread();
         void popWaitThread(uint32_t threadId, uint32_t waitingTime);
         void stopPopWaitThread();
     public:
+        uint32_t retries = 4;
         uint32_t id = 0;
         int64_t* lastAction = nullptr;
         bool noSending = false;
@@ -80,7 +81,6 @@ class BidCoSQueue
         std::shared_ptr<Peer> peer;
         std::shared_ptr<CallbackFunctionParameter> callbackParameter;
         delegate<void (std::shared_ptr<CallbackFunctionParameter>)> queueEmptyCallback;
-        bool burst = false;
         BidCoSQueueType getQueueType() { return _queueType; }
         std::deque<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }

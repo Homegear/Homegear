@@ -529,20 +529,20 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 	GD::rfDevice->sendPacket(packet);
 }
 
-void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int32_t peerAddress, bool destinationIsInWOR, bool useCentralMessageCounter, bool isThread)
+void HomeMaticDevice::sendPacketMultipleTimes(std::shared_ptr<BidCoSPacket> packet, int32_t peerAddress, int32_t count, int32_t delay, bool useCentralMessageCounter, bool isThread)
 {
 	if(!isThread)
 	{
-		std::thread t(&HomeMaticDevice::sendBurstPacket, this, packet, peerAddress, destinationIsInWOR, useCentralMessageCounter, true);
+		std::thread t(&HomeMaticDevice::sendPacketMultipleTimes, this, packet, peerAddress, count, delay, useCentralMessageCounter, true);
 		t.detach();
 		return;
 	}
 	std::shared_ptr<Peer> peer = getPeer(peerAddress);
 	if(!peer) return;
-	for(uint32_t i = 0; i < 6; i++)
+	for(uint32_t i = 0; i < count; i++)
 	{
 		_sentPackets.set(packet->destinationAddress(), packet);
-		GD::rfDevice->sendPacket(packet, destinationIsInWOR);
+		GD::rfDevice->sendPacket(packet);
 		if(useCentralMessageCounter)
 		{
 			packet->setMessageCounter(_messageCounter[0]);
@@ -553,7 +553,7 @@ void HomeMaticDevice::sendBurstPacket(std::shared_ptr<BidCoSPacket> packet, int3
 			packet->setMessageCounter(peer->messageCounter);
 			peer->messageCounter++;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(600));
+		std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 	}
 }
 

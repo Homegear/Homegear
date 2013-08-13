@@ -311,14 +311,11 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 			{
 				_payload.push_back(0);
 			}
-			while(value.size() < bytes)
-			{
-				//To really work this would have to be a push_front. But as multibyte values are probably not needed anyway, who cares?
-				value.push_back(0);
-			}
+			if(value.empty()) return;
 			uint32_t bitSize = std::lround(size * 10) % 10;
 			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
+			if(bytes > value.size()) bytes = value.size();
 			_payload.at(intByteIndex) = value.at(0) & _bitmask[bitSize];
 			for(uint32_t i = 1; i < bytes; i++)
 			{

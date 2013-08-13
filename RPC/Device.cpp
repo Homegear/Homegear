@@ -256,6 +256,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "integer_tinyfloat") type = Type::Enum::integerTinyFloat;
 			else if(attributeValue == "toggle") type = Type::Enum::toggle;
 			else if(attributeValue == "action_key_counter") type = Type::Enum::none;
+			else if(attributeValue == "rc19display") {} //ignore, no conversion necessary
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown type for \"conversion\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -446,7 +447,7 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 	{
-		value->integerValue = 200;
+		value->integerValue = (int32_t)value->booleanValue;
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 	{
@@ -534,7 +535,10 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		else if(attributeName == "loopback") { if(attributeValue == "true") loopback = true; }
 		else if(attributeName == "hidden") { if(attributeValue == "true") hidden = true; } //Ignored actually
 		else if(attributeName == "default") {} //Not necessary and not used
-		else if(attributeName == "burst_suppression") {} //Ignored, not sure, what it is for exactly
+		else if(attributeName == "burst_suppression")
+		{
+			if(attributeValue != "0") std::cout << "Warning: Unknown value for \"burst_suppression\" in node \"parameter\": " << attributeValue << std::endl;
+		}
 		else if(attributeName == "type")
 		{
 			if(attributeValue == "integer") type = PhysicalParameter::Type::Enum::typeInteger;

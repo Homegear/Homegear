@@ -403,10 +403,16 @@ int main(int argc, char* argv[])
             }
         }
 
+        std::cout << "Shutting down..." << std::endl;
+
         //Stop rpc server and client before saving
+        std::cout << "Stopping RPC server..." << std::endl;
         GD::rpcServer.stop();
+        std::cout << "Stopping RPC client..." << std::endl;
         GD::rpcClient.reset();
+        std::cout << "Closing RF device..." << std::endl;
         GD::rfDevice->stopListening();
+        std::cout << "Saving devices..." << std::endl;
         GD::devices.save();
         std::cout << "Shutdown complete." << std::endl;
         if(startAsDaemon)

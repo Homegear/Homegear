@@ -496,14 +496,15 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer)
 
 		std::shared_ptr<BasicPeer> switchPeer;
 
-		for(uint32_t i = 1; i < channelCount; i++)
+		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 		{
+			if(i->second->type != "KEY") continue;
 			switchPeer.reset(new BasicPeer());
 			switchPeer->address = sw->address();
 			switchPeer->serialNumber = sw->serialNumber();
-			switchPeer->channel = i;
+			switchPeer->channel = i->first;
 			switchPeer->hidden = true;
-			peer->addPeer(i, switchPeer);
+			peer->addPeer(i->first, switchPeer);
 		}
 
 		peer->saveToDatabase(_address);
@@ -512,18 +513,19 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer)
 
 		std::vector<uint8_t> payload;
 		//CONFIG_ADD_PEER
-		for(uint32_t i = 1; i < channelCount; i++)
+		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 		{
+			if(i->second->type != "KEY") continue;
 			std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 			pendingQueue->noSending = true;
 
 			payload.clear();
-			payload.push_back(i);
+			payload.push_back(i->first);
 			payload.push_back(0x01);
 			payload.push_back(actorAddress >> 16);
 			payload.push_back((actorAddress >> 8) & 0xFF);
 			payload.push_back(actorAddress & 0xFF);
-			payload.push_back(i);
+			payload.push_back(i->first);
 			payload.push_back(0);
 			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->address, payload));
 			pendingQueue->push(configPacket);
@@ -565,7 +567,13 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer)
 				peer->deviceType == HMDeviceTypes::HMRCKEY3 ||
 				peer->deviceType == HMDeviceTypes::HMRCKEY3B ||
 				peer->deviceType == HMDeviceTypes::HMPB4WM ||
-				peer->deviceType == HMDeviceTypes::HMPB2WM) addHomegearFeaturesSwitch(peer);
+				peer->deviceType == HMDeviceTypes::HMPB2WM ||
+				peer->deviceType == HMDeviceTypes::HMRC12 ||
+				peer->deviceType == HMDeviceTypes::HMRC12B ||
+				peer->deviceType == HMDeviceTypes::HMRC12SW ||
+				peer->deviceType == HMDeviceTypes::HMRC19 ||
+				peer->deviceType == HMDeviceTypes::HMRC19B ||
+				peer->deviceType == HMDeviceTypes::HMRC19SW) addHomegearFeaturesSwitch(peer);
 		else if(GD::debugLevel >= 5) std::cout << "Debug: No homegear features to add." << std::endl;
 	}
 	catch(const std::exception& ex)

@@ -148,10 +148,13 @@ void Peer::stopThreads()
 {
 	try
 	{
-		if(!_workerThread) return;
+		if(!_workerThread || !_centralFeatures) return;
 		_stopWorkerThread = true;
-		if(_workerThread->joinable()) _workerThread->join();
-		_workerThread.reset();
+		if(_workerThread->joinable())
+		{
+			_workerThread->join();
+			_workerThread.reset();
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -1305,7 +1308,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		}
 		else if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
 		{
-			GD::devices.getCentral()->enqueuePendingQueues(address);
+			//GD::devices.getCentral()->enqueuePendingQueues(address);
 		}
 		if(!rpcValues->empty())
 		{
@@ -1583,6 +1586,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			queue->serviceMessages = serviceMessages;
 			std::vector<uint8_t> payload;
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+			bool firstPacket = true;
 
 			for(std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>>::iterator i = changedParameters.begin(); i != changedParameters.end(); ++i)
 			{
@@ -1594,7 +1598,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				payload.push_back(0);
 				payload.push_back(0);
 				payload.push_back(i->first);
-				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+				uint8_t controlByte = 0xA0;
+				//Only send first packet as burst packet
+				if(firstPacket && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) controlByte |= 0x10;
+				firstPacket = false;
+				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(messageCounter, controlByte, 0x01, central->address(), address, payload));
 				queue->push(configPacket);
 				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 				payload.clear();
@@ -1708,6 +1716,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			queue->serviceMessages = serviceMessages;
 			std::vector<uint8_t> payload;
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+			bool firstPacket = true;
 
 			for(std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>>::iterator i = changedParameters.begin(); i != changedParameters.end(); ++i)
 			{
@@ -1719,7 +1728,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				payload.push_back(remotePeer->address & 0xFF);
 				payload.push_back(remotePeer->channel);
 				payload.push_back(i->first);
-				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+				uint8_t controlByte = 0xA0;
+				//Only send first packet as burst packet
+				if(firstPacket && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) controlByte |= 0x10;
+				firstPacket = false;
+				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(messageCounter, controlByte, 0x01, central->address(), address, payload));
 				queue->push(configPacket);
 				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 				payload.clear();
@@ -2661,7 +2674,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				else payload.push_back(0x01);
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x41, address, central->address(), payload));
 				central->messageCounter()->at(0)++;
-				central->sendBurstPacket(packet, address, true);
+				central->sendPacketMultipleTimes(packet, address, 6, 600, true);
 				return true;
 			}
 			else if(valueKey == "INSTALL_TEST")
@@ -2684,7 +2697,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				associatedPeer->team.data.at(0)++;
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x40, address, central->address(), payload));
 				central->messageCounter()->at(0)++;
-				central->sendBurstPacket(packet, address, true);
+				central->sendPacketMultipleTimes(packet, address, 6, 600, true);
 				return true;
 			}
 		}
@@ -2799,7 +2812,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			while((signed)payload.size() - 1 < frame->channelField - 9) payload.push_back(0);
 			payload.at(frame->channelField - 9) = (uint8_t)channel;
 		}
-		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA0, (uint8_t)frame->type, GD::devices.getCentral()->address(), address, payload));
+		uint8_t controlByte = 0xA0;
+		if(rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst) controlByte |= 0x10;
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, controlByte, (uint8_t)frame->type, GD::devices.getCentral()->address(), address, payload));
 		for(std::vector<RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 		{
 			if(i->constValue > -1)
@@ -2896,9 +2911,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		pendingBidCoSQueues->push(queue);
-		if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))
+		if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))
 		{
-			if(valueKey == "STATE") queue->burst = true;
+			if(valueKey == "STATE") queue->retries = 12;
 			GD::devices.getCentral()->enqueuePendingQueues(address);
 		}
 		else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;

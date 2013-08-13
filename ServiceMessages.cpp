@@ -417,6 +417,7 @@ void ServiceMessages::setUnreachThread(bool value)
 					return;
 				}
 			}
+			_unreachResendCounter = 0;
 			_unreach = value;
 
 			if(value && GD::debugLevel >= 4) std::cout << "Info: Device 0x" << std::hex << _peer->address << std::dec << " is unreachable." << std::endl;

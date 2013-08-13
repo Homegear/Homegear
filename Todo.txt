@@ -2,7 +2,7 @@
 - Delete peer from all devices it is linked to, when peer is reset
 - _peersMutex and _peersBySerialMutex
 	- Don't work with peer after using peerExists
-- Homegear features are not applied when removing and adding a device without restart of Homegear
+- Check that Homegear features are being deleted when pairing to another device
 Today:
 
 Questions:

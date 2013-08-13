@@ -1,5 +1,6 @@
 #include "BidCoSQueue.h"
 #include "GD.h"
+#include "HelperFunctions.h"
 
 BidCoSQueue::BidCoSQueue() : _queueType(BidCoSQueueType::EMPTY)
 {
@@ -86,14 +87,15 @@ BidCoSQueue::~BidCoSQueue()
     }
 }
 
-void BidCoSQueue::resend(uint32_t threadId)
+void BidCoSQueue::resend(uint32_t threadId, bool burst)
 {
 	try
 	{
 		//Add 100 milliseconds after pushing the packet, otherwise for responses the first resend is 100 ms too early. If the queue is not generated as a response, the resend is 90 ms too late. But so what?
+		//Packets that are not sent in response are 100 ms too late. But that doesn't matter.
 		int32_t i = 0;
 		std::chrono::milliseconds sleepingTime(33);
-		if(resendCounter == 0)
+		if(_resendCounter == 0)
 		{
 			while(!_stopResendThread && i < 3)
 			{
@@ -101,19 +103,23 @@ void BidCoSQueue::resend(uint32_t threadId)
 				i++;
 			}
 		}
-		if(resendCounter < 2)
+		if(_resendCounter < 2)
 		{
 			//Sleep for 175 ms
 			i = 0;
-			sleepingTime = std::chrono::milliseconds(25);
+			if(burst)
+			{
+				longKeepAlive();
+				sleepingTime = std::chrono::milliseconds(100);
+			}
+			else sleepingTime = std::chrono::milliseconds(25);
 			while(!_stopResendThread && i < 7)
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				i++;
 			}
 		}
-		//only when burst = true
-		else if(resendCounter >= 2 && resendCounter < 6)
+		else if(_resendCounter >= 2 && _resendCounter < 6)
 		{
 			longKeepAlive();
 			//Sleep for 1000 ms
@@ -125,7 +131,6 @@ void BidCoSQueue::resend(uint32_t threadId)
 				i++;
 			}
 		}
-		//only when burst = true
 		else
 		{
 			longKeepAlive();
@@ -147,7 +152,7 @@ void BidCoSQueue::resend(uint32_t threadId)
 				std::thread send;
 				if(!noSending)
 				{
-					if(GD::debugLevel >= 5) std::cout << "Sending from resend thread " << threadId << " of queue " << id << "." << std::endl;
+					if(GD::debugLevel >= 5) std::cout << HelperFunctions::getTime() << " Sending from resend thread " << threadId << " of queue " << id << "." << std::endl;
 					if(_queue.front().getType() == QueueEntryType::MESSAGE)
 					{
 						if(GD::debugLevel >= 5) std::cout << "Invoking outgoing message handler from BidCoSQueue." << std::endl;
@@ -158,19 +163,13 @@ void BidCoSQueue::resend(uint32_t threadId)
 				}
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread
 				if(_stopResendThread) return;
-				if(resendCounter < 1) //This actually means that the message will be sent three times all together if there is no response
+				if(_resendCounter < (retries - 2)) //This actually means that the message will be sent three times all together if there is no response
 				{
-					resendCounter++;
+					_resendCounter++;
 					send = std::thread(&BidCoSQueue::startResendThread, this);
 					send.detach();
 				}
-				else if(burst && resendCounter < 10)
-				{
-					resendCounter++;
-					send = std::thread(&BidCoSQueue::startResendThread, this);
-					send.detach();
-				}
-				else resendCounter = 0;
+				else _resendCounter = 0;
 			}
 			else _queueMutex.unlock();
 		}
@@ -198,7 +197,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet)
 		if(!noSending && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 		{
 			_queue.push_back(entry);
-			resendCounter = 0;
+			_resendCounter = 0;
 			if(!noSending)
 			{
 				std::thread send(&BidCoSQueue::send, this, entry.getPacket());
@@ -287,7 +286,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 		if(!noSending && entry.getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 		{
 			_queue.push_back(entry);
-			resendCounter = 0;
+			_resendCounter = 0;
 			if(!noSending)
 			{
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
@@ -325,7 +324,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message)
 		if(!noSending && entry.getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 		{
 			_queue.push_back(entry);
-			resendCounter = 0;
+			_resendCounter = 0;
 			if(!noSending)
 			{
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
@@ -361,7 +360,7 @@ void BidCoSQueue::push_front(std::shared_ptr<BidCoSPacket> packet)
                 if(!noSending)
                 {
                         _queue.push_front(entry);
-                        resendCounter = 0;
+                        _resendCounter = 0;
                         if(!noSending)
                         {
                                 std::thread send(&BidCoSQueue::send, this, entry.getPacket());
@@ -472,7 +471,7 @@ void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet)
 	try
 	{
 		if(noSending) return;
-		if(device != nullptr) device->sendPacket(packet);
+		if(device) device->sendPacket(packet);
 		else if(GD::debugLevel >= 2) std::cout << "Error: Device pointer of queue " << id << " is null." << std::endl;
 	}
 	catch(const std::exception& ex)
@@ -539,7 +538,8 @@ void BidCoSQueue::startResendThread()
 		if(!(controlByte & 0x02) && (controlByte & 0x20)) //Resend when no response?
 		{
 			stopResendThread();
-			_resendThread.reset(new std::thread(&BidCoSQueue::resend, this, _resendThreadId++));
+			bool burst = controlByte & 0x10;
+			_resendThread.reset(new std::thread(&BidCoSQueue::resend, this, _resendThreadId++, burst));
 		}
 	}
 	catch(const std::exception& ex)
@@ -615,13 +615,13 @@ void BidCoSQueue::pushPendingQueue()
 		serviceMessages = queue->serviceMessages;
 		queueEmptyCallback = queue->queueEmptyCallback;
 		callbackParameter = queue->callbackParameter;
-		burst = queue->burst;
+		retries = queue->retries;
 		for(std::deque<BidCoSQueueEntry>::iterator i = queue->getQueue()->begin(); i != queue->getQueue()->end(); ++i)
 		{
 			if(!noSending && i->getType() == QueueEntryType::MESSAGE && i->getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 			{
 				_queue.push_back(*i);
-				resendCounter = 0;
+				_resendCounter = 0;
 				if(!noSending)
 				{
 					std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
@@ -632,7 +632,7 @@ void BidCoSQueue::pushPendingQueue()
 			else if(!noSending && i->getType() == QueueEntryType::PACKET && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 			{
 				_queue.push_back(*i);
-				resendCounter = 0;
+				_resendCounter = 0;
 				if(!noSending)
 				{
 					std::thread send(&BidCoSQueue::send, this, i->getPacket());
@@ -706,7 +706,7 @@ void BidCoSQueue::pop()
 		}
 		if((_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONOUT) || _queue.front().getType() == QueueEntryType::PACKET)
 		{
-			resendCounter = 0;
+			_resendCounter = 0;
 			std::thread send;
 			if(!noSending)
 			{

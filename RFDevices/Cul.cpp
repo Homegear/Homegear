@@ -1,5 +1,6 @@
 #include "Cul.h"
 #include "../GD.h"
+#include "../HelperFunctions.h"
 
 namespace RF
 {
@@ -24,11 +25,11 @@ Cul::~Cul()
     closeDevice();
 }
 
-void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool sendToDeviceInWOR)
+void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		if(packet == nullptr)
+		if(!packet)
 		{
 			if(GD::debugLevel >= 3) std::cout << "Warning: Packet was nullptr." << std::endl;
 			return;
@@ -45,7 +46,6 @@ void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool sendToDeviceInWO
 			if(GD::debugLevel >= 2) std::cerr << "Tried to send packet larger than 64 bytes. That is not supported." << std::endl;
 			return;
 		}
-		if(sendToDeviceInWOR && GD::debugLevel >= 2) std::cerr << "Error: Sending packets to devices in Wake on Radio mode is not supported by the CUL." << std::endl;
 
 		writeToDevice("As" + packet->hexString() + "\r\n", true);
 
@@ -182,7 +182,7 @@ std::string Cul::readFromDevice()
 		int32_t i;
 		char localBuffer[1];
 		struct timeval timeout;
-		timeout.tv_sec = 1200;
+		timeout.tv_sec = 3;
 		timeout.tv_usec = 0;
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
@@ -193,9 +193,12 @@ std::string Cul::readFromDevice()
 			i = select(_fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			switch(i)
 			{
-				case 0:
-					if(GD::debugLevel >= 3) std::cout << "Warning: Reading from CUL device timed out: " + _rfDevice << std::endl;
-					continue;
+				case 0: //Timeout
+					FD_ZERO(&readFileDescriptor);
+					FD_SET(_fileDescriptor, &readFileDescriptor);
+					timeout.tv_sec = 3;
+					if(!_stopCallbackThread) continue;
+					break;
 				case -1:
 					throw(Exception("Error reading from CUL device: " + _rfDevice));
 					break;
@@ -245,7 +248,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
         //fd_set writeFileDescriptor;
         if(GD::debugLevel > 3 && printSending)
         {
-            std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << data.substr(2, data.size() - 4) << std::endl;
+            std::cout << HelperFunctions::getTime() << " Sending: " << data.substr(2, data.size() - 4) << std::endl;
         }
         _sendMutex.lock();
         //FD_ZERO(&writeFileDescriptor);

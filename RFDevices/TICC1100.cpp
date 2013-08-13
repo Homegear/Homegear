@@ -1,10 +1,9 @@
-//TODO REMOVE AFTER TESTING
 #define TI_CC1100
-
 #ifdef TI_CC1100
 
 #include "TICC1100.h"
 #include "../GD.h"
+#include "../HelperFunctions.h"
 
 namespace RF
 {
@@ -269,7 +268,7 @@ void TICC1100::setupDevice()
     }
 }
 
-void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool sendToDeviceInWOR)
+void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -279,6 +278,7 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool sendToDevic
 			if(GD::debugLevel >= 2) std::cerr << "Tried to send packet larger than 64 bytes. That is not supported." << std::endl;
 			return;
 		}
+		bool burst = packet->controlByte() & 0x10;
 
 		std::vector<uint8_t> decodedPacket = packet->byteArray();
 		std::vector<uint8_t> encodedPacket(decodedPacket.size());
@@ -294,32 +294,16 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool sendToDevic
 		_txMutex.lock();
 		_sending = true;
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-		if(sendToDeviceInWOR)
-		{
-			/*writeRegister(Registers::Enum::PKTCTRL1, 0x4C);
-			writeRegister(Registers::Enum::AGCCTRL1, 0x68);
-			writeRegister(Registers::Enum::WOREVT1, 0x2F);
-			sendCommandStrobe(CommandStrobes::Enum::SFRX);
-			sendCommandStrobe(CommandStrobes::Enum::SRX);
-
-			for(uint32_t i = 0; i < 5500; i++)
-			{
-				readRegisters(Registers::Enum::PKTSTATUS, 1).at(1);
-				usleep(100);
-			}
-
-			sendCommandStrobe(CommandStrobes::Enum::SIDLE);*/
-		}
 		sendCommandStrobe(CommandStrobes::Enum::SFTX);
-		if(sendToDeviceInWOR)
+		if(burst)
 		{
 			sendCommandStrobe(CommandStrobes::Enum::STX);
 			usleep(360000);
 		}
 		writeRegisters(Registers::Enum::FIFO, encodedPacket);
-		if(!sendToDeviceInWOR) sendCommandStrobe(CommandStrobes::Enum::STX);
+		if(!burst) sendCommandStrobe(CommandStrobes::Enum::STX);
 
-		if(GD::debugLevel >= 4) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << " Sending: " << packet->hexString() << std::endl;
+		if(GD::debugLevel >= 4) std::cout << HelperFunctions::getTime() << " Sending: " << packet->hexString() << std::endl;
 
 		struct pollfd pollstruct {
 			(int)_gpioDescriptor,
