@@ -511,17 +511,17 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 	if(packetInfo)
 	{
 		int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
-		if(timeDifference < 100)
+		if(timeDifference < 110)
 		{
-			packetInfo->time += 100 - timeDifference; //Set to sending time
-			std::this_thread::sleep_for(std::chrono::milliseconds(100 - timeDifference));
+			packetInfo->time += 110 - timeDifference; //Set to sending time
+			std::this_thread::sleep_for(std::chrono::milliseconds(110 - timeDifference));
 		}
 	}
 	packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
 	if(packetInfo)
 	{
 		int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
-		if(timeDifference >= 0 && timeDifference < 100) std::this_thread::sleep_for(std::chrono::milliseconds(100 - timeDifference));
+		if(timeDifference >= 0 && timeDifference < 100) std::this_thread::sleep_for(std::chrono::milliseconds(110 - timeDifference));
 		//Set time to now. This is necessary if two packets are sent after each other without a response in between
 		packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}

@@ -92,9 +92,9 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 	try
 	{
 		//Add 100 milliseconds after pushing the packet, otherwise for responses the first resend is 100 ms too early. If the queue is not generated as a response, the resend is 90 ms too late. But so what?
-		//Packets that are not sent in response are 100 ms too late. But that doesn't matter.
+		//Packets that are not sent in response are 110 ms too late. But that doesn't matter.
 		int32_t i = 0;
-		std::chrono::milliseconds sleepingTime(33);
+		std::chrono::milliseconds sleepingTime(36);
 		if(_resendCounter == 0)
 		{
 			while(!_stopResendThread && i < 3)

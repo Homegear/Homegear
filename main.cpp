@@ -372,8 +372,8 @@ int main(int argc, char* argv[])
             }
             else if(input == "list devices")
             {
-            	std::vector<std::shared_ptr<HomeMaticDevice>>* devices = GD::devices.getDevices();
-            	for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = devices->begin(); i != devices->end(); ++i)
+            	std::vector<std::shared_ptr<HomeMaticDevice>> devices = GD::devices.getDevices();
+            	for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = devices.begin(); i != devices.end(); ++i)
             	{
             		std::cout << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (uint32_t)(*i)->deviceType() << std::endl << std::dec;
             	}

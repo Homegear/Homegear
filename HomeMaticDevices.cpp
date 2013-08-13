@@ -159,6 +159,37 @@ void HomeMaticDevices::createCentral()
     }
 }
 
+std::shared_ptr<HomeMaticCentral> HomeMaticDevices::getCentral()
+{
+	try
+	{
+		_devicesMutex.lock();
+		if(!_central)
+		{
+			_devicesMutex.unlock();
+			return std::shared_ptr<HomeMaticCentral>();
+		}
+
+		std::shared_ptr<HomeMaticCentral> central(_central);
+		_devicesMutex.unlock();
+		return central;
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+    _devicesMutex.unlock();
+    return std::shared_ptr<HomeMaticCentral>();
+}
+
 int32_t HomeMaticDevices::getUniqueAddress(uint8_t firstByte)
 {
 	int32_t prefix = firstByte << 16;
@@ -319,23 +350,20 @@ bool HomeMaticDevices::remove(int32_t address)
 				return true;
 			}
 		}
-		_devicesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_devicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
-    	_devicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
-    	_devicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
+    _devicesMutex.unlock();
 	return false;
 }
 
@@ -352,24 +380,50 @@ std::shared_ptr<HomeMaticDevice> HomeMaticDevices::get(int32_t address)
 				return (*i);
 			}
 		}
-		_devicesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_devicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
-    	_devicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
-    	_devicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
+    _devicesMutex.unlock();
 	return std::shared_ptr<HomeMaticDevice>();
+}
+
+std::vector<std::shared_ptr<HomeMaticDevice>> HomeMaticDevices::getDevices()
+{
+	try
+	{
+		_devicesMutex.lock();
+		std::vector<std::shared_ptr<HomeMaticDevice>> devices;
+		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		{
+			devices.push_back(*i);
+		}
+		_devicesMutex.unlock();
+		return devices;
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    _devicesMutex.unlock();
+	return std::vector<std::shared_ptr<HomeMaticDevice>>();
 }
 
 std::shared_ptr<HomeMaticDevice> HomeMaticDevices::get(std::string serialNumber)
@@ -385,22 +439,19 @@ std::shared_ptr<HomeMaticDevice> HomeMaticDevices::get(std::string serialNumber)
 				return (*i);
 			}
 		}
-		_devicesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_devicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
-    	_devicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(...)
     {
-    	_devicesMutex.unlock();
         std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
     }
+    _devicesMutex.unlock();
 	return std::shared_ptr<HomeMaticDevice>();
 }

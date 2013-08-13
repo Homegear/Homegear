@@ -19,8 +19,8 @@ public:
 	bool remove(int32_t address);
 	std::shared_ptr<HomeMaticDevice> get(int32_t address);
 	std::shared_ptr<HomeMaticDevice> get(std::string serialNumber);
-	std::shared_ptr<HomeMaticCentral> getCentral() { return _central; }
-	std::vector<std::shared_ptr<HomeMaticDevice>>* getDevices() { return &_devices; }
+	std::shared_ptr<HomeMaticCentral> getCentral();
+	std::vector<std::shared_ptr<HomeMaticDevice>> getDevices();
 	void load();
 	void save();
 	void stopThreads();
