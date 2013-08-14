@@ -148,7 +148,7 @@ void Peer::stopThreads()
 {
 	try
 	{
-		if(!_workerThread || !_workerThreadRunning) return;
+		if(!_workerThreadRunning || !_workerThread) return;
 		_stopWorkerThread = true;
 		if(_workerThread->joinable())
 		{

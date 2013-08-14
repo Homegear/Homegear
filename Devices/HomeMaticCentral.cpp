@@ -443,7 +443,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int
 			std::string temp = peer->getSerialNumber().substr(3);
 			std::string serialNumber = getUniqueSerialNumber("VCD", HelperFunctions::getNumber(temp));
 			GD::devices.add(new HM_CC_TC(serialNumber, hmcctcAddress));
-			std::shared_ptr<HomeMaticDevice> tc = GD::devices.get(hmcctcAddress);
+			tc = GD::devices.get(hmcctcAddress);
 			tc->addPeer(peer);
 			tc->saveToDatabase();
 		}
@@ -505,7 +505,6 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
 		if(!sw)
 		{
 			int32_t actorAddress = getUniqueAddress((0x04 << 16) + (peer->address & 0xFF00) + (peer->address & 0xFF));
-			//TODO: Check all channels and add all channels not paired to an actor
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 			{
 				if(!peer->hasPeers(i->first) || peer->getPeer(i->first, actorAddress))
