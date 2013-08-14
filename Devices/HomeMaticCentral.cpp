@@ -296,6 +296,15 @@ void HomeMaticCentral::handleCLICommand(std::string command)
 			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 		}
 	}
+	else if(command == "peer list peers")
+	{
+		if(!_currentPeer)
+		{
+			std::cout << "No peer selected." << std::endl;
+			return;
+		}
+		_currentPeer->handleCLICommand(command.substr(5));
+	}
 	else if(command == "select peer")
 	{
 		std::cout << "Please enter the devices address: ";
@@ -422,18 +431,22 @@ std::string HomeMaticCentral::getUniqueSerialNumber(std::string seedPrefix, uint
 	return "";
 }
 
-void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
+void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues)
 {
 	try
 	{
-		int32_t hmcctcAddress = getUniqueAddress((0x39 << 16) + (peer->address & 0xFF00) + (peer->address & 0xFF));
-		if(peer->hasPeers(1) && !peer->getPeer(1, hmcctcAddress)) return; //Already linked to a HM-CC-TC
-		std::string temp = peer->getSerialNumber().substr(3);
-		std::string serialNumber = getUniqueSerialNumber("VCD", HelperFunctions::getNumber(temp));
-		GD::devices.add(new HM_CC_TC(serialNumber, hmcctcAddress));
-		std::shared_ptr<HomeMaticDevice> tc = GD::devices.get(hmcctcAddress);
-		tc->addPeer(peer);
-		tc->saveToDatabase();
+		std::shared_ptr<HomeMaticDevice> tc(peer->getHiddenPeerDevice());
+		if(!tc)
+		{
+			int32_t hmcctcAddress = getUniqueAddress((0x39 << 16) + (peer->address & 0xFF00) + (peer->address & 0xFF));
+			if(peer->hasPeers(1) && !peer->getPeer(1, hmcctcAddress)) return; //Already linked to a HM-CC-TC
+			std::string temp = peer->getSerialNumber().substr(3);
+			std::string serialNumber = getUniqueSerialNumber("VCD", HelperFunctions::getNumber(temp));
+			GD::devices.add(new HM_CC_TC(serialNumber, hmcctcAddress));
+			std::shared_ptr<HomeMaticDevice> tc = GD::devices.get(hmcctcAddress);
+			tc->addPeer(peer);
+			tc->saveToDatabase();
+		}
 		std::shared_ptr<BasicPeer> hmcctc(new BasicPeer());
 		hmcctc->address = tc->address();
 		hmcctc->serialNumber = tc->serialNumber();
@@ -442,7 +455,6 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 		peer->addPeer(1, hmcctc);
 		peer->saveToDatabase(_address);
 
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, peer->address);
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		pendingQueue->noSending = true;
 
@@ -450,9 +462,9 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 		//CONFIG_ADD_PEER
 		payload.push_back(0x01);
 		payload.push_back(0x01);
-		payload.push_back(hmcctcAddress >> 16);
-		payload.push_back((hmcctcAddress >> 8) & 0xFF);
-		payload.push_back(hmcctcAddress & 0xFF);
+		payload.push_back(tc->address() >> 16);
+		payload.push_back((tc->address() >> 8) & 0xFF);
+		payload.push_back(tc->address() & 0xFF);
 		payload.push_back(0x02);
 		payload.push_back(0);
 		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->address, payload));
@@ -463,7 +475,11 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
 		pendingQueue->serviceMessages = peer->serviceMessages;
 		peer->serviceMessages->setConfigPending(true);
 		peer->pendingBidCoSQueues->push(pendingQueue);
-		queue->push(peer->pendingBidCoSQueues);
+		if(pushPendingBidCoSQueues)
+		{
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, peer->address);
+			queue->push(peer->pendingBidCoSQueues);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -479,53 +495,75 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer)
     }
 }
 
-void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer)
+void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues)
 {
 	try
 	{
-		int32_t actorAddress = getUniqueAddress((0x04 << 16) + (peer->address & 0xFF00) + (peer->address & 0xFF));
-		if(peer->hasPeers(1) && !peer->getPeer(1, actorAddress)) return; //Already linked to an actor
-		std::string temp = peer->getSerialNumber().substr(3);
-		std::string serialNumber = getUniqueSerialNumber("VSW", HelperFunctions::getNumber(temp));
-		GD::devices.add(new HM_LC_SWX_FM(serialNumber, actorAddress));
-		std::shared_ptr<HomeMaticDevice> sw = GD::devices.get(actorAddress);
-		uint32_t channelCount = peer->rpcDevice->channels.size();
-		sw->setChannelCount(channelCount);
-		sw->addPeer(peer);
-		sw->saveToDatabase();
+		if(!peer) return;
+		std::shared_ptr<HomeMaticDevice> sw(peer->getHiddenPeerDevice());
+		std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>> channels;
+		if(!sw)
+		{
+			int32_t actorAddress = getUniqueAddress((0x04 << 16) + (peer->address & 0xFF00) + (peer->address & 0xFF));
+			//TODO: Check all channels and add all channels not paired to an actor
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+			{
+				if(!peer->hasPeers(i->first) || peer->getPeer(i->first, actorAddress))
+				{
+					channels[i->first] = i->second;
+				}
+			}
+			if(channels.empty()) return; //All channels are already paired to actors
+			std::string temp = peer->getSerialNumber().substr(3);
+			std::string serialNumber = getUniqueSerialNumber("VSW", HelperFunctions::getNumber(temp));
+			GD::devices.add(new HM_LC_SWX_FM(serialNumber, actorAddress));
+			sw = GD::devices.get(actorAddress);
+			uint32_t channelCount = peer->rpcDevice->channels.size();
+			sw->setChannelCount(channelCount);
+			sw->addPeer(peer);
+			sw->saveToDatabase();
+		}
 
 		std::shared_ptr<BasicPeer> switchPeer;
 
-		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		if(channel > -1)
 		{
-			if(i->second->type != "KEY") continue;
 			switchPeer.reset(new BasicPeer());
 			switchPeer->address = sw->address();
 			switchPeer->serialNumber = sw->serialNumber();
-			switchPeer->channel = i->first;
+			switchPeer->channel = channel;
 			switchPeer->hidden = true;
-			peer->addPeer(i->first, switchPeer);
+			peer->addPeer(channel, switchPeer);
+		}
+		else
+		{
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+			{
+				if(i->second->type != "KEY") continue;
+				switchPeer.reset(new BasicPeer());
+				switchPeer->address = sw->address();
+				switchPeer->serialNumber = sw->serialNumber();
+				switchPeer->channel = i->first;
+				switchPeer->hidden = true;
+				peer->addPeer(i->first, switchPeer);
+			}
 		}
 
 		peer->saveToDatabase(_address);
 
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, peer->address);
-
 		std::vector<uint8_t> payload;
-		//CONFIG_ADD_PEER
-		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		if(channel > -1)
 		{
-			if(i->second->type != "KEY") continue;
 			std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 			pendingQueue->noSending = true;
 
 			payload.clear();
-			payload.push_back(i->first);
+			payload.push_back(channel);
 			payload.push_back(0x01);
-			payload.push_back(actorAddress >> 16);
-			payload.push_back((actorAddress >> 8) & 0xFF);
-			payload.push_back(actorAddress & 0xFF);
-			payload.push_back(i->first);
+			payload.push_back(sw->address() >> 16);
+			payload.push_back((sw->address() >> 8) & 0xFF);
+			payload.push_back(sw->address() & 0xFF);
+			payload.push_back(channel);
 			payload.push_back(0);
 			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->address, payload));
 			pendingQueue->push(configPacket);
@@ -535,8 +573,37 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer)
 			peer->serviceMessages->setConfigPending(true);
 			peer->pendingBidCoSQueues->push(pendingQueue);
 		}
+		else
+		{
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+			{
+				if(i->second->type != "KEY") continue;
+				std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+				pendingQueue->noSending = true;
 
-		queue->push(peer->pendingBidCoSQueues);
+				payload.clear();
+				payload.push_back(i->first);
+				payload.push_back(0x01);
+				payload.push_back(sw->address() >> 16);
+				payload.push_back((sw->address() >> 8) & 0xFF);
+				payload.push_back(sw->address() & 0xFF);
+				payload.push_back(i->first);
+				payload.push_back(0);
+				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->address, payload));
+				pendingQueue->push(configPacket);
+				pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+				_messageCounter[0]++;
+				pendingQueue->serviceMessages = peer->serviceMessages;
+				peer->serviceMessages->setConfigPending(true);
+				peer->pendingBidCoSQueues->push(pendingQueue);
+			}
+		}
+
+		if(pushPendingBidCoSQueues)
+		{
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, peer->address);
+			queue->push(peer->pendingBidCoSQueues);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -552,12 +619,12 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer)
     }
 }
 
-void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer)
+void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues)
 {
 	try
 	{
 		if(GD::debugLevel >= 5) std::cout << "Debug: Adding homegear features. Device type: 0x" << std::hex << (int32_t)peer->deviceType << std::dec << std::endl;
-		if(peer->deviceType == HMDeviceTypes::HMCCVD) addHomegearFeaturesHMCCVD(peer);
+		if(peer->deviceType == HMDeviceTypes::HMCCVD) addHomegearFeaturesHMCCVD(peer, channel, pushPendingBidCoSQueues);
 		else if(peer->deviceType == HMDeviceTypes::HMPB4DISWM ||
 				peer->deviceType == HMDeviceTypes::HMRC4 ||
 				peer->deviceType == HMDeviceTypes::HMRC4B ||
@@ -573,7 +640,7 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer)
 				peer->deviceType == HMDeviceTypes::HMRC12SW ||
 				peer->deviceType == HMDeviceTypes::HMRC19 ||
 				peer->deviceType == HMDeviceTypes::HMRC19B ||
-				peer->deviceType == HMDeviceTypes::HMRC19SW) addHomegearFeaturesSwitch(peer);
+				peer->deviceType == HMDeviceTypes::HMRC19SW) addHomegearFeaturesSwitch(peer, channel, pushPendingBidCoSQueues);
 		else if(GD::debugLevel >= 5) std::cout << "Debug: No homegear features to add." << std::endl;
 	}
 	catch(const std::exception& ex)
@@ -649,12 +716,15 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
 
+		uint8_t configByte = 0xA0;
+		if(peer->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+
 		std::vector<uint8_t> payload;
 
 		//CONFIG_START
 		payload.push_back(0x04);
 		payload.push_back(0x00);
-		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x11, _address, address, payload));
+		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x11, _address, address, payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
@@ -693,6 +763,8 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
 
+		uint8_t configByte = 0xA0;
+		if(peer->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
 		std::vector<uint8_t> payload;
 
 		//CONFIG_START
@@ -703,7 +775,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 		payload.push_back(0);
 		payload.push_back(0);
 		payload.push_back(0);
-		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x01, _address, address, payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -1226,7 +1298,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		{
 			if(!peer->pairingComplete)
 			{
-				addHomegearFeatures(peer);
+				addHomegearFeatures(peer, -1, true);
 				peer->pairingComplete = true;
 			}
 		}
@@ -1641,7 +1713,6 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		receiverPeer->linkName = name;
 
 		sender->addPeer(senderChannelIndex, receiverPeer);
-
 		receiver->addPeer(receiverChannelIndex, senderPeer);
 
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, sender->address);
@@ -1649,6 +1720,31 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		pendingQueue->noSending = true;
 
 		std::vector<uint8_t> payload;
+
+		uint8_t configByte = 0xA0;
+		if(sender->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+		std::shared_ptr<BasicPeer> hiddenPeer(sender->getHiddenPeer(senderChannelIndex));
+		if(hiddenPeer)
+		{
+			sender->removePeer(senderChannelIndex, hiddenPeer->address, hiddenPeer->channel);
+			if(!sender->getHiddenPeerDevice()) GD::devices.remove(hiddenPeer->address);
+
+			payload.clear();
+			payload.push_back(senderChannelIndex);
+			payload.push_back(0x02);
+			payload.push_back(hiddenPeer->address >> 16);
+			payload.push_back((hiddenPeer->address >> 8) & 0xFF);
+			payload.push_back(hiddenPeer->address & 0xFF);
+			payload.push_back(hiddenPeer->channel);
+			payload.push_back(0);
+			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x01, _address, sender->address, payload));
+			pendingQueue->push(configPacket);
+			pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+			_messageCounter[0]++;
+			configByte = 0xA0;
+		}
+
+		payload.clear();
 		//CONFIG_ADD_PEER
 		payload.push_back(senderChannelIndex);
 		payload.push_back(0x01);
@@ -1657,7 +1753,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		payload.push_back(receiver->address & 0xFF);
 		payload.push_back(receiverChannelIndex);
 		payload.push_back(0);
-		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, sender->address, payload));
+		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x01, _address, sender->address, payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
@@ -1703,6 +1799,30 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		pendingQueue.reset(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		pendingQueue->noSending = true;
 
+		configByte = 0xA0;
+		if(receiver->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+
+		hiddenPeer = receiver->getHiddenPeer(receiverChannelIndex);
+		if(hiddenPeer)
+		{
+			sender->removePeer(receiverChannelIndex, hiddenPeer->address, hiddenPeer->channel);
+			if(!sender->getHiddenPeerDevice()) GD::devices.remove(hiddenPeer->address);
+
+			payload.clear();
+			payload.push_back(receiverChannelIndex);
+			payload.push_back(0x02);
+			payload.push_back(hiddenPeer->address >> 16);
+			payload.push_back((hiddenPeer->address >> 8) & 0xFF);
+			payload.push_back(hiddenPeer->address & 0xFF);
+			payload.push_back(hiddenPeer->channel);
+			payload.push_back(0);
+			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x01, _address, receiver->address, payload));
+			pendingQueue->push(configPacket);
+			pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+			_messageCounter[0]++;
+			configByte = 0xA0;
+		}
+
 		payload.clear();
 		//CONFIG_ADD_PEER
 		payload.push_back(receiverChannelIndex);
@@ -1712,7 +1832,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		payload.push_back(sender->address & 0xFF);
 		payload.push_back(senderChannelIndex);
 		payload.push_back(0);
-		configPacket.reset(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, receiver->address, payload));
+		configPacket.reset(new BidCoSPacket(_messageCounter[0], configByte, 0x01, _address, receiver->address, payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
@@ -1796,15 +1916,17 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Receiver channel not found.");
 		if(!sender->getPeer(senderChannelIndex, receiver->address) && !receiver->getPeer(receiverChannelIndex, sender->address)) return RPC::RPCVariable::createError(-6, "Devices are not paired to each other.");
 
-		sender->removePeer(senderChannelIndex, receiver->address);
-		receiver->removePeer(receiverChannelIndex, sender->address);
+		sender->removePeer(senderChannelIndex, receiver->address, receiverChannelIndex);
+		receiver->removePeer(receiverChannelIndex, sender->address, senderChannelIndex);
 
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, sender->address);
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		pendingQueue->noSending = true;
 
+		uint8_t configByte = 0xA0;
+		if(sender->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+
 		std::vector<uint8_t> payload;
-		//CONFIG_ADD_PEER
 		payload.push_back(senderChannelIndex);
 		payload.push_back(0x02);
 		payload.push_back(receiver->address >> 16);
@@ -1812,7 +1934,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		payload.push_back(receiver->address & 0xFF);
 		payload.push_back(receiverChannelIndex);
 		payload.push_back(0);
-		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, sender->address, payload));
+		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x01, _address, sender->address, payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
@@ -1822,12 +1944,16 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		sender->pendingBidCoSQueues->push(pendingQueue);
 		queue->push(sender->pendingBidCoSQueues);
 
+		addHomegearFeatures(sender, senderChannelIndex, false);
+
 		queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, receiver->address);
 		pendingQueue.reset(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		pendingQueue->noSending = true;
 
+		configByte = 0xA0;
+		if(receiver->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+
 		payload.clear();
-		//CONFIG_ADD_PEER
 		payload.push_back(receiverChannelIndex);
 		payload.push_back(0x02);
 		payload.push_back(sender->address >> 16);
@@ -1835,7 +1961,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		payload.push_back(sender->address & 0xFF);
 		payload.push_back(senderChannelIndex);
 		payload.push_back(0);
-		configPacket.reset(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, receiver->address, payload));
+		configPacket.reset(new BidCoSPacket(_messageCounter[0], configByte, 0x01, _address, receiver->address, payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
@@ -1844,6 +1970,9 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		receiver->serviceMessages->setConfigPending(true);
 		receiver->pendingBidCoSQueues->push(pendingQueue);
 		queue->push(receiver->pendingBidCoSQueues);
+
+		addHomegearFeatures(receiver, receiverChannelIndex, false);
+
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -2042,6 +2171,9 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		peer->serviceMessages->setConfigPending(true);
 		queue->serviceMessages = peer->serviceMessages;
 
+		uint8_t configByte = 0xA0;
+		if(peer->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+
 		std::vector<uint8_t> payload;
 		payload.push_back(channel);
 		payload.push_back(0x02);
@@ -2050,7 +2182,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		payload.push_back(oldTeamAddress & 0xFF);
 		payload.push_back(oldTeamChannel);
 		payload.push_back(0);
-		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(peer->messageCounter, 0xB0, 0x01, _address, peer->address, payload));
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(peer->messageCounter, configByte, 0x01, _address, peer->address, payload));
 		peer->messageCounter++;
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
@@ -2285,12 +2417,12 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialN
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
 {
 	try
 	{
 		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
-		if(peer) return peer->getParamsetId(channel, type);
+		if(peer) return peer->getParamsetId(channel, type, remoteSerialNumber, remoteChannel);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)

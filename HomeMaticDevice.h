@@ -35,13 +35,14 @@ class HomeMaticDevice
         virtual bool isCentral() { return _deviceType == HMDeviceTypes::HMCENTRAL; }
         virtual void stopThreads();
         virtual void checkForDeadlock();
+        virtual void reset();
 
         HomeMaticDevice();
         HomeMaticDevice(std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
         virtual bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
-        virtual void addPeer(std::shared_ptr<Peer> peer) { if(_peers.find(peer->address) == _peers.end()) _peers[peer->address] = peer; }
+        virtual void addPeer(std::shared_ptr<Peer> peer);
         bool peerExists(int32_t address);
         std::shared_ptr<Peer> getPeer(int32_t address);
         std::shared_ptr<Peer> getPeerBySerial(std::string serialNumber);
@@ -131,8 +132,6 @@ class HomeMaticDevice
         virtual void init();
         virtual void setUpBidCoSMessages();
         virtual void setUpConfig();
-
-        virtual void reset();
     private:
 };
 

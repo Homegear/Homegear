@@ -148,7 +148,7 @@ void Peer::stopThreads()
 {
 	try
 	{
-		if(!_workerThread || !_centralFeatures) return;
+		if(!_workerThread || !_workerThreadRunning) return;
 		_stopWorkerThread = true;
 		if(_workerThread->joinable())
 		{
@@ -244,7 +244,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 				dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 				for(uint32_t k = 0; k < dataSize; k++)
 				{
-					team.data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
+					basicPeer->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
 				}
 			}
 		}
@@ -318,6 +318,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 void Peer::worker()
 {
 	if(!_centralFeatures) return;
+	_workerThreadRunning = true;
 	std::chrono::milliseconds sleepingTime(300);
 	std::vector<uint32_t> positionsToDelete;
 	std::vector<std::shared_ptr<VariableToReset>> variablesToReset;
@@ -335,7 +336,11 @@ void Peer::worker()
 				continue;
 			}
 			else wakeUpIndex = 0;
-			if(_stopWorkerThread) return;
+			if(_stopWorkerThread)
+			{
+				_workerThreadRunning = false;
+				return;
+			}
 			time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 			if(!_variablesToReset.empty())
 			{
@@ -396,6 +401,21 @@ void Peer::worker()
 			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 		}
 	}
+	_workerThreadRunning = false;
+}
+
+void Peer::handleCLICommand(std::string command)
+{
+	if(command == "list peers")
+	{
+		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		{
+			for(std::vector<std::shared_ptr<BasicPeer>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				std::cout << "Channel: " << i->first << "\tAddress: 0x" << std::hex << (*j)->address << "\tRemote channel: " << std::dec << (*j)->channel << "\tSerial number: " << (*j)->serialNumber << std::endl << std::dec;
+			}
+		}
+	}
 }
 
 void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
@@ -413,6 +433,8 @@ void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 	_peers[channel].push_back(peer);
 	initializeLinkConfig(channel, peer->address, peer->channel, true);
 }
+
+
 
 std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel)
 {
@@ -434,20 +456,87 @@ std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, std::string serialNumb
 	return std::shared_ptr<BasicPeer>();
 }
 
-std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, int32_t address, int32_t remoteChannel)
+std::shared_ptr<HomeMaticDevice> Peer::getHiddenPeerDevice()
 {
-	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+	try
 	{
-		if((*i)->address == address && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
+		//This is pretty dirty, but as all hidden peers should be the same device, this should always work
+		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::iterator j = _peers.begin(); j != _peers.end(); ++j)
+		{
+			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = j->second.begin(); i != j->second.end(); ++i)
+			{
+				if((*i)->hidden) return GD::devices.get((*i)->address);
+			}
+		}
 	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+	return std::shared_ptr<HomeMaticDevice>();
+}
+
+std::shared_ptr<BasicPeer> Peer::getHiddenPeer(int32_t channel)
+{
+	try
+	{
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		{
+			if((*i)->hidden) return *i;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 	return std::shared_ptr<BasicPeer>();
 }
 
-void Peer::removePeer(int32_t channel, int32_t address)
+std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, int32_t address, int32_t remoteChannel)
+{
+	try
+	{
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		{
+			if((*i)->address == address && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+	return std::shared_ptr<BasicPeer>();
+}
+
+void Peer::removePeer(int32_t channel, int32_t address, int32_t remoteChannel)
 {
 	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 	{
-		if((*i)->address == address)
+		if((*i)->address == address && (*i)->channel == remoteChannel)
 		{
 			_peers[channel].erase(i);
 			if(linksCentral[channel].find(address) != linksCentral[channel].end()) linksCentral[channel].erase(linksCentral[channel].find(address));
@@ -501,22 +590,65 @@ void Peer::saveToDatabase(int32_t parentAddress)
     }
 }
 
+void Peer::deletePairedVirtualDevice(int32_t address)
+{
+	try
+	{
+		std::shared_ptr<HomeMaticDevice> device(GD::devices.get(address));
+		if(device)
+		{
+			GD::devices.remove(address);
+			device->reset();
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
+}
+
 void Peer::deletePairedVirtualDevices()
 {
-	std::shared_ptr<HomeMaticDevice> device;
-	for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+	try
 	{
-		for(std::vector<std::shared_ptr<BasicPeer>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+		std::shared_ptr<HomeMaticDevice> device;
+		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			if(!*j) continue;
-			if((*j)->hidden)
+			for(std::vector<std::shared_ptr<BasicPeer>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				device = GD::devices.get((*j)->address);
-				if(device) GD::devices.remove((*j)->address);
-				(*j)->device.reset();
+				if(!*j) continue;
+				if((*j)->hidden)
+				{
+					device = GD::devices.get((*j)->address);
+					if(device)
+					{
+						GD::devices.remove((*j)->address);
+						device->reset();
+					}
+				}
 			}
 		}
 	}
+	catch(const std::exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    }
 }
 
 std::string Peer::serialize()
@@ -1095,7 +1227,7 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 			_variablesToReset.push_back(variable);
 			if(GD::debugLevel >= 5) std::cout << "Debug: " << parameter->id << " will be reset in " << ((variable->resetTime - time) / 1000)  << "s." << std::endl;
 			_variablesToResetMutex.unlock();
-			if(!_workerThread || !_workerThread->joinable())
+			if(!_workerThread || !_workerThreadRunning)
 			{
 				_stopWorkerThread = false;
 				_workerThread.reset(new std::thread(&Peer::worker, this));
@@ -1504,12 +1636,19 @@ std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> Peer::getDeviceD
 	return descriptions;
 }
 
-std::shared_ptr<RPC::RPCVariable> Peer::getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type)
+std::shared_ptr<RPC::RPCVariable> Peer::getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
 {
 	try
 	{
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+		std::shared_ptr<BasicPeer> remotePeer;
+		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty())
+		{
+			remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
+			if(!remotePeer) return RPC::RPCVariable::createError(-2, "Unknown remote peer.");
+		}
+
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcDevice->channels[channel]->parameterSets[type]->id));
 	}
 	catch(const std::exception& ex)
@@ -1870,7 +2009,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkInfo(int32_t senderChannel, std::
 	try
 	{
 		if(_peers.find(senderChannel) == _peers.end()) return RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
-		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverSerialNumber);
+		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverSerialNumber, receiverChannel);
 		if(!remotePeer) return RPC::RPCVariable::createError(-2, "No peer found for sender channel and receiver serial number.");
 		if(remotePeer->channel != receiverChannel)  RPC::RPCVariable::createError(-2, "No peer found for receiver channel.");
 		std::shared_ptr<RPC::RPCVariable> response(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
@@ -1937,6 +2076,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel)
 			if(!central) return array; //central actually should always be set at this point
 			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
 			{
+				if((*i)->hidden) continue;
 				std::shared_ptr<Peer> peer(central->getPeer((*i)->address));
 				bool peerKnowsMe = false;
 				if(peer && peer->getPeer(channel, address)) peerKnowsMe = true;
@@ -2014,9 +2154,10 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 			if(!central) return array; //central actually should always be set at this point
 			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
 			{
+				if((*i)->hidden) continue;
 				std::shared_ptr<Peer> remotePeer(central->getPeer((*i)->address));
 				bool peerKnowsMe = false;
-				if(remotePeer && remotePeer->getPeer(channel, address)) peerKnowsMe = true;
+				if(remotePeer && remotePeer->getPeer((*i)->channel, address, channel)) peerKnowsMe = true;
 
 				//Don't continue if peer is sender and exists in central's peer array to avoid generation of duplicate results when requesting all links (only generate results when we are sender)
 				if(!isSender && peerKnowsMe && avoidDuplicates) return array;

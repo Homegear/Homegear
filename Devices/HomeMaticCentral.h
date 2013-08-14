@@ -39,9 +39,9 @@ public:
 	virtual void enqueuePendingQueues(int32_t deviceAddress);
 	int32_t getUniqueAddress(int32_t seed);
 	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
-	void addHomegearFeatures(std::shared_ptr<Peer> peer);
-	void addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer);
-	void addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer);
+	void addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
+	void addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
+	void addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
 
 	void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
@@ -62,7 +62,7 @@ public:
 	std::shared_ptr<RPC::RPCVariable> getLinkPeers(std::string serialNumber, int32_t channel);
 	std::shared_ptr<RPC::RPCVariable> getLinks(std::string serialNumber, int32_t channel, int32_t flags);
 	std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
-	std::shared_ptr<RPC::RPCVariable> getParamsetId(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type);
+	std::shared_ptr<RPC::RPCVariable> getParamsetId(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
 	std::shared_ptr<RPC::RPCVariable> getParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
 	std::shared_ptr<RPC::RPCVariable> getServiceMessages();
 	std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);

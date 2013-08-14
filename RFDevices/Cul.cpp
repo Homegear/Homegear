@@ -198,6 +198,7 @@ std::string Cul::readFromDevice()
 					FD_SET(_fileDescriptor, &readFileDescriptor);
 					timeout.tv_sec = 3;
 					if(!_stopCallbackThread) continue;
+					else return "";
 					break;
 				case -1:
 					throw(Exception("Error reading from CUL device: " + _rfDevice));
@@ -370,6 +371,7 @@ void Cul::listen()
         	if(_stopped)
         	{
         		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        		if(_stopCallbackThread) return;
         		continue;
         	}
         	std::string packetHex = readFromDevice();

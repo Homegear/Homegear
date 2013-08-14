@@ -96,11 +96,15 @@ void startDaemon()
 		if(pid > 0) exit(0);
 		//Set process permission
 		umask(S_IWGRP | S_IWOTH);
-		//Set child processes id
+		//Set child processe's id
 		sid = setsid();
 		if(sid < 0) exit(1);
 		//Set root directory as working directory (always available)
-		if((chdir("/")) < 0) exit(1);
+		if((chdir(GD::settings.logfilePath().c_str())) < 0)
+		{
+			std::cerr << "Could not change working directory to " << GD::settings.logfilePath() << "." << std::endl;
+			exit(1);
+		}
 
 		close(STDIN_FILENO);
 	}
@@ -209,6 +213,19 @@ int main(int argc, char* argv[])
         //delscreen for all screens!!!
         return 0;*/
 
+    	GD::bigEndian = HelperFunctions::isBigEndian();
+
+    	char path[1024];
+    	getcwd(path, 1024);
+    	GD::workingDirectory = std::string(path);
+		ssize_t length = readlink("/proc/self/exe", path, sizeof(path) - 1);
+		if (length == -1) throw Exception("Could not get executable path.");
+		path[length] = '\0';
+		GD::executablePath = std::string(path);
+		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
+		if(GD::configPath.empty()) GD::configPath = "/etc/Homegear/";
+		GD::settings.load(GD::configPath + "main.conf");
+
     	if(startAsDaemon) startDaemon();
 
     	//Create PID file
@@ -242,18 +259,6 @@ int main(int argc, char* argv[])
 
     	std::shared_ptr<HomeMaticDevice> currentDevice;
 
-    	GD::bigEndian = HelperFunctions::isBigEndian();
-
-    	char path[1024];
-    	getcwd(path, 1024);
-    	GD::workingDirectory = std::string(path);
-		ssize_t length = readlink("/proc/self/exe", path, sizeof(path) - 1);
-		if (length == -1) throw Exception("Could not get executable path.");
-		path[length] = '\0';
-		GD::executablePath = std::string(path);
-		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
-		if(GD::configPath.empty()) GD::configPath = "/etc/Homegear/";
-		GD::settings.load(GD::configPath + "main.conf");
 		if(startAsDaemon)
 		{
 			std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout);

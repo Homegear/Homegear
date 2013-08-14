@@ -1195,6 +1195,31 @@ bool HomeMaticDevice::peerExists(int32_t address)
     }
 }
 
+void HomeMaticDevice::addPeer(std::shared_ptr<Peer> peer)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peers.find(peer->address) == _peers.end())
+		{
+			_peers[peer->address] = peer;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    _peersMutex.unlock();
+}
+
 std::shared_ptr<Peer> HomeMaticDevice::getPeer(int32_t address)
 {
 	try

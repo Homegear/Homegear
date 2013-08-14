@@ -93,6 +93,7 @@ class Peer
 
         std::shared_ptr<PendingBidCoSQueues> pendingBidCoSQueues;
 
+        void handleCLICommand(std::string command);
         void stopThreads();
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel, bool useConfigFunction);
@@ -104,12 +105,15 @@ class Peer
         void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
         void deleteFromDatabase(int32_t parentAddress);
         void saveToDatabase(int32_t parentAddress);
+        void deletePairedVirtualDevice(int32_t address);
         void deletePairedVirtualDevices();
         bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
         void addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer);
         std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address, int32_t remoteChannel = -1);
+        std::shared_ptr<HomeMaticDevice> getHiddenPeerDevice();
+        std::shared_ptr<BasicPeer> getHiddenPeer(int32_t channel);
         std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel = -1);
-        void removePeer(int32_t channel, int32_t address);
+        void removePeer(int32_t channel, int32_t address, int32_t remoteChannel);
         void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
         void setRSSI(uint8_t rssi);
 
@@ -129,7 +133,7 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> getLinkPeers(int32_t channel);
         std::shared_ptr<RPC::RPCVariable> getLink(int32_t channel, int32_t flags, bool avoidDuplicates);
         std::shared_ptr<RPC::RPCVariable> getParamsetDescription(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
-        std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type);
+        std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
         std::shared_ptr<RPC::RPCVariable> getParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
         std::shared_ptr<RPC::RPCVariable> getServiceMessages();
         std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
@@ -140,6 +144,7 @@ class Peer
         uint32_t _lastPacketReceived = 0;
         uint32_t _lastRSSI = 0;
         bool _stopWorkerThread = true;
+        bool _workerThreadRunning = false;
         std::shared_ptr<std::thread> _workerThread;
         std::string _serialNumber;
         std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;

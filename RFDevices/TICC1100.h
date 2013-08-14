@@ -1,4 +1,3 @@
-#define TI_CC1100
 #ifndef TICC1100_H_
 #define TICC1100_H_
 

@@ -1,4 +1,3 @@
-#define TI_CC1100
 #ifdef TI_CC1100
 
 #include "TICC1100.h"
