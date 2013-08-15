@@ -38,7 +38,7 @@ class BidCoSPacket
         virtual ~BidCoSPacket();
         void import(std::string&, bool removeFirstCharacter = true);
         void import(std::vector<uint8_t>&, bool rssiByte);
-        std::vector<uint8_t> getPosition(double index, double size);
+        std::vector<uint8_t> getPosition(double index, double size, int32_t mask);
         void setPosition(double index, double size, std::vector<uint8_t>& value);
     protected:
     private:

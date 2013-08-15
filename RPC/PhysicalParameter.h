@@ -44,6 +44,7 @@ public:
 	uint32_t startIndex = 0;
 	uint32_t endIndex = 0;
 	double size = 1.0;
+	int32_t mask = -1;
 	std::string valueID;
 	bool noInit = false;
 	std::string getRequest;

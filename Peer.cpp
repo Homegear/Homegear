@@ -1118,7 +1118,7 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string
 				if(j->size > 0 && j->index > 0)
 				{
 					if(((int32_t)j->index) - 9 >= (signed)packet->payload()->size()) continue;
-					data = packet->getPosition(j->index, j->size);
+					data = packet->getPosition(j->index, j->size, -1);
 
 					if(j->constValue > -1)
 					{

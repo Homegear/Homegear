@@ -1,8 +1,7 @@
 - Central: Is configuration sent to device after inserting batteries? / Handle device start up
 - Delete peer from all devices it is linked to, when peer is reset
 - Configuring link paramsets doesn't work for the sender in HomeMatic Configurator
-- Enforcing link parameters does not always work
-- Calculate index and size from mask (support mask)
+- TI CC1100 deadlock
 
 When AES is working:
 - enforce $PEER.AES

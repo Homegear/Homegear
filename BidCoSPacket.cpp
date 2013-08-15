@@ -338,7 +338,7 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
     _length = 9 + _payload.size();
 }
 
-std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size)
+std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_t mask)
 {
 	std::vector<uint8_t> result;
 	try
@@ -402,10 +402,14 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size)
 			uint32_t bitSize = std::lround(size * 10) % 10;
 			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
-			result.push_back(_payload.at(index) & _bitmask[bitSize]);
+			uint8_t currentByte = _payload.at(index) & _bitmask[bitSize];
+			if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - 1) * 8));
+			result.push_back(currentByte);
 			for(uint32_t i = 1; i < bytes; i++)
 			{
-				result.push_back(_payload.at(index + i));
+				currentByte = _payload.at(index + i);
+				if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - i - 1) * 8));
+				result.push_back(currentByte);
 			}
 		}
 		if(result.empty()) result.push_back(0);

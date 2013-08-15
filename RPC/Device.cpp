@@ -718,7 +718,7 @@ bool DeviceType::matches(std::shared_ptr<BidCoSPacket> packet)
 		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
 			int32_t intValue = 0;
-			std::vector<uint8_t> data = packet->getPosition(i->index, i->size);
+			std::vector<uint8_t> data = packet->getPosition(i->index, i->size, -1);
 			HelperFunctions::memcpyBigEndian(intValue, data);
 			if(!i->checkCondition(intValue)) return false;
 		}

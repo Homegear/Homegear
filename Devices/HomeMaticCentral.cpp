@@ -550,6 +550,13 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
 
 		peer->saveToDatabase(_address);
 
+		std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+		if(peer->deviceType == HMDeviceTypes::HMRC19 || peer->deviceType == HMDeviceTypes::HMRC19B || peer->deviceType == HMDeviceTypes::HMRC19SW)
+		{
+			paramset->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LCD_SYMBOL", 2)));
+			paramset->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LCD_LEVEL_INTERP", 1)));
+		}
+
 		std::vector<uint8_t> payload;
 		if(channel > -1)
 		{
@@ -571,6 +578,9 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
 			pendingQueue->serviceMessages = peer->serviceMessages;
 			peer->serviceMessages->setConfigPending(true);
 			peer->pendingBidCoSQueues->push(pendingQueue);
+
+			//putParamset pushes the packets on pendingQueues, but does not send immediately
+			if(!paramset->structValue->empty()) peer->putParamset(channel, RPC::ParameterSet::Type::Enum::link, sw->serialNumber(), channel, paramset, true, true);
 		}
 		else
 		{
@@ -595,6 +605,9 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
 				pendingQueue->serviceMessages = peer->serviceMessages;
 				peer->serviceMessages->setConfigPending(true);
 				peer->pendingBidCoSQueues->push(pendingQueue);
+
+				//putParamset pushes the packets on pendingQueues, but does not send immediately
+				if(!paramset->structValue->empty()) peer->putParamset(i->first, RPC::ParameterSet::Type::Enum::link, sw->serialNumber(), i->first, paramset, true, true);
 			}
 		}
 
@@ -1212,7 +1225,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 							if(type == RPC::ParameterSet::Type::master)
 							{
 								//This is not working if one parameter is split over two or more packets.
-								peer->configCentral[channel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size);
+								peer->configCentral[channel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
 								if(!peer->pairingComplete && (*i)->logicalParameter->enforce)
 								{
 									std::cerr << "Moin1" << std::endl;
@@ -1223,7 +1236,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 							}
 							else if(peer->getPeer(channel, remoteAddress, remoteChannel))
 							{
-								peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size);
+								peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
 								if(GD::debugLevel >= 5) std::cout << "Parameter " << (*i)->id << " of device 0x" << std::hex << peer->address << std::dec << " at index " << std::to_string((*i)->physicalParameter->index) << " and packet index " << std::to_string(position) << " with size " << std::to_string((*i)->physicalParameter->size) << " was set." << std::endl;
 							}
 						}
@@ -1251,7 +1264,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 								double position = std::fmod((*j)->physicalParameter->index, 1) + 9 + i + 1;
 								double size = (*j)->physicalParameter->size;
 								if(size > 1.0) size = 1.0; //Reading more than one byte doesn't make any sense
-								uint8_t data = packet->getPosition(position, size).at(0);
+								uint8_t data = packet->getPosition(position, size, (*j)->physicalParameter->mask).at(0);
 								RPCConfigurationParameter* configParam = nullptr;
 								if(type == RPC::ParameterSet::Type::master)
 								{
@@ -2490,9 +2503,18 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string seri
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
-		if(peer) return peer->getParamset(channel, type, remoteSerialNumber, remoteChannel);
-		return RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(serialNumber == "BidCoS-RF" && channel == 0 && type == RPC::ParameterSet::Type::Enum::master)
+		{
+			std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+			paramset->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("AES_KEY", 1)));
+			return paramset;
+		}
+		else
+		{
+			std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+			if(peer) return peer->getParamset(channel, type, remoteSerialNumber, remoteChannel);
+			return RPC::RPCVariable::createError(-2, "Unknown device.");
+		}
 	}
 	catch(const std::exception& ex)
     {
