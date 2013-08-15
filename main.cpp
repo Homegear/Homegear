@@ -191,11 +191,12 @@ int main(int argc, char* argv[])
     	//thread apply all bt
 
     	//Enable printing of backtraces
-    	signal(SIGSEGV, exceptionHandler);
+    	/*signal(SIGSEGV, exceptionHandler);
     	signal(SIGTERM, killHandler);
 
-        /*int row,col;
+        int row,col;
         WINDOW* mainWindow = initscr();
+        if(!mainWindow) std::cerr << "Bla" << std::endl;
 
         getmaxyx(stdscr, row, col);
         WINDOW* left = newwin(row, col / 2, 0, 0);
@@ -205,9 +206,9 @@ int main(int argc, char* argv[])
         refresh();
         mvwprintw(right, row/2 - 2, 0, "%s", "Hallo2");
         refresh();
-        std::string input2 = "";
-        cin >> input2;
-        mvwprintw(right, row/2 - 4, 0, "%s", input2.c_str());
+        //std::string input2 = "";
+        //std::cin >> input2;
+        //mvwprintw(right, row/2 - 4, 0, "%s", input2.c_str());
         getch();
         endwin();
         //delscreen for all screens!!!
@@ -278,25 +279,6 @@ int main(int argc, char* argv[])
         GD::devices.load(); //Don't load before database is open!
         if(GD::debugLevel >= 4) std::cout << "Starting XML RPC server..." << std::endl;
         GD::rpcServer.start();
-
-        //sd->addFilter(FilterType::SenderAddress, 0x1E53E7);
-        //sd->addFilter(FilterType::DestinationAddress, 0x1E53E7);
-
-        //sd->addFilter(FilterType::SenderAddress, 0x390001);
-        //sd->addFilter(FilterType::DestinationAddress, 0x390001);
-
-        //sd->addFilter(FilterType::SenderAddress, 0x1DA44D); //Stellantrieb Preetz 1. OG Zimmer NW
-        //sd->addFilter(FilterType::DestinationAddress, 0x1DA44D); //Stellantrieb Preetz 1. OG Zimmer NW
-
-        //sd->addFilter(FilterType::SenderAddress, 0x1D8DDD); //Wandthermostat Kiel Zimmer NW
-        //sd->addFilter(FilterType::DestinationAddress, 0x1D8DDD); //Wandthermostat Kiel Zimmer NW
-
-        //sd->addFilter(FilterType::SenderAddress, 0x1D8F45); //Wandthermostat Preetz 1. OG Zimmer NW
-        //sd->addFilter(FilterType::DestinationAddress, 0x1D8F45); //Wandthermostat Preetz 1. OG Zimmer NW
-
-        //sd->addFilter(FilterType::DestinationAddress, 0x1DDD0F);
-        //sd->addFilter(FilterType::SenderAddress, 0x1F454D);
-        //sd->addFilter(FilterType::DestinationAddress, 0x1F454D);
 
         char inputBuffer[256];
         std::string input = "";
