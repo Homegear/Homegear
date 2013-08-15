@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="7" rx_modes="CONFIG,WAKEUP" supports_aes="true" cyclic_timeout="1200">
+<device version="9" rx_modes="CONFIG,WAKEUP,LAZY_CONFIG" supports_aes="true" cyclic_timeout="1200">
 	<supported_types>
 		<type name="HM radio-controlled motion detector" id="HM-Sec-MDIR" priority="2">
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
 			<parameter index="10.0" size="2.0" const_value="0x004A"/>
 		</type>
 		<type name="HM radio-controlled motion detector Schueco" id="263 162" priority="2">
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
 			<parameter index="10.0" size="2.0" const_value="0x0090"/>
 		</type>
 		<type name="Generic Secure Motion Detector" id="HM-Sec-MD" priority="1">
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
 			<parameter index="22.0" size="1.0" const_value="0x81"/>
 			<parameter index="23.7" size="0.1" const_value="1"/>
 		</type>
@@ -91,7 +94,7 @@
 					<conversion type="float_integer_scale" factor="2"/>
 				</parameter>
 				<parameter id="EVENT_FILTER_NUMBER">
-					<logical type="integer" min="1" max="15" default="3"/>
+					<logical type="integer" min="1" max="15" default="1"/>
 					<physical type="integer" interface="config" list="1" index="1.4" size="0.4"/>
 				</parameter>
 				<parameter id="CAPTURE_WITHIN_INTERVAL">

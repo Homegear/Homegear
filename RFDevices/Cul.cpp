@@ -308,11 +308,11 @@ void Cul::startListening()
 		if(_fileDescriptor == -1) throw(Exception("Couldn't listen to CUL device, because the file descriptor is not valid: " + _rfDevice));
 		_stopped = false;
 		writeToDevice("Ax\r\n", false);
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		writeToDevice("X20\r\n", false);
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		writeToDevice("Ar\r\n", false);
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		_listenThread = std::thread(&Cul::listen, this);
 	}
     catch(const std::exception& ex)

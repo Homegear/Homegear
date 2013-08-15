@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="5" rx_modes="CONFIG,WAKEUP" supports_aes="true">
+<device version="8" rx_modes="CONFIG,WAKEUP,LAZY_CONFIG" supports_aes="true">
 	<supported_types>
 		<type name="HM radio-controlled motion detector surface-mount" id="HM-Sen-MDIR-SM" priority="2">
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
 			<parameter index="10.0" size="2.0" const_value="0x004F"/>
 		</type>
 		<type name="HM radio-controlled motion detector outdoor" id="HM-Sen-MDIR-O" priority="2">
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
 			<parameter index="10.0" size="2.0" const_value="0x005D"/>
 		</type>
 		<type name="Generic Motion Detector" id="HM-MD" priority="1">
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
 			<parameter index="22.0" size="1.0" const_value="0x81"/>
 			<parameter index="23.7" size="0.1" const_value="0"/>
 		</type>
@@ -84,7 +87,7 @@
 					<conversion type="float_integer_scale" factor="2"/>
 				</parameter>
 				<parameter id="EVENT_FILTER_NUMBER">
-					<logical type="integer" min="1" max="15" default="3"/>
+					<logical type="integer" min="1" max="15" default="1"/>
 					<physical type="integer" interface="config" list="1" index="1.4" size="0.4"/>
 				</parameter>
 				<parameter id="CAPTURE_WITHIN_INTERVAL">

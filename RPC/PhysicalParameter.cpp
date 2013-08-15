@@ -27,7 +27,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown interface for \"physical\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "value_id") valueID = attributeValue;
-		else if(attributeName == "no_init" && attributeValue == "true") noInit = true;
+		else if(attributeName == "no_init") { if(attributeValue == "true") noInit = true; }
 		else if(attributeName == "list") list = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "index")
 		{

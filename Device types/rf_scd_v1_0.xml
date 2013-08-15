@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="5" rx_modes="CONFIG,WAKEUP" supports_aes="true" cyclic_timeout="88200">
+<device version="6" rx_modes="CONFIG,WAKEUP" supports_aes="true" cyclic_timeout="88200">
 	<supported_types>
 		<type name="HM SENSOR_FOR_CARBON_DIOXIDE" id="HM-CC-SCD" priority="2">
-			<parameter index="9.0" size="1.0" cond_op="E" const_value="0x10"/>
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x10"/>
 			<parameter index="10.0" size="2.0" const_value="0x0056"/>
 		</type>
 		<type name="HM SENSOR_FOR_CARBON_DIOXIDE Schueco" id="263 160" priority="2">
-			<parameter index="9.0" size="1.0" cond_op="E" const_value="0x10"/>
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x10"/>
 			<parameter index="10.0" size="2.0" const_value="0x0084"/>
 		</type>
 	</supported_types>

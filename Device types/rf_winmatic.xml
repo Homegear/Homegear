@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="5" rx_modes="BURST" supports_aes="true">
+<device version="6" rx_modes="BURST" supports_aes="true">
 	<supported_types>
 		<type name="WinMatic white" id="HM-Sec-Win" priority="2">
 			<parameter index="10.0" size="2.0" const_value="40"/>
@@ -128,11 +128,13 @@
 			<parameter type="integer" index="11.0" size="1.0" param="LEVEL"/>
 			<parameter type="integer" index="12.1" size="0.3" param="ERROR"/>
 			<parameter type="integer" index="12.4" size="0.2" param="LEVEL_STATE"/>
+			<parameter type="integer" index="12.4" size="0.3" param="STATE_FLAGS"/>
 		</frame>
 		<frame id="ACK_STATUS" direction="from_device" allowed_receivers="CENTRAL" event="true" type="0x02" subtype="1" subtype_index="9" channel_field="10">
 			<parameter type="integer" index="11.0" size="1.0" param="LEVEL"/>
 			<parameter type="integer" index="12.1" size="0.3" param="ERROR"/>
 			<parameter type="integer" index="12.4" size="0.2" param="LEVEL_STATE"/>
+			<parameter type="integer" index="12.4" size="0.3" param="STATE_FLAGS"/>
 		</frame>
 		<frame id="INFO_AKKU" direction="from_device" event="true" type="0x10" subtype="6" subtype_index="9" channel_field="10">
 			<parameter type="integer" index="11.0" size="1.0" param="LEVEL"/>
@@ -185,6 +187,41 @@
 					<event frame="ACK_STATUS" auth_violate_policy="reject"/>
 				</physical>
 				<conversion type="boolean_integer" threshold="3"/>
+			</parameter>
+			<parameter id="DIRECTION" operations="read,event" ui_flags="internal">
+				<logical type="option">
+					<option id="NONE" default="true"/>
+					<option id="UP"/>
+					<option id="DOWN"/>
+					<option id="UNDEFINED"/>
+				</logical>
+				<physical type="integer" interface="command" value_id="LEVEL_STATE">
+					<get request="LEVEL_GET" response="INFO_LEVEL"/>
+					<event frame="INFO_LEVEL"/>
+					<event frame="ACK_STATUS"/>
+				</physical>
+				<conversion type="option_integer">
+					<value_map device_value="0x00" parameter_value="0"/>
+					<value_map device_value="0x01" parameter_value="1"/>
+					<value_map device_value="0x02" parameter_value="2"/>
+					<value_map device_value="0x03" parameter_value="3"/>
+				</conversion>
+			</parameter>
+			<parameter id="WORKING" operations="read,event" ui_flags="internal">
+				<logical type="boolean" default="false"/>
+				<physical type="integer" interface="command" value_id="STATE_FLAGS">
+					<get request="LEVEL_GET" response="INFO_LEVEL" process_as_event="true"/>
+					<event frame="INFO_LEVEL"/>
+					<event frame="ACK_STATUS"/>
+				</physical>
+				<conversion type="boolean_integer"/>
+				<conversion type="integer_integer_map">
+					<value_map device_value="0x04" parameter_value="1" mask="0x04"/>
+					<value_map device_value="0x00" parameter_value="0"/>
+					<value_map device_value="0x01" parameter_value="1"/>
+					<value_map device_value="0x02" parameter_value="1"/>
+					<value_map device_value="0x03" parameter_value="0"/>
+				</conversion>
 			</parameter>
 			<parameter id="INHIBIT" operations="read,write,event" control="NONE" loopback="true">
 				<logical type="boolean"/>

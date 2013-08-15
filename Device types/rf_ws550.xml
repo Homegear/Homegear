@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="6">
+<device version="7">
 	<supported_types>
-		<type name="HM-WDC7000" id="HM-WDC7000">
+		<type name="WS550" id="WS550">
 			<parameter index="10.0" size="2.0" const_value="11"/>
+		</type>
+		<type name="WS888" id="WS888">
+			<parameter index="10.0" size="2.0" const_value="34"/>
+		</type>
+		<type name="WS550Tech" id="WS550Tech">
+			<parameter index="10.0" size="2.0" const_value="43"/>
+		</type>
+		<type name="WS550LCB" id="WS550LCB">
+			<parameter index="10.0" size="2.0" const_value="49"/>
+		</type>
+		<type name="WS550LCW" id="WS550LCW">
+			<parameter index="10.0" size="2.0" const_value="50"/>
 		</type>
 		<type name="HM-WDC7000" id="HM-WDC7000">
 			<parameter index="10.0" size="2.0" const_value="65"/>

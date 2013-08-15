@@ -30,8 +30,11 @@ enum class HMDeviceTypes : uint32_t
 	HMSECSD = 		0x0042,
 	HMRC12SW =		0x004C,
 	HMRC19SW =		0x004D,
+	RCH =			0x0054,
 	HMPB4DISWM = 	0x0060,
-	HMLCSW1PBUFM =	0x0069
+	ATENT =			0x0064,
+	HMLCSW1PBUFM =	0x0069,
+	ZELSTGRMHS4 =	0x0080
 };
 
 class HMDeviceType

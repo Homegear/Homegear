@@ -639,7 +639,10 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t c
 				peer->deviceType == HMDeviceTypes::HMRC12SW ||
 				peer->deviceType == HMDeviceTypes::HMRC19 ||
 				peer->deviceType == HMDeviceTypes::HMRC19B ||
-				peer->deviceType == HMDeviceTypes::HMRC19SW) addHomegearFeaturesSwitch(peer, channel, pushPendingBidCoSQueues);
+				peer->deviceType == HMDeviceTypes::HMRC19SW ||
+				peer->deviceType == HMDeviceTypes::RCH ||
+				peer->deviceType == HMDeviceTypes::ATENT ||
+				peer->deviceType == HMDeviceTypes::ZELSTGRMHS4) addHomegearFeaturesSwitch(peer, channel, pushPendingBidCoSQueues);
 		else if(GD::debugLevel >= 5) std::cout << "Debug: No homegear features to add." << std::endl;
 	}
 	catch(const std::exception& ex)
@@ -1212,6 +1215,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 								peer->configCentral[channel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size);
 								if(!peer->pairingComplete && (*i)->logicalParameter->enforce)
 								{
+									std::cerr << "Moin1" << std::endl;
 									parametersToEnforce->structValue->push_back((*i)->logicalParameter->getEnforceValue());
 									parametersToEnforce->structValue->back()->name = (*i)->id;
 								}
@@ -1266,6 +1270,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 									configParam->data.at(index - (*j)->physicalParameter->startIndex) = data;
 									if(!peer->pairingComplete && (*j)->logicalParameter->enforce)
 									{
+										std::cerr << "Moin2" << std::endl;
 										parametersToEnforce->structValue->push_back((*j)->logicalParameter->getEnforceValue());
 										parametersToEnforce->structValue->back()->name = (*j)->id;
 									}
@@ -1278,7 +1283,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				}
 				if(!multiPacket && (packet->controlByte() & 0x20)) sendOK(packet->messageCounter(), peer->address);
 			}
-			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, "", -1, parametersToEnforce);
+			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, "", -1, parametersToEnforce, true, true);
 		}
 		if((continuousData || multiPacket) && !multiPacketEnd && (packet->controlByte() & 0x20)) //Multiple config response packets
 		{
@@ -1782,7 +1787,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 					std::shared_ptr<RPC::Parameter> parameter = linkset->getParameter((*i)->id);
 					if(parameter)
 					{
-						paramset->structValue->push_back((*i)->getValue((RPC::RPCVariableType)parameter->logicalParameter->type));
+						paramset->structValue->push_back((*i)->getValue(parameter->logicalParameter->type));
 						paramset->structValue->back()->name = (*i)->id;
 					}
 				}
@@ -1793,6 +1798,10 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 
 		queue->push(sender->pendingBidCoSQueues);
 
+		while(_bidCoSQueueManager.get(sender->address))
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 
 		queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, receiver->address);
 		pendingQueue.reset(new BidCoSQueue(BidCoSQueueType::CONFIG));
@@ -1861,7 +1870,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 					std::shared_ptr<RPC::Parameter> parameter = linkset->getParameter((*i)->id);
 					if(parameter)
 					{
-						paramset->structValue->push_back((*i)->getValue((RPC::RPCVariableType)parameter->logicalParameter->type));
+						paramset->structValue->push_back((*i)->getValue(parameter->logicalParameter->type));
 						paramset->structValue->back()->name = (*i)->id;
 					}
 				}
@@ -1871,6 +1880,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		}
 
 		queue->push(receiver->pendingBidCoSQueues);
+
+		while(_bidCoSQueueManager.get(receiver->address))
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 
 		//Check, if channel is part of a group and if that's the case add link for the grouped channel
 		int32_t channelGroupedWith = sender->getChannelGroupedWith(senderChannelIndex);
@@ -1945,6 +1959,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 
 		addHomegearFeatures(sender, senderChannelIndex, false);
 
+		while(_bidCoSQueueManager.get(sender->address))
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
+
 		queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, receiver->address);
 		pendingQueue.reset(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		pendingQueue->noSending = true;
@@ -1971,6 +1990,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		queue->push(receiver->pendingBidCoSQueues);
 
 		addHomegearFeatures(receiver, receiverChannelIndex, false);
+
+		while(_bidCoSQueueManager.get(receiver->address))
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}

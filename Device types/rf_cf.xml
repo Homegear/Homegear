@@ -3,7 +3,7 @@
 <device version="6" supports_aes="true">
 	<supported_types>
 		<type name="radio chime with light flash" id="HM-OU-CF-Pl" priority="2">
-			<parameter index="9.0" size="1.0" cond_op="E" const_value="0x10"/>
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x10"/>
 			<parameter index="10.0" size="2.0" const_value="0x5C"/>
 		</type>
 	</supported_types>

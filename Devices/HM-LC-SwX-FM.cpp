@@ -96,7 +96,7 @@ void HM_LC_SWX_FM::handleStateChange(int32_t messageCounter, std::shared_ptr<Bid
 		}
 		else _states[channel] = !_states[channel];
 
-		sendStateChangeResponse(packet, channel);
+		if(packet->controlByte() & 0x20) sendStateChangeResponse(packet, channel);
 	}
 	catch(const std::exception& ex)
     {

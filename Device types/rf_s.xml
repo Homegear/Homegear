@@ -4,11 +4,15 @@
 	Changes: 
 	- Added event to parameter INHIBIT
 -->
-<device version="18" supports_aes="true">
+<device version="20" supports_aes="true">
 	<supported_types>
 		<type name="radio-controlled socket adapter switch actuator 1-channel" id="HM-LC-Sw1-Pl" priority="2">
 			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
 			<parameter index="10.0" size="2.0" const_value="0x0011"/>
+		</type>
+		<type name="radio-controlled socket adapter switch actuator 1-channel" id="HM-LC-Sw1-Pl-2" priority="2">
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
+			<parameter index="10.0" size="2.0" const_value="0x00A1"/>
 		</type>
 		<type name="radio-controlled switch actuator 1-channel (surface-mount)" id="HM-LC-Sw1-SM" priority="2">
 			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
@@ -61,6 +65,10 @@
 		<type name="radio-controlled socket adapter switch actuator 1-channel Roto" id="ZEL STG RM FZS" priority="2">
 			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
 			<parameter index="10.0" size="2.0" const_value="0x007C"/>
+		</type>
+		<type name="radio-controlled socket adapter switch actuator 1-channel Roto" id="ZEL STG RM FZS-2" priority="2">
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
+			<parameter index="10.0" size="2.0" const_value="0x00A2"/>
 		</type>
 		<type name="Generic Switch" id="HM-LC-SwX" priority="1">
 			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x16"/>
@@ -115,6 +123,7 @@
 			<link_roles>
 				<target name="SWITCH"/>
 				<target name="WEATHER_CS"/>
+				<target name="WCS_TIPTRONIC_SENSOR"/>
 			</link_roles>
 			<paramset type="MASTER" id="switch_ch_master">
 				<subset ref="switch_paramset"/>

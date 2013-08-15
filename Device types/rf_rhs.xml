@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="9" rx_modes="CONFIG,WAKEUP" supports_aes="true" cyclic_timeout="88200">
+<device version="12" rx_modes="CONFIG,WAKEUP" supports_aes="true" cyclic_timeout="88200">
 	<supported_types>
 		<type name="HM Rotary Handle Sensor" id="HM-Sec-RHS" priority="2">
 			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x18"/>
@@ -34,14 +34,17 @@
 	<frames>
 		<frame id="EVENT" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x41" channel_field="9:0.6">
 			<parameter type="integer" index="11.0" size="1.0" param="STATE"/>
+			<parameter type="integer" index="9.7" size="0.1" param="LOWBAT"/>
 		</frame>
 		<frame id="INFO_LEVEL" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x10" subtype="6" subtype_index="9" channel_field="10">
 			<parameter type="integer" index="11.0" size="1.0" param="STATE"/>
 			<parameter type="integer" index="12.1" size="0.3" param="ERROR"/>
+			<parameter type="integer" index="12.7" size="0.1" param="LOWBAT"/>
 		</frame>
 		<frame id="ACK_STATUS" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x02" subtype="1" subtype_index="9" channel_field="10">
 			<parameter type="integer" index="11.0" size="1.0" param="STATE"/>
 			<parameter type="integer" index="12.1" size="0.3" param="ERROR"/>
+			<parameter type="integer" index="12.7" size="0.1" param="LOWBAT"/>
 		</frame>
 	</frames>
 	<channels>
@@ -157,6 +160,14 @@
 						<option id="SABOTAGE" index="7"/>
 					</logical>
 					<physical type="integer" interface="command" value_id="ERROR">
+						<event frame="INFO_LEVEL"/>
+						<event frame="ACK_STATUS"/>
+					</physical>
+				</parameter>
+				<parameter id="LOWBAT" operations="read,event" control="NONE">
+					<logical type="boolean"/>
+					<physical type="integer" interface="command" value_id="LOWBAT">
+						<event frame="EVENT"/>
 						<event frame="INFO_LEVEL"/>
 						<event frame="ACK_STATUS"/>
 					</physical>

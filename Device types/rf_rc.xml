@@ -5,7 +5,7 @@
 	- Added parameter for TEST_COUNTER
 	- Added parameter for SIM_COUNTER
 -->
-<device version="6" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
+<device version="10" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
 	<supported_types>
 		<type name="HM Remote 4 buttons" id="HM-RC-4" priority="2">
 			<parameter index="10.0" size="2.0" const_value="0x0008"/>
@@ -112,6 +112,12 @@
 			<parameter type="integer" index="10.0" size="1.0" param="COUNTER"/>
 			<parameter type="integer" index="10.0" size="1.0" param="TEST_COUNTER"/>
 		</frame>
+		<frame id="KEY_EVENT_LONG_BIDI" direction="from_device" allowed_receivers="CENTRAL,BROADCAST,OTHER" event="true" type="0x40" channel_field="9:0.6">
+			<parameter type="integer" index="1.5" size="0.1" const_value="1"/>
+			<parameter type="integer" index="9.6" size="0.1" const_value="1"/>
+			<parameter type="integer" index="10.0" size="1.0" param="COUNTER"/>
+			<parameter type="integer" index="10.0" size="1.0" param="TEST_COUNTER"/>
+		</frame>
 		<frame id="KEY_SIM_SHORT" direction="from_device" type="0x40" channel_field="9:0.6">
 			<parameter type="integer" index="9.6" size="0.1" const_value="0"/>
 			<parameter type="integer" index="9.7" size="0.1" const_value="0"/>
@@ -140,6 +146,19 @@
 					<set request="KEY_SIM_LONG"/>
 				</physical>
 				<conversion type="action_key_counter" sim_counter="SIM_COUNTER"/>
+			</parameter>
+			<parameter id="PRESS_LONG_RELEASE" operations="event" ui_flags="internal" burst_suppression="0">
+				<logical type="action"/>
+				<physical type="integer" interface="command" value_id="COUNTER">
+					<event frame="KEY_EVENT_LONG_BIDI" auth_violate_policy="reject"/>
+				</physical>
+			</parameter>
+			<parameter id="PRESS_CONT" operations="event" ui_flags="internal" burst_suppression="0">
+				<logical type="action"/>
+				<physical type="integer" interface="command" value_id="COUNTER">
+					<event frame="KEY_EVENT_LONG" auth_violate_policy="reject"/>
+				</physical>
+				<conversion type="action_key_same_counter" sim_counter="SIM_CONT_COUNTER"/>
 			</parameter>
 			<parameter id="TEST_COUNTER" operations="read,event">
 				<logical type="integer"/>

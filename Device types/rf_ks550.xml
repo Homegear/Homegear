@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="6" rx_modes="CONFIG,WAKEUP" cyclic_timeout="600">
+<device version="7" rx_modes="CONFIG,WAKEUP" cyclic_timeout="600">
 	<supported_types>
 		<type name="KS550" id="KS550">
 			<parameter index="10.0" size="2.0" const_value="7"/>
+		</type>
+		<type name="KS888" id="KS888">
+			<parameter index="10.0" size="2.0" const_value="31"/>
+		</type>
+		<type name="KS550Tech" id="KS550Tech">
+			<parameter index="10.0" size="2.0" const_value="44"/>
+		</type>
+		<type name="KS550LC" id="KS550LC">
+			<parameter index="10.0" size="2.0" const_value="51"/>
 		</type>
 		<type name="HM-WDS100-C6-O" id="HM-WDS100-C6-O">
 			<parameter index="10.0" size="2.0" const_value="0x0040"/>

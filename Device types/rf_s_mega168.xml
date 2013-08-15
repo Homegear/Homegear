@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="9">
+<device version="10">
 	<supported_types>
 		<type name="1 channel switch (plug OM54)" id="HM-LC-Sw1-Pl-OM54" priority="2">
 			<parameter index="10.0" size="2.0" const_value="0x0001"/>
@@ -48,6 +48,7 @@
 			<link_roles>
 				<target name="SWITCH"/>
 				<target name="WEATHER_CS"/>
+				<target name="WCS_TIPTRONIC_SENSOR"/>
 			</link_roles>
 			<paramset type="MASTER" id="switch_ch_master">
 				<subset ref="switch_paramset"/>

@@ -4,13 +4,14 @@
 	Changes: 
 	- Added event to parameter INHIBIT
 -->
-<device version="2" supports_aes="true">
+<device version="5" supports_aes="true">
 	<supported_types>
 		<type name="radio-controlled switch actuator 1-channel (flush-mount)" id="HM-LC-Sw1PBU-FM" priority="2">
-			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x20"/>
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x22"/>
 			<parameter index="10.0" size="2.0" const_value="0x0069"/>
 		</type>
 		<type name="radio-controlled switch actuator 1-channel (flush-mount) Schueco" id="263 131" priority="2">
+			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x22"/>
 			<parameter index="10.0" size="2.0" const_value="0x008C"/>
 		</type>
 	</supported_types>
@@ -18,6 +19,10 @@
 		<parameter id="INTERNAL_KEYS_VISIBLE" ui_flags="internal">
 			<logical type="boolean" default="true"/>
 			<physical type="integer" interface="config" list="0" index="2.7" size="0.1"/>
+		</parameter>
+		<parameter id="LOCAL_RESET_DISABLE" operations="read,write">
+			<logical type="boolean" default="false"/>
+			<physical type="integer" interface="config" list="0" index="24.0" size="0.1"/>
 		</parameter>
 	</paramset>
 	<channels>
@@ -62,6 +67,7 @@
 			<link_roles>
 				<target name="SWITCH"/>
 				<target name="WEATHER_CS"/>
+				<target name="WCS_TIPTRONIC_SENSOR"/>
 			</link_roles>
 			<paramset type="MASTER" id="switch_ch_master">
 				<subset ref="switch_paramset"/>
@@ -158,6 +164,22 @@
 			<parameter id="AES_ACTIVE" ui_flags="internal">
 				<logical type="boolean" default="false"/>
 				<physical type="boolean" interface="internal" value_id="AES"/>
+			</parameter>
+			<parameter id="TRANSMIT_TRY_MAX" operations="read,write">
+				<logical type="integer" min="0" max="10" default="6"/>
+				<physical type="integer" interface="config" list="1" index="48" size="1"/>
+			</parameter>
+			<parameter id="STATUSINFO_MINDELAY" operations="read,write">
+				<logical type="float" min="0.5" max="15.5" default="2.0" unit="s">
+					<special_value id="NOT_USED" value="0.0"/>
+				</logical>
+				<physical type="integer" interface="config" list="1" index="87.0" size="0.5"/>
+				<conversion type="float_integer_scale" factor="2"/>
+			</parameter>
+			<parameter id="STATUSINFO_RANDOM" operations="read,write">
+				<logical type="float" min="0.0" max="7.0" default="1.0" unit="s"/>
+				<physical type="integer" interface="config" list="1" index="87.5" size="0.3"/>
+				<conversion type="float_integer_scale" factor="1"/>
 			</parameter>
 		</paramset>
 		<paramset id="switch_linkset">

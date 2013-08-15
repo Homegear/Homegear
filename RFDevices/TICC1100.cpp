@@ -758,11 +758,17 @@ void TICC1100::listen()
         	}
 
 			pollResult = poll(&pollstruct, 1, 1000);
-			if(pollResult > 0 && !_sending)
+			if(pollResult > 0)
 			{
 				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::to_string(errno));
 				bytesRead = read(_gpioDescriptor, &readBuffer[0], 1);
-				if(!bytesRead || readBuffer.at(0) == 0x30) continue; //Packet is being received. Wait for GDO high
+				if(!bytesRead || readBuffer.at(0) == 0x30)
+				{
+					_txMutex.lock(); //Don't send now
+					continue; //Packet is being received. Wait for GDO high
+				}
+				_txMutex.unlock(); //Packet received, now we can send
+				if(_sending) continue;
 				if(crcOK())
 				{
 					uint8_t firstByte = readRegister(Registers::Enum::FIFO);

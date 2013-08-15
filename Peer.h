@@ -144,7 +144,6 @@ class Peer
         uint32_t _lastPacketReceived = 0;
         uint32_t _lastRSSI = 0;
         bool _stopWorkerThread = true;
-        bool _workerThreadRunning = false;
         std::shared_ptr<std::thread> _workerThread;
         std::string _serialNumber;
         std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;

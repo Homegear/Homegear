@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="6" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
+<device version="7" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
 	<supported_types>
 		<type name="HM Switch Interface 3 switches" id="HM-SwI-3-FM" priority="2">
 			<parameter index="10.0" size="2.0" const_value="0x0046"/>
@@ -58,7 +58,12 @@
 				<source name="KEYMATIC"/>
 				<source name="WINMATIC"/>
 			</link_roles>
-			<paramset type="MASTER" id="swi_ch_master"/>
+			<paramset type="MASTER" id="swi_ch_master">
+				<parameter id="AES_ACTIVE" ui_flags="internal">
+					<logical type="boolean" default="false"/>
+					<physical type="boolean" interface="internal" value_id="AES"/>
+				</parameter>
+			</paramset>
 			<paramset type="VALUES" id="swi_ch_values">
 				<parameter id="PRESS" operations="write,event" loopback="true" control="EVENT_INTERFACE.TRIGGER">
 					<logical type="action"/>

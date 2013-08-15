@@ -255,8 +255,9 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "option_integer") type = Type::Enum::optionInteger;
 			else if(attributeValue == "integer_tinyfloat") type = Type::Enum::integerTinyFloat;
 			else if(attributeValue == "toggle") type = Type::Enum::toggle;
-			else if(attributeValue == "action_key_counter") type = Type::Enum::none;
-			else if(attributeValue == "rc19display") {} //ignore, no conversion necessary
+			else if(attributeValue == "action_key_counter") type = Type::Enum::none; //ignore, no conversion necessary
+			else if(attributeValue == "action_key_same_counter") type = Type::Enum::none; //ignore, no conversion necessary
+			else if(attributeValue == "rc19display") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown type for \"conversion\": " << attributeValue << std::endl;
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -344,9 +345,10 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 	}
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 	{
-		if(!data.empty())
+		if(!data.empty() && data.at(0) != 0)
 		{
-			std::string string(&data.at(0), &data.at(0) + data.size());
+			int32_t size = data.back() == 0 ? data.size() - 1 : data.size();
+			std::string string(&data.at(0), &data.at(0) + size);
 			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(string));
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
@@ -742,6 +744,7 @@ DeviceType::DeviceType(xml_node<>* typeNode)
 		if(attributeName == "name") name = attributeValue;
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "priority") priority = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "updatable") { if(attributeValue == "true") updatable = true; }
 		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"type\": " << attributeName << std::endl;
 	}
 	for(xml_node<>* parameterNode = typeNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
@@ -960,9 +963,12 @@ EnforceLink::EnforceLink(xml_node<>* node)
 	}
 }
 
-std::shared_ptr<RPCVariable> EnforceLink::getValue(RPCVariableType type)
+std::shared_ptr<RPCVariable> EnforceLink::getValue(LogicalParameter::Type::Enum type)
 {
-	return RPCVariable::fromString(value, type);
+	RPCVariableType rpcType = (RPCVariableType)type;
+	if(type == LogicalParameter::Type::Enum::typeEnum) rpcType = RPCVariableType::rpcInteger;
+	else if(type == LogicalParameter::Type::Enum::typeAction) rpcType = RPCVariableType::rpcBoolean;
+	return RPCVariable::fromString(value, rpcType);
 }
 
 DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)

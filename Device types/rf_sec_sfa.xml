@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="7" supports_aes="true">
+<device version="11" supports_aes="true">
 	<supported_types>
 		<type name="radio-controlled siren flash actuator (surface-mount)" id="HM-Sec-SFA-SM" priority="2">
 			<parameter index="9.0" size="1.0" cond_op="GE" const_value="0x01"/>
@@ -135,6 +135,7 @@
 			<link_roles>
 				<target name="SWITCH"/>
 				<target name="WEATHER_CS"/>
+				<target name="WCS_TIPTRONIC_SENSOR"/>
 			</link_roles>
 			<paramset type="MASTER" id="alarmactuator_ch_master">
 				<subset ref="alarmactuator_paramset"/>
@@ -167,7 +168,7 @@
 			<parameter type="integer" index="11.0" size="1.0" param="STATE"/>
 			<parameter type="integer" index="12.4" size="0.3" param="STATE_FLAGS"/>
 		</frame>
-		<frame id="INFO_LEV_ERR" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x10" subtype="6" subtype_index="9" fixed_channel="0">
+		<frame id="INFO_LEV_ERR" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x10" subtype="6" subtype_index="9" fixed_channel="*">
 			<parameter type="integer" index="12.1" size="0.1" param="ERROR_POWER"/>
 			<parameter type="integer" index="12.2" size="0.1" param="ERROR_SABOTAGE"/>
 			<parameter type="integer" index="12.3" size="0.1" param="ERROR_BATTERY"/>
@@ -176,7 +177,7 @@
 			<parameter type="integer" index="11.0" size="1.0" param="STATE"/>
 			<parameter type="integer" index="12.4" size="0.3" param="STATE_FLAGS"/>
 		</frame>
-		<frame id="ACK_STAT_ERR" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x02" subtype="1" subtype_index="9" fixed_channel="0">
+		<frame id="ACK_STAT_ERR" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x02" subtype="1" subtype_index="9" fixed_channel="*">
 			<parameter type="integer" index="12.1" size="0.1" param="ERROR_POWER"/>
 			<parameter type="integer" index="12.2" size="0.1" param="ERROR_SABOTAGE"/>
 			<parameter type="integer" index="12.3" size="0.1" param="ERROR_BATTERY"/>
@@ -205,6 +206,36 @@
 					<reset_after_send param="ON_TIME"/>
 				</physical>
 				<conversion type="boolean_integer" threshold="1" false="0" true="200"/>
+			</parameter>
+			<parameter id="ERROR_POWER" operations="read,event" control="NONE">
+				<logical type="option">
+					<option id="NO_ERROR" index="0" default="true"/>
+					<option id="POWER_FAILURE" index="1"/>
+				</logical>
+				<physical type="integer" interface="command" value_id="ERROR_POWER">
+					<event frame="INFO_LEV_ERR"/>
+					<event frame="ACK_STAT_ERR"/>
+				</physical>
+			</parameter>
+			<parameter id="ERROR_SABOTAGE" operations="read,event" control="NONE">
+				<logical type="option">
+					<option id="NO_ERROR" index="0" default="true"/>
+					<option id="SABOTAGE" index="1"/>
+				</logical>
+				<physical type="integer" interface="command" value_id="ERROR_SABOTAGE">
+					<event frame="INFO_LEV_ERR"/>
+					<event frame="ACK_STAT_ERR"/>
+				</physical>
+			</parameter>
+			<parameter id="ERROR_BATTERY" operations="read,event" control="NONE">
+				<logical type="option">
+					<option id="NO_ERROR" index="0" default="true"/>
+					<option id="BATTERY_DEFECT" index="1"/>
+				</logical>
+				<physical type="integer" interface="command" value_id="ERROR_BATTERY">
+					<event frame="INFO_LEV_ERR"/>
+					<event frame="ACK_STAT_ERR"/>
+				</physical>
 			</parameter>
 			<parameter id="ON_TIME" operations="write" control="NONE">
 				<logical type="float" min="0.0" max="85825945.6" default="120.0" unit="s"/>

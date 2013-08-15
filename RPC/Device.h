@@ -137,6 +137,7 @@ public:
 	std::string name;
 	std::string id;
 	std::vector<Parameter> parameters;
+	bool updatable = false;
 	int32_t priority = 0;
 
 	DeviceType() {}
@@ -184,7 +185,7 @@ public:
 	EnforceLink() {}
 	EnforceLink(xml_node<>* parameterSetNode);
 	virtual ~EnforceLink() {}
-	std::shared_ptr<RPCVariable> getValue(RPCVariableType type);
+	std::shared_ptr<RPCVariable> getValue(LogicalParameter::Type::Enum type);
 };
 
 class LinkRole

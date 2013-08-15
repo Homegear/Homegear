@@ -148,7 +148,7 @@ void Peer::stopThreads()
 {
 	try
 	{
-		if(!_workerThreadRunning || !_workerThread) return;
+		if(!_workerThread || !_centralFeatures) return;
 		_stopWorkerThread = true;
 		if(_workerThread->joinable())
 		{
@@ -158,7 +158,8 @@ void Peer::stopThreads()
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		//We often get an "Invalid argument" error. I don't where the error is.
+    	if(GD::debugLevel > 5) std::cerr << "Warning in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {
@@ -318,7 +319,6 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 void Peer::worker()
 {
 	if(!_centralFeatures) return;
-	_workerThreadRunning = true;
 	std::chrono::milliseconds sleepingTime(300);
 	std::vector<uint32_t> positionsToDelete;
 	std::vector<std::shared_ptr<VariableToReset>> variablesToReset;
@@ -336,11 +336,7 @@ void Peer::worker()
 				continue;
 			}
 			else wakeUpIndex = 0;
-			if(_stopWorkerThread)
-			{
-				_workerThreadRunning = false;
-				return;
-			}
+			if(_stopWorkerThread) return;
 			time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 			if(!_variablesToReset.empty())
 			{
@@ -387,21 +383,20 @@ void Peer::worker()
 		}
 		catch(const std::exception& ex)
 		{
-			_variablesToResetMutex.unlock();
 			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			_variablesToResetMutex.unlock();
 		}
 		catch(const Exception& ex)
 		{
-			_variablesToResetMutex.unlock();
 			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			_variablesToResetMutex.unlock();
 		}
 		catch(...)
 		{
-			_variablesToResetMutex.unlock();
 			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+			_variablesToResetMutex.unlock();
 		}
 	}
-	_workerThreadRunning = false;
 }
 
 void Peer::handleCLICommand(std::string command)
@@ -1227,7 +1222,7 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 			_variablesToReset.push_back(variable);
 			if(GD::debugLevel >= 5) std::cout << "Debug: " << parameter->id << " will be reset in " << ((variable->resetTime - time) / 1000)  << "s." << std::endl;
 			_variablesToResetMutex.unlock();
-			if(!_workerThread || !_workerThreadRunning)
+			if(!_workerThread || !_workerThread->joinable())
 			{
 				_stopWorkerThread = false;
 				_workerThread.reset(new std::thread(&Peer::worker, this));
@@ -1588,6 +1583,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 		{
 			variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second->typeString())));
 		}
+		//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::link)->typeString())));
+		//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::master) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::master)->typeString())));
+		//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::values) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::values)->typeString())));
 
 		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", _serialNumber)));
 
@@ -2292,6 +2290,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 			}
 			else //Get links for all channels
 			{
+				flags &= 7; //Remove flag 8 and 16. Both are not processed, when getting links for all devices.
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));

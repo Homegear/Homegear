@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
-<device version="8" supports_aes="true">
+<device version="11" supports_aes="true">
 	<supported_types>
 		<type name="radio-controlled blind actuator 1-channel (surface-mount)" id="HM-LC-Bl1-SM" priority="2">
 			<parameter index="10.0" size="2.0" const_value="0x0006"/>
@@ -22,6 +22,10 @@
 		</type>
 	</supported_types>
 	<paramset type="MASTER" id="blind_dev_master">
+		<parameter id="INTERNAL_KEYS_VISIBLE" ui_flags="internal">
+			<logical type="boolean" default="false"/>
+			<physical type="integer" interface="config" list="0" index="2.7" size="0.1"/>
+		</parameter>
 	</paramset>
 	<channels>
 		<channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
@@ -91,10 +95,12 @@
 		<frame id="INFO_LEVEL" direction="from_device" event="true" type="0x10" subtype="6" subtype_index="9" channel_field="10">
 			<parameter type="integer" index="11.0" size="1.0" param="LEVEL"/>
 			<parameter type="integer" index="12.4" size="0.3" param="STATE_FLAGS"/>
+			<parameter type="integer" index="12.4" size="0.2" param="DIRECTION_FLAGS"/>
 		</frame>
 		<frame id="ACK_STATUS" direction="from_device" event="true" type="0x02" subtype="1" subtype_index="9" channel_field="10">
 			<parameter type="integer" index="11.0" size="1.0" param="LEVEL"/>
 			<parameter type="integer" index="12.4" size="0.3" param="STATE_FLAGS"/>
+			<parameter type="integer" index="12.4" size="0.2" param="DIRECTION_FLAGS"/>
 		</frame>
 		<frame id="STOP" direction="to_device" type="0x11" subtype="0x03" subtype_index="9" channel_field="10">
 		</frame>
@@ -143,6 +149,25 @@
 					<value_map device_value="0x03" parameter_value="0"/>
 				</conversion>
 			</parameter>
+			<parameter id="DIRECTION" operations="read,event" ui_flags="internal">
+				<logical type="option">
+					<option id="NONE" default="true"/>
+					<option id="UP"/>
+					<option id="DOWN"/>
+					<option id="UNDEFINED"/>
+				</logical>
+				<physical type="integer" interface="command" value_id="DIRECTION_FLAGS">
+					<get request="LEVEL_GET" response="INFO_LEVEL" process_as_event="true"/>
+					<event frame="INFO_LEVEL"/>
+					<event frame="ACK_STATUS"/>
+				</physical>
+				<conversion type="option_integer">
+					<value_map device_value="0x00" parameter_value="0"/>
+					<value_map device_value="0x01" parameter_value="1"/>
+					<value_map device_value="0x02" parameter_value="2"/>
+					<value_map device_value="0x03" parameter_value="3"/>
+				</conversion>
+			</parameter>
 			<parameter id="INSTALL_TEST" operations="write" ui_flags="internal">
 				<logical type="action"/>
 				<physical type="integer" interface="command" value_id="IT_LEVEL" no_init="true">
@@ -167,7 +192,7 @@
 				<conversion type="float_integer_scale" factor="10" offset="0.0"/>
 			</parameter>
 			<parameter id="CHANGE_OVER_DELAY">
-				<logical type="float" min="0.0" max="6000.0" default="0.5" unit="s"/>
+				<logical type="float" min="0.0" max="25.5" default="0.5" unit="s"/>
 				<physical type="integer" interface="config" list="1" index="15" size="1"/>
 				<conversion type="float_integer_scale" factor="10" offset="0.0"/>
 			</parameter>

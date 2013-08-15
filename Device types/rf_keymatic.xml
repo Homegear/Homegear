@@ -158,6 +158,25 @@
 				</physical>
 				<conversion type="boolean_integer" threshold="3"/>
 			</parameter>
+			<parameter id="DIRECTION" operations="read,event" ui_flags="internal">
+				<logical type="option">
+					<option id="NONE" default="true"/>
+					<option id="UP"/>
+					<option id="DOWN"/>
+					<option id="UNDEFINED"/>
+				</logical>
+				<physical type="integer" interface="command" value_id="LEVEL_STATE">
+					<get request="LEVEL_GET" response="INFO_LEVEL"/>
+					<event frame="INFO_LEVEL"/>
+					<event frame="ACK_STATUS"/>
+				</physical>
+				<conversion type="option_integer">
+					<value_map device_value="0x00" parameter_value="0"/>
+					<value_map device_value="0x01" parameter_value="1"/>
+					<value_map device_value="0x02" parameter_value="2"/>
+					<value_map device_value="0x03" parameter_value="3"/>
+				</conversion>
+			</parameter>
 			<parameter id="INHIBIT" operations="read,write,event" control="NONE" loopback="true">
 				<logical type="boolean"/>
 				<physical type="integer" interface="command" value_id="INHIBIT">
