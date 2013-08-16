@@ -1,5 +1,6 @@
 #include "HM-SD.h"
 #include "../GD.h"
+#include "../HelperFunctions.h"
 
 HM_SD::HM_SD() : HomeMaticDevice()
 {
@@ -44,6 +45,7 @@ void HM_SD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCo
 		size = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		responseToOverwrite.response = serializedObject.substr(pos, size); pos += size;
 		responseToOverwrite.sendAfter = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_responsesToOverwrite.push_back(responseToOverwrite);
 	}
 }
 
@@ -105,12 +107,12 @@ bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
             std::this_thread::sleep_for(sleepingTime);
             std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
             std::stringstream stringstream;
-            stringstream << std::hex << std::setw(2) << (i->response.size() / 2) + 1;
+            stringstream << std::hex << std::setfill('0') << std::setw(2) << (i->response.size() / 2) + 1;
             std::string lengthHex = stringstream.str();
             std::string packetString(lengthHex + packetHex.substr(2, 2) + i->response);
             packet->import(packetString, false);
             std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
-            std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response: " << '\n';
+            std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response." << '\n';
             GD::rfDevice->sendPacket(packet);
         }
     }
@@ -139,103 +141,322 @@ void HM_SD::addOverwriteResponse(std::string packetPartToCapture, std::string re
     _responsesToOverwrite.push_back(overwriteResponse);
 }
 
+void removeCapture(std::string packetPartToCapture);
+
 void HM_SD::removeOverwriteResponse(std::string packetPartToCapture)
 {
     _responsesToOverwrite.remove_if([&](HM_SD_OverwriteResponse entry){ return entry.packetPartToCapture == packetPartToCapture; });
 }
 
-void HM_SD::handleCLICommand(std::string command)
+std::string HM_SD::handleCLICommand(std::string command)
 {
-	if(command == "add filter")
+		try
 	{
-		std::string input;
-		std::cout << "Enter filter type or press \"l\" to list filter types: ";
-		do
+		std::ostringstream stringStream;
+
+		if(command == "help")
 		{
-			std::cin >> input;
-			if(input == "l")
+			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "filters list\t\tLists all packet filters" << std::endl;
+			stringStream << "filters add\t\tAdds a packet filter" << std::endl;
+			stringStream << "filters remove\t\tRemoves a packet filter" << std::endl;
+			stringStream << "captures list\t\tLists all packet captures" << std::endl;
+			stringStream << "captures add\t\tAdds a packet to capture" << std::endl;
+			stringStream << "captures remove\t\tRemoves a packet to capture" << std::endl;
+			stringStream << "send\t\tSends a BidCoS packet" << std::endl;
+			return stringStream.str();
+		}
+		if(command.compare(0, 12, "filters list") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
 			{
-				std::cout << "Filter types:" << std::endl;
-				std::cout << "\t00: Sender address" << std::endl;
-				std::cout << "\t01: Destination address" << std::endl;
-				std::cout << "\t03: Message type" << std::endl << std::endl;
-				std::cout << "Enter filter type or press \"l\" to list filter types: ";
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command lists all BidCoS packet filters." << std::endl;
+						stringStream << "Usage: filters list" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
 			}
-		}while(input == "l");
-		int32_t filterType = -1;
-		try	{ filterType = std::stoll(input, 0, 16); } catch(...) {}
-		if(filterType < 0 || filterType > 3) std::cout << "Invalid filter type." << std::endl;
-		else
-		{
-			std::cout << "Please enter a filter value in hexadecimal format: ";
-			HM_SD_Filter filter;
-			filter.filterType = (FilterType)filterType;
-			filter.filterValue = getHexInput();
-			_filters.push_back(filter);
-			std::cout << "Filter added." << std::endl;
+
+			if(_filters.empty())
+			{
+				stringStream << "No filters defined." << std::endl;
+				stringStream.str();
+			}
+			for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
+			{
+				stringStream << "Filter type: " << std::hex << (int32_t)i->filterType << "\tFilter value: " << i->filterValue << std::dec << std::endl;
+			}
+			return stringStream.str();
 		}
-	}
-	else if(command == "remove filter")
-	{
-		std::string input;
-		std::cout << "Enter filter type or press \"l\" to list filter types: ";
-		while(input == "l")
+		else if(command.compare(0, 11, "filters add") == 0)
 		{
-			std::cin >> input;
-			std::cout << "Filter types:" << std::endl;
-			std::cout << "\t00: Sender address" << std::endl;
-			std::cout << "\t01: Destination address" << std::endl;
-			std::cout << "\t03: Message type" << std::endl << std::endl;
-			std::cout << "Enter filter type or press \"l\" to list filter types: ";
+			int32_t filterType;
+			int32_t filterValue;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					filterType = HelperFunctions::getNumber(element, true);
+					if(filterType != 0 && filterType != 1 && filterType != 3) return "Invalid filter type.\n";
+				}
+				else if(index == 3) filterValue = HelperFunctions::getNumber(element, true);
+				index++;
+			}
+			if(index < 4)
+			{
+				stringStream << "Description: This command adds a BidCoS packet filter. All filters are linked by \"or\". Currently there is no option to connect the filters by \"and\"" << std::endl;
+				stringStream << "Usage: filters add FILTERTYPE FILTERVALUE" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  FILTERTYPE:\tSee filter types below." << std::endl;
+				stringStream << "  FILTERVALUE:\tDepends on the filter type. The parameter needs to be in hexadecimal format." << std::endl << std::endl;
+				stringStream << "Filter types:" << std::endl;
+				stringStream << "  00: Filter by sender address." << std::endl;
+				stringStream << "      FILTERVALUE: The 3 byte address of the peer to filter." << std::endl;
+				stringStream << "  01: Filter by destination address." << std::endl;
+				stringStream << "      FILTERVALUE: The 3 byte address of the peer to filter." << std::endl;
+				stringStream << "  03: Filter by message type." << std::endl;
+				stringStream << "      FILTERVALUE: The 1 byte message type of the packet to filter." << std::endl;
+				return stringStream.str();
+			}
+
+			addFilter((FilterType)filterType, filterValue);
+			stringStream << "Filter added." << std::endl;
+			return stringStream.str();
 		}
-		int32_t filterType = getHexInput();
-		if(filterType < 0 || filterType > 3) std::cout << "Invalid filter type." << std::endl;
-		else
+		else if(command.compare(0, 14, "filters remove") == 0)
 		{
-			std::cout << "Please enter a filter value in hexadecimal format: ";
+			int32_t filterType;
+			int32_t filterValue;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					filterType = HelperFunctions::getNumber(element, true);
+					if(filterType != 0 && filterType != 1 && filterType != 3) return "Invalid filter type.\n";
+				}
+				else if(index == 3) filterValue = HelperFunctions::getNumber(element, true);
+				index++;
+			}
+			if(index < 4)
+			{
+				stringStream << "Description: This command removes a BidCoS packet filter." << std::endl;
+				stringStream << "Usage: filters remove FILTERTYPE FILTERVALUE" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  FILTERTYPE:\tThe type of the filter to delete." << std::endl;
+				stringStream << "  FILTERVALUE:\tThe value of the filter to delete." << std::endl;
+				return stringStream.str();
+			}
+
 			uint32_t oldSize = _filters.size();
-			removeFilter((FilterType)filterType, getHexInput());
-			if(_filters.size() != oldSize) std::cout << "Filter removed." << std::endl;
-			else std::cout << "Filter not found." << std::endl;
+			removeFilter((FilterType)filterType, filterValue);
+			if(_filters.size() != oldSize) stringStream << "Filter removed." << std::endl;
+			else stringStream << "Filter not found." << std::endl;
+			return stringStream.str();
 		}
-	}
-	else if(command == "add response")
-	{
-		std::string input;
-		std::cout << "Please enter a hexadecimal byte sequence to capture: ";
-		std::cin >> input;
-		if(input.empty()) return;
-		std::string packetPartToCapture = input;
-		std::cout << "Please enter the packet to send in hexadecimal format without length and message counter: ";
-		std::cin >> input;
-		if(input.empty()) return;
-		HM_SD_OverwriteResponse response;
-		response.packetPartToCapture = packetPartToCapture;
-		response.response = input;
-		response.sendAfter = 80;
-		_responsesToOverwrite.push_back(response);
-	}
-	else if(command == "list filters")
-	{
-		for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
+		else if(command.compare(0, 13, "captures list") == 0)
 		{
-			std::cout << "Filter type: " << std::hex << (int32_t)i->filterType << "\tFilter value: " << i->filterValue << std::dec << std::endl;
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command lists all BidCoS packet captures." << std::endl;
+						stringStream << "Usage: captures list" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			if(_responsesToOverwrite.empty())
+			{
+				stringStream << "No captures defined." << std::endl;
+				stringStream.str();
+			}
+			for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
+			{
+				stringStream << "Packet part to capture: " << std::hex << i->packetPartToCapture << "\tResponse: " << i->response << std::dec << "\tSend after: " << i->sendAfter << " ms" << std::endl;
+			}
+			return stringStream.str();
 		}
-	}
-	else if(command == "send packet")
-	{
-		std::cout << "Please provide a packet in hexadecimal format: ";
-		std::string packetHex;
-		std::cin >> packetHex;
-		if(packetHex.size() < 18)
+		else if(command.compare(0, 12, "captures add") == 0)
 		{
-			std::cout << "Packet is too short. Please provide at least 9 bytes." << std::endl;
+			std::string toCapture;
+			std::string response;
+			int32_t sendAfter;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					toCapture = element;
+				}
+				else if(index == 3) response = element;
+				else if(index == 4)
+				{
+					sendAfter = HelperFunctions::getNumber(element);
+					if(sendAfter < 5) stringStream << "Invalid value for SENDAFTER. SENDAFTER needs to be longer than 5 ms." << std::endl;
+				}
+				index++;
+			}
+			if(index < 5)
+			{
+				stringStream << "Description: Sends a custom response after receiving the specified packet." << std::endl;
+				stringStream << "Usage: captures add CAPTURE RESPONSE SENDAFTER" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  CAPTURE:\tAny part of the packet to capture in hexadecimal format." << std::endl;
+				stringStream << "  RESPONSE:\tThe packet to send as a response in hexadecimal format without length byte and message counter." << std::endl;
+				stringStream << "  SENDAFTER:\tThe time in milliseconds to wait before sending the response (typically 80 to 120 ms)." << std::endl;
+				return stringStream.str();
+			}
+
+			addOverwriteResponse(toCapture, response, sendAfter);
+			stringStream << "Capture added." << std::endl;
+			return stringStream.str();
 		}
-		else
+		else if(command.compare(0, 15, "captures remove") == 0)
 		{
+			std::string toCapture;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					toCapture = element;
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: Removes a packet capture." << std::endl;
+				stringStream << "Usage: captures remove CAPTURE" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  CAPTURE:\tThe part of the packet to capture which should be removed from the list of captures." << std::endl;
+				return stringStream.str();
+			}
+
+
+			uint32_t oldSize = _responsesToOverwrite.size();
+			removeOverwriteResponse(toCapture);
+			if(_responsesToOverwrite.size() != oldSize) stringStream << "Capture removed." << std::endl;
+			else stringStream << "Capture not found." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 4, "send") == 0)
+		{
+			std::string packetHex;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					packetHex = element;
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: Sends a BidCoS packet." << std::endl;
+				stringStream << "Usage: send PACKET" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PACKET:\tThe packet to send with length byte and message counter." << std::endl;
+				return stringStream.str();
+			}
+
+			if(packetHex.size() < 18) return "Packet is too short. Please provide at least 9 bytes.\n";
 			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 			packet->import(packetHex, false);
 			sendPacket(packet);
+			stringStream << "Packet sent: " << packet->hexString() << std::endl;
+			return stringStream.str();
 		}
+		else return "Unknown command.\n";
 	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return "Error executing command. See log file for more details.\n";
 }

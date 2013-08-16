@@ -14,7 +14,8 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 . /lib/lsb/init-functions
 
 DAEMON=/usr/bin/Homegear
-PIDFILE=/var/run/Homegear.pid
+PIDPATH=/var/run/Homegear
+PIDFILE=/var/run/Homegear/Homegear.pid
 
 test -x $DAEMON || exit 5
 
@@ -57,6 +58,13 @@ case $1 in
 					echo both > /sys/class/gpio/gpio22/edge
 					if test ! -d /sys/class/gpio/gpio22; then echo Could not export gpio22; fi
 				fi
+				
+				if test ! -d $PIDPATH; then 
+					mkdir /var/run/Homegear
+					chown $RUNASUSER:$RUNASGROUP $PIDPATH
+					chmod 750 $PIDPATH
+				fi
+				
                 log_daemon_msg "Starting Homegear" "Homegear"
                 lock_homegear
                 start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $HOMEGEAR_OPTS

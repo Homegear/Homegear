@@ -93,7 +93,7 @@ class Peer
 
         std::shared_ptr<PendingBidCoSQueues> pendingBidCoSQueues;
 
-        void handleCLICommand(std::string command);
+        std::string handleCLICommand(std::string command);
         void stopThreads();
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel, bool useConfigFunction);
@@ -122,7 +122,7 @@ class Peer
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
         int32_t getChannelGroupedWith(int32_t channel);
-        void printConfig();
+        std::string printConfig();
         void setLastPacketReceived();
         uint32_t getLastPacketReceived() { return _lastPacketReceived; }
 

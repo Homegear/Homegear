@@ -36,11 +36,11 @@ solution "Homegear"
  
    configuration { "linux", "gmake" }
       buildoptions { "-std=c++11" }
-      linkoptions { "-l pthread", "-l sqlite3" }
+      linkoptions { "-l pthread", "-l sqlite3", "-l readline" }
 
    configuration { "rpi", "gmake" }
       buildoptions { "-std=c++11" }
-      linkoptions { "-l pthread", "-l sqlite3" }
+      linkoptions { "-l pthread", "-l sqlite3", "-l readline" }
       includedirs { "./ARM\ headers" }
       libdirs { "./ARM\ libraries" }
 
@@ -51,6 +51,7 @@ solution "Homegear"
       files { "*.h", "*.cpp" }
       files { "./Devices/*.h", "./Devices/*.cpp" }
       files { "./RPC/*.h", "./RPC/*.cpp" }
+      files { "./CLI/*.h", "./CLI/*.cpp" }
       files { "./RFDevices/*.h", "./RFDevices/*.cpp" }
  
       configuration "Debug"

@@ -173,13 +173,38 @@ void HM_CC_TC::unserialize(std::string serializedObject, uint8_t dutyCycleMessag
 	startDutyCycle(calculateLastDutyCycleEvent());
 }
 
-void HM_CC_TC::handleCLICommand(std::string command)
+std::string HM_CC_TC::handleCLICommand(std::string command)
 {
-	if(command == "get duty cycle counter")
+	try
 	{
-		std::cout << "Duty cycle counter: " << std::dec << _dutyCycleCounter << " (" << ((_dutyCycleCounter * 250) / 1000) << "s)" << std::endl;
+		std::ostringstream stringStream;
+		std::string response(HomeMaticDevice::handleCLICommand(command));
+		if(command == "help")
+		{
+			stringStream << response << "duty cycle counter\tPrints the value of the duty cycle counter" << std::endl;
+			return stringStream.str();
+		}
+		else if(!response.empty()) return response;
+		else if(command == "duty cycle counter")
+		{
+			stringStream << "Duty cycle counter: " << std::dec << _dutyCycleCounter << " (" << ((_dutyCycleCounter * 250) / 1000) << "s)" << std::endl;
+			return stringStream.str();
+		}
+		else return "Unknown command.\n";
 	}
-	HomeMaticDevice::handleCLICommand(command);
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return "Error executing command. See log file for more details.\n";
 }
 
 void HM_CC_TC::setValveState(int32_t valveState)
@@ -234,7 +259,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		if(_stopDutyCycleThread) break;
 
 		timePoint = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		std::cout << "Correcting time mismatch of " << std::dec << ((nextDutyCycleEvent - 10000000 - timePoint) / 1000) << "ms." << std::endl;
+		if(GD::debugLevel >= 5) std::cout << "Correcting time mismatch of " << std::dec << ((nextDutyCycleEvent - 10000000 - timePoint) / 1000) << "ms." << std::endl;
 		std::this_thread::sleep_for(std::chrono::microseconds(nextDutyCycleEvent - timePoint - 5000000));
 		if(_stopDutyCycleThread) break;
 

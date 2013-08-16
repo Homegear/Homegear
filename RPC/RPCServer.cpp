@@ -23,11 +23,6 @@ void RPCServer::start()
 void RPCServer::stop()
 {
 	_stopServer = true;
-	if(_mainThread.joinable()) _mainThread.join();
-	for(std::vector<std::thread>::iterator i = _readThreads.begin(); i != _readThreads.end(); ++i)
-	{
-		if(i->joinable()) i->join();
-	}
 }
 
 void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method)
@@ -93,7 +88,7 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 	try
 	{
 		if(!data || data->empty()) return;
-		int32_t ret = send(clientFileDescriptor, &data->at(0), data->size(), 0);
+		int32_t ret = send(clientFileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
 		if(closeConnection) shutdown(clientFileDescriptor, 1);
 		if(ret != (signed)data->size() && GD::debugLevel >= 3) std::cout << "Warning: Error sending data to client." << std::endl;
 	}

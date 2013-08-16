@@ -77,7 +77,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 
 		std::string msg("POST /RPC2 HTTP/1.1\nUser_Agent: Homegear\nHost: " + server + ":" + port + "\nContent-Type: text/xml\nContent-Length: " + std::to_string(data.length()) + "\n\n" + data + "\n");
 		if(GD::debugLevel >= 5) std::cout << "Sending packet: " << msg << std::endl;
-		int32_t sentBytes = send(fileDescriptor, msg.c_str(), msg.size(), 0);
+		int32_t sentBytes = send(fileDescriptor, msg.c_str(), msg.size(), MSG_NOSIGNAL);
 		if(sentBytes == 0)
 		{
 			if(GD::debugLevel >= 2) std::cout << "Error while sending data to XML RPC server " << server << " on port " << port << std::endl;

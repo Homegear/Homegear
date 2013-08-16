@@ -65,9 +65,9 @@ void HM_LC_SWX_FM::unserialize(std::string serializedObject, uint8_t dutyCycleMe
 	_channelCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 }
 
-void HM_LC_SWX_FM::handleCLICommand(std::string command)
+std::string HM_LC_SWX_FM::handleCLICommand(std::string command)
 {
-	HomeMaticDevice::handleCLICommand(command);
+	return HomeMaticDevice::handleCLICommand(command);
 }
 
 void HM_LC_SWX_FM::handleStateChange(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)

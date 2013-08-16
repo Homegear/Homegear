@@ -1,17 +1,20 @@
 #define VERSION "0.0.1"
 
-#include <algorithm>
+#include <readline/readline.h>
+#include <readline/history.h>
 //#include <ncurses.h>
 #include <execinfo.h>
 #include <signal.h>
 #include <sys/resource.h>
 #include <stdlib.h>
-#include <cmath>
-#include <vector>
-#include <memory>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/file.h>
+
+#include <cmath>
+#include <vector>
+#include <memory>
+#include <algorithm>
 
 #include "Devices/HM-SD.h"
 #include "Devices/HM-CC-VD.h"
@@ -37,6 +40,7 @@ void killHandler(int32_t signalNumber)
 	try
 	{
 		std::cout << "Stopping Homegear..." << std::endl;
+		GD::cliServer.stop();
 		GD::rpcServer.stop();
 		GD::rpcClient.reset();
 		GD::rfDevice->stopListening();
@@ -83,6 +87,7 @@ void printHelp()
 	std::cout << "-c <path>\tSpecify path to config file" << std::endl;
 	std::cout << "-d\t\tRun as daemon" << std::endl;
 	std::cout << "-p <pid path>\tSpecify path to process id file" << std::endl;
+	std::cout << "-r\t\tConnect to Homegear on this machine" << std::endl;
 	std::cout << "-v\t\tPrint program version" << std::endl;
 }
 
@@ -126,6 +131,23 @@ int main(int argc, char* argv[])
 {
     try
     {
+    	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
+			throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
+
+    	//Set rlimit for core dumps
+    	struct rlimit coreLimits;
+    	coreLimits.rlim_cur = coreLimits.rlim_max;
+    	setrlimit(RLIMIT_CORE, &coreLimits);
+
+    	//Analyze core dump with:
+    	//gdb Homegear core
+    	//where
+    	//thread apply all bt
+
+    	//Enable printing of backtraces
+    	signal(SIGSEGV, exceptionHandler);
+    	signal(SIGTERM, killHandler);
+
     	bool startAsDaemon = false;
     	for(int32_t i = 1; i < argc; i++)
     	{
@@ -166,6 +188,11 @@ int main(int argc, char* argv[])
     		{
     			startAsDaemon = true;
     		}
+    		else if(arg == "-r")
+    		{
+    			GD::cliClient.start();
+    			exit(0);
+    		}
     		else if(arg == "-v")
     		{
     			std::cout << "Homegear version " << VERSION << std::endl;
@@ -177,24 +204,8 @@ int main(int argc, char* argv[])
     			exit(1);
     		}
     	}
-    	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
-			throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
 
-    	//Set rlimit for core dumps
-    	struct rlimit coreLimits;
-    	coreLimits.rlim_cur = coreLimits.rlim_max;
-    	setrlimit(RLIMIT_CORE, &coreLimits);
-
-    	//Analyze core dump with:
-    	//gdb Homegear core
-    	//where
-    	//thread apply all bt
-
-    	//Enable printing of backtraces
-    	/*signal(SIGSEGV, exceptionHandler);
-    	signal(SIGTERM, killHandler);
-
-        int row,col;
+        /*int row,col;
         WINDOW* mainWindow = initscr();
         if(!mainWindow) std::cerr << "Bla" << std::endl;
 
@@ -258,8 +269,6 @@ int main(int argc, char* argv[])
 			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 		}
 
-    	std::shared_ptr<HomeMaticDevice> currentDevice;
-
 		if(startAsDaemon)
 		{
 			std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout);
@@ -277,122 +286,33 @@ int main(int argc, char* argv[])
         GD::rpcDevices.load();
         if(GD::debugLevel >= 4) std::cout << "Loading devices..." << std::endl;
         GD::devices.load(); //Don't load before database is open!
+        if(GD::debugLevel >= 4) std::cout << "Starting CLI server..." << std::endl;
+        GD::cliServer.start();
         if(GD::debugLevel >= 4) std::cout << "Starting XML RPC server..." << std::endl;
         GD::rpcServer.start();
 
-        char inputBuffer[256];
-        std::string input = "";
-        while(input != "q" && input != "quit")
-        {
-            std::cin.getline(inputBuffer, 256);
-            input = std::string(inputBuffer);
-            if(input == "h" || input == "?" || input == "help")
-            {
-                //Help
-            }
-            else if(input == "test")
-            {
-            	std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-            	std::string packetString("0E3D82021DA44D1D8F45010150163845");
-            	packet->import(packetString, false);
-            	GD::devices.getCentral()->packetReceived(packet);
-            }
-            else if(input == "test2")
-            {
-            }
-            else if(input == "create device" || input == "add device")
-            {
-            	std::cout << "Please enter a 3 byte address for the device in hexadecimal format (e. g. 3A0001): ";
-            	int32_t address = getHexInput();
+        rl_bind_key('\t', rl_abort); //no autocompletion
 
-            	if(address < 1 || address > 0xFFFFFF) std::cout << "Address not valid." << std::endl;
-            	else if(GD::devices.get(address) != nullptr) std::cout << "Address already in use." << std::endl;
-            	else
-            	{
-            		std::cout << "Please enter a serial number (length 10, e. g. VVD0000001): ";
-            		std::cin >> input;
-            		if(input.size() != 10) std::cout << "Serial number has wrong length." << std::endl;
-            		else
-            		{
-            			std::string serialNumber = input;
-            			std::cout << "Please enter a device type: ";
-						int32_t deviceType = getHexInput();
-						switch(deviceType)
-						{
-						case (uint32_t)HMDeviceTypes::HMCCTC:
-							GD::devices.add(new HM_CC_TC(serialNumber, address));
-							std::cout << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
-							break;
-						case (uint32_t)HMDeviceTypes::HMCCVD:
-							GD::devices.add(new HM_CC_VD(serialNumber, address));
-							std::cout << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
-							break;
-						case (uint32_t)HMDeviceTypes::HMCENTRAL:
-							GD::devices.add(new HomeMaticCentral(serialNumber, address));
-							std::cout << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
-							break;
-						case (uint32_t)HMDeviceTypes::HMSD:
-							GD::devices.add(new HM_SD(serialNumber, address));
-							std::cout << "Created HM_SD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
-							break;
-						default:
-							std::cout << "Unknown device type." << std::endl;
-						}
-            		}
-            	}
-            }
-            else if(input == "remove device" || input == "delete device")
-            {
-            	std::cout << "Please enter the address of the device to delete (e. g. 3A0001): ";
-            	int32_t address = getHexInput();
-            	if(currentDevice != nullptr && currentDevice->address() == address) currentDevice = nullptr;
-            	if(GD::devices.remove(address)) std::cout << "Device removed." << std::endl;
-            	else std::cout << "Device not found." << std::endl;
-            }
-            else if(input == "select device")
-            {
-            	std::cout << "Device address: ";
-            	int32_t address = getHexInput();
-            	currentDevice = GD::devices.get(address);
-            	if(currentDevice == nullptr) std::cout << "Device not found." << std::endl;
-            	else std::cout << "Device selected." << std::endl;
-            }
-            else if(input == "list devices")
-            {
-            	std::vector<std::shared_ptr<HomeMaticDevice>> devices = GD::devices.getDevices();
-            	for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = devices.begin(); i != devices.end(); ++i)
-            	{
-            		std::cout << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (uint32_t)(*i)->deviceType() << std::endl << std::dec;
-            	}
-            }
-            else if(input == "set verbosity")
-            {
-            	std::cout << "Verbosity (0 - 8): ";
-            	int32_t verbosity = getHexInput();
-            	if(verbosity < 0 || verbosity > 8) std::cout << "Invalid verbosity." << std::endl;
-            	else
-            	{
-            		GD::debugLevel = verbosity;
-            		std::cout << "Verbosity set to " << verbosity << std::endl;
-            	}
-            }
-            else if(input == "time")
-            {
-            	std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << std::endl;
-            }
-            else if(input == "q" || input == "quit") {} //nothing
-            else
-            {
-            	if(currentDevice != nullptr)
-            	{
-            		currentDevice->handleCLICommand(input);
-            	}
-            }
+		char* inputBuffer;
+        std::string input;
+        uint32_t bytes;
+        while((inputBuffer = readline("")) != NULL)
+        {
+            input = std::string(inputBuffer);
+            bytes = strlen(inputBuffer);
+			if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
+			if(strcmp(inputBuffer, "quit") == 0 || strcmp(inputBuffer, "exit") == 0) break;
+
+			add_history(inputBuffer); //Sets inputBuffer to 0
+
+            std::cout << GD::devices.handleCLICommand(input);
         }
 
         std::cout << "Shutting down..." << std::endl;
 
         //Stop rpc server and client before saving
+        std::cout << "Stopping CLI server..." << std::endl;
+        GD::cliServer.stop();
         std::cout << "Stopping RPC server..." << std::endl;
         GD::rpcServer.stop();
         std::cout << "Stopping RPC client..." << std::endl;

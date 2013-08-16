@@ -25,8 +25,10 @@ public:
 	void save();
 	void stopThreads();
 	void stopThreadsThread(std::shared_ptr<HomeMaticDevice> device);
+	std::string handleCLICommand(std::string& command);
 
 private:
+	std::shared_ptr<HomeMaticDevice> _currentDevice;
 	std::mutex _devicesMutex;
 	std::vector<std::shared_ptr<HomeMaticDevice>> _devices;
 	std::shared_ptr<HomeMaticCentral> _central;

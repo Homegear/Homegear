@@ -36,7 +36,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -l pthread -l sqlite3
+  LDFLAGS   += -l pthread -l sqlite3 -l readline
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -58,7 +58,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -l pthread -l sqlite3
+  LDFLAGS   += -s -l pthread -l sqlite3 -l readline
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -80,7 +80,7 @@ ifeq ($(config),profiling)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -l pthread -l sqlite3 -pg
+  LDFLAGS   += -l pthread -l sqlite3 -l readline -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -132,6 +132,8 @@ OBJECTS := \
 	$(OBJDIR)/Devices.o \
 	$(OBJDIR)/LogicalParameter.o \
 	$(OBJDIR)/PhysicalParameter.o \
+	$(OBJDIR)/CLIServer.o \
+	$(OBJDIR)/CLIClient.o \
 	$(OBJDIR)/RFDevice.o \
 	$(OBJDIR)/TICC1100.o \
 	$(OBJDIR)/Cul.o \
@@ -311,6 +313,12 @@ $(OBJDIR)/LogicalParameter.o: RPC/LogicalParameter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhysicalParameter.o: RPC/PhysicalParameter.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/CLIServer.o: CLI/CLIServer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/CLIClient.o: CLI/CLIClient.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RFDevice.o: RFDevices/RFDevice.cpp

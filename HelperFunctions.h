@@ -67,11 +67,11 @@ public:
 		return true;
 	}
 
-	static int32_t getNumber(std::string &s)
+	static int32_t getNumber(std::string &s, bool isHex = false)
 	{
 		int32_t xpos = s.find('x');
 		int32_t number = 0;
-		if(xpos == -1) try { number = std::stoll(s, 0, 10); } catch(...) {}
+		if(xpos == -1 && !isHex) try { number = std::stoll(s, 0, 10); } catch(...) {}
 		else try { number = std::stoll(s, 0, 16); } catch(...) {}
 		return number;
 	}

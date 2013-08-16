@@ -17,7 +17,7 @@ class HM_LC_SWX_FM : public HomeMaticDevice
         HM_LC_SWX_FM(std::string, int32_t);
         virtual ~HM_LC_SWX_FM();
 
-        void handleCLICommand(std::string command);
+        std::string handleCLICommand(std::string command);
         void setChannelCount(uint32_t channelCount) { _channelCount = channelCount; }
 
         std::string serialize();

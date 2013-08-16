@@ -455,3 +455,197 @@ std::shared_ptr<HomeMaticDevice> HomeMaticDevices::get(std::string serialNumber)
     _devicesMutex.unlock();
 	return std::shared_ptr<HomeMaticDevice>();
 }
+
+std::string HomeMaticDevices::handleCLICommand(std::string& command)
+{
+	try
+	{
+		std::ostringstream stringStream;
+		if(command.compare(0, 7, "devices") != 0 && (_currentDevice || command != "help"))
+		{
+			if(!_currentDevice) return "No device selected.\n";
+			return _currentDevice->handleCLICommand(command);
+		}
+		else if(command == "devices help" || command == "help")
+		{
+			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "devices list\t\tList all devices" << std::endl;
+			stringStream << "devices create\t\tCreate a virtual device" << std::endl;
+			stringStream << "devices remove\t\tRemove a virtual device" << std::endl;
+			stringStream << "devices select\t\tSelect a virtual device" << std::endl;
+			return stringStream.str();
+		}
+		else if(command == "devices list")
+		{
+			_devicesMutex.lock();
+			std::vector<std::shared_ptr<HomeMaticDevice>> devices;
+			for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+			{
+				stringStream << "Address: 0x" << std::hex << (*i)->address() << "\tSerial number: " << (*i)->serialNumber() << "\tDevice type: " << (uint32_t)(*i)->deviceType() << std::endl << std::dec;
+			}
+			_devicesMutex.unlock();
+			return stringStream.str();
+		}
+		else if(command.compare(0, 14, "devices create") == 0)
+		{
+			int32_t address;
+			int32_t deviceType;
+			std::string serialNumber;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					address = HelperFunctions::getNumber(element, true);
+					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+				}
+				else if(index == 3)
+				{
+					serialNumber = element;
+					if(serialNumber.size() > 10) return "Serial number too long.\n";
+				}
+				else if(index == 4) deviceType = HelperFunctions::getNumber(element, true);
+				index++;
+			}
+			if(index < 5)
+			{
+				stringStream << "Description: This command creates a new virtual device." << std::endl;
+				stringStream << "Usage: devices create ADDRESS SERIALNUMBER DEVICETYPE" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  ADDRESS:\tAny unused 3 byte address in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  SERIALNUMBER:\tAny unused serial number with a maximum size of 10 characters. Don't use special characters. Example: VTC9179403" << std::endl;
+				stringStream << "  DEVICETYPE:\tThe type of the device to create. Example: FFFFFFFD" << std::endl << std::endl;
+				stringStream << "Currently supported virtual device types:" << std::endl;
+				stringStream << "  FFFFFFFD:\tCentral device" << std::endl;
+				stringStream << "  FFFFFFFE:\tSpy device" << std::endl;
+				stringStream << "  39:\t\tHM-CC-TC" << std::endl;
+				stringStream << "  3A:\t\tHM-CC-VD" << std::endl;
+				return stringStream.str();
+			}
+
+			switch(deviceType)
+			{
+			case (uint32_t)HMDeviceTypes::HMCCTC:
+				GD::devices.add(new HM_CC_TC(serialNumber, address));
+				stringStream << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+				break;
+			case (uint32_t)HMDeviceTypes::HMCCVD:
+				GD::devices.add(new HM_CC_VD(serialNumber, address));
+				stringStream << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+				break;
+			case (uint32_t)HMDeviceTypes::HMCENTRAL:
+				GD::devices.add(new HomeMaticCentral(serialNumber, address));
+				stringStream << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+				break;
+			case (uint32_t)HMDeviceTypes::HMSD:
+				GD::devices.add(new HM_SD(serialNumber, address));
+				stringStream << "Created HM_SD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+				break;
+			default:
+				return "Unknown device type.\n";
+			}
+			return stringStream.str();
+		}
+		else if(command.compare(0, 14, "devices remove") == 0)
+		{
+			int32_t address;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					address = HelperFunctions::getNumber(element, true);
+					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command removes a virtual device." << std::endl;
+				stringStream << "Usage: devices remove ADDRESS" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  ADDRESS:\tThe 3 byte address of the device to delete in hexadecimal format. Example: 1A03FC" << std::endl;
+				return stringStream.str();
+			}
+
+			if(_currentDevice && _currentDevice->address() == address) _currentDevice.reset();
+			if(GD::devices.remove(address)) stringStream << "Device removed." << std::endl;
+			else stringStream << "Device not found." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 14, "devices select") == 0)
+		{
+			int32_t address = 0;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					address = HelperFunctions::getNumber(element, true);
+					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command selects a virtual device." << std::endl;
+				stringStream << "Usage: devices select ADDRESS" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  ADDRESS:\tThe 3 byte address of the device to select in hexadecimal format. Example: 1A03FC" << std::endl;
+				return stringStream.str();
+			}
+
+			_currentDevice = GD::devices.get(address);
+			if(!_currentDevice) stringStream << "Device not found." << std::endl;
+			else
+			{
+				stringStream << "Device selected." << std::endl;
+				stringStream << "For information about the device's commands type: \"help\"" << std::endl;
+			}
+
+			return stringStream.str();
+		}
+		else return "Unknown command.\n";
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return "Error executing command. See log file for more details.\n";
+}

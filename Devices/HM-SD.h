@@ -31,7 +31,7 @@ class HM_SD : public HomeMaticDevice
         void removeFilter(FilterType, int32_t);
         void addOverwriteResponse(std::string packetPartToCapture, std::string response, int32_t sendAfter);
         void removeOverwriteResponse(std::string packetPartToCapture);
-        void handleCLICommand(std::string command);
+        std::string handleCLICommand(std::string command);
         std::string serialize();
         void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
     protected:

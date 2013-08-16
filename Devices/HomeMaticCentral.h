@@ -34,7 +34,7 @@ public:
 	void resetTeam(std::shared_ptr<Peer> peer, uint32_t channel);
 	std::string serialize();
 	void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
-	void handleCLICommand(std::string command);
+	std::string handleCLICommand(std::string command);
 	virtual void enqueuePackets(int32_t deviceAddress, std::shared_ptr<BidCoSQueue> packets, bool pushPendingBidCoSQueues = false);
 	virtual void enqueuePendingQueues(int32_t deviceAddress);
 	int32_t getUniqueAddress(int32_t seed);
@@ -71,7 +71,7 @@ public:
 	std::shared_ptr<RPC::RPCVariable> listTeams();
 	std::shared_ptr<RPC::RPCVariable> setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel);
 	std::shared_ptr<RPC::RPCVariable> putParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> paramset);
-	std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on);
+	std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on, int32_t duration = 60, bool debugOutput = true);
 	std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 protected:
 	std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>());
@@ -79,7 +79,7 @@ protected:
 private:
 	std::shared_ptr<Peer> _currentPeer = nullptr;
 	uint32_t _timeLeftInPairingMode = 0;
-	void pairingModeTimer();
+	void pairingModeTimer(int32_t duration, bool debugOutput = true);
 	bool _stopPairingModeThread = false;
 	std::thread _pairingModeThread;
 	std::map<std::string, std::shared_ptr<RPC::RPCVariable>> _metadata;

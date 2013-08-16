@@ -399,18 +399,232 @@ void Peer::worker()
 	}
 }
 
-void Peer::handleCLICommand(std::string command)
+std::string Peer::handleCLICommand(std::string command)
 {
-	if(command == "list peers")
+	try
 	{
-		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		std::ostringstream stringStream;
+
+		if(command == "help")
 		{
-			for(std::vector<std::shared_ptr<BasicPeer>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
-			{
-				std::cout << "Channel: " << i->first << "\tAddress: 0x" << std::hex << (*j)->address << "\tRemote channel: " << std::dec << (*j)->channel << "\tSerial number: " << (*j)->serialNumber << std::endl << std::dec;
-			}
+			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "unselect\t\tUnselect this peer" << std::endl;
+			stringStream << "channel count\t\tPrint the number of channels of this peer" << std::endl;
+			stringStream << "config print\t\tPrints all configuration parameters and their values" << std::endl;
+			stringStream << "queues info\t\tPrints information about the pending BidCoS packet queues" << std::endl;
+			stringStream << "queues clear\t\tClears pending BidCoS packet queues" << std::endl;
+			stringStream << "team info\t\tPrints information about this peers team" << std::endl;
+			stringStream << "peers list\t\tLists all peers paired to this peer" << std::endl;
+			return stringStream.str();
 		}
+		if(command.compare(0, 13, "channel count") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command prints this peer's number of channels." << std::endl;
+						stringStream << "Usage: channel count" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			stringStream << "Peer has " << rpcDevice->channels.size() << " channels." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "config print") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command prints all configuration parameters of this peer. The values are in BidCoS packet format." << std::endl;
+						stringStream << "Usage: config print" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			return printConfig();
+		}
+		else if(command.compare(0, 11, "queues info") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command prints information about the pending BidCoS queues." << std::endl;
+						stringStream << "Usage: queues info" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			stringStream << "Number of Pending queues:\t\t\t" << pendingBidCoSQueues->size() << std::endl;
+			if(!pendingBidCoSQueues->empty() && !pendingBidCoSQueues->front()->isEmpty())
+			{
+				stringStream << "First pending queue type:\t\t\t" << (int32_t)pendingBidCoSQueues->front()->getQueueType() << std::endl;
+				if(pendingBidCoSQueues->front()->front()->getPacket()) stringStream << "First packet of first pending queue:\t\t" << pendingBidCoSQueues->front()->front()->getPacket()->hexString() << std::endl;
+				stringStream << "Type of first entry of first pending queue:\t" << (int32_t)pendingBidCoSQueues->front()->front()->getType() << std::endl;
+			}
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "queues clear") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command clears all pending BidCoS queues." << std::endl;
+						stringStream << "Usage: queues clear" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			pendingBidCoSQueues->clear();
+			stringStream << "All pending BidCoSQueues were deleted." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 9, "team info") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command prints information about this peers team." << std::endl;
+						stringStream << "Usage: team info" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			if(team.serialNumber.empty()) stringStream << "This peer doesn't support teams." << std::endl;
+			else stringStream << "Team address: 0x" << std::hex << team.address << std::dec << " Team serial number: " << team.serialNumber << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 10, "peers list") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command lists all peers paired to this peer." << std::endl;
+						stringStream << "Usage: peers list" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			if(_peers.empty())
+			{
+				stringStream << "No peers are paired to this peer." << std::endl;
+				return stringStream.str();
+			}
+			for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+			{
+				for(std::vector<std::shared_ptr<BasicPeer>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					stringStream << "Channel: " << i->first << "\tAddress: 0x" << std::hex << (*j)->address << "\tRemote channel: " << std::dec << (*j)->channel << "\tSerial number: " << (*j)->serialNumber << std::endl << std::dec;
+				}
+			}
+			return stringStream.str();
+		}
+		else return "Unknown command.\n";
 	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return "Error executing command. See log file for more details.\n";
 }
 
 void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
@@ -956,81 +1170,83 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
     }
 }
 
-void Peer::printConfig()
+std::string Peer::printConfig()
 {
 	try
 	{
-		std::cout << "MASTER" << std::endl;
-		std::cout << "{" << std::endl;
+		std::ostringstream stringStream;
+		stringStream << "MASTER" << std::endl;
+		stringStream << "{" << std::endl;
 		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator i = configCentral.begin(); i != configCentral.end(); ++i)
 		{
-			std::cout << "\t" << "Channel: " << std::dec << i->first << std::endl;
-			std::cout << "\t{" << std::endl;
+			stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
+			stringStream << "\t{" << std::endl;
 			for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				std::cout << "\t\t[" << j->first << "]: ";
-				if(!j->second.rpcParameter) std::cout << "No RPC parameter";
+				stringStream << "\t\t[" << j->first << "]: ";
+				if(!j->second.rpcParameter) stringStream << "No RPC parameter";
 				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
 				{
-					std::cout << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
+					stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
 				}
-				std::cout << std::endl;
+				stringStream << std::endl;
 			}
-			std::cout << "\t}" << std::endl;
+			stringStream << "\t}" << std::endl;
 		}
-		std::cout << "}" << std::endl << std::endl;
+		stringStream << "}" << std::endl << std::endl;
 
-		std::cout << "VALUES" << std::endl;
-		std::cout << "{" << std::endl;
+		stringStream << "VALUES" << std::endl;
+		stringStream << "{" << std::endl;
 		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator i = valuesCentral.begin(); i != valuesCentral.end(); ++i)
 		{
-			std::cout << "\t" << "Channel: " << std::dec << i->first << std::endl;
-			std::cout << "\t{" << std::endl;
+			stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
+			stringStream << "\t{" << std::endl;
 			for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				std::cout << "\t\t[" << j->first << "]: ";
-				if(!j->second.rpcParameter) std::cout << "No RPC parameter";
+				stringStream << "\t\t[" << j->first << "]: ";
+				if(!j->second.rpcParameter) stringStream << "No RPC parameter";
 				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
 				{
-					std::cout << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
+					stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
 				}
-				std::cout << std::endl;
+				stringStream << std::endl;
 			}
-			std::cout << "\t}" << std::endl;
+			stringStream << "\t}" << std::endl;
 		}
-		std::cout << "}" << std::endl << std::endl;
+		stringStream << "}" << std::endl << std::endl;
 
-		std::cout << "LINK" << std::endl;
-		std::cout << "{" << std::endl;
+		stringStream << "LINK" << std::endl;
+		stringStream << "{" << std::endl;
 		for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>::const_iterator i = linksCentral.begin(); i != linksCentral.end(); ++i)
 		{
-			std::cout << "\t" << "Channel: " << std::dec << i->first << std::endl;
-			std::cout << "\t{" << std::endl;
+			stringStream << "\t" << "Channel: " << std::dec << i->first << std::endl;
+			stringStream << "\t{" << std::endl;
 			for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				std::cout << "\t\t" << "Address: " << std::hex << "0x" << j->first << std::endl;
-				std::cout << "\t\t{" << std::endl;
+				stringStream << "\t\t" << "Address: " << std::hex << "0x" << j->first << std::endl;
+				stringStream << "\t\t{" << std::endl;
 				for(std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
 				{
-					std::cout << "\t\t\t" << "Remote channel: " << std::dec << k->first << std::endl;
-					std::cout << "\t\t\t{" << std::endl;
+					stringStream << "\t\t\t" << "Remote channel: " << std::dec << k->first << std::endl;
+					stringStream << "\t\t\t{" << std::endl;
 					for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator l = k->second.begin(); l != k->second.end(); ++l)
 					{
-						std::cout << "\t\t\t\t[" << l->first << "]: ";
-						if(!l->second.rpcParameter) std::cout << "No RPC parameter";
+						stringStream << "\t\t\t\t[" << l->first << "]: ";
+						if(!l->second.rpcParameter) stringStream << "No RPC parameter";
 						for(std::vector<uint8_t>::const_iterator m = l->second.data.begin(); m != l->second.data.end(); ++m)
 						{
-							std::cout << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*m << " ";
+							stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*m << " ";
 						}
-						std::cout << std::endl;
+						stringStream << std::endl;
 					}
-					std::cout << "\t\t\t}" << std::endl;
+					stringStream << "\t\t\t}" << std::endl;
 				}
-				std::cout << "\t\t}" << std::endl;
+				stringStream << "\t\t}" << std::endl;
 			}
-			std::cout << "\t}" << std::endl;
+			stringStream << "\t}" << std::endl;
 		}
-		std::cout << "}" << std::endl << std::endl;
+		stringStream << "}" << std::endl << std::endl;
+		return stringStream.str();
 	}
 	catch(const std::exception& ex)
     {
@@ -1044,6 +1260,7 @@ void Peer::printConfig()
     {
     	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
     }
+    return "";
 }
 
 int32_t Peer::getChannelGroupedWith(int32_t channel)

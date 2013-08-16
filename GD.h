@@ -12,6 +12,8 @@ class HomeMaticDevices;
 #include "HomeMaticDevices.h"
 #include "RPC/Server.h"
 #include "RPC/Client.h"
+#include "CLI/CLIServer.h"
+#include "CLI/CLIClient.h"
 #include "RPC/Devices.h"
 #include "Settings.h"
 
@@ -24,6 +26,8 @@ public:
 	static HomeMaticDevices devices;
 	static RPC::Server rpcServer;
 	static RPC::Client rpcClient;
+	static CLI::Server cliServer;
+	static CLI::Client cliClient;
 	static RPC::Devices rpcDevices;
 	static Settings settings;
 	static Database db;

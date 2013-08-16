@@ -1,5 +1,6 @@
 #include "HomeMaticDevice.h"
 #include "GD.h"
+#include "HelperFunctions.h"
 
 HomeMaticDevice::HomeMaticDevice()
 {
@@ -208,17 +209,99 @@ int32_t HomeMaticDevice::getHexInput()
     return intInput;
 }
 
-void HomeMaticDevice::handleCLICommand(std::string command)
+std::string HomeMaticDevice::handleCLICommand(std::string command)
 {
-	if(command == "pair")
+	try
 	{
-		if(pairDevice(10000)) std::cout << "Pairing successful." << std::endl; else std::cout << "Pairing not successful." << std::endl;
+		std::ostringstream stringStream;
+		if(command == "help")
+		{
+			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "pair\t\t\tEnables pairing mode" << std::endl;
+			stringStream << "reset\t\t\tResets the device to it's default settings" << std::endl;
+			return stringStream.str();
+		}
+		if(command.compare(0, 4, "pair") == 0)
+		{
+			int32_t duration = 20;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command enables pairing mode." << std::endl;
+						stringStream << "Usage: pair [DURATION]" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  DURATION:\tOptional duration in seconds to stay in pairing mode." << std::endl;
+						return stringStream.str();
+					}
+					duration = HelperFunctions::getNumber(element, true);
+					if(duration < 5 || duration > 3600) return "Invalid duration. Duration has to be greater than 5 and less than 3600.\n";
+				}
+				index++;
+			}
+
+			std::thread t(&HomeMaticDevice::pairDevice, this, duration * 1000);
+			t.detach();
+			stringStream << "Pairing mode enabled." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 5, "reset") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command resets the device to it's default settings." << std::endl;
+						stringStream << "Usage: reset" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			reset();
+			stringStream << "Device reset." << std::endl;
+			return stringStream.str();
+		}
+		else return "";
 	}
-	else if(command == "reset")
-	{
-		reset();
-		std::cout << "Device reset." << std::endl;
-	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return "Error executing command. See log file for more details.\n";
 }
 
 void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)

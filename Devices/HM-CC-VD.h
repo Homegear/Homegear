@@ -12,7 +12,7 @@ class HM_CC_VD : public HomeMaticDevice
         void setValveDriveBlocked(bool);
         void setValveDriveLoose(bool);
         void setAdjustingRangeTooSmall(bool);
-        void handleCLICommand(std::string command);
+        std::string handleCLICommand(std::string command);
 
         void handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
         std::string serialize();

@@ -63,55 +63,9 @@ void HM_CC_VD::setUpBidCoSMessages()
     _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x58, this, ACCESSPAIREDTOSENDER, NOACCESS, &HomeMaticDevice::handleDutyCyclePacket)));
 }
 
-void HM_CC_VD::handleCLICommand(std::string command)
+std::string HM_CC_VD::handleCLICommand(std::string command)
 {
-	std::string input;
-	if(command == "set valve drive blocked")
-	{
-		std::cout << "Please enter \"yes\" or \"no\": ";
-        std::cin >> input;
-        if(input == "yes")
-        {
-        	_valveDriveBlocked = true;
-        	std::cout << "Valve drive blocked." << std::endl;
-        }
-        else
-        {
-        	_valveDriveBlocked = false;
-        	std::cout << "Valve drive not blocked." << std::endl;
-        }
-	}
-	if(command == "set valve drive loose")
-	{
-		std::cout << "Please enter \"yes\" or \"no\": ";
-        std::cin >> input;
-        if(input == "yes")
-        {
-        	_valveDriveLoose = true;
-        	std::cout << "Valve drive loose." << std::endl;
-        }
-        else
-        {
-        	_valveDriveLoose = false;
-        	std::cout << "Valve drive not loose." << std::endl;
-        }
-	}
-	if(command == "set adjusting range too small")
-	{
-		std::cout << "Please enter \"yes\" or \"no\": ";
-        std::cin >> input;
-        if(input == "yes")
-        {
-        	_adjustingRangeTooSmall = true;
-        	std::cout << "Adjusting range too small." << std::endl;
-        }
-        else
-        {
-        	_adjustingRangeTooSmall = false;
-        	std::cout << "Adjusting range ok." << std::endl;
-        }
-	}
-	HomeMaticDevice::handleCLICommand(command);
+	return HomeMaticDevice::handleCLICommand(command);
 }
 
 void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)

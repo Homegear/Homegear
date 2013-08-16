@@ -233,139 +233,238 @@ std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firm
 	return peer;
 }
 
-void HomeMaticCentral::handleCLICommand(std::string command)
+std::string HomeMaticCentral::handleCLICommand(std::string command)
 {
-	if(command == "pairing mode on")
+	try
 	{
-		_pairing = true;
-		std::cout << "Pairing mode enabled." << std::endl;
-	}
-	else if(command == "pairing mode off")
-	{
-		_pairing = false;
-		std::cout << "Pairing mode disabled." << std::endl;
-	}
-	else if(command == "unpair")
-	{
-		std::string input;
-		std::cout << "Please enter the devices address: ";
-		int32_t address = getHexInput();
-		if(!peerExists(address)) std::cout << "This device is not paired to this central." << std::endl;
-		else
+		std::ostringstream stringStream;
+		if(_currentPeer)
 		{
-			std::cout << "Unpairing device 0x" << std::hex << address << std::dec << std::endl;
-			unpair(address, true);
-		}
-	}
-	else if(command == "enable aes")
-	{
-		std::string input;
-		std::cout << "Please enter the devices address: ";
-		int32_t address = getHexInput();
-		if(!peerExists(address)) std::cout << "This device is not paired to this central." << std::endl;
-		else
-		{
-			std::cout << "Enabling AES for device device 0x" << std::hex << address << std::dec << std::endl;
-			sendEnableAES(address, 1);
-		}
-	}
-	else if(command == "list peers")
-	{
-		try
-		{
-			_peersMutex.lock();
-			for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+			if(command == "unselect")
 			{
-				std::cout << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: " << (uint32_t)i->second->deviceType << std::endl << std::dec;
+				_currentPeer.reset();
+				return "Peer unselected.\n";
 			}
-			_peersMutex.unlock();
+			if(!_currentPeer) return "No peer selected.\n";
+			return _currentPeer->handleCLICommand(command);
 		}
-		catch(const std::exception& ex)
+		else if(command == "help")
 		{
-			_peersMutex.unlock();
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "pairing on\t\tEnables pairing mode" << std::endl;
+			stringStream << "pairing off\t\tDisables pairing mode" << std::endl;
+			stringStream << "peers list\t\tList all peers" << std::endl;
+			stringStream << "peers remove\t\tRemove a peer (without unpairing)" << std::endl;
+			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
+			stringStream << "peers select\t\tSelect a peer" << std::endl;
+			return stringStream.str();
 		}
-		catch(const Exception& ex)
+		if(command.compare(0, 10, "pairing on") == 0)
 		{
-			_peersMutex.unlock();
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			int32_t duration = 300;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command enables pairing mode." << std::endl;
+						stringStream << "Usage: pairing on [DURATION]" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  DURATION:\tOptional duration in seconds to stay in pairing mode." << std::endl;
+						return stringStream.str();
+					}
+					duration = HelperFunctions::getNumber(element, true);
+					if(duration < 5 || duration > 3600) return "Invalid duration. Duration has to be greater than 5 and less than 3600.\n";
+				}
+				index++;
+			}
+
+			setInstallMode(true, duration, false);
+			stringStream << "Pairing mode enabled." << std::endl;
+			return stringStream.str();
 		}
-		catch(...)
+		else if(command.compare(0, 11, "pairing off") == 0)
 		{
-			_peersMutex.unlock();
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command disables pairing mode." << std::endl;
+						stringStream << "Usage: pairing off" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			setInstallMode(false, -1, false);
+			stringStream << "Pairing mode disabled." << std::endl;
+			return stringStream.str();
 		}
+		else if(command.compare(0, 12, "peers unpair") == 0)
+		{
+			int32_t peerAddress;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					peerAddress = HelperFunctions::getNumber(element, true);
+					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command unpairs a peer." << std::endl;
+				stringStream << "Usage: peers unpair ADDRESS" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  ADDRESS:\tThe 3 byte address of the peer to unpair in hexadecimal format. Example: 1A03FC" << std::endl;
+				return stringStream.str();
+			}
+
+			if(!peerExists(peerAddress)) stringStream << "This device is not paired to this central." << std::endl;
+			else
+			{
+				if(_currentPeer && _currentPeer->address == peerAddress) _currentPeer.reset();
+				stringStream << "Unpairing device 0x" << std::hex << peerAddress << std::dec << std::endl;
+				unpair(peerAddress, true);
+			}
+			return stringStream.str();
+		}
+		else if(command == "enable aes")
+		{
+			std::string input;
+			stringStream << "Please enter the devices address: ";
+			int32_t address = getHexInput();
+			if(!peerExists(address)) stringStream << "This device is not paired to this central." << std::endl;
+			else
+			{
+				stringStream << "Enabling AES for device device 0x" << std::hex << address << std::dec << std::endl;
+				sendEnableAES(address, 1);
+			}
+			return stringStream.str();
+		}
+		else if(command == "peers list")
+		{
+			try
+			{
+				if(_peers.empty())
+				{
+					stringStream << "No peers are paired to this central." << std::endl;
+					return stringStream.str();
+				}
+				_peersMutex.lock();
+				for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+				{
+					stringStream << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: " << (uint32_t)i->second->deviceType << std::endl << std::dec;
+				}
+				_peersMutex.unlock();
+				return stringStream.str();
+			}
+			catch(const std::exception& ex)
+			{
+				_peersMutex.unlock();
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			}
+			catch(const Exception& ex)
+			{
+				_peersMutex.unlock();
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			}
+			catch(...)
+			{
+				_peersMutex.unlock();
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+			}
+		}
+		else if(command.compare(0, 12, "peers select") == 0)
+		{
+			int32_t address;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					address = HelperFunctions::getNumber(element, true);
+					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command selects a peer." << std::endl;
+				stringStream << "Usage: peers select ADDRESS" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  ADDRESS:\tThe 3 byte address of the peer to select in hexadecimal format. Example: 1A03FC" << std::endl;
+				return stringStream.str();
+			}
+
+			_currentPeer = getPeer(address);
+			if(!_currentPeer) stringStream << "This peer is not paired to this central." << std::endl;
+			else
+			{
+				stringStream << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->deviceType << " selected." << std::dec << std::endl;
+				stringStream << "For information about the peer's commands type: \"help\"" << std::endl;
+			}
+			return stringStream.str();
+		}
+		else return "Unknown command.\n";
 	}
-	else if(command == "peer list peers")
-	{
-		if(!_currentPeer)
-		{
-			std::cout << "No peer selected." << std::endl;
-			return;
-		}
-		_currentPeer->handleCLICommand(command.substr(5));
-	}
-	else if(command == "select peer")
-	{
-		std::cout << "Please enter the devices address: ";
-		int32_t address = getHexInput();
-		_currentPeer = getPeer(address);
-		if(!_currentPeer) std::cout << "This device is not paired to this central." << std::endl;
-		else std::cout << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->deviceType << " selected." << std::dec << std::endl;
-	}
-	else if(command == "channel count")
-	{
-		if(!_currentPeer)
-		{
-			std::cout << "No peer selected." << std::endl;
-			return;
-		}
-		std::cout << "Peer has " << _currentPeer->rpcDevice->channels.size() << " channels." << std::endl;
-	}
-	else if(command == "print config")
-	{
-		if(!_currentPeer)
-		{
-			std::cout << "No peer selected." << std::endl;
-			return;
-		}
-		_currentPeer->printConfig();
-	}
-	else if(command == "pending queues info")
-	{
-		if(!_currentPeer)
-		{
-			std::cout << "No peer selected." << std::endl;
-			return;
-		}
-		std::cout << "Number of Pending queues:\t\t\t" << _currentPeer->pendingBidCoSQueues->size() << std::endl;
-		if(!_currentPeer->pendingBidCoSQueues->empty() && !_currentPeer->pendingBidCoSQueues->front()->isEmpty())
-		{
-			std::cout << "First pending queue type:\t\t\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->getQueueType() << std::endl;
-			if(_currentPeer->pendingBidCoSQueues->front()->front()->getPacket()) std::cout << "First packet of first pending queue:\t\t" << _currentPeer->pendingBidCoSQueues->front()->front()->getPacket()->hexString() << std::endl;
-			std::cout << "Type of first entry of first pending queue:\t" << (int32_t)_currentPeer->pendingBidCoSQueues->front()->front()->getType() << std::endl;
-		}
-	}
-	else if(command == "clear pending queues")
-	{
-		if(!_currentPeer)
-		{
-			std::cout << "No peer selected." << std::endl;
-			return;
-		}
-		_currentPeer->pendingBidCoSQueues->clear();
-		std::cout << "Pending queues cleared." << std::endl;
-	}
-	else if(command == "team info")
-	{
-		if(!_currentPeer)
-		{
-			std::cout << "No peer selected." << std::endl;
-			return;
-		}
-		if(_currentPeer->team.serialNumber.empty()) std::cout << "This peer doesn't support teams." << std::endl;
-		else std::cout << "Team address: 0x" << std::hex << _currentPeer->team.address << std::dec << " Team serial number: " << _currentPeer->team.serialNumber << std::endl;
-	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
+    return "Error executing command. See log file for more details.\n";
 }
 
 int32_t HomeMaticCentral::getUniqueAddress(int32_t seed)
@@ -1228,7 +1327,6 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 								peer->configCentral[channel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
 								if(!peer->pairingComplete && (*i)->logicalParameter->enforce)
 								{
-									std::cerr << "Moin1" << std::endl;
 									parametersToEnforce->structValue->push_back((*i)->logicalParameter->getEnforceValue());
 									parametersToEnforce->structValue->back()->name = (*i)->id;
 								}
@@ -1283,7 +1381,6 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 									configParam->data.at(index - (*j)->physicalParameter->startIndex) = data;
 									if(!peer->pairingComplete && (*j)->logicalParameter->enforce)
 									{
-										std::cerr << "Moin2" << std::endl;
 										parametersToEnforce->structValue->push_back((*j)->logicalParameter->getEnforceValue());
 										parametersToEnforce->structValue->back()->name = (*j)->id;
 									}
@@ -2633,24 +2730,24 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setValue(std::string serialN
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-void HomeMaticCentral::pairingModeTimer()
+void HomeMaticCentral::pairingModeTimer(int32_t duration, bool debugOutput)
 {
 	try
 	{
 		_pairing = true;
-		std::cout << "Pairing mode enabled." << std::endl;
-		_timeLeftInPairingMode = 60;
+		if(debugOutput && GD::debugLevel >= 4) std::cout << "Info: Pairing mode enabled." << std::endl;
+		_timeLeftInPairingMode = duration;
 		int64_t startTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		int64_t timePassed = 0;
-		while(timePassed < 60000 && !_stopPairingModeThread)
+		while(timePassed < (duration * 1000) && !_stopPairingModeThread)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(250));
 			timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - startTime;
-			_timeLeftInPairingMode = 60 - (timePassed / 1000);
+			_timeLeftInPairingMode = duration - (timePassed / 1000);
 		}
 		_timeLeftInPairingMode = 0;
 		_pairing = false;
-		std::cout << "Pairing mode disabled." << std::endl;
+		if(debugOutput && GD::debugLevel >= 4) std::cout << "Info: Pairing mode disabled." << std::endl;
 	}
 	catch(const std::exception& ex)
     {
@@ -2697,7 +2794,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteMetadata(std::string o
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool on)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool on, int32_t duration, bool debugOutput)
 {
 	try
 	{
@@ -2705,10 +2802,10 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool on)
 		if(_pairingModeThread.joinable()) _pairingModeThread.join();
 		_stopPairingModeThread = false;
 		_timeLeftInPairingMode = 0;
-		if(on)
+		if(on && duration >= 5)
 		{
-			_timeLeftInPairingMode = 60; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
-			_pairingModeThread = std::thread(&HomeMaticCentral::pairingModeTimer, this);
+			_timeLeftInPairingMode = duration; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
+			_pairingModeThread = std::thread(&HomeMaticCentral::pairingModeTimer, this, duration, debugOutput);
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}

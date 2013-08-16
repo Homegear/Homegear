@@ -60,7 +60,7 @@ class HomeMaticDevice
         virtual void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         virtual int32_t getHexInput();
         virtual std::shared_ptr<BidCoSMessages> getMessages() { return _messages; }
-        virtual void handleCLICommand(std::string command);
+        virtual std::string handleCLICommand(std::string command);
         virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet);
         virtual void sendPacketMultipleTimes(std::shared_ptr<BidCoSPacket> packet, int32_t peerAddress, int32_t count, int32_t delay, bool useCentralMessageCounter = false, bool isThread = false);
         std::shared_ptr<BidCoSPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }

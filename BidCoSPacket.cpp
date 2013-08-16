@@ -187,6 +187,11 @@ void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 	try
 	{
 		uint32_t startIndex = removeFirstCharacter ? 1 : 0;
+		if(packet.size() < startIndex + 20)
+		{
+			if(GD::debugLevel >= 2) std::cerr << "Error: Packet is too short: " << packet << std::endl;
+			return;
+		}
 		_length = getByte(packet.substr(startIndex, 2));
 		_messageCounter = getByte(packet.substr(startIndex + 2, 2));
 		_controlByte = getByte(packet.substr(startIndex + 4, 2));
@@ -196,10 +201,10 @@ void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 
 		uint32_t tailLength = 0;
 		if(packet.back() == '\n') tailLength = 2;
-		uint32_t endIndex = startIndex + 2 + (_length * 2);
+		uint32_t endIndex = startIndex + 2 + (_length * 2) - 1;
 		if(endIndex >= packet.size())
 		{
-			if(GD::debugLevel >= 4) std::cout << "Info: Packet is shorter than value of packet length byte: " << packet << std::endl;
+			if(GD::debugLevel >= 3) std::cout << "Warning: Packet is shorter than value of packet length byte: " << packet << std::endl;
 			endIndex = packet.size() - 1;
 		}
 		_payload.clear();
