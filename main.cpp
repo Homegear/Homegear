@@ -81,7 +81,7 @@ int32_t getHexInput()
 
 void printHelp()
 {
-	std::cout << "Usage: Homegear [OPTIONS]" << std::endl << std::endl;
+	std::cout << "Usage: homegear [OPTIONS]" << std::endl << std::endl;
 	std::cout << "Option\t\tMeaning" << std::endl;
 	std::cout << "--help\t\tShow this help" << std::endl;
 	std::cout << "-c <path>\tSpecify path to config file" << std::endl;
@@ -131,23 +131,6 @@ int main(int argc, char* argv[])
 {
     try
     {
-    	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
-			throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
-
-    	//Set rlimit for core dumps
-    	struct rlimit coreLimits;
-    	coreLimits.rlim_cur = coreLimits.rlim_max;
-    	setrlimit(RLIMIT_CORE, &coreLimits);
-
-    	//Analyze core dump with:
-    	//gdb Homegear core
-    	//where
-    	//thread apply all bt
-
-    	//Enable printing of backtraces
-    	signal(SIGSEGV, exceptionHandler);
-    	signal(SIGTERM, killHandler);
-
     	bool startAsDaemon = false;
     	for(int32_t i = 1; i < argc; i++)
     	{
@@ -235,10 +218,27 @@ int main(int argc, char* argv[])
 		path[length] = '\0';
 		GD::executablePath = std::string(path);
 		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
-		if(GD::configPath.empty()) GD::configPath = "/etc/Homegear/";
+		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
 		GD::settings.load(GD::configPath + "main.conf");
 
     	if(startAsDaemon) startDaemon();
+
+    	    	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
+			throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
+
+    	//Set rlimit for core dumps
+    	struct rlimit coreLimits;
+    	coreLimits.rlim_cur = coreLimits.rlim_max;
+    	setrlimit(RLIMIT_CORE, &coreLimits);
+
+    	//Analyze core dump with:
+    	//gdb homegear core
+    	//where
+    	//thread apply all bt
+
+    	//Enable printing of backtraces
+    	signal(SIGSEGV, exceptionHandler);
+    	signal(SIGTERM, killHandler);
 
     	//Create PID file
     	try

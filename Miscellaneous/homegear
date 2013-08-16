@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ### BEGIN INIT INFO
-# Provides:		Homegear
+# Provides:		homegear
 # Required-Start:	$network $remote_fs $syslog
 # Required-Stop:	$network $remote_fs $syslog
 # Default-Start:	2 3 4 5
@@ -13,19 +13,19 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 . /lib/lsb/init-functions
 
-DAEMON=/usr/bin/Homegear
-PIDPATH=/var/run/Homegear
-PIDFILE=$PIDPATH/Homegear.pid
+DAEMON=/usr/bin/homegear
+PIDPATH=/var/run/homegear
+PIDFILE=$PIDPATH/homegear.pid
 
 test -x $DAEMON || exit 5
 
-if [ -r /etc/default/Homegear ]; then
-        . /etc/default/Homegear
+if [ -r /etc/default/homegear ]; then
+        . /etc/default/homegear
 fi
 
 HOMEGEAR_OPTS="$HOMEGEAR_OPTS -d"
 
-LOCKFILE=/var/lock/Homegear
+LOCKFILE=/var/lock/homegear
 
 lock_homegear() {
         if [ -x /usr/bin/lockfile-create ]; then
@@ -60,12 +60,12 @@ case $1 in
 				fi
 				
 				if test ! -d $PIDPATH; then 
-					mkdir /var/run/Homegear
+					mkdir $PIDPATH
 					chown $RUNASUSER:$RUNASGROUP $PIDPATH
 					chmod 750 $PIDPATH
 				fi
 				
-                log_daemon_msg "Starting Homegear" "Homegear"
+                log_daemon_msg "Starting Homegear" "homegear"
                 lock_homegear
                 start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $HOMEGEAR_OPTS
                 status=$?
@@ -73,7 +73,7 @@ case $1 in
                 log_end_msg $status
                 ;;
         stop)
-                log_daemon_msg "Stopping Homegear" "Homegear"
+                log_daemon_msg "Stopping Homegear" "homegear"
                 start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
                 log_end_msg $?
                 rm -f $PIDFILE
@@ -92,7 +92,7 @@ case $1 in
                 exit 3
                 ;;
         status)
-                status_of_proc $DAEMON "Homegear"
+                status_of_proc $DAEMON "homegear"
                 ;;
         *)
                 echo "Usage: $0 {start|stop|restart|try-restart|force-reload|status}"

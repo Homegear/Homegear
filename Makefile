@@ -6,18 +6,18 @@ ifndef config
 endif
 export config
 
-PROJECTS := Homegear
+PROJECTS := homegear
 
 .PHONY: all clean help $(PROJECTS)
 
 all: $(PROJECTS)
 
-Homegear: 
-	@echo "==== Building Homegear ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f Homegear.make
+homegear: 
+	@echo "==== Building homegear ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f homegear.make
 
 clean:
-	@${MAKE} --no-print-directory -C . -f Homegear.make clean
+	@${MAKE} --no-print-directory -C . -f homegear.make clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -26,10 +26,13 @@ help:
 	@echo "   debug"
 	@echo "   release"
 	@echo "   profiling"
+	@echo "   debug_rpi"
+	@echo "   release_rpi"
+	@echo "   profiling_rpi"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
-	@echo "   Homegear"
+	@echo "   homegear"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

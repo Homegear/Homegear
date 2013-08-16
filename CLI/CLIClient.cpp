@@ -80,7 +80,7 @@ void Client::start()
 		if(GD::debugLevel >= 4) std::cout << "Info: Trying to connect..." << std::endl;
 		sockaddr_un remoteAddress;
 		remoteAddress.sun_family = AF_UNIX;
-		strcpy(remoteAddress.sun_path, "/var/run/Homegear/Homegear.sock");
+		strcpy(remoteAddress.sun_path, GD::socketPath.c_str());
 		if(connect(fileDescriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
 		{
 			std::cerr << "Could not connect to socket. Error: " << strerror(errno) << std::endl;
@@ -151,7 +151,7 @@ void Client::start()
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Couldn't create socket file /var/run/Homegear/Homegear.sock: " << ex.what() << std::endl;
+    	std::cerr << "Couldn't create socket file " << GD::socketPath << ": " << ex.what() << std::endl;
     }
     catch(const Exception& ex)
     {

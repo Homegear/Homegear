@@ -13,7 +13,7 @@ void Settings::reset()
 	_rfDeviceType = "cul";
 	_rfDevice = "/dev/ttyACM0";
 	_databasePath = GD::executablePath + "db.sql";
-	_logfilePath = "/var/log/Homegear/homegear.log";
+	_logfilePath = "/var/log/homegear/";
 }
 
 void Settings::load(std::string filename)
@@ -98,7 +98,7 @@ void Settings::load(std::string filename)
 				else if(name == "logfilepath")
 				{
 					_logfilePath = value;
-					if(_logfilePath.empty()) _logfilePath = "/var/log/Homegear/";
+					if(_logfilePath.empty()) _logfilePath = "/var/log/homegear/";
 					if(_logfilePath[_logfilePath.size() - 1] != '/') _logfilePath.push_back('/');
 					if(GD::debugLevel >= 5) std::cout << "Debug: logfilePath set to " << _logfilePath << std::endl;
 				}

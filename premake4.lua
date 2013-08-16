@@ -31,7 +31,7 @@ newplatform {
 }
 
 -- A solution contains projects, and defines the available configurations
-solution "Homegear"
+solution "homegear"
    configurations { "Debug", "Release", "Profiling" }
  
    configuration { "linux", "gmake" }
@@ -45,7 +45,7 @@ solution "Homegear"
       libdirs { "./ARM\ libraries" }
 
    -- A project defines one build target
-   project "Homegear"
+   project "homegear"
       kind "ConsoleApp"
       language "C++"
       files { "*.h", "*.cpp" }

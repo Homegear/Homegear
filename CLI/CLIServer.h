@@ -37,8 +37,6 @@ public:
 	void start();
 	void stop();
 private:
-	std::string _socketDir;
-	std::string _socketPath;
 	bool _stopServer = false;
 	std::thread _mainThread;
 	int32_t _backlog = 10;

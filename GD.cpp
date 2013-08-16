@@ -3,6 +3,8 @@
 std::shared_ptr<RF::RFDevice> GD::rfDevice;
 std::string GD::configPath = "";
 std::string GD::pidfilePath = "";
+std::string GD::runDir = "/var/run/homegear/";
+std::string GD::socketPath = GD::runDir + "homegear.sock";
 std::string GD::workingDirectory = "";
 std::string GD::executablePath = "";
 HomeMaticDevices GD::devices;

@@ -20,7 +20,9 @@ class HomeMaticDevices;
 class GD {
 public:
 	static std::string configPath;
+	static std::string runDir;
 	static std::string pidfilePath;
+	static std::string socketPath;
 	static std::string workingDirectory;
 	static std::string executablePath;
 	static HomeMaticDevices devices;
