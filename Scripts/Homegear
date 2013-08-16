@@ -15,7 +15,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 DAEMON=/usr/bin/Homegear
 PIDPATH=/var/run/Homegear
-PIDFILE=/var/run/Homegear/Homegear.pid
+PIDFILE=$PIDPATH/Homegear.pid
 
 test -x $DAEMON || exit 5
 

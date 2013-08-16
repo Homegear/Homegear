@@ -1,3 +1,11 @@
 - Follow instructions here: http://airwiki.ws.dei.polimi.it/index.php/Cross-compiling_for_the_RaspberryPi
 - You can ignore the copying of the libraries and the cmake part of the howto
+- Copy the libraries from the directory "ARM\ libraries" into $HOME/raspberrypi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/arm-linux-gnueabihf/libc/usr/lib/arm-linux-gnueabihf
 - Now makeRPI.sh should work
+
+When libraries are not found, this helps:
+cd into the Homegear source dir and type:
+./premake4 --platform=rpi gmake
+strace -f -o /tmp/strace.out -- make config=release_rpi
+
+Then open /tmp/strace.out and search for the libraries which cause problems.

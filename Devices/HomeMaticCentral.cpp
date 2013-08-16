@@ -324,6 +324,46 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			stringStream << "Pairing mode disabled." << std::endl;
 			return stringStream.str();
 		}
+		else if(command.compare(0, 12, "peers remove") == 0)
+		{
+			int32_t peerAddress;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					peerAddress = HelperFunctions::getNumber(element, true);
+					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command removes a peer without trying to unpair it first." << std::endl;
+				stringStream << "Usage: peers remove ADDRESS" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  ADDRESS:\tThe 3 byte address of the peer to remove in hexadecimal format. Example: 1A03FC" << std::endl;
+				return stringStream.str();
+			}
+
+			if(!peerExists(peerAddress)) stringStream << "This device is not paired to this central." << std::endl;
+			else
+			{
+				if(_currentPeer && _currentPeer->address == peerAddress) _currentPeer.reset();
+				deletePeer(peerAddress);
+				stringStream << "Removed device 0x" << std::hex << peerAddress << "." << std::dec << std::endl;
+			}
+			return stringStream.str();
+		}
 		else if(command.compare(0, 12, "peers unpair") == 0)
 		{
 			int32_t peerAddress;

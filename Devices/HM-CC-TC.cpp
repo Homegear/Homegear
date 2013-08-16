@@ -137,7 +137,12 @@ HM_CC_TC::~HM_CC_TC()
 void HM_CC_TC::stopThreads()
 {
 	HomeMaticDevice::stopThreads();
-	_stopDutyCycleThread = true;
+	if(_dutyCycleThread && _dutyCycleThread->joinable())
+	{
+		_stopDutyCycleThread = true;
+		_dutyCycleThread->join();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	}
 }
 
 std::string HM_CC_TC::serialize()
@@ -302,6 +307,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 {
 	try
 	{
+		if(_stopDutyCycleThread) return;
 		int32_t address = getNextDutyCycleDeviceAddress();
 		if(GD::debugLevel >= 5)	std::cout << "Next HM-CC-VD is 0x" << std::hex << address << std::dec << std::endl;
 		if(address < 1)
@@ -320,11 +326,13 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 		timeToSleep.tv_sec = seconds;
 		timeToSleep.tv_nsec = nanoseconds;
 		nanosleep(&timeToSleep, NULL);
+		if(_stopDutyCycleThread) return;
 
 		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 500000) * 1000;
 		timeToSleep.tv_sec = 0;
 		timeToSleep.tv_nsec = nanoseconds;
 		nanosleep(&timeToSleep, NULL);
+		if(_stopDutyCycleThread) return;
 
 		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 100000) * 1000;
 		timeToSleep.tv_nsec = nanoseconds;
@@ -391,7 +399,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 			{
 				j = _peers.begin();
 			}
-			if(j->second->deviceType == HMDeviceTypes::HMCCVD)
+			if(j->second && j->second->deviceType == HMDeviceTypes::HMCCVD)
 			{
 				_currentDutyCycleDeviceAddress = j->first;
 				_peersMutex.unlock();

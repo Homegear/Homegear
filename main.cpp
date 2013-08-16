@@ -296,16 +296,21 @@ int main(int argc, char* argv[])
 		char* inputBuffer;
         std::string input;
         uint32_t bytes;
-        while((inputBuffer = readline("")) != NULL)
+        if(startAsDaemon)
+        	while(true) std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        else
         {
-            input = std::string(inputBuffer);
-            bytes = strlen(inputBuffer);
-			if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
-			if(strcmp(inputBuffer, "quit") == 0 || strcmp(inputBuffer, "exit") == 0) break;
+			while((inputBuffer = readline("")) != NULL)
+			{
+				input = std::string(inputBuffer);
+				bytes = strlen(inputBuffer);
+				if(inputBuffer[0] == '\n' || inputBuffer[0] == 0) continue;
+				if(strcmp(inputBuffer, "quit") == 0 || strcmp(inputBuffer, "exit") == 0) break;
 
-			add_history(inputBuffer); //Sets inputBuffer to 0
+				add_history(inputBuffer); //Sets inputBuffer to 0
 
-            std::cout << GD::devices.handleCLICommand(input);
+				std::cout << GD::devices.handleCLICommand(input);
+			}
         }
 
         std::cout << "Shutting down..." << std::endl;
