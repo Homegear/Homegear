@@ -1,0 +1,2 @@
+shlibs:Depends=libc6 (>= 2.2.5), libgcc1 (>= 1:4.1.1), libreadline6 (>= 6.0), libsqlite3-0 (>= 3.5.9), libstdc++6 (>= 4.6)
+misc:Depends=

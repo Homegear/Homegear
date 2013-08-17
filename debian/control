@@ -1,0 +1,14 @@
+Source: homegear
+Maintainer: Sathya Laufer <sathya@laufers.net>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.4
+Build-Depends: debhelper (>= 8)
+Homepage: https://homegear.eu
+
+Package: homegear
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libsqlite3-0 (>= 3.7.13), libreadline6 (>= 6.2), adduser (>= 3.113)
+Description: Program to control your HomeMatic devices
+ Homegear a program to interface your home automation software 
+ with your HomeMatic devices.

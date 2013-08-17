@@ -1,0 +1,38 @@
+#!/usr/bin/make -f
+
+override_dh_auto_clean:
+	rm -Rf bin
+	rm -Rf obj
+
+override_dh_auto_configure:
+	# We can for example download needed files here.
+	# All shell commands are supported
+
+override_dh_auto_build:
+	make config=release
+
+override_dh_auto_install:
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+	mkdir -p $(CURDIR)/debian/homegear/usr/bin
+	cp $(CURDIR)/bin/Release/homegear $(CURDIR)/debian/homegear/usr/bin
+	chown root:root $(CURDIR)/debian/homegear/usr/bin/homegear
+	chmod 750 $(CURDIR)/debian/homegear/usr/bin/homegear
+
+	
+	mkdir -p $(CURDIR)/debian/homegear/etc/homegear
+	cp $(CURDIR)/Miscellaneous/main.conf $(CURDIR)/debian/homegear/etc/homegear
+	cp -R $(CURDIR)/Device\ types $(CURDIR)/debian/homegear/etc/homegear
+	chown -R root:root $(CURDIR)/debian/homegear/etc/homegear
+	chmod 755 $(CURDIR)/debian/homegear/etc/homegear
+	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/*
+	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/Devices\ types
+	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/Devices\ types/*
+	mkdir -p $(CURDIR)/debian/homegear/etc/init.d
+	cp $(CURDIR)/Miscellaneous/homegear $(CURDIR)/debian/homegear/etc/init.d
+	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear
+	chmod 750 $(CURDIR)/debian/homegear/etc/init.d/homegear
+%:
+	dh $@

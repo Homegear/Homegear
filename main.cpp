@@ -83,7 +83,7 @@ void printHelp()
 {
 	std::cout << "Usage: homegear [OPTIONS]" << std::endl << std::endl;
 	std::cout << "Option\t\tMeaning" << std::endl;
-	std::cout << "--help\t\tShow this help" << std::endl;
+	std::cout << "-h\t\tShow this help" << std::endl;
 	std::cout << "-c <path>\tSpecify path to config file" << std::endl;
 	std::cout << "-d\t\tRun as daemon" << std::endl;
 	std::cout << "-p <pid path>\tSpecify path to process id file" << std::endl;
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
     	for(int32_t i = 1; i < argc; i++)
     	{
     		std::string arg(argv[i]);
-    		if(arg == "--help")
+    		if(arg == "-h" || arg == "--help")
     		{
     			printHelp();
     			exit(0);
@@ -223,8 +223,8 @@ int main(int argc, char* argv[])
 
     	if(startAsDaemon) startDaemon();
 
-    	    	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
-			throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
+    	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
+		throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
 
     	//Set rlimit for core dumps
     	struct rlimit coreLimits;
@@ -286,8 +286,11 @@ int main(int argc, char* argv[])
         GD::rpcDevices.load();
         if(GD::debugLevel >= 4) std::cout << "Loading devices..." << std::endl;
         GD::devices.load(); //Don't load before database is open!
-        if(GD::debugLevel >= 4) std::cout << "Starting CLI server..." << std::endl;
-        GD::cliServer.start();
+        if(startAsDaemon)
+        {
+        	if(GD::debugLevel >= 4) std::cout << "Starting CLI server..." << std::endl;
+        	GD::cliServer.start();
+        }
         if(GD::debugLevel >= 4) std::cout << "Starting XML RPC server..." << std::endl;
         GD::rpcServer.start();
 
@@ -316,8 +319,11 @@ int main(int argc, char* argv[])
         std::cout << "Shutting down..." << std::endl;
 
         //Stop rpc server and client before saving
-        std::cout << "Stopping CLI server..." << std::endl;
-        GD::cliServer.stop();
+        if(startAsDaemon)
+        {
+        	std::cout << "Stopping CLI server..." << std::endl;
+        	GD::cliServer.stop();
+        }
         std::cout << "Stopping RPC server..." << std::endl;
         GD::rpcServer.stop();
         std::cout << "Stopping RPC client..." << std::endl;

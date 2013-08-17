@@ -1,0 +1,55 @@
+#!/bin/sh
+
+case $1 in
+	# Configure this package. If the package must prompt the user for
+	# information, do it here.
+	configure)
+		result=`id -u homegear 2>/dev/null`
+		if [ "0$result" -eq "0" ]; then
+			adduser --system --no-create-home --shell /bin/false --group homegear >/dev/null 2>&1
+			usermod -a -G dialout homegear
+		fi
+		mkdir -p /var/run/homegear
+		chown homegear:homegear /var/run/homegear
+		chmod 750 /var/run/homegear
+
+		mkdir -p /var/lib/homegear
+		chown homegear:homegear /var/lib/homegear
+		chmod 750 /var/lib/homegear
+
+		mkdir -p /var/log/homegear
+		chown homegear:homegear /var/log/homegear
+		chmod 750 /var/log/homegear
+
+		chown root:homegear /dev/ttyACM0 >/dev/null 2>&1
+
+		insserv homegear
+		service homegear start
+		;;
+
+	# Back out of an attempt to upgrade this package FROM THIS VERSION
+	# to version $2. Undo the effects of "prerm upgrade $2".
+	abort-upgrade)
+		;;
+
+	# Back out of an attempt to remove this package, which was due to
+	# a conflict with package $3 (version $4). Undo the effects of
+	# "prerm remove in-favour $3 $4".
+	abort-remove)
+		;;
+
+	# Back out of an attempt to deconfigure this package, which was
+	# due to package $6 (version $7) which we depend on being removed
+	# to make way for package $3 (version $4). Undo the effects of
+	# "prerm deconfigure in-favour $3 $4 removing $6 $7".
+	abort-deconfigure)
+		;;
+
+	*)
+		echo "$0: didn't understand being called with \`$1'" 1>&2
+		exit 1;
+		;;
+
+esac
+
+#DEBHELPER#

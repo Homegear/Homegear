@@ -16,6 +16,8 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/bin/homegear
 PIDPATH=/var/run/homegear
 PIDFILE=$PIDPATH/homegear.pid
+DBPATH=/var/lib/homegear
+LOGPATH=/var/log/homegear
 
 test -x $DAEMON || exit 5
 
@@ -65,6 +67,18 @@ case $1 in
 					chmod 750 $PIDPATH
 				fi
 				
+				if test ! -d $DBPATH; then 
+					mkdir $DBPATH
+					chown $RUNASUSER:$RUNASGROUP $DBPATH
+					chmod 750 $DBPATH
+				fi
+				
+				if test ! -d $LOGPATH; then 
+					mkdir $LOGPATH
+					chown $RUNASUSER:$RUNASGROUP $LOGPATH
+					chmod 750 $LOGPATH
+				fi
+				
                 log_daemon_msg "Starting Homegear" "homegear"
                 lock_homegear
                 start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $HOMEGEAR_OPTS
@@ -75,11 +89,12 @@ case $1 in
         stop)
                 log_daemon_msg "Stopping Homegear" "homegear"
                 start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+                sleep 15
                 log_end_msg $?
                 rm -f $PIDFILE
                 ;;
         restart|force-reload)
-                $0 stop && sleep 15 && $0 start
+                $0 stop && sleep 2 && $0 start
                 ;;
         try-restart)
                 if $0 status >/dev/null; then
