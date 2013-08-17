@@ -1,7 +1,6 @@
 - Central: Is configuration sent to device after inserting batteries? / Handle device start up
 - Delete peer from all devices it is linked to, when peer is reset
-- Configuring link paramsets doesn't work for the sender in HomeMatic Configurator
-- TI CC1100 deadlock
+- Broadcast team value changes
 
 When AES is working:
 - enforce $PEER.AES
@@ -9,5 +8,4 @@ When AES is working:
 Today:
 
 Questions:
-- How are smoke detector packets timed?
 - AES handshakes

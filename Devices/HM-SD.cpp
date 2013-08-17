@@ -176,15 +176,15 @@ std::string HM_SD::handleCLICommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "enable\t\tEnables the device if it was disabled" << std::endl;
-			stringStream << "disable\t\tDisables the device" << std::endl;
+			stringStream << "enable\t\t\tEnables the device if it was disabled" << std::endl;
+			stringStream << "disable\t\t\tDisables the device" << std::endl;
 			stringStream << "filters list\t\tLists all packet filters" << std::endl;
 			stringStream << "filters add\t\tAdds a packet filter" << std::endl;
 			stringStream << "filters remove\t\tRemoves a packet filter" << std::endl;
 			stringStream << "captures list\t\tLists all packet captures" << std::endl;
 			stringStream << "captures add\t\tAdds a packet to capture" << std::endl;
 			stringStream << "captures remove\t\tRemoves a packet to capture" << std::endl;
-			stringStream << "send\t\tSends a BidCoS packet" << std::endl;
+			stringStream << "send\t\t\tSends a BidCoS packet" << std::endl;
 			return stringStream.str();
 		}
 		if(command.compare(0, 12, "filters list") == 0)

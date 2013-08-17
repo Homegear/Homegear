@@ -1664,8 +1664,10 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 			{
 				if(sentPacket) std::cerr << "Error: NACK received from 0x" << std::hex << packet->senderAddress() << " in response to " << sentPacket->hexString() << "." << std::dec << std::endl;
 				else std::cerr << "Error: NACK received from 0x" << std::hex << packet->senderAddress() << std::endl;
+				if(queue->getQueueType() == BidCoSQueueType::PAIRING) std::cerr << "Try resetting the device to factory defaults before pairing it to this central." << std::endl;
 			}
-			queue->pop(); //Otherwise the queue will persist forever
+			if(queue->getQueueType() == BidCoSQueueType::PAIRING) queue->clear(); //Abort
+			else queue->pop(); //Otherwise the queue might persist forever. NACKS shouldn't be received when not pairing
 			return;
 		}
 		if(queue->getQueueType() == BidCoSQueueType::PAIRING)

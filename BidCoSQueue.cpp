@@ -560,8 +560,11 @@ void BidCoSQueue::clear()
 {
 	try
 	{
-		std::deque<BidCoSQueueEntry> emptyQueue;
-		std::swap(_queue, emptyQueue);
+		stopResendThread();
+		_queueMutex.lock();
+		if(_pendingQueues) _pendingQueues->clear();
+		_queue.clear();
+		_queueMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
