@@ -51,18 +51,33 @@ std::string HM_LC_SWX_FM::serialize()
 
 void HM_LC_SWX_FM::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
-	int32_t baseLength = std::stoll(serializedObject.substr(0, 8), 0, 16);
-	HomeMaticDevice::unserialize(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
-
-	uint32_t pos = 8 + baseLength;
-	uint32_t stateSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	for(uint32_t i = 0; i < stateSize; i++)
+	try
 	{
-		uint32_t channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		bool state = std::stol(serializedObject.substr(pos, 1)); pos += 1;
-		_states[channel] = state;
+		int32_t baseLength = std::stoll(serializedObject.substr(0, 8), 0, 16);
+		HomeMaticDevice::unserialize(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
+
+		uint32_t pos = 8 + baseLength;
+		uint32_t stateSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t i = 0; i < stateSize; i++)
+		{
+			uint32_t channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+			bool state = std::stol(serializedObject.substr(pos, 1)); pos += 1;
+			_states[channel] = state;
+		}
+		_channelCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 	}
-	_channelCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 std::string HM_LC_SWX_FM::handleCLICommand(std::string command)

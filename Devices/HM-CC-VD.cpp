@@ -48,12 +48,27 @@ std::string HM_CC_VD::serialize()
 
 void HM_CC_VD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
-	HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
-	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
-	_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	_valveDriveBlocked = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-	_valveDriveLoose = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-	_adjustingRangeTooSmall = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+	try
+	{
+		HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
+		uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
+		_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		_valveDriveBlocked = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+		_valveDriveLoose = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+		_adjustingRangeTooSmall = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 void HM_CC_VD::setUpBidCoSMessages()

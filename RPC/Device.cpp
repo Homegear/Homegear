@@ -1164,7 +1164,7 @@ void Device::load(std::string xmlFilename)
 			doc.parse<parse_no_entity_translation | parse_validate_closing_tags>(buffer);
 			parseXML(doc.first_node("device"));
 		}
-		else throw Exception("Error reading file " + xmlFilename + ". Error number: " + std::to_string(errno));
+		else std::cerr << "Error reading file " + xmlFilename + ": " + strerror(errno) << std::endl;
 		_loaded = true;
 	}
 	catch(const std::exception& ex)

@@ -36,6 +36,7 @@ class HM_SD : public HomeMaticDevice
         void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
     protected:
     private:
+        bool _enabled = true;
         std::list<HM_SD_Filter> _filters;
         std::list<HM_SD_OverwriteResponse> _responsesToOverwrite;
 

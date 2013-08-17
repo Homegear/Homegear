@@ -162,20 +162,35 @@ std::string HM_CC_TC::serialize()
 
 void HM_CC_TC::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
-	int32_t baseLength = std::stoll(serializedObject.substr(0, 8), 0, 16);
-	HomeMaticDevice::unserialize(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
+	try
+	{
+		int32_t baseLength = std::stoll(serializedObject.substr(0, 8), 0, 16);
+		HomeMaticDevice::unserialize(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
 
-	uint32_t pos = 8 + baseLength;
-	_currentDutyCycleDeviceAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	_temperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-	_setPointTemperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-	_humidity = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-	_newValveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		uint32_t pos = 8 + baseLength;
+		_currentDutyCycleDeviceAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_temperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+		_setPointTemperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+		_humidity = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		_newValveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 
-	_messageCounter[1] = dutyCycleMessageCounter;
-	_lastDutyCycleEvent = lastDutyCycleEvent;
-	startDutyCycle(calculateLastDutyCycleEvent());
+		_messageCounter[1] = dutyCycleMessageCounter;
+		_lastDutyCycleEvent = lastDutyCycleEvent;
+		startDutyCycle(calculateLastDutyCycleEvent());
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 std::string HM_CC_TC::handleCLICommand(std::string command)

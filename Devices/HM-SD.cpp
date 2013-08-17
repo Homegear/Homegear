@@ -25,28 +25,44 @@ void HM_SD::init()
 
 void HM_SD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
-	HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
+	try
+	{
+		HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
 
-	uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
-	uint32_t filtersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	for(uint32_t i = 0; i < filtersSize; i++)
-	{
-		HM_SD_Filter filter;
-		filter.filterType = (FilterType)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		filter.filterValue = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_filters.push_back(filter);
+		uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
+		uint32_t filtersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t i = 0; i < filtersSize; i++)
+		{
+			HM_SD_Filter filter;
+			filter.filterType = (FilterType)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			filter.filterValue = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			_filters.push_back(filter);
+		}
+		uint32_t responsesToOverwriteSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t i = 0; i < responsesToOverwriteSize; i++)
+		{
+			HM_SD_OverwriteResponse responseToOverwrite;
+			uint32_t size = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			responseToOverwrite.packetPartToCapture = serializedObject.substr(pos, size); pos += size;
+			size = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			responseToOverwrite.response = serializedObject.substr(pos, size); pos += size;
+			responseToOverwrite.sendAfter = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			_responsesToOverwrite.push_back(responseToOverwrite);
+		}
+		_enabled = std::stol(serializedObject.substr(pos, 1)); pos += 1;
 	}
-	uint32_t responsesToOverwriteSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	for(uint32_t i = 0; i < responsesToOverwriteSize; i++)
-	{
-		HM_SD_OverwriteResponse responseToOverwrite;
-		uint32_t size = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		responseToOverwrite.packetPartToCapture = serializedObject.substr(pos, size); pos += size;
-		size = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		responseToOverwrite.response = serializedObject.substr(pos, size); pos += size;
-		responseToOverwrite.sendAfter = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_responsesToOverwrite.push_back(responseToOverwrite);
-	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 std::string HM_SD::serialize()
@@ -70,12 +86,14 @@ std::string HM_SD::serialize()
 		stringstream << i->response;
 		stringstream << std::setw(8) << i->sendAfter;
 	}
+	stringstream << std::setw(1) << (int32_t)_enabled;
 	stringstream << std::dec;
 	return stringstream.str();
 }
 
 bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
+	if(!_enabled) return false;
     bool printPacket = false;
     for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
     {
@@ -150,7 +168,7 @@ void HM_SD::removeOverwriteResponse(std::string packetPartToCapture)
 
 std::string HM_SD::handleCLICommand(std::string command)
 {
-		try
+	try
 	{
 		std::ostringstream stringStream;
 
@@ -158,6 +176,8 @@ std::string HM_SD::handleCLICommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "enable\t\tEnables the device if it was disabled" << std::endl;
+			stringStream << "disable\t\tDisables the device" << std::endl;
 			stringStream << "filters list\t\tLists all packet filters" << std::endl;
 			stringStream << "filters add\t\tAdds a packet filter" << std::endl;
 			stringStream << "filters remove\t\tRemoves a packet filter" << std::endl;
@@ -202,6 +222,76 @@ std::string HM_SD::handleCLICommand(std::string command)
 			{
 				stringStream << "Filter type: " << std::hex << (int32_t)i->filterType << "\tFilter value: " << i->filterValue << std::dec << std::endl;
 			}
+			return stringStream.str();
+		}
+		else if(command.compare(0, 6, "enable") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1)
+				{
+					if(element == "help") break;
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command enables the spy device if it was disabled." << std::endl;
+				stringStream << "Usage: enable" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  There are no parameters." << std::endl;
+				return stringStream.str();
+			}
+
+			if(!_enabled)
+			{
+				_enabled = true;
+				stringStream << "Device is enabled now." << std::endl;
+			}
+			else stringStream << "Device already is enabled." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 7, "disable") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 1)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1)
+				{
+					if(element == "help") break;
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command disables processing of received packets." << std::endl;
+				stringStream << "Usage: disable" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  There are no parameters." << std::endl;
+				return stringStream.str();
+			}
+
+			if(_enabled)
+			{
+				_enabled = false;
+				stringStream << "Device is disabled now." << std::endl;
+			}
+			else stringStream << "Device already is disabled." << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 11, "filters add") == 0)

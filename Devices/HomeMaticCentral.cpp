@@ -1273,6 +1273,9 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		//Peer request
 		if(sentPacket && sentPacket->payload()->size() >= 2 && sentPacket->payload()->at(1) == 0x03)
 		{
+			int32_t localChannel = sentPacket->payload()->at(0);
+			std::shared_ptr<RPC::DeviceChannel> rpcChannel = peer->rpcDevice->channels[localChannel];
+			bool peerFound = false;
 			if(packet->payload()->size() >= 5)
 			{
 				for(uint32_t i = 1; i < packet->payload()->size() - 1; i += 4)
@@ -1280,8 +1283,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 					int32_t peerAddress = (packet->payload()->at(i) << 16) + (packet->payload()->at(i + 1) << 8) + packet->payload()->at(i + 2);
 					if(peerAddress != 0)
 					{
-						int32_t localChannel = sentPacket->payload()->at(0);
-						std::shared_ptr<RPC::DeviceChannel> rpcChannel = peer->rpcDevice->channels[localChannel];
+						peerFound = true;
 						int32_t remoteChannel = packet->payload()->at(i + 3);
 						if(rpcChannel->hasTeam) //Peer is team
 						{
@@ -1310,6 +1312,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 						}
 					}
 				}
+			}
+			if(rpcChannel->hasTeam && !peerFound)
+			{
+				//Peer has no team yet so set it needs to be defined
+				setTeam(peer->getSerialNumber(), localChannel, "", 0, true, false);
 			}
 			if(packet->controlByte() & 0x20) sendOK(packet->messageCounter(), peer->address);
 			if(packet->payload()->size() >= 2 && packet->payload()->at(0) == 0x03 && packet->payload()->at(1) == 0x00)
@@ -2290,7 +2297,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listTeams()
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel, bool force, bool burst)
 {
 	try
 	{
@@ -2302,9 +2309,10 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		if(!peer->rpcDevice->channels[channel]->hasTeam) return RPC::RPCVariable::createError(-6, "Channel does not support teams.");
 		int32_t oldTeamAddress = peer->team.address;
 		int32_t oldTeamChannel = peer->team.channel;
+		if(oldTeamChannel < 0) oldTeamChannel = 0;
 		if(teamSerialNumber.empty()) //Reset team to default
 		{
-			if(!peer->team.serialNumber.empty() && peer->team.serialNumber.substr(1) == peer->getSerialNumber() && peer->teamChannel == channel)
+			if(!force && !peer->team.serialNumber.empty() && peer->team.serialNumber.substr(1) == peer->getSerialNumber() && peer->teamChannel == channel)
 			{
 				//Team already is default
 				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -2326,7 +2334,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		}
 		else //Set new team
 		{
-			if(!peer->team.serialNumber.empty() && peer->team.serialNumber == teamSerialNumber && peer->teamChannel == channel && peer->team.channel == teamChannel)
+			if(!force && !peer->team.serialNumber.empty() && peer->team.serialNumber == teamSerialNumber && peer->teamChannel == channel && peer->team.channel == teamChannel)
 			{
 				//Peer already is member of this team
 				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -2345,36 +2353,37 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		queue->serviceMessages = peer->serviceMessages;
 
 		uint8_t configByte = 0xA0;
-		if(peer->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+		if(burst && (peer->rpcDevice->rxModes & RPC::Device::RXModes::burst)) configByte |= 0x10;
 
 		std::vector<uint8_t> payload;
+		if(oldTeamAddress != 0 && oldTeamAddress != peer->team.address)
+		{
+			payload.push_back(channel);
+			payload.push_back(0x02);
+			payload.push_back(oldTeamAddress >> 16);
+			payload.push_back((oldTeamAddress >> 8) & 0xFF);
+			payload.push_back(oldTeamAddress & 0xFF);
+			payload.push_back(oldTeamChannel);
+			payload.push_back(0);
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(peer->messageCounter, configByte, 0x01, _address, peer->address, payload));
+			peer->messageCounter++;
+			queue->push(packet);
+			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+			configByte = 0xA0;
+		}
+
+		payload.clear();
 		payload.push_back(channel);
-		payload.push_back(0x02);
-		payload.push_back(oldTeamAddress >> 16);
-		payload.push_back((oldTeamAddress >> 8) & 0xFF);
-		payload.push_back(oldTeamAddress & 0xFF);
-		payload.push_back(oldTeamChannel);
+		payload.push_back(0x01);
+		payload.push_back(peer->team.address >> 16);
+		payload.push_back((peer->team.address >> 8) & 0xFF);
+		payload.push_back(peer->team.address & 0xFF);
+		payload.push_back(peer->team.channel);
 		payload.push_back(0);
 		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(peer->messageCounter, configByte, 0x01, _address, peer->address, payload));
 		peer->messageCounter++;
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-
-		if(peer->team.address != peer->address)
-		{
-			payload.clear();
-			payload.push_back(channel);
-			payload.push_back(0x01);
-			payload.push_back(peer->team.address >> 16);
-			payload.push_back((peer->team.address >> 8) & 0xFF);
-			payload.push_back(peer->team.address & 0xFF);
-			payload.push_back(peer->team.channel);
-			payload.push_back(0);
-			packet.reset(new BidCoSPacket(peer->messageCounter, 0xA0, 0x01, _address, peer->address, payload));
-			peer->messageCounter++;
-			queue->push(packet);
-			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		}
 
 		peer->pendingBidCoSQueues->push(queue);
 		if((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) enqueuePendingQueues(peer->address);
