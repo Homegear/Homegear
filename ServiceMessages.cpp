@@ -289,7 +289,7 @@ void ServiceMessages::endUnreachThread()
 			_unreach = false;
 			_unreachResendCounter = 0;
 
-			if(_peer->valuesCentral.at(0).find("UNREACH") != _peer->valuesCentral.at(0).end())
+			if(_peer->valuesCentral.find(0) != _peer->valuesCentral.end() && _peer->valuesCentral.at(0).find("UNREACH") != _peer->valuesCentral.at(0).end())
 			{
 				_peer->valuesCentral.at(0).at("UNREACH").data.at(0) = 0;
 

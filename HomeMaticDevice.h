@@ -45,7 +45,7 @@ class HomeMaticDevice
         virtual void addPeer(std::shared_ptr<Peer> peer);
         bool peerExists(int32_t address);
         std::shared_ptr<Peer> getPeer(int32_t address);
-        std::shared_ptr<Peer> getPeerBySerial(std::string serialNumber);
+        std::shared_ptr<Peer> getPeer(std::string serialNumber);
         virtual void deletePeersFromDatabase();
         virtual void loadPeersFromDatabase();
         virtual void savePeersToDatabase();

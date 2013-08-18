@@ -1,6 +1,6 @@
 - Central: Is configuration sent to device after inserting batteries? / Handle device start up
 - Delete peer from all devices it is linked to, when peer is reset
-- Broadcast team value changes
+- "Entkalkungsfahrt"
 
 When AES is working:
 - enforce $PEER.AES

@@ -107,6 +107,8 @@ class Peer
         void saveToDatabase(int32_t parentAddress);
         void deletePairedVirtualDevice(int32_t address);
         void deletePairedVirtualDevices();
+        bool hasTeam() { return !team.serialNumber.empty(); }
+        bool isTeam() { return _serialNumber.front() == '*'; }
         bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
         void addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer);
         std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address, int32_t remoteChannel = -1);

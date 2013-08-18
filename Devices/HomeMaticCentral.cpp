@@ -137,8 +137,11 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		bool handled = HomeMaticDevice::packetReceived(packet);
 		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
 		if(!peer) return false;
+		std::shared_ptr<Peer> team;
+		if(peer->hasTeam() && packet->senderAddress() == peer->team.address) team = getPeer(peer->team.serialNumber);
 		if(handled)
 		{
+			//This block is not necessary for teams as teams will never have queues.
 			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 			if(queue && queue->getQueueType() != BidCoSQueueType::PEER)
 			{
@@ -148,7 +151,15 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				return true; //Packet is handled by queue. Don't check if queue is empty!
 			}
 		}
-		peer->packetReceived(packet);
+		if(team)
+		{
+			team->packetReceived(packet);
+			for(std::vector<std::pair<std::string, uint32_t>>::const_iterator i = team->teamChannels.begin(); i != team->teamChannels.end(); ++i)
+			{
+				getPeer(i->first)->packetReceived(packet);
+			}
+		}
+		else peer->packetReceived(packet);
 	}
 	catch(const std::exception& ex)
     {
@@ -1800,7 +1811,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addDevice(std::string serial
 			std::thread t(&HomeMaticDevice::sendPacket, this, packet);
 			t.detach();
 			std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-			peer = getPeerBySerial(serialNumber);
+			peer = getPeer(serialNumber);
 			i++;
 		}
 
@@ -1836,8 +1847,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 	{
 		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
 		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
-		std::shared_ptr<Peer> sender = getPeerBySerial(senderSerialNumber);
-		std::shared_ptr<Peer> receiver = getPeerBySerial(receiverSerialNumber);
+		std::shared_ptr<Peer> sender = getPeer(senderSerialNumber);
+		std::shared_ptr<Peer> receiver = getPeer(receiverSerialNumber);
 		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
 		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
@@ -2078,8 +2089,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 	{
 		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
 		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
-		std::shared_ptr<Peer> sender = getPeerBySerial(senderSerialNumber);
-		std::shared_ptr<Peer> receiver = getPeerBySerial(receiverSerialNumber);
+		std::shared_ptr<Peer> sender = getPeer(senderSerialNumber);
+		std::shared_ptr<Peer> receiver = getPeer(receiverSerialNumber);
 		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
 		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
@@ -2178,7 +2189,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
 	{
 		if(serialNumber.empty()) return RPC::RPCVariable::createError(-2, "Unknown device.");
 		if(serialNumber[0] == '*') return RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
-		std::shared_ptr<Peer> peer = getPeerBySerial(serialNumber);
+		std::shared_ptr<Peer> peer = getPeer(serialNumber);
 		if(!peer) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		int32_t address = peer->address;
 
@@ -2305,7 +2316,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 	{
 		if(channel < 0) channel = 0;
 		if(teamChannel < 0) teamChannel = 0;
-		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		std::shared_ptr<Peer> peer(getPeer(serialNumber));
 		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 		if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(!peer->rpcDevice->channels[channel]->hasTeam) return RPC::RPCVariable::createError(-6, "Channel does not support teams.");
@@ -2342,7 +2353,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 			}
 			//Don't create team if not existent!
-			std::shared_ptr<Peer> team = getPeerBySerial(teamSerialNumber);
+			std::shared_ptr<Peer> team = getPeer(teamSerialNumber);
 			if(!team) return RPC::RPCVariable::createError(-2, "Team does not exist.");
 			if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown team channel.");
 			if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return RPC::RPCVariable::createError(-6, "Peer channel is not compatible to team channel.");
@@ -2411,7 +2422,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescription(std::st
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		std::shared_ptr<Peer> peer(getPeer(serialNumber));
 		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 
 		return peer->getDeviceDescription(channel);
@@ -2458,8 +2469,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setLinkInfo(std::string send
 	{
 		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
 		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
-		std::shared_ptr<Peer> sender(getPeerBySerial(senderSerialNumber));
-		std::shared_ptr<Peer> receiver(getPeerBySerial(receiverSerialNumber));
+		std::shared_ptr<Peer> sender(getPeer(senderSerialNumber));
+		std::shared_ptr<Peer> receiver(getPeer(receiverSerialNumber));
 		std::shared_ptr<RPC::RPCVariable> result1;
 		std::shared_ptr<RPC::RPCVariable> result2;
 		if(sender)
@@ -2496,8 +2507,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinkInfo(std::string send
 	{
 		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
 		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
-		std::shared_ptr<Peer> sender(getPeerBySerial(senderSerialNumber));
-		std::shared_ptr<Peer> receiver(getPeerBySerial(receiverSerialNumber));
+		std::shared_ptr<Peer> sender(getPeer(senderSerialNumber));
+		std::shared_ptr<Peer> receiver(getPeer(receiverSerialNumber));
 		if(!sender)
 		{
 			if(receiver) return receiver->getLinkInfo(receiverChannel, senderSerialNumber, senderChannel);
@@ -2524,7 +2535,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinkPeers(std::string ser
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		std::shared_ptr<Peer> peer(getPeer(serialNumber));
 		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 		return peer->getLinkPeers(channel);
 	}
@@ -2579,7 +2590,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialN
 		}
 		else
 		{
-			std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+			std::shared_ptr<Peer> peer(getPeer(serialNumber));
 			if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 			element = peer->getLink(channel, flags, false);
 			array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
@@ -2605,7 +2616,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::string se
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		std::shared_ptr<Peer> peer(getPeer(serialNumber));
 		if(peer) return peer->getParamsetId(channel, type, remoteSerialNumber, remoteChannel);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
@@ -2628,7 +2639,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string seri
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		std::shared_ptr<Peer> peer(getPeer(serialNumber));
 		if(peer) return peer->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
@@ -2659,7 +2670,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string seri
 		}
 		else
 		{
-			std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+			std::shared_ptr<Peer> peer(getPeer(serialNumber));
 			if(peer) return peer->getParamset(channel, type, remoteSerialNumber, remoteChannel);
 			return RPC::RPCVariable::createError(-2, "Unknown device.");
 		}
@@ -2683,7 +2694,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		std::shared_ptr<Peer> peer(getPeer(serialNumber));
 		if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
@@ -2739,7 +2750,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getValue(std::string serialN
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		std::shared_ptr<Peer> peer(getPeer(serialNumber));
 		if(peer) return peer->getValue(channel, valueKey);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
@@ -2762,7 +2773,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setValue(std::string serialN
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeerBySerial(serialNumber));
+		std::shared_ptr<Peer> peer(getPeer(serialNumber));
 		if(peer) return peer->setValue(channel, valueKey, value);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}

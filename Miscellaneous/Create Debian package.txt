@@ -10,7 +10,7 @@
 	o	…
 •	In the following steps make sure all file and directory names are correct!
 •	Move homegear directory to homegear-X.X.X where X.X.X is the current version number
-•	Package it: tar -zcpf homegear_X.X.X.orig.tar.gz homegear-X.X.X
+•	Pack it: tar -zcpf homegear_X.X.X.orig.tar.gz homegear-X.X.X
 •	cd homegear-X.X.X
 •	Run debuild -us -uc
 •	The lintian warnings can be ignored

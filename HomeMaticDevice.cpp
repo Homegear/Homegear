@@ -1349,7 +1349,7 @@ std::shared_ptr<Peer> HomeMaticDevice::getPeer(int32_t address)
     return std::shared_ptr<Peer>();
 }
 
-std::shared_ptr<Peer> HomeMaticDevice::getPeerBySerial(std::string serialNumber)
+std::shared_ptr<Peer> HomeMaticDevice::getPeer(std::string serialNumber)
 {
 	try
 	{

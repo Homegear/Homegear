@@ -1318,7 +1318,7 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string
 		{
 			std::shared_ptr<RPC::DeviceFrame> frame(i->second);
 			if(!frame) continue;
-			if(frame->direction == RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != address) continue;
+			if(frame->direction == RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != address && (!hasTeam() || packet->senderAddress() != team.address)) continue;
 			if(frame->direction == RPC::DeviceFrame::Direction::Enum::toDevice && packet->destinationAddress() != address) continue;
 			if(packet->payload()->empty()) continue;
 			if(frame->subtype > -1 && frame->subtypeIndex >= 9 && (signed)packet->payload()->size() > (frame->subtypeIndex - 9) && packet->payload()->at(frame->subtypeIndex - 9) != (unsigned)frame->subtype) continue;
@@ -1492,7 +1492,7 @@ void Peer::setRSSIThread(uint8_t rssi)
 	try
 	{
 		uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		if(valuesCentral.at(0).find("RSSI_DEVICE") != valuesCentral.at(0).end() && (time - _lastRSSI) > 10)
+		if(valuesCentral.find(0) != valuesCentral.end() && valuesCentral.at(0).find("RSSI_DEVICE") != valuesCentral.at(0).end() && (time - _lastRSSI) > 10)
 		{
 			_lastRSSI = time;
 			RPCConfigurationParameter* parameter = &valuesCentral.at(0).at("RSSI_DEVICE");
@@ -1524,7 +1524,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	try
 	{
 		if(!_centralFeatures) return;
-		if(packet->senderAddress() != address) return;
+		if(packet->senderAddress() != address && (!hasTeam() || packet->senderAddress() != team.address)) return;
 		if(!rpcDevice) return;
 		setLastPacketReceived();
 		setRSSI(packet->rssi());
@@ -1650,10 +1650,10 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 			GD::devices.getCentral()->enqueuePackets(address, queue, true);
 		}
-		else if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
-		{
+		//else if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
+		//{
 			//GD::devices.getCentral()->enqueuePendingQueues(address);
-		}
+		//}
 		if(!rpcValues->empty())
 		{
 			for(std::list<uint32_t>::const_iterator j = paramsetChannels.begin(); j != paramsetChannels.end(); ++j)
