@@ -464,17 +464,44 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
 		{
 			LogicalParameterFloat* parameter = (LogicalParameterFloat*)logicalParameter.get();
-			if(value->floatValue > parameter->max)
+			bool specialValue = (value->floatValue == parameter->defaultValue);
+			if(!specialValue)
 			{
-				if(parameter->defaultValue <= parameter->max || value->floatValue > parameter->defaultValue) value->floatValue = parameter->max;
+				for(std::unordered_map<std::string, double>::const_iterator i = parameter->specialValues.begin(); i != parameter->specialValues.end(); ++i)
+				{
+					if(i->second == value->floatValue)
+					{
+						specialValue = true;
+						break;
+					}
+				}
 			}
-			if(value->floatValue < parameter->min) value->floatValue = parameter->min;
+			if(!specialValue)
+			{
+				if(value->floatValue > parameter->max) value->floatValue = parameter->max;
+				else if(value->floatValue < parameter->min) value->floatValue = parameter->min;
+			}
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
 		{
 			LogicalParameterInteger* parameter = (LogicalParameterInteger*)logicalParameter.get();
-			if(value->integerValue > parameter->max) value->integerValue = parameter->max;
-			if(value->integerValue < parameter->min) value->integerValue = parameter->min;
+			bool specialValue = (value->integerValue == parameter->defaultValue);
+			if(!specialValue)
+			{
+				for(std::unordered_map<std::string, int32_t>::const_iterator i = parameter->specialValues.begin(); i != parameter->specialValues.end(); ++i)
+				{
+					if(i->second == value->integerValue)
+					{
+						specialValue = true;
+						break;
+					}
+				}
+			}
+			if(!specialValue)
+			{
+				if(value->integerValue > parameter->max) value->integerValue = parameter->max;
+				else if(value->integerValue < parameter->min) value->integerValue = parameter->min;
+			}
 		}
 		std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
 		*variable = *value;

@@ -132,17 +132,49 @@ void HM_CC_TC::setUpBidCoSMessages()
 
 HM_CC_TC::~HM_CC_TC()
 {
+	try
+	{
+		stopHMCCTCThreads();
+	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
-void HM_CC_TC::stopThreads()
+void HM_CC_TC::stopHMCCTCThreads()
 {
-	HomeMaticDevice::stopThreads();
-	if(_dutyCycleThread && _dutyCycleThread->joinable())
+	try
 	{
+		HomeMaticDevice::stopThreads();
 		_stopDutyCycleThread = true;
-		_dutyCycleThread->join();
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		if(_dutyCycleThread && _dutyCycleThread->joinable())
+		{
+			_dutyCycleThread->join();
+			//Wait a little bit, so subthreads are stopped, too (e. g. sendDutyCyclePacket)
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}
 	}
+	catch(const std::exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(const Exception& ex)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+    }
 }
 
 std::string HM_CC_TC::serialize()
@@ -239,7 +271,7 @@ void HM_CC_TC::setValveState(int32_t valveState)
 
 void HM_CC_TC::startDutyCycle(int64_t lastDutyCycleEvent)
 {
-	_dutyCycleThread = new std::thread(&HM_CC_TC::dutyCycleThread, this, lastDutyCycleEvent);
+	_dutyCycleThread.reset(new std::thread(&HM_CC_TC::dutyCycleThread, this, lastDutyCycleEvent));
 }
 
 void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
@@ -254,56 +286,120 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 	if(GD::debugLevel >= 5 && _dutyCycleCounter > 0) std::cout << "Skipping " << (_dutyCycleCounter * 250) << " ms of duty cycle." << std::endl;
 	while(!_stopDutyCycleThread)
 	{
-		cycleTime = cycleLength * 250000;
-		nextDutyCycleEvent += cycleTime + 3000; //Add 3ms every cycle. This is very important! Without it, 20% of the packets are sent too early.
-		if(GD::debugLevel >= 5) std::cout << "Next duty cycle: " << (nextDutyCycleEvent / 1000) << " (in " << (cycleTime / 1000) << " ms) with message counter 0x" << std::hex << (int32_t)_messageCounter[1] << std::dec << std::endl;
-		std::chrono::milliseconds sleepingTime(2000);
-		while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
+		try
 		{
-			std::this_thread::sleep_for(sleepingTime);
-			_dutyCycleCounter += 8;
-		}
-		if(_stopDutyCycleThread) break;
+			cycleTime = cycleLength * 250000;
+			nextDutyCycleEvent += cycleTime + 3000; //Add 3ms every cycle. This is very important! Without it, 20% of the packets are sent too early.
+			if(GD::debugLevel >= 5) std::cout << "Next duty cycle: " << (nextDutyCycleEvent / 1000) << " (in " << (cycleTime / 1000) << " ms) with message counter 0x" << std::hex << (int32_t)_messageCounter[1] << std::dec << std::endl;
 
-		if(_dutyCycleBroadcast)
+			std::chrono::milliseconds sleepingTime(2000);
+			while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				_dutyCycleCounter += 8;
+			}
+			if(_stopDutyCycleThread) break;
+
+			if(_dutyCycleBroadcast)
+			{
+				std::thread sendDutyCycleBroadcastThread(&HM_CC_TC::sendDutyCycleBroadcast, this);
+				sendDutyCycleBroadcastThread.detach();
+			}
+
+			while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 40)
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				_dutyCycleCounter += 8;
+			}
+			if(_stopDutyCycleThread) break;
+
+			setDecalcification();
+
+			timePoint = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+			if(GD::debugLevel >= 5) std::cout << "Correcting time mismatch of " << std::dec << ((nextDutyCycleEvent - 10000000 - timePoint) / 1000) << "ms." << std::endl;
+			std::this_thread::sleep_for(std::chrono::microseconds(nextDutyCycleEvent - timePoint - 5000000));
+			if(_stopDutyCycleThread) break;
+
+			timePoint = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+			std::this_thread::sleep_for(std::chrono::microseconds(nextDutyCycleEvent - timePoint - 2000000));
+			if(_stopDutyCycleThread) break;
+
+			std::thread sendDutyCyclePacketThread(&HM_CC_TC::sendDutyCyclePacket, this, _messageCounter[1], nextDutyCycleEvent);
+
+			sched_param schedParam;
+			int policy;
+			pthread_getschedparam(sendDutyCyclePacketThread.native_handle(), &policy, &schedParam);
+			schedParam.sched_priority = 99;
+			if(!pthread_setschedparam(sendDutyCyclePacketThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+			sendDutyCyclePacketThread.detach();
+
+			_lastDutyCycleEvent = nextDutyCycleEvent;
+			cycleLength = calculateCycleLength(_messageCounter[1]);
+			_messageCounter[1]++;
+			std::ostringstream command;
+			command << "UPDATE devices SET dutyCycleMessageCounter=" << std::dec << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent;
+			GD::db.executeCommand(command.str());
+
+			_dutyCycleCounter = 0;
+		}
+		catch(const std::exception& ex)
 		{
-			std::thread sendDutyCycleBroadcastThread(&HM_CC_TC::sendDutyCycleBroadcast, this);
-			sendDutyCycleBroadcastThread.detach();
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 		}
-
-		while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 40)
+		catch(const Exception& ex)
 		{
-			std::this_thread::sleep_for(sleepingTime);
-			_dutyCycleCounter += 8;
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
 		}
-		if(_stopDutyCycleThread) break;
+		catch(...)
+		{
+			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+		}
+	}
 
-		timePoint = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		if(GD::debugLevel >= 5) std::cout << "Correcting time mismatch of " << std::dec << ((nextDutyCycleEvent - 10000000 - timePoint) / 1000) << "ms." << std::endl;
-		std::this_thread::sleep_for(std::chrono::microseconds(nextDutyCycleEvent - timePoint - 5000000));
-		if(_stopDutyCycleThread) break;
+}
 
-		timePoint = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		std::this_thread::sleep_for(std::chrono::microseconds(nextDutyCycleEvent - timePoint - 2000000));
-		if(_stopDutyCycleThread) break;
-
-		std::thread sendDutyCyclePacketThread(&HM_CC_TC::sendDutyCyclePacket, this, _messageCounter[1], nextDutyCycleEvent);
-
-		sched_param schedParam;
-		int policy;
-		pthread_getschedparam(sendDutyCyclePacketThread.native_handle(), &policy, &schedParam);
-		schedParam.sched_priority = 99;
-		if(!pthread_setschedparam(sendDutyCyclePacketThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
-		sendDutyCyclePacketThread.detach();
-
-		_lastDutyCycleEvent = nextDutyCycleEvent;
-		cycleLength = calculateCycleLength(_messageCounter[1]);
-		_messageCounter[1]++;
-		std::ostringstream command;
-		command << "UPDATE devices SET dutyCycleMessageCounter=" << std::dec << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent;
-		GD::db.executeCommand(command.str());
-
-		_dutyCycleCounter = 0;
+void HM_CC_TC::setDecalcification()
+{
+	try
+	{
+		std::time_t time1(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+		std::tm* time2 = std::localtime(&time1);
+		if(time2->tm_wday == 6 && time2->tm_hour == 14 && time2->tm_min >= 0 && time2->tm_min <= 3)
+		{
+			try
+			{
+				_peersMutex.lock();
+				for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+				{
+					i->second->config[0xFFFF] = 4;
+				}
+			}
+			catch(const std::exception& ex)
+			{
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			}
+			catch(const Exception& ex)
+			{
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			}
+			catch(...)
+			{
+				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+			}
+			_peersMutex.unlock();
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(const Exception& ex)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+	}
+	catch(...)
+	{
+		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
 	}
 }
 
@@ -331,10 +427,10 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 			return;
 		}
 		std::vector<uint8_t> payload;
-		payload.push_back(getAdjustmentCommand());
+		payload.push_back(getAdjustmentCommand(address));
 		payload.push_back(_newValveState);
 		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA2, 0x58, _address, address, payload));
-		int64_t nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 1000000) * 1000;
+		int64_t nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - 1000000) * 1000;
 		int32_t seconds = nanoseconds / 1000000000;
 		nanoseconds -= seconds * 1000000000;
 		struct timespec timeToSleep;
@@ -343,31 +439,31 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 		nanosleep(&timeToSleep, NULL);
 		if(_stopDutyCycleThread) return;
 
-		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 500000) * 1000;
+		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - 500000) * 1000;
 		timeToSleep.tv_sec = 0;
 		timeToSleep.tv_nsec = nanoseconds;
 		nanosleep(&timeToSleep, NULL);
 		if(_stopDutyCycleThread) return;
 
-		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 100000) * 1000;
+		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - 100000) * 1000;
 		timeToSleep.tv_nsec = nanoseconds;
 		nanosleep(&timeToSleep, NULL);
 
-		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 30000) * 1000;
+		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - 30000) * 1000;
 		timeToSleep.tv_nsec = nanoseconds;
 		nanosleep(&timeToSleep, NULL);
 
-		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count()) * 1000;
+		nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count()) * 1000;
 		timeToSleep.tv_nsec = nanoseconds;
 		nanosleep(&timeToSleep, NULL);
 		if(_stopDutyCycleThread) return;
 
-		int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
 		GD::rfDevice->sendPacket(packet);
 		_valveState = _newValveState;
-		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - timePoint;
-		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << std::endl;
+		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - timePoint;
+		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << std::endl;
 	}
 	catch(const std::exception& ex)
 	{
@@ -375,16 +471,12 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 	}
 }
 
-int32_t HM_CC_TC::getAdjustmentCommand()
+int32_t HM_CC_TC::getAdjustmentCommand(int32_t peerAddress)
 {
-	if(_setPointTemperature == 0) //OFF
-	{
-		return 2;
-	}
-	else if(_setPointTemperature == 60) //ON
-	{
-		return 3;
-	}
+	std::shared_ptr<Peer> peer(getPeer(peerAddress));
+	if(peer && peer->config[0xFFFF] == 4) return 4;
+	else if(_setPointTemperature == 0) return 2; //OFF
+	else if(_setPointTemperature == 60) return 3; //ON
 	else
 	{
 		if(_newValveState != _valveState) return 3; else return 0;
@@ -598,6 +690,8 @@ void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> p
 {
 	try
 	{
+		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
+		if(peer) peer->config[0xFFFF] = 0; //Decalcification done
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue) return;
 		queue->pop(); //Messages are not popped by default.

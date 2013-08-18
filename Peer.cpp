@@ -52,15 +52,17 @@ void Peer::initializeLinkConfig(int32_t channel, int32_t peerAddress, int32_t re
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 		if(rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
 		std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
+		//This line creates an empty link config. This is essential as the link config must exist, even if it is empty.
+		std::unordered_map<std::string, RPCConfigurationParameter>* linkConfig = &linksCentral[channel][peerAddress][remoteChannel];
 		RPCConfigurationParameter parameter;
 		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = linkSet->parameters.begin(); j != linkSet->parameters.end(); ++j)
 		{
-			if(!(*j)->id.empty() && linksCentral[channel][peerAddress][remoteChannel].find((*j)->id) == linksCentral[channel][peerAddress][remoteChannel].end())
+			if(!(*j)->id.empty() && linkConfig->find((*j)->id) == linkConfig->end())
 			{
 				parameter = RPCConfigurationParameter();
 				parameter.rpcParameter = *j;
 				parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-				linksCentral[channel][peerAddress][remoteChannel][(*j)->id] = parameter;
+				linkConfig->insert(std::pair<std::string, RPCConfigurationParameter>((*j)->id, parameter));
 			}
 		}
 		if(useConfigFunction) applyConfigFunction(channel, peerAddress, remoteChannel);
@@ -629,7 +631,6 @@ std::string Peer::handleCLICommand(std::string command)
 
 void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 {
-	//Allow unknown channel for myself. Needed e. g. for switches.
 	if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 	{
@@ -2382,18 +2383,12 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 				int32_t brokenFlags = 0;
 				if((*i)->serialNumber.empty())
 				{
-					if(peerKnowsMe)
+					if(peerKnowsMe ||
+					  (*i)->address == address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
 					{
 						(*i)->serialNumber = remotePeer->getSerialNumber();
 						peerSerial = (*i)->serialNumber;
 					}
-					/*else if((*i)->address == address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
-					{
-						(*i)->serialNumber = _serialNumber;
-						peerSerial = (*i)->serialNumber;
-						if(isSender) brokenFlags = 2 | 4; //LINK_FLAG_RECEIVER_BROKEN | PEER_IS_ME
-						else brokenFlags = 1 | 4; //LINK_FLAG_SENDER_BROKEN | PEER_IS_ME
-					}*/
 					else
 					{
 						//Peer not paired to central

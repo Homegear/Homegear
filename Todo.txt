@@ -1,4 +1,3 @@
-- Central: Is configuration sent to device after inserting batteries? / Handle device start up
 - Delete peer from all devices it is linked to, when peer is reset
 - "Entkalkungsfahrt"
 

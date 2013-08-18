@@ -4,7 +4,7 @@
 	Changes:
 	- Added parameter for TEST_COUNTER
 	- Added parameter for SIM_COUNTER
-	- COMMA in frame DISPLAY commented out
+	- Added parameter for COMMA
 -->
 <device version="13" rx_modes="CONFIG,BURST" peering_sysinfo_expect_channel="false" supports_aes="true">
 	<supported_types>
@@ -317,6 +317,10 @@
 					<logical type="action"/>
 					<physical type="integer" interface="store" volatile="true" id="ARROW_DOWN"/>
 				</parameter>
+				<parameter id="COMMA" operations="write">
+					<logical type="action"/>
+					<physical type="integer" interface="store" volatile="true" id="COMMA"/>
+				</parameter>
 				<parameter id="UNIT" operations="write" control="RC19_DISPLAY.UNIT">
 					<logical type="option">
 						<option id="NONE" index="0" default="true"/>
@@ -368,6 +372,7 @@
 						<reset_after_send param="CLOCK"/>
 						<reset_after_send param="ARROW_UP"/>
 						<reset_after_send param="ARROW_DOWN"/>
+						<reset_after_send param="COMMA"/>
 						<reset_after_send param="UNIT"/>
 						<reset_after_send param="BEEP"/>
 						<reset_after_send param="BACKLIGHT"/>
@@ -434,7 +439,7 @@
 			<parameter type="integer" index="17.0" size="0.1" param="CLOCK"/>
 			<parameter type="integer" index="17.1" size="0.1" param="ARROW_UP"/>
 			<parameter type="integer" index="17.2" size="0.1" param="ARROW_DOWN"/>
-			<!--<parameter type="integer" index="17.3" size="0.1" param="COMMA"/>-->
+			<parameter type="integer" index="17.3" size="0.1" param="COMMA"/>
 			<parameter type="integer" index="17.4" size="0.4" param="UNIT"/>
 			<parameter type="integer" index="18.0" size="0.2" param="BEEP"/>
 			<parameter type="integer" index="18.2" size="0.2" param="BACKLIGHT"/>

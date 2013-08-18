@@ -137,7 +137,7 @@ LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node)
 				xml_attribute<>* attr2;
 				attr1 = logicalNode->first_attribute("id");
 				attr2 = logicalNode->first_attribute("value");
-				if(attr1 != nullptr && attr2 != nullptr) continue;
+				if(!attr1 || !attr2) continue;
 				std::string valueString(attr2->value());
 				specialValues[attr1->value()] = HelperFunctions::getNumber(valueString);
 			}
@@ -192,7 +192,7 @@ LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node)
 				xml_attribute<>* attr2;
 				attr1 = logicalNode->first_attribute("id");
 				attr2 = logicalNode->first_attribute("value");
-				if(attr1 != nullptr && attr2 != nullptr) continue;
+				if(!attr1 || !attr2) continue;
 				std::string valueString(attr2->value());
 				specialValues[attr1->value()] = HelperFunctions::getDouble(valueString);
 			}

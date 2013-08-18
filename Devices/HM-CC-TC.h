@@ -20,7 +20,7 @@ class HM_CC_TC : public HomeMaticDevice
         void setValveState(int32_t valveState);
         int32_t getNewValueState() { return _newValveState; }
         std::string handleCLICommand(std::string command);
-        void stopThreads();
+        void stopHMCCTCThreads();
 
         void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
         void handleConfigParamResponse(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
@@ -40,7 +40,7 @@ class HM_CC_TC : public HomeMaticDevice
         int32_t _humidity = 56;
         bool _stopDutyCycleThread = false;
         std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>());
-        std::thread* _dutyCycleThread = nullptr;
+        std::shared_ptr<std::thread> _dutyCycleThread;
         int32_t _valveState = 0;
         int32_t _newValveState = 0;
         int32_t _dutyCycleCounter  = 0;
@@ -49,7 +49,7 @@ class HM_CC_TC : public HomeMaticDevice
 
         int32_t getNextDutyCycleDeviceAddress();
         int64_t calculateLastDutyCycleEvent();
-        int32_t getAdjustmentCommand();
+        int32_t getAdjustmentCommand(int32_t peerAddress);
 
         void sendRequestConfig(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet);
         void sendConfigParams(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet);
@@ -57,6 +57,7 @@ class HM_CC_TC : public HomeMaticDevice
         void sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime);
         void startDutyCycle(int64_t lastDutyCycleEvent);
         void dutyCycleThread(int64_t lastDutyCycleEvent);
+        void setDecalcification();
         void setUpConfig();
 };
 
