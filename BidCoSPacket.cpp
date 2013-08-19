@@ -1,5 +1,6 @@
 #include "BidCoSPacket.h"
 #include "GD.h"
+#include "HelperFunctions.h"
 
 //Properties
 uint8_t BidCoSPacket::length()
@@ -36,7 +37,15 @@ int32_t BidCoSPacket::messageSubtype()
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return -1;
 }
@@ -84,7 +93,15 @@ std::string BidCoSPacket::hexString()
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "";
 }
@@ -109,15 +126,15 @@ std::vector<uint8_t> BidCoSPacket::byteArray()
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -169,15 +186,15 @@ void BidCoSPacket::import(std::vector<uint8_t>& packet, bool rssiByte)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -189,7 +206,7 @@ void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 		uint32_t startIndex = removeFirstCharacter ? 1 : 0;
 		if(packet.size() < startIndex + 20)
 		{
-			if(GD::debugLevel >= 2) std::cerr << "Error: Packet is too short: " << packet << std::endl;
+			HelperFunctions::printError("Error: Packet is too short: " + packet);
 			return;
 		}
 		_length = getByte(packet.substr(startIndex, 2));
@@ -204,7 +221,7 @@ void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 		uint32_t endIndex = startIndex + 2 + (_length * 2) - 1;
 		if(endIndex >= packet.size())
 		{
-			if(GD::debugLevel >= 3) std::cout << "Warning: Packet is shorter than value of packet length byte: " << packet << std::endl;
+			HelperFunctions::printWarning("Warning: Packet is shorter than value of packet length byte: " + packet);
 			endIndex = packet.size() - 1;
 		}
 		_payload.clear();
@@ -217,15 +234,15 @@ void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -239,15 +256,15 @@ uint8_t BidCoSPacket::getByte(std::string hexString)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return 0;
 }
@@ -262,15 +279,15 @@ int32_t BidCoSPacket::getInt(std::string hexString)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return 0;
 }
@@ -281,12 +298,12 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 	{
 		if(size < 0)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Negative size not allowed." << std::endl;
+			HelperFunctions::printError("Error: Negative size not allowed.");
 			return;
 		}
 		if(index < 9)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 9 requested." << std::endl;
+			HelperFunctions::printError("Error: Packet index < 9 requested.");
 			return;
 		}
 		index -= 9;
@@ -297,7 +314,7 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 			int32_t intByteIndex = byteIndex;
 			if(size > 1)
 			{
-				if(GD::debugLevel >= 2) std::cout << "Error: Can't set partial byte index > 1." << std::endl;
+				HelperFunctions::printError("Error: Can't set partial byte index > 1.");
 				return;
 			}
 			uint32_t bitSize = std::lround(size * 10);
@@ -330,15 +347,15 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _length = 9 + _payload.size();
 }
@@ -350,13 +367,13 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 	{
 		if(size < 0)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Negative negative size not allowed." << std::endl;
+			HelperFunctions::printError("Error: Negative size not allowed.");
 			result.push_back(0);
 			return result;
 		}
 		if(index < 0)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 0 requested." << std::endl;
+			HelperFunctions::printError("Error: Packet index < 0 requested.");
 			result.push_back(0);
 			return result;
 		}
@@ -364,7 +381,7 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 		{
 			if(size > 0.8)
 			{
-				if(GD::debugLevel >= 2) std::cout << "Error: Packet index < 9 and size > 1 requested." << std::endl;
+				HelperFunctions::printError("Error: Packet index < 9 and size > 1 requested.");
 				result.push_back(0);
 				return result;
 			}
@@ -393,7 +410,7 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 		{
 			if(size > 1)
 			{
-				if(GD::debugLevel >= 2) std::cout << "Error: Partial byte index > 1 requested." << std::endl;
+				HelperFunctions::printError("Error: Partial byte index > 1 requested.");
 				result.push_back(0);
 				return result;
 			}
@@ -422,15 +439,15 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     result.push_back(0);
     return result;

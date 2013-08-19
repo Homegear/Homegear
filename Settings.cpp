@@ -28,7 +28,7 @@ void Settings::load(std::string filename)
 
 		if (!(fin = fopen(filename.c_str(), "r")))
 		{
-			std::cerr << "Unable to open config file: " + filename << std::endl;
+			HelperFunctions::printError("Unable to open config file: " + filename);
 			return;
 		}
 
@@ -61,50 +61,50 @@ void Settings::load(std::string filename)
 				{
 					_rpcPort = HelperFunctions::getNumber(value);
 					if(_rpcPort < 1) _rpcPort = 2001;
-					if(GD::debugLevel >= 5) std::cout << "Debug: rpcPort set to " << std::to_string(_rpcPort) << std::endl;
+					HelperFunctions::printDebug("Debug: rpcPort set to " + std::to_string(_rpcPort));
 				}
 				else if(name == "rpcinterface")
 				{
 					_rpcInterface = value;
 					if(_rpcInterface.empty()) _rpcInterface = "0.0.0.0";
-					if(GD::debugLevel >= 5) std::cout << "Debug: rpcInterface set to " << _rpcInterface << std::endl;
+					HelperFunctions::printDebug("Debug: rpcInterface set to " + _rpcInterface);
 				}
 				else if(name == "debuglevel")
 				{
 					_debugLevel = HelperFunctions::getNumber(value);
 					if(_debugLevel < 0) _debugLevel = 3;
 					GD::debugLevel = _debugLevel;
-					if(GD::debugLevel >= 5) std::cout << "Debug: debugLevel set to " << std::to_string(_debugLevel) << std::endl;
+					HelperFunctions::printDebug("Debug: debugLevel set to " + std::to_string(_debugLevel));
 				}
 				else if(name == "databasepath")
 				{
 					_databasePath = value;
 					if(_databasePath.empty()) _databasePath = GD::executablePath + "db.sql";
-					if(GD::debugLevel >= 5) std::cout << "Debug: databasePath set to " << _databasePath << std::endl;
+					HelperFunctions::printDebug("Debug: databasePath set to " + _databasePath);
 				}
 				else if(name == "rfdevicetype")
 				{
 					HelperFunctions::toLower(value);
 					_rfDeviceType = value;
 					if(_rfDeviceType.empty()) _rfDeviceType = "cul";
-					if(GD::debugLevel >= 5) std::cout << "Debug: rfDeviceType set to " << _rfDeviceType << std::endl;
+					HelperFunctions::printDebug("Debug: rfDeviceType set to " + _rfDeviceType);
 				}
 				else if(name == "rfdevice")
 				{
 					_rfDevice = value;
 					if(_rfDevice.empty()) _rfDevice = "/dev/ttyACM0";
-					if(GD::debugLevel >= 5) std::cout << "Debug: rfDevice set to " << _rfDevice << std::endl;
+					HelperFunctions::printDebug("Debug: rfDevice set to " + _rfDevice);
 				}
 				else if(name == "logfilepath")
 				{
 					_logfilePath = value;
 					if(_logfilePath.empty()) _logfilePath = "/var/log/homegear/";
 					if(_logfilePath[_logfilePath.size() - 1] != '/') _logfilePath.push_back('/');
-					if(GD::debugLevel >= 5) std::cout << "Debug: logfilePath set to " << _logfilePath << std::endl;
+					HelperFunctions::printDebug("Debug: logfilePath set to " + _logfilePath);
 				}
 				else if(GD::debugLevel >= 3)
 				{
-					std::cout << "Warning: Setting not found: " << std::string(input) << std::endl;
+					HelperFunctions::printWarning("Warning: Setting not found: " + std::string(input));
 				}
 			}
 		}
@@ -113,14 +113,14 @@ void Settings::load(std::string filename)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }

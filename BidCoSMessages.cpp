@@ -1,4 +1,5 @@
 #include "BidCoSMessages.h"
+#include "HelperFunctions.h"
 
 void BidCoSMessages::add(std::shared_ptr<BidCoSMessage> message)
 {
@@ -8,7 +9,15 @@ void BidCoSMessages::add(std::shared_ptr<BidCoSMessage> message)
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -34,7 +43,15 @@ std::shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, std::shar
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return nullptr;
 }
@@ -50,7 +67,15 @@ std::shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, int32_t m
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << '\n';
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
     return std::shared_ptr<BidCoSMessage>();
 }

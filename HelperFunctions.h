@@ -1,10 +1,3 @@
-/*
- * HelperFunctions.h
- *
- *  Created on: May 23, 2013
- *      Author: sathya
- */
-
 #ifndef HELPERFUNCTIONS_H_
 #define HELPERFUNCTIONS_H_
 
@@ -17,6 +10,9 @@
 #include <memory>
 #include <random>
 #include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 class HelperFunctions {
 public:
@@ -25,6 +21,19 @@ public:
 	static inline int64_t getTime()
 	{
 		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	}
+
+	static inline std::string getTimeString()
+	{
+		const char timeFormat[] = "%x %X";
+		auto timePoint = std::chrono::system_clock::now();
+		std::time_t t = std::chrono::system_clock::to_time_t(timePoint);
+		char timeString[50];
+		strftime(&timeString[0], 50, &timeFormat[0], std::localtime(&t));
+		int32_t milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(timePoint.time_since_epoch()).count() % 1000;
+		std::ostringstream timeStream;
+		timeStream << timeString << "." << std::setw(3) << std::setfill('0') << milliseconds;
+		return timeStream.str();
 	}
 
 	static inline std::string &ltrim(std::string &s)
@@ -94,6 +103,14 @@ public:
 	static void memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from);
 	static void printBinary(std::shared_ptr<std::vector<char>> data);
 	static std::string getHexString(const std::vector<uint8_t>& data);
+	static std::string getHexString(int32_t number);
+	static void printEx(std::string file, uint32_t line, std::string function, const char* what = nullptr);
+	static void printCritical(std::string errorString);
+	static void printError(std::string errorString);
+	static void printWarning(std::string errorString);
+	static void printInfo(std::string message);
+	static void printDebug(std::string message, int32_t minDebugLevel = 5);
+	static void printMessage(std::string message, int32_t minDebugLevel = 0);
 private:
 	//Non public constructor
 	HelperFunctions();

@@ -1,4 +1,5 @@
 #include "HM-CC-VD.h"
+#include "../HelperFunctions.h"
 
 HM_CC_VD::HM_CC_VD(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
 {
@@ -59,15 +60,15 @@ void HM_CC_VD::unserialize(std::string serializedObject, uint8_t dutyCycleMessag
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -90,8 +91,7 @@ void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<Bid
     if(!peer || peer->deviceType != HMDeviceTypes::HMCCTC) return;
     int32_t oldValveState = _valveState;
     _valveState = (packet->payload()->at(1) * 100) / 256;
-    std::cout << "0x" << std::setw(6) << std::hex << _address << std::dec;
-    std::cout << ": New valve state " << _valveState << '\n';
+    HelperFunctions::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": New valve state " + std::to_string(_valveState));
     if(packet->destinationAddress() != _address) return; //Unidirectional packet (more than three valve drives connected to one room thermostat) or packet to other valve drive
     sendDutyCycleResponse(packet->senderAddress(), oldValveState, packet->payload()->at(0));
     if(_justPairedToOrThroughCentral)
@@ -209,17 +209,17 @@ void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 	catch(const std::exception& ex)
     {
 		_peersMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
     	_peersMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_peersMutex.unlock();
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

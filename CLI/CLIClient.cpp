@@ -1,5 +1,6 @@
 #include "CLIClient.h"
 #include "../GD.h"
+#include "../HelperFunctions.h"
 
 namespace CLI {
 
@@ -17,15 +18,15 @@ Client::~Client()
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -52,17 +53,17 @@ void Client::ping()
     catch(const std::exception& ex)
     {
     	_sendMutex.unlock();
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
     	_sendMutex.unlock();
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_sendMutex.unlock();
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -74,7 +75,7 @@ void Client::start()
 		_fileDescriptor = fileDescriptor;
 		if(fileDescriptor == -1)
 		{
-			std::cerr << "Could not create socket." << std::endl;
+			HelperFunctions::printError("Could not create socket.");
 			return;
 		}
 		if(GD::debugLevel >= 4) std::cout << "Info: Trying to connect..." << std::endl;
@@ -83,7 +84,7 @@ void Client::start()
 		strcpy(remoteAddress.sun_path, GD::socketPath.c_str());
 		if(connect(fileDescriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
 		{
-			std::cerr << "Could not connect to socket. Error: " << strerror(errno) << std::endl;
+			HelperFunctions::printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
 			return;
 		}
 		if(GD::debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
@@ -113,7 +114,7 @@ void Client::start()
 			if(_closed) break;
 			if(send(fileDescriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
 			{
-				std::cerr << "Error sending to socket." << std::endl;
+				HelperFunctions::printError("Error sending to socket.");
 				close(fileDescriptor);
 				free(sendBuffer);
 				return;
@@ -151,15 +152,15 @@ void Client::start()
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Couldn't create socket file " << GD::socketPath << ": " << ex.what() << std::endl;
+    	HelperFunctions::printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());;
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

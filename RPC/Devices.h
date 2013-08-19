@@ -3,6 +3,8 @@
 
 class BidCoSPacket;
 
+#include <dirent.h>
+
 #include <vector>
 #include <memory>
 

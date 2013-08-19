@@ -29,7 +29,7 @@ void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod
 {
 	if(_rpcMethods->find(methodName) != _rpcMethods->end())
 	{
-		if(GD::debugLevel >= 3) std::cout << "Warning: Could not register RPC method, because a method with this name already exists." << std::endl;
+		HelperFunctions::printWarning("Warning: Could not register RPC method, because a method with this name already exists.");
 		return;
 	}
 	_rpcMethods->insert(std::pair<std::string, std::shared_ptr<RPCMethod>>(methodName, method));
@@ -51,7 +51,7 @@ void RPCServer::mainThread()
 			}
 			if(clientFileDescriptor > _maxConnections)
 			{
-				if(GD::debugLevel >= 2) std::cout << "Error: Client connection rejected, because there are too many clients connected to me." << std::endl;
+				HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
 				shutdown(clientFileDescriptor, 0);
 				close(clientFileDescriptor);
 				continue;
@@ -65,17 +65,17 @@ void RPCServer::mainThread()
 		}
 		catch(const std::exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			_stateMutex.unlock();
 		}
 		catch(const Exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			_stateMutex.unlock();
 		}
 		catch(...)
 		{
-			std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			_stateMutex.unlock();
 		}
 	}
@@ -90,19 +90,19 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 		if(!data || data->empty()) return;
 		int32_t ret = send(clientFileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
 		if(closeConnection) shutdown(clientFileDescriptor, 1);
-		if(ret != (signed)data->size() && GD::debugLevel >= 3) std::cout << "Warning: Error sending data to client." << std::endl;
+		if(ret != (signed)data->size()) HelperFunctions::printWarning("Warning: Error sending data to client.");
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -121,7 +121,7 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
 	}
 	if(GD::debugLevel >= 4)
 	{
-		std::cout << "Method called: " << methodName << " Parameters:" << std::endl;
+		HelperFunctions::printInfo("Info: Method called: " + methodName + " Parameters:");
 		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 		{
 			(*i)->print();
@@ -130,7 +130,7 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
 	if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(clientFileDescriptor, methodName, parameters, responseType);
 	else if(GD::debugLevel >= 3)
 	{
-		std::cerr << "Warning: RPC method not found: " << methodName << std::endl;
+		HelperFunctions::printError("Warning: RPC method not found: " + methodName);
 		sendRPCResponseToClient(clientFileDescriptor, RPCVariable::createError(-32601, ": Requested method not found."), responseType);
 	}
 }
@@ -162,22 +162,22 @@ void RPCServer::callMethod(int32_t clientFileDescriptor, std::string methodName,
 		std::shared_ptr<RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters);
 		if(GD::debugLevel >= 5)
 		{
-			std::cout << "Response: " << std::endl;
+			HelperFunctions::printDebug("Response: ");
 			ret->print();
 		}
 		sendRPCResponseToClient(clientFileDescriptor, ret, responseType);
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -210,15 +210,15 @@ void RPCServer::packetReceived(int32_t clientFileDescriptor, std::shared_ptr<std
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -241,17 +241,17 @@ void RPCServer::removeClientFileDescriptor(int32_t clientFileDescriptor)
 	catch(const std::exception& ex)
     {
     	_stateMutex.unlock();
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
     	_stateMutex.unlock();
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_stateMutex.unlock();
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -273,7 +273,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 		timeout.tv_sec = 20;
 		timeout.tv_usec = 0;
 
-		if(GD::debugLevel >= 5) std::cout << "Listening for incoming packets from client number " << clientFileDescriptor << "." << std::endl;
+		HelperFunctions::printDebug("Listening for incoming packets from client number " + std::to_string(clientFileDescriptor) + ".");
 		while(!_stopServer)
 		{
 			fd_set readFileDescriptor;
@@ -285,7 +285,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 			{
 				removeClientFileDescriptor(clientFileDescriptor);
 				close(clientFileDescriptor);
-				if(GD::debugLevel >= 5) std::cout << "Connection to client number " << clientFileDescriptor << " closed." << std::endl;
+				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
 				return;
 			}
 
@@ -294,7 +294,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 			{
 				removeClientFileDescriptor(clientFileDescriptor);
 				close(clientFileDescriptor);
-				if(GD::debugLevel >= 5) std::cout << "Connection to client number " << clientFileDescriptor << " closed." << std::endl;
+				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
 				return;
 			}
 			uBytesRead = bytesRead; //To prevent errors comparing signed and unsigned integers
@@ -303,11 +303,11 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				packetType = (buffer[3] == 0) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryResponse;
 				if(uBytesRead < 8) continue;
 				HelperFunctions::memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
-				if(GD::debugLevel >= 6) std::cout << "Receiving binary rpc packet with size: " << dataSize << std::endl;
+				HelperFunctions::printDebug("Receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
 				if(dataSize == 0) continue;
 				if(dataSize > 104857600)
 				{
-					if(GD::debugLevel >= 2) std::cout << "Error: Packet with data larger than 100 MiB received." << std::endl;
+					HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
 					continue;
 				}
 				packet.reset(new std::vector<char>());
@@ -350,10 +350,10 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 					else if(contentType && host && line.size() > 5 && line.substr(0, 5) == "<?xml")
 					{
 						packetType = PacketType::Enum::xmlRequest;
-						if(GD::debugLevel >= 6) std::cout << "Receiving xml rpc packet with content size: " << dataSize << std::endl;
+						if(GD::debugLevel >= 6) HelperFunctions::printDebug("Receiving xml rpc packet with content size: " + std::to_string(dataSize), 6);
 						if(dataSize > 104857600)
 						{
-							if(GD::debugLevel >= 2) std::cout << "Error: Packet with data larger than 100 MiB received." << std::endl;
+							HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
 							break;
 						}
 						packet.reset(new std::vector<char>());
@@ -361,7 +361,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 						int32_t restLength = uBytesRead - pos;
 						if(restLength < 1)
 						{
-							if(GD::debugLevel >= 2) std::cout << "Error: No data in xml rpc packet." << std::endl;
+							HelperFunctions::printError("Error: No data in xml rpc packet.");
 							break;
 						}
 						if((unsigned)restLength >= dataSize)
@@ -389,7 +389,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				}
 				if(packetLength + uBytesRead > dataSize)
 				{
-					if(GD::debugLevel >= 2) std::cout << "Error: Packet length is wrong." << std::endl;
+					HelperFunctions::printError("Error: Packet length is wrong.");
 					packetLength = 0;
 					continue;
 				}
@@ -411,15 +411,15 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -438,28 +438,28 @@ int32_t RPCServer::getClientFileDescriptor()
 		if (clientInfo.ss_family == AF_INET) {
 			struct sockaddr_in *s = (struct sockaddr_in *)&clientInfo;
 			port = ntohs(s->sin_port);
-			inet_ntop(AF_INET, &s->sin_addr, ipString, sizeof ipString);
+			inet_ntop(AF_INET, &s->sin_addr, ipString, sizeof(ipString));
 		} else { // AF_INET6
 			struct sockaddr_in6 *s = (struct sockaddr_in6 *)&clientInfo;
 			port = ntohs(s->sin6_port);
-			inet_ntop(AF_INET6, &s->sin6_addr, ipString, sizeof ipString);
+			inet_ntop(AF_INET6, &s->sin6_addr, ipString, sizeof(ipString));
 		}
-
-		if(GD::debugLevel >= 4) std::cout << "Connection from " << ipString << ":" << port << " accepted. Client number: " << clientFileDescriptor << std::endl;
+		std::string ipString2(&ipString[0]);
+		HelperFunctions::printInfo("Info: Connection from " + ipString2 + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(clientFileDescriptor));
 
 		return clientFileDescriptor;
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -506,7 +506,7 @@ void RPCServer::getFileDescriptor()
 				  address = std::string(buffer);
 				  break;
 			}
-			if(GD::debugLevel >= 4) std::cout << "Info: RPC Server started listening on address " << address << std::endl;
+			HelperFunctions::printInfo("Info: RPC Server started listening on address " + address);
 			bound = true;
 			break;
 		}
@@ -517,14 +517,14 @@ void RPCServer::getFileDescriptor()
     }
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }

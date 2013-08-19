@@ -1,4 +1,5 @@
 #include "Database.h"
+#include "HelperFunctions.h"
 
 Database GD::db;
 
@@ -78,10 +79,6 @@ void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
 				{
 					col->dataType = DataColumn::DataType::Enum::TEXT;
 					col->textValue = std::string((const char*)sqlite3_column_text(statement, i));
-					if(GD::debugLevel >= 5)
-					{
-						std::cout << "Read text column from database: " << col->textValue << std::endl;;
-					}
 				}
 				dataRows[row][i] = col;
 			}
@@ -94,15 +91,15 @@ void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -112,13 +109,12 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 	try
 	{
 		if(!_database) return dataRows;
-		if(GD::debugLevel >= 8) std::cout << "Executing SQL command: " << command << std::endl;
 		_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
 		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
-			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 		}
 		int32_t index = 1;
 		std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](std::shared_ptr<DataColumn> col)
@@ -143,7 +139,7 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 			}
 			if(result)
 			{
-				throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+				throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 			}
 			index++;
 		});
@@ -151,20 +147,20 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
-			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 		}
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 	return dataRows;
@@ -176,32 +172,31 @@ DataTable Database::executeCommand(std::string command)
     try
     {
     	if(!_database) return dataRows;
-    	if(GD::debugLevel >= 8) std::cout << "Executing SQL command: " << command << std::endl;
     	_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
 		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
-			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 		}
 		getDataRows(statement, dataRows);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
-			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 		}
     }
     catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
     return dataRows;

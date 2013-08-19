@@ -8,7 +8,7 @@ void Peer::initializeCentralConfig()
 {
 	if(!rpcDevice)
 	{
-		if(GD::debugLevel >= 3) std::cout << "Warning: Tried to initialize peer's central config without xmlrpcDevice being set." << std::endl;
+		HelperFunctions::printWarning("Warning: Tried to initialize peer's central config without xmlrpcDevice being set.");
 		return;
 	}
 	RPCConfigurationParameter parameter;
@@ -69,15 +69,15 @@ void Peer::initializeLinkConfig(int32_t channel, int32_t peerAddress, int32_t re
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -104,7 +104,7 @@ void Peer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t rem
 		}
 		if(function.empty()) return;
 		if(linkSet->defaultValues.find(function) == linkSet->defaultValues.end()) return;
-		if(GD::debugLevel >= 4) std::cout << "Info: Device 0x" << std::hex << address << std::dec << ": Applying channel function " << function << "." << std::endl;
+		HelperFunctions::printInfo("Info: Device 0x" + HelperFunctions::getHexString(address) + ": Applying channel function " + function + ".");
 		for(RPC::DefaultValue::iterator j = linkSet->defaultValues.at(function).begin(); j != linkSet->defaultValues.at(function).end(); ++j)
 		{
 			RPCConfigurationParameter* parameter = &linksCentral[channel][peerAddress][remoteChannel][j->first];
@@ -114,15 +114,15 @@ void Peer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t rem
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -134,15 +134,15 @@ Peer::~Peer()
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -150,26 +150,52 @@ void Peer::stopThreads()
 {
 	try
 	{
-		if(!_workerThread || !_centralFeatures) return;
-		_stopWorkerThread = true;
-		if(_workerThread->joinable())
+		_stopThreads = true;
+		if(_workerThread)
 		{
-			_workerThread->join();
-			_workerThread.reset();
+			if(_workerThread->joinable())
+			{
+				_workerThread->join();
+				_workerThread.reset();
+			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-		//We often get an "Invalid argument" error. I don't where the error is.
-    	if(GD::debugLevel > 5) std::cerr << "Warning in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		//We often get an "Invalid argument" error (no idea where the error lies).
+    	if(GD::debugLevel > 5) HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    try
+    {
+    	if(_setRSSIThread)
+		{
+			if(_setRSSIThread->joinable())
+			{
+				_setRSSIThread->join();
+				_setRSSIThread.reset();
+			}
+		}
+    }
+	catch(const std::exception& ex)
+    {
+		//We often get an "Invalid argument" error (no idea where the error lies).
+    	if(GD::debugLevel > 5) HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(const Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -183,7 +209,7 @@ Peer::Peer(bool centralFeatures)
 	{
 		serviceMessages.reset(new ServiceMessages(this));
 		pendingBidCoSQueues.reset(new PendingBidCoSQueues());
-		_stopWorkerThread = false;
+		_stopThreads = false;
 		_workerThread.reset(new std::thread(&Peer::worker, this));
 	}
 }
@@ -193,7 +219,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 	try
 	{
 		if(serializedObject.empty()) return;
-		if(GD::debugLevel >= 5) std::cout << "Unserializing peer: " << serializedObject << std::endl;
+		HelperFunctions::printDebug("Unserializing peer: " + serializedObject, 5);
 
 		std::istringstream stringstream(serializedObject);
 		std::string entry;
@@ -208,7 +234,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 		countFromSysinfo = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
 		rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, countFromSysinfo);
-		if(!rpcDevice && GD::debugLevel >= 2) std::cout << "Error: Device type not found: 0x" << std::hex << (uint32_t)deviceType << " Firmware version: " << firmwareVersion << std::endl;
+		if(!rpcDevice) HelperFunctions::printError("Error: Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)deviceType) + " Firmware version: " + std::to_string(firmwareVersion));
 		messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		pairingComplete = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
 		teamChannel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -281,17 +307,17 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 			catch(const std::exception& ex)
 			{
 				_variablesToResetMutex.unlock();
-				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(const Exception& ex)
 			{
 				_variablesToResetMutex.unlock();
-				std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
 				_variablesToResetMutex.unlock();
-				std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
 		initializeCentralConfig();
@@ -306,15 +332,15 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -327,7 +353,7 @@ void Peer::worker()
 	int32_t wakeUpIndex = 0;
 	int32_t index;
 	int64_t time;
-	while(!_stopWorkerThread)
+	while(!_stopThreads)
 	{
 		try
 		{
@@ -338,7 +364,7 @@ void Peer::worker()
 				continue;
 			}
 			else wakeUpIndex = 0;
-			if(_stopWorkerThread) return;
+			if(_stopThreads) return;
 			time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 			if(!_variablesToReset.empty())
 			{
@@ -361,7 +387,7 @@ void Peer::worker()
 						valuesCentral.at((*i)->channel).at((*i)->key).data = (*i)->data;
 						std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
 						std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data) });
-						if(GD::debugLevel >= 4) std::cout << "Info: Domino event: " << (*i)->key << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << ":" << (*i)->channel << " was reset." << std::endl;
+						HelperFunctions::printInfo("Info: Domino event: " + (*i)->key + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
 						GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
 					}
 					else
@@ -385,17 +411,17 @@ void Peer::worker()
 		}
 		catch(const std::exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			_variablesToResetMutex.unlock();
 		}
 		catch(const Exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			_variablesToResetMutex.unlock();
 		}
 		catch(...)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			_variablesToResetMutex.unlock();
 		}
 	}
@@ -616,15 +642,15 @@ std::string Peer::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -681,15 +707,15 @@ std::shared_ptr<HomeMaticDevice> Peer::getHiddenPeerDevice()
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<HomeMaticDevice>();
 }
@@ -705,15 +731,15 @@ std::shared_ptr<BasicPeer> Peer::getHiddenPeer(int32_t channel)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -729,15 +755,15 @@ std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, int32_t address, int32
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -788,15 +814,15 @@ void Peer::saveToDatabase(int32_t parentAddress)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -813,15 +839,15 @@ void Peer::deletePairedVirtualDevice(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -849,15 +875,15 @@ void Peer::deletePairedVirtualDevices()
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -956,32 +982,32 @@ std::string Peer::serialize()
 		catch(const std::exception& ex)
 		{
 			_variablesToResetMutex.unlock();
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(const Exception& ex)
 		{
 			_variablesToResetMutex.unlock();
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(...)
 		{
 			_variablesToResetMutex.unlock();
-			std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 		stringstream << std::dec;
 		return stringstream.str();
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return "";
 }
@@ -997,14 +1023,14 @@ void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<
 		{
 			if(!j->second.rpcParameter)
 			{
-				if(GD::debugLevel >= 1) std::cout << "Critical: Parameter " << j->first << " has no corresponding RPC parameter. Writing dummy data. Device: 0x" << std::hex << address << std::dec << " Channel: " << i->first << std::endl;
+				HelperFunctions::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(i->first));
 				stringstream << std::setw(8) << 0;
 				stringstream << std::setw(8) << 0;
 				continue;
 			}
-			if(j->second.rpcParameter->id.size() == 0 && GD::debugLevel >= 2)
+			if(j->second.rpcParameter->id.size() == 0)
 			{
-				std::cout << "Error: Parameter has no id." << std::endl;
+				HelperFunctions::printError("Error: Parameter has no id.");
 			}
 			stringstream << std::setw(8) << j->second.rpcParameter->id.size();
 			stringstream << j->second.rpcParameter->id;
@@ -1036,14 +1062,14 @@ void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<
 				{
 					if(!l->second.rpcParameter)
 					{
-						if(GD::debugLevel >= 1) std::cout << "Critical: Parameter " << l->first << " has no corresponding RPC parameter. Writing dummy data. Device: 0x" << std::hex << address << std::dec << " Channel: " << i->first << std::endl;
+						HelperFunctions::printCritical("Critical: Parameter " + l->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(i->first));
 						stringstream << std::setw(8) << 0;
 						stringstream << std::setw(8) << 0;
 						continue;
 					}
-					if(l->second.rpcParameter->id.size() == 0 && GD::debugLevel >= 2)
+					if(l->second.rpcParameter->id.size() == 0)
 					{
-						std::cout << "Error: Parameter has no id." << std::endl;
+						HelperFunctions::printError("Error: Parameter has no id.");
 					}
 					stringstream << std::setw(8) << l->second.rpcParameter->id.size();
 					stringstream << l->second.rpcParameter->id;
@@ -1071,7 +1097,7 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 			{
 				uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 				std::string id;
-				if(idLength == 0 && GD::debugLevel >= 1) std::cout << "Critical: Added central config parameter without id. Device: 0x" << std::hex << address << std::dec << " Channel: " << channel << std::endl;
+				if(idLength == 0) HelperFunctions::printCritical("Critical: Added central config parameter without id. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(channel));
 				if(idLength > 0) { id = serializedObject.substr(pos, idLength); pos += idLength; }
 				else id = "Parameter" + std::to_string(k);
 				RPCConfigurationParameter* parameter = &config[channel][id];
@@ -1082,13 +1108,13 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 				}
 				if(!rpcDevice)
 				{
-					if(GD::debugLevel >= 1) std::cerr << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec << std::endl;
+					HelperFunctions::printError("Critical: No xml rpc device found for peer 0x" + HelperFunctions::getHexString(address) + ".");
 					continue;
 				}
 				parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
 				if(!parameter->rpcParameter)
 				{
-					if(GD::debugLevel >= 2) std::cout << "Error: Deleting parameter " << id << ", because no corresponding RPC parameter was found. Device: 0x" << std::hex << address << std::dec << " Channel: " << channel << std::endl;
+					HelperFunctions::printError("Error: Deleting parameter " + id + ", because no corresponding RPC parameter was found. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(channel));
 					config[channel].erase(id);
 				}
 			}
@@ -1096,15 +1122,15 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1129,7 +1155,7 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 					{
 						uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 						std::string id;
-						if(idLength == 0 && GD::debugLevel >= 1) std::cerr << "Critical: Added central config parameter without id. Device: 0x" << std::hex << address << std::dec << " Channel: " << channel << std::endl;
+						if(idLength == 0) HelperFunctions::printError("Critical: Added central config parameter without id. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(channel));
 						if(idLength > 0) { id = serializedObject.substr(pos, idLength); pos += idLength; }
 						else id = "Parameter" + std::to_string(l);
 						RPCConfigurationParameter* parameter = &config[channel][address][remoteChannel][id];
@@ -1140,13 +1166,13 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 						}
 						if(!rpcDevice)
 						{
-							if(GD::debugLevel >= 1) std::cerr << "Critical: No xml rpc device found for peer 0x" << std::hex << address << "." << std::dec << std::endl;
+							HelperFunctions::printError("Critical: No xml rpc device found for peer 0x" + HelperFunctions::getHexString(address) + ".");
 							continue;
 						}
 						parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
 						if(!parameter->rpcParameter)
 						{
-							if(GD::debugLevel >= 2) std::cout << "Error: Deleting parameter " << id << ", because no corresponding RPC parameter was found. Device: 0x" << std::hex << address << std::dec << " Channel: " << channel << std::endl;
+							HelperFunctions::printError("Error: Deleting parameter " + id + ", because no corresponding RPC parameter was found. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(channel));
 							config[channel][address][remoteChannel].erase(id);
 						}
 						//Clean up - delete if the peer doesn't exist anymore
@@ -1159,15 +1185,15 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1251,15 +1277,15 @@ std::string Peer::printConfig()
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }
@@ -1292,15 +1318,15 @@ int32_t Peer::getChannelGroupedWith(int32_t channel)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return -1;
 }
@@ -1390,15 +1416,15 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1418,7 +1444,7 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 				{
 					if((*k)->channel == channel && (*k)->key == parameter->id)
 					{
-						if(GD::debugLevel >= 5) std::cout << "Debug: Deleting element " << parameter->id << " from _variablesToReset. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frameID << std::endl;
+						HelperFunctions::printDebug("Debug: Deleting element " + parameter->id + " from _variablesToReset. Device: 0x" + HelperFunctions::getHexString(address) + " Serial number: " + _serialNumber + " Frame: " + frameID);
 						_variablesToReset.erase(k);
 						break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
 					}
@@ -1438,26 +1464,26 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 			variable->isDominoEvent = true;
 			_variablesToResetMutex.lock();
 			_variablesToReset.push_back(variable);
-			if(GD::debugLevel >= 5) std::cout << "Debug: " << parameter->id << " will be reset in " << ((variable->resetTime - time) / 1000)  << "s." << std::endl;
+			HelperFunctions::printDebug("Debug: " + parameter->id + " will be reset in " + std::to_string((variable->resetTime - time) / 1000) + "s.", 5);
 			_variablesToResetMutex.unlock();
 			if(!_workerThread || !_workerThread->joinable())
 			{
-				_stopWorkerThread = false;
+				_stopThreads = false;
 				_workerThread.reset(new std::thread(&Peer::worker, this));
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1471,20 +1497,19 @@ void Peer::setRSSI(uint8_t rssi)
 	try
 	{
 		if(!_centralFeatures) return;
-		std::thread t(&Peer::setRSSIThread, this, rssi);
-		t.detach();
+		_setRSSIThread.reset(new std::thread(&Peer::setRSSIThread, this, rssi));
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1508,15 +1533,15 @@ void Peer::setRSSIThread(uint8_t rssi)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1600,7 +1625,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				}
 				else
 				{
-					if(GD::debugLevel >= 4) std::cout << "Info: " << i->first << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << ":" << *j << " was set to 0x" << HelperFunctions::getHexString(i->second) << "." << std::endl;
+					HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second) + ".");
 					valueKeys->push_back(i->first);
 					rpcValues->push_back(rpcDevice->channels.at(*j)->parameterSets.at(parameterSetType)->getParameter(i->first)->convertFromPacket(i->second, true));
 				}
@@ -1644,14 +1669,14 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			*packet = *sentPacket;
 			packet->setMessageCounter(messageCounter);
 			messageCounter++;
-			if(GD::debugLevel >= 4) std::cout << "Info: Resending values for device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << ", because they were not set correctly." << std::endl;
+			HelperFunctions::printInfo("Info: Resending values for device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ", because they were not set correctly.");
 			queue->push(sentPacket);
 			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) GD::devices.getCentral()->enqueuePackets(address, queue, true);
 			else
 			{
 				pendingBidCoSQueues->push(queue);
-				if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
+				HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			}
 		}
 
@@ -1685,15 +1710,15 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1889,15 +1914,15 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetId(uint32_t channel, RPC::Par
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1947,7 +1972,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				//Continue when value is unchanged except parameter is of the same index as a changed one.
 				if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
-				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " was set to 0x" << HelperFunctions::getHexString(allParameters[list][intIndex]) << "." << std::endl;
+				HelperFunctions::printInfo("Info: Parameter " + (*i)->name + " of device 0x" + HelperFunctions::getHexString(address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
@@ -2028,7 +2053,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 
 			pendingBidCoSQueues->push(queue);
 			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getCentral()->enqueuePendingQueues(address);
-			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
+			else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 		}
 		else if(type == RPC::ParameterSet::Type::Enum::values)
 		{
@@ -2077,7 +2102,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				//Continue when value is unchanged except parameter is of the same index as a changed one.
 				if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
-				if(GD::debugLevel >= 4) std::cout << "Info: Parameter " << (*i)->name << " was set." << std::endl;
+				HelperFunctions::printInfo("Info: Parameter " + (*i)->name + " of device 0x" + HelperFunctions::getHexString(address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
@@ -2158,21 +2183,21 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 
 			pendingBidCoSQueues->push(queue);
 			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getCentral()->enqueuePendingQueues(address);
-			else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
+			else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2227,15 +2252,15 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamset(int32_t channel, RPC::Parame
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2255,15 +2280,15 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkInfo(int32_t senderChannel, std::
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(const Exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2282,15 +2307,15 @@ std::shared_ptr<RPC::RPCVariable> Peer::setLinkInfo(int32_t senderChannel, std::
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(const Exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2353,15 +2378,15 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel)
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2535,15 +2560,15 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2974,15 +2999,15 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3018,7 +3043,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
 				HM_CC_TC* tc = (HM_CC_TC*)_peers[1].at(0)->device.get();
 				tc->setValveState(value->integerValue);
-				if(GD::debugLevel >= 4) std::cout << "Setting valve state of HM-CC-VD with address 0x" << std::hex << address << std::dec << " to " << value->integerValue << "%." << std::endl;
+				HelperFunctions::printInfo("Info: Setting valve state of HM-CC-VD with address 0x" + HelperFunctions::getHexString(address) + " to " + std::to_string(value->integerValue) + "%.");
 				return true;
 			}
 		}
@@ -3034,7 +3059,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				std::shared_ptr<Peer> associatedPeer = central->getPeer(address);
 				if(!associatedPeer)
 				{
-					if(GD::debugLevel >= 2) std::cerr << "Error: Could not handle \"STATE\", because the main team peer is not paired to this central." << std::endl;
+					HelperFunctions::printError("Error: Could not handle \"STATE\", because the main team peer is not paired to this central.");
 					return false;
 				}
 				if(associatedPeer->team.data.empty()) associatedPeer->team.data.push_back(0);
@@ -3059,7 +3084,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				std::shared_ptr<Peer> associatedPeer = central->getPeer(address);
 				if(!associatedPeer)
 				{
-					if(GD::debugLevel >= 2) std::cerr << "Error: Could not handle \"INSTALL_TEST\", because the main team peer is not paired to this central." << std::endl;
+					HelperFunctions::printError("Error: Could not handle \"INSTALL_TEST\", because the main team peer is not paired to this central.");
 					return false;
 				}
 				if(associatedPeer->team.data.empty()) associatedPeer->team.data.push_back(0);
@@ -3076,15 +3101,15 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return false;
 }
@@ -3095,7 +3120,7 @@ void Peer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter>
 	{
 		if(parameters->integers.size() != 3) return;
 		if(parameters->strings.size() != 1) return;
-		if(GD::debugLevel >= 5) std::cerr << "Debug: addVariableToResetCallback invoked for parameter " << parameters->strings.at(0) << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << "." << std::endl;
+		HelperFunctions::printMessage("addVariableToResetCallback invoked for parameter " + parameters->strings.at(0) + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ".", 5);
 		std::shared_ptr<VariableToReset> variable(new VariableToReset);
 		variable->channel = parameters->integers.at(0);
 		int32_t integerValue = parameters->integers.at(1);
@@ -3108,15 +3133,15 @@ void Peer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter>
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -3167,7 +3192,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return RPC::RPCVariable::createError(-6, "frame not found");
 		std::shared_ptr<RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 		valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
-		if(GD::debugLevel >= 5) std::cout << "Debug: " << valueKey << " of device 0x" << std::hex << address << std::dec << " with serial number " << _serialNumber << ":" << channel << " was set." << std::endl;
+		HelperFunctions::printDebug("Debug: " + valueKey + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(valuesCentral[channel][valueKey].data) + ".");
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
 		queue->noSending = true;
@@ -3223,13 +3248,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 						break;
 					}
 				}
-				if(!paramFound && GD::debugLevel >= 2) std::cerr << "Error constructing packet. param \"" << i->param << "\" not found. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frame->id << std::endl;
+				if(!paramFound) HelperFunctions::printError("Error constructing packet. param \"" + i->param + "\" not found. Device: 0x" + HelperFunctions::getHexString(address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 			}
 			if(i->additionalParameter == "ON_TIME")
 			{
 				if(rpcParameter->physicalParameter->valueID != "STATE" || rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeBoolean)
 				{
-					if(GD::debugLevel >= 2) std::cerr << "Error: Can't set \"ON_TIME\" for " << rpcParameter->physicalParameter->valueID << ". Currently \"ON_TIME\" is only supported for \"STATE\" of type \"boolean\". Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frame->id << std::endl;
+					HelperFunctions::printError("Error: Can't set \"ON_TIME\" for " + rpcParameter->physicalParameter->valueID + ". Currently \"ON_TIME\" is only supported for \"STATE\" of type \"boolean\". Device: 0x" + HelperFunctions::getHexString(address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					continue;
 				}
 				if(!_variablesToReset.empty())
@@ -3239,7 +3264,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 					{
 						if((*i)->channel == channel && (*i)->key == rpcParameter->physicalParameter->valueID)
 						{
-							if(GD::debugLevel >= 5) std::cerr << "Debug: Deleting element from _variablesToReset. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frame->id << std::endl;
+							HelperFunctions::printMessage("Debug: Deleting element from _variablesToReset. Device: 0x" + HelperFunctions::getHexString(address) + " Serial number: " + _serialNumber + " Frame: " + frame->id, 5);
 							_variablesToReset.erase(i);
 							break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
 						}
@@ -3257,7 +3282,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<Peer, &Peer::addVariableToResetCallback>(this);
 				if(!_workerThread || !_workerThread->joinable())
 				{
-					_stopWorkerThread = false;
+					_stopThreads = false;
 					_workerThread.reset(new std::thread(&Peer::worker, this));
 				}
 			}
@@ -3272,7 +3297,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				if(defaultValue != valuesCentral.at(channel).at(*j).data)
 				{
 					valuesCentral.at(channel).at(*j).data = defaultValue;
-					if(GD::debugLevel >= 4) std::cout << "INFO: Parameter \"" << *j << "\" was reset. Device: 0x" << std::hex << address << std::dec << " Serial number: " << _serialNumber << " Frame: " << frame->id << std::endl;
+					HelperFunctions::printInfo( "Info: Parameter \"" + *j + "\" was reset to " + HelperFunctions::getHexString(defaultValue) + ". Device: 0x" + HelperFunctions::getHexString(address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {*j});
 					std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<RPC::RPCVariable>> { logicalDefaultValue });
 					GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(channel), valueKeys, values);
@@ -3288,22 +3313,22 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			if(valueKey == "STATE") queue->retries = 12;
 			GD::devices.getCentral()->enqueuePendingQueues(address);
 		}
-		else if(GD::debugLevel >= 5) std::cout << "Debug: Packet was queued and will be sent with next wake me up packet." << std::endl;
+		else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
         _variablesToResetMutex.unlock();
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
         _variablesToResetMutex.unlock();
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
         _variablesToResetMutex.unlock();
     }
     return RPC::RPCVariable::createError(-1, "unknown error");

@@ -1,5 +1,5 @@
 - Delete peer from all devices it is linked to, when peer is reset
-- "Entkalkungsfahrt"
+- Replace all std::cerr with printEx or printError and all std::cout with printMessagte
 
 When AES is working:
 - enforce $PEER.AES

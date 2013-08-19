@@ -1,5 +1,6 @@
 #include "CLIServer.h"
 #include "../GD.h"
+#include "../HelperFunctions.h"
 
 namespace CLI {
 
@@ -27,17 +28,17 @@ void Server::stop()
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_stateMutex.unlock();
 	}
 	catch(const Exception& ex)
 	{
-		std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_stateMutex.unlock();
 	}
 	catch(...)
 	{
-		std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		_stateMutex.unlock();
 	}
 }
@@ -58,7 +59,7 @@ void Server::mainThread()
 			}
 			if(clientFileDescriptor > _maxConnections)
 			{
-				if(GD::debugLevel >= 2) std::cout << "Error: Client connection rejected, because there are too many clients connected to me." << std::endl;
+				HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
 				shutdown(clientFileDescriptor, 0);
 				close(clientFileDescriptor);
 				continue;
@@ -73,17 +74,17 @@ void Server::mainThread()
 		}
 		catch(const std::exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			_stateMutex.unlock();
 		}
 		catch(const Exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			_stateMutex.unlock();
 		}
 		catch(...)
 		{
-			std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			_stateMutex.unlock();
 		}
 	}
@@ -100,21 +101,21 @@ int32_t Server::getClientFileDescriptor()
 		int32_t clientFileDescriptor = accept(_serverFileDescriptor, (struct sockaddr *) &clientAddress, &addressSize);
 		if(clientFileDescriptor == -1) return -1;
 
-		if(GD::debugLevel >= 4) std::cout << "CLI connection accepted. Client number: " << clientFileDescriptor << std::endl;
+		HelperFunctions::printInfo("Info: CLI connection accepted. Client number: " + std::to_string(clientFileDescriptor));
 
 		return clientFileDescriptor;
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -138,17 +139,17 @@ void Server::removeClientData(int32_t clientFileDescriptor)
 	catch(const std::exception& ex)
     {
     	_stateMutex.unlock();
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
     	_stateMutex.unlock();
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_stateMutex.unlock();
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -159,13 +160,13 @@ void Server::getFileDescriptor()
 		struct stat sb;
 		if(stat(GD::runDir.c_str(), &sb) == -1)
 		{
-			if(errno == ENOENT && GD::debugLevel >= 1) std::cerr << "Directory " << GD::runDir << " does not exist. Please create it before starting Homegear." << std::endl;
+			if(errno == ENOENT) HelperFunctions::printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
 			else throw Exception("Error reading information of directory " + GD::runDir + ": " + strerror(errno));
 			return;
 		}
 		if(!S_ISDIR(sb.st_mode))
 		{
-			if(GD::debugLevel >= 1) std::cerr << "Directory " << GD::runDir << " does not exist. Please create it before starting Homegear." << std::endl;
+			HelperFunctions::printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
 			return;
 		}
 		if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
@@ -182,15 +183,15 @@ void Server::getFileDescriptor()
     }
     catch(const std::exception& ex)
     {
-    	std::cerr << "Couldn't create socket file " << GD::socketPath << ": " << ex.what() << std::endl;
+    	HelperFunctions::printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -211,7 +212,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 		timeout.tv_sec = 2;
 		timeout.tv_usec = 0;
 
-		if(GD::debugLevel >= 5) std::cout << "Listening for incoming commands from client number " << clientFileDescriptor << "." << std::endl;
+		HelperFunctions::printDebug("Listening for incoming commands from client number " + std::to_string(clientFileDescriptor) + ".");
 		while(!_stopServer)
 		{
 			fd_set readFileDescriptor;
@@ -223,7 +224,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			{
 				removeClientData(clientFileDescriptor);
 				close(clientFileDescriptor);
-				if(GD::debugLevel >= 5) std::cout << "Connection to client number " << clientFileDescriptor << " closed." << std::endl;
+				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
 				close(_serverFileDescriptor);
 				//Socket file gets deleted when closing connection, so create it again
 				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
@@ -236,7 +237,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			{
 				removeClientData(clientFileDescriptor);
 				close(clientFileDescriptor);
-				if(GD::debugLevel >= 5) std::cout << "Connection to client number " << clientFileDescriptor << " closed." << std::endl;
+				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
 				close(_serverFileDescriptor);
 				//Socket file gets deleted when closing connection, so create it again
 				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
@@ -254,15 +255,15 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -275,20 +276,20 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		response.push_back(0);
 		if(send(clientData->fileDescriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
 		{
-			std::cerr << "Could not send data to client: " << clientData->fileDescriptor << std::endl;
+			HelperFunctions::printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor));
 		}
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

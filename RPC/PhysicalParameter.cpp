@@ -14,7 +14,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			if(attributeValue == "integer") type = Type::Enum::typeInteger;
 			else if(attributeValue == "boolean") type = Type::Enum::typeBoolean;
 			else if(attributeValue == "string") type = Type::Enum::typeString;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown physical type: " << attributeValue << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown physical type: " + attributeValue);
 		}
 		else if(attributeName == "interface")
 		{
@@ -24,7 +24,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			else if(attributeValue == "config") interface = Interface::Enum::config;
 			else if(attributeValue == "config_string") interface = Interface::Enum::configString;
 			else if(attributeValue == "store") interface = Interface::Enum::store;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown interface for \"physical\": " << attributeValue << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown interface for \"physical\": " + attributeValue);
 		}
 		else if(attributeName == "value_id") valueID = attributeValue;
 		else if(attributeName == "no_init") { if(attributeValue == "true") noInit = true; }
@@ -56,9 +56,9 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 		else if(attributeName == "id") { id = attributeValue; }
 		else if(attributeName == "save_on_change") {} //not necessary, all values are saved on change
 		else if(attributeName == "mask") mask = HelperFunctions::getNumber(attributeValue);
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"physical\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"physical\": " + attributeName);
 	}
-	if(mask != -1 && fmod(index, 1) != 0) std::cout << "Warning: mask combined with unaligned index not supported." << std::endl;
+	if(mask != -1 && fmod(index, 1) != 0) HelperFunctions::printWarning("Warning: mask combined with unaligned index not supported.");
 	startIndex = std::lround(std::floor(index));
 	int32_t intDiff = std::lround(std::floor(size)) - 1;
 	if(intDiff < 0) intDiff = 0;
@@ -98,10 +98,10 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 						event->dominoEventValue = HelperFunctions::getNumber(eventValue);
 						event->dominoEventDelayID = std::string(attr2->value());
 					}
-					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node for \"physical\\event\": " << eventNodeName << std::endl;
+					else HelperFunctions::printWarning("Warning: Unknown node for \"physical\\event\": " + eventNodeName);
 				}
 			}
-			else if(GD::debugLevel >= 3) std::cout << "Warning: domino_event is only supported for physical type integer." << std::endl;
+			else HelperFunctions::printWarning("Warning: domino_event is only supported for physical type integer.");
 			eventFrames.push_back(event);
 		}
 		else if(nodeName == "reset_after_send")
@@ -109,7 +109,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			attr = physicalNode->first_attribute("param");
 			if(attr) resetAfterSend.push_back(std::string(attr->value()));
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node for \"physical\": " << nodeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown node for \"physical\": " + nodeName);
 	}
 }
 

@@ -29,7 +29,7 @@ void exceptionHandler(int32_t signalNumber) {
   void *stackTrace[30];
   size_t length = backtrace(stackTrace, 30);
 
-  std::cerr << "Error: Signal " << signalNumber << ". Backtrace:" << std::endl;
+  HelperFunctions::printError("Error: Signal " + std::to_string(signalNumber) + ". Backtrace:");
   backtrace_symbols_fd(stackTrace, length, STDERR_FILENO);
   signal(signalNumber, SIG_DFL);
   kill(getpid(), signalNumber); //Generate core dump
@@ -39,7 +39,7 @@ void killHandler(int32_t signalNumber)
 {
 	try
 	{
-		std::cout << "Stopping Homegear..." << std::endl;
+		HelperFunctions::printMessage("Stopping Homegear...");
 		GD::cliServer.stop();
 		GD::rpcServer.stop();
 		GD::rpcClient.reset();
@@ -49,15 +49,15 @@ void killHandler(int32_t signalNumber)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -107,7 +107,7 @@ void startDaemon()
 		//Set root directory as working directory (always available)
 		if((chdir(GD::settings.logfilePath().c_str())) < 0)
 		{
-			std::cerr << "Could not change working directory to " << GD::settings.logfilePath() << "." << std::endl;
+			HelperFunctions::printError("Could not change working directory to " + GD::settings.logfilePath() + ".");
 			exit(1);
 		}
 
@@ -115,15 +115,15 @@ void startDaemon()
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-v")
     		{
-    			std::cout << "Homegear version " << VERSION << std::endl;
+    			std::cout <<  "Homegear version " << VERSION << std::endl;
     			exit(0);
     		}
     		else
@@ -190,7 +190,7 @@ int main(int argc, char* argv[])
 
         /*int row,col;
         WINDOW* mainWindow = initscr();
-        if(!mainWindow) std::cerr << "Bla" << std::endl;
+        if(!mainWindow) HelperFunctions::printError("Bla" << std::endl;
 
         getmaxyx(stdscr, row, col);
         WINDOW* left = newwin(row, col / 2, 0, 0);
@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
 				int32_t rc = flock(pidfile, LOCK_EX | LOCK_NB);
 				if(rc && errno == EWOULDBLOCK)
 				{
-					std::cerr << "Error: Homegear is already running - Can't lock PID file." << std::endl;
+					HelperFunctions::printError("Error: Homegear is already running - Can't lock PID file.");
 				}
 				std::string pid(std::to_string(getpid()));
 				write(pidfile, pid.c_str(), pid.size());
@@ -258,15 +258,15 @@ int main(int argc, char* argv[])
 		}
 		catch(const std::exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(const Exception& ex)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(...)
 		{
-			std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 
 		if(startAsDaemon)
@@ -279,19 +279,19 @@ int main(int argc, char* argv[])
     	GD::rfDevice = RF::RFDevice::create(GD::settings.rfDeviceType());
         GD::rfDevice->init(GD::settings.rfDevice());
         if(!GD::rfDevice) return -1;
-        if(GD::debugLevel >= 4) std::cout << "Start listening for BidCoS packets..." << std::endl;
+        HelperFunctions::printInfo("Start listening for BidCoS packets...");
         GD::rfDevice->startListening();
         if(!GD::rfDevice->isOpen()) return -1;
-        if(GD::debugLevel >= 4) std::cout << "Loading XML RPC devices..." << std::endl;
+        HelperFunctions::printInfo("Loading XML RPC devices...");
         GD::rpcDevices.load();
-        if(GD::debugLevel >= 4) std::cout << "Loading devices..." << std::endl;
+        HelperFunctions::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
         if(startAsDaemon)
         {
-        	if(GD::debugLevel >= 4) std::cout << "Starting CLI server..." << std::endl;
+        	HelperFunctions::printInfo("Starting CLI server...");
         	GD::cliServer.start();
         }
-        if(GD::debugLevel >= 4) std::cout << "Starting XML RPC server..." << std::endl;
+        HelperFunctions::printInfo("Starting XML RPC server...");
         GD::rpcServer.start();
 
         rl_bind_key('\t', rl_abort); //no autocompletion
@@ -316,23 +316,23 @@ int main(int argc, char* argv[])
 			}
         }
 
-        std::cout << "Shutting down..." << std::endl;
+        HelperFunctions::printMessage("Shutting down...");
 
         //Stop rpc server and client before saving
         if(startAsDaemon)
         {
-        	std::cout << "Stopping CLI server..." << std::endl;
+        	HelperFunctions::printInfo("Stopping CLI server...");
         	GD::cliServer.stop();
         }
-        std::cout << "Stopping RPC server..." << std::endl;
+        HelperFunctions::printInfo( "Stopping RPC server...");
         GD::rpcServer.stop();
-        std::cout << "Stopping RPC client..." << std::endl;
+        HelperFunctions::printInfo( "Stopping RPC client...");
         GD::rpcClient.reset();
-        std::cout << "Closing RF device..." << std::endl;
+        HelperFunctions::printInfo( "Closing RF device...");
         GD::rfDevice->stopListening();
-        std::cout << "Saving devices..." << std::endl;
+        HelperFunctions::printInfo( "Saving devices...");
         GD::devices.save();
-        std::cout << "Shutdown complete." << std::endl;
+        HelperFunctions::printInfo("Shutdown complete.");
         if(startAsDaemon)
         {
         	fclose(stdout);
@@ -341,12 +341,16 @@ int main(int argc, char* argv[])
         return 0;
     }
     catch(const std::exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << '\n';
-    }
-    catch(const Exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << '\n';
-    }
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
     return 1;
 }

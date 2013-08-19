@@ -39,7 +39,7 @@ namespace rapidxml
     //! <pre>
     //! void %rapidxml::%parse_error_handler(const char *what, void *where)
     //! {
-    //!     std::cout << "Parse error: " << what << "\n";
+    //!     HelperFunctions::printMessage( "Parse error: " << what << "\n";
     //!     std::abort();
     //! }
     //! </pre>

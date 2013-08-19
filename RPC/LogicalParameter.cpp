@@ -13,7 +13,7 @@ ParameterOption::ParameterOption(xml_node<>* node)
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "default" && attributeValue == "true") isDefault = true;
 		else if(attributeName == "index") index = HelperFunctions::getNumber(attributeValue);
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"option\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"option\": " + attributeName);
 	}
 }
 
@@ -38,15 +38,15 @@ std::shared_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return parameter;
 }
@@ -67,7 +67,7 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node)
 			std::string attributeValue(attr->value());
 			if(attributeName == "type") {}
 			else if(attributeName == "unit") unit = attributeValue;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type enum: " << attributeName << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown attribute for \"logical\" with type enum: " + attributeName);
 		}
 		int32_t index = 0;
 		for(xml_node<>* optionNode = node->first_node("option"); optionNode; optionNode = optionNode->next_sibling())
@@ -91,15 +91,15 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node)
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -126,7 +126,7 @@ LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node)
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type integer: " << attributeName << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown attribute for \"logical\" with type integer: " + attributeName);
 		}
 		for(xml_node<>* logicalNode = node->first_node(); logicalNode; logicalNode = logicalNode->next_sibling())
 		{
@@ -141,20 +141,20 @@ LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node)
 				std::string valueString(attr2->value());
 				specialValues[attr1->value()] = HelperFunctions::getNumber(valueString);
 			}
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node in \"logical\" with type integer: " << nodeName << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown node in \"logical\" with type integer: " + nodeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -181,7 +181,7 @@ LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node)
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type float: " << attributeName << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown attribute for \"logical\" with type float: " + attributeName);
 		}
 		for(xml_node<>* logicalNode = node->first_node(); logicalNode; logicalNode = logicalNode->next_sibling())
 		{
@@ -196,20 +196,20 @@ LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node)
 				std::string valueString(attr2->value());
 				specialValues[attr1->value()] = HelperFunctions::getDouble(valueString);
 			}
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node in \"logical\" with type float: " << nodeName << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown node in \"logical\" with type float: " + nodeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -233,20 +233,20 @@ LogicalParameterBoolean::LogicalParameterBoolean(xml_node<>* node)
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else if(attributeName != "type" && GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type boolean: " << attributeName << std::endl;
+			else if(attributeName != "type") HelperFunctions::printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -271,20 +271,20 @@ LogicalParameterString::LogicalParameterString(xml_node<>* node)
 			}
 			else if(attributeName == "unit") unit = attributeValue;
 			else if(attributeName == "use_default_on_failure") {} //ignore, not necessary - all values are initialized
-			else if(attributeName != "type" && GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type string: " << attributeName << std::endl;
+			else if(attributeName != "type") HelperFunctions::printWarning("Warning: Unknown attribute for \"logical\" with type string: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -301,20 +301,20 @@ LogicalParameterAction::LogicalParameterAction(xml_node<>* node)
 		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 		{
 			std::string attributeName(attr->name());
-			if(attributeName != "type" && GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"logical\" with type boolean: " << attributeName << std::endl;
+			if(attributeName != "type") HelperFunctions::printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

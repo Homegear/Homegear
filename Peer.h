@@ -145,8 +145,9 @@ class Peer
         bool _centralFeatures = false;
         uint32_t _lastPacketReceived = 0;
         uint32_t _lastRSSI = 0;
-        bool _stopWorkerThread = true;
+        bool _stopThreads = false;
         std::shared_ptr<std::thread> _workerThread;
+        std::shared_ptr<std::thread> _setRSSIThread;
         std::string _serialNumber;
         std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
         std::mutex _variablesToResetMutex;

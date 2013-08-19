@@ -72,15 +72,15 @@ std::pair<std::string, std::string> HelperFunctions::split(std::string string, c
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::pair<std::string, std::string>();
 }
@@ -108,4 +108,53 @@ std::string HelperFunctions::getHexString(const std::vector<uint8_t>& data)
 	}
 	stringstream << std::dec;
 	return stringstream.str();
+}
+
+std::string HelperFunctions::getHexString(int32_t number)
+{
+	std::ostringstream stringstream;
+	stringstream << std::hex << std::uppercase << number << std::dec;
+	return stringstream.str();
+}
+
+void HelperFunctions::printEx(std::string file, uint32_t line, std::string function, const char* what)
+{
+	if(what) std::cerr << getTimeString() << " Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
+	else std::cerr << getTimeString() << " Unknown error in file " << file << " line " << line << " in function " << function << "." << std::endl;
+}
+
+void HelperFunctions::printCritical(std::string errorString)
+{
+	if(GD::debugLevel < 1) return;
+	std::cerr << getTimeString() << " " << errorString << std::endl;
+}
+
+void HelperFunctions::printError(std::string errorString)
+{
+	if(GD::debugLevel < 2) return;
+	std::cerr << getTimeString() << " " << errorString << std::endl;
+}
+
+void HelperFunctions::printWarning(std::string errorString)
+{
+	if(GD::debugLevel < 3) return;
+	std::cerr << getTimeString() << " " << errorString << std::endl;
+}
+
+void HelperFunctions::printInfo(std::string message)
+{
+	if(GD::debugLevel < 4) return;
+	std::cout << getTimeString() << " " << message << std::endl;
+}
+
+void HelperFunctions::printDebug(std::string message, int32_t minDebugLevel)
+{
+	if(GD::debugLevel < minDebugLevel) return;
+	std::cout << getTimeString() << " " << message << std::endl;
+}
+
+void HelperFunctions::printMessage(std::string message, int32_t minDebugLevel)
+{
+	if(GD::debugLevel < minDebugLevel) return;
+	std::cout << getTimeString() << " " << message << std::endl;
 }

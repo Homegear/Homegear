@@ -24,7 +24,7 @@ RPCVariable::RPCVariable(RPCVariableType variableType, std::vector<uint8_t> data
 	{
 		HelperFunctions::memcpyBigEndian(integerValue, data);
 	}
-	else if(GD::debugLevel >= 2) std::cerr << "Error: Could not create RPCVariable. Type cannot be converted automatically." << std::endl;
+	else HelperFunctions::printError("Error: Could not create RPCVariable. Type cannot be converted automatically.");
 }
 
 std::shared_ptr<RPCVariable> RPCVariable::createError(int32_t faultCode, std::string faultString)

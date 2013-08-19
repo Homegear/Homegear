@@ -12,7 +12,7 @@ DescriptionField::DescriptionField(xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "value") value = attributeValue;
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"field\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"field\": " + attributeName);
 	}
 }
 
@@ -25,7 +25,7 @@ ParameterDescription::ParameterDescription(xml_node<>* node)
 		{
 			fields.push_back(descriptionNode);
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown subnode for \"description\": " << nodeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown subnode for \"description\": " + nodeName);
 	}
 }
 
@@ -39,7 +39,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		{
 			if(attributeValue == "from_device") direction = Direction::Enum::fromDevice;
 			else if(attributeValue == "to_device") direction = Direction::Enum::toDevice;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown direction for \"frame\": " << attributeValue << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown direction for \"frame\": " + attributeValue);
 		}
 		else if(attributeName == "allowed_receivers")
 		{
@@ -69,7 +69,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 			if(attributeValue == "*") fixedChannel = -2;
 			else fixedChannel = HelperFunctions::getNumber(attributeValue);
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"frame\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))
 	{
@@ -258,7 +258,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "action_key_counter") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "action_key_same_counter") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "rc19display") type = Type::Enum::none; //ignore, no conversion necessary
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown type for \"conversion\": " << attributeValue << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
 		else if(attributeName == "factors")
@@ -282,7 +282,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 		else if(attributeName == "sim_counter") {}
 		else if(attributeName == "on") on = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "off") off = HelperFunctions::getNumber(attributeValue);
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"conversion\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"conversion\": " + attributeName);
 	}
 	for(xml_node<>* conversionNode = node->first_node(); conversionNode; conversionNode = conversionNode->next_sibling())
 	{
@@ -303,7 +303,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 				integerValueMapParameter[parameterValue] = deviceValue;
 			}
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown subnode for \"conversion\": " << nodeName << std::endl;
+		else HelperFunctions::printWarning( "Warning: Unknown subnode for \"conversion\": " + nodeName);
 	}
 }
 
@@ -327,7 +327,7 @@ bool Parameter::checkCondition(int32_t value)
 		return value <= constValue;
 		break;
 	default:
-		if(GD::debugLevel >= 3) std::cout << "Warning: Boolean operator is none." << std::endl;
+		HelperFunctions::printWarning("Warning: Boolean operator is none.");
 		break;
 	}
 	return false;
@@ -431,7 +431,7 @@ std::vector<uint8_t> Parameter::convertToPacket(std::string value)
 	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) convertedValue.reset(new RPCVariable(value));
 	if(!convertedValue)
 	{
-		if(GD::debugLevel >= 3) std::cout << "Warning: Could not convert parameter " << id << " from String." << std::endl;
+		HelperFunctions::printWarning("Warning: Could not convert parameter " + id + " from String.");
 		return std::vector<uint8_t>();
 	}
 	return convertToPacket(convertedValue);
@@ -554,7 +554,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 			else if(attributeValue == "l") booleanOperator = BooleanOperator::Enum::l;
 			else if(attributeValue == "ge") booleanOperator = BooleanOperator::Enum::ge;
 			else if(attributeValue == "le") booleanOperator = BooleanOperator::Enum::le;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " << attributeValue << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " + attributeValue);
 		}
 		else if(attributeName == "const_value") constValue = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "id") id = attributeValue;
@@ -566,7 +566,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		else if(attributeName == "default") {} //Not necessary and not used
 		else if(attributeName == "burst_suppression")
 		{
-			if(attributeValue != "0") std::cout << "Warning: Unknown value for \"burst_suppression\" in node \"parameter\": " << attributeValue << std::endl;
+			if(attributeValue != "0") HelperFunctions::printWarning("Warning: Unknown value for \"burst_suppression\" in node \"parameter\": " + attributeValue);
 		}
 		else if(attributeName == "type")
 		{
@@ -574,13 +574,13 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 			else if(attributeValue == "boolean") type = PhysicalParameter::Type::Enum::typeBoolean;
 			else if(attributeValue == "string") type = PhysicalParameter::Type::Enum::typeString;
 			else if(attributeValue == "option") type = PhysicalParameter::Type::Enum::typeOption;
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute value for \"type\" in node \"parameter\": " << attributeValue << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown attribute value for \"type\" in node \"parameter\": " + attributeValue);
 		}
 		else if(attributeName == "omit_if")
 		{
 			if(type != PhysicalParameter::Type::Enum::typeInteger)
 			{
-				if(GD::debugLevel >= 3) std::cout << "Warning: \"omit_if\" is only supported for type \"integer\" in node \"parameter\"." << std::endl;
+				HelperFunctions::printWarning("Warning: \"omit_if\" is only supported for type \"integer\" in node \"parameter\".");
 				continue;
 			}
 			omitIfSet = true;
@@ -613,11 +613,11 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 				else if(element == "sticky") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::sticky);
 			}
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"parameter\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
 	}
 	if(checkForID && id.empty() && GD::debugLevel >= 2)
 	{
-		std::cout << "Error: Parameter has no id." << std::endl;
+		HelperFunctions::printError("Error: Parameter has no id. Index: " + std::to_string(index));
 	}
 	for(xml_node<>* parameterNode = node->first_node(); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
@@ -648,7 +648,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		{
 			description = ParameterDescription(parameterNode);
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown subnode for \"parameter\": " << nodeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown subnode for \"parameter\": " + nodeName);
 	}
 }
 
@@ -661,7 +661,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 		HelperFunctions::memcpyBigEndian(value, data);
 		if(physicalParameter->size < 0)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Negative size not allowed." << std::endl;
+			HelperFunctions::printError("Error: Negative size not allowed.");
 			return;
 		}
 		double i = physicalParameter->index;
@@ -671,7 +671,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 		{
 			if(physicalParameter->size > 1)
 			{
-				if(GD::debugLevel >= 2) std::cout << "Error: Can't set partial byte index > 1." << std::endl;
+				HelperFunctions::printError("Error: Can't set partial byte index > 1.");
 				return;
 			}
 			data.clear();
@@ -680,15 +680,15 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -710,13 +710,17 @@ bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
 		if(match) return true;
 	}
 	catch(const std::exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << std::endl;
-    }
-    catch(const Exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << std::endl;
-    }
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
     return false;
 }
 
@@ -727,13 +731,17 @@ bool DeviceType::matches(std::string typeID)
 		if(id == typeID) return true;
 	}
 	catch(const std::exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << std::endl;
-    }
-    catch(const Exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << std::endl;
-    }
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
     return false;
 }
 
@@ -752,13 +760,17 @@ bool DeviceType::matches(std::shared_ptr<BidCoSPacket> packet)
 		return true;
 	}
 	catch(const std::exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << std::endl;
-    }
-    catch(const Exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << std::endl;
-    }
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
     return false;
 }
 
@@ -772,7 +784,7 @@ DeviceType::DeviceType(xml_node<>* typeNode)
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "priority") priority = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "updatable") { if(attributeValue == "true") updatable = true; }
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"type\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"type\": " + attributeName);
 	}
 	for(xml_node<>* parameterNode = typeNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
@@ -854,10 +866,10 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		{
 			std::stringstream stream(attributeValue);
 			type = typeFromString(attributeValue);
-			if(GD::debugLevel >= 3 && type == Type::Enum::none) std::cout << "Warning: Unknown parameter set type: " << attributeValue << std::endl;
+			if(type == Type::Enum::none) HelperFunctions::printWarning("Warning: Unknown parameter set type: " + attributeValue);
 		}
 		else if(attributeName == "link") {} //Ignored
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
 	}
 	std::vector<std::pair<std::string, std::string>> enforce;
 	for(xml_node<>* parameterNode = parameterSetNode->first_node(); parameterNode; parameterNode = parameterNode->next_sibling())
@@ -876,7 +888,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr2 = parameterNode->first_attribute("value");
 			if(!attr1 || !attr2)
 			{
-				if(GD::debugLevel >= 3) std::cout << "Warning: Could not parse \"enforce\". Attribute id or value not set." << std::endl;
+				HelperFunctions::printWarning("Warning: Could not parse \"enforce\". Attribute id or value not set.");
 				continue;
 			}
 			enforce.push_back(std::pair<std::string, std::string>(std::string(attr1->value()), std::string(attr2->value())));
@@ -886,7 +898,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr = parameterNode->first_attribute("ref");
 			if(!attr)
 			{
-				if(GD::debugLevel >= 3) std::cout << "Warning: Could not parse \"subset\". Attribute ref not set." << std::endl;
+				HelperFunctions::printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
 				continue;
 			}
 			subsetReference = std::string(attr->value());
@@ -896,7 +908,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr = parameterNode->first_attribute("function");
 			if(!attr)
 			{
-				if(GD::debugLevel >= 3) std::cout << "Warning: Could not parse \"subset\". Attribute ref not set." << std::endl;
+				HelperFunctions::printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
 				continue;
 			}
 			std::string function = std::string(attr->value());
@@ -910,15 +922,15 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 					xml_attribute<>* attr2 = defaultValueNode->first_attribute("value");
 					if(!attr1 || !attr2)
 					{
-						if(GD::debugLevel >= 3) std::cout << "Warning: Could not parse \"value\" (in default_values). Attribute id or value not set." << std::endl;
+						HelperFunctions::printWarning("Warning: Could not parse \"value\" (in default_values). Attribute id or value not set.");
 						continue;
 					}
 					defaultValues[function].push_back(std::pair<std::string, std::string>(std::string(attr1->value()), std::string(attr2->value())));
 				}
-				else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"default_values\": " << nodeName << std::endl;
+				else HelperFunctions::printWarning("Warning: Unknown node name for \"default_values\": " + nodeName);
 			}
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"paramset\": " << nodeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown node name for \"paramset\": " + nodeName);
 	}
 	for(std::vector<std::pair<std::string, std::string>>::iterator i = enforce.begin(); i != enforce.end(); ++i)
 	{
@@ -974,7 +986,7 @@ LinkRole::LinkRole(xml_node<>* node)
 			xml_attribute<>* attr = linkRoleNode->first_attribute("name");
 			if(attr != nullptr) sourceNames.push_back(attr->value());
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"link_roles\": " << nodeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown node name for \"link_roles\": " + nodeName);
 	}
 }
 
@@ -986,7 +998,7 @@ EnforceLink::EnforceLink(xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "value") value = attributeValue;
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"enforce_link - value\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"enforce_link - value\": " + attributeName);
 	}
 }
 
@@ -1010,13 +1022,13 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 			if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
 			else if(attributeValue == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
 			else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown ui flag for \"channel\": " << attributeValue << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
 		}
 		else if(attributeName == "direction")
 		{
 			if(attributeValue == "sender") direction = (Direction::Enum)(direction | Direction::Enum::sender);
 			else if(attributeValue == "receiver") direction = (Direction::Enum)(direction | Direction::Enum::receiver);
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown direction for \"channel\": " << attributeValue << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown direction for \"channel\": " + attributeValue);
 		}
 		else if(attributeName == "class") channelClass = attributeValue;
 		else if(attributeName == "type") type = attributeValue;
@@ -1033,7 +1045,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		{
 			if(attributeValue.size() != 2)
 			{
-				if(GD::debugLevel >= 3) std::cout << "Warning: pair_function does not consist of two functions." << std::endl;
+				HelperFunctions::printWarning("Warning: pair_function does not consist of two functions.");
 				continue;
 			}
 			pairFunction1 = attributeValue.substr(0, 1);
@@ -1047,7 +1059,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 				countFromSysinfo = HelperFunctions::getDouble(splitValue.first);
 				if(countFromSysinfo < 9)
 				{
-					if(GD::debugLevel >= 2) std::cerr << "Error: count_from_sysinfo has to be >= 9." << std::endl;
+					HelperFunctions::printError("Error: count_from_sysinfo has to be >= 9.");
 					countFromSysinfo = -1;
 				}
 			}
@@ -1056,12 +1068,12 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 				countFromSysinfoSize = HelperFunctions::getDouble(splitValue.second);
 				if(countFromSysinfoSize > 1)
 				{
-					if(GD::debugLevel >= 2) std::cerr << "Error: The size of count_from_sysinfo has to be <= 1." << std::endl;
+					HelperFunctions::printError("Error: The size of count_from_sysinfo has to be <= 1.");
 					countFromSysinfoSize = 1;
 				}
 			}
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"channel\": " << attributeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown attribute for \"channel\": " + attributeName);
 	}
 	for(xml_node<>* channelNode = node->first_node(); channelNode; channelNode = channelNode->next_sibling())
 	{
@@ -1070,11 +1082,11 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		{
 			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(channelNode));
 			if(parameterSets.find(parameterSet->type) == parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
-			else if(GD::debugLevel >= 2) std::cerr << "Error: Tried to add same parameter set type twice." << std::endl;
+			else HelperFunctions::printError("Error: Tried to add same parameter set type twice.");
 		}
 		else if(nodeName == "link_roles")
 		{
-			if(linkRoles && GD::debugLevel >=3) std::cout << "Warning: Multiple link roles are defined for channel " << index << "." << std::endl;
+			if(linkRoles) HelperFunctions::printWarning("Warning: Multiple link roles are defined for channel " + std::to_string(index) + ".");
 			linkRoles.reset(new LinkRole(channelNode));
 		}
 		else if(nodeName == "enforce_link")
@@ -1084,7 +1096,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 				enforceLinks.push_back(std::shared_ptr<EnforceLink>(new EnforceLink(enforceLinkNode)));
 			}
 		}
-		else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
+		else HelperFunctions::printWarning("Warning: Unknown node name for \"device\": " + nodeName);
 	}
 }
 
@@ -1167,20 +1179,20 @@ void Device::load(std::string xmlFilename)
 			doc.parse<parse_no_entity_translation | parse_validate_closing_tags>(buffer);
 			parseXML(doc.first_node("device"));
 		}
-		else std::cerr << "Error reading file " + xmlFilename + ": " + strerror(errno) << std::endl;
+		else HelperFunctions::printError("Error reading file " + xmlFilename + ": " + strerror(errno));
 		_loaded = true;
 	}
 	catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     doc.clear();
 }
@@ -1206,7 +1218,7 @@ void Device::parseXML(xml_node<>* node)
 					else if(element == "config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::config);
 					else if(element == "burst") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::burst);
 					else if(element == "always") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::always);
-					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown rx mode for \"device\": " << element << std::endl;
+					else HelperFunctions::printWarning("Warning: Unknown rx mode for \"device\": " + element);
 				}
 				if(rxModes == RXModes::Enum::none) rxModes = RXModes::Enum::always;
 				if(rxModes != RXModes::Enum::always) hasBattery = true;
@@ -1220,12 +1232,12 @@ void Device::parseXML(xml_node<>* node)
 				if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
 				else if(attributeValue == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
 				else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
-				else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown ui flag for \"channel\": " << attributeValue << std::endl;
+				else HelperFunctions::printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
 			}
 			else if(attributeName == "cyclic_timeout") cyclicTimeout = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "supports_aes") { if(attributeValue == "true") supportsAES = true; }
 			else if(attributeName == "peering_sysinfo_expect_channel") { if(attributeValue == "false") peeringSysinfoExpectChannel = false; }
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"device\": " << attributeName << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown attribute for \"device\": " + attributeName);
 		}
 
 		std::map<std::string, std::shared_ptr<ParameterSet>> parameterSetDefinitions;
@@ -1250,9 +1262,9 @@ void Device::parseXML(xml_node<>* node)
 					else if(attributeName == "type")
 					{
 						if(attributeValue == "master") parameterSet->type = ParameterSet::Type::Enum::master;
-						else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add parameter set of type \"" << attributeValue << "\" to device. That is not allowed." << std::endl;
+						else HelperFunctions::printError("Error: Tried to add parameter set of type \"" + attributeValue + "\" to device. That is not allowed.");
 					}
-					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset\": " << attributeName << std::endl;
+					else HelperFunctions::printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
 				}
 				parameterSet->init(node);
 			}
@@ -1264,7 +1276,7 @@ void Device::parseXML(xml_node<>* node)
 					std::string attributeValue(attr->value());
 					HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
 					if(attributeName == "id") parameterSet->id = attributeValue;
-					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown attribute for \"paramset_defs\": " << attributeName << std::endl;
+					else HelperFunctions::printWarning("Warning: Unknown attribute for \"paramset_defs\": " + attributeName);
 				}
 
 				for(xml_node<>* paramsetNode = node->first_node(); paramsetNode; paramsetNode = paramsetNode->next_sibling())
@@ -1275,7 +1287,7 @@ void Device::parseXML(xml_node<>* node)
 						std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(paramsetNode));
 						parameterSetDefinitions[parameterSet->id] = parameterSet;
 					}
-					else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"paramset_defs\": " << nodeName << std::endl;
+					else HelperFunctions::printWarning("Warning: Unknown node name for \"paramset_defs\": " + nodeName);
 				}
 			}
 			else if(nodeName == "channels")
@@ -1288,14 +1300,14 @@ void Device::parseXML(xml_node<>* node)
 					for(uint32_t i = index; i < index + channel->count; i++)
 					{
 						if(channels.find(i) == channels.end()) channels[i] = channel;
-						else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add channel with the same index twice. Index: " << i << std::endl;
+						else HelperFunctions::printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
 					}
 					if(channel->countFromSysinfo)
 					{
-						if(countFromSysinfoIndex > -1 && GD::debugLevel >= 2) std::cout << "Error: count_from_sysinfo is defined for two channels. That is not allowed." << std::endl;
-						if(std::floor(channel->countFromSysinfo) != channel->countFromSysinfo && GD::debugLevel >= 2)
+						if(countFromSysinfoIndex > -1) HelperFunctions::printError("Error: count_from_sysinfo is defined for two channels. That is not allowed.");
+						if(std::floor(channel->countFromSysinfo) != channel->countFromSysinfo)
 						{
-							std::cout << "Error: count_from_sysinfo has to start with index 0 of a byte." << std::endl;
+							HelperFunctions::printError("Error: count_from_sysinfo has to start with index 0 of a byte.");
 							continue;
 						}
 						countFromSysinfoIndex = (int32_t)channel->countFromSysinfo;
@@ -1319,7 +1331,7 @@ void Device::parseXML(xml_node<>* node)
 				team.reset(new Device());
 				team->parseXML(node);
 			}
-			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
+			else HelperFunctions::printWarning("Warning: Unknown node name for \"device\": " + nodeName);
 		}
 
 		if(!parameterSetDefinitions.empty())
@@ -1346,9 +1358,9 @@ void Device::parseXML(xml_node<>* node)
 		if(!channels[0]->parameterSets[ParameterSet::Type::Enum::master]) channels[0]->parameterSets[ParameterSet::Type::Enum::master] = std::shared_ptr<ParameterSet>(new ParameterSet());
 		if(parameterSet->type == ParameterSet::Type::Enum::master && !parameterSet->parameters.empty())
 		{
-			if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0 && GD::debugLevel >= 2)
+			if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0)
 			{
-				std::cout << "Error: Master parameter set of channnel 0 has to be empty." << std::endl;
+				HelperFunctions::printError("Error: Master parameter set of channnel 0 has to be empty.");
 			}
 			channels[0]->parameterSets[ParameterSet::Type::Enum::master] = parameterSet;
 		}
@@ -1370,15 +1382,15 @@ void Device::parseXML(xml_node<>* node)
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1396,15 +1408,15 @@ int32_t Device::getCountFromSysinfo(std::shared_ptr<BidCoSPacket> packet)
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -1428,20 +1440,20 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
 		for(uint32_t i = index + 1; i < index + countFromSysinfo; i++)
 		{
 			if(channels.find(i) == channels.end()) channels[i] = channel;
-			else if(GD::debugLevel >= 2) std::cout << "Error: Tried to add channel with the same index twice. Index: " << i << std::endl;
+			else HelperFunctions::printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
 		}
 	}
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

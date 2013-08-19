@@ -8,6 +8,7 @@ class Peer;
 #include <memory>
 #include <chrono>
 #include <map>
+#include <thread>
 
 #include "RPC/RPCVariable.h"
 
@@ -37,6 +38,10 @@ private:
     bool _unreach = false;
 	bool _stickyUnreach = false;
 	bool _lowbat = false;
+	std::thread _setConfigPendingThread;
+	std::thread _setUnreachThread;
+	std::thread _checkUnreachThread;
+	std::thread _endUnreachThread;
 
 	std::map<uint32_t, uint8_t> _errors;
 
@@ -46,6 +51,7 @@ private:
 	void setUnreachThread(bool value);
 	void checkUnreachThread();
     void endUnreachThread();
+    void stopThreads();
 };
 
 #endif /* SERVICEMESSAGES_H_ */

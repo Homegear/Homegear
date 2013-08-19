@@ -34,6 +34,7 @@ class HM_CC_TC : public HomeMaticDevice
         virtual void setUpBidCoSMessages();
         virtual void init();
     private:
+        const int32_t _dutyCycleTimeOffset = 3000;
         int32_t _currentDutyCycleDeviceAddress = -1;
         int32_t _temperature = 213;
         int32_t _setPointTemperature = 42;

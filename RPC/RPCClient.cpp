@@ -8,25 +8,25 @@ void RPCClient::invokeBroadcast(std::string server, std::string port, std::strin
 {
 	if(methodName.empty())
 	{
-		if(GD::debugLevel >= 2) std::cout << "Error: Could not invoke XML RPC method for server " << server << ". methodName is empty." << std::endl;
+		HelperFunctions::printError("Error: Could not invoke XML RPC method for server " + server + ". methodName is empty.");
 		return;
 	}
 	std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
 	if(result.empty())
 	{
-		if(GD::debugLevel >= 2) std::cout << "Error: Response for XML RPC method " << methodName << " sent to server " << server << " on port " << port << " is empty." << std::endl;
+		HelperFunctions::printError("Error: Response for XML RPC method " + methodName + " sent to server " + server + " on port " + port + " is empty.");
 		return;
 	}
 	std::shared_ptr<RPCVariable> returnValue = _xmlRpcDecoder.decodeResponse(result);
-	if(returnValue->errorStruct && GD::debugLevel >= 2)
+	if(returnValue->errorStruct)
 	{
 		if(returnValue->structValue->size() == 2)
 		{
-			std::cout << "Error reading response from XML RPC server " << server << " on port " << port << ". Fault code: " << returnValue->structValue->at(0)->integerValue << ". Fault string: " << returnValue->structValue->at(1)->stringValue << std::endl;
+			HelperFunctions::printError("Error reading response from XML RPC server " + server + " on port " + port + ". Fault code: " + std::to_string(returnValue->structValue->at(0)->integerValue) + ". Fault string: " + returnValue->structValue->at(1)->stringValue);
 		}
 		else
 		{
-			std::cout << "Error reading response from XML RPC server " << server << " on port " << port << ". Can't print fault struct. It is not well formed." << std::endl;
+			HelperFunctions::printError("Error reading response from XML RPC server " + server + " on port " + port + ". Can't print fault struct. It is not well formed.");
 		}
 	}
 }
@@ -60,14 +60,14 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		int32_t fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 		if(fileDescriptor == -1)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Could not create socket for XML RPC server " << server << " on port " << port << std::endl;
+			HelperFunctions::printError("Could not create socket for XML RPC server " + server + " on port " + port);
 			freeaddrinfo(serverInfo);
 			return "";
 		}
 
 		if(connect(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error: Could not connect to XML RPC server " << server << " on port " << port << std::endl;
+			HelperFunctions::printError("Error: Could not connect to XML RPC server " + server + " on port " + port);
 			freeaddrinfo(serverInfo);
 			close(fileDescriptor);
 			return "";
@@ -76,11 +76,11 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		freeaddrinfo(serverInfo);
 
 		std::string msg("POST /RPC2 HTTP/1.1\nUser_Agent: Homegear\nHost: " + server + ":" + port + "\nContent-Type: text/xml\nContent-Length: " + std::to_string(data.length()) + "\n\n" + data + "\n");
-		if(GD::debugLevel >= 5) std::cout << "Sending packet: " << msg << std::endl;
+		HelperFunctions::printDebug("Sending packet: " + msg);
 		int32_t sentBytes = send(fileDescriptor, msg.c_str(), msg.size(), MSG_NOSIGNAL);
 		if(sentBytes == 0)
 		{
-			if(GD::debugLevel >= 2) std::cout << "Error while sending data to XML RPC server " << server << " on port " << port << std::endl;
+			HelperFunctions::printError("Error sending data to XML RPC server " + server + " on port " + port);
 			close(fileDescriptor);
 			return "";
 		}
@@ -106,15 +106,15 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 			switch(receivedBytes)
 			{
 				case 0:
-					if(GD::debugLevel >= 2) std::cout << "Error: Reading from XML RPC server " << server << " on port " << port << " timed out." << std::endl;
+					HelperFunctions::printError("Error: Reading from XML RPC server " + server + " on port " + port + " timed out.");
 					break;
 				case -1:
-					if(GD::debugLevel >= 2) std::cout << "Error reading from XML RPC server " << server << " on port " << port << "." << std::endl;
+					HelperFunctions::printError("Error reading from XML RPC server " + server + " on port " + port + ".");
 					break;
 				case 1:
 					break;
 				default:
-					if(GD::debugLevel >= 2) std::cout << "Error reading from XML RPC server " << server << " on port " << port << "." << std::endl;
+					HelperFunctions::printError("Error reading from XML RPC server " + server + " on port " + port + ".");
 			}
 			if(receivedBytes != 1)
 			{
@@ -125,7 +125,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 			receivedBytes = recv(fileDescriptor, buffer, 1024, 0);
 			if(receivedBytes < 0)
 			{
-				if(GD::debugLevel >= 2) std::cout << "Error reading data from XML RPC server " << server << " on port " << port << "." << std::endl;
+				HelperFunctions::printError("Error reading data from XML RPC server " + server + " on port " + port + ".");
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
 				return "";
@@ -134,7 +134,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 			{
 				if(receivedBytes < 50)
 				{
-					if(GD::debugLevel >= 2) std::cout << "Error: Response packet from XML RPC server too small " << server << " on port " << port << "." << std::endl;
+					HelperFunctions::printError("Error: Response packet from XML RPC server too small " + server + " on port " + port + ".");
 					shutdown(fileDescriptor, 0);
 					close(fileDescriptor);
 					return "";
@@ -147,7 +147,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 				HelperFunctions::toLower(line);
 				if(line.size() < 15 || line.substr(0, 6) != "http/1" || line.substr(9, 6) != "200 ok")
 				{
-					if(GD::debugLevel >= 2) std::cout << "Error receiving response from XML RPC server " << server << " on port " << port << ". Response code: " << line << std::endl;
+					HelperFunctions::printError("Error receiving response from XML RPC server " + server + " on port " + port + ". Response code: " + line);
 					shutdown(fileDescriptor, 0);
 					close(fileDescriptor);
 					return "";
@@ -162,7 +162,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 						contentType = true;
 						if(line.substr(14, 8) != "text/xml")
 						{
-							if(GD::debugLevel >= 2) std::cout << "Error receiving response from XML RPC server " << server << " on port " << port << ". Content type is not text/xml but " << line.substr(14, 8) << "." << std::endl;
+							HelperFunctions::printError("Error receiving response from XML RPC server " + server + " on port " + port + ". Content type is not text/xml but " + line.substr(14, 8) + ".");
 							shutdown(fileDescriptor, 0);
 							close(fileDescriptor);
 							return "";
@@ -173,12 +173,12 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 						try	{ dataSize = std::stoll(line.substr(16)); } catch(...) {}
 						if(dataSize == 0)
 						{
-							if(GD::debugLevel >= 2) std::cout << "Error receiving response from XML RPC server " << server << " on port " << port << ". Content length is 0." << std::endl;
+							HelperFunctions::printError("Error receiving response from XML RPC server " + server + " on port " + port + ". Content length is 0.");
 							shutdown(fileDescriptor, 0);
 							close(fileDescriptor);
 							return "";
 						}
-						if(GD::debugLevel >= 5) std::cout << "Receiving packet with length " << dataSize << " from remote server " << server << " on port " << port << "." << std::endl;
+						HelperFunctions::printDebug("Debug: Receiving packet with length " + std::to_string(dataSize) + " from remote server " + server + " on port " + port + ".");
 					}
 					else if(contentType && line.size() > 5 && line.substr(0, 5) == "<?xml")
 					{
@@ -186,7 +186,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 						int32_t restLength = receivedBytes - pos;
 						if(restLength < 1)
 						{
-							if(GD::debugLevel >= 2) std::cout << "Error: No data in XML RPC packet." << std::endl;
+							HelperFunctions::printError("Error: No data in XML RPC packet.");
 							break;
 						}
 						if((unsigned)restLength >= dataSize)
@@ -208,7 +208,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 				}
 				if(response.size() + receivedBytes > dataSize)
 				{
-					if(GD::debugLevel >= 2) std::cout << "Error: Packet length is wrong." << std::endl;
+					HelperFunctions::printError("Error: Packet length is wrong.");
 					shutdown(fileDescriptor, 0);
 					close(fileDescriptor);
 					return "";
@@ -219,20 +219,20 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		}
 		shutdown(fileDescriptor, 0);
 		close(fileDescriptor);
-		if(GD::debugLevel >= 5) std::cout << "Debug: Received packet from server " << server << " on port " << port << ": " << std::endl << response << std::endl;
+		HelperFunctions::printDebug("Debug: Received packet from server " + server + " on port " + port + ":\n" + response);
 		return response;
     }
     catch(const std::exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-    	std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	std::cerr << "Unknown error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ << "." << std::endl;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }

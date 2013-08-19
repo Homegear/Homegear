@@ -53,15 +53,15 @@ void HM_SD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCo
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -115,7 +115,7 @@ bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
     }
     if(_filters.size() == 0) printPacket = true;
     std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
-    if(printPacket) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Received: " << packet->hexString() << '\n';
+    if(printPacket) HelperFunctions::printMessage("Received: " + packet->hexString());
     for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
     {
         std::string packetHex = packet->hexString();
@@ -130,7 +130,7 @@ bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
             std::string packetString(lengthHex + packetHex.substr(2, 2) + i->response);
             packet->import(packetString, false);
             std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
-            std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(timepoint.time_since_epoch()).count() << " Overwriting response." << '\n';
+            HelperFunctions::printMessage("Captured: " + packetHex + " Responding with: " + packet->hexString());
             GD::rfDevice->sendPacket(packet);
         }
     }
@@ -538,15 +538,15 @@ std::string HM_SD::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(const Exception& ex)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<": " << ex.what() << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        std::cerr << "Error in file " << __FILE__ " line " << __LINE__ << " in function " << __PRETTY_FUNCTION__ <<"." << std::endl;
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
