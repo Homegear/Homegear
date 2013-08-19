@@ -117,6 +117,53 @@ std::string HelperFunctions::getHexString(int32_t number)
 	return stringstream.str();
 }
 
+void HelperFunctions::copyFile(std::string source, std::string dest)
+{
+	try
+	{
+		int in_fd = open(source.c_str(), O_RDONLY);
+		if(in_fd == -1)
+		{
+			printError("Error copying file " + source + ": " + strerror(errno));
+			return;
+		}
+		int out_fd = open(dest.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP);
+		if(out_fd == -1)
+		{
+			printError("Error copying file " + source + ": " + strerror(errno));
+			return;
+		}
+		char buf[8192];
+
+		while (1) {
+			ssize_t result = read(in_fd, &buf[0], sizeof(buf));
+			if (!result) break;
+			if(result == -1)
+			{
+				printError("Error reading file " + source + ": " + strerror(errno));
+				return;
+			}
+			if(write(out_fd, &buf[0], result) != result)
+			{
+				printError("Error writing file " + dest + ": " + strerror(errno));
+				return;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HelperFunctions::printEx(std::string file, uint32_t line, std::string function, std::string what)
 {
 	if(!what.empty()) std::cerr << getTimeString() << " Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;

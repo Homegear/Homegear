@@ -14,9 +14,10 @@ Database::Database(std::string databasePath)
     openDatabase(databasePath);
 }
 
-void Database::init(std::string databasePath)
+void Database::init(std::string databasePath, std::string backupPath)
 {
 	if(_database) closeDatabase();
+	if(!backupPath.empty()) HelperFunctions::copyFile(databasePath, backupPath);
 	if(databasePath.size() == 0) return;
     openDatabase(databasePath);
 }

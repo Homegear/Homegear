@@ -95,6 +95,7 @@ public:
 		return bint.c[0] == 1;
 	}
 
+	static void copyFile(std::string source, std::string dest);
 	static int32_t getRandomNumber(int32_t min, int32_t max);
 
 	static void memcpyBigEndian(char* to, char* from, const uint32_t& length);

@@ -49,7 +49,7 @@ class Database
 		Database();
         Database(std::string databasePath);
         virtual ~Database();
-        void init(std::string databasePath);
+        void init(std::string databasePath, std::string backupPath = "");
         DataTable executeCommand(std::string command);
         DataTable executeCommand(std::string command, DataColumnVector& dataToEscape);
     protected:
