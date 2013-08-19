@@ -42,7 +42,7 @@ std::shared_ptr<RFDevice> RFDevice::create(std::string rfDeviceType)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -66,7 +66,7 @@ void RFDevice::addHomeMaticDevice(HomeMaticDevice* device)
     	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -91,7 +91,7 @@ void RFDevice::removeHomeMaticDevice(HomeMaticDevice* device)
     	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -121,7 +121,7 @@ void RFDevice::callCallback(std::shared_ptr<BidCoSPacket> packet)
     	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

@@ -26,7 +26,35 @@ ServiceMessages::ServiceMessages(Peer* peer, std::string serializedObject) : Ser
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+ServiceMessages::~ServiceMessages()
+{
+	dispose();
+}
+
+void ServiceMessages::dispose()
+{
+	try
+	{
+		if(_disposing) return;
+		_disposing = true;
+		stopThreads();
+		_peer = nullptr;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -49,7 +77,7 @@ void ServiceMessages::stopThreads()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -82,7 +110,7 @@ std::string ServiceMessages::serialize()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -97,6 +125,7 @@ bool ServiceMessages::set(std::string id, bool value)
 {
 	try
 	{
+		if(!_peer || _disposing) return false;
 		if(id == "UNREACH" && value != _unreach) _unreach = value;
 		else if(id == "STICKY_UNREACH" && value != _stickyUnreach) _stickyUnreach = value;
 		else if(id == "CONFIG_PENDING" && value != _configPending) _configPending = value;
@@ -118,7 +147,7 @@ bool ServiceMessages::set(std::string id, bool value)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -133,6 +162,7 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
 {
 	try
 	{
+		if(!_peer || _disposing) return;
 		if(id == "ERROR")
 		{
 			if(_errors.find(channel) != _errors.end() && value == 0) _errors.erase(channel);
@@ -145,7 +175,7 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -208,7 +238,7 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -223,6 +253,7 @@ void ServiceMessages::checkUnreach()
 {
 	try
 	{
+		if(!_peer || _disposing) return;
 		if(_checkUnreachThread.joinable()) _checkUnreachThread.join();
 		_checkUnreachThread = std::thread(&ServiceMessages::checkUnreachThread, this);
 	}
@@ -230,7 +261,7 @@ void ServiceMessages::checkUnreach()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -244,7 +275,7 @@ void ServiceMessages::checkUnreachThread()
 {
 	try
 	{
-		if(!_peer) return;
+		if(!_peer || _disposing) return;
 		uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		if(_peer->rpcDevice && _peer->rpcDevice->cyclicTimeout > 0 && (time - _peer->getLastPacketReceived()) > _peer->rpcDevice->cyclicTimeout && !_unreach)
 		{
@@ -273,7 +304,7 @@ void ServiceMessages::checkUnreachThread()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -287,6 +318,7 @@ void ServiceMessages::endUnreach()
 {
 	try
 	{
+		if(!_peer || _disposing) return;
 		if(_endUnreachThread.joinable()) _endUnreachThread.join();
 		_endUnreachThread = std::thread(&ServiceMessages::endUnreachThread, this);
 	}
@@ -294,7 +326,7 @@ void ServiceMessages::endUnreach()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -308,6 +340,7 @@ void ServiceMessages::endUnreachThread()
 {
 	try
 	{
+		if(!_peer || _disposing) return;
 		if(_unreach == true)
 		{
 			_unreach = false;
@@ -329,7 +362,7 @@ void ServiceMessages::endUnreachThread()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -343,6 +376,7 @@ void ServiceMessages::setConfigPending(bool value)
 {
 	try
 	{
+		if(!_peer || _disposing) return;
 		if(_setConfigPendingThread.joinable()) _setConfigPendingThread.join();
 		_setConfigPendingThread = std::thread(&ServiceMessages::setConfigPendingThread, this, value);
 	}
@@ -350,7 +384,7 @@ void ServiceMessages::setConfigPending(bool value)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -364,18 +398,10 @@ void ServiceMessages::setConfigPendingThread(bool value)
 {
 	try
 	{
-		if(!_peer) return;
+		if(!_peer || _disposing) return;
 		if(value != _configPending)
 		{
 			_configPending = value;
-			//Sleep for two seconds before setting values. This is necessary so HomeMatic Config does not think,
-			//the paremeters weren't received.
-			if(_configPending)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-				if(!_configPending) return; //Was changed during sleeping
-			}
-
 			if(_peer && _peer->valuesCentral.at(0).find("CONFIG_PENDING") != _peer->valuesCentral.at(0).end())
 			{
 				_peer->valuesCentral.at(0).at("CONFIG_PENDING").data.at(0) = (uint8_t)value;
@@ -392,7 +418,7 @@ void ServiceMessages::setConfigPendingThread(bool value)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -406,6 +432,7 @@ void ServiceMessages::setUnreach(bool value)
 {
 	try
 	{
+		if(!_peer || _disposing) return;
 		if(_setUnreachThread.joinable()) _setUnreachThread.join();
 		_setUnreachThread = std::thread(&ServiceMessages::setUnreachThread, this, value);
 	}
@@ -413,7 +440,7 @@ void ServiceMessages::setUnreach(bool value)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -427,7 +454,7 @@ void ServiceMessages::setUnreachThread(bool value)
 {
 	try
 	{
-		if(!_peer) return;
+		if(!_peer || _disposing) return;
 		if(value != _unreach)
 		{
 			if(value == true && _unreachResendCounter < 3 && _peer->rpcDevice && ((_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && !_peer->pendingBidCoSQueues->empty())
@@ -469,7 +496,7 @@ void ServiceMessages::setUnreachThread(bool value)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

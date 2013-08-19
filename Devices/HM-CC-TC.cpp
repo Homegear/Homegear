@@ -141,7 +141,7 @@ HM_CC_TC::~HM_CC_TC()
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -168,7 +168,7 @@ void HM_CC_TC::stopHMCCTCThreads()
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -216,7 +216,7 @@ void HM_CC_TC::unserialize(std::string serializedObject, uint8_t dutyCycleMessag
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -249,7 +249,7 @@ std::string HM_CC_TC::handleCLICommand(std::string command)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -347,7 +347,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		{
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(const Exception& ex)
+		catch(Exception& ex)
 		{
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
@@ -379,7 +379,7 @@ void HM_CC_TC::setDecalcification()
 			{
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(const Exception& ex)
+			catch(Exception& ex)
 			{
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
@@ -394,7 +394,7 @@ void HM_CC_TC::setDecalcification()
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -581,7 +581,7 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -713,7 +713,7 @@ void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> p
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

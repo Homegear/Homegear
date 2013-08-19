@@ -104,7 +104,7 @@ public:
 	static void printBinary(std::shared_ptr<std::vector<char>> data);
 	static std::string getHexString(const std::vector<uint8_t>& data);
 	static std::string getHexString(int32_t number);
-	static void printEx(std::string file, uint32_t line, std::string function, const char* what = nullptr);
+	static void printEx(std::string file, uint32_t line, std::string function, std::string what = "");
 	static void printCritical(std::string errorString);
 	static void printError(std::string errorString);
 	static void printWarning(std::string errorString);

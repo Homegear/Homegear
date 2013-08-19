@@ -62,7 +62,7 @@ void HM_CC_VD::unserialize(std::string serializedObject, uint8_t dutyCycleMessag
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -211,7 +211,7 @@ void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

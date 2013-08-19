@@ -71,7 +71,7 @@ void HM_LC_SWX_FM::unserialize(std::string serializedObject, uint8_t dutyCycleMe
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -118,7 +118,7 @@ void HM_LC_SWX_FM::handleStateChange(int32_t messageCounter, std::shared_ptr<Bid
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

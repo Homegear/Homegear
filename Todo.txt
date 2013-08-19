@@ -1,5 +1,5 @@
 - Delete peer from all devices it is linked to, when peer is reset
-- Replace all std::cerr with printEx or printError and all std::cout with printMessagte
+- put broadcastdeletedevices in thread
 
 When AES is working:
 - enforce $PEER.AES

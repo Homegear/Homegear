@@ -10,10 +10,10 @@ class Exception : std::exception
         /** Default constructor */
         Exception(std::string message);
 
-        const char* what() const noexcept { return _message; }
+        std::string what() { return _message; }
     protected:
     private:
-        const char* _message;
+        std::string _message;
 };
 
 #endif // EXCEPTION_H

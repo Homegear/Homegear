@@ -74,7 +74,7 @@ std::pair<std::string, std::string> HelperFunctions::split(std::string string, c
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -117,9 +117,9 @@ std::string HelperFunctions::getHexString(int32_t number)
 	return stringstream.str();
 }
 
-void HelperFunctions::printEx(std::string file, uint32_t line, std::string function, const char* what)
+void HelperFunctions::printEx(std::string file, uint32_t line, std::string function, std::string what)
 {
-	if(what) std::cerr << getTimeString() << " Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
+	if(!what.empty()) std::cerr << getTimeString() << " Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
 	else std::cerr << getTimeString() << " Unknown error in file " << file << " line " << line << " in function " << function << "." << std::endl;
 }
 

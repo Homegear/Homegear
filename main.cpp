@@ -25,6 +25,8 @@
 #include "GD.h"
 #include "HelperFunctions.h"
 
+bool _startAsDaemon = false;
+
 void exceptionHandler(int32_t signalNumber) {
   void *stackTrace[30];
   size_t length = backtrace(stackTrace, 30);
@@ -35,23 +37,49 @@ void exceptionHandler(int32_t signalNumber) {
   kill(getpid(), signalNumber); //Generate core dump
 }
 
-void killHandler(int32_t signalNumber)
+void terminate(int32_t signalNumber)
 {
 	try
 	{
-		HelperFunctions::printMessage("Stopping Homegear...");
-		GD::cliServer.stop();
-		GD::rpcServer.stop();
-		GD::rpcClient.reset();
-		GD::rfDevice->stopListening();
-		GD::devices.save();
-		exit(0);
+		if(signalNumber != 15)
+		{
+			HelperFunctions::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
+			HelperFunctions::printCritical("Critical: Trying to save data to " + GD::settings.databasePath() + ".crash");
+			GD::db.init(GD::settings.databasePath() + ".crash");
+			GD::devices.save(true);
+			signal(signalNumber, SIG_DFL);
+			kill(getpid(), signalNumber); //Generate core dump
+		}
+		else
+		{
+			HelperFunctions::printMessage("Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")...");
+			if(_startAsDaemon)
+			{
+				HelperFunctions::printInfo("Stopping CLI server...");
+				GD::cliServer.stop();
+			}
+			HelperFunctions::printInfo( "Stopping RPC server...");
+			GD::rpcServer.stop();
+			HelperFunctions::printInfo( "Stopping RPC client...");
+			GD::rpcClient.reset();
+			HelperFunctions::printInfo( "Closing RF device...");
+			GD::rfDevice->stopListening();
+			HelperFunctions::printInfo( "Saving devices...");
+			GD::devices.save();
+			HelperFunctions::printMessage("Shutdown complete.");
+			if(_startAsDaemon)
+			{
+				fclose(stdout);
+				fclose(stderr);
+			}
+			exit(0);
+		}
 	}
 	catch(const std::exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -117,7 +145,7 @@ void startDaemon()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -131,7 +159,6 @@ int main(int argc, char* argv[])
 {
     try
     {
-    	bool startAsDaemon = false;
     	for(int32_t i = 1; i < argc; i++)
     	{
     		std::string arg(argv[i]);
@@ -169,7 +196,7 @@ int main(int argc, char* argv[])
     		}
     		else if(arg == "-d")
     		{
-    			startAsDaemon = true;
+    			_startAsDaemon = true;
     		}
     		else if(arg == "-r")
     		{
@@ -221,7 +248,7 @@ int main(int argc, char* argv[])
 		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
 		GD::settings.load(GD::configPath + "main.conf");
 
-    	if(startAsDaemon) startDaemon();
+    	if(_startAsDaemon) startDaemon();
 
     	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
 		throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
@@ -237,8 +264,9 @@ int main(int argc, char* argv[])
     	//thread apply all bt
 
     	//Enable printing of backtraces
-    	signal(SIGSEGV, exceptionHandler);
-    	signal(SIGTERM, killHandler);
+    	signal(SIGABRT, terminate);
+    	signal(SIGSEGV, terminate);
+    	signal(SIGTERM, terminate);
 
     	//Create PID file
     	try
@@ -260,7 +288,7 @@ int main(int argc, char* argv[])
 		{
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(const Exception& ex)
+		catch(Exception& ex)
 		{
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
@@ -269,7 +297,7 @@ int main(int argc, char* argv[])
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 
-		if(startAsDaemon)
+		if(_startAsDaemon)
 		{
 			std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout);
 			std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr);
@@ -286,7 +314,7 @@ int main(int argc, char* argv[])
         GD::rpcDevices.load();
         HelperFunctions::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
-        if(startAsDaemon)
+        if(_startAsDaemon)
         {
         	HelperFunctions::printInfo("Starting CLI server...");
         	GD::cliServer.start();
@@ -299,7 +327,7 @@ int main(int argc, char* argv[])
 		char* inputBuffer;
         std::string input;
         uint32_t bytes;
-        if(startAsDaemon)
+        if(_startAsDaemon)
         	while(true) std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         else
         {
@@ -316,35 +344,14 @@ int main(int argc, char* argv[])
 			}
         }
 
-        HelperFunctions::printMessage("Shutting down...");
-
-        //Stop rpc server and client before saving
-        if(startAsDaemon)
-        {
-        	HelperFunctions::printInfo("Stopping CLI server...");
-        	GD::cliServer.stop();
-        }
-        HelperFunctions::printInfo( "Stopping RPC server...");
-        GD::rpcServer.stop();
-        HelperFunctions::printInfo( "Stopping RPC client...");
-        GD::rpcClient.reset();
-        HelperFunctions::printInfo( "Closing RF device...");
-        GD::rfDevice->stopListening();
-        HelperFunctions::printInfo( "Saving devices...");
-        GD::devices.save();
-        HelperFunctions::printInfo("Shutdown complete.");
-        if(startAsDaemon)
-        {
-        	fclose(stdout);
-        	fclose(stderr);
-        }
+        terminate(15);
         return 0;
     }
     catch(const std::exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}

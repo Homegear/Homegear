@@ -11,7 +11,7 @@ void BidCoSMessages::add(std::shared_ptr<BidCoSMessage> message)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -45,7 +45,7 @@ std::shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, std::shar
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -69,7 +69,7 @@ std::shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, int32_t m
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}

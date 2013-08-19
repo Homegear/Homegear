@@ -36,6 +36,9 @@ protected:
 	std::shared_ptr<BidCoSMessage> _message;
 	std::shared_ptr<BidCoSPacket> _packet;
 public:
+	bool stealthy = false;
+	bool forceResend= false;
+
 	BidCoSQueueEntry() {}
 	virtual ~BidCoSQueueEntry() {}
 	QueueEntryType getType() { return _type; }
@@ -67,10 +70,11 @@ class BidCoSQueue
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
         void resend(uint32_t threadId, bool burst);
-        void startResendThread();
+        void startResendThread(bool force);
         void stopResendThread();
         void popWaitThread(uint32_t threadId, uint32_t waitingTime);
         void stopPopWaitThread();
+        void nextQueueEntry();
     public:
         uint32_t retries = 4;
         uint32_t id = 0;
@@ -85,10 +89,10 @@ class BidCoSQueue
         std::deque<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
 
-        void push(std::shared_ptr<BidCoSMessage> message);
-        void push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet);
-        void push_front(std::shared_ptr<BidCoSPacket> packet);
-        void push(std::shared_ptr<BidCoSPacket> packet);
+        void push(std::shared_ptr<BidCoSMessage> message, bool forceResend = false);
+        void push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet, bool forceResend = false);
+        void pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy = false, bool popBeforePushing = false, bool forceResend = false);
+        void push(std::shared_ptr<BidCoSPacket> packet, bool forceResend = false, bool stealthy = false);
         void push(std::shared_ptr<PendingBidCoSQueues>& pendingBidCoSQueues);
         void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool popImmediately, bool clearPendingQueues);
         BidCoSQueueEntry* front() { return &_queue.front(); }
@@ -97,7 +101,7 @@ class BidCoSQueue
         bool isEmpty() { return _queue.empty() && (!_pendingQueues || _pendingQueues->empty()); }
         bool pendingQueuesEmpty() { return (!_pendingQueues || _pendingQueues->empty()); }
         void clear();
-        void send(std::shared_ptr<BidCoSPacket> packet);
+        void send(std::shared_ptr<BidCoSPacket> packet, bool stealthy);
         void keepAlive();
         void longKeepAlive();
         std::string serialize();

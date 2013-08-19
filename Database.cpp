@@ -16,6 +16,7 @@ Database::Database(std::string databasePath)
 
 void Database::init(std::string databasePath)
 {
+	if(_database) closeDatabase();
 	if(databasePath.size() == 0) return;
     openDatabase(databasePath);
 }
@@ -93,7 +94,7 @@ void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -154,7 +155,7 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -190,7 +191,7 @@ DataTable Database::executeCommand(std::string command)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

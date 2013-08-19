@@ -33,7 +33,7 @@ void HomeMaticCentral::init()
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -117,7 +117,7 @@ void HomeMaticCentral::worker()
 			_peersMutex.unlock();
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(const Exception& ex)
+		catch(Exception& ex)
 		{
 			_peersMutex.unlock();
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -165,7 +165,7 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -192,7 +192,7 @@ void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -218,7 +218,7 @@ void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<Bid
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -450,7 +450,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				_peersMutex.unlock();
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(const Exception& ex)
+			catch(Exception& ex)
 			{
 				_peersMutex.unlock();
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -507,7 +507,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -533,7 +533,7 @@ int32_t HomeMaticCentral::getUniqueAddress(int32_t seed)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -570,7 +570,7 @@ std::string HomeMaticCentral::getUniqueSerialNumber(std::string seedPrefix, uint
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -635,7 +635,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -771,7 +771,7 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -812,7 +812,7 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t c
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -859,7 +859,7 @@ void HomeMaticCentral::deletePeer(int32_t address)
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -908,7 +908,7 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -986,7 +986,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1146,9 +1146,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			{
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 				{
-					std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
-					pendingQueue->noSending = true;
-					pendingQueue->serviceMessages = peer->serviceMessages;
+					std::shared_ptr<BidCoSQueue> pendingQueue;
 					int32_t channel = i->first;
 					//Walk through all lists to request master config if necessary
 					if(peer->rpcDevice->channels.at(channel)->parameterSets.find(RPC::ParameterSet::Type::Enum::master) != peer->rpcDevice->channels.at(channel)->parameterSets.end())
@@ -1156,6 +1154,9 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 						std::shared_ptr<RPC::ParameterSet> masterSet = peer->rpcDevice->channels.at(channel)->parameterSets[RPC::ParameterSet::Type::Enum::master];
 						for(std::map<uint32_t, uint32_t>::iterator k = masterSet->lists.begin(); k != masterSet->lists.end(); ++k)
 						{
+							pendingQueue.reset(new BidCoSQueue(BidCoSQueueType::CONFIG));
+							pendingQueue->noSending = true;
+							pendingQueue->serviceMessages = peer->serviceMessages;
 							payload.push_back(channel);
 							payload.push_back(0x04);
 							payload.push_back(0);
@@ -1168,11 +1169,16 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 							pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
 							payload.clear();
 							_messageCounter[0]++;
+							peer->serviceMessages->setConfigPending(true);
+							peer->pendingBidCoSQueues->push(pendingQueue);
 						}
 					}
 
 					if(peer->rpcDevice->channels[channel]->linkRoles && (!peer->rpcDevice->channels[channel]->linkRoles->sourceNames.empty() || !peer->rpcDevice->channels[channel]->linkRoles->targetNames.empty()))
 					{
+						pendingQueue.reset(new BidCoSQueue(BidCoSQueueType::CONFIG));
+						pendingQueue->noSending = true;
+						pendingQueue->serviceMessages = peer->serviceMessages;
 						payload.push_back(channel);
 						payload.push_back(0x03);
 						configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
@@ -1180,10 +1186,6 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 						pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
 						payload.clear();
 						_messageCounter[0]++;
-					}
-
-					if(!pendingQueue->isEmpty())
-					{
 						peer->serviceMessages->setConfigPending(true);
 						peer->pendingBidCoSQueues->push(pendingQueue);
 					}
@@ -1201,13 +1203,12 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 
 		if(peer->pendingBidCoSQueues && !peer->pendingBidCoSQueues->empty()) HelperFunctions::printInfo("Info: Pushing pending queues.");
 		queue->push(peer->pendingBidCoSQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
-
 	}
 	catch(const std::exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1259,7 +1260,7 @@ void HomeMaticCentral::sendRequestConfig(int32_t address, uint8_t localChannel, 
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1329,7 +1330,13 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				//Peer has no team yet so set it needs to be defined
 				setTeam(peer->getSerialNumber(), localChannel, "", 0, true, false);
 			}
-			if(packet->controlByte() & 0x20) sendOK(packet->messageCounter(), peer->address);
+			if(packet->controlByte() & 0x20)
+			{
+				std::vector<uint8_t> payload;
+				payload.push_back(0x00);
+				std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x80, 0x02, _address, peer->address, payload));
+				queue->pushFront(ok, false, true, true);
+			}
 			if(packet->payload()->size() >= 2 && packet->payload()->at(0) == 0x03 && packet->payload()->at(1) == 0x00)
 			{
 				//multiPacketEnd was received unexpectedly. Because of the delay it was received after the peer request packet was sent.
@@ -1343,7 +1350,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 				if(queue)
 				{
-					queue->push_front(sentPacket);
+					queue->pushFront(sentPacket);
 					return;
 				}
 			}
@@ -1449,22 +1456,30 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 						}
 					}
 				}
-				if(!multiPacket && (packet->controlByte() & 0x20)) sendOK(packet->messageCounter(), peer->address);
 			}
 			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, "", -1, parametersToEnforce, true, true);
 		}
 		if((continuousData || multiPacket) && !multiPacketEnd && (packet->controlByte() & 0x20)) //Multiple config response packets
 		{
 			//StealthyOK does not set sentPacket
-			sendStealthyOK(packet->messageCounter(), packet->senderAddress());
+			std::vector<uint8_t> payload;
+			payload.push_back(0x00);
+			std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x80, 0x02, _address, packet->senderAddress(), payload));
+			queue->pushFront(ok, true, false, true);
 			//No popping from queue to stay at the same position until all response packets are received!!!
 			//The popping is done with the last packet, which has no BIDI control bit set. See https://sathya.de/HMCWiki/index.php/Examples:Message_Counter
 		}
 		else
 		{
 			//Sometimes the peer requires an ok after the end packet
-			if(multiPacketEnd && (packet->controlByte() & 0x20)) sendOK(packet->messageCounter(), packet->senderAddress());
-			queue->pop(); //Messages are not popped by default.
+			if((multiPacketEnd || !multiPacket) && (packet->controlByte() & 0x20))
+			{
+				std::vector<uint8_t> payload;
+				payload.push_back(0x00);
+				std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x80, 0x02, _address, packet->senderAddress(), payload));
+				queue->pushFront(ok, false, true, true);
+			}
+			else queue->pop(); //Messages are not popped by default.
 		}
 		if(queue->isEmpty())
 		{
@@ -1479,7 +1494,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1527,7 +1542,7 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<Peer> peer, uint32_t channel)
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1563,7 +1578,7 @@ void HomeMaticCentral::addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1601,7 +1616,7 @@ void HomeMaticCentral::addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1650,7 +1665,7 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<Peer> peer)
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1700,7 +1715,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						_peersMutex.unlock();
 						HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 					}
-					catch(const Exception& ex)
+					catch(Exception& ex)
 					{
 						_peersMutex.unlock();
 						HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1744,7 +1759,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 								_peersMutex.unlock();
 								HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 							}
-							catch(const Exception& ex)
+							catch(Exception& ex)
 							{
 								_peersMutex.unlock();
 								HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1776,7 +1791,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1808,7 +1823,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addDevice(std::string serial
 		{
 			packet->setMessageCounter(_messageCounter[0]);
 			_messageCounter[0]++;
-			std::thread t(&HomeMaticDevice::sendPacket, this, packet);
+			std::thread t(&HomeMaticDevice::sendPacket, this, packet, false);
 			t.detach();
 			std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 			peer = getPeer(serialNumber);
@@ -1830,7 +1845,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addDevice(std::string serial
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2072,7 +2087,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2172,7 +2187,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2218,7 +2233,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2259,7 +2274,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2297,7 +2312,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listTeams()
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2407,7 +2422,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2431,7 +2446,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescription(std::st
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2452,7 +2467,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getInstallMode()
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2490,7 +2505,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setLinkInfo(std::string send
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2520,7 +2535,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinkInfo(std::string send
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(const Exception& ex)
+	catch(Exception& ex)
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
@@ -2543,7 +2558,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinkPeers(std::string ser
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2577,7 +2592,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialN
 				_peersMutex.unlock();
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(const Exception& ex)
+			catch(Exception& ex)
 			{
 				_peersMutex.unlock();
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2601,7 +2616,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialN
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2624,7 +2639,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::string se
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2640,14 +2655,23 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string seri
 	try
 	{
 		std::shared_ptr<Peer> peer(getPeer(serialNumber));
-		if(peer) return peer->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
+		if(peer)
+		{
+			std::shared_ptr<RPC::RPCVariable> result = peer->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
+			if(result->errorStruct) return result;
+			while(_bidCoSQueueManager.get(peer->address))
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+			return result;
+		}
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2679,7 +2703,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string seri
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2702,7 +2726,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2733,7 +2757,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getServiceMessages()
 		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2758,7 +2782,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getValue(std::string serialN
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2781,7 +2805,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setValue(std::string serialN
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2815,7 +2839,7 @@ void HomeMaticCentral::pairingModeTimer(int32_t duration, bool debugOutput)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2845,7 +2869,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteMetadata(std::string o
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -2875,7 +2899,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool on, int3
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }

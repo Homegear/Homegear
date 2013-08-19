@@ -22,7 +22,7 @@ public:
 	std::shared_ptr<HomeMaticCentral> getCentral();
 	std::vector<std::shared_ptr<HomeMaticDevice>> getDevices();
 	void load();
-	void save();
+	void save(bool crash = false);
 	void stopThreads();
 	void stopThreadsThread(std::shared_ptr<HomeMaticDevice> device);
 	std::string handleCLICommand(std::string& command);

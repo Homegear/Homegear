@@ -18,12 +18,13 @@ public:
 
 	ServiceMessages(Peer* peer) { _peer = peer; }
 	ServiceMessages(Peer* peer, std::string serializedObject);
-	virtual ~ServiceMessages() { _peer = nullptr; }
+	virtual ~ServiceMessages();
 
 	std::string serialize();
 	bool set(std::string id, bool value);
 	void set(std::string id, uint8_t value, uint32_t channel);
 	std::shared_ptr<RPC::RPCVariable> get();
+	void dispose();
 
 	void setConfigPending(bool value);
 	bool getConfigPending() { return _configPending; }
@@ -33,6 +34,7 @@ public:
 	void checkUnreach();
     void endUnreach();
 private:
+    bool _disposing = false;
     bool _configPending = false;
     int32_t _unreachResendCounter = 0;
     bool _unreach = false;

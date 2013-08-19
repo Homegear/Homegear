@@ -21,9 +21,13 @@ BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device) 
 		uint32_t queueSize = std::stol(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		for(uint32_t i = 0; i < queueSize; i++)
 		{
+			_queueMutex.lock();
 			_queue.push_back(BidCoSQueueEntry());
 			BidCoSQueueEntry* entry = &_queue.back();
+			_queueMutex.unlock();
 			entry->setType((QueueEntryType)std::stoi(serializedObject.substr(pos, 1), 0, 16)); pos += 1;
+			entry->stealthy = std::stoi(serializedObject.substr(pos, 1)); pos += 1;
+			entry->forceResend = std::stoi(serializedObject.substr(pos, 1)); pos += 1;
 			int32_t packetExists = std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
 			if(packetExists)
 			{
@@ -48,18 +52,21 @@ BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device) 
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	clear();
     	_pendingQueues.reset();
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	clear();
     	_pendingQueues.reset();
     }
     catch(...)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	clear();
     	_pendingQueues.reset();
@@ -77,7 +84,7 @@ BidCoSQueue::~BidCoSQueue()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -158,7 +165,7 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 						HelperFunctions::printDebug("Invoking outgoing message handler from BidCoSQueue.");
 						send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 					}
-					else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket());
+					else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), _queue.front().stealthy);
 					send.detach();
 				}
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread
@@ -166,8 +173,10 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 				if(_resendCounter < (retries - 2)) //This actually means that the message will be sent three times all together if there is no response
 				{
 					_resendCounter++;
-					send = std::thread(&BidCoSQueue::startResendThread, this);
+					_queueMutex.lock();
+					send = std::thread(&BidCoSQueue::startResendThread, this, _queue.front().forceResend);
 					send.detach();
+					_queueMutex.unlock();
 				}
 				else _resendCounter = 0;
 			}
@@ -176,50 +185,61 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet)
+void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool forceResend)
 {
 	try
 	{
 		BidCoSQueueEntry entry;
 		entry.setPacket(packet, true);
+		entry.stealthy = stealthy;
+		entry.forceResend = forceResend;
+		_queueMutex.lock();
 		if(!noSending && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 		{
 			_queue.push_back(entry);
+			_queueMutex.unlock();
 			_resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSQueue::send, this, entry.getPacket());
+				std::thread send(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
 				send.detach();
-				startResendThread();
+				startResendThread(forceResend);
 			}
 		}
 		else
 		{
 			_queue.push_back(entry);
+			_queueMutex.unlock();
 		}
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -228,53 +248,70 @@ void BidCoSQueue::push(std::shared_ptr<PendingBidCoSQueues>& pendingQueues)
 {
 	try
 	{
+		_queueMutex.lock();
 		_pendingQueues = pendingQueues;
-		if(_queue.empty()) pushPendingQueue();
+		if(_queue.empty())
+		{
+			 _queueMutex.unlock();
+			pushPendingQueue();
+		}
+		else  _queueMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
+		 _queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	 _queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	 _queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+
 }
 
 void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmediately, bool clearPendingQueues)
 {
 	try
 	{
+		if(!pendingQueue) return;
+		_queueMutex.lock();
 		if(!_pendingQueues) _pendingQueues.reset(new PendingBidCoSQueues());
 		if(clearPendingQueues) _pendingQueues->clear();
-		if(!pendingQueue) return;
 		_pendingQueues->push(pendingQueue);
+		_queueMutex.unlock();
 		pushPendingQueue();
+		_queueMutex.lock();
 		if(popImmediately)
 		{
 			_pendingQueues->pop();
 			_workingOnPendingQueue = false;
 		}
+		_queueMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet)
+void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet, bool forceResend)
 {
 	try
 	{
@@ -283,37 +320,44 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 		BidCoSQueueEntry entry;
 		entry.setMessage(message, true);
 		entry.setPacket(packet, false);
+		entry.forceResend = forceResend;
+		_queueMutex.lock();
 		if(!noSending && entry.getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 		{
 			_queue.push_back(entry);
+			_queueMutex.unlock();
 			_resendCounter = 0;
 			if(!noSending)
 			{
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				send.detach();
-				startResendThread();
+				startResendThread(forceResend);
 			}
 		}
 		else
 		{
 			_queue.push_back(entry);
+			_queueMutex.unlock();
 		}
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message)
+void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
 {
 	try
 	{
@@ -321,68 +365,94 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message)
 		if(message == nullptr) return;
 		BidCoSQueueEntry entry;
 		entry.setMessage(message, true);
+		entry.forceResend = forceResend;
+		_queueMutex.lock();
 		if(!noSending && entry.getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 		{
 			_queue.push_back(entry);
+			_queueMutex.unlock();
 			_resendCounter = 0;
 			if(!noSending)
 			{
 				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				send.detach();
-				startResendThread();
+				startResendThread(forceResend);
 			}
 		}
 		else
 		{
 			_queue.push_back(entry);
+			_queueMutex.unlock();
 		}
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void BidCoSQueue::push_front(std::shared_ptr<BidCoSPacket> packet)
+void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool popBeforePushing, bool forceResend)
 {
-        try
-        {
-                BidCoSQueueEntry entry;
-                entry.setPacket(packet, true);
-                if(!noSending)
-                {
-                        _queue.push_front(entry);
-                        _resendCounter = 0;
-                        if(!noSending)
-                        {
-                                std::thread send(&BidCoSQueue::send, this, entry.getPacket());
-                                send.detach();
-                                startResendThread();
-                        }
-                }
-                else
-                {
-                        _queue.push_front(entry);
-                }
-        }
-        catch(const std::exception& ex)
+	try
+	{
+		keepAlive();
+		if(popBeforePushing)
+		{
+			HelperFunctions::printDebug("Popping from BidCoSQueue and pushing packet at the front: " + std::to_string(id));
+			if(_popWaitThread && _popWaitThread->joinable()) _stopPopWaitThread = true;
+			if(_resendThread && _resendThread->joinable()) _stopResendThread = true;
+			_queueMutex.lock();
+			_queue.pop_front();
+			_queueMutex.unlock();
+		}
+		BidCoSQueueEntry entry;
+		entry.setPacket(packet, true);
+		entry.stealthy = stealthy;
+		entry.forceResend = forceResend;
+		if(!noSending)
+		{
+			_queueMutex.lock();
+			_queue.push_front(entry);
+			_queueMutex.unlock();
+			_resendCounter = 0;
+			if(!noSending)
+			{
+				std::thread send(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
+				send.detach();
+				startResendThread(forceResend);
+			}
+		}
+		else
+		{
+			_queueMutex.lock();
+			_queue.push_front(entry);
+			_queueMutex.unlock();
+		}
+	}
+	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_queueMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -404,7 +474,7 @@ void BidCoSQueue::stopPopWaitThread()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -426,7 +496,7 @@ void BidCoSQueue::popWait(uint32_t waitingTime)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -456,7 +526,7 @@ void BidCoSQueue::popWaitThread(uint32_t threadId, uint32_t waitingTime)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -466,19 +536,19 @@ void BidCoSQueue::popWaitThread(uint32_t threadId, uint32_t waitingTime)
     }
 }
 
-void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet)
+void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet, bool stealthy)
 {
 	try
 	{
 		if(noSending) return;
-		if(device) device->sendPacket(packet);
+		if(device) device->sendPacket(packet, stealthy);
 		else HelperFunctions::printError("Error: Device pointer of queue " + std::to_string(id) + " is null.");
 	}
 	catch(const std::exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -505,7 +575,7 @@ void BidCoSQueue::stopResendThread()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -515,7 +585,7 @@ void BidCoSQueue::stopResendThread()
     }
 }
 
-void BidCoSQueue::startResendThread()
+void BidCoSQueue::startResendThread(bool force)
 {
 	try
 	{
@@ -533,7 +603,7 @@ void BidCoSQueue::startResendThread()
 		else throw Exception("Packet or message pointer is empty.");
 
 		_queueMutex.unlock();
-		if(!(controlByte & 0x02) && (controlByte & 0x20)) //Resend when no response?
+		if((!(controlByte & 0x02) && (controlByte & 0x20)) || force) //Resend when no response?
 		{
 			stopResendThread();
 			bool burst = controlByte & 0x10;
@@ -542,14 +612,17 @@ void BidCoSQueue::startResendThread()
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -562,13 +635,12 @@ void BidCoSQueue::clear()
 		_queueMutex.lock();
 		if(_pendingQueues) _pendingQueues->clear();
 		_queue.clear();
-		_queueMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -576,6 +648,7 @@ void BidCoSQueue::clear()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queueMutex.unlock();
 }
 
 void BidCoSQueue::sleepAndPushPendingQueue()
@@ -589,7 +662,7 @@ void BidCoSQueue::sleepAndPushPendingQueue()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -603,15 +676,25 @@ void BidCoSQueue::pushPendingQueue()
 {
 	try
 	{
-		if(!_pendingQueues || _pendingQueues->empty()) return;
+		_queueMutex.lock();
+		if(!_pendingQueues || _pendingQueues->empty())
+		{
+			_queueMutex.unlock();
+			return;
+		}
 		while(!_pendingQueues->empty() && _pendingQueues->front()->isEmpty())
 		{
 			HelperFunctions::printDebug("Debug: Empty queue was pushed.");
 			_pendingQueues->pop();
 		}
-		if(_pendingQueues->empty()) return;
+		if(_pendingQueues->empty())
+		{
+			_queueMutex.unlock();
+			return;
+		}
 		std::shared_ptr<BidCoSQueue> queue;
 		queue = _pendingQueues->front();
+		_queueMutex.unlock();
 		_queueType = queue->getQueueType();
 		serviceMessages = queue->serviceMessages;
 		queueEmptyCallback = queue->queueEmptyCallback;
@@ -621,40 +704,52 @@ void BidCoSQueue::pushPendingQueue()
 		{
 			if(!noSending && i->getType() == QueueEntryType::MESSAGE && i->getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 			{
+				_queueMutex.lock();
 				_queue.push_back(*i);
+				_queueMutex.unlock();
 				_resendCounter = 0;
 				if(!noSending)
 				{
 					std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
 					send.detach();
-					startResendThread();
+					startResendThread(i->forceResend);
 				}
 			}
 			else if(!noSending && i->getType() == QueueEntryType::PACKET && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 			{
+				_queueMutex.lock();
 				_queue.push_back(*i);
+				_queueMutex.unlock();
 				_resendCounter = 0;
 				if(!noSending)
 				{
-					std::thread send(&BidCoSQueue::send, this, i->getPacket());
+					std::thread send(&BidCoSQueue::send, this, i->getPacket(), i->stealthy);
 					send.detach();
-					startResendThread();
+					startResendThread(i->forceResend);
 				}
 			}
-			else _queue.push_back(*i);
+			else
+			{
+				_queueMutex.lock();
+				_queue.push_back(*i);
+				_queueMutex.unlock();
+			}
 		}
 		_workingOnPendingQueue = true;
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -669,17 +764,11 @@ void BidCoSQueue::longKeepAlive()
 	if(lastAction != nullptr) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 5000;
 }
 
-void BidCoSQueue::pop()
+void BidCoSQueue::nextQueueEntry()
 {
 	try
 	{
-		keepAlive();
-		HelperFunctions::printDebug("Popping from BidCoSQueue: " + std::to_string(id));
-		if(_popWaitThread && _popWaitThread->joinable()) _stopPopWaitThread = true;
-		if(_resendThread && _resendThread->joinable()) _stopResendThread = true;
-		if(_queue.empty()) return;
 		_queueMutex.lock();
-		_queue.pop_front();
 		if(_queue.empty()) {
 			if(queueEmptyCallback && callbackParameter) queueEmptyCallback(callbackParameter);
 			if(_workingOnPendingQueue) _pendingQueues->pop();
@@ -715,10 +804,11 @@ void BidCoSQueue::pop()
 				{
 					send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 				}
-				else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket());
+				else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), _queue.front().stealthy);
 				send.detach();
+				bool forceResend = _queue.front().forceResend;
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread()
-				startResendThread();
+				startResendThread(forceResend);
 			}
 			else _queueMutex.unlock();
 		}
@@ -726,14 +816,53 @@ void BidCoSQueue::pop()
 	}
 	catch(const std::exception& ex)
     {
+		_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_queueMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void BidCoSQueue::pop()
+{
+	try
+	{
+		keepAlive();
+		HelperFunctions::printDebug("Popping from BidCoSQueue: " + std::to_string(id));
+		if(_popWaitThread && _popWaitThread->joinable()) _stopPopWaitThread = true;
+		if(_resendThread && _resendThread->joinable()) _stopResendThread = true;
+		if(_queue.empty()) return;
+		_queueMutex.lock();
+		_queue.pop_front();
+		if(GD::debugLevel >= 5 && !_queue.empty())
+		{
+			if(_queue.front().getType() == QueueEntryType::PACKET && _queue.front().getPacket()) HelperFunctions::printDebug("Packet now at front of queue: " + _queue.front().getPacket()->hexString());
+			else if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()) HelperFunctions::printDebug("Message now at front: Message type: 0x" + HelperFunctions::getHexString(_queue.front().getMessage()->getMessageType()) + " Control byte: 0x" + HelperFunctions::getHexString(_queue.front().getMessage()->getControlByte()));
+		}
+		_queueMutex.unlock();
+		nextQueueEntry();
+	}
+	catch(const std::exception& ex)
+    {
+		_queueMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_queueMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -742,7 +871,12 @@ std::string BidCoSQueue::serialize()
 {
 	try
 	{
-		if(_queue.size() == 0) return "";
+		_queueMutex.lock();
+		if(_queue.size() == 0)
+		{
+			_queueMutex.unlock();
+			return "";
+		}
 		std::ostringstream stringstream;
 		stringstream << std::hex << std::uppercase << std::setfill('0');
 		stringstream << std::setw(2) << (uint32_t)_queueType;
@@ -750,6 +884,8 @@ std::string BidCoSQueue::serialize()
 		for(std::deque<BidCoSQueueEntry>::iterator i = _queue.begin(); i != _queue.end(); ++i)
 		{
 			stringstream << std::setw(1) << (int32_t)i->getType();
+			stringstream << std::setw(1) << (int32_t)i->stealthy;
+			stringstream << std::setw(1) << (int32_t)i->forceResend;
 			if(i->getPacket() == nullptr)
 			{
 				stringstream << '0';
@@ -779,13 +915,14 @@ std::string BidCoSQueue::serialize()
 			}
 		}
 		stringstream << std::dec;
+		_queueMutex.unlock();
 		return stringstream.str();
 	}
 	catch(const std::exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(const Exception& ex)
+    catch(Exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -793,5 +930,6 @@ std::string BidCoSQueue::serialize()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queueMutex.unlock();
     return "";
 }

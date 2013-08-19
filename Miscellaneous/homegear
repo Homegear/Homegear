@@ -88,10 +88,28 @@ case $1 in
                 ;;
         stop)
                 log_daemon_msg "Stopping Homegear" "homegear"
-                start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
-                sleep 15
-                log_end_msg $?
-                rm -f $PIDFILE
+                if test -e $PIDFILE; then
+                	PID=`cat $PIDFILE`
+                	PROCESSCOUNT=`ps --pid $PID | grep -c homegear`
+                	if [ $PROCESSCOUNT -ne 0 ]; then
+                		start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+                	fi
+                	INDEX=0
+                	while [ $PROCESSCOUNT -ne 0 ] && [ $INDEX -lt 30 ]; do
+                		sleep 1
+                		PROCESSCOUNT=`ps --pid $PID | grep -c homegear`
+                		INDEX=$((INDEX+1))
+                	done
+                	if [ $PROCESSCOUNT -ne 0 ]; then
+               			log_end_msg 1
+               		else
+               			log_end_msg 0
+               		fi
+                	rm -f $PIDFILE
+                else
+                	log_end_msg 1
+                	echo "Can't stop homegear. There is no pid file."
+                fi
                 ;;
         restart|force-reload)
                 $0 stop && sleep 2 && $0 start
