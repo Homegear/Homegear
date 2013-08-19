@@ -1607,6 +1607,26 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			}
 		}
 
+		if(isTeam() && !valueKeys->empty())
+		{
+			//Set SENDERADDRESS so that the we can identify the sending peer in our home automation software
+			std::shared_ptr<Peer> senderPeer(GD::devices.getCentral()->getPeer(packet->destinationAddress()));
+			if(senderPeer)
+			{
+				for(std::list<uint32_t>::const_iterator i = paramsetChannels.begin(); i != paramsetChannels.end(); ++i)
+				{
+					std::shared_ptr<RPC::Parameter> rpcParameter(rpcDevice->channels.at(*i)->parameterSets.at(parameterSetType)->getParameter("SENDERADDRESS"));
+					if(rpcParameter)
+					{
+						RPCConfigurationParameter* parameter = &valuesCentral[*i]["SENDERADDRESS"];
+						parameter->data = rpcParameter->convertToPacket(senderPeer->getSerialNumber() + ":" + std::to_string(*i));
+						valueKeys->push_back("SENDERADDRESS");
+						rpcValues->push_back(rpcParameter->convertFromPacket(parameter->data, true));
+					}
+				}
+			}
+		}
+
 		//We have to do this in a seperate loop, because all parameters need to be set first
 		for(std::map<std::string, std::vector<uint8_t>>::iterator i = values.begin(); i != values.end(); ++i)
 		{

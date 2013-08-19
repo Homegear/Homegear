@@ -13,7 +13,7 @@ void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vect
 	try
 	{
 		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
-		std::string methodName("event"); //We can't just create the methods RPCVariable with new RPCVariable("methodName", "event") because "event" is not a string object. That's way we create the string object here.
+		std::string methodName("event"); //We can't just create the methods RPCVariable with new RPCVariable("methodName", "event") because "event" is not a string object. That's why we create the string object here.
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{

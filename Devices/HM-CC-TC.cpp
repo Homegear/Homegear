@@ -463,7 +463,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 		GD::rfDevice->sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - timePoint;
-		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << ": Sending took " << timePassed << "ms." << std::endl;
+		if(GD::debugLevel >= 5) std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() << " Debug: Sending took " << timePassed << "ms." << std::endl;
 	}
 	catch(const std::exception& ex)
 	{

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <?xml-stylesheet type="text/xsl" href="device.xsl"?>
+<!-- Modified from original
+	Changes:
+	- Added parameter SENDERADDRESS
+-->
 <device version="7" rx_modes="BURST" supports_aes="false" cyclic_timeout="1209600">
 	<supported_types>
 		<type name="HM Smoke Detector" id="HM-Sec-SD" priority="2">
@@ -114,6 +118,10 @@
 						<physical type="integer" interface="command" value_id="INSTALL_TEST_VALUE">
 							<event frame="EVENT"/>
 						</physical>
+					</parameter>
+					<parameter id="SENDERADDRESS" operations="read,event">
+						<logical type="string"/>
+						<physical type="string" interface="command" />
 					</parameter>
 				</paramset>
 				<paramset type="LINK" id="sd_team_ch_link">

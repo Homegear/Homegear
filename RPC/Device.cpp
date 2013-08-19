@@ -1097,16 +1097,7 @@ Device::Device(std::string xmlFilename) : Device()
 {
 	load(xmlFilename);
 
-	if(!channels[0]) channels[0] = std::shared_ptr<DeviceChannel>(new DeviceChannel());
-	if(!channels[0]->parameterSets[ParameterSet::Type::Enum::master]) channels[0]->parameterSets[ParameterSet::Type::Enum::master] = std::shared_ptr<ParameterSet>(new ParameterSet());
-	if(parameterSet->type == ParameterSet::Type::Enum::master && !parameterSet->parameters.empty())
-	{
-		if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0 && GD::debugLevel >= 2)
-		{
-			std::cout << "Error: Master parameter set of channnel 0 has to be empty." << std::endl;
-		}
-		channels[0]->parameterSets[ParameterSet::Type::Enum::master] = parameterSet;
-	}
+	if(!_loaded || channels.empty()) return; //Happens when file couldn't be read
 
 	std::shared_ptr<Parameter> parameter(new Parameter());
 	parameter->id = "PAIRED_TO_CENTRAL";
@@ -1151,21 +1142,6 @@ Device::Device(std::string xmlFilename) : Device()
 	parameter->physicalParameter->list = 0;
 	parameter->physicalParameter->index = 12;
 	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
-
-	for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
-	{
-		if(!i->second || i->second->parameterSets.find(ParameterSet::Type::Enum::values) == i->second->parameterSets.end()) continue;
-		for(std::vector<std::shared_ptr<Parameter>>::iterator j = i->second->parameterSets.at(ParameterSet::Type::Enum::values)->parameters.begin(); j != i->second->parameterSets.at(ParameterSet::Type::Enum::values)->parameters.end(); ++j)
-		{
-			if(!*j) continue;
-			if(!(*j)->physicalParameter->getRequest.empty() && framesByID.find((*j)->physicalParameter->getRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->getRequest]->associatedValues.push_back(*j);
-			if(!(*j)->physicalParameter->setRequest.empty() && framesByID.find((*j)->physicalParameter->setRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->setRequest]->associatedValues.push_back(*j);
-			for(std::vector<std::shared_ptr<PhysicalParameterEvent>>::iterator k = (*j)->physicalParameter->eventFrames.begin(); k != (*j)->physicalParameter->eventFrames.end(); ++k)
-			{
-				if(framesByID.find((*k)->frame) != framesByID.end()) framesByID[(*k)->frame]->associatedValues.push_back(*j);
-			}
-		}
-	}
 }
 
 Device::~Device() {
@@ -1345,20 +1321,49 @@ void Device::parseXML(xml_node<>* node)
 			}
 			else if(GD::debugLevel >= 3) std::cout << "Warning: Unknown node name for \"device\": " << nodeName << std::endl;
 		}
-		if(parameterSetDefinitions.empty()) return;
+
+		if(!parameterSetDefinitions.empty())
+		{
+			for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+			{
+				for(std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>::iterator j = i->second->parameterSets.begin(); j != i->second->parameterSets.end(); ++j)
+				{
+					if(j->second->subsetReference.empty() || parameterSetDefinitions.find(j->second->subsetReference) == parameterSetDefinitions.end()) continue;
+					std::shared_ptr<ParameterSet> parameterSet(new ParameterSet());
+					*parameterSet = *parameterSetDefinitions.at(j->second->subsetReference);
+					parameterSet->type = j->second->type;
+					parameterSet->id = j->second->id;
+					i->second->parameterSets[parameterSet->type] = parameterSet;
+					for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
+					{
+						(*i)->parentParameterSet = parameterSet.get();
+					}
+				}
+			}
+		}
+
+		if(!channels[0]) channels[0] = std::shared_ptr<DeviceChannel>(new DeviceChannel());
+		if(!channels[0]->parameterSets[ParameterSet::Type::Enum::master]) channels[0]->parameterSets[ParameterSet::Type::Enum::master] = std::shared_ptr<ParameterSet>(new ParameterSet());
+		if(parameterSet->type == ParameterSet::Type::Enum::master && !parameterSet->parameters.empty())
+		{
+			if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0 && GD::debugLevel >= 2)
+			{
+				std::cout << "Error: Master parameter set of channnel 0 has to be empty." << std::endl;
+			}
+			channels[0]->parameterSets[ParameterSet::Type::Enum::master] = parameterSet;
+		}
+
 		for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
 		{
-			for(std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>::iterator j = i->second->parameterSets.begin(); j != i->second->parameterSets.end(); ++j)
+			if(!i->second || i->second->parameterSets.find(ParameterSet::Type::Enum::values) == i->second->parameterSets.end()) continue;
+			for(std::vector<std::shared_ptr<Parameter>>::iterator j = i->second->parameterSets.at(ParameterSet::Type::Enum::values)->parameters.begin(); j != i->second->parameterSets.at(ParameterSet::Type::Enum::values)->parameters.end(); ++j)
 			{
-				if(j->second->subsetReference.empty() || parameterSetDefinitions.find(j->second->subsetReference) == parameterSetDefinitions.end()) continue;
-				std::shared_ptr<ParameterSet> parameterSet(new ParameterSet());
-				*parameterSet = *parameterSetDefinitions.at(j->second->subsetReference);
-				parameterSet->type = j->second->type;
-				parameterSet->id = j->second->id;
-				i->second->parameterSets[parameterSet->type] = parameterSet;
-				for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
+				if(!*j) continue;
+				if(!(*j)->physicalParameter->getRequest.empty() && framesByID.find((*j)->physicalParameter->getRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->getRequest]->associatedValues.push_back(*j);
+				if(!(*j)->physicalParameter->setRequest.empty() && framesByID.find((*j)->physicalParameter->setRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->setRequest]->associatedValues.push_back(*j);
+				for(std::vector<std::shared_ptr<PhysicalParameterEvent>>::iterator k = (*j)->physicalParameter->eventFrames.begin(); k != (*j)->physicalParameter->eventFrames.end(); ++k)
 				{
-					(*i)->parentParameterSet = parameterSet.get();
+					if(framesByID.find((*k)->frame) != framesByID.end()) framesByID[(*k)->frame]->associatedValues.push_back(*j);
 				}
 			}
 		}
