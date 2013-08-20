@@ -591,6 +591,11 @@ void BidCoSQueue::startResendThread(bool force)
 	{
 		if(noSending) return;
 		_queueMutex.lock();
+		if(_queue.empty())
+		{
+			_queueMutex.unlock();
+			return;
+		}
 		uint8_t controlByte = 0;
 		if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage())
 		{

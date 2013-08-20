@@ -1802,21 +1802,31 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			}
 		}
 
-		if(!values.empty() && (packet->controlByte() & 32) && packet->destinationAddress() == GD::devices.getCentral()->address())
+		if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == address && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional
+		{
+			if(packet->controlByte() & 32) //Bidirectional?
+			{
+				std::vector<uint8_t> payload;
+				payload.push_back(0x00);
+				std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x81, 0x02, GD::devices.getCentral()->address(), address, payload));
+				GD::devices.getCentral()->sendPacket(ok);
+				GD::devices.getCentral()->enqueuePendingQueues(address);
+			}
+			else
+			{
+				std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
+				queue->noSending = true;
+				std::vector<uint8_t> payload;
+				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(packet->messageCounter(), 0xA1, 0x12, GD::devices.getCentral()->address(), address, payload));
+				queue->push(configPacket);
+				queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+
+				GD::devices.getCentral()->enqueuePackets(address, queue, true);
+			}
+		}
+		else if(!values.empty() && (packet->controlByte() & 32) && packet->destinationAddress() == GD::devices.getCentral()->address())
 		{
 			GD::devices.getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
-		}
-		if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == address && !(packet->controlByte() & 32) && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional
-		{
-			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
-			queue->noSending = true;
-
-			std::vector<uint8_t> payload;
-			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(packet->messageCounter(), 0xA1, 0x12, GD::devices.getCentral()->address(), address, payload));
-			queue->push(configPacket);
-			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-
-			GD::devices.getCentral()->enqueuePackets(address, queue, true);
 		}
 		//else if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
 		//{

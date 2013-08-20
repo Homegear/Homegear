@@ -680,6 +680,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		}
 		else if(attributeName == "operations")
 		{
+			operations = Operations::Enum::none;
 			std::stringstream stream(attributeValue);
 			std::string element;
 			while(std::getline(stream, element, ','))

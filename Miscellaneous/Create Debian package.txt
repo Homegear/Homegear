@@ -1,4 +1,4 @@
-•	apt-get install binutils debhelper devscripts g++-4.7 sqlite3 libsqlite3-dev libreadline6 libncurses6-dev
+•	apt-get install binutils debhelper devscripts g++-4.7 sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev
 •	If g++-4.7 was not installed before do:
 	o	cd /usr/bin
 	o	rm g++
