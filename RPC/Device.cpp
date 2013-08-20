@@ -162,6 +162,10 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 			int32_t exponent = (value->integerValue >> exponentStart) & ((1 << exponentSize) - 1);
 			value->integerValue = mantissa * (1 << exponent);
 		}
+		else if(type == Type::Enum::stringUnsignedInteger)
+		{
+			value->stringValue = std::to_string((uint32_t)value->integerValue);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -253,6 +257,10 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			exponent = exponent << exponentStart;
 			value->integerValue = (mantissa << mantissaStart) | exponent;
 		}
+		else if(type == Type::Enum::stringUnsignedInteger)
+		{
+			value->integerValue = HelperFunctions::getUnsignedNumber(value->stringValue);
+		}
 		value->type = RPCVariableType::rpcInteger;
 	}
 	catch(const std::exception& ex)
@@ -285,6 +293,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "option_integer") type = Type::Enum::optionInteger;
 			else if(attributeValue == "integer_tinyfloat") type = Type::Enum::integerTinyFloat;
 			else if(attributeValue == "toggle") type = Type::Enum::toggle;
+			else if(attributeValue == "string_unsigned_integer") type = Type::Enum::stringUnsignedInteger;
 			else if(attributeValue == "action_key_counter") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "action_key_same_counter") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "rc19display") type = Type::Enum::none; //ignore, no conversion necessary
@@ -390,7 +399,7 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 		{
 			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcBoolean, data));
 		}
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString && conversion.empty())
 		{
 			if(!data.empty() && data.at(0) != 0)
 			{
@@ -530,7 +539,7 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 		{
 			value->integerValue = (int32_t)value->booleanValue;
 		}
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString && conversion.empty())
 		{
 			if(value->stringValue.size() > 0)
 			{
@@ -599,16 +608,19 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 		}
 		if(physicalParameter->type != PhysicalParameter::Type::Enum::typeString)
 		{
-			//Crop to size. Most importantly for negative numbers
-			uint32_t byteSize = std::lround(std::floor(physicalParameter->size));
-			int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
-			if(byteSize >= 4)
+			if(physicalParameter->sizeDefined) //Values have no size defined. That is a problem if the value is larger than 1 byte.
 			{
-				byteSize = 4;
-				bitSize = 0;
+				//Crop to size. Most importantly for negative numbers
+				uint32_t byteSize = std::lround(std::floor(physicalParameter->size));
+				int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
+				if(byteSize >= 4)
+				{
+					byteSize = 4;
+					bitSize = 0;
+				}
+				int32_t valueMask = 0xFFFFFFFF >> (((4 - byteSize) * 8) - bitSize);
+				value->integerValue &= valueMask;
 			}
-			int32_t valueMask = 0xFFFFFFFF >> (((4 - byteSize) * 8) - bitSize);
-			value->integerValue &= valueMask;
 			HelperFunctions::memcpyBigEndian(data, value->integerValue);
 		}
 	}

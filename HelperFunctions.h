@@ -85,6 +85,15 @@ public:
 		return number;
 	}
 
+	static uint32_t getUnsignedNumber(std::string &s, bool isHex = false)
+	{
+		int32_t xpos = s.find('x');
+		uint32_t number = 0;
+		if(xpos == -1 && !isHex) try { number = std::stoull(s, 0, 10); } catch(...) {}
+		else try { number = std::stoull(s, 0, 16); } catch(...) {}
+		return number;
+	}
+
 	static bool isBigEndian()
 	{
 		union {

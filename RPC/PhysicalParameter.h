@@ -43,6 +43,7 @@ public:
 	double index = 0;
 	uint32_t startIndex = 0;
 	uint32_t endIndex = 0;
+	bool sizeDefined = false;
 	double size = 1.0;
 	int32_t mask = -1;
 	std::string valueID;

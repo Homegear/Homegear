@@ -1,6 +1,4 @@
 - Delete peer from all devices it is linked to, when peer is reset
-- put broadcastdeletedevices in thread
-- Find out how HomeMatic configurator grays out buttons
 
 When AES is working:
 - enforce $PEER.AES

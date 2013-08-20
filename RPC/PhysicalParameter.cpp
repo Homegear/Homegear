@@ -52,6 +52,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 					size /= 10;
 				}
 				size += HelperFunctions::getNumber(splitValue.first);
+				sizeDefined = true;
 			}
 			else if(attributeName == "counter") counter = attributeValue;
 			else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
