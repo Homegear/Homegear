@@ -15,8 +15,23 @@ Server::~Server()
 
 void Server::start()
 {
-	_mainThread = std::thread(&Server::mainThread, this);
-	_mainThread.detach();
+	try
+	{
+		_mainThread = std::thread(&Server::mainThread, this);
+		_mainThread.detach();
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Server::stop()
@@ -45,51 +60,66 @@ void Server::stop()
 
 void Server::mainThread()
 {
-	getFileDescriptor();
-	if(_serverFileDescriptor == -1) return;
-	while(!_stopServer)
+	try
 	{
-		try
+		getFileDescriptor();
+		if(_serverFileDescriptor == -1) return;
+		while(!_stopServer)
 		{
-			int32_t clientFileDescriptor = getClientFileDescriptor();
-			if(clientFileDescriptor < 0)
+			try
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				continue;
-			}
-			if(clientFileDescriptor > _maxConnections)
-			{
-				HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
-				shutdown(clientFileDescriptor, 0);
-				close(clientFileDescriptor);
-				continue;
-			}
-			std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
-			_stateMutex.lock();
-			_fileDescriptors.push_back(clientData);
-			_stateMutex.unlock();
+				int32_t clientFileDescriptor = getClientFileDescriptor();
+				if(clientFileDescriptor < 0)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+					continue;
+				}
+				if(clientFileDescriptor > _maxConnections)
+				{
+					HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
+					shutdown(clientFileDescriptor, 0);
+					close(clientFileDescriptor);
+					continue;
+				}
+				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
+				_stateMutex.lock();
+				_fileDescriptors.push_back(clientData);
+				_stateMutex.unlock();
 
-			_readThreads.push_back(std::thread(&Server::readClient, this, clientData));
-			_readThreads.back().detach();
+				_readThreads.push_back(std::thread(&Server::readClient, this, clientData));
+				_readThreads.back().detach();
+			}
+			catch(const std::exception& ex)
+			{
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				_stateMutex.unlock();
+			}
+			catch(Exception& ex)
+			{
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				_stateMutex.unlock();
+			}
+			catch(...)
+			{
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				_stateMutex.unlock();
+			}
 		}
-		catch(const std::exception& ex)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			_stateMutex.unlock();
-		}
-		catch(Exception& ex)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			_stateMutex.unlock();
-		}
-		catch(...)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			_stateMutex.unlock();
-		}
+		close(_serverFileDescriptor);
+		_serverFileDescriptor = -1;
 	}
-	close(_serverFileDescriptor);
-	_serverFileDescriptor = -1;
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 int32_t Server::getClientFileDescriptor()

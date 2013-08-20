@@ -17,12 +17,27 @@ void Cul::init(std::string rfDevice)
 
 Cul::~Cul()
 {
-	if(_listenThread.joinable())
+	try
 	{
-		_stopCallbackThread = true;
-		_listenThread.join();
+		if(_listenThread.joinable())
+		{
+			_stopCallbackThread = true;
+			_listenThread.join();
+		}
+		closeDevice();
 	}
-    closeDevice();
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)

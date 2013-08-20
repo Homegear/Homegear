@@ -175,83 +175,127 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(xml_document<>* doc)
 
 std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNode)
 {
-	if(valueNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
-	xml_node<>* subNode = valueNode->first_node();
-	if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+	try
+	{
+		if(valueNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+		xml_node<>* subNode = valueNode->first_node();
+		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
 
-	std::string type(subNode->name());
-	std::string value(subNode->value());
-	if(type == "string")
-	{
-		return std::shared_ptr<RPCVariable>(new RPCVariable(value));
+		std::string type(subNode->name());
+		std::string value(subNode->value());
+		if(type == "string")
+		{
+			return std::shared_ptr<RPCVariable>(new RPCVariable(value));
+		}
+		else if(type == "boolean")
+		{
+			bool boolean = false;
+			if(value == "true" || value == "1") boolean = true;
+			return std::shared_ptr<RPCVariable>(new RPCVariable(boolean));
+		}
+		else if(type == "i4" || type == "int")
+		{
+			return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getNumber(value)));
+		}
+		else if(type == "double")
+		{
+			double number = 0;
+			try { number = std::stod(value); } catch(...) {}
+			return std::shared_ptr<RPCVariable>(new RPCVariable(number));
+		}
+		else if(type == "base64")
+		{
+			std::shared_ptr<RPCVariable> base64(new RPCVariable(RPCVariableType::rpcBase64));
+			base64->stringValue = value;
+			return base64;
+		}
+		else if(type == "array")
+		{
+			return decodeArray(subNode);
+		}
+		else if(type == "struct")
+		{
+			return decodeStruct(subNode);
+		}
+		return std::shared_ptr<RPCVariable>(new RPCVariable(value)); //if no type is specified return string
 	}
-	else if(type == "boolean")
-	{
-		bool boolean = false;
-		if(value == "true" || value == "1") boolean = true;
-		return std::shared_ptr<RPCVariable>(new RPCVariable(boolean));
-	}
-	else if(type == "i4" || type == "int")
-	{
-		return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getNumber(value)));
-	}
-	else if(type == "double")
-	{
-		double number = 0;
-		try { number = std::stod(value); } catch(...) {}
-		return std::shared_ptr<RPCVariable>(new RPCVariable(number));
-	}
-	else if(type == "base64")
-	{
-		std::shared_ptr<RPCVariable> base64(new RPCVariable(RPCVariableType::rpcBase64));
-		base64->stringValue = value;
-		return base64;
-	}
-	else if(type == "array")
-	{
-		return decodeArray(subNode);
-	}
-	else if(type == "struct")
-	{
-		return decodeStruct(subNode);
-	}
-	return std::shared_ptr<RPCVariable>(new RPCVariable(value)); //if no type is specified return string
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<RPCVariable>(new RPCVariable(0));
 }
 
 std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeStruct(xml_node<>* structNode)
 {
 	std::shared_ptr<RPCVariable> rpcStruct(new RPCVariable(RPCVariableType::rpcStruct));
-	if(structNode == nullptr) return rpcStruct;
-
-	for(xml_node<>* memberNode = structNode->first_node(); memberNode; memberNode = memberNode->next_sibling())
+	try
 	{
-		xml_node<>* subNode = memberNode->first_node("name");
-		if(subNode == nullptr) continue;
-		std::string name(subNode->value());
-		if(name.empty()) continue;
-		subNode = subNode->next_sibling("value");
-		if(subNode == nullptr) continue;
-		std::shared_ptr<RPCVariable> element = decodeParameter(subNode);
-		element->name = name;
-		rpcStruct->structValue->push_back(element);
-	}
+		if(structNode == nullptr) return rpcStruct;
 
+		for(xml_node<>* memberNode = structNode->first_node(); memberNode; memberNode = memberNode->next_sibling())
+		{
+			xml_node<>* subNode = memberNode->first_node("name");
+			if(subNode == nullptr) continue;
+			std::string name(subNode->value());
+			if(name.empty()) continue;
+			subNode = subNode->next_sibling("value");
+			if(subNode == nullptr) continue;
+			std::shared_ptr<RPCVariable> element = decodeParameter(subNode);
+			element->name = name;
+			rpcStruct->structValue->push_back(element);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 	return rpcStruct;
 }
 
 std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeArray(xml_node<>* arrayNode)
 {
 	std::shared_ptr<RPCVariable> rpcArray(new RPCVariable(RPCVariableType::rpcArray));
-	if(arrayNode == nullptr) return rpcArray;
-
-	xml_node<>* dataNode = arrayNode->first_node("data");
-	if(dataNode == nullptr) return rpcArray;
-
-	for(xml_node<>* valueNode = dataNode->first_node(); valueNode; valueNode = valueNode->next_sibling())
+	try
 	{
-		rpcArray->arrayValue->push_back(decodeParameter(valueNode));
-	}
+		if(arrayNode == nullptr) return rpcArray;
 
+		xml_node<>* dataNode = arrayNode->first_node("data");
+		if(dataNode == nullptr) return rpcArray;
+
+		for(xml_node<>* valueNode = dataNode->first_node(); valueNode; valueNode = valueNode->next_sibling())
+		{
+			rpcArray->arrayValue->push_back(decodeParameter(valueNode));
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 	return rpcArray;
 }
 

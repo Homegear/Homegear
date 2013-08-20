@@ -52,6 +52,7 @@ class Database
         void init(std::string databasePath, std::string backupPath = "");
         DataTable executeCommand(std::string command);
         DataTable executeCommand(std::string command, DataColumnVector& dataToEscape);
+        bool isOpen() { return _database != nullptr; }
     protected:
     private:
         sqlite3* _database;

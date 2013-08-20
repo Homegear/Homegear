@@ -100,7 +100,6 @@ OBJECTS := \
 	$(OBJDIR)/GD.o \
 	$(OBJDIR)/BidCoSQueueManager.o \
 	$(OBJDIR)/HomeMaticDevices.o \
-	$(OBJDIR)/Log.o \
 	$(OBJDIR)/HelperFunctions.o \
 	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/BidCoSQueue.o \
@@ -217,9 +216,6 @@ $(OBJDIR)/BidCoSQueueManager.o: BidCoSQueueManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HomeMaticDevices.o: HomeMaticDevices.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Log.o: Log.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HelperFunctions.o: HelperFunctions.cpp

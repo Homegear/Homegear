@@ -6,7 +6,7 @@ namespace RPC
 {
 Client::~Client()
 {
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
 }
 
 void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values)
@@ -60,56 +60,86 @@ void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vect
 
 void Client::listDevices(std::pair<std::string, std::string> address)
 {
-	std::shared_ptr<RemoteRPCServer> server = getServer(address);
-	if(!server) return;
-	std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>> { std::shared_ptr<RPCVariable>(new RPCVariable(server->id)) });
-	std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "listDevices", parameters);
-	if(result->errorStruct)
+	try
 	{
-		HelperFunctions::printError("Error calling XML RPC method listDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
-		result->print();
-		return;
-	}
-	if(result->type != RPCVariableType::rpcArray) return;
-	server->knownDevices->clear();
-	for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
-	{
-		if((*i)->type == RPCVariableType::rpcStruct)
+		std::shared_ptr<RemoteRPCServer> server = getServer(address);
+		if(!server) return;
+		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>> { std::shared_ptr<RPCVariable>(new RPCVariable(server->id)) });
+		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "listDevices", parameters);
+		if(result->errorStruct)
 		{
-			std::pair<std::string, int32_t> device;
-			for(std::vector<std::shared_ptr<RPCVariable>>::iterator j = (*i)->structValue->begin(); j != (*i)->structValue->end(); ++j)
+			HelperFunctions::printError("Error calling XML RPC method listDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
+			result->print();
+			return;
+		}
+		if(result->type != RPCVariableType::rpcArray) return;
+		server->knownDevices->clear();
+		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
+		{
+			if((*i)->type == RPCVariableType::rpcStruct)
 			{
-				if((*j)->name == "ADDRESS")
+				std::pair<std::string, int32_t> device;
+				for(std::vector<std::shared_ptr<RPCVariable>>::iterator j = (*i)->structValue->begin(); j != (*i)->structValue->end(); ++j)
 				{
-					device.first = (*j)->stringValue;
-					if(device.first.empty()) break;
+					if((*j)->name == "ADDRESS")
+					{
+						device.first = (*j)->stringValue;
+						if(device.first.empty()) break;
+					}
+					else if((*j)->name == "VERSION")
+					{
+						device.second = (*j)->integerValue;
+					}
 				}
-				else if((*j)->name == "VERSION")
-				{
-					device.second = (*j)->integerValue;
-				}
+				server->knownDevices->insert(device);
 			}
-			server->knownDevices->insert(device);
 		}
 	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 {
-	std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
-	if(!central) HelperFunctions::printError("Error: Could not execute RPC method sendUnknownDevices. Please add a central device.");
-	std::shared_ptr<RemoteRPCServer> server = getServer(address);
-	if(!server) return;
-	std::shared_ptr<RPCVariable> devices = GD::devices.getCentral()->listDevices(server->knownDevices);
-	if(devices->arrayValue->empty()) return;
-	std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>{ std::shared_ptr<RPCVariable>(new RPCVariable(server->id)), devices });
-	std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "newDevices", parameters);
-	if(result->errorStruct)
+	try
 	{
-		HelperFunctions::printError("Error calling XML RPC method newDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
-		result->print();
-		return;
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		if(!central) HelperFunctions::printError("Error: Could not execute RPC method sendUnknownDevices. Please add a central device.");
+		std::shared_ptr<RemoteRPCServer> server = getServer(address);
+		if(!server) return;
+		std::shared_ptr<RPCVariable> devices = GD::devices.getCentral()->listDevices(server->knownDevices);
+		if(devices->arrayValue->empty()) return;
+		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>{ std::shared_ptr<RPCVariable>(new RPCVariable(server->id)), devices });
+		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "newDevices", parameters);
+		if(result->errorStruct)
+		{
+			HelperFunctions::printError("Error calling XML RPC method newDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
+			result->print();
+			return;
+		}
 	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Client::broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions)

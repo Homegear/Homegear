@@ -16,8 +16,23 @@ RPCServer::~RPCServer()
 
 void RPCServer::start()
 {
-	_mainThread = std::thread(&RPCServer::mainThread, this);
-	_mainThread.detach();
+	try
+	{
+		_mainThread = std::thread(&RPCServer::mainThread, this);
+		_mainThread.detach();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void RPCServer::stop()
@@ -27,60 +42,90 @@ void RPCServer::stop()
 
 void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method)
 {
-	if(_rpcMethods->find(methodName) != _rpcMethods->end())
+	try
 	{
-		HelperFunctions::printWarning("Warning: Could not register RPC method, because a method with this name already exists.");
-		return;
+		if(_rpcMethods->find(methodName) != _rpcMethods->end())
+		{
+			HelperFunctions::printWarning("Warning: Could not register RPC method, because a method with this name already exists.");
+			return;
+		}
+		_rpcMethods->insert(std::pair<std::string, std::shared_ptr<RPCMethod>>(methodName, method));
 	}
-	_rpcMethods->insert(std::pair<std::string, std::shared_ptr<RPCMethod>>(methodName, method));
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void RPCServer::mainThread()
 {
-	getFileDescriptor();
-	int32_t clientFileDescriptor;
-	while(!_stopServer)
+	try
 	{
-		try
+		getFileDescriptor();
+		int32_t clientFileDescriptor;
+		while(!_stopServer)
 		{
-			clientFileDescriptor = getClientFileDescriptor();
-			if(clientFileDescriptor < 0)
+			try
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-				continue;
-			}
-			if(clientFileDescriptor > _maxConnections)
-			{
-				HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
-				shutdown(clientFileDescriptor, 0);
-				close(clientFileDescriptor);
-				continue;
-			}
-			_stateMutex.lock();
-			_fileDescriptors.push_back(clientFileDescriptor);
-			_stateMutex.unlock();
+				clientFileDescriptor = getClientFileDescriptor();
+				if(clientFileDescriptor < 0)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					continue;
+				}
+				if(clientFileDescriptor > _maxConnections)
+				{
+					HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
+					shutdown(clientFileDescriptor, 0);
+					close(clientFileDescriptor);
+					continue;
+				}
+				_stateMutex.lock();
+				_fileDescriptors.push_back(clientFileDescriptor);
+				_stateMutex.unlock();
 
-			_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
-			_readThreads.back().detach();
+				_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
+				_readThreads.back().detach();
+			}
+			catch(const std::exception& ex)
+			{
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				_stateMutex.unlock();
+			}
+			catch(Exception& ex)
+			{
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				_stateMutex.unlock();
+			}
+			catch(...)
+			{
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				_stateMutex.unlock();
+			}
 		}
-		catch(const std::exception& ex)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			_stateMutex.unlock();
-		}
-		catch(Exception& ex)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			_stateMutex.unlock();
-		}
-		catch(...)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			_stateMutex.unlock();
-		}
+		close(_serverFileDescriptor);
+		_serverFileDescriptor = -1;
 	}
-	close(_serverFileDescriptor);
-	_serverFileDescriptor = -1;
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> data, bool closeConnection)
@@ -108,51 +153,81 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 
 void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType)
 {
-	std::string methodName;
-	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters;
-	if(packetType == PacketType::Enum::binaryRequest) parameters = _rpcDecoder.decodeRequest(packet, methodName);
-	else if(packetType == PacketType::Enum::xmlRequest) parameters = _xmlRpcDecoder.decodeRequest(packet, methodName);
-	if(!parameters) return;
-	PacketType::Enum responseType = (packetType == PacketType::Enum::binaryRequest) ? PacketType::Enum::binaryResponse : PacketType::Enum::xmlResponse;
-	if(!parameters->empty() && parameters->at(0)->errorStruct)
+	try
 	{
-		sendRPCResponseToClient(clientFileDescriptor, parameters->at(0), responseType);
-		return;
-	}
-	if(GD::debugLevel >= 4)
-	{
-		HelperFunctions::printInfo("Info: Method called: " + methodName + " Parameters:");
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+		std::string methodName;
+		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters;
+		if(packetType == PacketType::Enum::binaryRequest) parameters = _rpcDecoder.decodeRequest(packet, methodName);
+		else if(packetType == PacketType::Enum::xmlRequest) parameters = _xmlRpcDecoder.decodeRequest(packet, methodName);
+		if(!parameters) return;
+		PacketType::Enum responseType = (packetType == PacketType::Enum::binaryRequest) ? PacketType::Enum::binaryResponse : PacketType::Enum::xmlResponse;
+		if(!parameters->empty() && parameters->at(0)->errorStruct)
 		{
-			(*i)->print();
+			sendRPCResponseToClient(clientFileDescriptor, parameters->at(0), responseType);
+			return;
+		}
+		if(GD::debugLevel >= 4)
+		{
+			HelperFunctions::printInfo("Info: Method called: " + methodName + " Parameters:");
+			for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			{
+				(*i)->print();
+			}
+		}
+		if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(clientFileDescriptor, methodName, parameters, responseType);
+		else if(GD::debugLevel >= 3)
+		{
+			HelperFunctions::printError("Warning: RPC method not found: " + methodName);
+			sendRPCResponseToClient(clientFileDescriptor, RPCVariable::createError(-32601, ": Requested method not found."), responseType);
 		}
 	}
-	if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(clientFileDescriptor, methodName, parameters, responseType);
-	else if(GD::debugLevel >= 3)
-	{
-		HelperFunctions::printError("Warning: RPC method not found: " + methodName);
-		sendRPCResponseToClient(clientFileDescriptor, RPCVariable::createError(-32601, ": Requested method not found."), responseType);
-	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<RPCVariable> variable, PacketType::Enum responseType)
 {
-	std::shared_ptr<std::vector<char>> data;
-	if(responseType == PacketType::Enum::xmlResponse)
+	try
 	{
-		std::string xml = _xmlRpcEncoder.encodeResponse(variable);
-		std::string header = getHttpResponseHeader(xml.size());
-		xml.push_back('\n');
-		data.reset(new std::vector<char>(header.size() + xml.size()));
-		data->insert(data->begin(), header.begin(), header.end());
-		data->insert(data->begin() + header.size(), xml.begin(), xml.end());
-		sendRPCResponseToClient(clientFileDescriptor, data, true);
+		std::shared_ptr<std::vector<char>> data;
+		if(responseType == PacketType::Enum::xmlResponse)
+		{
+			std::string xml = _xmlRpcEncoder.encodeResponse(variable);
+			std::string header = getHttpResponseHeader(xml.size());
+			xml.push_back('\n');
+			data.reset(new std::vector<char>(header.size() + xml.size()));
+			data->insert(data->begin(), header.begin(), header.end());
+			data->insert(data->begin() + header.size(), xml.begin(), xml.end());
+			sendRPCResponseToClient(clientFileDescriptor, data, true);
+		}
+		else if(responseType == PacketType::Enum::binaryResponse)
+		{
+			data = _rpcEncoder.encodeResponse(variable);
+			sendRPCResponseToClient(clientFileDescriptor, data, false);
+		}
 	}
-	else if(responseType == PacketType::Enum::binaryResponse)
-	{
-		data = _rpcEncoder.encodeResponse(variable);
-		sendRPCResponseToClient(clientFileDescriptor, data, false);
-	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void RPCServer::callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType)
@@ -194,11 +269,26 @@ std::string RPCServer::getHttpResponseHeader(uint32_t contentLength)
 
 void RPCServer::analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType)
 {
-	std::shared_ptr<RPCVariable> response;
-	if(packetType == PacketType::Enum::binaryResponse) response = _rpcDecoder.decodeResponse(packet);
-	else if(packetType == PacketType::Enum::xmlResponse) response = _xmlRpcDecoder.decodeResponse(packet);
-	if(!response) return;
-	if(GD::debugLevel >= 7) response->print();
+	try
+	{
+		std::shared_ptr<RPCVariable> response;
+		if(packetType == PacketType::Enum::binaryResponse) response = _rpcDecoder.decodeResponse(packet);
+		else if(packetType == PacketType::Enum::xmlResponse) response = _xmlRpcDecoder.decodeResponse(packet);
+		if(!response) return;
+		if(GD::debugLevel >= 7) response->print();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void RPCServer::packetReceived(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType)

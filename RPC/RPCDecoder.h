@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cmath>
 
+#include "../Exception.h"
 #include "RPCVariable.h"
 
 namespace RPC

@@ -29,18 +29,49 @@ Database::~Database()
 
 void Database::openDatabase(std::string databasePath)
 {
-    int result = sqlite3_open(databasePath.c_str(), &_database);
-    if(result)
+	try
+	{
+		int result = sqlite3_open(databasePath.c_str(), &_database);
+		if(result)
+		{
+			throw(Exception("Can't open database: " + std::string(sqlite3_errmsg(_database))));
+			sqlite3_close(_database);
+			_database = nullptr;
+		}
+	}
+	catch(const std::exception& ex)
     {
-        throw(Exception("Can't open database: " + std::string(sqlite3_errmsg(_database))));
-        sqlite3_close(_database);
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
 void Database::closeDatabase()
 {
-    sqlite3_close(_database);
-    _database = nullptr;
+	try
+	{
+		sqlite3_close(_database);
+		_database = nullptr;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)

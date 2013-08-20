@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 
+#include "../Exception.h"
 #include "RPCVariable.h"
 
 namespace RPC

@@ -1,4 +1,5 @@
 #include "RPCMethod.h"
+#include "../HelperFunctions.h"
 
 namespace RPC
 {
@@ -30,22 +31,52 @@ std::shared_ptr<RPCVariable> RPCMethod::getError(RPCMethod::ParameterError::Enum
 
 void RPCMethod::setHelp(std::string help)
 {
-	_help.reset(new RPCVariable(help));
+	try
+	{
+		_help.reset(new RPCVariable(help));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void RPCMethod::addSignature(RPCVariableType returnType, std::vector<RPCVariableType> parameterTypes)
 {
-	if(!_signatures) _signatures.reset(new RPCVariable(RPCVariableType::rpcArray));
-
-	std::shared_ptr<RPCVariable> element(new RPCVariable(RPCVariableType::rpcArray));
-
-	element->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariable::getTypeString(returnType))));
-
-	for(std::vector<RPCVariableType>::iterator i = parameterTypes.begin(); i != parameterTypes.end(); ++i)
+	try
 	{
-		element->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariable::getTypeString(*i))));
+		if(!_signatures) _signatures.reset(new RPCVariable(RPCVariableType::rpcArray));
+
+		std::shared_ptr<RPCVariable> element(new RPCVariable(RPCVariableType::rpcArray));
+
+		element->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariable::getTypeString(returnType))));
+
+		for(std::vector<RPCVariableType>::iterator i = parameterTypes.begin(); i != parameterTypes.end(); ++i)
+		{
+			element->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariable::getTypeString(*i))));
+		}
+		_signatures->arrayValue->push_back(element);
 	}
-	_signatures->arrayValue->push_back(element);
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 } /* namespace RPC */

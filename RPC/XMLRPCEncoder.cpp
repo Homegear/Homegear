@@ -127,77 +127,122 @@ std::string XMLRPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable)
 
 void XMLRPCEncoder::encodeVariable(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable)
 {
-	xml_node<> *valueNode = doc->allocate_node(node_element, "value");
-	node->append_node(valueNode);
-	if(variable->type == RPCVariableType::rpcVoid)
+	try
 	{
-		//leave valueNode empty
+		xml_node<> *valueNode = doc->allocate_node(node_element, "value");
+		node->append_node(valueNode);
+		if(variable->type == RPCVariableType::rpcVoid)
+		{
+			//leave valueNode empty
+		}
+		else if(variable->type == RPCVariableType::rpcInteger)
+		{
+			xml_node<> *valueNode2 = doc->allocate_node(node_element, "i4", doc->allocate_string(std::to_string(variable->integerValue).c_str()));
+			valueNode->append_node(valueNode2);
+		}
+		else if(variable->type == RPCVariableType::rpcFloat)
+		{
+			xml_node<> *valueNode2 = doc->allocate_node(node_element, "double", doc->allocate_string(std::to_string(variable->floatValue).c_str()));
+			valueNode->append_node(valueNode2);
+		}
+		else if(variable->type == RPCVariableType::rpcBoolean)
+		{
+			xml_node<> *valueNode2 = doc->allocate_node(node_element, "boolean", doc->allocate_string(std::to_string(variable->booleanValue).c_str()));
+			valueNode->append_node(valueNode2);
+		}
+		else if(variable->type == RPCVariableType::rpcString)
+		{
+			//Don't allocate string. It is unnecessary, because variable->stringvalue exists until the encoding is done.
+			//xml_node<> *valueNode2 = doc->allocate_node(node_element, "string", variable->stringValue.c_str());
+			//valueNode->append_node(valueNode2);
+			//Some servers/clients don't understand strings in string tags - don't ask me why, so just print the value
+			valueNode->value(variable->stringValue.c_str());
+		}
+		else if(variable->type == RPCVariableType::rpcBase64)
+		{
+			//Don't allocate string. It is unnecessary, because variable->stringvalue exists until the encoding is done.
+			xml_node<> *valueNode2 = doc->allocate_node(node_element, "base64", variable->stringValue.c_str());
+			valueNode->append_node(valueNode2);
+		}
+		else if(variable->type == RPCVariableType::rpcStruct)
+		{
+			encodeStruct(doc, valueNode, variable);
+		}
+		else if(variable->type == RPCVariableType::rpcArray)
+		{
+			encodeArray(doc, valueNode, variable);
+		}
 	}
-	else if(variable->type == RPCVariableType::rpcInteger)
-	{
-		xml_node<> *valueNode2 = doc->allocate_node(node_element, "i4", doc->allocate_string(std::to_string(variable->integerValue).c_str()));
-		valueNode->append_node(valueNode2);
-	}
-	else if(variable->type == RPCVariableType::rpcFloat)
-	{
-		xml_node<> *valueNode2 = doc->allocate_node(node_element, "double", doc->allocate_string(std::to_string(variable->floatValue).c_str()));
-		valueNode->append_node(valueNode2);
-	}
-	else if(variable->type == RPCVariableType::rpcBoolean)
-	{
-		xml_node<> *valueNode2 = doc->allocate_node(node_element, "boolean", doc->allocate_string(std::to_string(variable->booleanValue).c_str()));
-		valueNode->append_node(valueNode2);
-	}
-	else if(variable->type == RPCVariableType::rpcString)
-	{
-		//Don't allocate string. It is unnecessary, because variable->stringvalue exists until the encoding is done.
-		//xml_node<> *valueNode2 = doc->allocate_node(node_element, "string", variable->stringValue.c_str());
-		//valueNode->append_node(valueNode2);
-		//Some servers/clients don't understand strings in string tags - don't ask me why, so just print the value
-		valueNode->value(variable->stringValue.c_str());
-	}
-	else if(variable->type == RPCVariableType::rpcBase64)
-	{
-		//Don't allocate string. It is unnecessary, because variable->stringvalue exists until the encoding is done.
-		xml_node<> *valueNode2 = doc->allocate_node(node_element, "base64", variable->stringValue.c_str());
-		valueNode->append_node(valueNode2);
-	}
-	else if(variable->type == RPCVariableType::rpcStruct)
-	{
-		encodeStruct(doc, valueNode, variable);
-	}
-	else if(variable->type == RPCVariableType::rpcArray)
-	{
-		encodeArray(doc, valueNode, variable);
-	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void XMLRPCEncoder::encodeStruct(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable)
 {
-	xml_node<> *structNode = doc->allocate_node(node_element, "struct");
-	node->append_node(structNode);
-
-	for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
+	try
 	{
-		xml_node<> *memberNode = doc->allocate_node(node_element, "member");
-		structNode->append_node(memberNode);
-		xml_node<> *nameNode = doc->allocate_node(node_element, "name", (*i)->name.c_str());
-		memberNode->append_node(nameNode);
-		encodeVariable(doc, memberNode, *i);
+		xml_node<> *structNode = doc->allocate_node(node_element, "struct");
+		node->append_node(structNode);
+
+		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
+		{
+			xml_node<> *memberNode = doc->allocate_node(node_element, "member");
+			structNode->append_node(memberNode);
+			xml_node<> *nameNode = doc->allocate_node(node_element, "name", (*i)->name.c_str());
+			memberNode->append_node(nameNode);
+			encodeVariable(doc, memberNode, *i);
+		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void XMLRPCEncoder::encodeArray(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable)
 {
-	xml_node<> *arrayNode = doc->allocate_node(node_element, "array");
-	node->append_node(arrayNode);
-
-	xml_node<> *dataNode = doc->allocate_node(node_element, "data");
-	arrayNode->append_node(dataNode);
-
-	for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
+	try
 	{
-		encodeVariable(doc, dataNode, *i);
+		xml_node<> *arrayNode = doc->allocate_node(node_element, "array");
+		node->append_node(arrayNode);
+
+		xml_node<> *dataNode = doc->allocate_node(node_element, "data");
+		arrayNode->append_node(dataNode);
+
+		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
+		{
+			encodeVariable(doc, dataNode, *i);
+		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 } /* namespace RPC */

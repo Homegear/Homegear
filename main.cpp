@@ -46,7 +46,7 @@ void terminate(int32_t signalNumber)
 			HelperFunctions::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
 			HelperFunctions::printCritical("Critical: Trying to save data to " + GD::settings.databasePath() + ".crash");
 			GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".crash");
-			GD::devices.save(true);
+			if(GD::db.isOpen()) GD::devices.save(true);
 			signal(signalNumber, SIG_DFL);
 			kill(getpid(), signalNumber); //Generate core dump
 		}
@@ -303,6 +303,7 @@ int main(int argc, char* argv[])
 			std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr);
 		}
     	GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".bak");
+    	if(!GD::db.isOpen()) exit(1);
 
     	GD::rfDevice = RF::RFDevice::create(GD::settings.rfDeviceType());
         GD::rfDevice->init(GD::settings.rfDevice());
@@ -359,5 +360,6 @@ int main(int argc, char* argv[])
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	terminate(15);
     return 1;
 }

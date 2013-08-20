@@ -28,70 +28,108 @@ void HomeMaticDevice::init()
 		_initialized = true;
 	}
 	catch(const std::exception& ex)
-	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevice::setUpConfig()
 {
-	_config[0x00][0x00][0x02] = 0; //Paired to central (Possible values: 0 - false, 1 - true);
-	_config[0x00][0x00][0x0A] = 0; //First byte of central address
-	_config[0x00][0x00][0x0B] = 0; //Second byte of central address
-	_config[0x00][0x00][0x0C] = 0; //Third byte of central address
+	try
+	{
+		_config[0x00][0x00][0x02] = 0; //Paired to central (Possible values: 0 - false, 1 - true);
+		_config[0x00][0x00][0x0A] = 0; //First byte of central address
+		_config[0x00][0x00][0x0B] = 0; //Second byte of central address
+		_config[0x00][0x00][0x0C] = 0; //Third byte of central address
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevice::setUpBidCoSMessages()
 {
-    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x00, this, NOACCESS, FULLACCESS, &HomeMaticDevice::handlePairingRequest)));
+	try
+	{
+		_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x00, this, NOACCESS, FULLACCESS, &HomeMaticDevice::handlePairingRequest)));
 
-    std::shared_ptr<BidCoSMessage> message(new BidCoSMessage(0x11, this, ACCESSCENTRAL | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleReset));
-    message->addSubtype(0x00, 0x04);
-    _messages->add(message);
+		std::shared_ptr<BidCoSMessage> message(new BidCoSMessage(0x11, this, ACCESSCENTRAL | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleReset));
+		message->addSubtype(0x00, 0x04);
+		_messages->add(message);
 
-    message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSCENTRAL | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigPeerAdd));
-    message->addSubtype(0x01, 0x01);
-    _messages->add(message);
+		message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSCENTRAL | ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigPeerAdd));
+		message->addSubtype(0x01, 0x01);
+		_messages->add(message);
 
-    message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigPeerDelete));
-    message->addSubtype(0x01, 0x02);
-    _messages->add(message);
+		message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigPeerDelete));
+		message->addSubtype(0x01, 0x02);
+		_messages->add(message);
 
-    message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamRequest));
-    message->addSubtype(0x01, 0x04);
-    _messages->add(message);
+		message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigParamRequest));
+		message->addSubtype(0x01, 0x04);
+		_messages->add(message);
 
-    message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, FULLACCESS, &HomeMaticDevice::handleConfigStart));
-    message->addSubtype(0x01, 0x05);
-    _messages->add(message);
+		message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, FULLACCESS, &HomeMaticDevice::handleConfigStart));
+		message->addSubtype(0x01, 0x05);
+		_messages->add(message);
 
-    message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex));
-    message->addSubtype(0x01, 0x08);
-    _messages->add(message);
+		message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex));
+		message->addSubtype(0x01, 0x08);
+		_messages->add(message);
 
-    message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, NOACCESS, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex));
-    message->addSubtype(0x01, 0x08);
-    message->addSubtype(0x02, 0x02);
-    message->addSubtype(0x03, 0x01);
-    _messages->add(message);
+		message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, NOACCESS, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex));
+		message->addSubtype(0x01, 0x08);
+		message->addSubtype(0x02, 0x02);
+		message->addSubtype(0x03, 0x01);
+		_messages->add(message);
 
-    message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSCENTRAL | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex));
-    message->addSubtype(0x01, 0x08);
-    message->addSubtype(0x02, 0x02);
-    message->addSubtype(0x03, 0x00);
-    _messages->add(message);
+		message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSCENTRAL | ACCESSDESTISME, &HomeMaticDevice::handleConfigWriteIndex));
+		message->addSubtype(0x01, 0x08);
+		message->addSubtype(0x02, 0x02);
+		message->addSubtype(0x03, 0x00);
+		_messages->add(message);
 
-    message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME | ACCESSUNPAIRING, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigEnd));
-    message->addSubtype(0x01, 0x06);
-    _messages->add(message);
+		message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME | ACCESSUNPAIRING, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigEnd));
+		message->addSubtype(0x01, 0x06);
+		_messages->add(message);
 
-    message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigRequestPeers));
-    message->addSubtype(0x01, 0x03);
-    _messages->add(message);
+		message = std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x01, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleConfigRequestPeers));
+		message->addSubtype(0x01, 0x03);
+		_messages->add(message);
 
-    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x3F, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleTimeRequest)));
+		_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x3F, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleTimeRequest)));
 
-    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
+		_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleAck)));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 HomeMaticDevice::~HomeMaticDevice()
@@ -438,9 +476,24 @@ void HomeMaticDevice::loadPeersFromDatabase()
 
 void HomeMaticDevice::deletePeersFromDatabase()
 {
-	std::ostringstream command;
-	command << "DELETE FROM peers WHERE parent=" << std::dec << _address;
-	GD::db.executeCommand(command.str());
+	try
+	{
+		std::ostringstream command;
+		command << "DELETE FROM peers WHERE parent=" << std::dec << _address;
+		GD::db.executeCommand(command.str());
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevice::savePeersToDatabase()
@@ -501,38 +554,54 @@ void HomeMaticDevice::savePeersToDatabase()
 
 std::string HomeMaticDevice::serialize()
 {
-	std::ostringstream stringstream;
-	stringstream << std::hex << std::uppercase << std::setfill('0');
-	stringstream << std::setw(8) << (uint32_t)_deviceType;
-	stringstream << std::setw(8) << _address;
-	if(_serialNumber.size() != 10) stringstream << "0000000000"; else stringstream << _serialNumber;
-	stringstream << std::setw(2) << _firmwareVersion;
-	stringstream << std::setw(8) << _centralAddress;
-	//cleanUpMessageCounters();
-	stringstream << std::setw(8) << _messageCounter.size();
-	for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
+	try
 	{
-		stringstream << std::setw(8) << i->first;
-		stringstream << std::setw(2) << (int32_t)i->second;
-	}
-	stringstream << std::setw(8) << _config.size();
-	for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
-	{
-		stringstream << std::setw(8) << i->first; //channel
-		stringstream << std::setw(8) << i->second.size();
-		for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+		std::ostringstream stringstream;
+		stringstream << std::hex << std::uppercase << std::setfill('0');
+		stringstream << std::setw(8) << (uint32_t)_deviceType;
+		stringstream << std::setw(8) << _address;
+		if(_serialNumber.size() != 10) stringstream << "0000000000"; else stringstream << _serialNumber;
+		stringstream << std::setw(2) << _firmwareVersion;
+		stringstream << std::setw(8) << _centralAddress;
+		//cleanUpMessageCounters();
+		stringstream << std::setw(8) << _messageCounter.size();
+		for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
 		{
-			stringstream << std::setw(8) << j->first; //List index
-			stringstream << std::setw(8) << j->second.size();
-			for(std::map<int32_t, int32_t>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
+			stringstream << std::setw(8) << i->first;
+			stringstream << std::setw(2) << (int32_t)i->second;
+		}
+		stringstream << std::setw(8) << _config.size();
+		for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
+		{
+			stringstream << std::setw(8) << i->first; //channel
+			stringstream << std::setw(8) << i->second.size();
+			for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				stringstream << std::setw(8) << k->first;
-				stringstream << std::setw(8) << k->second;
+				stringstream << std::setw(8) << j->first; //List index
+				stringstream << std::setw(8) << j->second.size();
+				for(std::map<int32_t, int32_t>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
+				{
+					stringstream << std::setw(8) << k->first;
+					stringstream << std::setw(8) << k->second;
+				}
 			}
 		}
+		stringstream << std::dec;
+		return stringstream.str();
 	}
-	stringstream << std::dec;
-	return stringstream.str();
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
 }
 
 std::string HomeMaticDevice::serialNumber()
@@ -557,21 +626,37 @@ HMDeviceTypes HomeMaticDevice::deviceType()
 
 bool HomeMaticDevice::pairDevice(int32_t timeout)
 {
-    _pairing = true;
-    int32_t i = 0;
-    std::chrono::milliseconds sleepingTime(500);
-    sendPairingRequest();
-    while(_pairing && i < timeout)
+	try
+	{
+		_pairing = true;
+		int32_t i = 0;
+		std::chrono::milliseconds sleepingTime(500);
+		sendPairingRequest();
+		while(_pairing && i < timeout)
+		{
+			std::this_thread::sleep_for(sleepingTime);
+			i += std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count();
+		}
+		if(_pairing)
+		{
+			_pairing = false;
+			return false;
+		}
+		return true;
+	}
+	catch(const std::exception& ex)
     {
-        std::this_thread::sleep_for(sleepingTime);
-        i += std::chrono::duration_cast<std::chrono::milliseconds>(sleepingTime).count();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    if(_pairing)
+    catch(Exception& ex)
     {
-        _pairing = false;
-        return false;
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    return true;
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
 }
 
 bool HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
@@ -604,57 +689,87 @@ bool HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool stealthy)
 {
-	std::shared_ptr<BidCoSPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
-	if(stealthy) _sentPackets.keepAlive(packet->destinationAddress());
-	else _sentPackets.set(packet->destinationAddress(), packet);
+	try
+	{
+		std::shared_ptr<BidCoSPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
+		if(stealthy) _sentPackets.keepAlive(packet->destinationAddress());
+		else _sentPackets.set(packet->destinationAddress(), packet);
 
-	if(packetInfo)
-	{
-		int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
-		if(timeDifference < 110)
+		if(packetInfo)
 		{
-			packetInfo->time += 110 - timeDifference; //Set to sending time
-			std::this_thread::sleep_for(std::chrono::milliseconds(110 - timeDifference));
+			int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
+			if(timeDifference < 110)
+			{
+				packetInfo->time += 110 - timeDifference; //Set to sending time
+				std::this_thread::sleep_for(std::chrono::milliseconds(110 - timeDifference));
+			}
 		}
+		packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
+		if(packetInfo)
+		{
+			int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
+			if(timeDifference >= 0 && timeDifference < 100) std::this_thread::sleep_for(std::chrono::milliseconds(110 - timeDifference));
+			//Set time to now. This is necessary if two packets are sent after each other without a response in between
+			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		}
+		else HelperFunctions::printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
+		GD::rfDevice->sendPacket(packet);
 	}
-	packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
-	if(packetInfo)
-	{
-		int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
-		if(timeDifference >= 0 && timeDifference < 100) std::this_thread::sleep_for(std::chrono::milliseconds(110 - timeDifference));
-		//Set time to now. This is necessary if two packets are sent after each other without a response in between
-		packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	}
-	else HelperFunctions::printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
-	GD::rfDevice->sendPacket(packet);
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevice::sendPacketMultipleTimes(std::shared_ptr<BidCoSPacket> packet, int32_t peerAddress, int32_t count, int32_t delay, bool useCentralMessageCounter, bool isThread)
 {
-	if(!isThread)
+	try
 	{
-		std::thread t(&HomeMaticDevice::sendPacketMultipleTimes, this, packet, peerAddress, count, delay, useCentralMessageCounter, true);
-		t.detach();
-		return;
-	}
-	std::shared_ptr<Peer> peer = getPeer(peerAddress);
-	if(!peer) return;
-	for(uint32_t i = 0; i < count; i++)
-	{
-		_sentPackets.set(packet->destinationAddress(), packet);
-		GD::rfDevice->sendPacket(packet);
-		if(useCentralMessageCounter)
+		if(!isThread)
 		{
-			packet->setMessageCounter(_messageCounter[0]);
-			_messageCounter[0]++;
+			std::thread t(&HomeMaticDevice::sendPacketMultipleTimes, this, packet, peerAddress, count, delay, useCentralMessageCounter, true);
+			t.detach();
+			return;
 		}
-		else
+		std::shared_ptr<Peer> peer = getPeer(peerAddress);
+		if(!peer) return;
+		for(uint32_t i = 0; i < count; i++)
 		{
-			packet->setMessageCounter(peer->messageCounter);
-			peer->messageCounter++;
+			_sentPackets.set(packet->destinationAddress(), packet);
+			GD::rfDevice->sendPacket(packet);
+			if(useCentralMessageCounter)
+			{
+				packet->setMessageCounter(_messageCounter[0]);
+				_messageCounter[0]++;
+			}
+			else
+			{
+				packet->setMessageCounter(peer->messageCounter);
+				peer->messageCounter++;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevice::handleReset(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
@@ -744,11 +859,27 @@ std::shared_ptr<Peer> HomeMaticDevice::createPeer(int32_t address, int32_t firmw
 
 std::shared_ptr<Peer> HomeMaticDevice::createTeam(int32_t address, HMDeviceTypes deviceType, std::string serialNumber)
 {
-	std::shared_ptr<Peer> team(new Peer(isCentral()));
-	team->address = address;
-	team->deviceType = deviceType;
-	team->setSerialNumber(serialNumber);
-    return team;
+	try
+	{
+		std::shared_ptr<Peer> team(new Peer(isCentral()));
+		team->address = address;
+		team->deviceType = deviceType;
+		team->setSerialNumber(serialNumber);
+		return team;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<Peer>();
 }
 
 void HomeMaticDevice::handleConfigRequestPeers(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
@@ -878,45 +1009,75 @@ void HomeMaticDevice::handleConfigParamRequest(int32_t messageCounter, std::shar
 
 void HomeMaticDevice::handleTimeRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
-	std::vector<uint8_t> payload;
-	payload.push_back(0x02);
-	payload.push_back(0x04);
-	uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 946684800;
-	payload.push_back(time >> 24);
-	payload.push_back((time >> 16) & 0xFF);
-	payload.push_back((time >> 8) & 0xFF);
-	payload.push_back(time & 0xFF);
-	std::shared_ptr<BidCoSPacket> timePacket(new BidCoSPacket(messageCounter, 0x80, 0x3F, _address, packet->senderAddress(), payload));
-	sendPacket(timePacket);
+	try
+	{
+		std::vector<uint8_t> payload;
+		payload.push_back(0x02);
+		payload.push_back(0x04);
+		uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 946684800;
+		payload.push_back(time >> 24);
+		payload.push_back((time >> 16) & 0xFF);
+		payload.push_back((time >> 8) & 0xFF);
+		payload.push_back(time & 0xFF);
+		std::shared_ptr<BidCoSPacket> timePacket(new BidCoSPacket(messageCounter, 0x80, 0x3F, _address, packet->senderAddress(), payload));
+		sendPacket(timePacket);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevice::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
-    int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
-    if(!peerExists(address))
+	try
+	{
+		int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
+		if(!peerExists(address))
+		{
+			std::shared_ptr<Peer> peer = createPeer(address, -1, HMDeviceTypes::HMUNKNOWN, "", packet->payload()->at(5), 0);
+			_peersMutex.lock();
+			try
+			{
+				_peers[address] = peer;
+			}
+			catch(const std::exception& ex)
+			{
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(Exception& ex)
+			{
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_peersMutex.unlock();
+		}
+		_justPairedToOrThroughCentral = true;
+		sendOK(messageCounter, packet->senderAddress());
+	}
+	catch(const std::exception& ex)
     {
-        std::shared_ptr<Peer> peer = createPeer(address, -1, HMDeviceTypes::HMUNKNOWN, "", packet->payload()->at(5), 0);
-        _peersMutex.lock();
-        try
-        {
-        	_peers[address] = peer;
-        }
-		catch(const std::exception& ex)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(Exception& ex)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
-		_peersMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    _justPairedToOrThroughCentral = true;
-    sendOK(messageCounter, packet->senderAddress());
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevice::handleConfigStart(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
@@ -955,22 +1116,37 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, std::shared_ptr<
 
 void HomeMaticDevice::handleConfigWriteIndex(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
-	if(packet->payload()->at(2) == 0x02 && packet->payload()->at(3) == 0x00)
-    {
-        std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, packet->senderAddress());
-        queue->peer = getPeer(packet->senderAddress());
-        queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x08), std::pair<uint32_t, int32_t>(0x02, 0x02), std::pair<uint32_t, int32_t>(0x03, 0x00) }));
-        queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x06) }));
-    }
-	uint32_t channel = packet->payload()->at(0);
-	for(int i = 2; i < (signed)packet->payload()->size(); i+=2)
+	try
 	{
-		int32_t index = (int32_t)packet->payload()->at(i);
-		if(_config.find(channel) == _config.end() || _config.at(channel).find(_currentList) == _config.at(channel).end() || _config.at(channel).at(_currentList).find(index) == _config.at(channel).at(_currentList).end()) continue;
-		_config[channel][_currentList][(int32_t)packet->payload()->at(i)] = packet->payload()->at(i + 1);
-		HelperFunctions::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": Config at index " + std::to_string(packet->payload()->at(i)) + " set to " + std::to_string(packet->payload()->at(i + 1)));
+		if(packet->payload()->at(2) == 0x02 && packet->payload()->at(3) == 0x00)
+		{
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, packet->senderAddress());
+			queue->peer = getPeer(packet->senderAddress());
+			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x08), std::pair<uint32_t, int32_t>(0x02, 0x02), std::pair<uint32_t, int32_t>(0x03, 0x00) }));
+			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x06) }));
+		}
+		uint32_t channel = packet->payload()->at(0);
+		for(int i = 2; i < (signed)packet->payload()->size(); i+=2)
+		{
+			int32_t index = (int32_t)packet->payload()->at(i);
+			if(_config.find(channel) == _config.end() || _config.at(channel).find(_currentList) == _config.at(channel).end() || _config.at(channel).at(_currentList).find(index) == _config.at(channel).at(_currentList).end()) continue;
+			_config[channel][_currentList][(int32_t)packet->payload()->at(i)] = packet->payload()->at(i + 1);
+			HelperFunctions::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": Config at index " + std::to_string(packet->payload()->at(i)) + " set to " + std::to_string(packet->payload()->at(i + 1)));
+		}
+		sendOK(messageCounter, packet->senderAddress());
 	}
-    sendOK(messageCounter, packet->senderAddress());
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAddress, int32_t channel)
@@ -1136,55 +1312,70 @@ void HomeMaticDevice::sendNOKTargetInvalid(int32_t messageCounter, int32_t desti
 
 void HomeMaticDevice::sendConfigParams(int32_t messageCounter, int32_t destinationAddress, std::shared_ptr<BidCoSPacket> packet)
 {
-	uint32_t channel = packet->payload()->at(0);
-	if(_config[channel][_currentList].size() >= 8)
+	try
 	{
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, destinationAddress);
-		queue->peer = getPeer(destinationAddress);
-
-		//Add request config packet in case the request is being repeated
-		queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x04) }));
-
-		std::vector<uint8_t> payload;
-		std::map<int32_t, int32_t>::const_iterator i = _config[channel][_currentList].begin();
-		while(true)
+		uint32_t channel = packet->payload()->at(0);
+		if(_config[channel][_currentList].size() >= 8)
 		{
-			if(i->first % 15 == 1 || i == _config[channel][_currentList].end()) //New packet
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, destinationAddress);
+			queue->peer = getPeer(destinationAddress);
+
+			//Add request config packet in case the request is being repeated
+			queue->push(_messages->find(DIRECTIONIN, 0x01, std::vector<std::pair<uint32_t, int32_t>> { std::pair<uint32_t, int32_t>(0x01, 0x04) }));
+
+			std::vector<uint8_t> payload;
+			std::map<int32_t, int32_t>::const_iterator i = _config[channel][_currentList].begin();
+			while(true)
 			{
-				if(!payload.empty())
+				if(i->first % 15 == 1 || i == _config[channel][_currentList].end()) //New packet
 				{
-					std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA0, 0x10, _address, destinationAddress, payload));
-					queue->push(packet);
-					messageCounter++;
-					queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-					payload.clear();
+					if(!payload.empty())
+					{
+						std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA0, 0x10, _address, destinationAddress, payload));
+						queue->push(packet);
+						messageCounter++;
+						queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+						payload.clear();
+					}
+					if(i == _config[channel][_currentList].end()) break;
+					payload.push_back((packet->payload()->at(0) == 2) ? 3 : 2);
+					payload.push_back(i->first);
 				}
-				if(i == _config[channel][_currentList].end()) break;
-				payload.push_back((packet->payload()->at(0) == 2) ? 3 : 2);
-				payload.push_back(i->first);
+				payload.push_back(i->second);
+				i++;
 			}
-			payload.push_back(i->second);
-			i++;
+			payload.push_back((packet->payload()->at(0) == 2) ? 3 : 2);
+			payload.push_back(0x00);
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
+			queue->push(packet);
 		}
-		payload.push_back((packet->payload()->at(0) == 2) ? 3 : 2);
-		payload.push_back(0x00);
-		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
-		queue->push(packet);
-	}
-	else
-	{
-		std::vector<unsigned char> payload;
-		payload.push_back((packet->payload()->at(0) == 2) ? 3 : 2); //No idea how to determine the destination channel
-		for(std::map<int32_t, int32_t>::const_iterator i = _config[channel][_currentList].begin(); i != _config[channel][_currentList].end(); ++i)
+		else
 		{
-			payload.push_back(i->first);
-			payload.push_back(i->second);
+			std::vector<unsigned char> payload;
+			payload.push_back((packet->payload()->at(0) == 2) ? 3 : 2); //No idea how to determine the destination channel
+			for(std::map<int32_t, int32_t>::const_iterator i = _config[channel][_currentList].begin(); i != _config[channel][_currentList].end(); ++i)
+			{
+				payload.push_back(i->first);
+				payload.push_back(i->second);
+			}
+			payload.push_back(0); //I think the packet always ends with two zero bytes
+			payload.push_back(0);
+			std::shared_ptr<BidCoSPacket> config(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
+			sendPacket(config);
 		}
-		payload.push_back(0); //I think the packet always ends with two zero bytes
-		payload.push_back(0);
-		std::shared_ptr<BidCoSPacket> config(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
-		sendPacket(config);
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevice::sendPairingRequest()

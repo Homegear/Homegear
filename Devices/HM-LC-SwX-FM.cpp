@@ -14,20 +14,50 @@ HM_LC_SWX_FM::HM_LC_SWX_FM(std::string serialNumber, int32_t address) : HomeMati
 
 void HM_LC_SWX_FM::init()
 {
-	HomeMaticDevice::init();
+	try
+	{
+		HomeMaticDevice::init();
 
-	_deviceType = HMDeviceTypes::HMLCSW1FM;
-    _firmwareVersion = 0x16;
+		_deviceType = HMDeviceTypes::HMLCSW1FM;
+		_firmwareVersion = 0x16;
 
-    setUpBidCoSMessages();
+		setUpBidCoSMessages();
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HM_LC_SWX_FM::setUpBidCoSMessages()
 {
-    HomeMaticDevice::setUpBidCoSMessages();
+	try
+	{
+		HomeMaticDevice::setUpBidCoSMessages();
 
-    //Incoming
-    _messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x40, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleStateChange)));
+		//Incoming
+		_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x40, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleStateChange)));
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 HM_LC_SWX_FM::~HM_LC_SWX_FM()
@@ -36,18 +66,34 @@ HM_LC_SWX_FM::~HM_LC_SWX_FM()
 
 std::string HM_LC_SWX_FM::serialize()
 {
-	std::string serializedBase = HomeMaticDevice::serialize();
-	std::ostringstream stringstream;
-	stringstream << std::hex << std::uppercase << std::setfill('0');
-	stringstream << std::setw(8) << serializedBase.size() << serializedBase;
-	stringstream << std::setw(8) << _states.size();
-	for(std::map<uint32_t, bool>::iterator i = _states.begin(); i != _states.end(); ++i)
+	try
 	{
-		stringstream << std::setw(4) << (i->first & 0xFFFF);
-		stringstream << std::setw(1) << i->second;
+		std::string serializedBase = HomeMaticDevice::serialize();
+		std::ostringstream stringstream;
+		stringstream << std::hex << std::uppercase << std::setfill('0');
+		stringstream << std::setw(8) << serializedBase.size() << serializedBase;
+		stringstream << std::setw(8) << _states.size();
+		for(std::map<uint32_t, bool>::iterator i = _states.begin(); i != _states.end(); ++i)
+		{
+			stringstream << std::setw(4) << (i->first & 0xFFFF);
+			stringstream << std::setw(1) << i->second;
+		}
+		stringstream << std::setw(8) << _channelCount;
+		return  stringstream.str();
 	}
-	stringstream << std::setw(8) << _channelCount;
-	return  stringstream.str();
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
 }
 
 void HM_LC_SWX_FM::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
@@ -142,8 +188,16 @@ void HM_LC_SWX_FM::sendStateChangeResponse(std::shared_ptr<BidCoSPacket> receive
 		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(receivedPacket->messageCounter(), 0x80, 0x02, _address, receivedPacket->senderAddress(), payload));
 		sendPacket(packet);
 	}
-	catch(const std::exception& ex)
-	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }

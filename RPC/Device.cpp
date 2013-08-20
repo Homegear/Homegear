@@ -79,164 +79,194 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 
 void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 {
-	if(!value) return;
-	if(type == Type::Enum::floatIntegerScale)
+	try
 	{
-		value->type = RPCVariableType::rpcFloat;
-		value->floatValue = ((double)value->integerValue / factor) - offset;
-	}
-	else if(type == Type::Enum::integerIntegerScale)
-	{
-		value->type = RPCVariableType::rpcInteger;
-		if(div > 0) value->integerValue *= div;
-		if(mul > 0) value->integerValue /= mul;
-	}
-	else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
-	{
-		if(integerValueMapDevice.find(value->integerValue) != integerValueMapDevice.end()) value->integerValue = integerValueMapDevice[value->integerValue];
-	}
-	else if(type == Type::Enum::booleanInteger)
-	{
-		value->type = RPCVariableType::rpcBoolean;
-		if(value->integerValue == valueFalse) value->booleanValue = false;
-		if(value->integerValue == valueTrue || value->integerValue > threshold) value->booleanValue = true;;
-	}
-	else if(type == Type::Enum::floatConfigTime)
-	{
-		value->type = RPCVariableType::rpcFloat;
-		if(value < 0)
+		if(!value) return;
+		if(type == Type::Enum::floatIntegerScale)
 		{
-			value->floatValue = 0;
-			return;
+			value->type = RPCVariableType::rpcFloat;
+			value->floatValue = ((double)value->integerValue / factor) - offset;
 		}
-		if(valueSize > 0)
+		else if(type == Type::Enum::integerIntegerScale)
 		{
-			uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
-			bits += std::lround(valueSize * 10) % 10;
-			if(bits == 0) bits = 7;
-			uint32_t maxNumber = 1 << bits;
-			if((unsigned)value->integerValue < maxNumber) value->floatValue = value->integerValue * factor;
-			else value->floatValue = (value->integerValue - maxNumber) * factor2;
+			value->type = RPCVariableType::rpcInteger;
+			if(div > 0) value->integerValue *= div;
+			if(mul > 0) value->integerValue /= mul;
 		}
-		else
+		else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 		{
-			int32_t factorIndex = (value->integerValue & 0xFF) >> 5;
-			double factor = 0;
-			switch(factorIndex)
+			if(integerValueMapDevice.find(value->integerValue) != integerValueMapDevice.end()) value->integerValue = integerValueMapDevice[value->integerValue];
+		}
+		else if(type == Type::Enum::booleanInteger)
+		{
+			value->type = RPCVariableType::rpcBoolean;
+			if(value->integerValue == valueFalse) value->booleanValue = false;
+			if(value->integerValue == valueTrue || value->integerValue > threshold) value->booleanValue = true;;
+		}
+		else if(type == Type::Enum::floatConfigTime)
+		{
+			value->type = RPCVariableType::rpcFloat;
+			if(value < 0)
 			{
-			case 0:
-				factor = 0.1;
-				break;
-			case 1:
-				factor = 1;
-				break;
-			case 2:
-				factor = 5;
-				break;
-			case 3:
-				factor = 10;
-				break;
-			case 4:
-				factor = 60;
-				break;
-			case 5:
-				factor = 300;
-				break;
-			case 6:
-				factor = 600;
-				break;
-			case 7:
-				factor = 3600;
-				break;
+				value->floatValue = 0;
+				return;
 			}
-			value->floatValue = (value->integerValue & 0x1F) * factor;
+			if(valueSize > 0)
+			{
+				uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
+				bits += std::lround(valueSize * 10) % 10;
+				if(bits == 0) bits = 7;
+				uint32_t maxNumber = 1 << bits;
+				if((unsigned)value->integerValue < maxNumber) value->floatValue = value->integerValue * factor;
+				else value->floatValue = (value->integerValue - maxNumber) * factor2;
+			}
+			else
+			{
+				int32_t factorIndex = (value->integerValue & 0xFF) >> 5;
+				double factor = 0;
+				switch(factorIndex)
+				{
+				case 0:
+					factor = 0.1;
+					break;
+				case 1:
+					factor = 1;
+					break;
+				case 2:
+					factor = 5;
+					break;
+				case 3:
+					factor = 10;
+					break;
+				case 4:
+					factor = 60;
+					break;
+				case 5:
+					factor = 300;
+					break;
+				case 6:
+					factor = 600;
+					break;
+				case 7:
+					factor = 3600;
+					break;
+				}
+				value->floatValue = (value->integerValue & 0x1F) * factor;
+			}
+		}
+		else if(type == Type::Enum::integerTinyFloat)
+		{
+			value->type = RPCVariableType::rpcInteger;
+			int32_t mantissa = (value->integerValue >> mantissaStart) & ((1 << mantissaSize) - 1);
+			if(mantissaSize == 0) mantissa = 1;
+			int32_t exponent = (value->integerValue >> exponentStart) & ((1 << exponentSize) - 1);
+			value->integerValue = mantissa * (1 << exponent);
 		}
 	}
-	else if(type == Type::Enum::integerTinyFloat)
-	{
-		value->type = RPCVariableType::rpcInteger;
-		int32_t mantissa = (value->integerValue >> mantissaStart) & ((1 << mantissaSize) - 1);
-		if(mantissaSize == 0) mantissa = 1;
-		int32_t exponent = (value->integerValue >> exponentStart) & ((1 << exponentSize) - 1);
-		value->integerValue = mantissa * (1 << exponent);
-	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 {
-	if(!value) return;
-	if(type == Type::Enum::none)
+	try
 	{
-		if(value->type == RPCVariableType::rpcBoolean) value->integerValue = (int32_t)value->booleanValue;
-	}
-	else if(type == Type::Enum::floatIntegerScale)
-	{
-		value->integerValue = std::lround((value->floatValue + offset) * factor);
-	}
-	else if(type == Type::Enum::integerIntegerScale)
-	{
-		if(mul > 0) value->integerValue *= mul;
-		//mul and div can be set, so no else if
-		if(div > 0) value->integerValue /= div;
-	}
-	else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
-	{
-		if(integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end()) value->integerValue = integerValueMapParameter[value->integerValue];
-	}
-	else if(type == Type::Enum::booleanInteger)
-	{
-		if(valueTrue == 0 && valueFalse == 0) value->integerValue = (int32_t)value->booleanValue;
-		else if(value->booleanValue) value->integerValue = valueTrue;
-		else value->integerValue = valueFalse;
-	}
-	else if(type == Type::Enum::floatConfigTime)
-	{
-		if(valueSize > 0)
+		if(!value) return;
+		if(type == Type::Enum::none)
 		{
-			uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
-			bits += std::lround(valueSize * 10) % 10;
-			if(bits == 0) bits = 7;
-			uint32_t maxNumber = 1 << bits;
-			if(value->floatValue <= maxNumber - 1) value->integerValue = std::lround(value->floatValue / factor);
-			else value->integerValue = maxNumber + std::lround(value->floatValue / factor2);
+			if(value->type == RPCVariableType::rpcBoolean) value->integerValue = (int32_t)value->booleanValue;
 		}
-		else
+		else if(type == Type::Enum::floatIntegerScale)
 		{
-			int32_t factorIndex = 0;
-			double factor = 0.1;
-			if(value->floatValue < 0) value->floatValue = 0;
-			if(value->floatValue <= 3.1) { factorIndex = 0; factor = 0.1; }
-			else if(value->floatValue <= 31) { factorIndex = 1; factor = 1; }
-			else if(value->floatValue <= 155) { factorIndex = 2; factor = 5; }
-			else if(value->floatValue <= 310) { factorIndex = 3; factor = 10; }
-			else if(value->floatValue <= 1860) { factorIndex = 4; factor = 60; }
-			else if(value->floatValue <= 9300) { factorIndex = 5; factor = 300; }
-			else if(value->floatValue <= 18600) { factorIndex = 6; factor = 600; }
-			else { factorIndex = 7; factor = 3600; }
-
-			value->integerValue = ((factorIndex << 5) | std::lround(value->floatValue / factor)) & 0xFF;
+			value->integerValue = std::lround((value->floatValue + offset) * factor);
 		}
-	}
-	else if(type == Type::Enum::integerTinyFloat)
-	{
-		int64_t maxMantissa = ((1 << mantissaSize) - 1);
-		int64_t maxExponent = ((1 << exponentSize) - 1);
-		int64_t mantissa = value->integerValue;
-		int64_t exponent = 0;
-		if(maxMantissa > 0)
+		else if(type == Type::Enum::integerIntegerScale)
 		{
-			while(value->integerValue >= maxMantissa)
+			if(mul > 0) value->integerValue *= mul;
+			//mul and div can be set, so no else if
+			if(div > 0) value->integerValue /= div;
+		}
+		else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
+		{
+			if(integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end()) value->integerValue = integerValueMapParameter[value->integerValue];
+		}
+		else if(type == Type::Enum::booleanInteger)
+		{
+			if(valueTrue == 0 && valueFalse == 0) value->integerValue = (int32_t)value->booleanValue;
+			else if(value->booleanValue) value->integerValue = valueTrue;
+			else value->integerValue = valueFalse;
+		}
+		else if(type == Type::Enum::floatConfigTime)
+		{
+			if(valueSize > 0)
 			{
-				mantissa = mantissa >> 1;
-				exponent++;
+				uint32_t bits = (uint32_t)std::floor(valueSize) * 8;
+				bits += std::lround(valueSize * 10) % 10;
+				if(bits == 0) bits = 7;
+				uint32_t maxNumber = 1 << bits;
+				if(value->floatValue <= maxNumber - 1) value->integerValue = std::lround(value->floatValue / factor);
+				else value->integerValue = maxNumber + std::lround(value->floatValue / factor2);
+			}
+			else
+			{
+				int32_t factorIndex = 0;
+				double factor = 0.1;
+				if(value->floatValue < 0) value->floatValue = 0;
+				if(value->floatValue <= 3.1) { factorIndex = 0; factor = 0.1; }
+				else if(value->floatValue <= 31) { factorIndex = 1; factor = 1; }
+				else if(value->floatValue <= 155) { factorIndex = 2; factor = 5; }
+				else if(value->floatValue <= 310) { factorIndex = 3; factor = 10; }
+				else if(value->floatValue <= 1860) { factorIndex = 4; factor = 60; }
+				else if(value->floatValue <= 9300) { factorIndex = 5; factor = 300; }
+				else if(value->floatValue <= 18600) { factorIndex = 6; factor = 600; }
+				else { factorIndex = 7; factor = 3600; }
+
+				value->integerValue = ((factorIndex << 5) | std::lround(value->floatValue / factor)) & 0xFF;
 			}
 		}
-		if(mantissa > maxMantissa) mantissa = maxMantissa;
-		if(exponent > maxExponent) exponent = maxExponent;
-		exponent = exponent << exponentStart;
-		value->integerValue = (mantissa << mantissaStart) | exponent;
+		else if(type == Type::Enum::integerTinyFloat)
+		{
+			int64_t maxMantissa = ((1 << mantissaSize) - 1);
+			int64_t maxExponent = ((1 << exponentSize) - 1);
+			int64_t mantissa = value->integerValue;
+			int64_t exponent = 0;
+			if(maxMantissa > 0)
+			{
+				while(value->integerValue >= maxMantissa)
+				{
+					mantissa = mantissa >> 1;
+					exponent++;
+				}
+			}
+			if(mantissa > maxMantissa) mantissa = maxMantissa;
+			if(exponent > maxExponent) exponent = maxExponent;
+			exponent = exponent << exponentStart;
+			value->integerValue = (mantissa << mantissaStart) | exponent;
+		}
+		value->type = RPCVariableType::rpcInteger;
 	}
-	value->type = RPCVariableType::rpcInteger;
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 ParameterConversion::ParameterConversion(xml_node<>* node)
@@ -309,229 +339,291 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 
 bool Parameter::checkCondition(int32_t value)
 {
-	switch(booleanOperator)
+	try
 	{
-	case BooleanOperator::Enum::e:
-		return value == constValue;
-		break;
-	case BooleanOperator::Enum::g:
-		return value > constValue;
-		break;
-	case BooleanOperator::Enum::l:
-		return value < constValue;
-		break;
-	case BooleanOperator::Enum::ge:
-		return value >= constValue;
-		break;
-	case BooleanOperator::Enum::le:
-		return value <= constValue;
-		break;
-	default:
-		HelperFunctions::printWarning("Warning: Boolean operator is none.");
-		break;
+		switch(booleanOperator)
+		{
+		case BooleanOperator::Enum::e:
+			return value == constValue;
+			break;
+		case BooleanOperator::Enum::g:
+			return value > constValue;
+			break;
+		case BooleanOperator::Enum::l:
+			return value < constValue;
+			break;
+		case BooleanOperator::Enum::ge:
+			return value >= constValue;
+			break;
+		case BooleanOperator::Enum::le:
+			return value <= constValue;
+			break;
+		default:
+			HelperFunctions::printWarning("Warning: Boolean operator is none.");
+			break;
+		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 	return false;
 }
 
 std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint8_t>& data, bool isEvent)
 {
-	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
+	try
 	{
-		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger, data));
-	}
-	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.empty())
-	{
-		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcBoolean, data));
-	}
-	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
-	{
-		if(!data.empty() && data.at(0) != 0)
+		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 		{
-			int32_t size = data.back() == 0 ? data.size() - 1 : data.size();
-			std::string string(&data.at(0), &data.at(0) + size);
-			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(string));
+			return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger, data));
 		}
-		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
-	}
-	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
-	{
-		if(isEvent) return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(true));
-		else return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(false));
-	}
-	else if(id == "RSSI_DEVICE" || id == "RSSI_PEER")
-	{
-		//From CC1100 manual page 37:
-		//1) Read the RSSI status register
-		//2) Convert the reading from a hexadecimal
-		//number to a decimal number (RSSI_dec)
-		//3) If RSSI_dec ≥ 128 then RSSI_dBm =
-		//(RSSI_dec - 256)/2 – RSSI_offset
-		//4) Else if RSSI_dec < 128 then RSSI_dBm =
-		//(RSSI_dec)/2 – RSSI_offset
-		std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcInteger, data));
-		if(variable->integerValue >= 128) variable->integerValue = ((variable->integerValue - 256) / 2) - 74;
-		else variable->integerValue = (variable->integerValue / 2) - 74;
-		return variable;
-	}
-	else
-	{
-		std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcInteger, data));
-		if(isSigned && data.size() <= 4)
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.empty())
 		{
-			int32_t byteIndex = data.size() - std::lround(std::ceil(physicalParameter->size));
-			int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
-			int32_t signPosition = 0;
-			if(bitSize == 0) signPosition = 7;
-			else
+			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcBoolean, data));
+		}
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
+		{
+			if(!data.empty() && data.at(0) != 0)
 			{
-				signPosition = bitSize - 1;
+				int32_t size = data.back() == 0 ? data.size() - 1 : data.size();
+				std::string string(&data.at(0), &data.at(0) + size);
+				return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(string));
 			}
-			if(data.at(byteIndex) & (1 << signPosition))
-			{
-				int32_t bits = (std::lround(std::floor(physicalParameter->size)) * 8) + bitSize;
-				variable->integerValue -= (1 << bits);
-			}
+			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
 		}
-		for(std::vector<std::shared_ptr<ParameterConversion>>::reverse_iterator i = conversion.rbegin(); i != conversion.rend(); ++i)
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 		{
-			(*i)->fromPacket(variable);
+			if(isEvent) return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(true));
+			else return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(false));
 		}
-		return variable;
+		else if(id == "RSSI_DEVICE" || id == "RSSI_PEER")
+		{
+			//From CC1100 manual page 37:
+			//1) Read the RSSI status register
+			//2) Convert the reading from a hexadecimal
+			//number to a decimal number (RSSI_dec)
+			//3) If RSSI_dec ≥ 128 then RSSI_dBm =
+			//(RSSI_dec - 256)/2 – RSSI_offset
+			//4) Else if RSSI_dec < 128 then RSSI_dBm =
+			//(RSSI_dec)/2 – RSSI_offset
+			std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcInteger, data));
+			if(variable->integerValue >= 128) variable->integerValue = ((variable->integerValue - 256) / 2) - 74;
+			else variable->integerValue = (variable->integerValue / 2) - 74;
+			return variable;
+		}
+		else
+		{
+			std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcInteger, data));
+			if(isSigned && data.size() <= 4)
+			{
+				int32_t byteIndex = data.size() - std::lround(std::ceil(physicalParameter->size));
+				int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
+				int32_t signPosition = 0;
+				if(bitSize == 0) signPosition = 7;
+				else
+				{
+					signPosition = bitSize - 1;
+				}
+				if(data.at(byteIndex) & (1 << signPosition))
+				{
+					int32_t bits = (std::lround(std::floor(physicalParameter->size)) * 8) + bitSize;
+					variable->integerValue -= (1 << bits);
+				}
+			}
+			for(std::vector<std::shared_ptr<ParameterConversion>>::reverse_iterator i = conversion.rbegin(); i != conversion.rend(); ++i)
+			{
+				(*i)->fromPacket(variable);
+			}
+			return variable;
+		}
+		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger, data));
 	}
-	return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger, data));
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger));
 }
 
 std::vector<uint8_t> Parameter::convertToPacket(std::string value)
 {
-	std::shared_ptr<RPCVariable> convertedValue;
-	if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
-	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
+	try
 	{
-		if(HelperFunctions::isNumber(value)) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
-		else //value is id of enum element
+		std::shared_ptr<RPCVariable> convertedValue;
+		if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
+		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
 		{
-			LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
-			for(std::vector<ParameterOption>::iterator i = parameter->options.begin(); i != parameter->options.end(); ++i)
+			if(HelperFunctions::isNumber(value)) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
+			else //value is id of enum element
 			{
-				if(i->id == value)
+				LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
+				for(std::vector<ParameterOption>::iterator i = parameter->options.begin(); i != parameter->options.end(); ++i)
 				{
-					convertedValue.reset(new RPCVariable(i->index));
-					break;
+					if(i->id == value)
+					{
+						convertedValue.reset(new RPCVariable(i->index));
+						break;
+					}
 				}
+				if(!convertedValue) convertedValue.reset(new RPCVariable(0));
 			}
-			if(!convertedValue) convertedValue.reset(new RPCVariable(0));
 		}
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean || logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
+		{
+			convertedValue.reset(new RPCVariable(false));
+			if(HelperFunctions::toLower(value) == "true") convertedValue->booleanValue = true;
+		}
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) convertedValue.reset(new RPCVariable(HelperFunctions::getDouble(value)));
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) convertedValue.reset(new RPCVariable(value));
+		if(!convertedValue)
+		{
+			HelperFunctions::printWarning("Warning: Could not convert parameter " + id + " from String.");
+			return std::vector<uint8_t>();
+		}
+		return convertToPacket(convertedValue);
 	}
-	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean || logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
-	{
-		convertedValue.reset(new RPCVariable(false));
-		if(HelperFunctions::toLower(value) == "true") convertedValue->booleanValue = true;
-	}
-	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) convertedValue.reset(new RPCVariable(HelperFunctions::getDouble(value)));
-	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) convertedValue.reset(new RPCVariable(value));
-	if(!convertedValue)
-	{
-		HelperFunctions::printWarning("Warning: Could not convert parameter " + id + " from String.");
-		return std::vector<uint8_t>();
-	}
-	return convertToPacket(convertedValue);
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<uint8_t>();
 }
 
 std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> value)
 {
 	std::vector<uint8_t> data;
-	if(!value) return data;
-	if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
+	try
 	{
-		LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
-		if(value->integerValue > parameter->max) value->integerValue = parameter->max;
-		if(value->integerValue < parameter->min) value->integerValue = parameter->min;
-	}
-	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
-	{
-		value->integerValue = (int32_t)value->booleanValue;
-	}
-	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
-	{
-		if(value->stringValue.size() > 0)
+		if(!value) return data;
+		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 		{
-			data.insert(data.end(), value->stringValue.begin(), value->stringValue.end());
+			LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
+			if(value->integerValue > parameter->max) value->integerValue = parameter->max;
+			if(value->integerValue < parameter->min) value->integerValue = parameter->min;
 		}
-		if(data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
-	}
-	else
-	{
-		if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 		{
-			LogicalParameterFloat* parameter = (LogicalParameterFloat*)logicalParameter.get();
-			bool specialValue = (value->floatValue == parameter->defaultValue);
-			if(!specialValue)
-			{
-				for(std::unordered_map<std::string, double>::const_iterator i = parameter->specialValues.begin(); i != parameter->specialValues.end(); ++i)
-				{
-					if(i->second == value->floatValue)
-					{
-						specialValue = true;
-						break;
-					}
-				}
-			}
-			if(!specialValue)
-			{
-				if(value->floatValue > parameter->max) value->floatValue = parameter->max;
-				else if(value->floatValue < parameter->min) value->floatValue = parameter->min;
-			}
+			value->integerValue = (int32_t)value->booleanValue;
 		}
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 		{
-			LogicalParameterInteger* parameter = (LogicalParameterInteger*)logicalParameter.get();
-			bool specialValue = (value->integerValue == parameter->defaultValue);
-			if(!specialValue)
+			if(value->stringValue.size() > 0)
 			{
-				for(std::unordered_map<std::string, int32_t>::const_iterator i = parameter->specialValues.begin(); i != parameter->specialValues.end(); ++i)
-				{
-					if(i->second == value->integerValue)
-					{
-						specialValue = true;
-						break;
-					}
-				}
+				data.insert(data.end(), value->stringValue.begin(), value->stringValue.end());
 			}
-			if(!specialValue)
-			{
-				if(value->integerValue > parameter->max) value->integerValue = parameter->max;
-				else if(value->integerValue < parameter->min) value->integerValue = parameter->min;
-			}
-		}
-		std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
-		*variable = *value;
-		if(conversion.empty())
-		{
-			if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean) variable->integerValue = (int32_t)variable->booleanValue;
+			if(data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
 		}
 		else
 		{
-			for(std::vector<std::shared_ptr<ParameterConversion>>::iterator i = conversion.begin(); i != conversion.end(); ++i)
+			if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
 			{
-				(*i)->toPacket(variable);
+				LogicalParameterFloat* parameter = (LogicalParameterFloat*)logicalParameter.get();
+				bool specialValue = (value->floatValue == parameter->defaultValue);
+				if(!specialValue)
+				{
+					for(std::unordered_map<std::string, double>::const_iterator i = parameter->specialValues.begin(); i != parameter->specialValues.end(); ++i)
+					{
+						if(i->second == value->floatValue)
+						{
+							specialValue = true;
+							break;
+						}
+					}
+				}
+				if(!specialValue)
+				{
+					if(value->floatValue > parameter->max) value->floatValue = parameter->max;
+					else if(value->floatValue < parameter->min) value->floatValue = parameter->min;
+				}
 			}
+			else if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
+			{
+				LogicalParameterInteger* parameter = (LogicalParameterInteger*)logicalParameter.get();
+				bool specialValue = (value->integerValue == parameter->defaultValue);
+				if(!specialValue)
+				{
+					for(std::unordered_map<std::string, int32_t>::const_iterator i = parameter->specialValues.begin(); i != parameter->specialValues.end(); ++i)
+					{
+						if(i->second == value->integerValue)
+						{
+							specialValue = true;
+							break;
+						}
+					}
+				}
+				if(!specialValue)
+				{
+					if(value->integerValue > parameter->max) value->integerValue = parameter->max;
+					else if(value->integerValue < parameter->min) value->integerValue = parameter->min;
+				}
+			}
+			std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
+			*variable = *value;
+			if(conversion.empty())
+			{
+				if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean) variable->integerValue = (int32_t)variable->booleanValue;
+			}
+			else
+			{
+				for(std::vector<std::shared_ptr<ParameterConversion>>::iterator i = conversion.begin(); i != conversion.end(); ++i)
+				{
+					(*i)->toPacket(variable);
+				}
+			}
+			value->integerValue = variable->integerValue;
 		}
-		value->integerValue = variable->integerValue;
-	}
-	if(physicalParameter->type != PhysicalParameter::Type::Enum::typeString)
-	{
-		//Crop to size. Most importantly for negative numbers
-		uint32_t byteSize = std::lround(std::floor(physicalParameter->size));
-		int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
-		if(byteSize >= 4)
+		if(physicalParameter->type != PhysicalParameter::Type::Enum::typeString)
 		{
-			byteSize = 4;
-			bitSize = 0;
+			//Crop to size. Most importantly for negative numbers
+			uint32_t byteSize = std::lround(std::floor(physicalParameter->size));
+			int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
+			if(byteSize >= 4)
+			{
+				byteSize = 4;
+				bitSize = 0;
+			}
+			int32_t valueMask = 0xFFFFFFFF >> (((4 - byteSize) * 8) - bitSize);
+			value->integerValue &= valueMask;
+			HelperFunctions::memcpyBigEndian(data, value->integerValue);
 		}
-		int32_t valueMask = 0xFFFFFFFF >> (((4 - byteSize) * 8) - bitSize);
-		value->integerValue &= valueMask;
-		HelperFunctions::memcpyBigEndian(data, value->integerValue);
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 	return data;
 }
 
@@ -801,24 +893,53 @@ ParameterSet::ParameterSet(xml_node<>* parameterSetNode)
 std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(uint32_t startIndex, uint32_t endIndex, int32_t list)
 {
 	std::vector<std::shared_ptr<Parameter>> filteredParameters;
-	if(list < 0) return filteredParameters;
-	for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	try
 	{
-		if((*i)->physicalParameter->list != (unsigned)list) continue;
-		//if((*i)->physicalParameter->index >= startIndex && std::floor((*i)->physicalParameter->index) <= endIndex) filteredParameters.push_back(*i);
-		if((*i)->physicalParameter->endIndex >= startIndex && (*i)->physicalParameter->startIndex <= endIndex) filteredParameters.push_back(*i);
+		if(list < 0) return filteredParameters;
+		for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		{
+			if((*i)->physicalParameter->list != (unsigned)list) continue;
+			//if((*i)->physicalParameter->index >= startIndex && std::floor((*i)->physicalParameter->index) <= endIndex) filteredParameters.push_back(*i);
+			if((*i)->physicalParameter->endIndex >= startIndex && (*i)->physicalParameter->startIndex <= endIndex) filteredParameters.push_back(*i);
+		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 	return filteredParameters;
 }
 
 std::shared_ptr<Parameter> ParameterSet::getIndex(double index)
 {
-	std::vector<std::shared_ptr<Parameter>> filteredParameters;
-	for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	try
 	{
-		if((*i)->physicalParameter->index == index) return *i;
+		for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		{
+			if((*i)->physicalParameter->index == index) return *i;
+		}
 	}
-	return nullptr;
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return std::shared_ptr<Parameter>();
 }
 
 std::string ParameterSet::typeString()
@@ -848,10 +969,25 @@ ParameterSet::Type::Enum ParameterSet::typeFromString(std::string type)
 
 std::shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
 {
-	for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	try
 	{
-		if((*i)->id == id) return *i;
+		for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		{
+			if((*i)->id == id) return *i;
+		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 	return std::shared_ptr<Parameter>();
 }
 
@@ -1004,10 +1140,26 @@ EnforceLink::EnforceLink(xml_node<>* node)
 
 std::shared_ptr<RPCVariable> EnforceLink::getValue(LogicalParameter::Type::Enum type)
 {
-	RPCVariableType rpcType = (RPCVariableType)type;
-	if(type == LogicalParameter::Type::Enum::typeEnum) rpcType = RPCVariableType::rpcInteger;
-	else if(type == LogicalParameter::Type::Enum::typeAction) rpcType = RPCVariableType::rpcBoolean;
-	return RPCVariable::fromString(value, rpcType);
+	try
+	{
+		RPCVariableType rpcType = (RPCVariableType)type;
+		if(type == LogicalParameter::Type::Enum::typeEnum) rpcType = RPCVariableType::rpcInteger;
+		else if(type == LogicalParameter::Type::Enum::typeAction) rpcType = RPCVariableType::rpcBoolean;
+		return RPCVariable::fromString(value, rpcType);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<RPCVariable>();
 }
 
 DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
@@ -1107,53 +1259,68 @@ Device::Device()
 
 Device::Device(std::string xmlFilename) : Device()
 {
-	load(xmlFilename);
+	try
+	{
+		load(xmlFilename);
 
-	if(!_loaded || channels.empty()) return; //Happens when file couldn't be read
+		if(!_loaded || channels.empty()) return; //Happens when file couldn't be read
 
-	std::shared_ptr<Parameter> parameter(new Parameter());
-	parameter->id = "PAIRED_TO_CENTRAL";
-	parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
-	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
-	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeBoolean;
-	parameter->physicalParameter->valueID = "PAIRED_TO_CENTRAL";
-	parameter->physicalParameter->list = 0;
-	parameter->physicalParameter->index = 2;
-	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+		std::shared_ptr<Parameter> parameter(new Parameter());
+		parameter->id = "PAIRED_TO_CENTRAL";
+		parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
+		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
+		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeBoolean;
+		parameter->physicalParameter->valueID = "PAIRED_TO_CENTRAL";
+		parameter->physicalParameter->list = 0;
+		parameter->physicalParameter->index = 2;
+		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
-	parameter.reset(new Parameter());
-	parameter->id = "CENTRAL_ADDRESS_BYTE_1";
-	parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
-	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
-	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
-	parameter->physicalParameter->list = 0;
-	parameter->physicalParameter->index = 10;
-	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+		parameter.reset(new Parameter());
+		parameter->id = "CENTRAL_ADDRESS_BYTE_1";
+		parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
+		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
+		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+		parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
+		parameter->physicalParameter->list = 0;
+		parameter->physicalParameter->index = 10;
+		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
-	parameter.reset(new Parameter());
-	parameter->id = "CENTRAL_ADDRESS_BYTE_2";
-	parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
-	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
-	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_2";
-	parameter->physicalParameter->list = 0;
-	parameter->physicalParameter->index = 11;
-	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+		parameter.reset(new Parameter());
+		parameter->id = "CENTRAL_ADDRESS_BYTE_2";
+		parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
+		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
+		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+		parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_2";
+		parameter->physicalParameter->list = 0;
+		parameter->physicalParameter->index = 11;
+		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
-	parameter.reset(new Parameter());
-	parameter->id = "CENTRAL_ADDRESS_BYTE_3";
-	parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
-	parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
-	parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
-	parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
-	parameter->physicalParameter->list = 0;
-	parameter->physicalParameter->index = 12;
-	channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+		parameter.reset(new Parameter());
+		parameter->id = "CENTRAL_ADDRESS_BYTE_3";
+		parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
+		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
+		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
+		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+		parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
+		parameter->physicalParameter->list = 0;
+		parameter->physicalParameter->index = 12;
+		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 Device::~Device() {
@@ -1459,10 +1626,25 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
 
 std::shared_ptr<DeviceType> Device::getType(HMDeviceTypes deviceType, int32_t firmwareVersion)
 {
-	for(std::vector<std::shared_ptr<DeviceType>>::iterator j = supportedTypes.begin(); j != supportedTypes.end(); ++j)
+	try
 	{
-		if((*j)->matches(deviceType, firmwareVersion)) return *j;
+		for(std::vector<std::shared_ptr<DeviceType>>::iterator j = supportedTypes.begin(); j != supportedTypes.end(); ++j)
+		{
+			if((*j)->matches(deviceType, firmwareVersion)) return *j;
+		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 	return std::shared_ptr<DeviceType>();
 }
 

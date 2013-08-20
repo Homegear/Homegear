@@ -6,37 +6,68 @@ namespace RPC
 {
 void RPCClient::invokeBroadcast(std::string server, std::string port, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
 {
-	if(methodName.empty())
+	try
 	{
-		HelperFunctions::printError("Error: Could not invoke XML RPC method for server " + server + ". methodName is empty.");
-		return;
-	}
-	std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
-	if(result.empty())
-	{
-		HelperFunctions::printError("Error: Response for XML RPC method " + methodName + " sent to server " + server + " on port " + port + " is empty.");
-		return;
-	}
-	std::shared_ptr<RPCVariable> returnValue = _xmlRpcDecoder.decodeResponse(result);
-	if(returnValue->errorStruct)
-	{
-		if(returnValue->structValue->size() == 2)
+		if(methodName.empty())
 		{
-			HelperFunctions::printError("Error reading response from XML RPC server " + server + " on port " + port + ". Fault code: " + std::to_string(returnValue->structValue->at(0)->integerValue) + ". Fault string: " + returnValue->structValue->at(1)->stringValue);
+			HelperFunctions::printError("Error: Could not invoke XML RPC method for server " + server + ". methodName is empty.");
+			return;
 		}
-		else
+		std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
+		if(result.empty())
 		{
-			HelperFunctions::printError("Error reading response from XML RPC server " + server + " on port " + port + ". Can't print fault struct. It is not well formed.");
+			HelperFunctions::printError("Error: Response for XML RPC method " + methodName + " sent to server " + server + " on port " + port + " is empty.");
+			return;
+		}
+		std::shared_ptr<RPCVariable> returnValue = _xmlRpcDecoder.decodeResponse(result);
+		if(returnValue->errorStruct)
+		{
+			if(returnValue->structValue->size() == 2)
+			{
+				HelperFunctions::printError("Error reading response from XML RPC server " + server + " on port " + port + ". Fault code: " + std::to_string(returnValue->structValue->at(0)->integerValue) + ". Fault string: " + returnValue->structValue->at(1)->stringValue);
+			}
+			else
+			{
+				HelperFunctions::printError("Error reading response from XML RPC server " + server + " on port " + port + ". Can't print fault struct. It is not well formed.");
+			}
 		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 std::shared_ptr<RPCVariable> RPCClient::invoke(std::string server, std::string port, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
 {
-	if(methodName.empty()) return RPCVariable::createError(-32601, "Method name is empty");
-	std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
-	if(result.empty()) return RPCVariable::createError(-32700, "No response data.");
-	return _xmlRpcDecoder.decodeResponse(result);
+	try
+	{
+		if(methodName.empty()) return RPCVariable::createError(-32601, "Method name is empty");
+		std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
+		if(result.empty()) return RPCVariable::createError(-32700, "No response data.");
+		return _xmlRpcDecoder.decodeResponse(result);
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPCVariable::createError(-32700, "No response data.");
 }
 
 std::string RPCClient::sendRequest(std::string server, std::string port, std::string data)

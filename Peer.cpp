@@ -6,43 +6,58 @@ class CallbackFunctionParameter;
 
 void Peer::initializeCentralConfig()
 {
-	if(!rpcDevice)
+	try
 	{
-		HelperFunctions::printWarning("Warning: Tried to initialize peer's central config without xmlrpcDevice being set.");
-		return;
-	}
-	RPCConfigurationParameter parameter;
-	for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
-	{
-		if(i->second->parameterSets.find(RPC::ParameterSet::Type::master) != i->second->parameterSets.end() && i->second->parameterSets[RPC::ParameterSet::Type::master])
+		if(!rpcDevice)
 		{
-			std::shared_ptr<RPC::ParameterSet> masterSet = i->second->parameterSets[RPC::ParameterSet::Type::master];
-			for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
+			HelperFunctions::printWarning("Warning: Tried to initialize peer's central config without xmlrpcDevice being set.");
+			return;
+		}
+		RPCConfigurationParameter parameter;
+		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+		{
+			if(i->second->parameterSets.find(RPC::ParameterSet::Type::master) != i->second->parameterSets.end() && i->second->parameterSets[RPC::ParameterSet::Type::master])
 			{
-				if(!(*j)->id.empty() && configCentral[i->first].find((*j)->id) == configCentral[i->first].end())
+				std::shared_ptr<RPC::ParameterSet> masterSet = i->second->parameterSets[RPC::ParameterSet::Type::master];
+				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
 				{
-					parameter = RPCConfigurationParameter();
-					parameter.rpcParameter = *j;
-					parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-					configCentral[i->first][(*j)->id] = parameter;
+					if(!(*j)->id.empty() && configCentral[i->first].find((*j)->id) == configCentral[i->first].end())
+					{
+						parameter = RPCConfigurationParameter();
+						parameter.rpcParameter = *j;
+						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+						configCentral[i->first][(*j)->id] = parameter;
+					}
+				}
+			}
+			if(i->second->parameterSets.find(RPC::ParameterSet::Type::values) != i->second->parameterSets.end() && i->second->parameterSets[RPC::ParameterSet::Type::values])
+			{
+				std::shared_ptr<RPC::ParameterSet> valueSet = i->second->parameterSets[RPC::ParameterSet::Type::values];
+				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
+				{
+					if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
+					{
+						parameter = RPCConfigurationParameter();
+						parameter.rpcParameter = *j;
+						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+						valuesCentral[i->first][(*j)->id] = parameter;
+					}
 				}
 			}
 		}
-		if(i->second->parameterSets.find(RPC::ParameterSet::Type::values) != i->second->parameterSets.end() && i->second->parameterSets[RPC::ParameterSet::Type::values])
-		{
-			std::shared_ptr<RPC::ParameterSet> valueSet = i->second->parameterSets[RPC::ParameterSet::Type::values];
-			for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
-			{
-				if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
-				{
-					parameter = RPCConfigurationParameter();
-					parameter.rpcParameter = *j;
-					parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-					valuesCentral[i->first][(*j)->id] = parameter;
-				}
-			}
-		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Peer::initializeLinkConfig(int32_t channel, int32_t peerAddress, int32_t remoteChannel, bool useConfigFunction)
@@ -202,17 +217,32 @@ void Peer::stopThreads()
 
 Peer::Peer(bool centralFeatures)
 {
-	_centralFeatures = centralFeatures;
-	_lastPacketReceived = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	rpcDevice.reset();
-	team.address = 0;
-	if(centralFeatures)
+	try
 	{
-		serviceMessages.reset(new ServiceMessages(this));
-		pendingBidCoSQueues.reset(new PendingBidCoSQueues());
-		_stopThreads = false;
-		_workerThread.reset(new std::thread(&Peer::worker, this));
+		_centralFeatures = centralFeatures;
+		_lastPacketReceived = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		rpcDevice.reset();
+		team.address = 0;
+		if(centralFeatures)
+		{
+			serviceMessages.reset(new ServiceMessages(this));
+			pendingBidCoSQueues.reset(new PendingBidCoSQueues());
+			_stopThreads = false;
+			_workerThread.reset(new std::thread(&Peer::worker, this));
+		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFeatures) : Peer(centralFeatures)
@@ -658,38 +688,68 @@ std::string Peer::handleCLICommand(std::string command)
 
 void Peer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 {
-	if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
-	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+	try
 	{
-		if((*i)->address == peer->address && (*i)->channel == peer->channel)
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 		{
-			_peers[channel].erase(i);
-			break;
+			if((*i)->address == peer->address && (*i)->channel == peer->channel)
+			{
+				_peers[channel].erase(i);
+				break;
+			}
 		}
+		_peers[channel].push_back(peer);
+		initializeLinkConfig(channel, peer->address, peer->channel, true);
 	}
-	_peers[channel].push_back(peer);
-	initializeLinkConfig(channel, peer->address, peer->channel, true);
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 
 
 std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel)
 {
-	if(_peers.find(channel) == _peers.end()) return std::shared_ptr<BasicPeer>();
-
-	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+	try
 	{
-		if((*i)->serialNumber.empty())
+		if(_peers.find(channel) == _peers.end()) return std::shared_ptr<BasicPeer>();
+
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 		{
-			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
-			if(central)
+			if((*i)->serialNumber.empty())
 			{
-				std::shared_ptr<Peer> peer(central->getPeer((*i)->address));
-				if(peer) (*i)->serialNumber = peer->getSerialNumber();
+				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+				if(central)
+				{
+					std::shared_ptr<Peer> peer(central->getPeer((*i)->address));
+					if(peer) (*i)->serialNumber = peer->getSerialNumber();
+				}
 			}
+			if((*i)->serialNumber == serialNumber && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
 		}
-		if((*i)->serialNumber == serialNumber && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 	return std::shared_ptr<BasicPeer>();
 }
 
@@ -771,26 +831,56 @@ std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, int32_t address, int32
 
 void Peer::removePeer(int32_t channel, int32_t address, int32_t remoteChannel)
 {
-	for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+	try
 	{
-		if((*i)->address == address && (*i)->channel == remoteChannel)
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 		{
-			_peers[channel].erase(i);
-			if(linksCentral[channel].find(address) != linksCentral[channel].end()) linksCentral[channel].erase(linksCentral[channel].find(address));
-			return;
+			if((*i)->address == address && (*i)->channel == remoteChannel)
+			{
+				_peers[channel].erase(i);
+				if(linksCentral[channel].find(address) != linksCentral[channel].end()) linksCentral[channel].erase(linksCentral[channel].find(address));
+				return;
+			}
 		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Peer::deleteFromDatabase(int32_t parentAddress)
 {
-	DataColumnVector data;
-	data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
-	GD::db.executeCommand("DELETE FROM metadata WHERE objectID=?", data);
+	try
+	{
+		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
+		GD::db.executeCommand("DELETE FROM metadata WHERE objectID=?", data);
 
-	std::ostringstream command;
-	command << "DELETE FROM peers WHERE parent=" << std::dec << parentAddress << " AND " << " address=" << address;
-	GD::db.executeCommand(command.str());
+		std::ostringstream command;
+		command << "DELETE FROM peers WHERE parent=" << std::dec << parentAddress << " AND " << " address=" << address;
+		GD::db.executeCommand(command.str());
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Peer::saveToDatabase(int32_t parentAddress)
@@ -1015,74 +1105,104 @@ std::string Peer::serialize()
 
 void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config)
 {
-	stringstream << std::setw(8) << config.size();
-	for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator i = config.begin(); i != config.end(); ++i)
+	try
 	{
-		stringstream << std::setw(8) << i->first;
-		stringstream << std::setw(8) << i->second.size();
-		for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+		stringstream << std::setw(8) << config.size();
+		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator i = config.begin(); i != config.end(); ++i)
 		{
-			if(!j->second.rpcParameter)
+			stringstream << std::setw(8) << i->first;
+			stringstream << std::setw(8) << i->second.size();
+			for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				HelperFunctions::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(i->first));
-				stringstream << std::setw(8) << 0;
-				stringstream << std::setw(8) << 0;
-				continue;
-			}
-			if(j->second.rpcParameter->id.size() == 0)
-			{
-				HelperFunctions::printError("Error: Parameter has no id.");
-			}
-			stringstream << std::setw(8) << j->second.rpcParameter->id.size();
-			stringstream << j->second.rpcParameter->id;
-			stringstream << std::setw(8) << j->second.data.size();
-			for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
-			{
-				stringstream << std::setw(2) << (int32_t)(*k);
+				if(!j->second.rpcParameter)
+				{
+					HelperFunctions::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(i->first));
+					stringstream << std::setw(8) << 0;
+					stringstream << std::setw(8) << 0;
+					continue;
+				}
+				if(j->second.rpcParameter->id.size() == 0)
+				{
+					HelperFunctions::printError("Error: Parameter has no id.");
+				}
+				stringstream << std::setw(8) << j->second.rpcParameter->id.size();
+				stringstream << j->second.rpcParameter->id;
+				stringstream << std::setw(8) << j->second.data.size();
+				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
+				{
+					stringstream << std::setw(2) << (int32_t)(*k);
+				}
 			}
 		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Peer::serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config)
 {
-	stringstream << std::setw(8) << config.size();
-	for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>::const_iterator i = config.begin(); i != config.end(); ++i)
+	try
 	{
-		stringstream << std::setw(8) << i->first;
-		stringstream << std::setw(8) << i->second.size();
-		for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+		stringstream << std::setw(8) << config.size();
+		for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>::const_iterator i = config.begin(); i != config.end(); ++i)
 		{
-			stringstream << std::setw(8) << j->first;
-			stringstream << std::setw(8) << j->second.size();
-			for(std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
+			stringstream << std::setw(8) << i->first;
+			stringstream << std::setw(8) << i->second.size();
+			for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				stringstream << std::setw(8) << k->first;
-				stringstream << std::setw(8) << k->second.size();
-				for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator l = k->second.begin(); l != k->second.end(); ++l)
+				stringstream << std::setw(8) << j->first;
+				stringstream << std::setw(8) << j->second.size();
+				for(std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
 				{
-					if(!l->second.rpcParameter)
+					stringstream << std::setw(8) << k->first;
+					stringstream << std::setw(8) << k->second.size();
+					for(std::unordered_map<std::string, RPCConfigurationParameter>::const_iterator l = k->second.begin(); l != k->second.end(); ++l)
 					{
-						HelperFunctions::printCritical("Critical: Parameter " + l->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(i->first));
-						stringstream << std::setw(8) << 0;
-						stringstream << std::setw(8) << 0;
-						continue;
-					}
-					if(l->second.rpcParameter->id.size() == 0)
-					{
-						HelperFunctions::printError("Error: Parameter has no id.");
-					}
-					stringstream << std::setw(8) << l->second.rpcParameter->id.size();
-					stringstream << l->second.rpcParameter->id;
-					stringstream << std::setw(8) << l->second.data.size();
-					for(std::vector<uint8_t>::const_iterator m = l->second.data.begin(); m != l->second.data.end(); ++m)
-					{
-						stringstream << std::setw(2) << (int32_t)(*m);
+						if(!l->second.rpcParameter)
+						{
+							HelperFunctions::printCritical("Critical: Parameter " + l->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(i->first));
+							stringstream << std::setw(8) << 0;
+							stringstream << std::setw(8) << 0;
+							continue;
+						}
+						if(l->second.rpcParameter->id.size() == 0)
+						{
+							HelperFunctions::printError("Error: Parameter has no id.");
+						}
+						stringstream << std::setw(8) << l->second.rpcParameter->id.size();
+						stringstream << l->second.rpcParameter->id;
+						stringstream << std::setw(8) << l->second.data.size();
+						for(std::vector<uint8_t>::const_iterator m = l->second.data.begin(); m != l->second.data.end(); ++m)
+						{
+							stringstream << std::setw(2) << (int32_t)(*m);
+						}
 					}
 				}
 			}
 		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos)
@@ -1726,177 +1846,209 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 {
-	std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-
-	std::string type;
-	std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(deviceType, firmwareVersion);
-	if(rpcDeviceType) type = rpcDeviceType->id;
-	else
+	try
 	{
-		type = HMDeviceType::getString(deviceType);
-		if(type.empty() && !rpcDevice->supportedTypes.empty()) type = rpcDevice->supportedTypes.at(0)->id;
-	}
+		std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
-	if(channel == -1) //Base device
-	{
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", _serialNumber)));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
-		RPC::RPCVariable* variable = description->structValue->back().get();
-		variable->name = "CHILDREN";
-		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+		std::string type;
+		std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(deviceType, firmwareVersion);
+		if(rpcDeviceType) type = rpcDeviceType->id;
+		else
 		{
-			if(i->second->hidden) continue;
-			variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(i->first))));
+			type = HMDeviceType::getString(deviceType);
+			if(type.empty() && !rpcDevice->supportedTypes.empty()) type = rpcDevice->supportedTypes.at(0)->id;
 		}
 
-		if(firmwareVersion != 0)
+		if(channel == -1) //Base device
 		{
-			std::ostringstream stringStream;
-			stringStream << std::setw(2) << std::hex << (int32_t)firmwareVersion << std::dec;
-			std::string firmware = stringStream.str();
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", firmware.substr(0, 1) + "." + firmware.substr(1))));
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", _serialNumber)));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
+			RPC::RPCVariable* variable = description->structValue->back().get();
+			variable->name = "CHILDREN";
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			{
+				if(i->second->hidden) continue;
+				variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(i->first))));
+			}
+
+			if(firmwareVersion != 0)
+			{
+				std::ostringstream stringStream;
+				stringStream << std::setw(2) << std::hex << (int32_t)firmwareVersion << std::dec;
+				std::string firmware = stringStream.str();
+				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", firmware.substr(0, 1) + "." + firmware.substr(1))));
+			}
+			else
+			{
+				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", std::string("?"))));
+			}
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)rpcDevice->uiFlags)));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INTERFACE", GD::devices.getCentral()->serialNumber())));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
+			variable = description->structValue->back().get();
+			variable->name = "PARAMSETS";
+			variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("MASTER")))); //Always MASTER
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", std::string(""))));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RF_ADDRESS", std::to_string(address))));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ROAMING", 0)));
+
+			if(!type.empty()) description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", type)));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
 		}
 		else
 		{
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", std::string("?"))));
-		}
+			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+			std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
+			if(rpcChannel->hidden) return description;
 
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)rpcDevice->uiFlags)));
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", _serialNumber + ":" + std::to_string(channel))));
 
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INTERFACE", GD::devices.getCentral()->serialNumber())));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
-		variable = description->structValue->back().get();
-		variable->name = "PARAMSETS";
-		variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("MASTER")))); //Always MASTER
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", std::string(""))));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RF_ADDRESS", std::to_string(address))));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ROAMING", 0)));
-
-		if(!type.empty()) description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", type)));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
-	}
-	else
-	{
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
-		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
-		if(rpcChannel->hidden) return description;
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", _serialNumber + ":" + std::to_string(channel))));
-
-		int32_t aesActive = 0;
-		if(configCentral.find(channel) != configCentral.end() && configCentral.at(channel).find("AES_ACTIVE") != configCentral.at(channel).end() && !configCentral.at(channel).at("AES_ACTIVE").data.empty() && configCentral.at(channel).at("AES_ACTIVE").data.at(0) != 0)
-		{
-			aesActive = 1;
-		}
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("AES_ACTIVE", aesActive)));
-
-		int32_t direction = 0;
-		std::ostringstream linkSourceRoles;
-		std::ostringstream linkTargetRoles;
-		if(rpcChannel->linkRoles)
-		{
-			for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->sourceNames.begin(); k != rpcChannel->linkRoles->sourceNames.end(); ++k)
+			int32_t aesActive = 0;
+			if(configCentral.find(channel) != configCentral.end() && configCentral.at(channel).find("AES_ACTIVE") != configCentral.at(channel).end() && !configCentral.at(channel).at("AES_ACTIVE").data.empty() && configCentral.at(channel).at("AES_ACTIVE").data.at(0) != 0)
 			{
-				//Probably only one direction is supported, but just in case I use the "or"
-				if(!k->empty())
+				aesActive = 1;
+			}
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("AES_ACTIVE", aesActive)));
+
+			int32_t direction = 0;
+			std::ostringstream linkSourceRoles;
+			std::ostringstream linkTargetRoles;
+			if(rpcChannel->linkRoles)
+			{
+				for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->sourceNames.begin(); k != rpcChannel->linkRoles->sourceNames.end(); ++k)
 				{
-					if(direction & 1) linkSourceRoles << " ";
-					linkSourceRoles << *k;
-					direction |= 1;
+					//Probably only one direction is supported, but just in case I use the "or"
+					if(!k->empty())
+					{
+						if(direction & 1) linkSourceRoles << " ";
+						linkSourceRoles << *k;
+						direction |= 1;
+					}
+				}
+				for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->targetNames.begin(); k != rpcChannel->linkRoles->targetNames.end(); ++k)
+				{
+					//Probably only one direction is supported, but just in case I use the "or"
+					if(!k->empty())
+					{
+						if(direction & 2) linkTargetRoles << " ";
+						linkTargetRoles << *k;
+						direction |= 2;
+					}
 				}
 			}
-			for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->targetNames.begin(); k != rpcChannel->linkRoles->targetNames.end(); ++k)
+
+			//Overwrite direction when manually set
+			if(rpcChannel->direction != RPC::DeviceChannel::Direction::Enum::none) direction = (int32_t)rpcChannel->direction;
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DIRECTION", direction)));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)rpcChannel->uiFlags)));
+
+			int32_t groupedWith = getChannelGroupedWith(channel);
+			if(groupedWith > -1)
 			{
-				//Probably only one direction is supported, but just in case I use the "or"
-				if(!k->empty())
+				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("GROUP", _serialNumber + ":" + std::to_string(groupedWith))));
+			}
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INDEX", channel)));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LINK_SOURCE_ROLES", linkSourceRoles.str())));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LINK_TARGET_ROLES", linkTargetRoles.str())));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
+			RPC::RPCVariable* variable = description->structValue->back().get();
+			variable->name = "PARAMSETS";
+			for(std::map<RPC::ParameterSet::Type::Enum, std::shared_ptr<RPC::ParameterSet>>::iterator j = rpcChannel->parameterSets.begin(); j != rpcChannel->parameterSets.end(); ++j)
+			{
+				variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second->typeString())));
+			}
+			//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::link)->typeString())));
+			//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::master) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::master)->typeString())));
+			//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::values) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::values)->typeString())));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", _serialNumber)));
+
+			if(!type.empty()) description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT_TYPE", type)));
+
+			if(!teamChannels.empty() && !rpcChannel->teamTag.empty())
+			{
+				std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+				array->name = "TEAM_CHANNELS";
+				for(std::vector<std::pair<std::string, uint32_t>>::iterator j = teamChannels.begin(); j != teamChannels.end(); ++j)
 				{
-					if(direction & 2) linkTargetRoles << " ";
-					linkTargetRoles << *k;
-					direction |= 2;
+					array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first + ":" + std::to_string(j->second))));
 				}
+				description->structValue->push_back(array);
 			}
-		}
 
-		//Overwrite direction when manually set
-		if(rpcChannel->direction != RPC::DeviceChannel::Direction::Enum::none) direction = (int32_t)rpcChannel->direction;
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DIRECTION", direction)));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)rpcChannel->uiFlags)));
-
-		int32_t groupedWith = getChannelGroupedWith(channel);
-		if(groupedWith > -1)
-		{
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("GROUP", _serialNumber + ":" + std::to_string(groupedWith))));
-		}
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INDEX", channel)));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LINK_SOURCE_ROLES", linkSourceRoles.str())));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LINK_TARGET_ROLES", linkTargetRoles.str())));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
-		RPC::RPCVariable* variable = description->structValue->back().get();
-		variable->name = "PARAMSETS";
-		for(std::map<RPC::ParameterSet::Type::Enum, std::shared_ptr<RPC::ParameterSet>>::iterator j = rpcChannel->parameterSets.begin(); j != rpcChannel->parameterSets.end(); ++j)
-		{
-			variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second->typeString())));
-		}
-		//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::link) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::link)->typeString())));
-		//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::master) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::master)->typeString())));
-		//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::values) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::values)->typeString())));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", _serialNumber)));
-
-		if(!type.empty()) description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT_TYPE", type)));
-
-		if(!teamChannels.empty() && !rpcChannel->teamTag.empty())
-		{
-			std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-			array->name = "TEAM_CHANNELS";
-			for(std::vector<std::pair<std::string, uint32_t>>::iterator j = teamChannels.begin(); j != teamChannels.end(); ++j)
+			if(!team.serialNumber.empty() && rpcChannel->hasTeam)
 			{
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first + ":" + std::to_string(j->second))));
+				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM", team.serialNumber)));
+
+				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM_TAG", rpcChannel->teamTag)));
 			}
-			description->structValue->push_back(array);
+			else if(!_serialNumber.empty() && _serialNumber[0] == '*' && !rpcChannel->teamTag.empty())
+			{
+				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM_TAG", rpcChannel->teamTag)));
+			}
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", rpcChannel->type)));
+
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
 		}
-
-		if(!team.serialNumber.empty() && rpcChannel->hasTeam)
-		{
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM", team.serialNumber)));
-
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM_TAG", rpcChannel->teamTag)));
-		}
-		else if(!_serialNumber.empty() && _serialNumber[0] == '*' && !rpcChannel->teamTag.empty())
-		{
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM_TAG", rpcChannel->teamTag)));
-		}
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", rpcChannel->type)));
-
-		description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
+		return description;
 	}
-	return description;
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> Peer::getDeviceDescription()
 {
-	std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
-	descriptions->push_back(getDeviceDescription(-1));
-
-	for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+	try
 	{
-		std::shared_ptr<RPC::RPCVariable> description = getDeviceDescription(i->first);
-		if(!description->structValue->empty()) descriptions->push_back(description);
-	}
+		std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
+		descriptions->push_back(getDeviceDescription(-1));
 
-	return descriptions;
+		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+		{
+			std::shared_ptr<RPC::RPCVariable> description = getDeviceDescription(i->first);
+			if(!description->structValue->empty()) descriptions->push_back(description);
+		}
+
+		return descriptions;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>>();
 }
 
 std::shared_ptr<RPC::RPCVariable> Peer::getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
@@ -3022,9 +3174,25 @@ std::shared_ptr<RPC::RPCVariable> Peer::getServiceMessages()
 
 std::shared_ptr<RPC::RPCVariable> Peer::getValue(uint32_t channel, std::string valueKey)
 {
-	if(valuesCentral.find(channel) == valuesCentral.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
-	if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
-	return valuesCentral[channel][valueKey].rpcParameter->convertFromPacket(valuesCentral[channel][valueKey].data);
+	try
+	{
+		if(valuesCentral.find(channel) == valuesCentral.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
+		return valuesCentral[channel][valueKey].rpcParameter->convertFromPacket(valuesCentral[channel][valueKey].data);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value)

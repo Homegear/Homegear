@@ -23,33 +23,6 @@ uint8_t BidCoSPacket::messageType()
     return _messageType;
 }
 
-int32_t BidCoSPacket::messageSubtype()
-{
-	try
-	{
-		switch(_messageType)
-		{
-			case 0x01:
-				return _payload.at(1);
-			case 0x11:
-				return _payload.at(0);
-		}
-	}
-	catch(const std::exception& ex)
-	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return -1;
-}
-
 int32_t BidCoSPacket::senderAddress()
 {
     return _senderAddress;
@@ -58,17 +31,6 @@ int32_t BidCoSPacket::senderAddress()
 int32_t BidCoSPacket::destinationAddress()
 {
     return _destinationAddress;
-}
-
-int32_t BidCoSPacket::channel()
-{
-    switch(_messageType)
-    {
-        case 0x01:
-            return _payload.at(0);
-        default:
-            return -1;
-    }
 }
 
 std::vector<uint8_t>* BidCoSPacket::payload()

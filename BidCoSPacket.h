@@ -20,10 +20,8 @@ class BidCoSPacket
         void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
         uint8_t controlByte();
         uint8_t messageType();
-        int32_t messageSubtype();
         int32_t senderAddress();
         int32_t destinationAddress();
-        int32_t channel();
         uint8_t rssi() { return _rssi; }
         std::vector<uint8_t>* payload();
         std::string hexString();

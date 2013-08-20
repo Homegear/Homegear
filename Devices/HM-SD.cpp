@@ -18,9 +18,24 @@ HM_SD::~HM_SD()
 
 void HM_SD::init()
 {
-	HomeMaticDevice::init();
+	try
+	{
+		HomeMaticDevice::init();
 
-	_deviceType = HMDeviceTypes::HMSD;
+		_deviceType = HMDeviceTypes::HMSD;
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HM_SD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
@@ -67,103 +82,191 @@ void HM_SD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCo
 
 std::string HM_SD::serialize()
 {
-	std::string serializedBase = HomeMaticDevice::serialize();
-	std::ostringstream stringstream;
-	stringstream << std::hex << std::uppercase << std::setfill('0');
-	stringstream << std::setw(8) << serializedBase.size() << serializedBase;
-	stringstream << std::setw(8) << _filters.size();
-	for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
+	try
 	{
-		stringstream << std::setw(8) << (int32_t)i->filterType;
-		stringstream << std::setw(8) << i->filterValue;
+		std::string serializedBase = HomeMaticDevice::serialize();
+		std::ostringstream stringstream;
+		stringstream << std::hex << std::uppercase << std::setfill('0');
+		stringstream << std::setw(8) << serializedBase.size() << serializedBase;
+		stringstream << std::setw(8) << _filters.size();
+		for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
+		{
+			stringstream << std::setw(8) << (int32_t)i->filterType;
+			stringstream << std::setw(8) << i->filterValue;
+		}
+		stringstream << std::setw(8) << _responsesToOverwrite.size();
+		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
+		{
+			stringstream << std::setw(8) << i->packetPartToCapture.size();
+			stringstream << i->packetPartToCapture;
+			stringstream << std::setw(8) << i->response.size();
+			stringstream << i->response;
+			stringstream << std::setw(8) << i->sendAfter;
+		}
+		stringstream << std::setw(1) << (int32_t)_enabled;
+		stringstream << std::dec;
+		return stringstream.str();
 	}
-	stringstream << std::setw(8) << _responsesToOverwrite.size();
-	for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
-	{
-		stringstream << std::setw(8) << i->packetPartToCapture.size();
-		stringstream << i->packetPartToCapture;
-		stringstream << std::setw(8) << i->response.size();
-		stringstream << i->response;
-		stringstream << std::setw(8) << i->sendAfter;
-	}
-	stringstream << std::setw(1) << (int32_t)_enabled;
-	stringstream << std::dec;
-	return stringstream.str();
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
 }
 
 bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
-	if(!_enabled) return false;
-    bool printPacket = false;
-    for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
+	try
+	{
+		if(!_enabled) return false;
+		bool printPacket = false;
+		for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
+		{
+			switch(i->filterType)
+			{
+				case FilterType::SenderAddress:
+					if(packet->senderAddress() == i->filterValue) printPacket = true;
+					break;
+				case FilterType::DestinationAddress:
+					if(packet->destinationAddress() == i->filterValue) printPacket = true;
+					break;
+				case FilterType::DeviceType:
+					//Only possible for paired devices
+					break;
+				case FilterType::MessageType:
+					if(packet->messageType() == i->filterValue) printPacket = true;
+					break;
+			}
+		}
+		if(_filters.size() == 0) printPacket = true;
+		if(printPacket) HelperFunctions::printMessage("Received: " + packet->hexString());
+		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
+		{
+			std::string packetHex = packet->hexString();
+			if(packetHex.find(i->packetPartToCapture) != std::string::npos)
+			{
+				std::chrono::milliseconds sleepingTime(i->sendAfter); //Don't respond too fast
+				std::this_thread::sleep_for(sleepingTime);
+				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
+				std::stringstream stringstream;
+				stringstream << std::hex << std::setfill('0') << std::setw(2) << (i->response.size() / 2) + 1;
+				std::string lengthHex = stringstream.str();
+				std::string packetString(lengthHex + packetHex.substr(2, 2) + i->response);
+				packet->import(packetString, false);
+				std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
+				HelperFunctions::printMessage("Captured: " + packetHex + " Responding with: " + packet->hexString());
+				GD::rfDevice->sendPacket(packet);
+			}
+		}
+	}
+    catch(const std::exception& ex)
     {
-        switch(i->filterType)
-        {
-            case FilterType::SenderAddress:
-                if(packet->senderAddress() == i->filterValue) printPacket = true;
-                break;
-            case FilterType::DestinationAddress:
-                if(packet->destinationAddress() == i->filterValue) printPacket = true;
-                break;
-            case FilterType::DeviceType:
-                //Only possible for paired devices
-                break;
-            case FilterType::MessageType:
-                if(packet->messageType() == i->filterValue) printPacket = true;
-                break;
-        }
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    if(_filters.size() == 0) printPacket = true;
-    std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
-    if(printPacket) HelperFunctions::printMessage("Received: " + packet->hexString());
-    for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
+    catch(Exception& ex)
     {
-        std::string packetHex = packet->hexString();
-        if(packetHex.find(i->packetPartToCapture) != std::string::npos)
-        {
-            std::chrono::milliseconds sleepingTime(i->sendAfter); //Don't respond too fast
-            std::this_thread::sleep_for(sleepingTime);
-            std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-            std::stringstream stringstream;
-            stringstream << std::hex << std::setfill('0') << std::setw(2) << (i->response.size() / 2) + 1;
-            std::string lengthHex = stringstream.str();
-            std::string packetString(lengthHex + packetHex.substr(2, 2) + i->response);
-            packet->import(packetString, false);
-            std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
-            HelperFunctions::printMessage("Captured: " + packetHex + " Responding with: " + packet->hexString());
-            GD::rfDevice->sendPacket(packet);
-        }
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    return false;
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return false;
 }
 
 void HM_SD::addFilter(FilterType filterType, int32_t filterValue)
 {
-    HM_SD_Filter filter;
-    filter.filterType = filterType;
-    filter.filterValue = filterValue;
-    _filters.push_back(filter);
+	try
+	{
+		HM_SD_Filter filter;
+		filter.filterType = filterType;
+		filter.filterValue = filterValue;
+		_filters.push_back(filter);
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HM_SD::removeFilter(FilterType filterType, int32_t filterValue)
 {
-    _filters.remove_if([&](HM_SD_Filter filter){ return filter.filterType == filterType && filter.filterValue == filterValue; });
+	try
+	{
+		_filters.remove_if([&](HM_SD_Filter filter){ return filter.filterType == filterType && filter.filterValue == filterValue; });
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HM_SD::addOverwriteResponse(std::string packetPartToCapture, std::string response, int32_t sendAfter)
 {
-    HM_SD_OverwriteResponse overwriteResponse;
-    overwriteResponse.sendAfter = sendAfter;
-    overwriteResponse.packetPartToCapture = packetPartToCapture;
-    overwriteResponse.response = response;
-    _responsesToOverwrite.push_back(overwriteResponse);
+	try
+	{
+		HM_SD_OverwriteResponse overwriteResponse;
+		overwriteResponse.sendAfter = sendAfter;
+		overwriteResponse.packetPartToCapture = packetPartToCapture;
+		overwriteResponse.response = response;
+		_responsesToOverwrite.push_back(overwriteResponse);
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
-
-void removeCapture(std::string packetPartToCapture);
 
 void HM_SD::removeOverwriteResponse(std::string packetPartToCapture)
 {
-    _responsesToOverwrite.remove_if([&](HM_SD_OverwriteResponse entry){ return entry.packetPartToCapture == packetPartToCapture; });
+	try
+	{
+		_responsesToOverwrite.remove_if([&](HM_SD_OverwriteResponse entry){ return entry.packetPartToCapture == packetPartToCapture; });
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 std::string HM_SD::handleCLICommand(std::string command)
