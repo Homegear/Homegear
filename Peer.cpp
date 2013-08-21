@@ -167,14 +167,7 @@ void Peer::stopThreads()
 	try
 	{
 		_stopThreads = true;
-		if(_workerThread)
-		{
-			if(_workerThread->joinable())
-			{
-				_workerThread->join();
-				_workerThread.reset();
-			}
-		}
+		if(_workerThread.joinable()) _workerThread.join();
 	}
 	catch(const std::exception& ex)
     {
@@ -191,14 +184,7 @@ void Peer::stopThreads()
     }
     try
     {
-    	if(_setRSSIThread)
-		{
-			if(_setRSSIThread->joinable())
-			{
-				_setRSSIThread->join();
-				_setRSSIThread.reset();
-			}
-		}
+		if(_setRSSIThread.joinable()) _setRSSIThread.join();
     }
 	catch(const std::exception& ex)
     {
@@ -228,7 +214,7 @@ Peer::Peer(bool centralFeatures)
 			serviceMessages.reset(new ServiceMessages(this));
 			pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 			_stopThreads = false;
-			_workerThread.reset(new std::thread(&Peer::worker, this));
+			_workerThread = std::thread(&Peer::worker, this);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1587,10 +1573,10 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 			_variablesToReset.push_back(variable);
 			HelperFunctions::printDebug("Debug: " + parameter->id + " will be reset in " + std::to_string((variable->resetTime - time) / 1000) + "s.", 5);
 			_variablesToResetMutex.unlock();
-			if(!_workerThread || !_workerThread->joinable())
+			if(!_workerThread.joinable())
 			{
 				_stopThreads = false;
-				_workerThread.reset(new std::thread(&Peer::worker, this));
+				_workerThread = std::thread(&Peer::worker, this);
 			}
 		}
 	}
@@ -1618,8 +1604,8 @@ void Peer::setRSSI(uint8_t rssi)
 	try
 	{
 		if(!_centralFeatures) return;
-		if(_setRSSIThread && _setRSSIThread->joinable()) _setRSSIThread->join();
-		_setRSSIThread.reset(new std::thread(&Peer::setRSSIThread, this, rssi));
+		if(_setRSSIThread.joinable()) _setRSSIThread.join();
+		_setRSSIThread = std::thread(&Peer::setRSSIThread, this, rssi);
 	}
 	catch(const std::exception& ex)
     {
@@ -3460,10 +3446,10 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				parameters->strings.push_back(rpcParameter->physicalParameter->valueID);
 				queue->callbackParameter = parameters;
 				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<Peer, &Peer::addVariableToResetCallback>(this);
-				if(!_workerThread || !_workerThread->joinable())
+				if(!_workerThread.joinable())
 				{
 					_stopThreads = false;
-					_workerThread.reset(new std::thread(&Peer::worker, this));
+					_workerThread = std::thread(&Peer::worker, this);
 				}
 			}
 		}

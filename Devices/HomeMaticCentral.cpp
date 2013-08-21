@@ -2309,7 +2309,10 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
 		}
 		//Force delete
 		if(force) deletePeer(address);
-		else std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+		while(_bidCoSQueueManager.get(address))
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 
 		if(!defer && !force && peerExists(address)) return RPC::RPCVariable::createError(-1, "No answer from device.");
 
@@ -2341,18 +2344,26 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 
+		std::vector<std::shared_ptr<Peer>> peers;
+		//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
 		_peersMutex.lock();
 		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
 			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
-			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = i->second->getDeviceDescription();
+			peers.push_back(i->second);
+		}
+		_peersMutex.unlock();
+
+		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+		{
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{
 				array->arrayValue->push_back(*j);
 			}
 		}
-		_peersMutex.unlock();
+
 		return array;
 	}
 	catch(const std::exception& ex)

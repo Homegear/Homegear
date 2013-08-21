@@ -77,8 +77,37 @@ BidCoSQueue::~BidCoSQueue()
 {
 	try
 	{
+		dispose();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void BidCoSQueue::dispose()
+{
+	try
+	{
+		if(_disposing) return;
+		_disposing = true;
+		if(_startResendThread.joinable()) _startResendThread.join();
+		if(_pushPendingQueueThread.joinable()) _pushPendingQueueThread.join();
+        if(_sendThread.joinable()) _sendThread.join();
 		stopResendThread();
 		stopPopWaitThread();
+		_queueMutex.lock();
+		_pendingQueues.reset();
+		_queue.clear();
+		_queueMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -98,21 +127,26 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 {
 	try
 	{
-		//Add 100 milliseconds after pushing the packet, otherwise for responses the first resend is 100 ms too early. If the queue is not generated as a response, the resend is 90 ms too late. But so what?
-		//Packets that are not sent in response are 110 ms too late. But that doesn't matter.
+		//Add ~100 milliseconds after popping, otherwise the first resend is 100 ms too early.
+		int64_t timeSinceLastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastPop;
 		int32_t i = 0;
-		std::chrono::milliseconds sleepingTime(36);
-		if(_resendCounter == 0)
+		std::chrono::milliseconds sleepingTime;
+		if(timeSinceLastPop < 100)
 		{
-			while(!_stopResendThread && i < 3)
+			sleepingTime = std::chrono::milliseconds((100 - timeSinceLastPop) / 3);
+			if(_resendCounter == 0)
 			{
-				std::this_thread::sleep_for(sleepingTime);
-				i++;
+				while(!_stopResendThread && i < 3)
+				{
+					std::this_thread::sleep_for(sleepingTime);
+					i++;
+				}
 			}
 		}
+		if(_stopResendThread) return;
 		if(_resendCounter < 2)
 		{
-			//Sleep for 175 ms
+			//Sleep for 200 ms
 			i = 0;
 			if(burst)
 			{
@@ -120,7 +154,7 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 				sleepingTime = std::chrono::milliseconds(100);
 			}
 			else sleepingTime = std::chrono::milliseconds(25);
-			while(!_stopResendThread && i < 7)
+			while(!_stopResendThread && i < 8)
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				i++;
@@ -150,38 +184,47 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 				i++;
 			}
 		}
+		if(_stopResendThread) return;
 
-		if(!_stopResendThread)
+		_queueMutex.lock();
+		if(!_queue.empty() && !_stopResendThread)
 		{
-			_queueMutex.lock();
-			if(!_queue.empty() && !_stopResendThread)
+			if(!noSending)
 			{
-				std::thread send;
-				if(!noSending)
+				HelperFunctions::printDebug("Sending from resend thread " + std::to_string(threadId) + " of queue " + std::to_string(id) + ".");
+				if(_sendThread.joinable()) _sendThread.join();
+				if(_stopResendThread)
 				{
-					HelperFunctions::printDebug("Sending from resend thread " + std::to_string(threadId) + " of queue " + std::to_string(id) + ".");
-					if(_queue.front().getType() == QueueEntryType::MESSAGE)
-					{
-						HelperFunctions::printDebug("Invoking outgoing message handler from BidCoSQueue.");
-						send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
-					}
-					else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), _queue.front().stealthy);
-					send.detach();
-				}
-				_queueMutex.unlock(); //Has to be unlocked before startResendThread
-				if(_stopResendThread) return;
-				if(_resendCounter < (retries - 2)) //This actually means that the message will be sent three times all together if there is no response
-				{
-					_resendCounter++;
-					_queueMutex.lock();
-					send = std::thread(&BidCoSQueue::startResendThread, this, _queue.front().forceResend);
-					send.detach();
 					_queueMutex.unlock();
+					return;
 				}
-				else _resendCounter = 0;
+				if(_queue.front().getType() == QueueEntryType::MESSAGE)
+				{
+					HelperFunctions::printDebug("Invoking outgoing message handler from BidCoSQueue.");
+					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
+				}
+				else
+				{
+					_sendThread = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), _queue.front().stealthy);
+				}
+				sched_param schedParam;
+				int policy;
+				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
+				schedParam.sched_priority = 80;
+				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 			}
-			else _queueMutex.unlock();
+			bool forceResend = _queue.front().forceResend;
+			_queueMutex.unlock(); //Has to be unlocked before startResendThread
+			if(_stopResendThread) return;
+			if(_resendCounter < (retries - 2)) //This actually means that the message will be sent three times all together if there is no response
+			{
+				_resendCounter++;
+				if(_startResendThread.joinable()) _startResendThread.join();
+				_startResendThread = std::thread(&BidCoSQueue::startResendThread, this, forceResend);
+			}
+			else _resendCounter = 0;
 		}
+		else _queueMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -216,8 +259,13 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool
 			_resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
-				send.detach();
+				if(_sendThread.joinable()) _sendThread.join();
+				_sendThread = std::thread(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
+				sched_param schedParam;
+				int policy;
+				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
+				schedParam.sched_priority = 80;
+				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 				startResendThread(forceResend);
 			}
 		}
@@ -329,8 +377,13 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 			_resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
-				send.detach();
+				if(_sendThread.joinable()) _sendThread.join();
+				_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
+				sched_param schedParam;
+				int policy;
+				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
+				schedParam.sched_priority = 80;
+				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 				startResendThread(forceResend);
 			}
 		}
@@ -374,8 +427,13 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
 			_resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
-				send.detach();
+				if(_sendThread.joinable()) _sendThread.join();
+				_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
+				sched_param schedParam;
+				int policy;
+				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
+				schedParam.sched_priority = 80;
+				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 				startResendThread(forceResend);
 			}
 		}
@@ -410,8 +468,8 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
 		if(popBeforePushing)
 		{
 			HelperFunctions::printDebug("Popping from BidCoSQueue and pushing packet at the front: " + std::to_string(id));
-			if(_popWaitThread && _popWaitThread->joinable()) _stopPopWaitThread = true;
-			if(_resendThread && _resendThread->joinable()) _stopResendThread = true;
+			if(_popWaitThread.joinable()) _stopPopWaitThread = true;
+			if(_resendThread.joinable()) _stopResendThread = true;
 			_queueMutex.lock();
 			_queue.pop_front();
 			_queueMutex.unlock();
@@ -428,8 +486,13 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
 			_resendCounter = 0;
 			if(!noSending)
 			{
-				std::thread send(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
-				send.detach();
+				if(_sendThread.joinable()) _sendThread.join();
+				_sendThread = std::thread(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
+				sched_param schedParam;
+				int policy;
+				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
+				schedParam.sched_priority = 80;
+				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 				startResendThread(forceResend);
 			}
 		}
@@ -461,13 +524,8 @@ void BidCoSQueue::stopPopWaitThread()
 {
 	try
 	{
-		if(!_popWaitThread) return;
 		_stopPopWaitThread = true;
-		if(_popWaitThread && _popWaitThread->joinable())
-		{
-			_popWaitThread->join();
-			_popWaitThread.reset();
-		}
+		if(_popWaitThread.joinable()) _popWaitThread.join();
 		_stopPopWaitThread = false;
 	}
 	catch(const std::exception& ex)
@@ -490,7 +548,12 @@ void BidCoSQueue::popWait(uint32_t waitingTime)
 	{
 		stopResendThread();
 		stopPopWaitThread();
-		_popWaitThread.reset(new std::thread(&BidCoSQueue::popWaitThread, this, _popWaitThreadId++, waitingTime));
+		_popWaitThread = std::thread(&BidCoSQueue::popWaitThread, this, _popWaitThreadId++, waitingTime);
+		sched_param schedParam;
+		int policy;
+		pthread_getschedparam(_popWaitThread.native_handle(), &policy, &schedParam);
+		schedParam.sched_priority = 80;
+		if(!pthread_setschedparam(_popWaitThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 	}
 	catch(const std::exception& ex)
     {
@@ -540,7 +603,7 @@ void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet, bool stealthy)
 {
 	try
 	{
-		if(noSending) return;
+		if(noSending || _disposing) return;
 		if(device) device->sendPacket(packet, stealthy);
 		else HelperFunctions::printError("Error: Device pointer of queue " + std::to_string(id) + " is null.");
 	}
@@ -562,13 +625,8 @@ void BidCoSQueue::stopResendThread()
 {
 	try
 	{
-		if(!_resendThread) return;
 		_stopResendThread = true;
-		if(_resendThread && _resendThread->joinable())
-		{
-			_resendThread->join();
-			_resendThread.reset();
-		}
+		if(_resendThread.joinable()) _resendThread.join();
 		_stopResendThread = false;
 	}
 	catch(const std::exception& ex)
@@ -589,7 +647,7 @@ void BidCoSQueue::startResendThread(bool force)
 {
 	try
 	{
-		if(noSending) return;
+		if(noSending || _disposing) return;
 		_queueMutex.lock();
 		if(_queue.empty())
 		{
@@ -612,7 +670,12 @@ void BidCoSQueue::startResendThread(bool force)
 		{
 			stopResendThread();
 			bool burst = controlByte & 0x10;
-			_resendThread.reset(new std::thread(&BidCoSQueue::resend, this, _resendThreadId++, burst));
+			_resendThread = std::thread(&BidCoSQueue::resend, this, _resendThreadId++, burst);
+			sched_param schedParam;
+			int policy;
+			pthread_getschedparam(_resendThread.native_handle(), &policy, &schedParam);
+			schedParam.sched_priority = 80;
+			if(!pthread_setschedparam(_resendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 		}
 	}
 	catch(const std::exception& ex)
@@ -681,13 +744,14 @@ void BidCoSQueue::pushPendingQueue()
 {
 	try
 	{
+		if(_disposing) return;
 		_queueMutex.lock();
 		if(!_pendingQueues || _pendingQueues->empty())
 		{
 			_queueMutex.unlock();
 			return;
 		}
-		while(!_pendingQueues->empty() && _pendingQueues->front()->isEmpty())
+		while(!_pendingQueues->empty() && (!_pendingQueues->front() || _pendingQueues->front()->isEmpty()))
 		{
 			HelperFunctions::printDebug("Debug: Empty queue was pushed.");
 			_pendingQueues->pop();
@@ -697,15 +761,15 @@ void BidCoSQueue::pushPendingQueue()
 			_queueMutex.unlock();
 			return;
 		}
-		std::shared_ptr<BidCoSQueue> queue;
-		queue = _pendingQueues->front();
+		std::shared_ptr<BidCoSQueue> queue = _pendingQueues->front();
+		if(!queue) return; //Not really necessary, as the mutex is locked, but I had a segmentation fault in this function, so just to make
 		_queueMutex.unlock();
 		_queueType = queue->getQueueType();
 		serviceMessages = queue->serviceMessages;
 		queueEmptyCallback = queue->queueEmptyCallback;
 		callbackParameter = queue->callbackParameter;
 		retries = queue->retries;
-		for(std::deque<BidCoSQueueEntry>::iterator i = queue->getQueue()->begin(); i != queue->getQueue()->end(); ++i)
+		for(std::list<BidCoSQueueEntry>::iterator i = queue->getQueue()->begin(); i != queue->getQueue()->end(); ++i)
 		{
 			if(!noSending && i->getType() == QueueEntryType::MESSAGE && i->getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 			{
@@ -715,8 +779,13 @@ void BidCoSQueue::pushPendingQueue()
 				_resendCounter = 0;
 				if(!noSending)
 				{
-					std::thread send(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
-					send.detach();
+					if(_sendThread.joinable()) _sendThread.join();
+					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
+					sched_param schedParam;
+					int policy;
+					pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
+					schedParam.sched_priority = 80;
+					if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 					startResendThread(i->forceResend);
 				}
 			}
@@ -728,8 +797,13 @@ void BidCoSQueue::pushPendingQueue()
 				_resendCounter = 0;
 				if(!noSending)
 				{
-					std::thread send(&BidCoSQueue::send, this, i->getPacket(), i->stealthy);
-					send.detach();
+					if(_sendThread.joinable()) _sendThread.join();
+					_sendThread = std::thread(&BidCoSQueue::send, this, i->getPacket(), i->stealthy);
+					sched_param schedParam;
+					int policy;
+					pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
+					schedParam.sched_priority = 80;
+					if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 					startResendThread(i->forceResend);
 				}
 			}
@@ -761,18 +835,21 @@ void BidCoSQueue::pushPendingQueue()
 
 void BidCoSQueue::keepAlive()
 {
-	if(lastAction != nullptr) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	if(_disposing) return;
+	if(lastAction) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 void BidCoSQueue::longKeepAlive()
 {
-	if(lastAction != nullptr) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 5000;
+	if(_disposing) return;
+	if(lastAction) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 5000;
 }
 
 void BidCoSQueue::nextQueueEntry()
 {
 	try
 	{
+		if(_disposing) return;
 		_queueMutex.lock();
 		if(_queue.empty()) {
 			if(queueEmptyCallback && callbackParameter) queueEmptyCallback(callbackParameter);
@@ -794,23 +871,32 @@ void BidCoSQueue::nextQueueEntry()
 			{
 				HelperFunctions::printDebug("Queue " + std::to_string(id) + " is empty. Pushing pending queue...");
 				_queueMutex.unlock();
-				std::thread push(&BidCoSQueue::pushPendingQueue, this);
-				push.detach();
+				if(_pushPendingQueueThread.joinable()) _pushPendingQueueThread.join();
+				_pushPendingQueueThread = std::thread(&BidCoSQueue::pushPendingQueue, this);
+				sched_param schedParam;
+				int policy;
+				pthread_getschedparam(_pushPendingQueueThread.native_handle(), &policy, &schedParam);
+				schedParam.sched_priority = 80;
+				if(!pthread_setschedparam(_pushPendingQueueThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 				return;
 			}
 		}
 		if((_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONOUT) || _queue.front().getType() == QueueEntryType::PACKET)
 		{
 			_resendCounter = 0;
-			std::thread send;
 			if(!noSending)
 			{
+				if(_sendThread.joinable()) _sendThread.join();
 				if(_queue.front().getType() == QueueEntryType::MESSAGE)
 				{
-					send = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
+					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
 				}
-				else send = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), _queue.front().stealthy);
-				send.detach();
+				else _sendThread = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), _queue.front().stealthy);
+				sched_param schedParam;
+				int policy;
+				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
+				schedParam.sched_priority = 80;
+				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 				bool forceResend = _queue.front().forceResend;
 				_queueMutex.unlock(); //Has to be unlocked before startResendThread()
 				startResendThread(forceResend);
@@ -840,11 +926,13 @@ void BidCoSQueue::pop()
 {
 	try
 	{
+		if(_disposing) return;
 		keepAlive();
 		HelperFunctions::printDebug("Popping from BidCoSQueue: " + std::to_string(id));
-		if(_popWaitThread && _popWaitThread->joinable()) _stopPopWaitThread = true;
-		if(_resendThread && _resendThread->joinable()) _stopResendThread = true;
+		if(_popWaitThread.joinable()) _stopPopWaitThread = true;
+		if(_resendThread.joinable()) _stopResendThread = true;
 		if(_queue.empty()) return;
+		_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		_queueMutex.lock();
 		_queue.pop_front();
 		if(GD::debugLevel >= 5 && !_queue.empty())
@@ -886,7 +974,7 @@ std::string BidCoSQueue::serialize()
 		stringstream << std::hex << std::uppercase << std::setfill('0');
 		stringstream << std::setw(2) << (uint32_t)_queueType;
 		stringstream << std::setw(4) << _queue.size();
-		for(std::deque<BidCoSQueueEntry>::iterator i = _queue.begin(); i != _queue.end(); ++i)
+		for(std::list<BidCoSQueueEntry>::iterator i = _queue.begin(); i != _queue.end(); ++i)
 		{
 			stringstream << std::setw(1) << (int32_t)i->getType();
 			stringstream << std::setw(1) << (int32_t)i->stealthy;

@@ -15,7 +15,7 @@ class BidCoSQueueData
 public:
 	uint32_t id = 0;
 	std::shared_ptr<BidCoSQueue> queue;
-	int64_t lastAction;
+	std::shared_ptr<int64_t> lastAction;
 
 	BidCoSQueueData();
 	virtual ~BidCoSQueueData() {}

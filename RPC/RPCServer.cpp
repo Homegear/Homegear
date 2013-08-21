@@ -19,6 +19,11 @@ void RPCServer::start()
 	try
 	{
 		_mainThread = std::thread(&RPCServer::mainThread, this);
+		sched_param schedParam;
+		int policy;
+		pthread_getschedparam(_mainThread.native_handle(), &policy, &schedParam);
+		schedParam.sched_priority = 1; //Low priority
+		if(!pthread_setschedparam(_mainThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 		_mainThread.detach();
 	}
 	catch(const std::exception& ex)
@@ -93,6 +98,11 @@ void RPCServer::mainThread()
 				_stateMutex.unlock();
 
 				_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
+				sched_param schedParam;
+				int policy;
+				pthread_getschedparam(_readThreads.back().native_handle(), &policy, &schedParam);
+				schedParam.sched_priority = 1; //Low priority
+				if(!pthread_setschedparam(_readThreads.back().native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 				_readThreads.back().detach();
 			}
 			catch(const std::exception& ex)
@@ -407,6 +417,11 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				{
 					packetLength = 0;
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
+					sched_param schedParam;
+					int policy;
+					pthread_getschedparam(t.native_handle(), &policy, &schedParam);
+					schedParam.sched_priority = 1; //Low priority
+					if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 					t.detach();
 				}
 			}
@@ -460,6 +475,11 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 							packet->push_back('\0');
 							packetLength = 0;
 							std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
+							sched_param schedParam;
+							int policy;
+							pthread_getschedparam(t.native_handle(), &policy, &schedParam);
+							schedParam.sched_priority = 1; //Low priority
+							if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 							t.detach();
 						}
 						else
@@ -488,6 +508,11 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				if(packetLength == dataSize)
 				{
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
+					sched_param schedParam;
+					int policy;
+					pthread_getschedparam(t.native_handle(), &policy, &schedParam);
+					schedParam.sched_priority = 1; //Low priority
+					if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 					t.detach();
 					packetLength = 0;
 					packet->push_back('\0');

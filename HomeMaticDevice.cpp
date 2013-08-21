@@ -692,23 +692,23 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool stea
 	try
 	{
 		std::shared_ptr<BidCoSPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
-		if(stealthy) _sentPackets.keepAlive(packet->destinationAddress());
-		else _sentPackets.set(packet->destinationAddress(), packet);
+		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet);
 
 		if(packetInfo)
 		{
 			int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
-			if(timeDifference < 110)
+			if(timeDifference < 100)
 			{
-				packetInfo->time += 110 - timeDifference; //Set to sending time
-				std::this_thread::sleep_for(std::chrono::milliseconds(110 - timeDifference));
+				packetInfo->time += 100 - timeDifference; //Set to sending time
+				std::this_thread::sleep_for(std::chrono::milliseconds(100 - timeDifference));
 			}
 		}
+		if(stealthy) _sentPackets.keepAlive(packet->destinationAddress());
 		packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
 		if(packetInfo)
 		{
 			int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
-			if(timeDifference >= 0 && timeDifference < 100) std::this_thread::sleep_for(std::chrono::milliseconds(110 - timeDifference));
+			if(timeDifference >= 0 && timeDifference < 100) std::this_thread::sleep_for(std::chrono::milliseconds(100 - timeDifference));
 			//Set time to now. This is necessary if two packets are sent after each other without a response in between
 			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		}

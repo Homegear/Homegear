@@ -5,7 +5,8 @@
 BidCoSQueueData::BidCoSQueueData()
 {
 	queue = std::shared_ptr<BidCoSQueue>(new BidCoSQueue());
-	lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	lastAction.reset(new int64_t);
+	*lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 void BidCoSQueueManager::dispose(bool wait)
@@ -26,7 +27,7 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		std::shared_ptr<BidCoSQueueData> queueData(new BidCoSQueueData());
 		queueData->queue->setQueueType(queueType);
 		queueData->queue->device = device;
-		queueData->queue->lastAction = &queueData->lastAction;
+		queueData->queue->lastAction = queueData->lastAction;
 		queueData->queue->id = _id++;
 		queueData->id = queueData->queue->id;
 		std::thread t(&BidCoSQueueManager::resetQueue, this, address, queueData->id);
@@ -63,7 +64,7 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 		{
 			if(_disposing) return;
 			_queueMutex.lock();
-			if(_queues.find(address) != _queues.end() && _queues.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _queues.at(address)->lastAction + 1000)
+			if(_queues.find(address) != _queues.end() && _queues.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 1000)
 			{
 				_queueMutex.unlock();
 				std::this_thread::sleep_for(sleepingTime);
@@ -77,11 +78,12 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 			}
 		}
 
+		std::shared_ptr<BidCoSQueueData> queue;
 		_queueMutex.lock();
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
 		{
-			HelperFunctions::printDebug("Deleting queue " + std::to_string(id) + " for 0x" + HelperFunctions::getHexString(address));
-			std::shared_ptr<BidCoSQueueData> queue = _queues.at(address);
+			HelperFunctions::printDebug("Debug: Deleting queue " + std::to_string(id) + " for 0x" + HelperFunctions::getHexString(address));
+			queue = _queues.at(address);
 			_queues.erase(address);
 			if(!queue->queue->isEmpty() && queue->queue->getQueueType() != BidCoSQueueType::PAIRING)
 			{
@@ -91,6 +93,7 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 					peer->serviceMessages->setUnreach(true);
 				}
 			}
+			queue->queue->dispose();
 		}
 		_queueMutex.unlock();
 	}

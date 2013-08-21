@@ -363,6 +363,7 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 			else if(pollResult == 0) continue;
 			if(i == 4) HelperFunctions::printWarning("Warning: Sending of packet timed out.");
 		}
+		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
 	}
 	catch(const std::exception& ex)
@@ -723,6 +724,11 @@ void TICC1100::startListening()
 
 		_stopCallbackThread = false;
 		_listenThread = std::thread(&TICC1100::listen, this);
+		sched_param schedParam;
+		int policy;
+		pthread_getschedparam(_listenThread.native_handle(), &policy, &schedParam);
+		schedParam.sched_priority = 80;
+		if(!pthread_setschedparam(_listenThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 	}
     catch(const std::exception& ex)
     {
@@ -818,6 +824,11 @@ void TICC1100::listen()
 
 						std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(decodedData, true));
 						std::thread t(&TICC1100::callCallback, this, packet);
+						sched_param schedParam;
+						int policy;
+						pthread_getschedparam(t.native_handle(), &policy, &schedParam);
+						schedParam.sched_priority = 80;
+						if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 						t.detach();
 					}
 				}

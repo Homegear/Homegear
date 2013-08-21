@@ -328,6 +328,11 @@ void Cul::startListening()
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		writeToDevice("Ar\r\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
+		sched_param schedParam;
+		int policy;
+		pthread_getschedparam(_listenThread.native_handle(), &policy, &schedParam);
+		schedParam.sched_priority = 80;
+		if(!pthread_setschedparam(_listenThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 		_listenThread = std::thread(&Cul::listen, this);
 	}
     catch(const std::exception& ex)
@@ -395,6 +400,11 @@ void Cul::listen()
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 				packet->import(packetHex);
 				std::thread t(&Cul::callCallback, this, packet);
+				sched_param schedParam;
+				int policy;
+				pthread_getschedparam(t.native_handle(), &policy, &schedParam);
+				schedParam.sched_priority = 80;
+				if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 				t.detach();
         	}
         }

@@ -340,7 +340,11 @@ int main(int argc, char* argv[])
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 
-				std::cout << GD::devices.handleCLICommand(input);
+				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
+				std::string packetHex("1ACAA0101D94A8FD00010301110B2A221828005800002422482A8A");
+				packet->import(packetHex, false);
+				if(input == "test") GD::devices.getCentral()->packetReceived(packet);
+				else std::cout << GD::devices.handleCLICommand(input);
 			}
         }
 

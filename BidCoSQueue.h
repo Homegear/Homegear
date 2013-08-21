@@ -9,7 +9,7 @@ class ServiceMessages;
 
 #include <iostream>
 #include <string>
-#include <deque>
+#include <list>
 #include <queue>
 #include <thread>
 #include <mutex>
@@ -54,18 +54,24 @@ enum class BidCoSQueueType { EMPTY, DEFAULT, CONFIG, PAIRING, PAIRINGCENTRAL, UN
 class BidCoSQueue
 {
     protected:
-        std::deque<BidCoSQueueEntry> _queue;
+		bool _disposing = false;
+		//I'm using list, so iterators are not invalidated
+        std::list<BidCoSQueueEntry> _queue;
         std::shared_ptr<PendingBidCoSQueues> _pendingQueues;
         std::mutex _queueMutex;
         BidCoSQueueType _queueType;
         bool _stopResendThread = false;
-        std::shared_ptr<std::thread> _resendThread;
+        std::thread _resendThread;
         int32_t _resendCounter = 0;
         uint32_t _resendThreadId = 0;
         bool _stopPopWaitThread = false;
         uint32_t _popWaitThreadId = 0;
-        std::shared_ptr<std::thread> _popWaitThread;
+        std::thread _popWaitThread;
+        std::thread _sendThread;
+        std::thread _startResendThread;
+        std::thread _pushPendingQueueThread;
         bool _workingOnPendingQueue = false;
+        int64_t _lastPop = 0;
         void (HomeMaticDevice::*_queueProcessed)() = nullptr;
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
@@ -78,7 +84,7 @@ class BidCoSQueue
     public:
         uint32_t retries = 4;
         uint32_t id = 0;
-        int64_t* lastAction = nullptr;
+        std::shared_ptr<int64_t> lastAction;
         bool noSending = false;
         std::shared_ptr<ServiceMessages> serviceMessages;
         HomeMaticDevice* device = nullptr;
@@ -86,7 +92,7 @@ class BidCoSQueue
         std::shared_ptr<CallbackFunctionParameter> callbackParameter;
         delegate<void (std::shared_ptr<CallbackFunctionParameter>)> queueEmptyCallback;
         BidCoSQueueType getQueueType() { return _queueType; }
-        std::deque<BidCoSQueueEntry>* getQueue() { return &_queue; }
+        std::list<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
 
         void push(std::shared_ptr<BidCoSMessage> message, bool forceResend = false);
@@ -104,6 +110,7 @@ class BidCoSQueue
         void send(std::shared_ptr<BidCoSPacket> packet, bool stealthy);
         void keepAlive();
         void longKeepAlive();
+        void dispose();
         std::string serialize();
 
         BidCoSQueue();
