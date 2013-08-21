@@ -2,9 +2,7 @@
 #include "../GD.h"
 #include "../HelperFunctions.h"
 #include "Cul.h"
-#ifdef TI_CC1100
 #include "TICC1100.h"
-#endif
 
 namespace RF
 {
@@ -27,12 +25,10 @@ std::shared_ptr<RFDevice> RFDevice::create(std::string rfDeviceType)
 		{
 			return std::shared_ptr<RFDevice>(new Cul());
 		}
-#ifdef TI_CC1100
 		else if(rfDeviceType == "cc1100")
 		{
 			return std::shared_ptr<RFDevice>(new TICC1100());
 		}
-#endif
 		else
 		{
 			HelperFunctions::printError("Error: Unsupported rf device type: " + rfDeviceType);

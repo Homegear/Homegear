@@ -1,8 +1,6 @@
 #ifndef TICC1100_H_
 #define TICC1100_H_
 
-#ifdef TI_CC1100
-
 #include <thread>
 #include <iostream>
 #include <fstream>
@@ -189,7 +187,7 @@ protected:
 	int32_t _fileDescriptor = -1;
 	int32_t _gpioDescriptor = -1;
 	struct spi_ioc_transfer _transfer;
-	std::mutex _txMutex;
+	std::timed_mutex _txMutex;
 	bool _sending = false;
 
 	void setupDevice();
@@ -213,7 +211,5 @@ protected:
 };
 
 }
-
-#endif /* TI_CC1100 */
 
 #endif /* TICC1100_H_ */

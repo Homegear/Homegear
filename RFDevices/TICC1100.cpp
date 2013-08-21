@@ -1,5 +1,3 @@
-#ifdef TI_CC1100
-
 #include "TICC1100.h"
 #include "../GD.h"
 #include "../HelperFunctions.h"
@@ -79,11 +77,8 @@ TICC1100::~TICC1100()
 {
 	try
 	{
-		if(_listenThread.joinable())
-		{
-			_stopCallbackThread = true;
-			_listenThread.join();
-		}
+		_stopCallbackThread = true;
+		if(_listenThread.joinable()) _listenThread.join();
 		closeDevice();
 	}
     catch(const std::exception& ex)
@@ -793,7 +788,7 @@ void TICC1100::listen()
         		continue;
         	}
 
-			pollResult = poll(&pollstruct, 1, 1000);
+			pollResult = poll(&pollstruct, 1, 500);
 			if(!_sending && pollResult > 0)
 			{
 				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::to_string(errno));
@@ -831,25 +826,33 @@ void TICC1100::listen()
 			}
 			else if(pollResult < 0)
 			{
-				throw Exception("Could not poll gpio: " + std::to_string(errno));
+				_txMutex.unlock();
+				throw Exception("Could not poll gpio: " + std::string(strerror(errno)));
 			}
 			//timeout
-			else if(pollResult == 0) continue;
+			else if(pollResult == 0)
+			{
+				//If poll has timed out, there was no action for 500 ms (also meaning currently nothing
+				//is being sent). So it is save to unlock _txMutex here.
+				_txMutex.unlock();
+				continue;
+			}
 		}
     }
     catch(const std::exception& ex)
     {
+    	_txMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_txMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_txMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
-
 }
-#endif /* TI_CC1100 */
