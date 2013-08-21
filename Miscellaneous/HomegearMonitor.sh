@@ -5,7 +5,7 @@
 # 2. Add the script to your root's crontab:
 #	- crontab -e
 #	- Add the line:
-#	  */2 *  *       *       *       /path/to/your/homegearMonitor.sh 2>&1 |/usr/bin/logger -t homegearMonitor
+#	  */2 *  *       *       *       /path/to/your/HomegearMonitor.sh 2>&1 |/usr/bin/logger -t HomegearMonitor
 
 return=`ps -A | grep homegear -c`
 if [ $return -lt 1 ] && test -e /var/run/homegear/homegear.pid; then

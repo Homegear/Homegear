@@ -1,5 +1,3 @@
-#define VERSION "0.0.1"
-
 #include <readline/readline.h>
 #include <readline/history.h>
 //#include <ncurses.h>
@@ -16,6 +14,7 @@
 #include <memory>
 #include <algorithm>
 
+#include "Version.h"
 #include "Devices/HM-SD.h"
 #include "Devices/HM-CC-VD.h"
 #include "Devices/HM-CC-TC.h"
