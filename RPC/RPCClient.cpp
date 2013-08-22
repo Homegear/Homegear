@@ -118,9 +118,6 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 
 		ssize_t receivedBytes;
 
-		struct timeval timeout;
-		timeout.tv_sec = 20;
-		timeout.tv_usec = 0;
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(fileDescriptor, &readFileDescriptor);
@@ -133,6 +130,10 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		std::string response;
 		while(receiving)
 		{
+			//Timeout needs to be set every time, so don't put it outside of the while loop
+			timeval timeout;
+			timeout.tv_sec = 10;
+			timeout.tv_usec = 0;
 			receivedBytes = select(fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			switch(receivedBytes)
 			{

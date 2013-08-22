@@ -33,6 +33,6 @@ override_dh_auto_install:
 	mkdir -p $(CURDIR)/debian/homegear/etc/init.d
 	cp $(CURDIR)/Miscellaneous/homegear $(CURDIR)/debian/homegear/etc/init.d
 	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear
-	chmod 750 $(CURDIR)/debian/homegear/etc/init.d/homegear
+	chmod 755 $(CURDIR)/debian/homegear/etc/init.d/homegear
 %:
 	dh $@

@@ -13,6 +13,8 @@ class HomeMaticDevice;
 
 class HomeMaticDevices {
 public:
+	void test();
+	void test2();
 	HomeMaticDevices();
 	virtual ~HomeMaticDevices();
 	void add(HomeMaticDevice* device);

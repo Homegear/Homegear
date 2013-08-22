@@ -37,6 +37,7 @@ public:
 	static int32_t debugLevel;
 	static int32_t rpcLogLevel;
 	static bool bigEndian;
+	static bool setThreadPriority;
 
 	virtual ~GD() { }
 private:

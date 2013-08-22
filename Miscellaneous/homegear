@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ### BEGIN INIT INFO
 # Provides:		homegear
@@ -62,25 +62,26 @@ case $1 in
 				fi
 				
 				if test ! -d $PIDPATH; then 
-					mkdir $PIDPATH
-					chown $RUNASUSER:$RUNASGROUP $PIDPATH
-					chmod 750 $PIDPATH
+					mkdir -p $PIDPATH
 				fi
+				chown -R $RUNASUSER:$RUNASGROUP $PIDPATH
+				chmod -R 750 $PIDPATH
 				
 				if test ! -d $DBPATH; then 
-					mkdir $DBPATH
-					chown $RUNASUSER:$RUNASGROUP $DBPATH
-					chmod 750 $DBPATH
+					mkdir -p $DBPATH
 				fi
+				chown -R $RUNASUSER:$RUNASGROUP $DBPATH
+				chmod -R 750 $DBPATH
 				
 				if test ! -d $LOGPATH; then 
-					mkdir $LOGPATH
-					chown $RUNASUSER:$RUNASGROUP $LOGPATH
-					chmod 750 $LOGPATH
+					mkdir -p $LOGPATH
 				fi
+				chown -R $RUNASUSER:$RUNASGROUP $LOGPATH
+				chmod -R 750 $LOGPATH
 				
                 log_daemon_msg "Starting Homegear" "homegear"
                 lock_homegear
+                ulimit -r 100
                 start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $HOMEGEAR_OPTS
                 status=$?
                 unlock_homegear
@@ -95,7 +96,7 @@ case $1 in
                 		start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
                 	fi
                 	INDEX=0
-                	while [ $PROCESSCOUNT -ne 0 ] && [ $INDEX -lt 30 ]; do
+                	while [ $PROCESSCOUNT -ne 0 ] && [ $INDEX -lt 60 ]; do
                 		sleep 1
                 		PROCESSCOUNT=`ps --pid $PID | grep -c homegear`
                 		INDEX=$((INDEX+1))

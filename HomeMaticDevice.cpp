@@ -24,7 +24,8 @@ void HomeMaticDevice::init()
 		_messageCounter[1] = 0; //Duty cycle message counter
 
 		setUpBidCoSMessages();
-		_workerThread.reset(new std::thread(&HomeMaticDevice::worker, this));
+		_workerThread = std::thread(&HomeMaticDevice::worker, this);
+		HelperFunctions::setThreadPriority(_workerThread.native_handle(), 19);
 		_initialized = true;
 	}
 	catch(const std::exception& ex)
@@ -136,9 +137,11 @@ HomeMaticDevice::~HomeMaticDevice()
 {
 	try
 	{
+		_disposing = true;
 		HelperFunctions::printDebug("Removing device 0x" + HelperFunctions::getHexString(_address) + " from CUL event queue...");
 		GD::rfDevice->removeHomeMaticDevice(this);
 		stopThreads();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for received packets, without this, program sometimes SIGABRTs
 	}
     catch(const std::exception& ex)
     {
@@ -171,13 +174,11 @@ void HomeMaticDevice::stopThreads()
 		}
 		_peersMutex.unlock();
 
-		if(!_workerThread) return;
 		_stopWorkerThread = true;
-		if(_workerThread->joinable())
+		if(_workerThread.joinable())
 		{
 			HelperFunctions::printDebug("Debug: Waiting for worker thread of device 0x" + HelperFunctions::getHexString(_address) + "...");
-			_workerThread->join();
-			_workerThread.reset();
+			_workerThread.join();
 		}
 	}
     catch(const std::exception& ex)
@@ -198,7 +199,7 @@ void HomeMaticDevice::checkForDeadlock()
 {
 	try
 	{
-		if(!_peersMutex.try_lock_for(std::chrono::seconds(5)))
+		if(!_peersMutex.try_lock_for(std::chrono::seconds(3)))
 		{
 			HelperFunctions::printError("Critical: _peersMutex is deadlocked. Unlocking... This might crash the program.");
 			_peersMutex.unlock();
@@ -663,6 +664,7 @@ bool HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
+		if(_disposing) return false;
 		_receivedPackets.set(packet->senderAddress(), packet);
 		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, packet);
 		if(message && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
@@ -693,7 +695,6 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool stea
 	{
 		std::shared_ptr<BidCoSPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
 		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet);
-
 		if(packetInfo)
 		{
 			int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
@@ -744,6 +745,7 @@ void HomeMaticDevice::sendPacketMultipleTimes(std::shared_ptr<BidCoSPacket> pack
 		for(uint32_t i = 0; i < count; i++)
 		{
 			_sentPackets.set(packet->destinationAddress(), packet);
+			int64_t start = HelperFunctions::getTime();
 			GD::rfDevice->sendPacket(packet);
 			if(useCentralMessageCounter)
 			{
@@ -755,7 +757,8 @@ void HomeMaticDevice::sendPacketMultipleTimes(std::shared_ptr<BidCoSPacket> pack
 				packet->setMessageCounter(peer->messageCounter);
 				peer->messageCounter++;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+			int32_t difference = HelperFunctions::getTime() - start;
+			if(difference < delay - 10) std::this_thread::sleep_for(std::chrono::milliseconds(delay - difference));
 		}
 	}
 	catch(const std::exception& ex)

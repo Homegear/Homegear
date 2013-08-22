@@ -105,9 +105,8 @@ void BidCoSQueue::dispose()
 		stopResendThread();
 		stopPopWaitThread();
 		_queueMutex.lock();
-		_pendingQueues.reset();
 		_queue.clear();
-		_queueMutex.unlock();
+		_pendingQueues.reset();
 	}
 	catch(const std::exception& ex)
     {
@@ -121,6 +120,7 @@ void BidCoSQueue::dispose()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queueMutex.unlock();
 }
 
 void BidCoSQueue::resend(uint32_t threadId, bool burst)
@@ -189,32 +189,49 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 		_queueMutex.lock();
 		if(!_queue.empty() && !_stopResendThread)
 		{
+			if(_stopResendThread)
+			{
+				_queueMutex.unlock();
+				return;
+			}
+			bool forceResend = _queue.front().forceResend;
 			if(!noSending)
 			{
 				HelperFunctions::printDebug("Sending from resend thread " + std::to_string(threadId) + " of queue " + std::to_string(id) + ".");
-				if(_sendThread.joinable()) _sendThread.join();
-				if(_stopResendThread)
-				{
-					_queueMutex.unlock();
-					return;
-				}
+				std::shared_ptr<BidCoSPacket> packet = _queue.front().getPacket();
+				if(!packet) return;
 				if(_queue.front().getType() == QueueEntryType::MESSAGE)
 				{
 					HelperFunctions::printDebug("Invoking outgoing message handler from BidCoSQueue.");
-					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
+					BidCoSMessage* message = _queue.front().getMessage().get();
+					_queueMutex.unlock();
+					_sendThreadMutex.lock();
+					if(_sendThread.joinable()) _sendThread.join();
+					if(_stopResendThread)
+					{
+						_sendThreadMutex.unlock();
+						return;
+					}
+					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message, packet);
+					_sendThreadMutex.unlock();
 				}
 				else
 				{
-					_sendThread = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), _queue.front().stealthy);
+					bool stealthy = _queue.front().stealthy;
+					_queueMutex.unlock();
+					_sendThreadMutex.lock();
+					if(_sendThread.joinable()) _sendThread.join();
+					if(_stopResendThread)
+					{
+						_sendThreadMutex.unlock();
+						return;
+					}
+					_sendThread = std::thread(&BidCoSQueue::send, this, packet, stealthy);
+					_sendThreadMutex.unlock();
 				}
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 80;
-				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+				HelperFunctions::setThreadPriority(_sendThread.native_handle(), 45);
 			}
-			bool forceResend = _queue.front().forceResend;
-			_queueMutex.unlock(); //Has to be unlocked before startResendThread
+			else _queueMutex.unlock(); //Has to be unlocked before startResendThread
 			if(_stopResendThread) return;
 			if(_resendCounter < (retries - 2)) //This actually means that the message will be sent three times all together if there is no response
 			{
@@ -229,16 +246,19 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 	catch(const std::exception& ex)
     {
 		_queueMutex.unlock();
+		_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -259,13 +279,11 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool
 			_resendCounter = 0;
 			if(!noSending)
 			{
+				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 80;
-				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+				_sendThreadMutex.unlock();
+				HelperFunctions::setThreadPriority(_sendThread.native_handle(), 45);
 				startResendThread(forceResend);
 			}
 		}
@@ -278,16 +296,19 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool
 	catch(const std::exception& ex)
     {
 		_queueMutex.unlock();
+		_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -377,13 +398,11 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 			_resendCounter = 0;
 			if(!noSending)
 			{
+				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 80;
-				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+				_sendThreadMutex.unlock();
+				HelperFunctions::setThreadPriority(_sendThread.native_handle(), 45);
 				startResendThread(forceResend);
 			}
 		}
@@ -396,16 +415,19 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 	catch(const std::exception& ex)
     {
 		_queueMutex.unlock();
+		_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -427,13 +449,11 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
 			_resendCounter = 0;
 			if(!noSending)
 			{
+				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 80;
-				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+				_sendThreadMutex.unlock();
+				HelperFunctions::setThreadPriority(_sendThread.native_handle(), 45);
 				startResendThread(forceResend);
 			}
 		}
@@ -446,16 +466,19 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
 	catch(const std::exception& ex)
     {
 		_queueMutex.unlock();
+		_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -486,13 +509,11 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
 			_resendCounter = 0;
 			if(!noSending)
 			{
+				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 80;
-				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+				_sendThreadMutex.unlock();
+				HelperFunctions::setThreadPriority(_sendThread.native_handle(), 45);
 				startResendThread(forceResend);
 			}
 		}
@@ -506,16 +527,19 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
 	catch(const std::exception& ex)
     {
 		_queueMutex.unlock();
+		_sendThreadMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -549,11 +573,7 @@ void BidCoSQueue::popWait(uint32_t waitingTime)
 		stopResendThread();
 		stopPopWaitThread();
 		_popWaitThread = std::thread(&BidCoSQueue::popWaitThread, this, _popWaitThreadId++, waitingTime);
-		sched_param schedParam;
-		int policy;
-		pthread_getschedparam(_popWaitThread.native_handle(), &policy, &schedParam);
-		schedParam.sched_priority = 80;
-		if(!pthread_setschedparam(_popWaitThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+		HelperFunctions::setThreadPriority(_popWaitThread.native_handle(), 45);
 	}
 	catch(const std::exception& ex)
     {
@@ -671,11 +691,7 @@ void BidCoSQueue::startResendThread(bool force)
 			stopResendThread();
 			bool burst = controlByte & 0x10;
 			_resendThread = std::thread(&BidCoSQueue::resend, this, _resendThreadId++, burst);
-			sched_param schedParam;
-			int policy;
-			pthread_getschedparam(_resendThread.native_handle(), &policy, &schedParam);
-			schedParam.sched_priority = 80;
-			if(!pthread_setschedparam(_resendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+			HelperFunctions::setThreadPriority(_resendThread.native_handle(), 45);
 		}
 	}
 	catch(const std::exception& ex)
@@ -762,10 +778,9 @@ void BidCoSQueue::pushPendingQueue()
 			return;
 		}
 		std::shared_ptr<BidCoSQueue> queue = _pendingQueues->front();
-		if(!queue) return; //Not really necessary, as the mutex is locked, but I had a segmentation fault in this function, so just to make
 		_queueMutex.unlock();
+		if(!queue) return; //Not really necessary, as the mutex is locked, but I had a segmentation fault in this function, so just to make
 		_queueType = queue->getQueueType();
-		serviceMessages = queue->serviceMessages;
 		queueEmptyCallback = queue->queueEmptyCallback;
 		callbackParameter = queue->callbackParameter;
 		retries = queue->retries;
@@ -779,13 +794,11 @@ void BidCoSQueue::pushPendingQueue()
 				_resendCounter = 0;
 				if(!noSending)
 				{
+					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
 					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
-					sched_param schedParam;
-					int policy;
-					pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
-					schedParam.sched_priority = 80;
-					if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+					_sendThreadMutex.unlock();
+					HelperFunctions::setThreadPriority(_sendThread.native_handle(), 45);
 					startResendThread(i->forceResend);
 				}
 			}
@@ -797,13 +810,11 @@ void BidCoSQueue::pushPendingQueue()
 				_resendCounter = 0;
 				if(!noSending)
 				{
+					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
 					_sendThread = std::thread(&BidCoSQueue::send, this, i->getPacket(), i->stealthy);
-					sched_param schedParam;
-					int policy;
-					pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
-					schedParam.sched_priority = 80;
-					if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+					_sendThreadMutex.unlock();
+					HelperFunctions::setThreadPriority(_sendThread.native_handle(), 45);
 					startResendThread(i->forceResend);
 				}
 			}
@@ -819,16 +830,19 @@ void BidCoSQueue::pushPendingQueue()
 	catch(const std::exception& ex)
     {
 		_queueMutex.unlock();
+		_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -860,24 +874,15 @@ void BidCoSQueue::nextQueueEntry()
 				HelperFunctions::printInfo("Info: Queue " + std::to_string(id) + " is empty and there are no pending queues.");
 				_workingOnPendingQueue = false;
 				_queueMutex.unlock();
-				if(serviceMessages && (_queueType == BidCoSQueueType::UNPAIRING || _queueType == BidCoSQueueType::CONFIG))
-				{
-					serviceMessages->setConfigPending(false);
-					serviceMessages.reset();
-				}
 				return;
 			}
 			else
 			{
-				HelperFunctions::printDebug("Queue " + std::to_string(id) + " is empty. Pushing pending queue...");
 				_queueMutex.unlock();
+				HelperFunctions::printDebug("Queue " + std::to_string(id) + " is empty. Pushing pending queue...");
 				if(_pushPendingQueueThread.joinable()) _pushPendingQueueThread.join();
 				_pushPendingQueueThread = std::thread(&BidCoSQueue::pushPendingQueue, this);
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(_pushPendingQueueThread.native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 80;
-				if(!pthread_setschedparam(_pushPendingQueueThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+				HelperFunctions::setThreadPriority(_pushPendingQueueThread.native_handle(), 45);
 				return;
 			}
 		}
@@ -886,19 +891,27 @@ void BidCoSQueue::nextQueueEntry()
 			_resendCounter = 0;
 			if(!noSending)
 			{
-				if(_sendThread.joinable()) _sendThread.join();
+				bool forceResend = _queue.front().forceResend;
+				std::shared_ptr<BidCoSPacket> packet = _queue.front().getPacket();
 				if(_queue.front().getType() == QueueEntryType::MESSAGE)
 				{
-					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, _queue.front().getMessage().get(), _queue.front().getPacket());
+					BidCoSMessage* message = _queue.front().getMessage().get();
+					_queueMutex.unlock();
+					_sendThreadMutex.lock();
+					if(_sendThread.joinable()) _sendThread.join();
+					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message, packet);
+					_sendThreadMutex.unlock();
 				}
-				else _sendThread = std::thread(&BidCoSQueue::send, this, _queue.front().getPacket(), _queue.front().stealthy);
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(_sendThread.native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 80;
-				if(!pthread_setschedparam(_sendThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
-				bool forceResend = _queue.front().forceResend;
-				_queueMutex.unlock(); //Has to be unlocked before startResendThread()
+				else
+				{
+					bool stealthy = _queue.front().stealthy;
+					_queueMutex.unlock();
+					_sendThreadMutex.lock();
+					if(_sendThread.joinable()) _sendThread.join();
+					_sendThread = std::thread(&BidCoSQueue::send, this, packet, stealthy);
+					_sendThreadMutex.unlock();
+				}
+				HelperFunctions::setThreadPriority(_sendThread.native_handle(), 45);
 				startResendThread(forceResend);
 			}
 			else _queueMutex.unlock();
@@ -908,16 +921,19 @@ void BidCoSQueue::nextQueueEntry()
 	catch(const std::exception& ex)
     {
 		_queueMutex.unlock();
+		_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
+    	_sendThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -931,9 +947,13 @@ void BidCoSQueue::pop()
 		HelperFunctions::printDebug("Popping from BidCoSQueue: " + std::to_string(id));
 		if(_popWaitThread.joinable()) _stopPopWaitThread = true;
 		if(_resendThread.joinable()) _stopResendThread = true;
-		if(_queue.empty()) return;
 		_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		_queueMutex.lock();
+		if(_queue.empty())
+		{
+			_queueMutex.unlock();
+			return;
+		}
 		_queue.pop_front();
 		if(GD::debugLevel >= 5 && !_queue.empty())
 		{

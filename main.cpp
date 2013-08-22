@@ -40,6 +40,7 @@ void terminate(int32_t signalNumber)
 {
 	try
 	{
+
 		if(signalNumber != 15)
 		{
 			HelperFunctions::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
@@ -158,6 +159,9 @@ int main(int argc, char* argv[])
 {
     try
     {
+    	GD::devices.test();
+    	exit(0);
+
     	for(int32_t i = 1; i < argc; i++)
     	{
     		std::string arg(argv[i]);
@@ -253,9 +257,13 @@ int main(int argc, char* argv[])
 		throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
 
     	//Set rlimit for core dumps
-    	struct rlimit coreLimits;
-    	coreLimits.rlim_cur = coreLimits.rlim_max;
-    	setrlimit(RLIMIT_CORE, &coreLimits);
+    	struct rlimit limits;
+    	getrlimit(RLIMIT_CORE, &limits);
+    	limits.rlim_cur = limits.rlim_max;
+    	setrlimit(RLIMIT_CORE, &limits);
+    	getrlimit(RLIMIT_RTPRIO, &limits);
+    	limits.rlim_cur = limits.rlim_max;
+    	setrlimit(RLIMIT_RTPRIO, &limits);
 
     	//Analyze core dump with:
     	//gdb homegear core

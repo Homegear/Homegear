@@ -1,15 +1,69 @@
-/*
- * HelperFunctions.cpp
- *
- *  Created on: May 23, 2013
- *      Author: sathya
- */
-
 #include "HelperFunctions.h"
 #include "GD.h"
 
 HelperFunctions::~HelperFunctions() {
 
+}
+
+void HelperFunctions::setThreadPriority(pthread_t thread, int32_t priority)
+{
+	try
+	{
+		if(!GD::setThreadPriority) return;
+		if(priority < 1 || priority > 99) throw Exception("Invalid thread priority: " + std::to_string(priority));
+		sched_param schedParam;
+		schedParam.sched_priority = priority;
+		int32_t error;
+		//Only use SCHED_FIFO or SCHED_RR
+		if((error = pthread_setschedparam(thread, SCHED_FIFO, &schedParam)) != 0)
+		{
+			if(error == EPERM)
+			{
+				printError("Could not set thread priority. The executing user does not have enough permissions.");
+			}
+			else if(error == ESRCH) printError("Could not set thread priority. Thread could not be found.");
+			else if(error == EINVAL) printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
+			else printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
+			GD::setThreadPriority = false;
+		}
+		else printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HelperFunctions::printThreadPriority()
+{
+	try
+	{
+		int32_t policy, error;
+		sched_param param;
+		if((error = pthread_getschedparam(pthread_self(), &policy, &param)) != 0) printError("Could not get thread priority. Error: " + std::to_string(error));
+
+		printMessage("Thread policy: " + std::to_string(policy) + " Thread priority: " + std::to_string(param.sched_priority));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 int32_t HelperFunctions::getRandomNumber(int32_t min, int32_t max)

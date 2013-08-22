@@ -78,7 +78,14 @@ std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwar
 				if((*j)->matches(deviceType, firmwareVersion))
 				{
 					countFromSysinfo = (*i)->getCountFromSysinfo(packet);
-					if((*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					if((*i)->getCountFromSysinfo() != countFromSysinfo)
+					{
+						//Only set partial match when device's countFromSysinfo is not set
+						//Otherwise if (*i)->countFromSysinfo is larger than countFromSysinfo,
+						//the channel count for the new device will be too large, becuase
+						//setCountFromSysinfo cannot reduce the amount of initialized channels.
+						if((*i)->getCountFromSysinfo() == -1) partialMatch = *i;
+					}
 					else return *i;
 				}
 			}
@@ -118,7 +125,10 @@ std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwar
 			{
 				if((*j)->matches(deviceType, firmwareVersion))
 				{
-					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo)
+					{
+						if((*i)->getCountFromSysinfo() == -1) partialMatch = *i;
+					}
 					else return *i;
 				}
 			}
@@ -160,7 +170,10 @@ std::shared_ptr<Device> Devices::find(std::string typeID, std::shared_ptr<BidCoS
 				if((*j)->matches(typeID))
 				{
 					countFromSysinfo = (*i)->getCountFromSysinfo(packet);
-					if((*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					if((*i)->getCountFromSysinfo() != countFromSysinfo)
+					{
+						if((*i)->getCountFromSysinfo() == -1) partialMatch = *i;
+					}
 					else return *i;
 				}
 			}
@@ -202,7 +215,10 @@ std::shared_ptr<Device> Devices::find(std::shared_ptr<BidCoSPacket> packet)
 				if((*j)->matches(packet))
 				{
 					countFromSysinfo = (*i)->getCountFromSysinfo(packet);
-					if((*i)->getCountFromSysinfo() != countFromSysinfo) partialMatch = *i;
+					if((*i)->getCountFromSysinfo() != countFromSysinfo)
+					{
+						if((*i)->getCountFromSysinfo() == -1) partialMatch = *i;
+					}
 					else return *i;
 				}
 			}

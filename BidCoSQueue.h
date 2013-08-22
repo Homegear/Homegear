@@ -59,6 +59,7 @@ class BidCoSQueue
         std::list<BidCoSQueueEntry> _queue;
         std::shared_ptr<PendingBidCoSQueues> _pendingQueues;
         std::mutex _queueMutex;
+        std::mutex _sendThreadMutex;
         BidCoSQueueType _queueType;
         bool _stopResendThread = false;
         std::thread _resendThread;
@@ -86,7 +87,6 @@ class BidCoSQueue
         uint32_t id = 0;
         std::shared_ptr<int64_t> lastAction;
         bool noSending = false;
-        std::shared_ptr<ServiceMessages> serviceMessages;
         HomeMaticDevice* device = nullptr;
         std::shared_ptr<Peer> peer;
         std::shared_ptr<CallbackFunctionParameter> callbackParameter;

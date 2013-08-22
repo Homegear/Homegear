@@ -19,11 +19,8 @@ void RPCServer::start()
 	try
 	{
 		_mainThread = std::thread(&RPCServer::mainThread, this);
-		sched_param schedParam;
-		int policy;
-		pthread_getschedparam(_mainThread.native_handle(), &policy, &schedParam);
-		schedParam.sched_priority = 1; //Low priority
-		if(!pthread_setschedparam(_mainThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+		//Set very low priority
+		HelperFunctions::setThreadPriority(_mainThread.native_handle(), 21);
 		_mainThread.detach();
 	}
 	catch(const std::exception& ex)
@@ -98,11 +95,7 @@ void RPCServer::mainThread()
 				_stateMutex.unlock();
 
 				_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(_readThreads.back().native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 1; //Low priority
-				if(!pthread_setschedparam(_readThreads.back().native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+				HelperFunctions::setThreadPriority(_readThreads.back().native_handle(), 21);
 				_readThreads.back().detach();
 			}
 			catch(const std::exception& ex)
@@ -143,6 +136,11 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 	try
 	{
 		if(!data || data->empty()) return;
+		if(data->size() > 104857600)
+		{
+			HelperFunctions::printError("Error: Data size was larger than 100MB.");
+			return;
+		}
 		int32_t ret = send(clientFileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
 		if(closeConnection) shutdown(clientFileDescriptor, 1);
 		if(ret != (signed)data->size()) HelperFunctions::printWarning("Warning: Error sending data to client.");
@@ -306,7 +304,7 @@ void RPCServer::packetReceived(int32_t clientFileDescriptor, std::shared_ptr<std
 	try
 	{
 		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest) analyzeRPC(clientFileDescriptor, packet, packetType);
-		if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(clientFileDescriptor, packet, packetType);
+		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(clientFileDescriptor, packet, packetType);
 	}
     catch(const std::exception& ex)
     {
@@ -369,18 +367,19 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 		uint32_t uBytesRead;
 		uint32_t dataSize = 0;
 		PacketType::Enum packetType;
-		struct timeval timeout;
-		timeout.tv_sec = 20;
-		timeout.tv_usec = 0;
 
 		HelperFunctions::printDebug("Listening for incoming packets from client number " + std::to_string(clientFileDescriptor) + ".");
 		while(!_stopServer)
 		{
+			//Timeout needs to be set every time, so don't put it outside of the while loop
+			timeval timeout;
+			timeout.tv_sec = 0;
+			timeout.tv_usec = 500000;
 			fd_set readFileDescriptor;
 			FD_ZERO(&readFileDescriptor);
 			FD_SET(clientFileDescriptor, &readFileDescriptor);
 			bytesRead = select(clientFileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
-			if(bytesRead == 0) continue;
+			if(bytesRead == 0) continue; //timeout
 			if(bytesRead != 1)
 			{
 				removeClientFileDescriptor(clientFileDescriptor);
@@ -417,11 +416,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				{
 					packetLength = 0;
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-					sched_param schedParam;
-					int policy;
-					pthread_getschedparam(t.native_handle(), &policy, &schedParam);
-					schedParam.sched_priority = 1; //Low priority
-					if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+					HelperFunctions::setThreadPriority(t.native_handle(), 21);
 					t.detach();
 				}
 			}
@@ -475,11 +470,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 							packet->push_back('\0');
 							packetLength = 0;
 							std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-							sched_param schedParam;
-							int policy;
-							pthread_getschedparam(t.native_handle(), &policy, &schedParam);
-							schedParam.sched_priority = 1; //Low priority
-							if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+							HelperFunctions::setThreadPriority(t.native_handle(), 21);
 							t.detach();
 						}
 						else
@@ -508,11 +499,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				if(packetLength == dataSize)
 				{
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-					sched_param schedParam;
-					int policy;
-					pthread_getschedparam(t.native_handle(), &policy, &schedParam);
-					schedParam.sched_priority = 1; //Low priority
-					if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+					HelperFunctions::setThreadPriority(t.native_handle(), 21);
 					t.detach();
 					packetLength = 0;
 					packet->push_back('\0');

@@ -196,15 +196,16 @@ std::string Cul::readFromDevice()
 		std::string packet;
 		int32_t i;
 		char localBuffer[1];
-		struct timeval timeout;
-		timeout.tv_sec = 3;
-		timeout.tv_usec = 0;
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(_fileDescriptor, &readFileDescriptor);
 
 		while(localBuffer[0] != '\n')
 		{
+			//Timeout needs to be set every time, so don't put it outside of the while loop
+			timeval timeout;
+			timeout.tv_sec = 0;
+			timeout.tv_usec = 500000;
 			i = select(_fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			switch(i)
 			{
@@ -328,12 +329,8 @@ void Cul::startListening()
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		writeToDevice("Ar\r\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
-		sched_param schedParam;
-		int policy;
-		pthread_getschedparam(_listenThread.native_handle(), &policy, &schedParam);
-		schedParam.sched_priority = 80;
-		if(!pthread_setschedparam(_listenThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
 		_listenThread = std::thread(&Cul::listen, this);
+		HelperFunctions::setThreadPriority(_listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
@@ -400,11 +397,7 @@ void Cul::listen()
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 				packet->import(packetHex);
 				std::thread t(&Cul::callCallback, this, packet);
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(t.native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 80;
-				if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+				HelperFunctions::setThreadPriority(t.native_handle(), 45);
 				t.detach();
         	}
         }

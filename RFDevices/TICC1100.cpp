@@ -302,7 +302,7 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor == -1 || _gpioDescriptor == -1) return;
 		if(packet->payload()->size() > 54)
 		{
 			HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
@@ -335,18 +335,20 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 
 		if(GD::debugLevel > 3) HelperFunctions::printInfo("Info: Sending: " + packet->hexString());
 
-		struct pollfd pollstruct {
-			(int)_gpioDescriptor,
-			(short)(POLLPRI | POLLERR),
-			(short)0
-		};
-
 		int32_t pollResult;
 		int32_t bytesRead;
 		std::vector<char> readBuffer({'0'});
 		for(uint32_t i = 0; i < 5; i++)
 		{
-			pollResult = poll(&pollstruct, 1, 50);
+			pollfd pollstruct {
+				(int)_gpioDescriptor,
+				(short)(POLLPRI | POLLERR),
+				(short)0
+			};
+			HelperFunctions::printMessage("Moin before poll");
+			pollResult = poll(&pollstruct, 1, 100);
+			//poll hangs here
+			HelperFunctions::printMessage("Moin after poll");
 			if(pollResult > 0)
 			{
 				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::to_string(errno));
@@ -357,11 +359,14 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 			}
 			else if(pollResult < 0)
 			{
-				throw Exception("Could not poll gpio: " + std::to_string(errno));
+				throw Exception("Could not poll gpio: " + std::string(strerror(errno)));
 			}
 			//timeout
-			else if(pollResult == 0) continue;
-			if(i == 4) HelperFunctions::printWarning("Warning: Sending of packet timed out.");
+			else if(pollResult == 0)
+			{
+				HelperFunctions::printWarning("Warning: Sending of packet timed out.");
+				break;
+			}
 		}
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
@@ -724,11 +729,7 @@ void TICC1100::startListening()
 
 		_stopCallbackThread = false;
 		_listenThread = std::thread(&TICC1100::listen, this);
-		sched_param schedParam;
-		int policy;
-		pthread_getschedparam(_listenThread.native_handle(), &policy, &schedParam);
-		schedParam.sched_priority = 80;
-		if(!pthread_setschedparam(_listenThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+		HelperFunctions::setThreadPriority(_listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
@@ -775,24 +776,23 @@ void TICC1100::listen()
 {
     try
     {
-    	struct pollfd pollstruct {
-			(int)_gpioDescriptor,
-			(short)(POLLPRI | POLLERR),
-			(short)0
-		};
-
 		int32_t pollResult;
 		int32_t bytesRead;
 		std::vector<char> readBuffer({'0'});
 		bool firstPacket = true;
 
-        while(!_stopCallbackThread)
+        while(!_stopCallbackThread && _gpioDescriptor > -1)
         {
         	if(_stopped)
         	{
         		std::this_thread::sleep_for(std::chrono::milliseconds(200));
         		continue;
         	}
+        	pollfd pollstruct {
+				(int)_gpioDescriptor,
+				(short)(POLLPRI | POLLERR),
+				(short)0
+			};
 
 			pollResult = poll(&pollstruct, 1, 500);
 			if(!_sending && pollResult > 0)
@@ -824,11 +824,7 @@ void TICC1100::listen()
 
 						std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(decodedData, true));
 						std::thread t(&TICC1100::callCallback, this, packet);
-						sched_param schedParam;
-						int policy;
-						pthread_getschedparam(t.native_handle(), &policy, &schedParam);
-						schedParam.sched_priority = 80;
-						if(!pthread_setschedparam(t.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+						HelperFunctions::setThreadPriority(t.native_handle(), 45);
 						t.detach();
 					}
 				}
@@ -838,7 +834,8 @@ void TICC1100::listen()
 			else if(pollResult < 0)
 			{
 				_txMutex.unlock();
-				throw Exception("Could not poll gpio: " + std::string(strerror(errno)));
+				HelperFunctions::printError("Could not poll gpio: " + std::string(strerror(errno)));
+				break;
 			}
 			//timeout
 			else if(pollResult == 0)

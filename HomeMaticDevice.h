@@ -96,8 +96,9 @@ class HomeMaticDevice
         virtual void sendDutyCycleResponse(int32_t destinationAddress);
         virtual void sendRequestConfig(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet) {}
     protected:
+        bool _disposing = false;
         bool _stopWorkerThread = false;
-        std::shared_ptr<std::thread> _workerThread;
+        std::thread _workerThread;
         int32_t _address;
         std::string _serialNumber;
         int32_t _firmwareVersion = 0;
@@ -111,7 +112,7 @@ class HomeMaticDevice
         std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>> _config;
         std::unordered_map<int32_t, std::shared_ptr<Peer>> _peers;
         std::unordered_map<std::string, std::shared_ptr<Peer>> _peersBySerial;
-        std::recursive_timed_mutex _peersMutex;
+        std::timed_mutex _peersMutex;
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
         bool _pairing = false;

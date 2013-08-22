@@ -16,6 +16,7 @@ HomeMaticCentral::~HomeMaticCentral()
 {
 	try
 	{
+		_disposing = true;
 		if(_pairingModeThread.joinable())
 		{
 			_stopPairingModeThread = true;
@@ -119,7 +120,8 @@ void HomeMaticCentral::worker()
 {
 	try
 	{
-		std::chrono::milliseconds sleepingTime(7000);
+		//Sleeping time needs to be longer than the deadlock checking
+		std::chrono::milliseconds sleepingTime(3500);
 		int32_t lastPeer;
 		lastPeer = 0;
 		while(!_stopWorkerThread)
@@ -128,37 +130,35 @@ void HomeMaticCentral::worker()
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				if(_stopWorkerThread) return;
-				if(_peersMutex.try_lock_for(std::chrono::milliseconds(100)))
+				std::thread t(&HomeMaticDevice::checkForDeadlock, this);
+				t.detach();
+				_peersMutex.lock();
+				if(!_peers.empty())
 				{
-					if(!_peers.empty())
+					if(lastPeer == 0 || _peers.find(lastPeer) == _peers.end()) lastPeer = _peers.begin()->first;
+					_peersMutex.unlock();
+
+					std::shared_ptr<Peer> peer(getPeer(lastPeer));
+					if(peer && !peer->deleting) peer->saveToDatabase(_address);
+
+					_peersMutex.lock();
+					std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator nextPeer = _peers.find(lastPeer);
+					if(nextPeer != _peers.end())
 					{
-						if(lastPeer == 0 || _peers.find(lastPeer) == _peers.end()) lastPeer = _peers.begin()->first;
-						_peersMutex.unlock();
-
-						std::shared_ptr<Peer> peer(getPeer(lastPeer));
-						if(peer) peer->saveToDatabase(_address);
-
-						_peersMutex.lock();
-						std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator nextPeer = _peers.find(lastPeer);
-						if(nextPeer != _peers.end())
-						{
-							nextPeer++;
-							if((nextPeer == _peers.end() || !nextPeer->second) && !_peers.empty())
-							{
-								nextPeer = _peers.begin();
-								lastPeer = nextPeer->first;
-							}
-						}
-						else if(!_peers.empty())
+						nextPeer++;
+						if((nextPeer == _peers.end() || !nextPeer->second) && !_peers.empty())
 						{
 							nextPeer = _peers.begin();
 							lastPeer = nextPeer->first;
 						}
 					}
-					_peersMutex.unlock();
+					else if(!_peers.empty())
+					{
+						nextPeer = _peers.begin();
+						lastPeer = nextPeer->first;
+					}
 				}
-				std::thread t(&HomeMaticDevice::checkForDeadlock, this);
-				t.detach();
+				_peersMutex.unlock();
 			}
 			catch(const std::exception& ex)
 			{
@@ -195,6 +195,7 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
+		if(_disposing) return false;
 		bool handled = HomeMaticDevice::packetReceived(packet);
 		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
 		if(!peer) return false;
@@ -699,7 +700,6 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
 
-		pendingQueue->serviceMessages = peer->serviceMessages;
 		peer->serviceMessages->setConfigPending(true);
 		peer->pendingBidCoSQueues->push(pendingQueue);
 		if(pushPendingBidCoSQueues)
@@ -802,7 +802,6 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
 			pendingQueue->push(configPacket);
 			pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			_messageCounter[0]++;
-			pendingQueue->serviceMessages = peer->serviceMessages;
 			peer->serviceMessages->setConfigPending(true);
 			peer->pendingBidCoSQueues->push(pendingQueue);
 
@@ -829,7 +828,6 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
 				pendingQueue->push(configPacket);
 				pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 				_messageCounter[0]++;
-				pendingQueue->serviceMessages = peer->serviceMessages;
 				peer->serviceMessages->setConfigPending(true);
 				peer->pendingBidCoSQueues->push(pendingQueue);
 
@@ -905,6 +903,7 @@ void HomeMaticCentral::deletePeer(int32_t address)
 	{
 		std::shared_ptr<Peer> peer(getPeer(address));
 		if(!peer) return;
+		peer->deleting = true;
 		std::shared_ptr<RPC::RPCVariable> deviceAddresses(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->getSerialNumber())));
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
@@ -973,7 +972,6 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
 
 		if(defer)
 		{
-			pendingQueue->serviceMessages = peer->serviceMessages;
 			peer->serviceMessages->setConfigPending(true);
 			while(!peer->pendingBidCoSQueues->empty()) peer->pendingBidCoSQueues->pop();
 			peer->pendingBidCoSQueues->push(pendingQueue);
@@ -1051,7 +1049,6 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 
 		if(defer)
 		{
-			pendingQueue->serviceMessages = peer->serviceMessages;
 			peer->serviceMessages->setConfigPending(true);
 			while(!peer->pendingBidCoSQueues->empty()) peer->pendingBidCoSQueues->pop();
 			peer->pendingBidCoSQueues->push(pendingQueue);
@@ -1233,7 +1230,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			payload.clear();
 			_messageCounter[0]++;
 
-			//Don't check for rxModes here! rxModes can be anything.
+			//Don't check for rxModes here! All rxModes are allowed.
 			if(!peerExists(packet->senderAddress())) //Only request config when peer is not already paired to central
 			{
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
@@ -1248,7 +1245,6 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 						{
 							pendingQueue.reset(new BidCoSQueue(BidCoSQueueType::CONFIG));
 							pendingQueue->noSending = true;
-							pendingQueue->serviceMessages = peer->serviceMessages;
 							payload.push_back(channel);
 							payload.push_back(0x04);
 							payload.push_back(0);
@@ -1270,7 +1266,6 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 					{
 						pendingQueue.reset(new BidCoSQueue(BidCoSQueueType::CONFIG));
 						pendingQueue->noSending = true;
-						pendingQueue->serviceMessages = peer->serviceMessages;
 						payload.push_back(channel);
 						payload.push_back(0x03);
 						configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
@@ -1342,7 +1337,6 @@ void HomeMaticCentral::sendRequestConfig(int32_t address, uint8_t localChannel, 
 		payload.clear();
 		_messageCounter[0]++;
 
-		pendingQueue->serviceMessages = peer->serviceMessages;
 		peer->serviceMessages->setConfigPending(true);
 		peer->pendingBidCoSQueues->push(pendingQueue);
 		if(!oldQueue) queue->push(peer->pendingBidCoSQueues);
@@ -1422,7 +1416,6 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 				//Peer has no team yet so set it needs to be defined
 				setTeam(peer->getSerialNumber(), localChannel, "", 0, true, false);
 			}
-			if(packet->controlByte() & 0x20) sendOK(packet->messageCounter(), peer->address);
 			if(packet->payload()->size() >= 2 && packet->payload()->at(0) == 0x03 && packet->payload()->at(1) == 0x00)
 			{
 				//multiPacketEnd was received unexpectedly. Because of the delay it was received after the peer request packet was sent.
@@ -1795,6 +1788,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						_peers[queue->peer->address] = queue->peer;
 						if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
 						_peersMutex.unlock();
+						queue->peer->saveToDatabase(_address);
 					}
 					catch(const std::exception& ex)
 					{
@@ -2033,7 +2027,6 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
 
-		pendingQueue->serviceMessages = sender->serviceMessages;
 		sender->serviceMessages->setConfigPending(true);
 		sender->pendingBidCoSQueues->push(pendingQueue);
 
@@ -2116,7 +2109,6 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
 
-		pendingQueue->serviceMessages = receiver->serviceMessages;
 		receiver->serviceMessages->setConfigPending(true);
 		receiver->pendingBidCoSQueues->push(pendingQueue);
 
@@ -2223,7 +2215,6 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
 
-		pendingQueue->serviceMessages = sender->serviceMessages;
 		sender->serviceMessages->setConfigPending(true);
 		sender->pendingBidCoSQueues->push(pendingQueue);
 		queue->push(sender->pendingBidCoSQueues);
@@ -2255,7 +2246,6 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
 
-		pendingQueue->serviceMessages = receiver->serviceMessages;
 		receiver->serviceMessages->setConfigPending(true);
 		receiver->pendingBidCoSQueues->push(pendingQueue);
 		queue->push(receiver->pendingBidCoSQueues);
@@ -2313,6 +2303,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 		if(!defer && !force && peerExists(address)) return RPC::RPCVariable::createError(-1, "No answer from device.");
 
@@ -2475,7 +2466,6 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		queue->noSending = true;
 		peer->serviceMessages->setConfigPending(true);
-		queue->serviceMessages = peer->serviceMessages;
 
 		uint8_t configByte = 0xA0;
 		if(burst && (peer->rpcDevice->rxModes & RPC::Device::RXModes::burst)) configByte |= 0x10;

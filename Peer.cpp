@@ -364,7 +364,7 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 void Peer::worker()
 {
 	if(!_centralFeatures) return;
-	std::chrono::milliseconds sleepingTime(300);
+	std::chrono::milliseconds sleepingTime(100);
 	std::vector<uint32_t> positionsToDelete;
 	std::vector<std::shared_ptr<VariableToReset>> variablesToReset;
 	int32_t wakeUpIndex = 0;
@@ -375,7 +375,7 @@ void Peer::worker()
 		try
 		{
 			std::this_thread::sleep_for(sleepingTime);
-			if(wakeUpIndex < 10)
+			if(wakeUpIndex < 5 && !_stopThreads)
 			{
 				wakeUpIndex++;
 				continue;
@@ -389,7 +389,7 @@ void Peer::worker()
 				_variablesToResetMutex.lock();
 				for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = _variablesToReset.begin(); i != _variablesToReset.end(); ++i)
 				{
-					if((*i)->resetTime + 5000 <= time)
+					if((*i)->resetTime + 3000 <= time)
 					{
 						variablesToReset.push_back(*i);
 						positionsToDelete.push_back(index);
@@ -424,7 +424,11 @@ void Peer::worker()
 				variablesToReset.clear();
 			}
 			serviceMessages->checkUnreach();
-			if(serviceMessages->getConfigPending() && pendingBidCoSQueues && pendingBidCoSQueues->empty()) serviceMessages->setConfigPending(false);
+			if(serviceMessages->getConfigPending() && (!pendingBidCoSQueues || pendingBidCoSQueues->empty()))
+			{
+				serviceMessages->setConfigPending(false);
+				if(_centralFeatures) saveToDatabase(GD::devices.getCentral()->address());
+			}
 		}
 		catch(const std::exception& ex)
 		{
@@ -847,6 +851,7 @@ void Peer::deleteFromDatabase(int32_t parentAddress)
 {
 	try
 	{
+		_databaseMutex.lock();
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
 		GD::db.executeCommand("DELETE FROM metadata WHERE objectID=?", data);
@@ -867,12 +872,14 @@ void Peer::deleteFromDatabase(int32_t parentAddress)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _databaseMutex.unlock();
 }
 
 void Peer::saveToDatabase(int32_t parentAddress)
 {
 	try
 	{
+		_databaseMutex.lock();
 		std::ostringstream command;
 		command << "SELECT 1 FROM peers WHERE parent=" << std::dec << parentAddress << " AND address=" << address;
 		DataTable result = GD::db.executeCommand(command.str());
@@ -901,6 +908,7 @@ void Peer::saveToDatabase(int32_t parentAddress)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _databaseMutex.unlock();
 }
 
 void Peer::deletePairedVirtualDevice(int32_t address)
@@ -1200,6 +1208,8 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 		{
 			uint32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 			uint32_t parameterCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) continue;
+			if(rpcDevice->channels[channel]->parameterSets.find(parameterSetType) == rpcDevice->channels[channel]->parameterSets.end()) continue;
 			for(uint32_t k = 0; k < parameterCount; k++)
 			{
 				uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -1249,6 +1259,8 @@ void Peer::unserializeConfig(std::string& serializedObject, std::unordered_map<u
 		for(uint32_t i = 0; i < configSize; i++)
 		{
 			uint32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) continue;
+			if(rpcDevice->channels[channel]->parameterSets.find(parameterSetType) == rpcDevice->channels[channel]->parameterSets.end()) continue;
 			uint32_t peerCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 			for(uint32_t j = 0; j < peerCount; j++)
 			{
@@ -2133,7 +2145,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 			queue->noSending = true;
 			serviceMessages->setConfigPending(true);
-			queue->serviceMessages = serviceMessages;
 			std::vector<uint8_t> payload;
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 			bool firstPacket = true;
@@ -2263,7 +2274,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 			queue->noSending = true;
 			if(serviceMessages) serviceMessages->setConfigPending(true);
-			queue->serviceMessages = serviceMessages;
 			std::vector<uint8_t> payload;
 			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 			bool firstPacket = true;
@@ -3237,7 +3247,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				else payload.push_back(0x01);
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x41, address, central->address(), payload));
 				central->messageCounter()->at(0)++;
-				central->sendPacketMultipleTimes(packet, address, 6, 600, true);
+				central->sendPacketMultipleTimes(packet, address, 6, 1000, true);
 				return true;
 			}
 			else if(valueKey == "INSTALL_TEST")
@@ -3362,7 +3372,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
 		queue->noSending = true;
-		queue->serviceMessages = serviceMessages;
 
 		std::vector<uint8_t> payload;
 		if(frame->subtype > -1 && frame->subtypeIndex >= 9)

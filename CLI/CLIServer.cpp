@@ -238,13 +238,13 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 		uint32_t packetLength = 0;
 		int32_t bytesRead;
 		uint32_t dataSize = 0;
-		struct timeval timeout;
-		timeout.tv_sec = 2;
-		timeout.tv_usec = 0;
-
 		HelperFunctions::printDebug("Listening for incoming commands from client number " + std::to_string(clientFileDescriptor) + ".");
 		while(!_stopServer)
 		{
+			//Timeout needs to be set every time, so don't put it outside of the while loop
+			timeval timeout;
+			timeout.tv_sec = 2;
+			timeout.tv_usec = 0;
 			fd_set readFileDescriptor;
 			FD_ZERO(&readFileDescriptor);
 			FD_SET(clientFileDescriptor, &readFileDescriptor);

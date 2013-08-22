@@ -14,9 +14,14 @@
 #include <iomanip>
 #include <sstream>
 
+#include <pthread.h>
+
 class HelperFunctions {
 public:
 	virtual ~HelperFunctions();
+
+	static void setThreadPriority(pthread_t thread, int32_t priority);
+	static void printThreadPriority();
 
 	static inline int64_t getTime()
 	{

@@ -70,6 +70,9 @@ class Peer
 		Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFeatures);
 		virtual ~Peer();
 
+		std::mutex _databaseMutex;
+		//Needed, so the peer gets not saved in central's worker thread while being deleted
+		bool deleting = false;
 		std::shared_ptr<ServiceMessages> serviceMessages;
         int32_t address = 0;
         std::string getSerialNumber() { return _serialNumber; }

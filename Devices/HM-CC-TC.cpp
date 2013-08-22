@@ -196,6 +196,7 @@ HM_CC_TC::~HM_CC_TC()
 {
 	try
 	{
+		_disposing = true;
 		stopHMCCTCThreads();
 	}
 	catch(const std::exception& ex)
@@ -218,9 +219,9 @@ void HM_CC_TC::stopHMCCTCThreads()
 	{
 		HomeMaticDevice::stopThreads();
 		_stopDutyCycleThread = true;
-		if(_dutyCycleThread && _dutyCycleThread->joinable())
+		if(_dutyCycleThread.joinable())
 		{
-			_dutyCycleThread->join();
+			_dutyCycleThread.join();
 			//Wait a little bit, so subthreads are stopped, too (e. g. sendDutyCyclePacket)
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
@@ -366,7 +367,8 @@ void HM_CC_TC::startDutyCycle(int64_t lastDutyCycleEvent)
 {
 	try
 	{
-		_dutyCycleThread.reset(new std::thread(&HM_CC_TC::dutyCycleThread, this, lastDutyCycleEvent));
+		_dutyCycleThread = std::thread(&HM_CC_TC::dutyCycleThread, this, lastDutyCycleEvent);
+		HelperFunctions::setThreadPriority(_dutyCycleThread.native_handle(), 35);
 	}
     catch(const std::exception& ex)
     {
@@ -402,11 +404,11 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 				nextDutyCycleEvent += cycleTime + _dutyCycleTimeOffset; //Add offset every cycle. This is very important! Without it, 20% of the packets are sent too early.
 				HelperFunctions::printDebug("Next duty cycle: " + std::to_string(nextDutyCycleEvent / 1000) + " (in " + std::to_string(cycleTime / 1000) + " ms) with message counter 0x" + HelperFunctions::getHexString(_messageCounter[1]));
 
-				std::chrono::milliseconds sleepingTime(2000);
+				std::chrono::milliseconds sleepingTime(1000);
 				while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
 				{
 					std::this_thread::sleep_for(sleepingTime);
-					_dutyCycleCounter += 8;
+					_dutyCycleCounter += 4;
 				}
 				if(_stopDutyCycleThread) break;
 
@@ -419,7 +421,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 				while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 40)
 				{
 					std::this_thread::sleep_for(sleepingTime);
-					_dutyCycleCounter += 8;
+					_dutyCycleCounter += 4;
 				}
 				if(_stopDutyCycleThread) break;
 
@@ -436,11 +438,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 
 				std::thread sendDutyCyclePacketThread(&HM_CC_TC::sendDutyCyclePacket, this, _messageCounter[1], nextDutyCycleEvent);
 
-				sched_param schedParam;
-				int policy;
-				pthread_getschedparam(sendDutyCyclePacketThread.native_handle(), &policy, &schedParam);
-				schedParam.sched_priority = 99;
-				if(!pthread_setschedparam(sendDutyCyclePacketThread.native_handle(), SCHED_FIFO, &schedParam)) throw(Exception("Error: Could not set thread priority."));
+				HelperFunctions::setThreadPriority(sendDutyCyclePacketThread.native_handle(), 49);
 				sendDutyCyclePacketThread.detach();
 
 				_lastDutyCycleEvent = nextDutyCycleEvent;

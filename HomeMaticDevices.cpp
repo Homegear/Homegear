@@ -1,10 +1,3 @@
-/*
- * HomeMaticDevices.cpp
- *
- *  Created on: May 20, 2013
- *      Author: sathya
- */
-
 #include "HomeMaticDevices.h"
 #include "GD.h"
 #include "Devices/HM-CC-VD.h"
@@ -224,6 +217,25 @@ std::string HomeMaticDevices::getUniqueSerialNumber(std::string seedPrefix)
 	return temp2;
 }
 
+#include "pthread.h"
+void HomeMaticDevices::test()
+{
+	std::thread bla(&HomeMaticDevices::test2, this);
+	HelperFunctions::setThreadPriority(bla.native_handle() , 0);
+	bla.detach();
+}
+
+void HomeMaticDevices::test2()
+{
+	uint32_t i = 0;
+	while(i < 100)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(400));
+		++i;
+		HelperFunctions::printThreadPriority();
+	}
+}
+
 void HomeMaticDevices::stopThreads()
 {
 	try
@@ -251,7 +263,7 @@ void HomeMaticDevices::stopThreads()
     	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	std::this_thread::sleep_for(std::chrono::milliseconds(8000));
+	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 }
 
 void HomeMaticDevices::stopThreadsThread(std::shared_ptr<HomeMaticDevice> device)

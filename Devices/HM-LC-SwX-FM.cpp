@@ -62,6 +62,7 @@ void HM_LC_SWX_FM::setUpBidCoSMessages()
 
 HM_LC_SWX_FM::~HM_LC_SWX_FM()
 {
+	_disposing = true;
 }
 
 std::string HM_LC_SWX_FM::serialize()

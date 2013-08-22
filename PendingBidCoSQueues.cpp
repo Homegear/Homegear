@@ -24,7 +24,6 @@ PendingBidCoSQueues::PendingBidCoSQueues(std::string serializedObject, Peer* pee
 			{
 				std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(serializedObject.substr(pos, queueLength), device)); pos += queueLength;
 				queue->noSending = true;
-				if(queue->getQueueType() == BidCoSQueueType::UNPAIRING || queue->getQueueType() == BidCoSQueueType::CONFIG) queue->serviceMessages = peer->serviceMessages;
 				bool hasCallbackFunction = std::stol(serializedObject.substr(pos, 1)); pos += 1;
 				if(hasCallbackFunction)
 				{
