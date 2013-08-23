@@ -847,6 +847,7 @@ void Peer::saveToDatabase(int32_t parentAddress)
 {
 	try
 	{
+		if(deleting) return;
 		_databaseMutex.lock();
 		std::ostringstream command;
 		command << "SELECT 1 FROM peers WHERE parent=" << std::dec << parentAddress << " AND address=" << address;

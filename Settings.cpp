@@ -113,6 +113,19 @@ void Settings::load(std::string filename)
 					if(_workerThreadWindow > 3600000) _workerThreadWindow = 3600000;
 					HelperFunctions::printDebug("Debug: workerThreadWindow set to " + std::to_string(_workerThreadWindow));
 				}
+				else if(name == "bidcosresponsedelay")
+				{
+					_bidCoSResponseDelay = HelperFunctions::getNumber(value);
+					if(_bidCoSResponseDelay > 10000) _bidCoSResponseDelay = 10000;
+					HelperFunctions::printDebug("Debug: bidCoSResponseDelay set to " + std::to_string(_bidCoSResponseDelay));
+				}
+				else if(name == "rpcserverthreadpriority")
+				{
+					_rpcServerThreadPriority = HelperFunctions::getNumber(value);
+					if(_rpcServerThreadPriority > 99) _bidCoSResponseDelay = 99;
+					if(_rpcServerThreadPriority == 0) _rpcServerThreadPriority = 1;
+					HelperFunctions::printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
+				}
 				else
 				{
 					HelperFunctions::printWarning("Warning: Setting not found: " + std::string(input));

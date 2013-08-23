@@ -20,7 +20,7 @@ void RPCServer::start()
 	{
 		_mainThread = std::thread(&RPCServer::mainThread, this);
 		//Set very low priority
-		HelperFunctions::setThreadPriority(_mainThread.native_handle(), 21);
+		HelperFunctions::setThreadPriority(_mainThread.native_handle(), GD::settings.rpcServerThreadPriority());
 		_mainThread.detach();
 	}
 	catch(const std::exception& ex)
@@ -95,7 +95,7 @@ void RPCServer::mainThread()
 				_stateMutex.unlock();
 
 				_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
-				HelperFunctions::setThreadPriority(_readThreads.back().native_handle(), 21);
+				HelperFunctions::setThreadPriority(_readThreads.back().native_handle(), GD::settings.rpcServerThreadPriority());
 				_readThreads.back().detach();
 			}
 			catch(const std::exception& ex)
@@ -416,7 +416,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				{
 					packetLength = 0;
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-					HelperFunctions::setThreadPriority(t.native_handle(), 21);
+					HelperFunctions::setThreadPriority(t.native_handle(), GD::settings.rpcServerThreadPriority());
 					t.detach();
 				}
 			}
@@ -470,7 +470,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 							packet->push_back('\0');
 							packetLength = 0;
 							std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-							HelperFunctions::setThreadPriority(t.native_handle(), 21);
+							HelperFunctions::setThreadPriority(t.native_handle(), GD::settings.rpcServerThreadPriority());
 							t.detach();
 						}
 						else
@@ -499,7 +499,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				if(packetLength == dataSize)
 				{
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-					HelperFunctions::setThreadPriority(t.native_handle(), 21);
+					HelperFunctions::setThreadPriority(t.native_handle(), GD::settings.rpcServerThreadPriority());
 					t.detach();
 					packetLength = 0;
 					packet->push_back('\0');

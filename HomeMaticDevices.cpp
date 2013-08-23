@@ -534,8 +534,15 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 				stringStream << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			case (uint32_t)HMDeviceTypes::HMCENTRAL:
-				GD::devices.add(new HomeMaticCentral(serialNumber, address));
-				stringStream << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+				if(GD::devices.getCentral())
+				{
+					stringStream << "Cannot create more than one central device." << std::endl;
+				}
+				else
+				{
+					GD::devices.add(new HomeMaticCentral(serialNumber, address));
+					stringStream << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+				}
 				break;
 			case (uint32_t)HMDeviceTypes::HMSD:
 				GD::devices.add(new HM_SD(serialNumber, address));

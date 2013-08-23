@@ -22,6 +22,8 @@ public:
 	bool prioritizeThreads() { return _prioritizeThreads; }
 	void setPrioritizeThreads(bool value) { _prioritizeThreads = value; }
 	uint32_t workerThreadWindow() { return _workerThreadWindow; }
+	uint32_t bidCoSResponseDelay() { return _bidCoSResponseDelay; }
+	uint32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
 private:
 	std::string _rpcInterface;
 	int32_t _rpcPort = 2001;
@@ -32,6 +34,8 @@ private:
 	std::string _logfilePath;
 	bool _prioritizeThreads = true;
 	uint32_t _workerThreadWindow = 3000;
+	uint32_t _bidCoSResponseDelay = 110;
+	uint32_t _rpcServerThreadPriority = 10;
 
 	void reset();
 };

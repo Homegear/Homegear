@@ -4,6 +4,7 @@
 
 BidCoSQueue::BidCoSQueue() : _queueType(BidCoSQueueType::EMPTY)
 {
+	_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 BidCoSQueue::BidCoSQueue(BidCoSQueueType queueType) : BidCoSQueue()
@@ -131,9 +132,10 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 		int64_t timeSinceLastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastPop;
 		int32_t i = 0;
 		std::chrono::milliseconds sleepingTime;
-		if(timeSinceLastPop < 100)
+		uint32_t responseDelay = GD::settings.bidCoSResponseDelay();
+		if(timeSinceLastPop < responseDelay)
 		{
-			sleepingTime = std::chrono::milliseconds((100 - timeSinceLastPop) / 3);
+			sleepingTime = std::chrono::milliseconds((responseDelay - timeSinceLastPop) / 3);
 			if(_resendCounter == 0)
 			{
 				while(!_stopResendThread && i < 3)
@@ -739,7 +741,7 @@ void BidCoSQueue::sleepAndPushPendingQueue()
 {
 	try
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(GD::settings.bidCoSResponseDelay()));
 		pushPendingQueue();
 	}
 	catch(const std::exception& ex)

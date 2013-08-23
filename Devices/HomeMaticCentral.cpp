@@ -2350,6 +2350,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 
 		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
 		{
+			//listDevices really needs a lot of ressources, so wait a little bit after each device
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
@@ -2669,13 +2671,22 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialN
 		{
 			try
 			{
+				std::vector<std::shared_ptr<Peer>> peers;
+				//Copy all peers first, because getLinks takes very long and we don't want to lock _peersMutex too long
 				_peersMutex.lock();
 				for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 				{
-					element = i->second->getLink(channel, flags, true);
-					array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
+					peers.push_back(i->second);
 				}
 				_peersMutex.unlock();
+
+				for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+				{
+					//listDevices really needs a lot of ressources, so wait a little bit after each device
+					std::this_thread::sleep_for(std::chrono::milliseconds(5));
+					element = (*i)->getLink(channel, flags, true);
+					array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
+				}
 			}
 			catch(const std::exception& ex)
 			{
