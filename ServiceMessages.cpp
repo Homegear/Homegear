@@ -16,6 +16,7 @@ ServiceMessages::ServiceMessages(Peer* peer, std::string serializedObject) : Ser
 		_configPending = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
 		_lowbat = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
 		int32_t errorSize = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		_errorMutex.lock();
 		for(uint32_t i = 0; i < errorSize; i++)
 		{
 			int32_t channel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
@@ -34,6 +35,7 @@ ServiceMessages::ServiceMessages(Peer* peer, std::string serializedObject) : Ser
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _errorMutex.unlock();
 }
 
 ServiceMessages::~ServiceMessages()
@@ -45,9 +47,8 @@ void ServiceMessages::dispose()
 {
 	try
 	{
-		if(_disposing) return;
+		_peerMutex.lock();
 		_disposing = true;
-		stopThreads();
 		_peer = nullptr;
 	}
 	catch(const std::exception& ex)
@@ -62,29 +63,7 @@ void ServiceMessages::dispose()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-}
-
-void ServiceMessages::stopThreads()
-{
-	try
-	{
-		if(_setConfigPendingThread.joinable()) _setConfigPendingThread.join();
-		if(_setUnreachThread.joinable()) _setUnreachThread.join();
-		if(_checkUnreachThread.joinable()) _checkUnreachThread.join();
-		if(_endUnreachThread.joinable()) _endUnreachThread.join();
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+    _peerMutex.unlock();
 }
 
 std::string ServiceMessages::serialize()
@@ -97,12 +76,14 @@ std::string ServiceMessages::serialize()
 		stringstream << std::setw(1) << (int32_t)_stickyUnreach;
 		stringstream << std::setw(1) << (int32_t)_configPending;
 		stringstream << std::setw(1) << (int32_t)_lowbat;
+		_errorMutex.lock();
 		stringstream << std::setw(2) << (int32_t)_errors.size();
 		for(std::map<uint32_t, uint8_t>::const_iterator i = _errors.begin(); i != _errors.end(); ++i)
 		{
 			stringstream << std::setw(2) << i->first;
 			stringstream << std::setw(2) << (int32_t)i->second;
 		}
+		_errorMutex.unlock();
 		stringstream << std::dec;
 		return stringstream.str();
 	}
@@ -118,6 +99,7 @@ std::string ServiceMessages::serialize()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _errorMutex.unlock();
     return "";
 }
 
@@ -125,13 +107,19 @@ bool ServiceMessages::set(std::string id, bool value)
 {
 	try
 	{
-		if(!_peer || _disposing) return false;
+		if(_disposing) return false;
 		if(id == "UNREACH" && value != _unreach) _unreach = value;
 		else if(id == "STICKY_UNREACH" && value != _stickyUnreach) _stickyUnreach = value;
 		else if(id == "CONFIG_PENDING" && value != _configPending) _configPending = value;
 		else if(id == "LOWBAT" && value != _lowbat) _lowbat = value;
 		else return false;
 
+		_peerMutex.lock();
+		if(!_peer)
+		{
+			_peerMutex.unlock();
+			return false;
+		}
 		if(_peer->valuesCentral.at(0).find(id) != _peer->valuesCentral.at(0).end())
 		{
 			_peer->valuesCentral.at(0).at(id).data.at(0) = (uint8_t)value;
@@ -155,6 +143,7 @@ bool ServiceMessages::set(std::string id, bool value)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peerMutex.unlock();
     return true;
 }
 
@@ -162,25 +151,30 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
 {
 	try
 	{
-		if(!_peer || _disposing) return;
+		if(_disposing) return;
 		if(id == "ERROR")
 		{
+			_errorMutex.lock();
 			if(_errors.find(channel) != _errors.end() && value == 0) _errors.erase(channel);
 			if(value > 0) _errors[channel] = value;
+			_errorMutex.unlock();
 		}
 
 		//RPC Broadcast is done in peer's packetReceived
 	}
 	catch(const std::exception& ex)
     {
+		_errorMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_errorMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_errorMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -190,6 +184,12 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 	try
 	{
 		std::shared_ptr<RPC::RPCVariable> serviceMessages(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		_peerMutex.lock();
+		if(!_peer || _disposing)
+		{
+			_peerMutex.unlock();
+			return serviceMessages;
+		}
 		std::shared_ptr<RPC::RPCVariable> array;
 		if(_unreach)
 		{
@@ -223,6 +223,7 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 			serviceMessages->arrayValue->push_back(array);
 		}
+		_errorMutex.lock();
 		for(std::map<uint32_t, uint8_t>::const_iterator i = _errors.begin(); i != _errors.end(); ++i)
 		{
 			if(i->second == 0) continue;
@@ -232,6 +233,8 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)i->second)));
 			serviceMessages->arrayValue->push_back(array);
 		}
+		_errorMutex.unlock();
+		_peerMutex.unlock();
 		return serviceMessages;
 	}
 	catch(const std::exception& ex)
@@ -246,6 +249,8 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _errorMutex.unlock();
+    _peerMutex.unlock();
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
@@ -253,29 +258,12 @@ void ServiceMessages::checkUnreach()
 {
 	try
 	{
-		if(!_peer || _disposing) return;
-		if(_checkUnreachThread.joinable()) _checkUnreachThread.join();
-		_checkUnreachThread = std::thread(&ServiceMessages::checkUnreachThread, this);
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void ServiceMessages::checkUnreachThread()
-{
-	try
-	{
-		if(!_peer || _disposing) return;
+		_peerMutex.lock();
+		if(!_peer || _disposing)
+		{
+			_peerMutex.unlock();
+			return;
+		}
 		uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		if(_peer->rpcDevice && _peer->rpcDevice->cyclicTimeout > 0 && (time - _peer->getLastPacketReceived()) > _peer->rpcDevice->cyclicTimeout && !_unreach)
 		{
@@ -312,35 +300,19 @@ void ServiceMessages::checkUnreachThread()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peerMutex.unlock();
 }
 
 void ServiceMessages::endUnreach()
 {
 	try
 	{
-		if(!_peer || _disposing) return;
-		if(_endUnreachThread.joinable()) _endUnreachThread.join();
-		_endUnreachThread = std::thread(&ServiceMessages::endUnreachThread, this);
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void ServiceMessages::endUnreachThread()
-{
-	try
-	{
-		if(!_peer || _disposing) return;
+		_peerMutex.lock();
+		if(!_peer || _disposing)
+		{
+			_peerMutex.unlock();
+			return;
+		}
 		if(_unreach == true)
 		{
 			_unreach = false;
@@ -370,35 +342,19 @@ void ServiceMessages::endUnreachThread()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peerMutex.unlock();
 }
 
 void ServiceMessages::setConfigPending(bool value)
 {
 	try
 	{
-		if(!_peer || _disposing) return;
-		if(_setConfigPendingThread.joinable()) _setConfigPendingThread.join();
-		_setConfigPendingThread = std::thread(&ServiceMessages::setConfigPendingThread, this, value);
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void ServiceMessages::setConfigPendingThread(bool value)
-{
-	try
-	{
-		if(!_peer || _disposing) return;
+		_peerMutex.lock();
+		if(!_peer || _disposing)
+		{
+			_peerMutex.unlock();
+			return;
+		}
 		if(value != _configPending)
 		{
 			_configPending = value;
@@ -426,35 +382,19 @@ void ServiceMessages::setConfigPendingThread(bool value)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peerMutex.unlock();
 }
 
 void ServiceMessages::setUnreach(bool value)
 {
 	try
 	{
-		if(!_peer || _disposing) return;
-		if(_setUnreachThread.joinable()) _setUnreachThread.join();
-		_setUnreachThread = std::thread(&ServiceMessages::setUnreachThread, this, value);
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void ServiceMessages::setUnreachThread(bool value)
-{
-	try
-	{
-		if(!_peer || _disposing) return;
+		_peerMutex.lock();
+		if(!_peer || _disposing)
+		{
+			_peerMutex.unlock();
+			return;
+		}
 		if(value != _unreach)
 		{
 			if(value == true && _unreachResendCounter < 3 && _peer->rpcDevice && ((_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && !_peer->pendingBidCoSQueues->empty())
@@ -465,6 +405,7 @@ void ServiceMessages::setUnreachThread(bool value)
 					HelperFunctions::printInfo("Info: Queue is not finished (device: 0x" + HelperFunctions::getHexString(_peer->address) + "). Retrying (" + std::to_string(_unreachResendCounter) + ")...");
 					central->enqueuePendingQueues(_peer->address);
 					_unreachResendCounter++;
+					_peerMutex.unlock();
 					return;
 				}
 			}
@@ -504,4 +445,5 @@ void ServiceMessages::setUnreachThread(bool value)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peerMutex.unlock();
 }

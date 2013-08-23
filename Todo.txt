@@ -1,4 +1,5 @@
 - Lazy config
+- Why does shutdown take so long?
 
 When AES is working:
 - enforce $PEER.AES

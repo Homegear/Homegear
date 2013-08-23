@@ -47,7 +47,7 @@ void HM_CC_VD::init()
 
 HM_CC_VD::~HM_CC_VD()
 {
-	_disposing = true;
+	dispose();
 }
 
 std::string HM_CC_VD::serialize()

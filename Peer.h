@@ -9,7 +9,6 @@
 #include <memory>
 #include <queue>
 #include <mutex>
-#include <thread>
 #include <list>
 
 class PendingBidCoSQueues;
@@ -69,6 +68,7 @@ class Peer
 		Peer(bool centralFeatures);
 		Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFeatures);
 		virtual ~Peer();
+		void dispose();
 
 		std::mutex _databaseMutex;
 		//Needed, so the peer gets not saved in central's worker thread while being deleted
@@ -96,6 +96,7 @@ class Peer
 
         std::shared_ptr<PendingBidCoSQueues> pendingBidCoSQueues;
 
+        void worker();
         std::string handleCLICommand(std::string command);
         void stopThreads();
         void initializeCentralConfig();
@@ -145,18 +146,14 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
+        bool _disposing = false;
         bool _centralFeatures = false;
         uint32_t _lastPacketReceived = 0;
         uint32_t _lastRSSI = 0;
-        bool _stopThreads = false;
-        std::thread _workerThread;
-        std::thread _setRSSIThread;
         std::string _serialNumber;
         std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
         std::mutex _variablesToResetMutex;
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
-        void worker();
-        void setRSSIThread(uint8_t rssi);
 };
 
 #endif // PEER_H

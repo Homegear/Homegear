@@ -9,7 +9,7 @@ void HelperFunctions::setThreadPriority(pthread_t thread, int32_t priority)
 {
 	try
 	{
-		if(!GD::setThreadPriority) return;
+		if(!GD::settings.prioritizeThreads()) return;
 		if(priority < 1 || priority > 99) throw Exception("Invalid thread priority: " + std::to_string(priority));
 		sched_param schedParam;
 		schedParam.sched_priority = priority;
@@ -19,12 +19,12 @@ void HelperFunctions::setThreadPriority(pthread_t thread, int32_t priority)
 		{
 			if(error == EPERM)
 			{
-				printError("Could not set thread priority. The executing user does not have enough permissions.");
+				printError("Could not set thread priority. The executing user does not have enough permissions. Please run \"ulimit -r 100\" before executing Homegear.");
 			}
 			else if(error == ESRCH) printError("Could not set thread priority. Thread could not be found.");
 			else if(error == EINVAL) printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
 			else printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
-			GD::setThreadPriority = false;
+			GD::settings.setPrioritizeThreads(false);
 		}
 		else printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
 	}

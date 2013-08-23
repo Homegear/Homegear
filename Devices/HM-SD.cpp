@@ -14,7 +14,7 @@ HM_SD::HM_SD(std::string serialNumber, int32_t address) : HomeMaticDevice(serial
 
 HM_SD::~HM_SD()
 {
-	_disposing = true;
+	dispose();
 }
 
 void HM_SD::init()

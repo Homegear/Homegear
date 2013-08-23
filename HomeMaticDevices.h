@@ -13,8 +13,6 @@ class HomeMaticDevice;
 
 class HomeMaticDevices {
 public:
-	void test();
-	void test2();
 	HomeMaticDevices();
 	virtual ~HomeMaticDevices();
 	void add(HomeMaticDevice* device);
@@ -25,8 +23,7 @@ public:
 	std::vector<std::shared_ptr<HomeMaticDevice>> getDevices();
 	void load();
 	void save(bool crash = false);
-	void stopThreads();
-	void stopThreadsThread(std::shared_ptr<HomeMaticDevice> device);
+	void dispose();
 	std::string handleCLICommand(std::string& command);
 
 private:

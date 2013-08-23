@@ -137,11 +137,8 @@ HomeMaticDevice::~HomeMaticDevice()
 {
 	try
 	{
-		_disposing = true;
-		HelperFunctions::printDebug("Removing device 0x" + HelperFunctions::getHexString(_address) + " from CUL event queue...");
-		GD::rfDevice->removeHomeMaticDevice(this);
-		stopThreads();
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000)); //Wait for received packets, without this, program sometimes SIGABRTs
+		dispose();
+		std::this_thread::sleep_for(std::chrono::milliseconds(20)); //Wait for received packets, without this, program sometimes SIGABRTs
 	}
     catch(const std::exception& ex)
     {
@@ -158,6 +155,15 @@ HomeMaticDevice::~HomeMaticDevice()
 
 }
 
+void HomeMaticDevice::dispose()
+{
+	if(_disposing) return;
+	_disposing = true;
+	HelperFunctions::printDebug("Removing device 0x" + HelperFunctions::getHexString(_address) + " from CUL event queue...");
+	GD::rfDevice->removeHomeMaticDevice(this);
+	stopThreads();
+}
+
 void HomeMaticDevice::stopThreads()
 {
 	try
@@ -169,8 +175,7 @@ void HomeMaticDevice::stopThreads()
 		_peersMutex.lock();
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			std::thread stop(&Peer::stopThreads, i->second.get());
-			stop.detach();
+			i->second->dispose();
 		}
 		_peersMutex.unlock();
 
@@ -394,6 +399,7 @@ void HomeMaticDevice::saveToDatabase()
 	{
 		std::ostringstream command;
 		command << "SELECT 1 FROM devices WHERE address=" << std::dec << _address;
+		_databaseMutex.lock();
 		DataTable result = GD::db.executeCommand(command.str());
 		if(result.empty())
 		{
@@ -420,6 +426,7 @@ void HomeMaticDevice::saveToDatabase()
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _databaseMutex.unlock();
 }
 
 void HomeMaticDevice::loadPeersFromDatabase()
@@ -427,6 +434,7 @@ void HomeMaticDevice::loadPeersFromDatabase()
 	try
 	{
 		_peersMutex.lock();
+		_databaseMutex.lock();
 		std::ostringstream command;
 		command << "SELECT * FROM peers WHERE parent=" << std::dec << std::to_string(_address);
 		DataTable rows = GD::db.executeCommand(command.str());
@@ -456,20 +464,24 @@ void HomeMaticDevice::loadPeersFromDatabase()
 				}
 			}
 		}
+		_databaseMutex.unlock();
 		_peersMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
+		_databaseMutex.unlock();
 		_peersMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_databaseMutex.unlock();
     	_peersMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_databaseMutex.unlock();
     	_peersMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
@@ -502,56 +514,27 @@ void HomeMaticDevice::savePeersToDatabase()
 	try
 	{
 		_peersMutex.lock();
+		_databaseMutex.lock();
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			i->second->saveToDatabase(_address);
 		}
-		_peersMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_peersMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _databaseMutex.unlock();
+	_peersMutex.unlock();
 }
-
-/*void HomeMaticDevice::cleanUpMessageCounters()
-{
-	try
-	{
-		std::vector<int32_t> countersToDelete;
-		for(std::unordered_map<int32_t, uint8_t>::iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
-		{
-			if(_peers.find(i->first) == _peers.end()) countersToDelete.push_back(i->first);
-		}
-		for(std::vector<int32_t>::iterator i = countersToDelete.begin(); i != countersToDelete.end(); ++i)
-		{
-			_messageCounter.erase(*i);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}*/
 
 std::string HomeMaticDevice::serialize()
 {

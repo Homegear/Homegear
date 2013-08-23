@@ -146,7 +146,7 @@ Peer::~Peer()
 	try
 	{
 		if(serviceMessages) serviceMessages->dispose();
-		stopThreads();
+		dispose();
 	}
 	catch(const std::exception& ex)
     {
@@ -162,34 +162,16 @@ Peer::~Peer()
     }
 }
 
-void Peer::stopThreads()
+void Peer::dispose()
 {
 	try
 	{
-		_stopThreads = true;
-		if(_workerThread.joinable()) _workerThread.join();
+		if(_disposing) return;
+		_disposing = true;
 	}
 	catch(const std::exception& ex)
     {
-		//We often get an "Invalid argument" error (no idea where the error lies).
-    	if(GD::debugLevel > 5) HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    try
-    {
-		if(_setRSSIThread.joinable()) _setRSSIThread.join();
-    }
-	catch(const std::exception& ex)
-    {
-		//We often get an "Invalid argument" error (no idea where the error lies).
-    	if(GD::debugLevel > 5) HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
@@ -213,8 +195,6 @@ Peer::Peer(bool centralFeatures)
 		{
 			serviceMessages.reset(new ServiceMessages(this));
 			pendingBidCoSQueues.reset(new PendingBidCoSQueues());
-			_stopThreads = false;
-			_workerThread = std::thread(&Peer::worker, this);
 		}
 	}
 	catch(const std::exception& ex)
@@ -363,88 +343,76 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 
 void Peer::worker()
 {
-	if(!_centralFeatures) return;
-	std::chrono::milliseconds sleepingTime(100);
+	if(!_centralFeatures || _disposing) return;
 	std::vector<uint32_t> positionsToDelete;
 	std::vector<std::shared_ptr<VariableToReset>> variablesToReset;
 	int32_t wakeUpIndex = 0;
 	int32_t index;
 	int64_t time;
-	while(!_stopThreads)
+	try
 	{
-		try
+		time = HelperFunctions::getTime();
+		if(!_variablesToReset.empty())
 		{
-			std::this_thread::sleep_for(sleepingTime);
-			if(wakeUpIndex < 5 && !_stopThreads)
+			index = 0;
+			_variablesToResetMutex.lock();
+			for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = _variablesToReset.begin(); i != _variablesToReset.end(); ++i)
 			{
-				wakeUpIndex++;
-				continue;
+				if((*i)->resetTime + 3000 <= time)
+				{
+					variablesToReset.push_back(*i);
+					positionsToDelete.push_back(index);
+				}
+				index++;
 			}
-			else wakeUpIndex = 0;
-			if(_stopThreads) return;
-			time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-			if(!_variablesToReset.empty())
+			_variablesToResetMutex.unlock();
+			for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = variablesToReset.begin(); i != variablesToReset.end(); ++i)
 			{
-				index = 0;
-				_variablesToResetMutex.lock();
-				for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = _variablesToReset.begin(); i != _variablesToReset.end(); ++i)
+				if((*i)->isDominoEvent)
 				{
-					if((*i)->resetTime + 3000 <= time)
-					{
-						variablesToReset.push_back(*i);
-						positionsToDelete.push_back(index);
-					}
-					index++;
+					valuesCentral.at((*i)->channel).at((*i)->key).data = (*i)->data;
+					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
+					std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data) });
+					HelperFunctions::printInfo("Info: Domino event: " + (*i)->key + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
+					GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
 				}
-				_variablesToResetMutex.unlock();
-				for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = variablesToReset.begin(); i != variablesToReset.end(); ++i)
+				else
 				{
-					if((*i)->isDominoEvent)
-					{
-						valuesCentral.at((*i)->channel).at((*i)->key).data = (*i)->data;
-						std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
-						std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data) });
-						HelperFunctions::printInfo("Info: Domino event: " + (*i)->key + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
-						GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
-					}
-					else
-					{
-						std::shared_ptr<RPC::RPCVariable> rpcValue = valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data);
-						setValue((*i)->channel, (*i)->key, rpcValue);
-					}
+					std::shared_ptr<RPC::RPCVariable> rpcValue = valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data);
+					setValue((*i)->channel, (*i)->key, rpcValue);
 				}
-				_variablesToResetMutex.lock();
-				for(std::vector<uint32_t>::reverse_iterator i = positionsToDelete.rbegin(); i != positionsToDelete.rend(); ++i)
-				{
-					std::vector<std::shared_ptr<VariableToReset>>::iterator element = _variablesToReset.begin() + *i;
-					if(element < _variablesToReset.end()) _variablesToReset.erase(element);
-				}
-				_variablesToResetMutex.unlock();
-				positionsToDelete.clear();
-				variablesToReset.clear();
 			}
-			serviceMessages->checkUnreach();
-			if(serviceMessages->getConfigPending() && (!pendingBidCoSQueues || pendingBidCoSQueues->empty()))
+			_variablesToResetMutex.lock();
+			for(std::vector<uint32_t>::reverse_iterator i = positionsToDelete.rbegin(); i != positionsToDelete.rend(); ++i)
 			{
-				serviceMessages->setConfigPending(false);
-				if(_centralFeatures) saveToDatabase(GD::devices.getCentral()->address());
+				std::vector<std::shared_ptr<VariableToReset>>::iterator element = _variablesToReset.begin() + *i;
+				if(element < _variablesToReset.end()) _variablesToReset.erase(element);
 			}
-		}
-		catch(const std::exception& ex)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			_variablesToResetMutex.unlock();
+			positionsToDelete.clear();
+			variablesToReset.clear();
 		}
-		catch(Exception& ex)
+		serviceMessages->checkUnreach();
+		if(serviceMessages->getConfigPending() && (!pendingBidCoSQueues || pendingBidCoSQueues->empty()))
 		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			_variablesToResetMutex.unlock();
+			serviceMessages->setConfigPending(false);
+			saveToDatabase(GD::devices.getCentral()->address());
 		}
-		catch(...)
-		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			_variablesToResetMutex.unlock();
-		}
+	}
+	catch(const std::exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_variablesToResetMutex.unlock();
+	}
+	catch(Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_variablesToResetMutex.unlock();
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		_variablesToResetMutex.unlock();
 	}
 }
 
@@ -1585,11 +1553,11 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 			_variablesToReset.push_back(variable);
 			HelperFunctions::printDebug("Debug: " + parameter->id + " will be reset in " + std::to_string((variable->resetTime - time) / 1000) + "s.", 5);
 			_variablesToResetMutex.unlock();
-			if(!_workerThread.joinable())
+			/*if(!_workerThread.joinable())
 			{
 				_stopThreads = false;
 				_workerThread = std::thread(&Peer::worker, this);
-			}
+			}*/
 		}
 	}
 	catch(const std::exception& ex)
@@ -1615,28 +1583,7 @@ void Peer::setRSSI(uint8_t rssi)
 {
 	try
 	{
-		if(!_centralFeatures) return;
-		if(_setRSSIThread.joinable()) _setRSSIThread.join();
-		_setRSSIThread = std::thread(&Peer::setRSSIThread, this, rssi);
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void Peer::setRSSIThread(uint8_t rssi)
-{
-	try
-	{
+		if(_centralFeatures || _disposing) return;
 		uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		if(valuesCentral.find(0) != valuesCentral.end() && valuesCentral.at(0).find("RSSI_DEVICE") != valuesCentral.at(0).end() && (time - _lastRSSI) > 10)
 		{
@@ -1669,7 +1616,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		if(!_centralFeatures) return;
+		if(!_centralFeatures || _disposing) return;
 		if(packet->senderAddress() != address && (!hasTeam() || packet->senderAddress() != team.address)) return;
 		if(!rpcDevice) return;
 		setLastPacketReceived();
@@ -1836,6 +1783,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			{
 				GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(*j), valueKeys, rpcValues);
 			}
+			saveToDatabase(GD::devices.getCentral()->address());
 		}
 	}
 	catch(const std::exception& ex)
@@ -1856,6 +1804,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
 		std::string type;
@@ -2063,6 +2012,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetId(uint32_t channel, RPC::Par
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BasicPeer> remotePeer;
@@ -2093,6 +2043,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
@@ -2366,6 +2317,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamset(int32_t channel, RPC::Parame
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
@@ -2429,6 +2381,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkInfo(int32_t senderChannel, std::
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(_peers.find(senderChannel) == _peers.end()) return RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
 		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverSerialNumber, receiverChannel);
 		if(!remotePeer) return RPC::RPCVariable::createError(-2, "No peer found for sender channel and receiver serial number.");
@@ -2484,6 +2437,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel)
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		if(channel > -1)
 		{
@@ -2555,6 +2509,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		std::shared_ptr<RPC::RPCVariable> element;
@@ -2737,6 +2692,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel");
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set");
@@ -3174,6 +3130,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 
 std::shared_ptr<RPC::RPCVariable> Peer::getServiceMessages()
 {
+	if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 	if(!serviceMessages) return RPC::RPCVariable::createError(-32500, "Service messages are not initialized.");
 	return serviceMessages->get();
 }
@@ -3182,6 +3139,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getValue(uint32_t channel, std::string v
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(valuesCentral.find(channel) == valuesCentral.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
 		return valuesCentral[channel][valueKey].rpcParameter->convertFromPacket(valuesCentral[channel][valueKey].data);
@@ -3210,15 +3168,16 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 			if(!_peers[1].at(0)->device)
 			{
 				_peers[1].at(0)->device = GD::devices.get(_peers[1].at(0)->address);
-				if(_peers[1].at(0)->device->deviceType() != HMDeviceTypes::HMCCTC) _peers[1].at(0)->device.reset();
+				if(_peers[1].at(0)->device->deviceType() != HMDeviceTypes::HMCCTC) return false;
 			}
 			if(_peers[1].at(0)->device)
 			{
+				if(_peers[1].at(0)->device->deviceType() != HMDeviceTypes::HMCCTC) return false;
+				HM_CC_TC* tc = (HM_CC_TC*)_peers[1].at(0)->device.get();
+				tc->setValveState(value->integerValue);
 				std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 				if(!rpcParameter) return false;
 				valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
-				HM_CC_TC* tc = (HM_CC_TC*)_peers[1].at(0)->device.get();
-				tc->setValveState(value->integerValue);
 				HelperFunctions::printInfo("Info: Setting valve state of HM-CC-VD with address 0x" + HelperFunctions::getHexString(address) + " to " + std::to_string(value->integerValue) + "%.");
 				return true;
 			}
@@ -3325,6 +3284,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 {
 	try
 	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return RPC::RPCVariable::createError(-5, "Value key is empty.");
 		if(channel == 0 && serviceMessages->set(valueKey, value->booleanValue)) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -3455,11 +3415,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				parameters->strings.push_back(rpcParameter->physicalParameter->valueID);
 				queue->callbackParameter = parameters;
 				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<Peer, &Peer::addVariableToResetCallback>(this);
-				if(!_workerThread.joinable())
+				/*if(!_workerThread.joinable())
 				{
 					_stopThreads = false;
 					_workerThread = std::thread(&Peer::worker, this);
-				}
+				}*/
 			}
 		}
 		if(!rpcParameter->physicalParameter->resetAfterSend.empty())
@@ -3489,6 +3449,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			GD::devices.getCentral()->enqueuePendingQueues(address);
 		}
 		else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+		saveToDatabase(GD::devices.getCentral()->address());
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)

@@ -217,34 +217,14 @@ std::string HomeMaticDevices::getUniqueSerialNumber(std::string seedPrefix)
 	return temp2;
 }
 
-#include "pthread.h"
-void HomeMaticDevices::test()
-{
-	std::thread bla(&HomeMaticDevices::test2, this);
-	HelperFunctions::setThreadPriority(bla.native_handle() , 0);
-	bla.detach();
-}
-
-void HomeMaticDevices::test2()
-{
-	uint32_t i = 0;
-	while(i < 100)
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(400));
-		++i;
-		HelperFunctions::printThreadPriority();
-	}
-}
-
-void HomeMaticDevices::stopThreads()
+void HomeMaticDevices::dispose()
 {
 	try
 	{
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			std::thread stop(&HomeMaticDevices::stopThreadsThread, this, (*i));
-			stop.detach();
+			(*i)->dispose();
 		}
 		_devicesMutex.unlock();
 	}
@@ -263,12 +243,7 @@ void HomeMaticDevices::stopThreads()
     	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-}
-
-void HomeMaticDevices::stopThreadsThread(std::shared_ptr<HomeMaticDevice> device)
-{
-	device->stopThreads();
+	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
 void HomeMaticDevices::save(bool crash)
@@ -278,9 +253,9 @@ void HomeMaticDevices::save(bool crash)
 		if(!crash)
 		{
 			HelperFunctions::printInfo("Waiting for duty cycles and worker threads to stop...");
-			//The stopping is necessary, because there is a small time gap between setting "_lastDutyCycleEvent" and the duty cycle message counter.
+			//The disposing is necessary, because there is a small time gap between setting "_lastDutyCycleEvent" and the duty cycle message counter.
 			//If saving takes place within this gap, the paired duty cycle devices are out of sync after restart of the program.
-			stopThreads();
+			dispose();
 		}
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)

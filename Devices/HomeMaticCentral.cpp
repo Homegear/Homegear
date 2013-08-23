@@ -16,7 +16,7 @@ HomeMaticCentral::~HomeMaticCentral()
 {
 	try
 	{
-		_disposing = true;
+		dispose();
 		if(_pairingModeThread.joinable())
 		{
 			_stopPairingModeThread = true;
@@ -120,45 +120,48 @@ void HomeMaticCentral::worker()
 {
 	try
 	{
-		//Sleeping time needs to be longer than the deadlock checking
-		std::chrono::milliseconds sleepingTime(3500);
+		std::chrono::milliseconds sleepingTime(10);
+		uint32_t counter = 0;
 		int32_t lastPeer;
 		lastPeer = 0;
+		//One loop on the Raspberry Pi takes about 30µs
 		while(!_stopWorkerThread)
 		{
 			try
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				if(_stopWorkerThread) return;
-				std::thread t(&HomeMaticDevice::checkForDeadlock, this);
-				t.detach();
+				if(counter > 10000)
+				{
+					counter = 0;
+					_peersMutex.lock();
+					if(_peers.size() > 0)
+					{
+						int32_t windowTimePerPeer = GD::settings.workerThreadWindow() / _peers.size();
+						if(windowTimePerPeer > 2) windowTimePerPeer -= 2;
+						sleepingTime = std::chrono::milliseconds(windowTimePerPeer);
+					}
+					_peersMutex.unlock();
+				}
 				_peersMutex.lock();
 				if(!_peers.empty())
 				{
-					if(lastPeer == 0 || _peers.find(lastPeer) == _peers.end()) lastPeer = _peers.begin()->first;
-					_peersMutex.unlock();
-
-					std::shared_ptr<Peer> peer(getPeer(lastPeer));
-					if(peer && !peer->deleting) peer->saveToDatabase(_address);
-
-					_peersMutex.lock();
-					std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator nextPeer = _peers.find(lastPeer);
-					if(nextPeer != _peers.end())
+					if(!_peers.empty())
 					{
-						nextPeer++;
-						if((nextPeer == _peers.end() || !nextPeer->second) && !_peers.empty())
+						std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator nextPeer = _peers.find(lastPeer);
+						if(nextPeer != _peers.end())
 						{
-							nextPeer = _peers.begin();
-							lastPeer = nextPeer->first;
+							nextPeer++;
+							if(nextPeer == _peers.end()) nextPeer = _peers.begin();
 						}
-					}
-					else if(!_peers.empty())
-					{
-						nextPeer = _peers.begin();
+						else nextPeer = _peers.begin();
 						lastPeer = nextPeer->first;
 					}
 				}
 				_peersMutex.unlock();
+				std::shared_ptr<Peer> peer(getPeer(lastPeer));
+				if(peer && !peer->deleting) peer->worker();
+				counter++;
 			}
 			catch(const std::exception& ex)
 			{

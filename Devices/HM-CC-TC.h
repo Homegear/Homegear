@@ -16,11 +16,12 @@ class HM_CC_TC : public HomeMaticDevice
         HM_CC_TC();
         HM_CC_TC(std::string, int32_t);
         virtual ~HM_CC_TC();
+        void dispose();
+        void stopThreads();
 
         void setValveState(int32_t valveState);
         int32_t getNewValueState() { return _newValveState; }
         std::string handleCLICommand(std::string command);
-        void stopHMCCTCThreads();
 
         void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
         void handleConfigParamResponse(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
@@ -46,6 +47,7 @@ class HM_CC_TC : public HomeMaticDevice
         int32_t _newValveState = 0;
         int32_t _dutyCycleCounter  = 0;
         bool _dutyCycleBroadcast = false;
+        std::thread _sendDutyCyclePacketThread;
         void reset();
 
         int32_t getNextDutyCycleDeviceAddress();

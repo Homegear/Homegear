@@ -102,7 +102,18 @@ void Settings::load(std::string filename)
 					if(_logfilePath[_logfilePath.size() - 1] != '/') _logfilePath.push_back('/');
 					HelperFunctions::printDebug("Debug: logfilePath set to " + _logfilePath);
 				}
-				else if(GD::debugLevel >= 3)
+				else if(name == "prioritizethreads")
+				{
+					if(HelperFunctions::toLower(value) == "false") _prioritizeThreads = false;
+					HelperFunctions::printDebug("Debug: prioritizeThreads set to " + std::to_string(_prioritizeThreads));
+				}
+				else if(name == "workerthreadwindow")
+				{
+					_workerThreadWindow = HelperFunctions::getNumber(value);
+					if(_workerThreadWindow > 3600000) _workerThreadWindow = 3600000;
+					HelperFunctions::printDebug("Debug: workerThreadWindow set to " + std::to_string(_workerThreadWindow));
+				}
+				else
 				{
 					HelperFunctions::printWarning("Warning: Setting not found: " + std::string(input));
 				}

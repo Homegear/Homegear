@@ -40,6 +40,7 @@ class HomeMaticDevice
         HomeMaticDevice();
         HomeMaticDevice(std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
+        virtual void dispose();
         virtual bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
         virtual void addPeer(std::shared_ptr<Peer> peer);
@@ -113,6 +114,7 @@ class HomeMaticDevice
         std::unordered_map<int32_t, std::shared_ptr<Peer>> _peers;
         std::unordered_map<std::string, std::shared_ptr<Peer>> _peersBySerial;
         std::timed_mutex _peersMutex;
+        std::mutex _databaseMutex;
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
         bool _pairing = false;

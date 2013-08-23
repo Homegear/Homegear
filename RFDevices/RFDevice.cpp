@@ -108,7 +108,7 @@ void RFDevice::callCallback(std::shared_ptr<BidCoSPacket> packet)
 		{
 			//Don't filter destination addresses here! Some devices need to receive packets not directed to them.
 			std::thread received(&HomeMaticDevice::packetReceived, (*i), packet);
-			HelperFunctions::setThreadPriority(received.native_handle(), 40); //Set to default priority
+			HelperFunctions::setThreadPriority(received.native_handle(), 40);
 			received.detach();
 		}
 		_homeMaticDevicesMutex.unlock();

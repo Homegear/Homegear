@@ -159,9 +159,6 @@ int main(int argc, char* argv[])
 {
     try
     {
-    	GD::devices.test();
-    	exit(0);
-
     	for(int32_t i = 1; i < argc; i++)
     	{
     		std::string arg(argv[i]);

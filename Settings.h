@@ -19,6 +19,9 @@ public:
 	std::string rfDeviceType() { return _rfDeviceType; }
 	std::string rfDevice() { return _rfDevice; }
 	std::string logfilePath() { return _logfilePath; }
+	bool prioritizeThreads() { return _prioritizeThreads; }
+	void setPrioritizeThreads(bool value) { _prioritizeThreads = value; }
+	uint32_t workerThreadWindow() { return _workerThreadWindow; }
 private:
 	std::string _rpcInterface;
 	int32_t _rpcPort = 2001;
@@ -27,6 +30,8 @@ private:
 	std::string _rfDeviceType;
 	std::string _rfDevice;
 	std::string _logfilePath;
+	bool _prioritizeThreads = true;
+	uint32_t _workerThreadWindow = 3000;
 
 	void reset();
 };

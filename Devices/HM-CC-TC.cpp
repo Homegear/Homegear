@@ -196,8 +196,7 @@ HM_CC_TC::~HM_CC_TC()
 {
 	try
 	{
-		_disposing = true;
-		stopHMCCTCThreads();
+		dispose();
 	}
 	catch(const std::exception& ex)
     {
@@ -213,18 +212,35 @@ HM_CC_TC::~HM_CC_TC()
     }
 }
 
-void HM_CC_TC::stopHMCCTCThreads()
+void HM_CC_TC::dispose()
+{
+	try
+	{
+		_stopDutyCycleThread = true;
+		HomeMaticDevice::dispose();
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_CC_TC::stopThreads()
 {
 	try
 	{
 		HomeMaticDevice::stopThreads();
 		_stopDutyCycleThread = true;
-		if(_dutyCycleThread.joinable())
-		{
-			_dutyCycleThread.join();
-			//Wait a little bit, so subthreads are stopped, too (e. g. sendDutyCyclePacket)
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		}
+		if(_dutyCycleThread.joinable()) _dutyCycleThread.join();
+		if(_sendDutyCyclePacketThread.joinable()) _sendDutyCyclePacketThread.join();
 	}
 	catch(const std::exception& ex)
     {
@@ -388,40 +404,42 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 {
 	try
 	{
-		int64_t nextDutyCycleEvent = (lastDutyCycleEvent == -1) ? std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() : lastDutyCycleEvent;
+		int64_t nextDutyCycleEvent = (lastDutyCycleEvent < 0) ? std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() : lastDutyCycleEvent;
 		_lastDutyCycleEvent = nextDutyCycleEvent;
 		int64_t timePoint;
 		int64_t cycleTime;
-		int32_t cycleLength = calculateCycleLength(_messageCounter[1] - 1); //The calculation has to use the last message counter
+		uint32_t cycleLength = calculateCycleLength(_messageCounter[1] - 1); //The calculation has to use the last message counter
 		_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250000;
-		_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
+		if(_dutyCycleCounter < 0) _dutyCycleCounter = 0;
 		if(_dutyCycleCounter > 0) HelperFunctions::printDebug("Debug: Skipping " + std::to_string(_dutyCycleCounter * 250) + " ms of duty cycle.");
+		//_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
 		while(!_stopDutyCycleThread)
 		{
 			try
 			{
 				cycleTime = cycleLength * 250000;
 				nextDutyCycleEvent += cycleTime + _dutyCycleTimeOffset; //Add offset every cycle. This is very important! Without it, 20% of the packets are sent too early.
+				std::cerr << cycleTime << " " << nextDutyCycleEvent << std::endl;
 				HelperFunctions::printDebug("Next duty cycle: " + std::to_string(nextDutyCycleEvent / 1000) + " (in " + std::to_string(cycleTime / 1000) + " ms) with message counter 0x" + HelperFunctions::getHexString(_messageCounter[1]));
 
-				std::chrono::milliseconds sleepingTime(1000);
+				std::chrono::milliseconds sleepingTime(250);
 				while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
 				{
 					std::this_thread::sleep_for(sleepingTime);
-					_dutyCycleCounter += 4;
+					_dutyCycleCounter += 1;
 				}
 				if(_stopDutyCycleThread) break;
 
 				if(_dutyCycleBroadcast)
 				{
-					std::thread sendDutyCycleBroadcastThread(&HM_CC_TC::sendDutyCycleBroadcast, this);
-					sendDutyCycleBroadcastThread.detach();
+					if(_sendDutyCyclePacketThread.joinable()) _sendDutyCyclePacketThread.join();
+					_sendDutyCyclePacketThread = std::thread(&HM_CC_TC::sendDutyCycleBroadcast, this);
 				}
 
 				while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 40)
 				{
 					std::this_thread::sleep_for(sleepingTime);
-					_dutyCycleCounter += 4;
+					_dutyCycleCounter += 1;
 				}
 				if(_stopDutyCycleThread) break;
 
@@ -436,17 +454,18 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 				std::this_thread::sleep_for(std::chrono::microseconds(nextDutyCycleEvent - timePoint - 2000000));
 				if(_stopDutyCycleThread) break;
 
-				std::thread sendDutyCyclePacketThread(&HM_CC_TC::sendDutyCyclePacket, this, _messageCounter[1], nextDutyCycleEvent);
-
-				HelperFunctions::setThreadPriority(sendDutyCyclePacketThread.native_handle(), 49);
-				sendDutyCyclePacketThread.detach();
+				if(_sendDutyCyclePacketThread.joinable()) _sendDutyCyclePacketThread.join();
+				_sendDutyCyclePacketThread = std::thread(&HM_CC_TC::sendDutyCyclePacket, this, _messageCounter[1], nextDutyCycleEvent);
+				HelperFunctions::setThreadPriority(_sendDutyCyclePacketThread.native_handle(), 99);
 
 				_lastDutyCycleEvent = nextDutyCycleEvent;
 				cycleLength = calculateCycleLength(_messageCounter[1]);
 				_messageCounter[1]++;
 				std::ostringstream command;
 				command << "UPDATE devices SET dutyCycleMessageCounter=" << std::dec << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent;
+				_databaseMutex.lock();
 				GD::db.executeCommand(command.str());
+				_databaseMutex.unlock();
 
 				_dutyCycleCounter = 0;
 			}
@@ -552,6 +571,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 {
 	try
 	{
+		if(sendingTime < 0) sendingTime = 2000000;
 		if(_stopDutyCycleThread) return;
 		int32_t address = getNextDutyCycleDeviceAddress();
 		HelperFunctions::printDebug("Debug: 0x" + HelperFunctions::getHexString(_address) + ": Next HM-CC-VD is 0x" + HelperFunctions::getHexString(_address));
@@ -564,6 +584,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 		payload.push_back(getAdjustmentCommand(address));
 		payload.push_back(_newValveState);
 		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, 0xA2, 0x58, _address, address, payload));
+
 		int64_t nanoseconds = (sendingTime - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - 1000000) * 1000;
 		int32_t seconds = nanoseconds / 1000000000;
 		nanoseconds -= seconds * 1000000000;
