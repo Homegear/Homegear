@@ -206,6 +206,7 @@ int main(int argc, char* argv[])
     		else if(arg == "-v")
     		{
     			std::cout <<  "Homegear version " << VERSION << std::endl;
+    			std::cout << "Copyright (C) 2013 Sathya Laufer" << std::endl;
     			exit(0);
     		}
     		else
