@@ -20,7 +20,7 @@ class HelperFunctions {
 public:
 	virtual ~HelperFunctions();
 
-	static void setThreadPriority(pthread_t thread, int32_t priority);
+	static void setThreadPriority(pthread_t thread, int32_t priority, int32_t policy = SCHED_FIFO);
 	static void printThreadPriority();
 
 	static inline int64_t getTime()

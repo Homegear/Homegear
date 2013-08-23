@@ -122,7 +122,7 @@ void Settings::load(std::string filename)
 				else if(name == "rpcserverthreadpriority")
 				{
 					_rpcServerThreadPriority = HelperFunctions::getNumber(value);
-					if(_rpcServerThreadPriority > 99) _bidCoSResponseDelay = 99;
+					if(_rpcServerThreadPriority > 99) _rpcServerThreadPriority = 99;
 					if(_rpcServerThreadPriority == 0) _rpcServerThreadPriority = 1;
 					HelperFunctions::printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
 				}

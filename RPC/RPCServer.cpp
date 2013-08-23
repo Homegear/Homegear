@@ -7,6 +7,11 @@ using namespace RPC;
 RPCServer::RPCServer()
 {
 	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<RPCMethod>>);
+	if(GD::settings.rpcServerThreadPriority() > 0)
+	{
+		_threadPriority = GD::settings.rpcServerThreadPriority();
+		_threadPolicy = SCHED_FIFO;
+	}
 }
 
 RPCServer::~RPCServer()
@@ -20,7 +25,7 @@ void RPCServer::start()
 	{
 		_mainThread = std::thread(&RPCServer::mainThread, this);
 		//Set very low priority
-		HelperFunctions::setThreadPriority(_mainThread.native_handle(), GD::settings.rpcServerThreadPriority());
+		HelperFunctions::setThreadPriority(_mainThread.native_handle(), _threadPriority, _threadPolicy);
 		_mainThread.detach();
 	}
 	catch(const std::exception& ex)
@@ -95,7 +100,7 @@ void RPCServer::mainThread()
 				_stateMutex.unlock();
 
 				_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
-				HelperFunctions::setThreadPriority(_readThreads.back().native_handle(), GD::settings.rpcServerThreadPriority());
+				HelperFunctions::setThreadPriority(_readThreads.back().native_handle(), _threadPriority, _threadPolicy);
 				_readThreads.back().detach();
 			}
 			catch(const std::exception& ex)
@@ -416,7 +421,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				{
 					packetLength = 0;
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-					HelperFunctions::setThreadPriority(t.native_handle(), GD::settings.rpcServerThreadPriority());
+					HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 					t.detach();
 				}
 			}
@@ -470,7 +475,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 							packet->push_back('\0');
 							packetLength = 0;
 							std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-							HelperFunctions::setThreadPriority(t.native_handle(), GD::settings.rpcServerThreadPriority());
+							HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 							t.detach();
 						}
 						else
@@ -499,7 +504,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				if(packetLength == dataSize)
 				{
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-					HelperFunctions::setThreadPriority(t.native_handle(), GD::settings.rpcServerThreadPriority());
+					HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 					t.detach();
 					packetLength = 0;
 					packet->push_back('\0');

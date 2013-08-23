@@ -48,6 +48,8 @@ namespace RPC
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
 		protected:
 		private:
+			int32_t _threadPolicy = SCHED_OTHER;
+			int32_t _threadPriority = 0;
 			bool _stopServer = false;
 			std::thread _mainThread;
 			int32_t _backlog = 10;

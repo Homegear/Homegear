@@ -5,17 +5,18 @@ HelperFunctions::~HelperFunctions() {
 
 }
 
-void HelperFunctions::setThreadPriority(pthread_t thread, int32_t priority)
+void HelperFunctions::setThreadPriority(pthread_t thread, int32_t priority, int32_t policy)
 {
 	try
 	{
 		if(!GD::settings.prioritizeThreads()) return;
-		if(priority < 1 || priority > 99) throw Exception("Invalid thread priority: " + std::to_string(priority));
+		if(policy != SCHED_FIFO && policy != SCHED_RR) priority = 0;
+		if((policy == SCHED_FIFO || policy == SCHED_RR) && (priority < 1 || priority > 99)) throw Exception("Invalid thread priority: " + std::to_string(priority));
 		sched_param schedParam;
 		schedParam.sched_priority = priority;
 		int32_t error;
 		//Only use SCHED_FIFO or SCHED_RR
-		if((error = pthread_setschedparam(thread, SCHED_FIFO, &schedParam)) != 0)
+		if((error = pthread_setschedparam(thread, policy, &schedParam)) != 0)
 		{
 			if(error == EPERM)
 			{
