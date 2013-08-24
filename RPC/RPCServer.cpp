@@ -88,14 +88,15 @@ void RPCServer::mainThread()
 					std::this_thread::sleep_for(std::chrono::milliseconds(100));
 					continue;
 				}
-				if(clientFileDescriptor > _maxConnections)
+				_stateMutex.lock();
+				if(_fileDescriptors.size() >= _maxConnections)
 				{
+					_stateMutex.unlock();
 					HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
 					shutdown(clientFileDescriptor, 0);
 					close(clientFileDescriptor);
 					continue;
 				}
-				_stateMutex.lock();
 				_fileDescriptors.push_back(clientFileDescriptor);
 				_stateMutex.unlock();
 

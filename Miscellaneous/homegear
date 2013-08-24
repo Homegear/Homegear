@@ -96,7 +96,7 @@ case $1 in
                 		start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
                 	fi
                 	INDEX=0
-                	while [ $PROCESSCOUNT -ne 0 ] && [ $INDEX -lt 60 ]; do
+                	while [ $PROCESSCOUNT -ne 0 ] && [ $INDEX -lt 300 ]; do
                 		sleep 1
                 		PROCESSCOUNT=`ps --pid $PID | grep -c homegear`
                 		INDEX=$((INDEX+1))
