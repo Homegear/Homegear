@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <string>
+#include <map>
 
 class Settings {
 public:
