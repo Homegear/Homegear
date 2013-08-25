@@ -345,10 +345,7 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 				(short)(POLLPRI | POLLERR),
 				(short)0
 			};
-			HelperFunctions::printMessage("Moin before poll");
 			pollResult = poll(&pollstruct, 1, 100);
-			//poll hangs here
-			HelperFunctions::printMessage("Moin after poll");
 			if(pollResult > 0)
 			{
 				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::to_string(errno));
@@ -395,19 +392,19 @@ void TICC1100::readwrite(std::vector<uint8_t>& data)
 		_transfer.tx_buf = (uint64_t)&data[0];
 		_transfer.rx_buf = (uint64_t)&data[0];
 		_transfer.len = (uint32_t)data.size();
-		/*HelperFunctions::printMessage( "Sending: " << std::hex << std::setfill('0');
+		/*std::cerr << "Sending: " << std::hex << std::setfill('0');
 		for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
 		{
-			HelperFunctions::printMessage( std::setw(2) << (int32_t)*i;
+			std::cerr << std::setw(2) << (int32_t)*i;
 		}
-		HelperFunctions::printMessage( std::dec << std::endl;*/
+		std::cerr << std::dec << std::endl;*/
 		if(!ioctl(_fileDescriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(Exception("Couldn't write to device " + _rfDevice));
-		/*HelperFunctions::printMessage( "Received: " << std::hex << std::setfill('0');
+		/*std::cerr << "Received: " << std::hex << std::setfill('0');
 		for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
 		{
-			HelperFunctions::printMessage( std::setw(2) << (int32_t)*i;
+			std::cerr << std::setw(2) << (int32_t)*i;
 		}
-		HelperFunctions::printMessage( std::dec << std::endl;*/
+		std::cerr << std::dec << std::endl;*/
 		_sendMutex.unlock();
 	}
 	catch(const std::exception& ex)

@@ -24,6 +24,7 @@ public:
 	uint32_t workerThreadWindow() { return _workerThreadWindow; }
 	uint32_t bidCoSResponseDelay() { return _bidCoSResponseDelay; }
 	uint32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
+	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
 private:
 	std::string _rpcInterface;
 	int32_t _rpcPort = 2001;
@@ -36,6 +37,7 @@ private:
 	uint32_t _workerThreadWindow = 3000;
 	uint32_t _bidCoSResponseDelay = 110;
 	uint32_t _rpcServerThreadPriority = 10;
+	std::map<std::string, bool> _tunnelClients;
 
 	void reset();
 };

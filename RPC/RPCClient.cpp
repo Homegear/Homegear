@@ -87,6 +87,13 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		if(ipAddress.substr(0, 7) == "http://") ipAddress = ipAddress.substr(7);
 
 		if(getaddrinfo(ipAddress.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0) throw Exception("Error: Could not get address information.");
+		if(GD::settings.tunnelClients().find(ipAddress) != GD::settings.tunnelClients().end())
+		{
+			if(serverInfo->ai_family == AF_INET6) ipAddress = "::1";
+			else ipAddress = "127.0.0.1";
+			if(getaddrinfo(ipAddress.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0) throw Exception("Error: Could not get address information.");
+		}
+
 
 		int32_t fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 		if(fileDescriptor == -1)

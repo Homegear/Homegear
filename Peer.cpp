@@ -3294,9 +3294,12 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
 		std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 		if(!rpcParameter) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
+		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {valueKey});
+		std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<RPC::RPCVariable>> { value });
 		if(rpcParameter->physicalParameter->interface == RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
+			GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		}
 		else if(rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::command) return RPC::RPCVariable::createError(-6, "Parameter is not settable.");
@@ -3434,9 +3437,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				{
 					valuesCentral.at(channel).at(*j).data = defaultValue;
 					HelperFunctions::printInfo( "Info: Parameter \"" + *j + "\" was reset to " + HelperFunctions::getHexString(defaultValue) + ". Device: 0x" + HelperFunctions::getHexString(address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
-					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {*j});
-					std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<RPC::RPCVariable>> { logicalDefaultValue });
-					GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(channel), valueKeys, values);
+					valueKeys->push_back(*j);
+					values->push_back(logicalDefaultValue);
 				}
 			}
 		}
@@ -3450,6 +3452,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			GD::devices.getCentral()->enqueuePendingQueues(address);
 		}
 		else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+
+		GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(channel), valueKeys, values);
+
 		saveToDatabase(GD::devices.getCentral()->address());
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}

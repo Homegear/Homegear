@@ -14,6 +14,7 @@ void Settings::reset()
 	_rfDevice = "/dev/ttyACM0";
 	_databasePath = GD::executablePath + "db.sql";
 	_logfilePath = "/var/log/homegear/";
+	_tunnelClients.clear();
 }
 
 void Settings::load(std::string filename)
@@ -125,6 +126,10 @@ void Settings::load(std::string filename)
 					if(_rpcServerThreadPriority > 99) _rpcServerThreadPriority = 99;
 					if(_rpcServerThreadPriority == 0) _rpcServerThreadPriority = 1;
 					HelperFunctions::printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
+				}
+				else if(name == "redirecttossltunnel")
+				{
+					if(!value.empty()) _tunnelClients[value] = true;
 				}
 				else
 				{
