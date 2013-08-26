@@ -96,11 +96,35 @@ case $1 in
                 		start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
                 	fi
                 	INDEX=0
-                	while [ $PROCESSCOUNT -ne 0 ] && [ $INDEX -lt 300 ]; do
-                		sleep 1
+                	while [ $PROCESSCOUNT -ne 0 ] && [ $INDEX -lt 5000 ]; do
+                		sleep 0.2
                 		PROCESSCOUNT=`ps --pid $PID | grep -c homegear`
+                		if log_use_fancy_output; then
+					        LOGLINE=`tail -n 1 $LOGPATH/homegear.log | grep -o "\- Saving peer.*$"`
+					        MESSAGE=${LOGLINE:2:-3}
+					        if [ ! -z "$LOGLINE" ]; then
+				                $TPUT civis || true
+				                $TPUT sc && \
+				                $TPUT hpa 36 && \
+				                CYAN=$( $TPUT setaf 6)
+				                NORMAL=$( $TPUT op)
+				                echo -ne "(${CYAN} $MESSAGE ${NORMAL})" || true
+				                $TPUT rc || true
+				                $TPUT cnorm || true
+					        fi
+						fi
                 		INDEX=$((INDEX+1))
                 	done
+                	if log_use_fancy_output; then
+		                $TPUT civis || true
+		                $TPUT sc && \
+		                $TPUT hpa 36 && \
+		                CYAN=$( $TPUT setaf 6)
+		                NORMAL=$( $TPUT op)
+		                echo -ne "                            " || true
+		                $TPUT rc || true
+		                $TPUT cnorm || true
+					fi
                 	if [ $PROCESSCOUNT -ne 0 ]; then
                			log_end_msg 1
                		else

@@ -517,7 +517,7 @@ void HomeMaticDevice::savePeersToDatabase()
 		_databaseMutex.lock();
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			HelperFunctions::printInfo(" - Saving peer " + HelperFunctions::getHexString(i->second->address) + "...");
+			HelperFunctions::printInfo(" - Saving peer 0x" + HelperFunctions::getHexString(i->second->address, 6) + "...");
 			i->second->saveToDatabase(_address);
 		}
 	}

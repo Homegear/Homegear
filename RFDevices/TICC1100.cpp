@@ -353,41 +353,6 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 		}
 
 		//Unlocking of _txMutex takes place in mainThread
-
-		/*int32_t pollResult;
-		int32_t bytesRead;
-		std::vector<char> readBuffer({'0'});
-		for(uint32_t i = 0; i < 5; i++)
-		{
-			pollfd pollstruct {
-				(int)_gpioDescriptor,
-				(short)(POLLPRI | POLLERR),
-				(short)0
-			};
-			pollResult = poll(&pollstruct, 1, 100);
-			if(pollResult > 0)
-			{
-				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::to_string(errno));
-				bytesRead = read(_gpioDescriptor, &readBuffer[0], 1);
-				if(!bytesRead || readBuffer.at(0) == 0x30) continue; //Packet is being received. Wait for GDO high
-				HelperFunctions::printDebug("Debug: Packet successfully sent.");
-				break;
-			}
-			else if(pollResult < 0)
-			{
-				throw Exception("Could not poll gpio: " + std::string(strerror(errno)));
-			}
-			//timeout
-			else if(pollResult == 0)
-			{
-				HelperFunctions::printWarning("Warning: Sending of packet timed out.");
-				break;
-			}
-		}
-		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-		sendCommandStrobe(CommandStrobes::Enum::SFRX);
-		sendCommandStrobe(CommandStrobes::Enum::SRX);
-		*/
 	}
 	catch(const std::exception& ex)
     {
@@ -401,8 +366,6 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    //_sending = false;
-	//_txMutex.unlock();
 }
 
 void TICC1100::readwrite(std::vector<uint8_t>& data)

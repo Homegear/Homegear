@@ -272,10 +272,12 @@ std::string HelperFunctions::getHexString(const std::vector<uint8_t>& data)
     return "";
 }
 
-std::string HelperFunctions::getHexString(int32_t number)
+std::string HelperFunctions::getHexString(int32_t number, int32_t width)
 {
 	std::ostringstream stringstream;
-	stringstream << std::hex << std::uppercase << number << std::dec;
+	stringstream << std::hex;
+	if(width > -1) stringstream << std::setw(width);
+	stringstream << std::uppercase << number << std::dec;
 	return stringstream.str();
 }
 
