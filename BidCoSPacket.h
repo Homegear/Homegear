@@ -26,11 +26,14 @@ class BidCoSPacket
         std::vector<uint8_t>* payload();
         std::string hexString();
         std::vector<uint8_t> byteArray();
+        int64_t timeReceived() { return _timeReceived; }
+        int64_t timeSending() { return _timeSending; }
+        void setTimeSending(int64_t time) { _timeSending = time; }
 
         /** Default constructor */
         BidCoSPacket();
-        BidCoSPacket(std::string&);
-        BidCoSPacket(std::vector<uint8_t>&, bool rssiByte);
+        BidCoSPacket(std::string&, int64_t timeReceived = 0);
+        BidCoSPacket(std::vector<uint8_t>&, bool rssiByte, int64_t timeReceived = 0);
         BidCoSPacket(uint8_t, uint8_t, uint8_t, int32_t, int32_t, std::vector<uint8_t>);
         /** Default destructor */
         virtual ~BidCoSPacket();
@@ -49,6 +52,8 @@ class BidCoSPacket
         std::vector<uint8_t> _payload;
         uint32_t _bitmask[8] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
         uint8_t _rssi = 0;
+        int64_t _timeReceived = 0;
+        int64_t _timeSending = 0;
 
         uint8_t getByte(std::string);
         int32_t getInt(std::string);

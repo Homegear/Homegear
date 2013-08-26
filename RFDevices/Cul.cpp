@@ -394,8 +394,7 @@ void Cul::listen()
         	std::string packetHex = readFromDevice();
         	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + CUL "A")
         	{
-				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-				packet->import(packetHex);
+				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, HelperFunctions::getTime()));
 				std::thread t(&Cul::callCallback, this, packet);
 				HelperFunctions::setThreadPriority(t.native_handle(), 45);
 				t.detach();

@@ -13,7 +13,7 @@ void BidCoSPacketManager::dispose(bool wait)
 	if(wait) std::this_thread::sleep_for(std::chrono::milliseconds(1500)); //Wait for threads to finish
 }
 
-void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& packet)
+void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& packet, int64_t time)
 {
 	try
 	{
@@ -25,27 +25,25 @@ void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& pa
 		std::shared_ptr<BidCoSPacketInfo> info(new BidCoSPacketInfo());
 		info->packet = packet;
 		info->id = _id++;
+		if(time > 0) info->time = time;
 		std::thread t(&BidCoSPacketManager::deletePacket, this, address, info->id);
 		t.detach();
 		_packetMutex.lock();
 		_packets.insert(std::pair<int32_t, std::shared_ptr<BidCoSPacketInfo>>(address, info));
-		_packetMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _packetMutex.unlock();
 }
 
 void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)

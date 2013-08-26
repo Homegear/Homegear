@@ -46,6 +46,7 @@ namespace RPC
 			void stop();
 			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
+			uint32_t connectionCount();
 		protected:
 		private:
 			int32_t _threadPolicy = SCHED_OTHER;

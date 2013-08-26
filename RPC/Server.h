@@ -15,6 +15,7 @@ public:
 	void registerMethods();
 	void start();
 	void stop();
+	uint32_t connectionCount() { if(_server) return _server->connectionCount(); else return 0; }
 protected:
 	std::shared_ptr<RPCServer> _server;
 };

@@ -406,6 +406,9 @@ std::shared_ptr<RPCVariable> RPCGetAllMetadata::invoke(std::shared_ptr<std::vect
 			metadataStruct->structValue->push_back(metadata);
 		}
 
+		//getAllMetadata is called repetitively for all central peers. That takes a lot of ressources, so we wait a little after each call.
+		std::this_thread::sleep_for(std::chrono::milliseconds(3));
+
 		return metadataStruct;
 	}
 	catch(const std::exception& ex)

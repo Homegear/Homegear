@@ -148,7 +148,7 @@ bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			}
 		}
 		if(_filters.size() == 0) printPacket = true;
-		if(printPacket) HelperFunctions::printMessage("Received: " + packet->hexString());
+		if(printPacket) std::cout << HelperFunctions::getTimeString(packet->timeReceived()) << " Received: " + packet->hexString() << std::endl;
 		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
 		{
 			std::string packetHex = packet->hexString();

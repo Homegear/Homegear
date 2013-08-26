@@ -124,7 +124,7 @@ void Settings::load(std::string filename)
 				{
 					_rpcServerThreadPriority = HelperFunctions::getNumber(value);
 					if(_rpcServerThreadPriority > 99) _rpcServerThreadPriority = 99;
-					if(_rpcServerThreadPriority == 0) _rpcServerThreadPriority = 1;
+					if(_rpcServerThreadPriority < 0) _rpcServerThreadPriority = 0;
 					HelperFunctions::printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
 				}
 				else if(name == "redirecttossltunnel")

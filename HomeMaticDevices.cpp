@@ -224,25 +224,23 @@ void HomeMaticDevices::dispose()
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
+			HelperFunctions::printDebug("Debug: Disposing device 0x" + HelperFunctions::getHexString((*i)->address()), 4);
 			(*i)->dispose();
 		}
-		_devicesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _devicesMutex.unlock();
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
@@ -257,9 +255,11 @@ void HomeMaticDevices::save(bool crash)
 			//If saving takes place within this gap, the paired duty cycle devices are out of sync after restart of the program.
 			dispose();
 		}
+		HelperFunctions::printInfo("Saving devices...");
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
+			HelperFunctions::printInfo("Saving device " + HelperFunctions::getHexString((*i)->address()) + "...");
 			(*i)->savePeersToDatabase();
 			(*i)->saveToDatabase();
 		}
@@ -451,7 +451,47 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if(command.compare(0, 7, "devices") != 0 && (_currentDevice || command != "help"))
+		if(command.compare(0, 10, "debuglevel") == 0)
+		{
+			int32_t debugLevel;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					debugLevel = HelperFunctions::getNumber(element, true);
+					if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command temporarily changes the current debug level." << std::endl;
+				stringStream << "Usage: debuglevel DEBUGLEVEL" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  DEBUGLEVEL:\tThe debug level between 0 and 10." << std::endl;
+				return stringStream.str();
+			}
+
+			GD::debugLevel = debugLevel;
+			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
+			return stringStream.str();
+		}
+		else if(command == "rpc connection count")
+		{
+			stringStream << GD::rpcServer.connectionCount() << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 7, "devices") != 0 && (_currentDevice || command != "help"))
 		{
 			if(!_currentDevice) return "No device selected.\n";
 			return _currentDevice->handleCLICommand(command);
@@ -460,6 +500,7 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "debuglevel\t\tChanges the debug level" << std::endl;
 			stringStream << "devices list\t\tList all devices" << std::endl;
 			stringStream << "devices create\t\tCreate a virtual device" << std::endl;
 			stringStream << "devices remove\t\tRemove a virtual device" << std::endl;

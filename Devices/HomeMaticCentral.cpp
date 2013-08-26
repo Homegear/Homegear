@@ -2351,7 +2351,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
 		{
 			//listDevices really needs a lot of ressources, so wait a little bit after each device
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
@@ -2364,19 +2364,17 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
@@ -2386,35 +2384,43 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listTeams()
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 
+		std::vector<std::shared_ptr<Peer>> peers;
+		//Copy all peers first, because listTeams takes very long and we don't want to lock _peersMutex too long
 		_peersMutex.lock();
 		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
-			if(i->first.empty() || i->first.at(0) != '*') continue;
-			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = i->second->getDeviceDescription();
+			peers.push_back(i->second);
+		}
+		_peersMutex.unlock();
+
+		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+		{
+			//listTeams really needs a lot of ressources, so wait a little bit after each device
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			std::string serialNumber = (*i)->getSerialNumber();
+			if(serialNumber.empty() || serialNumber.at(0) != '*') continue;
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{
 				array->arrayValue->push_back(*j);
 			}
 		}
-		_peersMutex.unlock();
 		return array;
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
@@ -2683,7 +2689,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getLinks(std::string serialN
 				for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
 				{
 					//listDevices really needs a lot of ressources, so wait a little bit after each device
-					std::this_thread::sleep_for(std::chrono::milliseconds(5));
+					std::this_thread::sleep_for(std::chrono::milliseconds(3));
 					element = (*i)->getLink(channel, flags, true);
 					array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
 				}
@@ -2842,32 +2848,39 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getServiceMessages()
 {
 	try
 	{
-		std::shared_ptr<RPC::RPCVariable> serviceMessages(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		std::vector<std::shared_ptr<Peer>> peers;
+		//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
 		_peersMutex.lock();
-		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 		{
-			if(!i->second) continue;
-			std::shared_ptr<RPC::RPCVariable> messages = i->second->getServiceMessages();
-			if(!messages->arrayValue->empty()) serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(), messages->arrayValue->begin(), messages->arrayValue->end());
+			peers.push_back(i->second);
 		}
 		_peersMutex.unlock();
+
+		std::shared_ptr<RPC::RPCVariable> serviceMessages(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+		{
+			if(!*i) continue;
+			//getServiceMessages really needs a lot of ressources, so wait a little bit after each device
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			std::shared_ptr<RPC::RPCVariable> messages = (*i)->getServiceMessages();
+			if(!messages->arrayValue->empty()) serviceMessages->arrayValue->insert(serviceMessages->arrayValue->end(), messages->arrayValue->begin(), messages->arrayValue->end());
+		}
 		return serviceMessages;
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 

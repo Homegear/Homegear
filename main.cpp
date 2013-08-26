@@ -64,7 +64,6 @@ void terminate(int32_t signalNumber)
 			GD::rpcClient.reset();
 			HelperFunctions::printInfo( "Closing RF device...");
 			GD::rfDevice->stopListening();
-			HelperFunctions::printInfo( "Saving devices...");
 			GD::devices.save();
 			HelperFunctions::printMessage("Shutdown complete.");
 			if(_startAsDaemon)

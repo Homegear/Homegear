@@ -55,23 +55,20 @@ void RFDevice::addHomeMaticDevice(HomeMaticDevice* device)
 	{
 		_homeMaticDevicesMutex.lock();
 		_homeMaticDevices.push_back(device);
-		_homeMaticDevicesMutex.unlock();
     }
     catch(const std::exception& ex)
     {
-    	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _homeMaticDevicesMutex.unlock();
 }
 
 void RFDevice::removeHomeMaticDevice(HomeMaticDevice* device)
@@ -80,23 +77,20 @@ void RFDevice::removeHomeMaticDevice(HomeMaticDevice* device)
 	{
 		_homeMaticDevicesMutex.lock();
 		_homeMaticDevices.remove(device);
-		_homeMaticDevicesMutex.unlock();
     }
     catch(const std::exception& ex)
     {
-    	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _homeMaticDevicesMutex.unlock();
 }
 
 void RFDevice::callCallback(std::shared_ptr<BidCoSPacket> packet)
@@ -107,27 +101,22 @@ void RFDevice::callCallback(std::shared_ptr<BidCoSPacket> packet)
 		for(std::list<HomeMaticDevice*>::const_iterator i = _homeMaticDevices.begin(); i != _homeMaticDevices.end(); ++i)
 		{
 			//Don't filter destination addresses here! Some devices need to receive packets not directed to them.
-			std::thread received(&HomeMaticDevice::packetReceived, (*i), packet);
-			HelperFunctions::setThreadPriority(received.native_handle(), 40);
-			received.detach();
+			(*i)->packetReceived(packet);
 		}
-		_homeMaticDevicesMutex.unlock();
 	}
     catch(const std::exception& ex)
     {
-    	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_homeMaticDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _homeMaticDevicesMutex.unlock();
 }
 
 }

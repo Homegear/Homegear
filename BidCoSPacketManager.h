@@ -30,7 +30,7 @@ public:
 
 	std::shared_ptr<BidCoSPacket> get(int32_t address);
 	std::shared_ptr<BidCoSPacketInfo> getInfo(int32_t address);
-	void set(int32_t address, std::shared_ptr<BidCoSPacket>& packet);
+	void set(int32_t address, std::shared_ptr<BidCoSPacket>& packet, int64_t time = 0);
 	void deletePacket(int32_t address, uint32_t id);
 	void keepAlive(int32_t address);
 	void dispose(bool wait = true);

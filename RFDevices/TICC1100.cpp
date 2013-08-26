@@ -56,7 +56,6 @@ TICC1100::TICC1100()
 			0x00, //28: RCCTRL0
 		};
 
-		//setupGPIO(17);
 		openGPIO(22);
 	}
     catch(const std::exception& ex)
@@ -80,6 +79,7 @@ TICC1100::~TICC1100()
 		_stopCallbackThread = true;
 		if(_listenThread.joinable()) _listenThread.join();
 		closeDevice();
+		closeGPIO();
 	}
     catch(const std::exception& ex)
     {
@@ -102,6 +102,30 @@ void TICC1100::openGPIO(int32_t gpio)
 		std::string path = "/sys/class/gpio/gpio" + std::to_string(gpio) + "/value";
 		_gpioDescriptor = open(path.c_str(), O_RDONLY);
 		if (_gpioDescriptor == -1) throw(Exception("Failed to open gpio " + std::to_string(gpio)));
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void TICC1100::closeGPIO()
+{
+	try
+	{
+		if(_gpioDescriptor > -1)
+		{
+			close(_gpioDescriptor);
+			_gpioDescriptor = -1;
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -161,23 +185,6 @@ void TICC1100::setupGPIO(int32_t gpio)
 		buffer.insert(buffer.end(), temp.begin(), temp.end());
 		write(fd, &buffer[0], buffer.size());
 		close(fd);
-		/*int32_t memFD;
-		if((memFD = open("/dev/mem", O_RDWR | O_SYNC)) < 0) throw Exception("Can't open /dev/mem.");
-
-		void *gpioMap = mmap(
-			NULL,             //Any adddress in our space will do
-			BLOCK_SIZE,       //Map length
-			PROT_READ | PROT_WRITE,// Enable reading & writting to mapped memory
-			MAP_SHARED,       //Shared with other processes
-			memFD,           //File to map
-			GPIO_BASE         //Offset to GPIO peripheral
-		);
-
-		close(memFD); //No need to keep mem_fd open after mmap
-
-		if (gpioMap == MAP_FAILED) throw Exception("Couldn't map GPIO.");
-
-		_gpio = (volatile unsigned *)gpioMap;*/
 	}
 	catch(const std::exception& ex)
     {
@@ -333,9 +340,21 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 		writeRegisters(Registers::Enum::FIFO, encodedPacket);
 		if(!burst) sendCommandStrobe(CommandStrobes::Enum::STX);
 
-		if(GD::debugLevel > 3) HelperFunctions::printInfo("Info: Sending: " + packet->hexString());
+		if(GD::debugLevel > 3)
+		{
+			if(packet->timeSending() > 0)
+			{
+				HelperFunctions::printInfo("Info: Sending: " + packet->hexString() + " Planned sending time: " + HelperFunctions::getTimeString(packet->timeSending()));
+			}
+			else
+			{
+				HelperFunctions::printInfo("Info: Sending: " + packet->hexString());
+			}
+		}
 
-		int32_t pollResult;
+		//Unlocking of _txMutex takes place in mainThread
+
+		/*int32_t pollResult;
 		int32_t bytesRead;
 		std::vector<char> readBuffer({'0'});
 		for(uint32_t i = 0; i < 5; i++)
@@ -366,7 +385,9 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 			}
 		}
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
+		*/
 	}
 	catch(const std::exception& ex)
     {
@@ -380,8 +401,8 @@ void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _sending = false;
-	_txMutex.unlock();
+    //_sending = false;
+	//_txMutex.unlock();
 }
 
 void TICC1100::readwrite(std::vector<uint8_t>& data)
@@ -392,19 +413,25 @@ void TICC1100::readwrite(std::vector<uint8_t>& data)
 		_transfer.tx_buf = (uint64_t)&data[0];
 		_transfer.rx_buf = (uint64_t)&data[0];
 		_transfer.len = (uint32_t)data.size();
-		/*std::cerr << "Sending: " << std::hex << std::setfill('0');
-		for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
+		if(GD::debugLevel >= 6)
 		{
-			std::cerr << std::setw(2) << (int32_t)*i;
+			std::cout << HelperFunctions::getTimeString() << " Sending: " << std::hex << std::setfill('0');
+			for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
+			{
+				std::cout << std::setw(2) << (int32_t)*i;
+			}
+			std::cout << std::dec << std::endl;
 		}
-		std::cerr << std::dec << std::endl;*/
 		if(!ioctl(_fileDescriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(Exception("Couldn't write to device " + _rfDevice));
-		/*std::cerr << "Received: " << std::hex << std::setfill('0');
-		for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
+		if(GD::debugLevel >= 6)
 		{
-			std::cerr << std::setw(2) << (int32_t)*i;
+			std::cout << HelperFunctions::getTimeString() << " Received: " << std::hex << std::setfill('0');
+			for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
+			{
+				std::cout << std::setw(2) << (int32_t)*i;
+			}
+			std::cout << std::dec << std::endl;
 		}
-		std::cerr << std::dec << std::endl;*/
 		_sendMutex.unlock();
 	}
 	catch(const std::exception& ex)
@@ -606,23 +633,20 @@ void TICC1100::enableRX(bool flushRXFIFO)
 		_txMutex.lock();
 		if(flushRXFIFO) sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
-		_txMutex.unlock();
 	}
     catch(const std::exception& ex)
     {
-    	_txMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_txMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_txMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _txMutex.unlock();
 }
 
 void TICC1100::initChip()
@@ -725,7 +749,7 @@ void TICC1100::startListening()
 		initChip();
 
 		_stopCallbackThread = false;
-		_listenThread = std::thread(&TICC1100::listen, this);
+		_listenThread = std::thread(&TICC1100::mainThread, this);
 		HelperFunctions::setThreadPriority(_listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
@@ -769,7 +793,30 @@ void TICC1100::stopListening()
     }
 }
 
-void TICC1100::listen()
+void TICC1100::endSending()
+{
+	try
+	{
+		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		sendCommandStrobe(CommandStrobes::Enum::SFRX);
+		sendCommandStrobe(CommandStrobes::Enum::SRX);
+		_sending = false;
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void TICC1100::mainThread()
 {
     try
     {
@@ -791,57 +838,67 @@ void TICC1100::listen()
 				(short)0
 			};
 
-			pollResult = poll(&pollstruct, 1, 500);
-			if(!_sending && pollResult > 0)
+			pollResult = poll(&pollstruct, 1, 100);
+			/*if(pollstruct.revents & POLLERR)
 			{
-				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::to_string(errno));
+				HelperFunctions::printWarning("Warning: Error polling GPIO. Reopening...");
+				closeGPIO();
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				openGPIO(22);
+			}*/
+			if(pollResult > 0)
+			{
+				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::string(strerror(errno)));
 				bytesRead = read(_gpioDescriptor, &readBuffer[0], 1);
-				if(!bytesRead || readBuffer.at(0) == 0x30)
+				if(!bytesRead) continue;
+				if(readBuffer.at(0) == 0x30)
 				{
-					if(!_sending) _txMutex.try_lock(); //Don't send now
+					if(!_sending) _txMutex.try_lock(); //We are receiving, don't send now
 					continue; //Packet is being received. Wait for GDO high
 				}
-				_txMutex.unlock(); //Packet received, now we can send
-				if(crcOK())
+				if(_sending) endSending();
+				else
 				{
-					uint8_t firstByte = readRegister(Registers::Enum::FIFO);
-					std::vector<uint8_t> encodedData = readRegisters(Registers::Enum::FIFO, firstByte + 1); //Read packet + RSSI
-					std::vector<uint8_t> decodedData(encodedData.size());
-					if(encodedData.size() >= 9 && encodedData.size() < 40) //Ignore too big packets. The first packet after initializing for example.
+					sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+					if(crcOK())
 					{
-						decodedData[0] = firstByte;
-						decodedData[1] = (~encodedData[1]) ^ 0x89;
-						uint32_t i = 2;
-						for(; i < firstByte; i++)
+						uint8_t firstByte = readRegister(Registers::Enum::FIFO);
+						std::vector<uint8_t> encodedData = readRegisters(Registers::Enum::FIFO, firstByte + 1); //Read packet + RSSI
+						std::vector<uint8_t> decodedData(encodedData.size());
+						if(encodedData.size() >= 9 && encodedData.size() < 40) //Ignore too big packets. The first packet after initializing for example.
 						{
-							decodedData[i] = (encodedData[i - 1] + 0xDC) ^ encodedData[i];
+							decodedData[0] = firstByte;
+							decodedData[1] = (~encodedData[1]) ^ 0x89;
+							uint32_t i = 2;
+							for(; i < firstByte; i++)
+							{
+								decodedData[i] = (encodedData[i - 1] + 0xDC) ^ encodedData[i];
+							}
+							decodedData[i] = encodedData[i] ^ decodedData[2];
+							decodedData[i + 1] = encodedData[i + 1]; //RSSI
+
+							std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(decodedData, true, HelperFunctions::getTime()));
+							std::thread t(&TICC1100::callCallback, this, packet);
+							HelperFunctions::setThreadPriority(t.native_handle(), 45);
+							t.detach();
 						}
-						decodedData[i] = encodedData[i] ^ decodedData[2];
-						decodedData[i + 1] = encodedData[i + 1]; //RSSI
-
-						std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(decodedData, true));
-						std::thread t(&TICC1100::callCallback, this, packet);
-						HelperFunctions::setThreadPriority(t.native_handle(), 45);
-						t.detach();
 					}
-				}
+					else HelperFunctions::printInfo("Info: Packet received, but CRC failed.");
 
-				enableRX(true);
+					sendCommandStrobe(CommandStrobes::Enum::SFRX);
+					sendCommandStrobe(CommandStrobes::Enum::SRX);
+				}
+				_txMutex.unlock(); //Packet sent or received, now we can send again
 			}
 			else if(pollResult < 0)
 			{
 				_txMutex.unlock();
-				HelperFunctions::printError("Could not poll gpio: " + std::string(strerror(errno)));
-				break;
+				HelperFunctions::printError("Error: Could not poll gpio: " + std::string(strerror(errno)) + ". Reopening...");
+				closeGPIO();
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+				openGPIO(22);
 			}
-			//timeout
-			else if(pollResult == 0)
-			{
-				//If poll has timed out, there was no action for 500 ms (also meaning currently nothing
-				//is being sent). So it is save to unlock _txMutex here.
-				_txMutex.unlock();
-				continue;
-			}
+			//pollResult == 0 is timeout
 		}
     }
     catch(const std::exception& ex)

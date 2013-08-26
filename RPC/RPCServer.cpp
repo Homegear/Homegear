@@ -47,6 +47,29 @@ void RPCServer::stop()
 	_stopServer = true;
 }
 
+uint32_t RPCServer::connectionCount()
+{
+	try
+	{
+		_stateMutex.lock();
+		uint32_t connectionCount = _fileDescriptors.size();
+		_stateMutex.unlock();
+		return connectionCount;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method)
 {
 	try
@@ -148,7 +171,12 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 			return;
 		}
 		int32_t ret = send(clientFileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
-		if(closeConnection) shutdown(clientFileDescriptor, 1);
+		if(closeConnection)
+		{
+			removeClientFileDescriptor(clientFileDescriptor);
+			shutdown(clientFileDescriptor, 1);
+			close(clientFileDescriptor);
+		}
 		if(ret != (signed)data->size()) HelperFunctions::printWarning("Warning: Error sending data to client.");
 	}
     catch(const std::exception& ex)

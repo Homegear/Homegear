@@ -194,9 +194,11 @@ protected:
 	void setGPIOMode(int32_t gpio, GPIOModes::Enum mode);
 	void setupGPIO(int32_t gpio);
 	void openGPIO(int32_t gpio);
+	void closeGPIO();
 	void openDevice();
     void closeDevice();
-    void listen();
+    void endSending();
+    void mainThread();
     void readwrite(std::vector<uint8_t>& data);
     void reset();
     void initChip();

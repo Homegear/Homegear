@@ -517,6 +517,7 @@ void HomeMaticDevice::savePeersToDatabase()
 		_databaseMutex.lock();
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
+			HelperFunctions::printInfo(" - Saving peer " + HelperFunctions::getHexString(i->second->address) + "...");
 			i->second->saveToDatabase(_address);
 		}
 	}
@@ -648,7 +649,7 @@ bool HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	try
 	{
 		if(_disposing) return false;
-		_receivedPackets.set(packet->senderAddress(), packet);
+		_receivedPackets.set(packet->senderAddress(), packet, packet->timeReceived());
 		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, packet);
 		if(message && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
 		{
@@ -692,8 +693,15 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool stea
 		packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
 		if(packetInfo)
 		{
-			int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
-			if(timeDifference >= 0 && timeDifference < responseDelay) std::this_thread::sleep_for(std::chrono::milliseconds(responseDelay - timeDifference));
+			int64_t time = HelperFunctions::getTime();
+			int64_t timeDifference = time - packetInfo->time;
+			if(timeDifference >= 0 && timeDifference < responseDelay)
+			{
+				int64_t sleepingTime = responseDelay - timeDifference;
+				if(sleepingTime > 1) sleepingTime -= 1;
+				packet->setTimeSending(time + sleepingTime + 1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
+			}
 			//Set time to now. This is necessary if two packets are sent after each other without a response in between
 			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		}
