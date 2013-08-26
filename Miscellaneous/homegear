@@ -97,7 +97,7 @@ case $1 in
                 	fi
                 	INDEX=0
                 	while [ $PROCESSCOUNT -ne 0 ] && [ $INDEX -lt 5000 ]; do
-                		sleep 0.2
+                		sleep 0.05
                 		PROCESSCOUNT=`ps --pid $PID | grep -c homegear`
                 		if log_use_fancy_output; then
 					        LOGLINE=`tail -n 1 $LOGPATH/homegear.log | grep -o "\- Saving peer.*$"`
