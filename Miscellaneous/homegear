@@ -53,6 +53,11 @@ case $1 in
         			chown root:$RUNASGROUP /dev/spidev0.0
         			chmod 660 /dev/spidev0.0
         		fi
+        		
+        		SPIPID=`ps -eo pid,cmd | grep "\[bcm2708_spi\.0\]" | sed 's/^ *//g' | cut -d ' ' -f 1`
+        		if [ ! -z "$SPIPID" ]; then
+        			chrt -f -p 99 $SPIPID
+        		fi
 
 				if test -d /sys/class/gpio; then
 					if test ! -d /sys/class/gpio/gpio22; then echo 22 > /sys/class/gpio/export; fi
