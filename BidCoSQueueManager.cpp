@@ -39,19 +39,17 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 	}
 	catch(const std::exception& ex)
     {
-		_queueMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_queueMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_queueMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queueMutex.unlock();
     return std::shared_ptr<BidCoSQueue>();
 }
 
@@ -70,7 +68,11 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 				std::this_thread::sleep_for(sleepingTime);
 				if(_disposing) return;
 			}
-			else if(_disposing) return;
+			else if(_disposing)
+			{
+				_queueMutex.unlock();
+				return;
+			}
 			else
 			{
 				_queueMutex.unlock();
@@ -79,6 +81,8 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 		}
 
 		std::shared_ptr<BidCoSQueueData> queue;
+		std::shared_ptr<Peer> peer;
+		bool setUnreach = false;
 		_queueMutex.lock();
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
 		{
@@ -87,15 +91,18 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 			_queues.erase(address);
 			if(!queue->queue->isEmpty() && queue->queue->getQueueType() != BidCoSQueueType::PAIRING)
 			{
-				std::shared_ptr<Peer> peer = queue->queue->peer;
+				peer = queue->queue->peer;
 				if(peer && peer->rpcDevice && ((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)))
 				{
-					peer->serviceMessages->setUnreach(true);
+					setUnreach = true;
 				}
 			}
 			queue->queue->dispose();
 		}
+		//setUnreach calls enqueuePendingQueues, which calls BidCoSQueueManger::get => deadlock,
+		//so we need to unlock first
 		_queueMutex.unlock();
+		if(setUnreach) peer->serviceMessages->setUnreach(true);
 	}
 	catch(const std::exception& ex)
     {
@@ -127,18 +134,16 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-		_queueMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_queueMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_queueMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queueMutex.unlock();
     return std::shared_ptr<BidCoSQueue>();
 }
