@@ -70,7 +70,6 @@ class Peer
 		virtual ~Peer();
 		void dispose();
 
-		std::mutex _databaseMutex;
 		//Needed, so the peer gets not saved in central's worker thread while being deleted
 		bool deleting = false;
 		std::shared_ptr<ServiceMessages> serviceMessages;
@@ -152,6 +151,7 @@ class Peer
         uint32_t _lastRSSI = 0;
         std::string _serialNumber;
         std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
+        std::mutex _databaseMutex;
         std::mutex _variablesToResetMutex;
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
 };

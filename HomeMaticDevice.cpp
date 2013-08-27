@@ -161,7 +161,11 @@ void HomeMaticDevice::dispose()
 	_disposing = true;
 	HelperFunctions::printDebug("Removing device 0x" + HelperFunctions::getHexString(_address) + " from CUL event queue...");
 	GD::rfDevice->removeHomeMaticDevice(this);
+	int64_t startTime = HelperFunctions::getTime();
 	stopThreads();
+	int64_t timeDifference = HelperFunctions::getTime() - startTime;
+	//Packets might still arrive, after removing this device from the rfDevice, so sleep a little bit
+	if(timeDifference >= 0 && timeDifference < 100) std::this_thread::sleep_for(std::chrono::milliseconds(100 - timeDifference));
 }
 
 void HomeMaticDevice::stopThreads()
@@ -188,14 +192,17 @@ void HomeMaticDevice::stopThreads()
 	}
     catch(const std::exception& ex)
     {
+    	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -464,33 +471,28 @@ void HomeMaticDevice::loadPeersFromDatabase()
 				}
 			}
 		}
-		_databaseMutex.unlock();
-		_peersMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_databaseMutex.unlock();
-		_peersMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_databaseMutex.unlock();
-    	_peersMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_databaseMutex.unlock();
-    	_peersMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _databaseMutex.unlock();
+    _peersMutex.unlock();
 }
 
 void HomeMaticDevice::deletePeersFromDatabase()
 {
 	try
 	{
+		_databaseMutex.lock();
 		std::ostringstream command;
 		command << "DELETE FROM peers WHERE parent=" << std::dec << _address;
 		GD::db.executeCommand(command.str());
@@ -507,6 +509,7 @@ void HomeMaticDevice::deletePeersFromDatabase()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _databaseMutex.unlock();
 }
 
 void HomeMaticDevice::savePeersToDatabase()
@@ -517,7 +520,8 @@ void HomeMaticDevice::savePeersToDatabase()
 		_databaseMutex.lock();
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			HelperFunctions::printInfo(" - Saving peer 0x" + HelperFunctions::getHexString(i->second->address, 6) + "...");
+			//We are always printing this, because the init script needs it
+			HelperFunctions::printMessage(" - Saving peer 0x" + HelperFunctions::getHexString(i->second->address, 6) + "...");
 			i->second->saveToDatabase(_address);
 		}
 	}

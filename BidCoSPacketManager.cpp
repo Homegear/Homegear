@@ -61,7 +61,11 @@ void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)
 				std::this_thread::sleep_for(sleepingTime);
 				if(_disposing) return;
 			}
-			else if(_disposing) return;
+			else if(_disposing)
+			{
+				_packetMutex.unlock();
+				return;
+			}
 			else
 			{
 				_packetMutex.unlock();
@@ -73,23 +77,20 @@ void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)
 		{
 			_packets.erase(address);
 		}
-		_packetMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _packetMutex.unlock();
 }
 
 std::shared_ptr<BidCoSPacket> BidCoSPacketManager::get(int32_t address)
@@ -105,19 +106,17 @@ std::shared_ptr<BidCoSPacket> BidCoSPacketManager::get(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-		_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _packetMutex.unlock();
     return std::shared_ptr<BidCoSPacket>();
 }
 
@@ -134,19 +133,17 @@ std::shared_ptr<BidCoSPacketInfo> BidCoSPacketManager::getInfo(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-		_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _packetMutex.unlock();
     return std::shared_ptr<BidCoSPacketInfo>();
 }
 
@@ -156,22 +153,19 @@ void BidCoSPacketManager::keepAlive(int32_t address)
 	{
 		if(_disposing) return;
 		_packetMutex.lock();
-		if(_packets.find(address) != _packets.end()) _packets[address]->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		_packetMutex.unlock();
+		if(_packets.find(address) != _packets.end()) _packets[address]->time = HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
     {
-		_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_packetMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _packetMutex.unlock();
 }

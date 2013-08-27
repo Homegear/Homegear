@@ -221,26 +221,34 @@ void HomeMaticDevices::dispose()
 {
 	try
 	{
+		std::vector<std::shared_ptr<HomeMaticDevice>> devices;
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			HelperFunctions::printDebug("Debug: Disposing device 0x" + HelperFunctions::getHexString((*i)->address()), 4);
+			devices.push_back(*i);
+		}
+		_devicesMutex.unlock();
+		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = devices.begin(); i != devices.end(); ++i)
+		{
 			(*i)->dispose();
 		}
 	}
 	catch(const std::exception& ex)
     {
+		_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _devicesMutex.unlock();
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
@@ -263,23 +271,20 @@ void HomeMaticDevices::save(bool crash)
 			(*i)->savePeersToDatabase();
 			(*i)->saveToDatabase();
 		}
-		_devicesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _devicesMutex.unlock();
 }
 
 void HomeMaticDevices::add(HomeMaticDevice* device)
@@ -300,23 +305,20 @@ void HomeMaticDevices::add(HomeMaticDevice* device)
 		{
 			_devices.push_back(std::shared_ptr<HomeMaticDevice>(device));
 		}
-		_devicesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_devicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _devicesMutex.unlock();
 }
 
 bool HomeMaticDevices::remove(int32_t address)

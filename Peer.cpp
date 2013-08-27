@@ -299,23 +299,20 @@ Peer::Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFe
 			{
 				_variablesToResetMutex.lock();
 				_variablesToReset.push_back(variable);
-				_variablesToResetMutex.unlock();
 			}
 			catch(const std::exception& ex)
 			{
-				_variablesToResetMutex.unlock();
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
-				_variablesToResetMutex.unlock();
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
-				_variablesToResetMutex.unlock();
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
+			_variablesToResetMutex.unlock();
 		}
 		initializeCentralConfig();
 
@@ -1031,23 +1028,20 @@ std::string Peer::serialize()
 				stringstream << std::setw(8) << ((*i)->resetTime / 1000);
 				stringstream << std::setw(1) << (int32_t)(*i)->isDominoEvent;
 			}
-			_variablesToResetMutex.unlock();
 		}
 		catch(const std::exception& ex)
 		{
-			_variablesToResetMutex.unlock();
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(Exception& ex)
 		{
-			_variablesToResetMutex.unlock();
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(...)
 		{
-			_variablesToResetMutex.unlock();
 			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
+		_variablesToResetMutex.unlock();
 		stringstream << std::dec;
 		return stringstream.str();
 	}
@@ -1552,8 +1546,8 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 			variable->isDominoEvent = true;
 			_variablesToResetMutex.lock();
 			_variablesToReset.push_back(variable);
-			HelperFunctions::printDebug("Debug: " + parameter->id + " will be reset in " + std::to_string((variable->resetTime - time) / 1000) + "s.", 5);
 			_variablesToResetMutex.unlock();
+			HelperFunctions::printDebug("Debug: " + parameter->id + " will be reset in " + std::to_string((variable->resetTime - time) / 1000) + "s.", 5);
 			/*if(!_workerThread.joinable())
 			{
 				_stopThreads = false;
