@@ -154,6 +154,7 @@ class Peer
         std::mutex _databaseMutex;
         std::mutex _variablesToResetMutex;
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
+        std::map<std::string, uint32_t> _resendCounter;
 };
 
 #endif // PEER_H

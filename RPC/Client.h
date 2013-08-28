@@ -37,7 +37,7 @@ public:
 	void listDevices(std::pair<std::string, std::string> address);
 	void broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions);
 	void broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses);
-	void broadcastUpdateDevices(std::string address, Hint::Enum hint);
+	void broadcastUpdateDevice(std::string address, Hint::Enum hint);
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
 	void addServer(std::pair<std::string, std::string> address, std::string id);
 	void removeServer(std::pair<std::string, std::string> address);

@@ -14,6 +14,7 @@
 #include <map>
 #include <unordered_map>
 #include <utility>
+#include <cstring>
 
 #include <fcntl.h>
 #include <unistd.h>

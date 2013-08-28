@@ -265,11 +265,11 @@ std::string HM_CC_TC::serialize()
 		stringstream << std::hex << std::uppercase << std::setfill('0');
 		stringstream << std::setw(8) << serializedBase.size() << serializedBase;
 		stringstream << std::setw(8) << _currentDutyCycleDeviceAddress;
-		stringstream << std::setw(4) << _temperature;
-		stringstream << std::setw(4) << _setPointTemperature;
-		stringstream << std::setw(2) << _humidity;
-		stringstream << std::setw(2) << _valveState;
-		stringstream << std::setw(2) << _newValveState;
+		stringstream << std::setw(4) << (_temperature & 0xFFFF);
+		stringstream << std::setw(4) << (_setPointTemperature & 0xFFFF);
+		stringstream << std::setw(2) << (_humidity & 0xFF);
+		stringstream << std::setw(2) << (_valveState & 0xFF);
+		stringstream << std::setw(2) << (_newValveState & 0xFF);
 		return  stringstream.str();
 	}
     catch(const std::exception& ex)

@@ -36,8 +36,8 @@ private:
 	std::string _logfilePath;
 	bool _prioritizeThreads = true;
 	uint32_t _workerThreadWindow = 3000;
-	uint32_t _bidCoSResponseDelay = 110;
-	uint32_t _rpcServerThreadPriority = 10;
+	uint32_t _bidCoSResponseDelay = 90;
+	uint32_t _rpcServerThreadPriority = 0;
 	std::map<std::string, bool> _tunnelClients;
 
 	void reset();

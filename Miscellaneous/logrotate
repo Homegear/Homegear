@@ -1,0 +1,13 @@
+/var/log/homegear/*.log /var/log/homegear/*.err {
+        daily
+        missingok
+        rotate 30
+        compress
+        delaycompress
+        notifempty
+        create 640 root adm
+        sharedscripts
+        postrotate
+                /etc/init.d/homegear reload > /dev/null
+        endscript
+}

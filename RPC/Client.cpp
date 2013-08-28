@@ -209,39 +209,35 @@ void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses
     }
 }
 
-void Client::broadcastUpdateDevices(std::string address, Hint::Enum hint)
+void Client::broadcastUpdateDevice(std::string address, Hint::Enum hint)
 {
 	try
 	{
 		if(!address.empty()) return;
 		_serversMutex.lock();
-		std::string methodName("deleteDevices");
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(address)));
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)hint)));
-			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "updateDevices", parameters);
+			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "updateDevice", parameters);
 			t.detach();
 		}
-		_serversMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_serversMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_serversMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_serversMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _serversMutex.unlock();
 }
 
 void Client::reset()

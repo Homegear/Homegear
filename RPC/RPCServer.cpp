@@ -431,7 +431,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				return;
 			}
 			uBytesRead = bytesRead; //To prevent errors comparing signed and unsigned integers
-			if(buffer[0] == 'B' && buffer[1] == 'i' && buffer[2] == 'n')
+			if(!strncmp(&buffer[0], "Bin", 3))
 			{
 				packetType = (buffer[3] == 0) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryResponse;
 				if(uBytesRead < 8) continue;
@@ -454,7 +454,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 					t.detach();
 				}
 			}
-			else if(buffer[0] == 'P' && buffer[1] == 'O' && buffer[2] == 'S' && buffer[3] == 'T')
+			else if(!strncmp(&buffer[0], "POST", 4))
 			{
 				buffer[uBytesRead] = '\0';
 				std::istringstream stringstream(buffer);
@@ -510,7 +510,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 						else
 						{
 							packetLength = restLength;
-							packet->insert(packet->begin() + packetLength, buffer + pos, buffer + pos + restLength);
+							packet->insert(packet->begin(), buffer + pos, buffer + pos + restLength);
 						}
 					}
 				}
@@ -532,11 +532,11 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				packetLength += uBytesRead;
 				if(packetLength == dataSize)
 				{
+					packet->push_back('\0');
 					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
 					HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 					t.detach();
 					packetLength = 0;
-					packet->push_back('\0');
 				}
 			}
 		}
@@ -620,6 +620,7 @@ void RPCServer::getFileDescriptor()
 		if(getaddrinfo(GD::settings.rpcInterface().c_str(), port.c_str(), &hostInfo, &serverInfo) != 0) throw Exception("Error: Could not get address information.");
 
 		bool bound = false;
+		int32_t error = 0;
 		for(struct addrinfo *info = serverInfo; info != 0; info = info->ai_next)
 		{
 			fileDescriptor = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
@@ -629,7 +630,11 @@ void RPCServer::getFileDescriptor()
 				if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK) < 0) throw Exception("Error: Could not set socket options.");
 			}
 			if(setsockopt(fileDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw Exception("Error: Could not set socket options.");
-			if(bind(fileDescriptor, info->ai_addr, info->ai_addrlen) == -1) continue;
+			if(bind(fileDescriptor, info->ai_addr, info->ai_addrlen) == -1)
+			{
+				error = errno;
+				continue;
+			}
 			std::string address;
 			switch (info->ai_family)
 			{
@@ -647,8 +652,17 @@ void RPCServer::getFileDescriptor()
 			break;
 		}
 		freeaddrinfo(serverInfo);
-		if(!bound && fileDescriptor > -1) close(fileDescriptor);
-		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1 || !bound) throw Exception("Error: Server could not start listening.");
+		if(!bound)
+		{
+			if(fileDescriptor > -1)	close(fileDescriptor);
+			HelperFunctions::printCritical("Error: Server could not start listening: " + std::string(strerror(error)));
+			return;
+		}
+		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1 || !bound)
+		{
+			HelperFunctions::printCritical("Error: Server could not start listening: " + std::string(strerror(errno)));
+			return;
+		}
 		_serverFileDescriptor = fileDescriptor;
     }
     catch(const std::exception& ex)

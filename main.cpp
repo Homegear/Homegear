@@ -26,31 +26,11 @@
 
 bool _startAsDaemon = false;
 
-void exceptionHandler(int32_t signalNumber) {
-  void *stackTrace[30];
-  size_t length = backtrace(stackTrace, 30);
-
-  HelperFunctions::printError("Error: Signal " + std::to_string(signalNumber) + ". Backtrace:");
-  backtrace_symbols_fd(stackTrace, length, STDERR_FILENO);
-  signal(signalNumber, SIG_DFL);
-  kill(getpid(), signalNumber); //Generate core dump
-}
-
 void terminate(int32_t signalNumber)
 {
 	try
 	{
-
-		if(signalNumber != 15)
-		{
-			HelperFunctions::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
-			HelperFunctions::printCritical("Critical: Trying to save data to " + GD::settings.databasePath() + ".crash");
-			GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".crash");
-			if(GD::db.isOpen()) GD::devices.save(true);
-			signal(signalNumber, SIG_DFL);
-			kill(getpid(), signalNumber); //Generate core dump
-		}
-		else
+		if(signalNumber == SIGTERM)
 		{
 			HelperFunctions::printMessage("Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")...");
 			if(_startAsDaemon)
@@ -72,6 +52,26 @@ void terminate(int32_t signalNumber)
 				fclose(stderr);
 			}
 			exit(0);
+		}
+		else if(signalNumber == SIGHUP)
+		{
+			HelperFunctions::printMessage("Reloading settings...");
+			GD::settings.load(GD::configPath + "main.conf");
+			//Reopen log files, important for logrotate
+			if(_startAsDaemon)
+			{
+				std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout);
+				std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr);
+			}
+		}
+		else
+		{
+			HelperFunctions::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
+			HelperFunctions::printCritical("Critical: Trying to save data to " + GD::settings.databasePath() + ".crash");
+			GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".crash");
+			if(GD::db.isOpen()) GD::devices.save(true);
+			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
+			kill(getpid(), signalNumber); //Generate core dump
 		}
 	}
 	catch(const std::exception& ex)
@@ -268,6 +268,7 @@ int main(int argc, char* argv[])
     	//thread apply all bt
 
     	//Enable printing of backtraces
+    	signal(SIGHUP, terminate);
     	signal(SIGABRT, terminate);
     	signal(SIGSEGV, terminate);
     	signal(SIGTERM, terminate);
@@ -311,10 +312,10 @@ int main(int argc, char* argv[])
 
     	GD::rfDevice = RF::RFDevice::create(GD::settings.rfDeviceType());
         GD::rfDevice->init(GD::settings.rfDevice());
-        if(!GD::rfDevice) return -1;
+        if(!GD::rfDevice) return 1;
         HelperFunctions::printInfo("Start listening for BidCoS packets...");
         GD::rfDevice->startListening();
-        if(!GD::rfDevice->isOpen()) return -1;
+        if(!GD::rfDevice->isOpen()) return 1;
         HelperFunctions::printInfo("Loading XML RPC devices...");
         GD::rpcDevices.load();
         HelperFunctions::printInfo("Loading devices...");

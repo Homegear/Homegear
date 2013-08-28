@@ -34,5 +34,9 @@ override_dh_auto_install:
 	cp $(CURDIR)/Miscellaneous/homegear $(CURDIR)/debian/homegear/etc/init.d
 	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear
 	chmod 755 $(CURDIR)/debian/homegear/etc/init.d/homegear
+	mkdir -p $(CURDIR)/debian/homegear/etc/logrotate.d
+	cp $(CURDIR)/Miscellaneous/logrotate $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
+	chown root:root $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
+	chmod 644 $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
 %:
 	dh $@

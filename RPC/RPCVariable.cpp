@@ -150,7 +150,7 @@ void RPCVariable::print(std::shared_ptr<RPCVariable> variable, std::string inden
 		}
 		else
 		{
-			std::cout << indent << "(unknown)" << std::endl;
+			std::cout << indent << "(Unknown)" << std::endl;
 		}
 	}
 	catch(const std::exception& ex)
@@ -171,7 +171,7 @@ void RPCVariable::printArray(std::shared_ptr<std::vector<std::shared_ptr<RPCVari
 {
 	try
 	{
-		std::cout << indent << "(array length=" << array->size() << ")" << std::endl << indent << "{" << std::endl;
+		std::cout << indent << "(Array length=" << array->size() << ")" << std::endl << indent << "{" << std::endl;
 		std::string currentIndent = indent;
 		currentIndent.push_back(' ');
 		currentIndent.push_back(' ');
@@ -199,7 +199,7 @@ void RPCVariable::printStruct(std::shared_ptr<std::vector<std::shared_ptr<RPCVar
 {
 	try
 	{
-		std::cout << indent << "(struct length=" << rpcStruct->size() << ")" << std::endl << indent << "{" << std::endl;
+		std::cout << indent << "(Struct length=" << rpcStruct->size() << ")" << std::endl << indent << "{" << std::endl;
 		std::string currentIndent = indent;
 		currentIndent.push_back(' ');
 		currentIndent.push_back(' ');

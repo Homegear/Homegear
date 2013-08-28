@@ -90,15 +90,27 @@ void Cul::openDevice()
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 		if(lockfileDescriptor == -1)
 		{
-			if(errno != EEXIST) throw(Exception("Couldn't create lockfile " + _lockfile));
+			if(errno != EEXIST)
+			{
+				HelperFunctions::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				return;
+			}
 
 			int processID = 0;
 			std::ifstream lockfileStream(_lockfile.c_str());
 			lockfileStream >> processID;
-			if(kill(processID, 0) == 0) throw(Exception("CUL device is in use: " + _rfDevice));
+			if(kill(processID, 0) == 0)
+			{
+				HelperFunctions::printCritical("CUL device is in use: " + _rfDevice);
+				return;
+			}
 			unlink(_lockfile.c_str());
 			lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-			if(lockfileDescriptor == -1) throw(Exception("Couldn't create lockfile " + _lockfile));
+			if(lockfileDescriptor == -1)
+			{
+				HelperFunctions::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				return;
+			}
 		}
 		dprintf(lockfileDescriptor, "%10i", getpid());
 		close(lockfileDescriptor);
@@ -107,7 +119,11 @@ void Cul::openDevice()
 
 		_fileDescriptor = open(_rfDevice.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
 
-		if(_fileDescriptor == -1) throw(Exception("Couldn't open CUL device: " + _rfDevice));
+		if(_fileDescriptor == -1)
+		{
+			HelperFunctions::printCritical("Couldn't open CUL device: " + _rfDevice);
+			return;
+		}
 
 		setupDevice();
 	}
@@ -321,7 +337,7 @@ void Cul::startListening()
 	{
 		stopListening();
 		openDevice();
-		if(_fileDescriptor == -1) throw(Exception("Couldn't listen to CUL device, because the file descriptor is not valid: " + _rfDevice));
+		if(_fileDescriptor == -1) return;
 		_stopped = false;
 		writeToDevice("Ax\r\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));

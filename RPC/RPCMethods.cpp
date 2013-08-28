@@ -16,19 +16,19 @@ std::shared_ptr<RPCVariable> RPCSystemGetCapabilities::invoke(std::shared_ptr<st
 
 		std::shared_ptr<RPCVariable> element(new RPCVariable(RPCVariableType::rpcStruct));
 		element->name = "xmlrpc";
-		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specUrl", "http://www.xmlrpc.com/spec")));
+		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specUrl", std::string("http://www.xmlrpc.com/spec"))));
 		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specVersion", 1)));
 		capabilities->structValue->push_back(element);
 
 		element.reset(new RPCVariable(RPCVariableType::rpcStruct));
 		element->name = "faults_interop";
-		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specUrl", "http://xmlrpc-epi.sourceforge.net/specs/rfc.fault_codes.php")));
+		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specUrl", std::string("http://xmlrpc-epi.sourceforge.net/specs/rfc.fault_codes.php"))));
 		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specVersion", 20010516)));
 		capabilities->structValue->push_back(element);
 
 		element.reset(new RPCVariable(RPCVariableType::rpcStruct));
 		element->name = "introspection";
-		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specUrl", "http://scripts.incutio.com/xmlrpc/introspection.html")));
+		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specUrl", std::string("http://scripts.incutio.com/xmlrpc/introspection.html"))));
 		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specVersion", 1)));
 		capabilities->structValue->push_back(element);
 
@@ -954,6 +954,7 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 		if(server.first.empty() || server.second.empty()) return RPCVariable::createError(-32602, "Server address or port is empty.");
 		if(server.first.size() < 5) return RPCVariable::createError(-32602, "Server address too short.");
 		if(server.first.substr(0, 5) == "https") return RPCVariable::createError(-32602, "https is currently not supported.");
+		HelperFunctions::toLower(server.first);
 		server.second = std::to_string(HelperFunctions::getNumber(server.second));
 		if(server.second == "0" || server.second.empty()) return RPCVariable::createError(-32602, "Port number is invalid.");
 

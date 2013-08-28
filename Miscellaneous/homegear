@@ -152,13 +152,18 @@ case $1 in
                 fi
                 ;;
         reload)
-                exit 3
+                log_daemon_msg "Reloading Homegear" "homegear"
+                if start-stop-daemon --stop --signal 1 --quiet --oknodo --pidfile $PIDFILE; then
+		            log_end_msg 0 || true
+		        else
+		            log_end_msg 1 || true
+		        fi
                 ;;
         status)
                 status_of_proc $DAEMON "homegear"
                 ;;
         *)
-                echo "Usage: $0 {start|stop|restart|try-restart|force-reload|status}"
+                echo "Usage: $0 {start|stop|restart|reload|force-reload|status}"
                 exit 2
                 ;;
 esac

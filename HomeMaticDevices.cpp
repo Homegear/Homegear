@@ -462,20 +462,20 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index == 0)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1)
 				{
 					if(element == "help") break;
-					debugLevel = HelperFunctions::getNumber(element, true);
+					debugLevel = HelperFunctions::getNumber(element);
 					if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1)
 			{
 				stringStream << "Description: This command temporarily changes the current debug level." << std::endl;
 				stringStream << "Usage: debuglevel DEBUGLEVEL" << std::endl << std::endl;

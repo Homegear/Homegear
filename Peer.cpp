@@ -1683,7 +1683,11 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 				if(sentValues.find(i->first) != sentValues.end())
 				{
-					if(sentValues.at(i->first) != i->second) resendPacket = true;
+					if(sentValues.at(i->first) != i->second && _resendCounter[i->first] < 10)
+					{
+						_resendCounter[i->first]++;
+						resendPacket = true;
+					}
 				}
 				else
 				{
@@ -2161,6 +2165,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			pendingBidCoSQueues->push(queue);
 			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		}
 		else if(type == RPC::ParameterSet::Type::Enum::values)
 		{
@@ -2290,6 +2295,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			pendingBidCoSQueues->push(queue);
 			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getCentral()->enqueuePendingQueues(address);
 			else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
@@ -3297,6 +3303,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		}
 		else if(rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::command) return RPC::RPCVariable::createError(-6, "Parameter is not settable.");
+		_resendCounter[valueKey] = 0;
 		if(!rpcParameter->conversion.empty() && rpcParameter->conversion.at(0)->type == RPC::ParameterConversion::Type::Enum::toggle)
 		{
 			//Handle toggle parameter

@@ -83,7 +83,11 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		hostInfo.ai_socktype = SOCK_STREAM;
 
 		std::string ipAddress = server;
-		if(ipAddress.size() < 8) throw Exception("Error: Server's address too short: " + ipAddress);
+		if(ipAddress.size() < 8)
+		{
+			HelperFunctions::printError("Error: Server's address too short: " + ipAddress);
+			return "";
+		}
 		if(ipAddress.substr(0, 7) == "http://") ipAddress = ipAddress.substr(7);
 
 		if(getaddrinfo(ipAddress.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0) throw Exception("Error: Could not get address information.");
@@ -98,14 +102,14 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		int32_t fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
 		if(fileDescriptor == -1)
 		{
-			HelperFunctions::printError("Could not create socket for XML RPC server " + server + " on port " + port);
+			HelperFunctions::printError("Error: Could not create socket for XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 			freeaddrinfo(serverInfo);
 			return "";
 		}
 
 		if(connect(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1)
 		{
-			HelperFunctions::printError("Error: Could not connect to XML RPC server " + server + " on port " + port);
+			HelperFunctions::printError("Error: Could not connect to XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 			freeaddrinfo(serverInfo);
 			close(fileDescriptor);
 			return "";
@@ -118,7 +122,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		int32_t sentBytes = send(fileDescriptor, msg.c_str(), msg.size(), MSG_NOSIGNAL);
 		if(sentBytes == 0)
 		{
-			HelperFunctions::printError("Error sending data to XML RPC server " + server + " on port " + port);
+			HelperFunctions::printError("Error sending data to XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 			close(fileDescriptor);
 			return "";
 		}
@@ -148,12 +152,12 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 					HelperFunctions::printError("Error: Reading from XML RPC server " + server + " on port " + port + " timed out.");
 					break;
 				case -1:
-					HelperFunctions::printError("Error reading from XML RPC server " + server + " on port " + port + ".");
+					HelperFunctions::printError("Error reading from XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 					break;
 				case 1:
 					break;
 				default:
-					HelperFunctions::printError("Error reading from XML RPC server " + server + " on port " + port + ".");
+					HelperFunctions::printError("Error reading from XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 			}
 			if(receivedBytes != 1)
 			{
@@ -164,7 +168,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 			receivedBytes = recv(fileDescriptor, buffer, 1024, 0);
 			if(receivedBytes < 0)
 			{
-				HelperFunctions::printError("Error reading data from XML RPC server " + server + " on port " + port + ".");
+				HelperFunctions::printError("Error reading data from XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
 				return "";
@@ -201,7 +205,9 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 						contentType = true;
 						if(line.substr(14, 8) != "text/xml")
 						{
-							HelperFunctions::printError("Error receiving response from XML RPC server " + server + " on port " + port + ". Content type is not text/xml but " + line.substr(14, 8) + ".");
+							std::string contentTypeString = line.substr(14);
+							HelperFunctions::trim(contentTypeString);
+							HelperFunctions::printError("Error receiving response from XML RPC server " + server + " on port " + port + ". Content type is not text/xml but " + contentTypeString + ".");
 							shutdown(fileDescriptor, 0);
 							close(fileDescriptor);
 							return "";
@@ -247,7 +253,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 				}
 				if(response.size() + receivedBytes > dataSize)
 				{
-					HelperFunctions::printError("Error: Packet length is wrong.");
+					HelperFunctions::printError("Error: Packet size (>=" + std::to_string(response.size() + receivedBytes) + ") is larger than Content-Length (" + std::to_string(dataSize) + ").");
 					shutdown(fileDescriptor, 0);
 					close(fileDescriptor);
 					return "";

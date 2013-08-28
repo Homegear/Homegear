@@ -101,7 +101,7 @@ void TICC1100::openGPIO(int32_t gpio)
 	{
 		std::string path = "/sys/class/gpio/gpio" + std::to_string(gpio) + "/value";
 		_gpioDescriptor = open(path.c_str(), O_RDONLY);
-		if (_gpioDescriptor == -1) throw(Exception("Failed to open gpio " + std::to_string(gpio)));
+		if (_gpioDescriptor == -1) throw(Exception("Failed to open gpio " + std::to_string(gpio) + ": " + strerror(errno)));
 	}
 	catch(const std::exception& ex)
     {
@@ -215,15 +215,27 @@ void TICC1100::openDevice()
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 		if(lockfileDescriptor == -1)
 		{
-			if(errno != EEXIST) throw(Exception("Couldn't create lockfile " + _lockfile));
+			if(errno != EEXIST)
+			{
+				HelperFunctions::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				return;
+			}
 
 			int processID = 0;
 			std::ifstream lockfileStream(_lockfile.c_str());
 			lockfileStream >> processID;
-			if(kill(processID, 0) == 0) throw(Exception("Rf device is in use: " + _rfDevice));
+			if(kill(processID, 0) == 0)
+			{
+				HelperFunctions::printCritical("Rf device is in use: " + _rfDevice);
+				return;
+			}
 			unlink(_lockfile.c_str());
 			lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-			if(lockfileDescriptor == -1) throw(Exception("Couldn't create lockfile " + _lockfile));
+			if(lockfileDescriptor == -1)
+			{
+				HelperFunctions::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				return;
+			}
 		}
 		dprintf(lockfileDescriptor, "%10i", getpid());
 		close(lockfileDescriptor);
@@ -231,7 +243,11 @@ void TICC1100::openDevice()
 		_fileDescriptor = open(_rfDevice.c_str(), O_RDWR);
 		usleep(1000);
 
-		if(_fileDescriptor == -1) throw(Exception("Couldn't open rf device: " + _rfDevice));
+		if(_fileDescriptor == -1)
+		{
+			HelperFunctions::printCritical("Couldn't open rf device: " + _rfDevice);
+			return;
+		}
 
 		setupDevice();
 	}
@@ -706,7 +722,7 @@ void TICC1100::startListening()
 		stopListening();
 		if(_gpioDescriptor == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _rfDevice));
 		openDevice();
-		if(_fileDescriptor == -1) throw(Exception("Couldn't listen to rf device, because the file descriptor is not valid: " + _rfDevice));
+		if(_fileDescriptor == -1) return;
 		_stopped = false;
 
 		initChip();
