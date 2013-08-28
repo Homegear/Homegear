@@ -1413,7 +1413,7 @@ int32_t Peer::getChannelGroupedWith(int32_t channel)
 	return -1;
 }
 
-void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, std::list<uint32_t>& paramsetChannels, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, std::vector<uint8_t>>& values)
+void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector<FrameValues>& frameValues)
 {
 	try
 	{
@@ -1422,9 +1422,9 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string
 		std::pair<std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator,std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByMessageType.equal_range((uint32_t)packet->messageType());
 		if(range.first == rpcDevice->framesByMessageType.end()) return;
 		std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator i = range.first;
-		paramsetChannels.clear();
 		do
 		{
+			FrameValues currentFrameValues;
 			std::shared_ptr<RPC::DeviceFrame> frame(i->second);
 			if(!frame) continue;
 			if(frame->direction == RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != address && (!hasTeam() || packet->senderAddress() != team.address)) continue;
@@ -1436,7 +1436,7 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string
 			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9);
 			if(channel > -1 && frame->channelFieldSize < 1.0) channel &= (0xFF >> (8 - std::lround(frame->channelFieldSize * 10) % 10));
 			if(frame->fixedChannel > -1) channel = frame->fixedChannel;
-			frameID = frame->id;
+			currentFrameValues.frameID = frame->id;
 
 			for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
 			{
@@ -1461,9 +1461,9 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string
 				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
 				{
 					if((*k)->physicalParameter->valueID != j->param) continue;
-					parameterSetType = (*k)->parentParameterSet->type;
+					currentFrameValues.parameterSetType = (*k)->parentParameterSet->type;
 					bool setValues = false;
-					if(paramsetChannels.empty()) //Fill paramsetChannels
+					if(currentFrameValues.paramsetChannels.empty()) //Fill paramsetChannels
 					{
 						int32_t startChannel = (channel < 0) ? 0 : channel;
 						int32_t endChannel;
@@ -1477,23 +1477,30 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string
 						for(uint32_t l = startChannel; l <= endChannel; l++)
 						{
 							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
-							if(rpcDevice->channels.at(l)->parameterSets.at(parameterSetType).get() != (*k)->parentParameterSet) continue;
-							paramsetChannels.push_back(l);
+							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
+							if(!rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							if(startChannel == endChannel && rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType).get() != (*k)->parentParameterSet) continue;
+							currentFrameValues.paramsetChannels.push_back(l);
+							currentFrameValues.values[(*k)->id].channels.push_back(l);
 							setValues = true;
 						}
 					}
 					else //Use paramsetChannels
 					{
-						for(std::list<uint32_t>::const_iterator l = paramsetChannels.begin(); l != paramsetChannels.end(); ++l)
+						for(std::list<uint32_t>::const_iterator l = currentFrameValues.paramsetChannels.begin(); l != currentFrameValues.paramsetChannels.end(); ++l)
 						{
-							if(rpcDevice->channels.at(*l)->parameterSets.at(parameterSetType).get() != (*k)->parentParameterSet) continue; //Shouldn't happen as all parameters should be in the same parameter set
+							if(rpcDevice->channels.find(*l) == rpcDevice->channels.end()) continue;
+							if(rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(*l)->parameterSets.end()) continue;
+							if(!rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							if(currentFrameValues.paramsetChannels.size() == 1 && rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType).get() != (*k)->parentParameterSet) continue; //Shouldn't happen as all parameters should be in the same parameter set
+							currentFrameValues.values[(*k)->id].channels.push_back(*l);
 							setValues = true;
-							break;
 						}
 					}
-					if(setValues) values[(*k)->id] = data;
+					if(setValues) currentFrameValues.values[(*k)->id].value = data;
 				}
 			}
+			if(!currentFrameValues.values.empty()) frameValues.push_back(currentFrameValues);
 		} while(++i != range.second && i != rpcDevice->framesByMessageType.end());
 	}
 	catch(const std::exception& ex)
@@ -1514,7 +1521,7 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 {
 	try
 	{
-		if(!parameter->hasDominoEvents) return;
+		if(!parameter || !parameter->hasDominoEvents) return;
 		for(std::vector<std::shared_ptr<RPC::PhysicalParameterEvent>>::iterator j = parameter->physicalParameter->eventFrames.begin(); j != parameter->physicalParameter->eventFrames.end(); ++j)
 		{
 			if((*j)->frame != frameID) continue;
@@ -1617,116 +1624,165 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		setLastPacketReceived();
 		setRSSI(packet->rssi());
 		serviceMessages->endUnreach();
-		std::list<uint32_t> paramsetChannels;
-		std::map<std::string, std::vector<uint8_t>> values;
-		RPC::ParameterSet::Type::Enum parameterSetType;
-		std::string frameID;
-		getValuesFromPacket(packet, frameID, paramsetChannels, parameterSetType, values);
-		std::shared_ptr<RPC::DeviceFrame> frame;
-		if(!frameID.empty()) frame = rpcDevice->framesByID.at(frameID);
-		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
-		std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
-
-		std::map<std::string, std::vector<uint8_t>> sentValues;
-		std::shared_ptr<BidCoSPacket> sentPacket;
-		std::string sentFrameID;
-		bool pushPendingQueues = false;
-		if(packet->messageType() == 0x02) //ACK packet: Check if all values were set correctly. If not set value again
-		{
-			sentPacket = GD::devices.getCentral()->getSentPacket(address);
-			if(sentPacket && sentPacket->messageType() > 0 && !sentPacket->payload()->empty())
-			{
-				std::list<uint32_t> sentParamsetChannels;
-				RPC::ParameterSet::Type::Enum sentParameterSetType;
-				getValuesFromPacket(sentPacket, sentFrameID, sentParamsetChannels, sentParameterSetType, sentValues);
-			}
-		}
-
-		//Check for low battery
-		//If values is not empty, packet is valid
-		if(rpcDevice->hasBattery && !values.empty() && !packet->payload()->empty() && frame)
-		{
-			bool hasLowbatBit = true;
-			//Three things to check to see if position 9.7 is used: channelField, subtypeIndex and parameter indices
-			if(frame->channelField == 9 && frame->channelFieldSize >= 0.8) hasLowbatBit = false;
-			else if(frame->subtypeIndex == 9) hasLowbatBit = false;
-			for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
-			{
-				if(j->index >= 9 && j->index < 10)
-				{
-					//fmod is needed for sizes > 1 (e. g. for frame WEATHER_EVENT)
-					if((j->index + std::fmod(j->size, 1)) >= 9.8) hasLowbatBit = false;
-				}
-			}
-
-			if(hasLowbatBit)
-			{
-				if(packet->payload()->at(0) & 0x80) serviceMessages->set("LOWBAT", true);
-				else serviceMessages->set("LOWBAT", false);
-			}
-		}
-
+		std::vector<FrameValues> frameValues;
+		getValuesFromPacket(packet, frameValues);
 		bool resendPacket = false;
-		for(std::map<std::string, std::vector<uint8_t>>::iterator i = values.begin(); i != values.end(); ++i)
+		std::shared_ptr<BidCoSPacket> sentPacket;
+		//Loop through all matching frames
+		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
 		{
-			for(std::list<uint32_t>::const_iterator j = paramsetChannels.begin(); j != paramsetChannels.end(); ++j)
+			std::shared_ptr<RPC::DeviceFrame> frame;
+			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
+			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
+
+			std::vector<FrameValues> sentFrameValues;
+			bool pushPendingQueues = false;
+			if(packet->messageType() == 0x02) //ACK packet: Check if all values were set correctly. If not set value again
 			{
-				RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
-				parameter->data = i->second;
-				 //Process error as service message
-				if(i->first.size() >= 5 && i->first.substr(0, 5) == "ERROR" && !i->second.empty() && parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
+				sentPacket = GD::devices.getCentral()->getSentPacket(address);
+				if(sentPacket && sentPacket->messageType() > 0 && !sentPacket->payload()->empty())
 				{
-					int32_t errorValue = (int32_t)i->second.at(0);
-					RPC::LogicalParameterEnum* logicalParameter = (RPC::LogicalParameterEnum*)parameter->rpcParameter->logicalParameter.get();
-					serviceMessages->set(i->first, i->second.at(0), *j);
+					RPC::ParameterSet::Type::Enum sentParameterSetType;
+					getValuesFromPacket(sentPacket, sentFrameValues);
+				}
+			}
+
+			//Check for low battery
+			//If values is not empty, packet is valid
+			if(rpcDevice->hasBattery && !a->values.empty() && !packet->payload()->empty() && frame)
+			{
+				bool hasLowbatBit = true;
+				//Three things to check to see if position 9.7 is used: channelField, subtypeIndex and parameter indices
+				if(frame->channelField == 9 && frame->channelFieldSize >= 0.8) hasLowbatBit = false;
+				else if(frame->subtypeIndex == 9) hasLowbatBit = false;
+				for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
+				{
+					if(j->index >= 9 && j->index < 10)
+					{
+						//fmod is needed for sizes > 1 (e. g. for frame WEATHER_EVENT)
+						if((j->index + std::fmod(j->size, 1)) >= 9.8) hasLowbatBit = false;
+					}
 				}
 
-				if(sentValues.find(i->first) != sentValues.end())
+				if(hasLowbatBit)
 				{
-					if(sentValues.at(i->first) != i->second && _resendCounter[i->first] < 10)
+					if(packet->payload()->at(0) & 0x80) serviceMessages->set("LOWBAT", true);
+					else serviceMessages->set("LOWBAT", false);
+				}
+			}
+
+			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
+			{
+				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
+				{
+					if(std::find(i->second.channels.begin(), i->second.channels.end(), *j) == i->second.channels.end()) continue;
+					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
+					parameter->data = i->second.value;
+					 //Process error as service message
+					if(i->first.size() >= 5 && i->first == "ERROR" && !i->second.value.empty() && parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
 					{
-						_resendCounter[i->first]++;
-						resendPacket = true;
+						serviceMessages->set(i->first, i->second.value.at(0), *j);
 					}
+
+					if(!sentFrameValues.empty())
+					{
+						for(std::vector<FrameValues>::iterator b = sentFrameValues.begin(); b != sentFrameValues.end(); ++b)
+						{
+							if(b->values.find(i->first) != b->values.end())
+							{
+								if(b->values.at(i->first).value != i->second.value && _resendCounter[i->first] < 10)
+								{
+									_resendCounter[i->first]++;
+									resendPacket = true;
+								}
+							}
+							else //Don't broadcast value, if packet will be resent
+							{
+								HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+								valueKeys->push_back(i->first);
+								rpcValues->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
+							}
+						}
+					}
+					else
+					{
+						HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+						valueKeys->push_back(i->first);
+						rpcValues->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
+					}
+				}
+			}
+
+			if(isTeam() && !valueKeys->empty())
+			{
+				//Set SENDERADDRESS so that the we can identify the sending peer in our home automation software
+				std::shared_ptr<Peer> senderPeer(GD::devices.getCentral()->getPeer(packet->destinationAddress()));
+				if(senderPeer)
+				{
+					for(std::list<uint32_t>::const_iterator i = a->paramsetChannels.begin(); i != a->paramsetChannels.end(); ++i)
+					{
+						std::shared_ptr<RPC::Parameter> rpcParameter(rpcDevice->channels.at(*i)->parameterSets.at(a->parameterSetType)->getParameter("SENDERADDRESS"));
+						if(rpcParameter)
+						{
+							RPCConfigurationParameter* parameter = &valuesCentral[*i]["SENDERADDRESS"];
+							parameter->data = rpcParameter->convertToPacket(senderPeer->getSerialNumber() + ":" + std::to_string(*i));
+							valueKeys->push_back("SENDERADDRESS");
+							rpcValues->push_back(rpcParameter->convertFromPacket(parameter->data, true));
+						}
+					}
+				}
+			}
+
+			//We have to do this in a seperate loop, because all parameters need to be set first
+			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
+			{
+				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
+				{
+					if(std::find(i->second.channels.begin(), i->second.channels.end(), *j) == i->second.channels.end()) continue;
+					handleDominoEvent(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first), a->frameID, *j);
+				}
+			}
+
+			if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == address && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional
+			{
+				if(packet->controlByte() & 32) //Bidirectional?
+				{
+					std::vector<uint8_t> payload;
+					payload.push_back(0x00);
+					std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x81, 0x02, GD::devices.getCentral()->address(), address, payload));
+					GD::devices.getCentral()->sendPacket(ok);
+					GD::devices.getCentral()->enqueuePendingQueues(address);
 				}
 				else
 				{
-					HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second) + ".");
-					valueKeys->push_back(i->first);
-					rpcValues->push_back(rpcDevice->channels.at(*j)->parameterSets.at(parameterSetType)->getParameter(i->first)->convertFromPacket(i->second, true));
+					std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
+					queue->noSending = true;
+					std::vector<uint8_t> payload;
+					std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(packet->messageCounter(), 0xA1, 0x12, GD::devices.getCentral()->address(), address, payload));
+					queue->push(configPacket);
+					queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+
+					GD::devices.getCentral()->enqueuePackets(address, queue, true);
 				}
 			}
-		}
-
-		if(isTeam() && !valueKeys->empty())
-		{
-			//Set SENDERADDRESS so that the we can identify the sending peer in our home automation software
-			std::shared_ptr<Peer> senderPeer(GD::devices.getCentral()->getPeer(packet->destinationAddress()));
-			if(senderPeer)
+			else if(!a->values.empty() && (packet->controlByte() & 32) && packet->destinationAddress() == GD::devices.getCentral()->address())
 			{
-				for(std::list<uint32_t>::const_iterator i = paramsetChannels.begin(); i != paramsetChannels.end(); ++i)
+				GD::devices.getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
+			}
+			//else if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
+			//{
+				//GD::devices.getCentral()->enqueuePendingQueues(address);
+			//}
+			if(!rpcValues->empty())
+			{
+				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
 				{
-					std::shared_ptr<RPC::Parameter> rpcParameter(rpcDevice->channels.at(*i)->parameterSets.at(parameterSetType)->getParameter("SENDERADDRESS"));
-					if(rpcParameter)
-					{
-						RPCConfigurationParameter* parameter = &valuesCentral[*i]["SENDERADDRESS"];
-						parameter->data = rpcParameter->convertToPacket(senderPeer->getSerialNumber() + ":" + std::to_string(*i));
-						valueKeys->push_back("SENDERADDRESS");
-						rpcValues->push_back(rpcParameter->convertFromPacket(parameter->data, true));
-					}
+					GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(*j), valueKeys, rpcValues);
 				}
+				saveToDatabase(GD::devices.getCentral()->address());
 			}
 		}
-
-		//We have to do this in a seperate loop, because all parameters need to be set first
-		for(std::map<std::string, std::vector<uint8_t>>::iterator i = values.begin(); i != values.end(); ++i)
-		{
-			for(std::list<uint32_t>::const_iterator j = paramsetChannels.begin(); j != paramsetChannels.end(); ++j)
-			{
-				handleDominoEvent(rpcDevice->channels.at(*j)->parameterSets.at(parameterSetType)->getParameter(i->first), frameID, *j);
-			}
-		}
-
 		if(resendPacket && sentPacket)
 		{
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
@@ -1744,45 +1800,6 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				pendingBidCoSQueues->push(queue);
 				HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			}
-		}
-
-		if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == address && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional
-		{
-			if(packet->controlByte() & 32) //Bidirectional?
-			{
-				std::vector<uint8_t> payload;
-				payload.push_back(0x00);
-				std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x81, 0x02, GD::devices.getCentral()->address(), address, payload));
-				GD::devices.getCentral()->sendPacket(ok);
-				GD::devices.getCentral()->enqueuePendingQueues(address);
-			}
-			else
-			{
-				std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
-				queue->noSending = true;
-				std::vector<uint8_t> payload;
-				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(packet->messageCounter(), 0xA1, 0x12, GD::devices.getCentral()->address(), address, payload));
-				queue->push(configPacket);
-				queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-
-				GD::devices.getCentral()->enqueuePackets(address, queue, true);
-			}
-		}
-		else if(!values.empty() && (packet->controlByte() & 32) && packet->destinationAddress() == GD::devices.getCentral()->address())
-		{
-			GD::devices.getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
-		}
-		//else if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
-		//{
-			//GD::devices.getCentral()->enqueuePendingQueues(address);
-		//}
-		if(!rpcValues->empty())
-		{
-			for(std::list<uint32_t>::const_iterator j = paramsetChannels.begin(); j != paramsetChannels.end(); ++j)
-			{
-				GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(*j), valueKeys, rpcValues);
-			}
-			saveToDatabase(GD::devices.getCentral()->address());
 		}
 	}
 	catch(const std::exception& ex)

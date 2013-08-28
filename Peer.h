@@ -35,6 +35,22 @@ public:
 	virtual ~VariableToReset() {}
 };
 
+class FrameValue
+{
+public:
+	std::list<uint32_t> channels;
+	std::vector<uint8_t> value;
+};
+
+class FrameValues
+{
+public:
+	std::string frameID;
+	std::list<uint32_t> paramsetChannels;
+	RPC::ParameterSet::Type::Enum parameterSetType;
+	std::map<std::string, FrameValue> values;
+};
+
 class BasicPeer
 {
 public:
@@ -123,7 +139,7 @@ class Peer
         void setRSSI(uint8_t rssi);
 
         void handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::string& frameID, uint32_t channel);
-        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::string& frameID, std::list<uint32_t>& paramsetChannels, RPC::ParameterSet::Type::Enum& parameterSetType, std::map<std::string, std::vector<uint8_t>>& values);
+        void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector<FrameValues>& frameValue);
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
         int32_t getChannelGroupedWith(int32_t channel);
