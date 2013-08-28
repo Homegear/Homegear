@@ -17,9 +17,14 @@ void HomeMaticDevices::load()
 {
 	try
 	{
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (parent INTEGER, address INTEGER, serializedObject TEXT)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, parent INTEGER NOT NULL, address INTEGER NOT NULL, serializedObject TEXT NOT NULL)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS ON peers (peerID, parent)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (peerID INTEGER NOT NULL, parameterID TEXT, value BLOB)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS ON parameters (peerID, parameterID TEXT)");
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS devices (address INTEGER, deviceTYPE INTEGER, serializedObject TEXT, dutyCycleMessageCounter INTEGER, lastDutyCycle INTEGER)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS ON metadata (objectID, dataID)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS devices (address INTEGER, deviceType INTEGER, serializedObject TEXT, dutyCycleMessageCounter INTEGER, lastDutyCycle INTEGER)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS ON devices (address, deviceType)");
 		DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
