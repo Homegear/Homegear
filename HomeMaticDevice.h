@@ -40,7 +40,7 @@ class HomeMaticDevice
         HomeMaticDevice();
         HomeMaticDevice(std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
-        virtual void dispose();
+        virtual void dispose(bool wait = true);
         virtual bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
         virtual void addPeer(std::shared_ptr<Peer> peer);
@@ -81,7 +81,8 @@ class HomeMaticDevice
         virtual void handleWakeUp(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
         virtual void handleSetPoint(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
         virtual void handleSetValveState(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
-        virtual void handleStateChange(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
+        virtual void handleStateChangeRemote(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet) {}
+        virtual void handleStateChangeMotionDetector(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet) {}
         virtual void handleTimeRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 
         virtual void sendPairingRequest();

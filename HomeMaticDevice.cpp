@@ -155,7 +155,7 @@ HomeMaticDevice::~HomeMaticDevice()
 
 }
 
-void HomeMaticDevice::dispose()
+void HomeMaticDevice::dispose(bool wait)
 {
 	if(_disposing) return;
 	_disposing = true;
@@ -165,7 +165,8 @@ void HomeMaticDevice::dispose()
 	stopThreads();
 	int64_t timeDifference = HelperFunctions::getTime() - startTime;
 	//Packets might still arrive, after removing this device from the rfDevice, so sleep a little bit
-	if(timeDifference >= 0 && timeDifference < 100) std::this_thread::sleep_for(std::chrono::milliseconds(100 - timeDifference));
+	//This is not necessary if the rfDevice doesn't listen anymore
+	if(wait && timeDifference >= 0 && timeDifference < 500) std::this_thread::sleep_for(std::chrono::milliseconds(500 - timeDifference));
 }
 
 void HomeMaticDevice::stopThreads()

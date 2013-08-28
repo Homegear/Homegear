@@ -41,7 +41,8 @@ public:
 	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
 	void addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
 	void addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
-	void addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
+	void addHomegearFeaturesRemote(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
+	void addHomegearFeaturesMotionDetector(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
 
 	void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);

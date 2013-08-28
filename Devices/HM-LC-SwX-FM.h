@@ -29,7 +29,8 @@ class HM_LC_SWX_FM : public HomeMaticDevice
         virtual void setUpBidCoSMessages();
         virtual void init();
 
-        virtual void handleStateChange(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
+        virtual void handleStateChangeRemote(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
+        virtual void handleStateChangeMotionDetector(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
 
         void sendStateChangeResponse(std::shared_ptr<BidCoSPacket> receivedPacket, uint32_t channel);
     private:

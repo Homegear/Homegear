@@ -231,7 +231,7 @@ void HomeMaticDevices::dispose()
 		_devicesMutex.unlock();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = devices.begin(); i != devices.end(); ++i)
 		{
-			(*i)->dispose();
+			(*i)->dispose(false);
 		}
 	}
 	catch(const std::exception& ex)

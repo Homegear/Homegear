@@ -725,7 +725,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int
     }
 }
 
-void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues)
+void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues)
 {
 	try
 	{
@@ -768,7 +768,7 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
 		{
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
 			{
-				if(i->second->type != "KEY") continue;
+				if(i->second->type != "KEY" && i->second->type != "MOTION_DETECTOR") continue;
 				switchPeer.reset(new BasicPeer());
 				switchPeer->address = sw->address();
 				switchPeer->serialNumber = sw->serialNumber();
@@ -815,7 +815,7 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
 		{
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
 			{
-				if(i->second->type != "KEY") continue;
+				if(i->second->type != "KEY" && i->second->type != "MOTION_DETECTOR") continue;
 				std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 				pendingQueue->noSending = true;
 
@@ -859,6 +859,26 @@ void HomeMaticCentral::addHomegearFeaturesSwitch(std::shared_ptr<Peer> peer, int
     }
 }
 
+void HomeMaticCentral::addHomegearFeaturesMotionDetector(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues)
+{
+	try
+	{
+		addHomegearFeaturesRemote(peer, channel, pushPendingBidCoSQueues);
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues)
 {
 	try
@@ -883,7 +903,11 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t c
 				peer->deviceType == HMDeviceTypes::HMRC19SW ||
 				peer->deviceType == HMDeviceTypes::RCH ||
 				peer->deviceType == HMDeviceTypes::ATENT ||
-				peer->deviceType == HMDeviceTypes::ZELSTGRMHS4) addHomegearFeaturesSwitch(peer, channel, pushPendingBidCoSQueues);
+				peer->deviceType == HMDeviceTypes::ZELSTGRMHS4) addHomegearFeaturesRemote(peer, channel, pushPendingBidCoSQueues);
+		else if(peer->deviceType == HMDeviceTypes::HMSECMDIR ||
+				peer->deviceType == HMDeviceTypes::HMSECMDIRSCHUECO ||
+				peer->deviceType == HMDeviceTypes::HMSENMDIRSM ||
+				peer->deviceType == HMDeviceTypes::HMSENMDIRO) addHomegearFeaturesMotionDetector(peer, channel, pushPendingBidCoSQueues);
 		else HelperFunctions::printDebug("Debug: No homegear features to add.");
 	}
 	catch(const std::exception& ex)
@@ -1869,6 +1893,16 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 			}
 		}
 		queue->pop(); //Messages are not popped by default.
+
+		if(queue->isEmpty())
+		{
+			std::shared_ptr<Peer> peer = getPeer(packet->senderAddress());
+			if(peer && !peer->pairingComplete)
+			{
+				addHomegearFeatures(peer, -1, true);
+				peer->pairingComplete = true;
+			}
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -2310,10 +2344,13 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
 		}
 		//Force delete
 		if(force) deletePeer(address);
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		while(_bidCoSQueueManager.get(address))
+		else
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			while(_bidCoSQueueManager.get(address) && peerExists(address))
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
 		}
 
 		if(!defer && !force && peerExists(address)) return RPC::RPCVariable::createError(-1, "No answer from device.");

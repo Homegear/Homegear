@@ -44,7 +44,8 @@ void HM_LC_SWX_FM::setUpBidCoSMessages()
 		HomeMaticDevice::setUpBidCoSMessages();
 
 		//Incoming
-		_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x40, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleStateChange)));
+		_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x40, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleStateChangeRemote)));
+		_messages->add(std::shared_ptr<BidCoSMessage>(new BidCoSMessage(0x41, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HomeMaticDevice::handleStateChangeMotionDetector)));
 	}
     catch(const std::exception& ex)
     {
@@ -133,7 +134,7 @@ std::string HM_LC_SWX_FM::handleCLICommand(std::string command)
 	return HomeMaticDevice::handleCLICommand(command);
 }
 
-void HM_LC_SWX_FM::handleStateChange(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
+void HM_LC_SWX_FM::handleStateChangeRemote(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -158,6 +159,36 @@ void HM_LC_SWX_FM::handleStateChange(int32_t messageCounter, std::shared_ptr<Bid
 			else _states[channel] = false;
 		}
 		else _states[channel] = !_states[channel];
+
+		if(packet->controlByte() & 0x20) sendStateChangeResponse(packet, channel);
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LC_SWX_FM::handleStateChangeMotionDetector(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
+{
+	try
+	{
+		if(packet->payload()->empty()) return;
+		int32_t channel = packet->payload()->at(0) & 0x3F;
+		if(channel > _channelCount) return;
+		std::shared_ptr<HomeMaticCentral> central(GD::devices.getCentral());
+		std::shared_ptr<Peer> peer(central->getPeer(packet->senderAddress()));
+		//Check if channel is paired to me
+		std::shared_ptr<BasicPeer> me(peer->getPeer(channel, _address, channel));
+		if(!me) return;
+		_states[channel] = true;
 
 		if(packet->controlByte() & 0x20) sendStateChangeResponse(packet, channel);
 	}
