@@ -1633,8 +1633,8 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		{
 			std::shared_ptr<RPC::DeviceFrame> frame;
 			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
-			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
-			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
+			std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
+			std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>>> rpcValues;
 
 			std::vector<FrameValues> sentFrameValues;
 			bool pushPendingQueues = false;
@@ -1677,6 +1677,12 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
 				{
 					if(std::find(i->second.channels.begin(), i->second.channels.end(), *j) == i->second.channels.end()) continue;
+					if(!valueKeys[*j] || !rpcValues[*j])
+					{
+						valueKeys[*j].reset(new std::vector<std::string>());
+						rpcValues[*j].reset(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
+					}
+
 					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
 					 //Process error as service message
@@ -1700,21 +1706,21 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 							else //Don't broadcast value, if packet will be resent
 							{
 								HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
-								valueKeys->push_back(i->first);
-								rpcValues->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
+								valueKeys[*j]->push_back(i->first);
+								rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
 							}
 						}
 					}
 					else
 					{
 						HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
-						valueKeys->push_back(i->first);
-						rpcValues->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
+						valueKeys[*j]->push_back(i->first);
+						rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
 					}
 				}
 			}
 
-			if(isTeam() && !valueKeys->empty())
+			if(isTeam() && !valueKeys.empty())
 			{
 				//Set SENDERADDRESS so that the we can identify the sending peer in our home automation software
 				std::shared_ptr<Peer> senderPeer(GD::devices.getCentral()->getPeer(packet->destinationAddress()));
@@ -1727,8 +1733,8 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 						{
 							RPCConfigurationParameter* parameter = &valuesCentral[*i]["SENDERADDRESS"];
 							parameter->data = rpcParameter->convertToPacket(senderPeer->getSerialNumber() + ":" + std::to_string(*i));
-							valueKeys->push_back("SENDERADDRESS");
-							rpcValues->push_back(rpcParameter->convertFromPacket(parameter->data, true));
+							valueKeys[*i]->push_back("SENDERADDRESS");
+							rpcValues[*i]->push_back(rpcParameter->convertFromPacket(parameter->data, true));
 						}
 					}
 				}
@@ -1770,17 +1776,13 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			{
 				GD::devices.getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
 			}
-			//else if(((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && pendingBidCoSQueues && !pendingBidCoSQueues->empty())
-			//{
-				//GD::devices.getCentral()->enqueuePendingQueues(address);
-			//}
-			if(!rpcValues->empty())
+			if(!rpcValues.empty())
 			{
-				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
+				for(std::map<uint32_t, std::shared_ptr<std::vector<std::string>>>::const_iterator j = valueKeys.begin(); j != valueKeys.end(); ++j)
 				{
-					GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(*j), valueKeys, rpcValues);
+					if(j->second->empty()) continue;
+					GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(j->first), j->second, rpcValues.at(j->first));
 				}
-				saveToDatabase(GD::devices.getCentral()->address());
 			}
 		}
 		if(resendPacket && sentPacket)
@@ -1801,6 +1803,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			}
 		}
+		saveToDatabase(GD::devices.getCentral()->address());
 	}
 	catch(const std::exception& ex)
     {
