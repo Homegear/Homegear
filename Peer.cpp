@@ -3257,6 +3257,7 @@ void Peer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter>
 		if(parameters->integers.size() != 3) return;
 		if(parameters->strings.size() != 1) return;
 		HelperFunctions::printMessage("addVariableToResetCallback invoked for parameter " + parameters->strings.at(0) + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ".", 5);
+		HelperFunctions::printInfo("Parameter " + parameters->strings.at(0) + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + " will be reset at " + HelperFunctions::getTimeString(parameters->integers.at(2)) + ".");
 		std::shared_ptr<VariableToReset> variable(new VariableToReset);
 		variable->channel = parameters->integers.at(0);
 		int32_t integerValue = parameters->integers.at(1);
@@ -3361,15 +3362,17 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				packet->setPosition(i->index, i->size, data);
 				continue;
 			}
+			RPCConfigurationParameter* additionalParameter = nullptr;
 			//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
 			if(i->param.empty() && !i->additionalParameter.empty() && valuesCentral[channel].find(i->additionalParameter) != valuesCentral[channel].end())
 			{
+				additionalParameter = &valuesCentral[channel][i->additionalParameter];
 				int32_t intValue = 0;
-				HelperFunctions::memcpyBigEndian(intValue, valuesCentral[channel][i->additionalParameter].data);
+				HelperFunctions::memcpyBigEndian(intValue, additionalParameter->data);
 				if(!i->omitIfSet || intValue != i->omitIf)
 				{
 					//Don't set ON_TIME when value is false
-					if(i->additionalParameter != "ON_TIME" || value->booleanValue) packet->setPosition(i->index, i->size, valuesCentral[channel][i->additionalParameter].data);
+					if(i->additionalParameter != "ON_TIME" || value->booleanValue) packet->setPosition(i->index, i->size, additionalParameter->data);
 				}
 			}
 			//param sometimes is ambiguous (e. g. LEVEL of HM-CC-TC), so don't search and use the given parameter when possible
@@ -3390,7 +3393,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				}
 				if(!paramFound) HelperFunctions::printError("Error constructing packet. param \"" + i->param + "\" not found. Device: 0x" + HelperFunctions::getHexString(address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 			}
-			if(i->additionalParameter == "ON_TIME")
+			if(i->additionalParameter == "ON_TIME" && additionalParameter)
 			{
 				if(rpcParameter->physicalParameter->valueID != "STATE" || rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeBoolean)
 				{
@@ -3411,20 +3414,15 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 					}
 					_variablesToResetMutex.unlock();
 				}
-				if(!value->booleanValue || valuesCentral[channel][i->additionalParameter].data.empty() || valuesCentral[channel][i->additionalParameter].data.at(0) == 0) continue;
+				if(!value->booleanValue || additionalParameter->data.empty() || additionalParameter->data.at(0) == 0) continue;
 				std::shared_ptr<CallbackFunctionParameter> parameters(new CallbackFunctionParameter());
 				parameters->integers.push_back(channel);
 				parameters->integers.push_back(0); //false = off
 				int64_t time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-				parameters->integers.push_back(time + std::lround(i->convertFromPacket(valuesCentral[channel][i->additionalParameter].data)->floatValue * 1000));
+				parameters->integers.push_back(time + std::lround(additionalParameter->rpcParameter->convertFromPacket(additionalParameter->data)->floatValue * 1000));
 				parameters->strings.push_back(rpcParameter->physicalParameter->valueID);
 				queue->callbackParameter = parameters;
 				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<Peer, &Peer::addVariableToResetCallback>(this);
-				/*if(!_workerThread.joinable())
-				{
-					_stopThreads = false;
-					_workerThread = std::thread(&Peer::worker, this);
-				}*/
 			}
 		}
 		if(!rpcParameter->physicalParameter->resetAfterSend.empty())
