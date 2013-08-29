@@ -5,7 +5,7 @@
         compress
         delaycompress
         notifempty
-        create 640 root adm
+        create 640 homegear homegear
         sharedscripts
         postrotate
                 /etc/init.d/homegear reload > /dev/null
