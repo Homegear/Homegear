@@ -449,7 +449,7 @@ void HomeMaticDevice::loadPeers()
 			int32_t peerID = row->second.at(0)->intValue;
 			int32_t address = row->second.at(2)->intValue;
 			std::shared_ptr<Peer> peer(new Peer(peerID, address, row->second.at(3)->textValue, isCentral()));
-			if(!peer->load(row->second.at(3)->textValue, this)) continue;
+			if(!peer->load(row->second.at(4)->textValue, this)) continue;
 			if(!peer->rpcDevice) continue;
 			_peers[peer->address] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
@@ -566,7 +566,7 @@ void HomeMaticDevice::deletePeersFromDatabase()
     _databaseMutex.unlock();
 }
 
-void HomeMaticDevice::savePeersToDatabase()
+void HomeMaticDevice::savePeersToDatabase(bool full)
 {
 	try
 	{
@@ -576,7 +576,7 @@ void HomeMaticDevice::savePeersToDatabase()
 		{
 			//We are always printing this, because the init script needs it
 			HelperFunctions::printMessage(" - Saving peer 0x" + HelperFunctions::getHexString(i->second->address, 6) + "...");
-			i->second->save(_address, true, false);
+			i->second->save(_address, true, full);
 		}
 	}
 	catch(const std::exception& ex)

@@ -1043,7 +1043,6 @@ void Peer::unserialize_0_0_6(std::string& serializedObject, HomeMaticDevice* dev
 		if(serializedObject.empty()) return;
 		HelperFunctions::printDebug("Unserializing peer: " + serializedObject, 5);
 
-		std::istringstream stringstream(serializedObject);
 		std::string entry;
 		uint32_t pos = 0;
 		address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -1420,41 +1419,41 @@ void Peer::loadVariables()
 		DataTable rows = GD::db.executeCommand("SELECT * FROM variables WHERE peerID=" + std::to_string(peerID));
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
-			_variableDatabaseIDs[row->second.at(1)->intValue] = row->second.at(0)->intValue;
-			switch(row->second.at(1)->intValue)
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			switch(row->second.at(2)->intValue)
 			{
 			case 0:
-				firmwareVersion = row->second.at(2)->intValue;
+				firmwareVersion = row->second.at(3)->intValue;
 				break;
 			case 1:
-				remoteChannel = row->second.at(2)->intValue;
+				remoteChannel = row->second.at(3)->intValue;
 				break;
 			case 2:
-				localChannel = row->second.at(2)->intValue;
+				localChannel = row->second.at(3)->intValue;
 				break;
 			case 3:
-				deviceType = (HMDeviceTypes)row->second.at(2)->intValue;
+				deviceType = (HMDeviceTypes)row->second.at(3)->intValue;
 				break;
 			case 4:
-				countFromSysinfo = row->second.at(2)->intValue;
+				countFromSysinfo = row->second.at(3)->intValue;
 				break;
 			case 5:
-				messageCounter = row->second.at(2)->intValue;
+				messageCounter = row->second.at(3)->intValue;
 				break;
 			case 6:
-				pairingComplete = (bool)row->second.at(2)->intValue;
+				pairingComplete = (bool)row->second.at(3)->intValue;
 				break;
 			case 7:
-				teamChannel = row->second.at(2)->intValue;
+				teamChannel = row->second.at(3)->intValue;
 				break;
 			case 8:
-				team.address = row->second.at(2)->intValue;
+				team.address = row->second.at(3)->intValue;
 				break;
 			case 9:
-				team.channel = row->second.at(2)->intValue;
+				team.channel = row->second.at(3)->intValue;
 				break;
 			case 10:
-				team.serialNumber = row->second.at(3)->textValue;
+				team.serialNumber = row->second.at(4)->textValue;
 				break;
 			}
 		}
@@ -1485,10 +1484,9 @@ bool Peer::load(std::string& serializedObject, HomeMaticDevice* device)
 		rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, countFromSysinfo);
 		if(!rpcDevice)
 		{
-			HelperFunctions::printError("Error: Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)deviceType) + " Firmware version: " + std::to_string(firmwareVersion));
+			HelperFunctions::printError("Error loading peer 0x" + HelperFunctions::getHexString(address) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)deviceType) + " Firmware version: " + std::to_string(firmwareVersion));
 			return false;
 		}
-		std::istringstream stringstream(serializedObject);
 		std::string entry;
 		uint32_t pos = 0;
 		uint32_t stringSize;

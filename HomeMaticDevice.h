@@ -50,7 +50,7 @@ class HomeMaticDevice
         virtual void deletePeersFromDatabase();
         virtual void loadPeers();
         virtual void loadPeers_0_0_6();
-        virtual void savePeersToDatabase();
+        virtual void savePeersToDatabase(bool full);
         virtual void saveToDatabase();
         virtual void setLowBattery(bool);
         virtual void setChannelCount(uint32_t channelCount) {}

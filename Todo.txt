@@ -1,7 +1,7 @@
 When AES is working:
 - enforce $PEER.AES
 - Check if wake up is working, for the HM-Sec-MDIR it works differently with AES enabled
-- Change ServiceMessages so that all errors are supported.
+- Change ServiceMessages so that all errors are supported (UIFlag service).
 
 Low priority:
 
@@ -11,4 +11,4 @@ Today:
 
 Questions:
 - AES handshakes
-- Lazy config, what is that?
+- Lazy config, what is that?sath

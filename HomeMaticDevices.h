@@ -23,7 +23,7 @@ public:
 	std::vector<std::shared_ptr<HomeMaticDevice>> getDevices();
 	void convertDatabase();
 	void load();
-	void save(bool crash = false);
+	void save(bool full, bool crash = false);
 	void dispose();
 	std::string handleCLICommand(std::string& command);
 

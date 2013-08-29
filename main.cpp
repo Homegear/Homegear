@@ -44,7 +44,7 @@ void terminate(int32_t signalNumber)
 			GD::rpcClient.reset();
 			HelperFunctions::printInfo( "Closing RF device...");
 			GD::rfDevice->stopListening();
-			GD::devices.save();
+			GD::devices.save(false);
 			HelperFunctions::printMessage("Shutdown complete.");
 			if(_startAsDaemon)
 			{
@@ -69,7 +69,7 @@ void terminate(int32_t signalNumber)
 			HelperFunctions::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
 			HelperFunctions::printCritical("Critical: Trying to save data to " + GD::settings.databasePath() + ".crash");
 			GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".crash");
-			if(GD::db.isOpen()) GD::devices.save(true);
+			if(GD::db.isOpen()) GD::devices.save(false, true);
 			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 			kill(getpid(), signalNumber); //Generate core dump
 		}

@@ -21,12 +21,15 @@ void HomeMaticDevices::convertDatabase()
 		if(!rows.empty()) return;
 		rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type='table' AND name='peers'");
 		if(rows.empty()) return;
+		//Create a backup
+		GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".old");
+		//Database is version 0.0.6
 		HelperFunctions::printMessage("Converting database (version 0.0.6)...");
 		loadDevicesFromDatabase_0_0_6();
 		GD::db.executeCommand("DROP TABLE IF EXISTS peers");
 		GD::db.executeCommand("DROP TABLE IF EXISTS devices");
 		initializeDatabase();
-		save(false);
+		save(true, false);
 		HelperFunctions::printMessage("Database converted. Stopping Homegear.");
 		exit(0);
 	}
@@ -48,11 +51,11 @@ void HomeMaticDevices::initializeDatabase()
 {
 	try
 	{
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, serializedObject TEXT NOT NULL)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, serializedObject TEXT NOT NULL)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS variables (variableID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS variables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS variablesIndex ON variables (variableID, peerID, variableIndex)");
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
@@ -411,7 +414,7 @@ void HomeMaticDevices::dispose()
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
-void HomeMaticDevices::save(bool crash)
+void HomeMaticDevices::save(bool full, bool crash)
 {
 	try
 	{
@@ -427,7 +430,7 @@ void HomeMaticDevices::save(bool crash)
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			HelperFunctions::printInfo("Saving device " + HelperFunctions::getHexString((*i)->address()) + "...");
-			(*i)->savePeersToDatabase();
+			(*i)->savePeersToDatabase(full);
 			(*i)->saveToDatabase();
 		}
 	}

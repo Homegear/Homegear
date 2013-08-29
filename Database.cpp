@@ -182,6 +182,11 @@ uint32_t Database::executeWriteCommand(std::string command, DataColumnVector& da
 			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 		}
 		escapeData(statement, dataToEscape);
+		result = sqlite3_step(statement);
+		if(result != SQLITE_DONE)
+		{
+			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+		}
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
