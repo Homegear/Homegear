@@ -313,11 +313,12 @@ int main(int argc, char* argv[])
     	GD::rfDevice = RF::RFDevice::create(GD::settings.rfDeviceType());
         GD::rfDevice->init(GD::settings.rfDevice());
         if(!GD::rfDevice) return 1;
+        HelperFunctions::printInfo("Loading XML RPC devices...");
+        GD::rpcDevices.load();
+        GD::devices.convertDatabase();
         HelperFunctions::printInfo("Start listening for BidCoS packets...");
         GD::rfDevice->startListening();
         if(!GD::rfDevice->isOpen()) return 1;
-        HelperFunctions::printInfo("Loading XML RPC devices...");
-        GD::rpcDevices.load();
         HelperFunctions::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
         if(_startAsDaemon)

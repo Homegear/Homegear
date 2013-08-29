@@ -437,7 +437,59 @@ void HomeMaticDevice::saveToDatabase()
     _databaseMutex.unlock();
 }
 
-void HomeMaticDevice::loadPeersFromDatabase()
+void HomeMaticDevice::loadPeers()
+{
+	try
+	{
+		_peersMutex.lock();
+		_databaseMutex.lock();
+		DataTable rows = GD::db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_address));
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			int32_t peerID = row->second.at(0)->intValue;
+			int32_t address = row->second.at(2)->intValue;
+			std::shared_ptr<Peer> peer(new Peer(peerID, address, row->second.at(3)->textValue, isCentral()));
+			if(!peer->load(row->second.at(3)->textValue, this)) continue;
+			if(!peer->rpcDevice) continue;
+			_peers[peer->address] = peer;
+			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+			if(!peer->team.serialNumber.empty())
+			{
+				if(_peersBySerial.find(peer->team.serialNumber) == _peersBySerial.end())
+				{
+					std::shared_ptr<Peer> team = createTeam(peer->team.address, peer->deviceType, peer->team.serialNumber);
+					team->rpcDevice = peer->rpcDevice->team;
+					team->initializeCentralConfig();
+					_peersBySerial[team->getSerialNumber()] = team;
+				}
+				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+				{
+					if(i->second->hasTeam)
+					{
+						_peersBySerial[peer->team.serialNumber]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), peer->team.channel));
+						break;
+					}
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+    _peersMutex.unlock();
+}
+
+void HomeMaticDevice::loadPeers_0_0_6()
 {
 	try
 	{
@@ -449,7 +501,8 @@ void HomeMaticDevice::loadPeersFromDatabase()
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			if(row->second.at(2)->textValue.empty()) continue;
-			std::shared_ptr<Peer> peer(new Peer(row->second.at(2)->textValue, this, isCentral()));
+			std::shared_ptr<Peer> peer(new Peer(isCentral()));
+			peer->unserialize_0_0_6(row->second.at(2)->textValue, this);
 			if(!peer->rpcDevice) continue;
 			_peers[peer->address] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
@@ -523,7 +576,7 @@ void HomeMaticDevice::savePeersToDatabase()
 		{
 			//We are always printing this, because the init script needs it
 			HelperFunctions::printMessage(" - Saving peer 0x" + HelperFunctions::getHexString(i->second->address, 6) + "...");
-			i->second->saveToDatabase(_address);
+			i->second->save(_address, true, false);
 		}
 	}
 	catch(const std::exception& ex)

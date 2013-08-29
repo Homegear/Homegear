@@ -684,7 +684,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int
 		hmcctc->channel = 1;
 		hmcctc->hidden = true;
 		peer->addPeer(1, hmcctc);
-		peer->saveToDatabase(_address);
+		peer->save(_address, true, true);
 
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		pendingQueue->noSending = true;
@@ -778,7 +778,7 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<Peer> peer, int
 			}
 		}
 
-		peer->saveToDatabase(_address);
+		peer->save(_address, true, true);
 
 		std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		if(peer->deviceType == HMDeviceTypes::HMRC19 || peer->deviceType == HMDeviceTypes::HMRC19B || peer->deviceType == HMDeviceTypes::HMRC19SW)
@@ -1815,7 +1815,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						_peers[queue->peer->address] = queue->peer;
 						if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
 						_peersMutex.unlock();
-						queue->peer->saveToDatabase(_address);
+						queue->peer->save(_address, true, true);
 					}
 					catch(const std::exception& ex)
 					{

@@ -74,6 +74,7 @@ public:
 	RPCConfigurationParameter() {}
 	virtual ~RPCConfigurationParameter() {}
 
+	uint32_t id = 0;
 	std::shared_ptr<RPC::Parameter> rpcParameter;
 	std::vector<uint8_t> data;
 };
@@ -82,10 +83,11 @@ class Peer
 {
     public:
 		Peer(bool centralFeatures);
-		Peer(std::string serializedObject, HomeMaticDevice* device, bool centralFeatures);
+		Peer(int32_t id, int32_t address, std::string serialNumber, bool centralFeatures);
 		virtual ~Peer();
 		void dispose();
 
+		uint32_t peerID = 0;
 		//Needed, so the peer gets not saved in central's worker thread while being deleted
 		bool deleting = false;
 		std::shared_ptr<ServiceMessages> serviceMessages;
@@ -101,7 +103,7 @@ class Peer
         std::unordered_map<int32_t, int32_t> config;
         std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
         std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> valuesCentral;
-        std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>> linksCentral;
+        std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>> linksCentral;
         std::shared_ptr<RPC::Device> rpcDevice;
 
         BasicPeer team;
@@ -117,13 +119,21 @@ class Peer
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel, bool useConfigFunction);
         void applyConfigFunction(int32_t channel, int32_t address, int32_t remoteChannel);
+        bool load(std::string& serializedObject, HomeMaticDevice* device);
+        void save(int32_t parentAddress, bool saveVariables, bool saveConfig);
+        void unserialize_0_0_6(std::string& serializedObject, HomeMaticDevice* device);
         std::string serialize();
         void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config);
-        void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config);
-        void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
-        void unserializeConfig(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<int32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
+        void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config);
+        void loadConfig();
+        void saveConfig();
+        void loadVariables();
+        void saveVariables();
+        void saveVariable(uint32_t index, int32_t intValue, std::string& stringValue, bool isInteger);
+        void saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress = 0, uint32_t remoteChannel = 0);
+        void unserializeConfig_0_0_6(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
+        void unserializeConfig_0_0_6(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
         void deleteFromDatabase(int32_t parentAddress);
-        void saveToDatabase(int32_t parentAddress);
         void deletePairedVirtualDevice(int32_t address);
         void deletePairedVirtualDevices();
         bool hasTeam() { return !team.serialNumber.empty(); }
@@ -161,6 +171,7 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
+        std::map<uint32_t, uint32_t> _variableDatabaseIDs;
         bool _disposing = false;
         bool _centralFeatures = false;
         uint32_t _lastPacketReceived = 0;

@@ -136,6 +136,77 @@ void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
     }
 }
 
+void Database::escapeData(sqlite3_stmt* statement, DataColumnVector& dataToEscape)
+{
+	//There is no try/catch block on purpose!
+	int32_t result;
+	int32_t index = 1;
+	std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](std::shared_ptr<DataColumn> col)
+	{
+		switch(col->dataType)
+		{
+			case DataColumn::DataType::Enum::NODATA:
+				result = sqlite3_bind_null(statement, index);
+				break;
+			case DataColumn::DataType::Enum::INTEGER:
+				result = sqlite3_bind_int64(statement, index, col->intValue);
+				break;
+			case DataColumn::DataType::Enum::FLOAT:
+				result = sqlite3_bind_double(statement, index, col->floatValue);
+				break;
+			case DataColumn::DataType::Enum::BLOB:
+				result = sqlite3_bind_blob(statement, index, &col->binaryValue->at(0), col->binaryValue->size(), SQLITE_STATIC);
+				break;
+			case DataColumn::DataType::Enum::TEXT:
+				result = sqlite3_bind_text(statement, index, col->textValue.c_str(), -1, SQLITE_STATIC);
+				break;
+		}
+		if(result)
+		{
+			throw(Exception(std::string(sqlite3_errmsg(_database))));
+		}
+		index++;
+	});
+}
+
+uint32_t Database::executeWriteCommand(std::string command, DataColumnVector& dataToEscape)
+{
+	try
+	{
+		if(!_database) return 0;
+		_databaseMutex.lock();
+		sqlite3_stmt* statement = 0;
+		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
+		if(result)
+		{
+			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
+		}
+		escapeData(statement, dataToEscape);
+		result = sqlite3_finalize(statement);
+		if(result)
+		{
+			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
+		}
+		uint32_t rowID = sqlite3_last_insert_rowid(_database);
+		_databaseMutex.unlock();
+		return rowID;
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_databaseMutex.unlock();
+	return 0;
+}
+
 DataTable Database::executeCommand(std::string command, DataColumnVector& dataToEscape)
 {
 	DataTable dataRows;
@@ -144,38 +215,12 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 		if(!_database) return dataRows;
 		_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
-		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
+		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
 			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 		}
-		int32_t index = 1;
-		std::for_each(dataToEscape.begin(), dataToEscape.end(), [&](std::shared_ptr<DataColumn> col)
-		{
-			switch(col->dataType)
-			{
-				case DataColumn::DataType::Enum::NODATA:
-					result = sqlite3_bind_null(statement, index);
-					break;
-				case DataColumn::DataType::Enum::INTEGER:
-					result = sqlite3_bind_int64(statement, index, col->intValue);
-					break;
-				case DataColumn::DataType::Enum::FLOAT:
-					result = sqlite3_bind_double(statement, index, col->floatValue);
-					break;
-				case DataColumn::DataType::Enum::BLOB:
-					result = sqlite3_bind_blob(statement, index, &col->binaryValue->at(0), col->binaryValue->size(), SQLITE_STATIC);
-					break;
-				case DataColumn::DataType::Enum::TEXT:
-					result = sqlite3_bind_text(statement, index, col->textValue.c_str(), -1, SQLITE_STATIC);
-					break;
-			}
-			if(result)
-			{
-				throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
-			}
-			index++;
-		});
+		escapeData(statement, dataToEscape);
 		getDataRows(statement, dataRows);
 		result = sqlite3_finalize(statement);
 		if(result)
@@ -207,7 +252,7 @@ DataTable Database::executeCommand(std::string command)
     	if(!_database) return dataRows;
     	_databaseMutex.lock();
 		sqlite3_stmt* statement = 0;
-		int result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
+		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
 			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));

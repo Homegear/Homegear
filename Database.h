@@ -37,6 +37,18 @@ class DataColumn
         DataColumn(std::string value) : DataColumn() { dataType = DataType::Enum::TEXT; textValue = value; }
         DataColumn(double value) : DataColumn() { dataType = DataType::Enum::FLOAT; floatValue = value; }
         DataColumn(std::shared_ptr<std::vector<char>> value) : DataColumn() { dataType = DataType::Enum::BLOB; if(value) binaryValue = value; }
+        DataColumn(std::vector<char>& value) : DataColumn()
+        {
+        	dataType = DataType::Enum::BLOB;
+        	binaryValue.reset(new std::vector<char>());
+        	*binaryValue = value;
+        }
+        DataColumn(std::vector<uint8_t>& value) : DataColumn()
+        {
+        	dataType = DataType::Enum::BLOB;
+        	binaryValue.reset(new std::vector<char>());
+        	binaryValue->assign(value.begin(), value.end());
+        }
         virtual ~DataColumn() {}
 };
 
@@ -50,6 +62,7 @@ class Database
         Database(std::string databasePath);
         virtual ~Database();
         void init(std::string databasePath, std::string backupPath = "");
+        uint32_t executeWriteCommand(std::string command, DataColumnVector& dataToEscape);
         DataTable executeCommand(std::string command);
         DataTable executeCommand(std::string command, DataColumnVector& dataToEscape);
         bool isOpen() { return _database != nullptr; }
@@ -61,6 +74,7 @@ class Database
         void openDatabase(std::string databasePath);
         void closeDatabase();
         void getDataRows(sqlite3_stmt* statement, DataTable& dataRows);
+        void escapeData(sqlite3_stmt* statement, DataColumnVector& dataToEscape);
 };
 
 #endif // DATABASE_H

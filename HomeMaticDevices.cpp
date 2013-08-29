@@ -13,18 +13,70 @@ HomeMaticDevices::~HomeMaticDevices()
 {
 }
 
-void HomeMaticDevices::load()
+void HomeMaticDevices::convertDatabase()
 {
 	try
 	{
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, parent INTEGER NOT NULL, address INTEGER NOT NULL, serializedObject TEXT NOT NULL)");
-		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS ON peers (peerID, parent)");
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (peerID INTEGER NOT NULL, parameterID TEXT, value BLOB)");
-		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS ON parameters (peerID, parameterID TEXT)");
+		DataTable rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type='table' AND name='parameters'");
+		if(!rows.empty()) return;
+		rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type='table' AND name='peers'");
+		if(rows.empty()) return;
+		HelperFunctions::printMessage("Converting database (version 0.0.6)...");
+		loadDevicesFromDatabase_0_0_6();
+		GD::db.executeCommand("DROP TABLE IF EXISTS peers");
+		GD::db.executeCommand("DROP TABLE IF EXISTS devices");
+		initializeDatabase();
+		save(false);
+		HelperFunctions::printMessage("Database converted. Stopping Homegear.");
+		exit(0);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevices::initializeDatabase()
+{
+	try
+	{
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, serializedObject TEXT NOT NULL)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS variables (variableID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS variablesIndex ON variables (variableID, peerID, variableIndex)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
-		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS ON metadata (objectID, dataID)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS devices (address INTEGER, deviceType INTEGER, serializedObject TEXT, dutyCycleMessageCounter INTEGER, lastDutyCycle INTEGER)");
-		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS ON devices (address, deviceType)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (address, deviceType)");
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevices::loadDevicesFromDatabase_0_0_6()
+{
+	try
+	{
 		DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
@@ -74,7 +126,7 @@ void HomeMaticDevices::load()
 					if(device)
 					{
 						device->unserialize(serializedObject, dutyCycleMessageCounter, col->second->intValue);
-						device->loadPeersFromDatabase();
+						device->loadPeers_0_0_6();
 						_devicesMutex.lock();
 						_devices.push_back(device);
 						_devicesMutex.unlock();
@@ -98,6 +150,108 @@ void HomeMaticDevices::load()
     catch(...)
     {
     	_devicesMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevices::loadDevicesFromDatabase()
+{
+	try
+	{
+		DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
+		bool spyDeviceExists = false;
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			HMDeviceTypes deviceType = HMDeviceTypes::HMUNKNOWN;
+			std::string serializedObject;
+			uint8_t dutyCycleMessageCounter = 0;
+			for(std::map<uint32_t, std::shared_ptr<DataColumn>>::iterator col = row->second.begin(); col != row->second.end(); ++col)
+			{
+				if(col->second->index == 1)
+				{
+					deviceType = (HMDeviceTypes)col->second->intValue;
+				}
+				else if(col->second->index == 2)
+				{
+					serializedObject = col->second->textValue;
+				}
+				else if(col->second->index == 3)
+				{
+					dutyCycleMessageCounter = col->second->intValue;
+				}
+				else if(col->second->index == 4)
+				{
+					std::shared_ptr<HomeMaticDevice> device;
+					switch(deviceType)
+					{
+					case HMDeviceTypes::HMCCTC:
+						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_TC());
+						break;
+					case HMDeviceTypes::HMLCSW1FM:
+						device = std::shared_ptr<HomeMaticDevice>(new HM_LC_SWX_FM());
+						break;
+					case HMDeviceTypes::HMCCVD:
+						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_VD());
+						break;
+					case HMDeviceTypes::HMCENTRAL:
+						_central = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral());
+						device = _central;
+						break;
+					case HMDeviceTypes::HMSD:
+						spyDeviceExists = true;
+						device = std::shared_ptr<HomeMaticDevice>(new HM_SD());
+						break;
+					default:
+						break;
+					}
+					if(device)
+					{
+						device->unserialize(serializedObject, dutyCycleMessageCounter, col->second->intValue);
+						device->loadPeers();
+						_devicesMutex.lock();
+						_devices.push_back(device);
+						_devicesMutex.unlock();
+					}
+				}
+			}
+		}
+		if(!_central) createCentral();
+		if(!spyDeviceExists) createSpyDevice();
+	}
+	catch(const std::exception& ex)
+    {
+		_devicesMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_devicesMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_devicesMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevices::load()
+{
+	try
+	{
+		initializeDatabase();
+		loadDevicesFromDatabase();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
