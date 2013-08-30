@@ -53,7 +53,7 @@ void HomeMaticDevices::initializeDatabase()
 	{
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, serializedObject TEXT NOT NULL)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS variables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS variables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS variablesIndex ON variables (variableID, peerID, variableIndex)");
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
@@ -139,6 +139,7 @@ void HomeMaticDevices::loadDevicesFromDatabase_0_0_6()
 		}
 		if(!_central) createCentral();
 		if(!spyDeviceExists) createSpyDevice();
+		_central->addPeersToVirtualDevices();
 	}
 	catch(const std::exception& ex)
     {

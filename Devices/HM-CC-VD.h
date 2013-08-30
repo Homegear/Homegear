@@ -28,7 +28,7 @@ class HM_CC_VD : public HomeMaticDevice
         bool _valveDriveLoose = false;
         bool _adjustingRangeTooSmall = false;
 
-        std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>());
+        std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
         void reset();
 
         void handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);

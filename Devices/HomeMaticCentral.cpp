@@ -203,7 +203,7 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
 		if(!peer) return false;
 		std::shared_ptr<Peer> team;
-		if(peer->hasTeam() && packet->senderAddress() == peer->team.address) team = getPeer(peer->team.serialNumber);
+		if(peer->hasTeam() && packet->senderAddress() == peer->getTeamRemoteAddress()) team = getPeer(peer->getTeamRemoteSerialNumber());
 		if(handled)
 		{
 			//This block is not necessary for teams as teams will never have queues.
@@ -293,21 +293,22 @@ void HomeMaticCentral::enqueuePackets(int32_t deviceAddress, std::shared_ptr<Bid
     }
 }
 
-std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
+std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(new Peer(true));
+		std::shared_ptr<Peer> peer(new Peer(_address, true));
 		peer->address = address;
-		peer->firmwareVersion = firmwareVersion;
-		peer->deviceType = deviceType;
+		peer->setFirmwareVersion(firmwareVersion);
+		peer->setDeviceType(deviceType);
 		peer->setSerialNumber(serialNumber);
-		peer->remoteChannel = remoteChannel;
-		peer->messageCounter = messageCounter;
+		peer->setRemoteChannel(remoteChannel);
+		peer->setMessageCounter(messageCounter);
 		peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, packet);
 		if(!peer->rpcDevice) peer->rpcDevice = GD::rpcDevices.find(HMDeviceType::getString(deviceType), packet);
 		if(!peer->rpcDevice) return std::shared_ptr<Peer>();
-		if(peer->rpcDevice->countFromSysinfoIndex > -1) peer->countFromSysinfo = peer->rpcDevice->getCountFromSysinfo();
+		if(peer->rpcDevice->countFromSysinfoIndex > -1) peer->setCountFromSysinfo(peer->rpcDevice->getCountFromSysinfo());
+		if(save) peer->save(true, false); //Save and create peerID
 		return peer;
 	}
     catch(const std::exception& ex)
@@ -521,7 +522,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				_peersMutex.lock();
 				for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 				{
-					stringStream << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: " << (uint32_t)i->second->deviceType << std::endl << std::dec;
+					stringStream << "Address: 0x" << std::hex << i->second->address << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: " << (uint32_t)i->second->getDeviceType() << std::endl << std::dec;
 				}
 				_peersMutex.unlock();
 				return stringStream.str();
@@ -577,7 +578,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			if(!_currentPeer) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				stringStream << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->deviceType << " selected." << std::dec << std::endl;
+				stringStream << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->getDeviceType() << " selected." << std::dec << std::endl;
 				stringStream << "For information about the peer's commands type: \"help\"" << std::endl;
 			}
 			return stringStream.str();
@@ -623,6 +624,31 @@ int32_t HomeMaticCentral::getUniqueAddress(int32_t seed)
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return seed;
+}
+
+void HomeMaticCentral::addPeersToVirtualDevices()
+{
+	try
+	{
+		_peersMutex.lock();
+		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+		{
+			i->second->getHiddenPeerDevice()->addPeer(i->second);
+		}
+		_peersMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 std::string HomeMaticCentral::getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber)
@@ -684,7 +710,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int
 		hmcctc->channel = 1;
 		hmcctc->hidden = true;
 		peer->addPeer(1, hmcctc);
-		peer->save(_address, true, true);
+		peer->save(true, true);
 
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		pendingQueue->noSending = true;
@@ -778,10 +804,10 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<Peer> peer, int
 			}
 		}
 
-		peer->save(_address, true, true);
+		peer->save(false, false);
 
 		std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-		if(peer->deviceType == HMDeviceTypes::HMRC19 || peer->deviceType == HMDeviceTypes::HMRC19B || peer->deviceType == HMDeviceTypes::HMRC19SW)
+		if(peer->getDeviceType() == HMDeviceTypes::HMRC19 || peer->getDeviceType() == HMDeviceTypes::HMRC19B || peer->getDeviceType() == HMDeviceTypes::HMRC19SW)
 		{
 			paramset->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LCD_SYMBOL", 2)));
 			paramset->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LCD_LEVEL_INTERP", 1)));
@@ -883,31 +909,31 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t c
 {
 	try
 	{
-		HelperFunctions::printDebug("Debug: Adding homegear features. Device type: 0x" + HelperFunctions::getHexString((int32_t)peer->deviceType));
-		if(peer->deviceType == HMDeviceTypes::HMCCVD) addHomegearFeaturesHMCCVD(peer, channel, pushPendingBidCoSQueues);
-		else if(peer->deviceType == HMDeviceTypes::HMPB4DISWM ||
-				peer->deviceType == HMDeviceTypes::HMRC4 ||
-				peer->deviceType == HMDeviceTypes::HMRC4B ||
-				peer->deviceType == HMDeviceTypes::HMRCP1 ||
-				peer->deviceType == HMDeviceTypes::HMRCSEC3 ||
-				peer->deviceType == HMDeviceTypes::HMRCSEC3B ||
-				peer->deviceType == HMDeviceTypes::HMRCKEY3 ||
-				peer->deviceType == HMDeviceTypes::HMRCKEY3B ||
-				peer->deviceType == HMDeviceTypes::HMPB4WM ||
-				peer->deviceType == HMDeviceTypes::HMPB2WM ||
-				peer->deviceType == HMDeviceTypes::HMRC12 ||
-				peer->deviceType == HMDeviceTypes::HMRC12B ||
-				peer->deviceType == HMDeviceTypes::HMRC12SW ||
-				peer->deviceType == HMDeviceTypes::HMRC19 ||
-				peer->deviceType == HMDeviceTypes::HMRC19B ||
-				peer->deviceType == HMDeviceTypes::HMRC19SW ||
-				peer->deviceType == HMDeviceTypes::RCH ||
-				peer->deviceType == HMDeviceTypes::ATENT ||
-				peer->deviceType == HMDeviceTypes::ZELSTGRMHS4) addHomegearFeaturesRemote(peer, channel, pushPendingBidCoSQueues);
-		else if(peer->deviceType == HMDeviceTypes::HMSECMDIR ||
-				peer->deviceType == HMDeviceTypes::HMSECMDIRSCHUECO ||
-				peer->deviceType == HMDeviceTypes::HMSENMDIRSM ||
-				peer->deviceType == HMDeviceTypes::HMSENMDIRO) addHomegearFeaturesMotionDetector(peer, channel, pushPendingBidCoSQueues);
+		HelperFunctions::printDebug("Debug: Adding homegear features. Device type: 0x" + HelperFunctions::getHexString((int32_t)peer->getDeviceType()));
+		if(peer->getDeviceType() == HMDeviceTypes::HMCCVD) addHomegearFeaturesHMCCVD(peer, channel, pushPendingBidCoSQueues);
+		else if(peer->getDeviceType() == HMDeviceTypes::HMPB4DISWM ||
+				peer->getDeviceType() == HMDeviceTypes::HMRC4 ||
+				peer->getDeviceType() == HMDeviceTypes::HMRC4B ||
+				peer->getDeviceType() == HMDeviceTypes::HMRCP1 ||
+				peer->getDeviceType() == HMDeviceTypes::HMRCSEC3 ||
+				peer->getDeviceType() == HMDeviceTypes::HMRCSEC3B ||
+				peer->getDeviceType() == HMDeviceTypes::HMRCKEY3 ||
+				peer->getDeviceType() == HMDeviceTypes::HMRCKEY3B ||
+				peer->getDeviceType() == HMDeviceTypes::HMPB4WM ||
+				peer->getDeviceType() == HMDeviceTypes::HMPB2WM ||
+				peer->getDeviceType() == HMDeviceTypes::HMRC12 ||
+				peer->getDeviceType() == HMDeviceTypes::HMRC12B ||
+				peer->getDeviceType() == HMDeviceTypes::HMRC12SW ||
+				peer->getDeviceType() == HMDeviceTypes::HMRC19 ||
+				peer->getDeviceType() == HMDeviceTypes::HMRC19B ||
+				peer->getDeviceType() == HMDeviceTypes::HMRC19SW ||
+				peer->getDeviceType() == HMDeviceTypes::RCH ||
+				peer->getDeviceType() == HMDeviceTypes::ATENT ||
+				peer->getDeviceType() == HMDeviceTypes::ZELSTGRMHS4) addHomegearFeaturesRemote(peer, channel, pushPendingBidCoSQueues);
+		else if(peer->getDeviceType() == HMDeviceTypes::HMSECMDIR ||
+				peer->getDeviceType() == HMDeviceTypes::HMSECMDIRSCHUECO ||
+				peer->getDeviceType() == HMDeviceTypes::HMSENMDIRSM ||
+				peer->getDeviceType() == HMDeviceTypes::HMSENMDIRO) addHomegearFeaturesMotionDetector(peer, channel, pushPendingBidCoSQueues);
 		else HelperFunctions::printDebug("Debug: No homegear features to add.");
 	}
 	catch(const std::exception& ex)
@@ -950,7 +976,7 @@ void HomeMaticCentral::deletePeer(int32_t address)
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
 		_peersMutex.unlock();
 		removePeerFromTeam(peer);
-		peer->deleteFromDatabase(_address);
+		peer->deleteFromDatabase();
 		peer->deletePairedVirtualDevices();
 		_peersMutex.lock();
 		_peers.erase(address);
@@ -1178,7 +1204,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 		HMDeviceTypes deviceType = (HMDeviceTypes)((packet->payload()->at(1) << 8) + packet->payload()->at(2));
 
 		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
-		if(peer && (peer->getSerialNumber() != serialNumber || peer->deviceType != deviceType))
+		if(peer && (peer->getSerialNumber() != serialNumber || peer->getDeviceType() != deviceType))
 		{
 			HelperFunctions::printError("Error: Pairing packet rejected, because a peer with the same address but different serial number or device type is already paired to this central.");
 			return;
@@ -1193,7 +1219,8 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 
 			if(!peer)
 			{
-				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), deviceType, serialNumber, 0, 0, packet);
+				//Do not save here
+				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), deviceType, serialNumber, 0, 0, packet, false);
 				if(!queue->peer)
 				{
 					HelperFunctions::printWarning("Warning: Device type not supported. Sender address 0x" + HelperFunctions::getHexString(packet->senderAddress()) + ".");
@@ -1469,7 +1496,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			int32_t remoteChannel = sentPacket->payload()->at(5);
 			RPC::ParameterSet::Type::Enum type = (remoteAddress != 0) ? RPC::ParameterSet::Type::link : RPC::ParameterSet::Type::master;
 			std::shared_ptr<RPC::RPCVariable> parametersToEnforce;
-			if(!peer->pairingComplete) parametersToEnforce.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+			if(!peer->getPairingComplete()) parametersToEnforce.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 			if((packet->controlByte() & 0x20) && (packet->payload()->at(0) == 3)) continuousData = true;
 			if(!continuousData && (packet->payload()->at(packet->payload()->size() - 2) != 0 || packet->payload()->at(packet->payload()->size() - 1) != 0)) multiPacket = true;
 			//Some devices have a payload size of 3
@@ -1496,7 +1523,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 							{
 								//This is not working if one parameter is split over two or more packets.
 								peer->configCentral[channel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
-								if(!peer->pairingComplete && (*i)->logicalParameter->enforce)
+								if(!peer->getPairingComplete() && (*i)->logicalParameter->enforce)
 								{
 									parametersToEnforce->structValue->push_back((*i)->logicalParameter->getEnforceValue());
 									parametersToEnforce->structValue->back()->name = (*i)->id;
@@ -1550,7 +1577,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 										configParam->data.push_back(0);
 									}
 									configParam->data.at(index - (*j)->physicalParameter->startIndex) = data;
-									if(!peer->pairingComplete && (*j)->logicalParameter->enforce)
+									if(!peer->getPairingComplete() && (*j)->logicalParameter->enforce)
 									{
 										parametersToEnforce->structValue->push_back((*j)->logicalParameter->getEnforceValue());
 										parametersToEnforce->structValue->back()->name = (*j)->id;
@@ -1563,7 +1590,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 					}
 				}
 			}
-			if(!peer->pairingComplete && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, "", -1, parametersToEnforce, true, true);
+			if(!peer->getPairingComplete() && !parametersToEnforce->structValue->empty()) peer->putParamset(channel, type, "", -1, parametersToEnforce, true, true);
 		}
 		if((continuousData || multiPacket) && !multiPacketEnd && (packet->controlByte() & 0x20)) //Multiple config response packets
 		{
@@ -1589,10 +1616,10 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		}
 		if(queue->isEmpty())
 		{
-			if(!peer->pairingComplete)
+			if(!peer->getPairingComplete())
 			{
 				addHomegearFeatures(peer, -1, true);
-				peer->pairingComplete = true;
+				peer->setPairingComplete(true);
 			}
 		}
 	}
@@ -1622,7 +1649,7 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<Peer> peer, uint32_t channel)
 		if(_peersBySerial.find(serialNumber) == _peersBySerial.end())
 		{
 			_peersMutex.unlock();
-			team = createTeam(peer->address, peer->deviceType, serialNumber);
+			team = createTeam(peer->address, peer->getDeviceType(), serialNumber);
 			team->rpcDevice = peer->rpcDevice->team;
 			team->initializeCentralConfig();
 			_peersMutex.lock();
@@ -1630,14 +1657,14 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<Peer> peer, uint32_t channel)
 		}
 		else team = _peersBySerial['*' + peer->getSerialNumber()];
 		_peersMutex.unlock();
-		peer->team.address = team->address;
-		peer->team.serialNumber = team->getSerialNumber();
-		peer->teamChannel = channel;
+		peer->setTeamRemoteAddress(team->address);
+		peer->setTeamRemoteSerialNumber(team->getSerialNumber());
+		peer->setTeamChannel(channel);
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator j = team->rpcDevice->channels.begin(); j != team->rpcDevice->channels.end(); ++j)
 		{
 			if(j->second->teamTag == peer->rpcDevice->channels.at(channel)->teamTag)
 			{
-				peer->team.channel = j->first;
+				peer->setTeamRemoteChannel(j->first);
 				break;
 			}
 		}
@@ -1674,10 +1701,10 @@ void HomeMaticCentral::addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel
 		{
 			removePeerFromTeam(peer);
 
-			peer->team.address = teamAddress;
-			peer->teamChannel = channel;
-			peer->team.channel = teamChannel;
-			peer->team.serialNumber.clear();
+			peer->setTeamRemoteAddress(teamAddress);
+			peer->setTeamChannel(channel);
+			peer->setTeamRemoteChannel(teamChannel);
+			peer->setTeamRemoteSerialNumber("");
 		}
 	}
 	catch(const std::exception& ex)
@@ -1711,10 +1738,10 @@ void HomeMaticCentral::addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel
 
 		removePeerFromTeam(peer);
 
-		peer->team.address = team->address;
-		peer->team.serialNumber = teamSerialNumber;
-		peer->teamChannel = channel;
-		peer->team.channel = teamChannel;
+		peer->setTeamRemoteAddress(team->address);
+		peer->setTeamRemoteSerialNumber(teamSerialNumber);
+		peer->setTeamChannel(channel);
+		peer->setTeamRemoteChannel(teamChannel);
 		team->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
 	}
 	catch(const std::exception& ex)
@@ -1739,17 +1766,17 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<Peer> peer)
 	try
 	{
 		_peersMutex.lock();
-		if(peer->team.serialNumber.empty() || _peersBySerial.find(peer->team.serialNumber) == _peersBySerial.end())
+		if(peer->getTeamRemoteSerialNumber().empty() || _peersBySerial.find(peer->getTeamRemoteSerialNumber()) == _peersBySerial.end())
 		{
 			_peersMutex.unlock();
 			return;
 		}
-		std::shared_ptr<Peer> oldTeam = _peersBySerial[peer->team.serialNumber];
+		std::shared_ptr<Peer> oldTeam = _peersBySerial[peer->getTeamRemoteSerialNumber()];
 		_peersMutex.unlock();
 		//Remove peer from old team
 		for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
 		{
-			if(i->first == peer->getSerialNumber() && (signed)i->second == peer->teamChannel)
+			if(i->first == peer->getSerialNumber() && (signed)i->second == peer->getTeamChannel())
 			{
 				oldTeam->teamChannels.erase(i);
 				break;
@@ -1762,9 +1789,9 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<Peer> peer)
 			_peersBySerial.erase(oldTeam->getSerialNumber());
 			_peersMutex.unlock();
 		}
-		peer->team.serialNumber.clear();
-		peer->team.address = 0;
-		peer->team.channel = 0;
+		peer->setTeamRemoteSerialNumber("");
+		peer->setTeamRemoteAddress(0);
+		peer->setTeamRemoteChannel(0);
 	}
 	catch(const std::exception& ex)
     {
@@ -1815,7 +1842,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						_peers[queue->peer->address] = queue->peer;
 						if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
 						_peersMutex.unlock();
-						queue->peer->save(_address, true, true);
+						queue->peer->save(true, false);
 					}
 					catch(const std::exception& ex)
 					{
@@ -1848,7 +1875,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 								_peersMutex.lock();
 								for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::const_iterator j = _peers.begin(); j != _peers.end(); ++j)
 								{
-									if(j->second->team.address == queue->peer->address && j->second->address != queue->peer->address)
+									if(j->second->getTeamRemoteAddress() == queue->peer->address && j->second->address != queue->peer->address)
 									{
 										//Needed to avoid deadlocks
 										peers.push_back(j->second);
@@ -1857,8 +1884,8 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 								_peersMutex.unlock();
 								for(std::vector<std::shared_ptr<Peer>>::iterator j = peers.begin(); j != peers.end(); ++j)
 								{
-									HelperFunctions::printInfo("Info: Adding device 0x" + HelperFunctions::getHexString((*j)->address) + " to team " + queue->peer->team.serialNumber + ".");
-									addPeerToTeam(*j, (*j)->teamChannel, (*j)->team.channel, queue->peer->team.serialNumber);
+									HelperFunctions::printInfo("Info: Adding device 0x" + HelperFunctions::getHexString((*j)->address) + " to team " + queue->peer->getTeamRemoteSerialNumber() + ".");
+									addPeerToTeam(*j, (*j)->getTeamChannel(), (*j)->getTeamRemoteChannel(), queue->peer->getTeamRemoteSerialNumber());
 								}
 							}
 							catch(const std::exception& ex)
@@ -1897,10 +1924,10 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 		if(queue->isEmpty())
 		{
 			std::shared_ptr<Peer> peer = getPeer(packet->senderAddress());
-			if(peer && !peer->pairingComplete)
+			if(peer && !peer->getPairingComplete())
 			{
 				addHomegearFeatures(peer, -1, true);
-				peer->pairingComplete = true;
+				peer->setPairingComplete(true);
 			}
 		}
 	}
@@ -2479,12 +2506,12 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 		if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(!peer->rpcDevice->channels[channel]->hasTeam) return RPC::RPCVariable::createError(-6, "Channel does not support teams.");
-		int32_t oldTeamAddress = peer->team.address;
-		int32_t oldTeamChannel = peer->team.channel;
+		int32_t oldTeamAddress = peer->getTeamRemoteAddress();
+		int32_t oldTeamChannel = peer->getTeamRemoteChannel();
 		if(oldTeamChannel < 0) oldTeamChannel = 0;
 		if(teamSerialNumber.empty()) //Reset team to default
 		{
-			if(!force && !peer->team.serialNumber.empty() && peer->team.serialNumber.substr(1) == peer->getSerialNumber() && peer->teamChannel == channel)
+			if(!force && !peer->getTeamRemoteSerialNumber().empty() && peer->getTeamRemoteSerialNumber().substr(1) == peer->getSerialNumber() && peer->getTeamChannel() == channel)
 			{
 				//Team already is default
 				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -2506,7 +2533,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		}
 		else //Set new team
 		{
-			if(!force && !peer->team.serialNumber.empty() && peer->team.serialNumber == teamSerialNumber && peer->teamChannel == channel && peer->team.channel == teamChannel)
+			if(!force && !peer->getTeamRemoteSerialNumber().empty() && peer->getTeamRemoteSerialNumber() == teamSerialNumber && peer->getTeamChannel() == channel && peer->getTeamRemoteChannel() == teamChannel)
 			{
 				//Peer already is member of this team
 				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -2527,7 +2554,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		if(burst && (peer->rpcDevice->rxModes & RPC::Device::RXModes::burst)) configByte |= 0x10;
 
 		std::vector<uint8_t> payload;
-		if(oldTeamAddress != 0 && oldTeamAddress != peer->team.address)
+		if(oldTeamAddress != 0 && oldTeamAddress != peer->getTeamRemoteAddress())
 		{
 			payload.push_back(channel);
 			payload.push_back(0x02);
@@ -2536,8 +2563,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 			payload.push_back(oldTeamAddress & 0xFF);
 			payload.push_back(oldTeamChannel);
 			payload.push_back(0);
-			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(peer->messageCounter, configByte, 0x01, _address, peer->address, payload));
-			peer->messageCounter++;
+			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(peer->getMessageCounter(), configByte, 0x01, _address, peer->address, payload));
+			peer->setMessageCounter(peer->getMessageCounter() + 1);
 			queue->push(packet);
 			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			configByte = 0xA0;
@@ -2546,13 +2573,13 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		payload.clear();
 		payload.push_back(channel);
 		payload.push_back(0x01);
-		payload.push_back(peer->team.address >> 16);
-		payload.push_back((peer->team.address >> 8) & 0xFF);
-		payload.push_back(peer->team.address & 0xFF);
-		payload.push_back(peer->team.channel);
+		payload.push_back(peer->getTeamRemoteAddress() >> 16);
+		payload.push_back((peer->getTeamRemoteAddress() >> 8) & 0xFF);
+		payload.push_back(peer->getTeamRemoteAddress() & 0xFF);
+		payload.push_back(peer->getTeamRemoteChannel());
 		payload.push_back(0);
-		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(peer->messageCounter, configByte, 0x01, _address, peer->address, payload));
-		peer->messageCounter++;
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(peer->getMessageCounter(), configByte, 0x01, _address, peer->address, payload));
+		peer->setMessageCounter(peer->getMessageCounter() + 1);
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 

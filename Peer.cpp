@@ -27,6 +27,7 @@ void Peer::initializeCentralConfig()
 						parameter.rpcParameter = *j;
 						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 						configCentral[i->first][(*j)->id] = parameter;
+						saveParameter(RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
 					}
 				}
 			}
@@ -41,6 +42,7 @@ void Peer::initializeCentralConfig()
 						parameter.rpcParameter = *j;
 						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 						valuesCentral[i->first][(*j)->id] = parameter;
+						saveParameter(RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
 					}
 				}
 			}
@@ -60,7 +62,7 @@ void Peer::initializeCentralConfig()
     }
 }
 
-void Peer::initializeLinkConfig(int32_t channel, int32_t peerAddress, int32_t remoteChannel, bool useConfigFunction)
+void Peer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, int32_t remoteChannel, bool useConfigFunction)
 {
 	try
 	{
@@ -68,7 +70,7 @@ void Peer::initializeLinkConfig(int32_t channel, int32_t peerAddress, int32_t re
 		if(rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
 		std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
 		//This line creates an empty link config. This is essential as the link config must exist, even if it is empty.
-		std::unordered_map<std::string, RPCConfigurationParameter>* linkConfig = &linksCentral[channel][peerAddress][remoteChannel];
+		std::unordered_map<std::string, RPCConfigurationParameter>* linkConfig = &linksCentral[channel][remoteAddress][remoteChannel];
 		RPCConfigurationParameter parameter;
 		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = linkSet->parameters.begin(); j != linkSet->parameters.end(); ++j)
 		{
@@ -78,9 +80,10 @@ void Peer::initializeLinkConfig(int32_t channel, int32_t peerAddress, int32_t re
 				parameter.rpcParameter = *j;
 				parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 				linkConfig->insert(std::pair<std::string, RPCConfigurationParameter>((*j)->id, parameter));
+				saveParameter(RPC::ParameterSet::Type::link, channel, (*j)->id, parameter.data, remoteAddress, remoteChannel);
 			}
 		}
-		if(useConfigFunction) applyConfigFunction(channel, peerAddress, remoteChannel);
+		if(useConfigFunction) applyConfigFunction(channel, remoteAddress, remoteChannel);
 	}
 	catch(const std::exception& ex)
     {
@@ -125,6 +128,7 @@ void Peer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t rem
 			RPCConfigurationParameter* parameter = &linksCentral[channel][peerAddress][remoteChannel][j->first];
 			if(!parameter->rpcParameter) continue;
 			parameter->data = parameter->rpcParameter->convertToPacket(j->second);
+			saveParameter(parameter->databaseID, parameter->data);
 		}
 	}
 	catch(const std::exception& ex)
@@ -183,14 +187,15 @@ void Peer::dispose()
     }
 }
 
-Peer::Peer(bool centralFeatures)
+Peer::Peer(int32_t parentAddress, bool centralFeatures)
 {
 	try
 	{
+		_parentAddress = parentAddress;
 		_centralFeatures = centralFeatures;
 		_lastPacketReceived = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		rpcDevice.reset();
-		team.address = 0;
+		_team.address = 0;
 		if(centralFeatures)
 		{
 			serviceMessages.reset(new ServiceMessages(this));
@@ -211,7 +216,7 @@ Peer::Peer(bool centralFeatures)
     }
 }
 
-Peer::Peer(int32_t id, int32_t address, std::string serialNumber, bool centralFeatures) : Peer(centralFeatures)
+Peer::Peer(int32_t id, int32_t address, std::string serialNumber, int32_t parentAddress, bool centralFeatures) : Peer(parentAddress, centralFeatures)
 {
 	try
 	{
@@ -262,7 +267,9 @@ void Peer::worker()
 			{
 				if((*i)->isDominoEvent)
 				{
-					valuesCentral.at((*i)->channel).at((*i)->key).data = (*i)->data;
+					RPCConfigurationParameter* parameter = &valuesCentral.at((*i)->channel).at((*i)->key);
+					parameter->data = (*i)->data;
+					saveParameter(parameter->databaseID, parameter->data);
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
 					std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data) });
 					HelperFunctions::printInfo("Info: Domino event: " + (*i)->key + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
@@ -474,8 +481,8 @@ std::string Peer::handleCLICommand(std::string command)
 				index++;
 			}
 
-			if(team.serialNumber.empty()) stringStream << "This peer doesn't support teams." << std::endl;
-			else stringStream << "Team address: 0x" << std::hex << team.address << std::dec << " Team serial number: " << team.serialNumber << std::endl;
+			if(_team.serialNumber.empty()) stringStream << "This peer doesn't support teams." << std::endl;
+			else stringStream << "Team address: 0x" << std::hex << _team.address << std::dec << " Team serial number: " << _team.serialNumber << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 10, "peers list") == 0)
@@ -706,7 +713,7 @@ void Peer::removePeer(int32_t channel, int32_t address, int32_t remoteChannel)
     }
 }
 
-void Peer::deleteFromDatabase(int32_t parentAddress)
+void Peer::deleteFromDatabase()
 {
 	try
 	{
@@ -733,7 +740,7 @@ void Peer::deleteFromDatabase(int32_t parentAddress)
     _databaseMutex.unlock();
 }
 
-void Peer::save(int32_t parentAddress, bool variables, bool config)
+void Peer::save(bool variables, bool centralConfig)
 {
 	try
 	{
@@ -742,7 +749,7 @@ void Peer::save(int32_t parentAddress, bool variables, bool config)
 		DataColumnVector data;
 		if(peerID > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
 		else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parentAddress)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_parentAddress)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(address)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(serialize())));
@@ -750,7 +757,7 @@ void Peer::save(int32_t parentAddress, bool variables, bool config)
 		if(peerID == 0) peerID = result;
 		_databaseMutex.unlock();
 		if(variables) saveVariables();
-		if(config) saveConfig();
+		if(centralConfig) saveConfig();
 	}
 	catch(const std::exception& ex)
     {
@@ -836,11 +843,6 @@ std::string Peer::serialize()
 	{
 		std::ostringstream stringstream;
 		stringstream << std::hex << std::uppercase << std::setfill('0');
-		stringstream << std::setw(8) << team.data.size();
-		for(std::vector<uint8_t>::iterator i = team.data.begin(); i != team.data.end(); ++i)
-		{
-			stringstream << std::setw(2) << (int32_t)(*i);
-		}
 		stringstream << std::setw(8) << config.size();
 		for(std::unordered_map<int32_t, int32_t>::const_iterator i = config.begin(); i != config.end(); ++i)
 		{
@@ -1048,29 +1050,29 @@ void Peer::unserialize_0_0_6(std::string& serializedObject, HomeMaticDevice* dev
 		address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		int32_t stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		_serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize;
-		firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		countFromSysinfo = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+		_firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		_localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		_deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_countFromSysinfo = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
-		rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, countFromSysinfo);
+		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
 		if(!rpcDevice)
 		{
-			HelperFunctions::printError("Error: Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)deviceType) + " Firmware version: " + std::to_string(firmwareVersion));
+			HelperFunctions::printError("Error: Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return;
 		}
-		messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		pairingComplete = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
-		teamChannel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		team.channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		_pairingComplete = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
+		_teamChannel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_team.channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		if(stringSize > 0) { team.serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize; }
+		if(stringSize > 0) { _team.serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize; }
 		uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		for(uint32_t i = 0; i < dataSize; i++)
 		{
-			team.data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
+			_team.data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
 		}
 		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
 		for(uint32_t i = 0; i < configSize; i++)
@@ -1166,14 +1168,45 @@ void Peer::unserialize_0_0_6(std::string& serializedObject, HomeMaticDevice* dev
     }
 }
 
-void Peer::saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress, uint32_t remoteChannel)
+void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
 {
 	try
 	{
+		if(parameterID == 0)
+		{
+			HelperFunctions::printError("Peer 0x" + HelperFunctions::getHexString(address, 6) + ": Tried to save parameter without parameterID");
+			return;
+		}
 		_databaseMutex.lock();
 		DataColumnVector data;
-		if(parameterID > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameterID)));
-		else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameterID)));
+		GD::db.executeWriteCommand("UPDATE parameters SET value=? WHERE parameterID=?", data);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
+void Peer::saveParameter(RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress, uint32_t remoteChannel)
+{
+	try
+	{
+		if(peerID == 0) return;
+		//Creates a new entry for parameter in database
+		_databaseMutex.lock();
+		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn((uint32_t)parameterSetType)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(channel)));
@@ -1182,12 +1215,10 @@ void Peer::saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum par
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameterName)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 		uint32_t result = GD::db.executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
-		if(parameterID == 0)
-		{
-			if(parameterSetType == RPC::ParameterSet::Type::Enum::master) configCentral[channel][parameterName].id = result;
-			else if(parameterSetType == RPC::ParameterSet::Type::Enum::values) valuesCentral[channel][parameterName].id = result;
-			else if(parameterSetType == RPC::ParameterSet::Type::Enum::link) linksCentral[channel][remoteAddress][remoteChannel][parameterName].id = result;
-		}
+
+		if(parameterSetType == RPC::ParameterSet::Type::Enum::master) configCentral[channel][parameterName].databaseID = result;
+		else if(parameterSetType == RPC::ParameterSet::Type::Enum::values) valuesCentral[channel][parameterName].databaseID = result;
+		else if(parameterSetType == RPC::ParameterSet::Type::Enum::link) linksCentral[channel][remoteAddress][remoteChannel][parameterName].databaseID = result;
 	}
 	catch(const std::exception& ex)
     {
@@ -1208,6 +1239,7 @@ void Peer::saveConfig()
 {
 	try
 	{
+		if(peerID == 0) return;
 		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = configCentral.begin(); i != configCentral.end(); ++i)
 		{
 			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j)
@@ -1223,7 +1255,8 @@ void Peer::saveConfig()
 					continue;
 				}
 				std::string name = j->first;
-				saveParameter(j->second.id, RPC::ParameterSet::Type::Enum::master, i->first, name, j->second.data);
+				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
+				else saveParameter(RPC::ParameterSet::Type::Enum::master, i->first, name, j->second.data);
 			}
 		}
 		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = valuesCentral.begin(); i != valuesCentral.end(); ++i)
@@ -1241,7 +1274,8 @@ void Peer::saveConfig()
 					continue;
 				}
 				std::string name = j->first;
-				saveParameter(j->second.id, RPC::ParameterSet::Type::Enum::values, i->first, name, j->second.data);
+				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
+				else saveParameter(RPC::ParameterSet::Type::Enum::values, i->first, name, j->second.data);
 			}
 		}
 		for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>::iterator i = linksCentral.begin(); i != linksCentral.end(); ++i)
@@ -1263,7 +1297,8 @@ void Peer::saveConfig()
 							continue;
 						}
 						std::string name = l->first;
-						saveParameter(l->second.id, RPC::ParameterSet::Type::Enum::link, i->first,name, l->second.data, j->first, k->first);
+						if(l->second.databaseID > 0) saveParameter(l->second.databaseID, l->second.data);
+						else saveParameter(RPC::ParameterSet::Type::Enum::link, i->first,name, l->second.data, j->first, k->first);
 					}
 				}
 			}
@@ -1291,7 +1326,7 @@ void Peer::loadConfig()
 		DataTable rows = GD::db.executeCommand("SELECT * FROM parameters WHERE peerID=" + std::to_string(peerID));
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
-			uint32_t id = row->second.at(0)->intValue;
+			uint32_t databaseID = row->second.at(0)->intValue;
 			RPC::ParameterSet::Type::Enum parameterSetType = (RPC::ParameterSet::Type::Enum)row->second.at(2)->intValue;
 			uint32_t channel = row->second.at(3)->intValue;
 			int32_t remoteAddress = row->second.at(4)->intValue;
@@ -1309,7 +1344,7 @@ void Peer::loadConfig()
 			if(parameterSetType == RPC::ParameterSet::Type::Enum::master) parameter = &configCentral[channel][*parameterName];
 			else if(parameterSetType == RPC::ParameterSet::Type::Enum::values) parameter = &valuesCentral[channel][*parameterName];
 			else if(parameterSetType == RPC::ParameterSet::Type::Enum::link) parameter = &linksCentral[channel][remoteAddress][remoteChannel][*parameterName];
-			parameter->id = id;
+			parameter->databaseID = databaseID;
 			parameter->data.assign(row->second.at(7)->binaryValue->begin(), row->second.at(7)->binaryValue->end());
 			if(!rpcDevice)
 			{
@@ -1341,29 +1376,113 @@ void Peer::loadConfig()
     _databaseMutex.unlock();
 }
 
-void Peer::saveVariable(uint32_t index, int32_t intValue, std::string& stringValue, bool isInteger)
+void Peer::saveVariable(uint32_t index, int32_t intValue)
 {
 	try
 	{
 		_databaseMutex.lock();
-		DataColumnVector data;
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		if(idIsKnown) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-		else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-		if(isInteger)
+		DataColumnVector data;
+		if(idIsKnown)
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
+			GD::db.executeWriteCommand("UPDATE variables SET integerValue=? WHERE variableID=?", data);
 		}
 		else
 		{
+			if(peerID == 0) return;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			int32_t result = GD::db.executeWriteCommand("REPLACE INTO variables VALUES(?, ?, ?, ?, ?, ?)", data);
+			_variableDatabaseIDs[index] = result;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
+void Peer::saveVariable(uint32_t index, std::string& stringValue)
+{
+	try
+	{
+		_databaseMutex.lock();
+		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
+		DataColumnVector data;
+		if(idIsKnown)
+		{
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
+			GD::db.executeWriteCommand("UPDATE variables SET stringValue=? WHERE variableID=?", data);
+		}
+		else
+		{
+			if(peerID == 0) return;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			int32_t result = GD::db.executeWriteCommand("REPLACE INTO variables VALUES(?, ?, ?, ?, ?, ?)", data);
+			_variableDatabaseIDs[index] = result;
 		}
-		int32_t result = GD::db.executeWriteCommand("REPLACE INTO variables VALUES(?, ?, ?, ?, ?)", data);
-		if(!idIsKnown) _variableDatabaseIDs[index] = result;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
+void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
+{
+	try
+	{
+		_databaseMutex.lock();
+		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
+		DataColumnVector data;
+		if(idIsKnown)
+		{
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
+			GD::db.executeWriteCommand("UPDATE variables SET binaryValue=? WHERE variableID=?", data);
+		}
+		else
+		{
+			if(peerID == 0) return;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
+			int32_t result = GD::db.executeWriteCommand("REPLACE INTO variables VALUES(?, ?, ?, ?, ?, ?)", data);
+			_variableDatabaseIDs[index] = result;
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -1384,18 +1503,19 @@ void Peer::saveVariables()
 {
 	try
 	{
-		std::string dummy;
-		saveVariable(0, firmwareVersion, dummy, true);
-		saveVariable(1, remoteChannel, dummy, true);
-		saveVariable(2, localChannel, dummy, true);
-		saveVariable(3, (int32_t)deviceType, dummy, true);
-		saveVariable(4, countFromSysinfo, dummy, true);
-		saveVariable(5, messageCounter, dummy, true);
-		saveVariable(6, pairingComplete, dummy, true);
-		saveVariable(7, teamChannel, dummy, true);
-		saveVariable(8, team.address, dummy, true);
-		saveVariable(9, team.channel, dummy, true);
-		saveVariable(10, 0, team.serialNumber, false);
+		if(peerID == 0) return;
+		saveVariable(0, _firmwareVersion);
+		saveVariable(1, _remoteChannel);
+		saveVariable(2, _localChannel);
+		saveVariable(3, (int32_t)_deviceType);
+		saveVariable(4, _countFromSysinfo);
+		saveVariable(5, _messageCounter);
+		saveVariable(6, _pairingComplete);
+		saveVariable(7, _teamChannel);
+		saveVariable(8, _team.address);
+		saveVariable(9, _team.channel);
+		saveVariable(10, _team.serialNumber);
+		saveVariable(11, _team.data);
 	}
 	catch(const std::exception& ex)
     {
@@ -1423,37 +1543,40 @@ void Peer::loadVariables()
 			switch(row->second.at(2)->intValue)
 			{
 			case 0:
-				firmwareVersion = row->second.at(3)->intValue;
+				_firmwareVersion = row->second.at(3)->intValue;
 				break;
 			case 1:
-				remoteChannel = row->second.at(3)->intValue;
+				_remoteChannel = row->second.at(3)->intValue;
 				break;
 			case 2:
-				localChannel = row->second.at(3)->intValue;
+				_localChannel = row->second.at(3)->intValue;
 				break;
 			case 3:
-				deviceType = (HMDeviceTypes)row->second.at(3)->intValue;
+				_deviceType = (HMDeviceTypes)row->second.at(3)->intValue;
 				break;
 			case 4:
-				countFromSysinfo = row->second.at(3)->intValue;
+				_countFromSysinfo = row->second.at(3)->intValue;
 				break;
 			case 5:
-				messageCounter = row->second.at(3)->intValue;
+				_messageCounter = row->second.at(3)->intValue;
 				break;
 			case 6:
-				pairingComplete = (bool)row->second.at(3)->intValue;
+				_pairingComplete = (bool)row->second.at(3)->intValue;
 				break;
 			case 7:
-				teamChannel = row->second.at(3)->intValue;
+				_teamChannel = row->second.at(3)->intValue;
 				break;
 			case 8:
-				team.address = row->second.at(3)->intValue;
+				_team.address = row->second.at(3)->intValue;
 				break;
 			case 9:
-				team.channel = row->second.at(3)->intValue;
+				_team.channel = row->second.at(3)->intValue;
 				break;
 			case 10:
-				team.serialNumber = row->second.at(4)->textValue;
+				_team.serialNumber = row->second.at(4)->textValue;
+				break;
+			case 11:
+				_team.data.assign(row->second.at(5)->binaryValue->begin(), row->second.at(5)->binaryValue->end());
 				break;
 			}
 		}
@@ -1481,20 +1604,15 @@ bool Peer::load(std::string& serializedObject, HomeMaticDevice* device)
 
 		loadVariables();
 
-		rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, countFromSysinfo);
+		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
 		if(!rpcDevice)
 		{
-			HelperFunctions::printError("Error loading peer 0x" + HelperFunctions::getHexString(address) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)deviceType) + " Firmware version: " + std::to_string(firmwareVersion));
+			HelperFunctions::printError("Error loading peer 0x" + HelperFunctions::getHexString(address) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
 		std::string entry;
 		uint32_t pos = 0;
-		uint32_t stringSize;
-		uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < dataSize; i++)
-		{
-			team.data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
-		}
+		uint32_t dataSize;
 		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
 		for(uint32_t i = 0; i < configSize; i++)
 		{
@@ -1510,14 +1628,14 @@ bool Peer::load(std::string& serializedObject, HomeMaticDevice* device)
 				std::shared_ptr<BasicPeer> basicPeer(new BasicPeer());
 				basicPeer->address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 				basicPeer->channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-				stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-				basicPeer->serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize;
+				dataSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
+				basicPeer->serialNumber = serializedObject.substr(pos, dataSize); pos += dataSize;
 				basicPeer->hidden = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
 				_peers[channel].push_back(basicPeer);
-				stringSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				basicPeer->linkName = serializedObject.substr(pos, stringSize); pos += stringSize;
-				stringSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				basicPeer->linkDescription = serializedObject.substr(pos, stringSize); pos += stringSize;
+				dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				basicPeer->linkName = serializedObject.substr(pos, dataSize); pos += dataSize;
+				dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				basicPeer->linkDescription = serializedObject.substr(pos, dataSize); pos += dataSize;
 				dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 				for(uint32_t k = 0; k < dataSize; k++)
 				{
@@ -1854,7 +1972,7 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector
 			FrameValues currentFrameValues;
 			std::shared_ptr<RPC::DeviceFrame> frame(i->second);
 			if(!frame) continue;
-			if(frame->direction == RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != address && (!hasTeam() || packet->senderAddress() != team.address)) continue;
+			if(frame->direction == RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != address && (!hasTeam() || packet->senderAddress() != _team.address)) continue;
 			if(frame->direction == RPC::DeviceFrame::Direction::Enum::toDevice && packet->destinationAddress() != address) continue;
 			if(packet->payload()->empty()) continue;
 			if(frame->subtype > -1 && frame->subtypeIndex >= 9 && (signed)packet->payload()->size() > (frame->subtypeIndex - 9) && packet->payload()->at(frame->subtypeIndex - 9) != (unsigned)frame->subtype) continue;
@@ -1982,11 +2100,6 @@ void Peer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::str
 			_variablesToReset.push_back(variable);
 			_variablesToResetMutex.unlock();
 			HelperFunctions::printDebug("Debug: " + parameter->id + " will be reset in " + std::to_string((variable->resetTime - time) / 1000) + "s.", 5);
-			/*if(!_workerThread.joinable())
-			{
-				_stopThreads = false;
-				_workerThread = std::thread(&Peer::worker, this);
-			}*/
 		}
 	}
 	catch(const std::exception& ex)
@@ -2041,12 +2154,45 @@ void Peer::setRSSI(uint8_t rssi)
     }
 }
 
+bool Peer::hasLowbatBit(std::shared_ptr<RPC::DeviceFrame> frame)
+{
+	try
+	{
+		bool hasLowbatBit = true;
+		//Three things to check to see if position 9.7 is used: channelField, subtypeIndex and parameter indices
+		if(frame->channelField == 9 && frame->channelFieldSize >= 0.8) hasLowbatBit = false;
+		else if(frame->subtypeIndex == 9) hasLowbatBit = false;
+		for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
+		{
+			if(j->index >= 9 && j->index < 10)
+			{
+				//fmod is needed for sizes > 1 (e. g. for frame WEATHER_EVENT)
+				if((j->index + std::fmod(j->size, 1)) >= 9.8) hasLowbatBit = false;
+			}
+		}
+		return hasLowbatBit;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
 		if(!_centralFeatures || _disposing) return;
-		if(packet->senderAddress() != address && (!hasTeam() || packet->senderAddress() != team.address)) return;
+		if(packet->senderAddress() != address && (!hasTeam() || packet->senderAddress() != _team.address)) return;
 		if(!rpcDevice) return;
 		setLastPacketReceived();
 		setRSSI(packet->rssi());
@@ -2055,13 +2201,13 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		getValuesFromPacket(packet, frameValues);
 		bool resendPacket = false;
 		std::shared_ptr<BidCoSPacket> sentPacket;
+		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
+		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>>> rpcValues;
 		//Loop through all matching frames
 		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
 		{
 			std::shared_ptr<RPC::DeviceFrame> frame;
 			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
-			std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
-			std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>>> rpcValues;
 
 			std::vector<FrameValues> sentFrameValues;
 			bool pushPendingQueues = false;
@@ -2077,26 +2223,10 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 			//Check for low battery
 			//If values is not empty, packet is valid
-			if(rpcDevice->hasBattery && !a->values.empty() && !packet->payload()->empty() && frame)
+			if(rpcDevice->hasBattery && !a->values.empty() && !packet->payload()->empty() && frame && hasLowbatBit(frame))
 			{
-				bool hasLowbatBit = true;
-				//Three things to check to see if position 9.7 is used: channelField, subtypeIndex and parameter indices
-				if(frame->channelField == 9 && frame->channelFieldSize >= 0.8) hasLowbatBit = false;
-				else if(frame->subtypeIndex == 9) hasLowbatBit = false;
-				for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
-				{
-					if(j->index >= 9 && j->index < 10)
-					{
-						//fmod is needed for sizes > 1 (e. g. for frame WEATHER_EVENT)
-						if((j->index + std::fmod(j->size, 1)) >= 9.8) hasLowbatBit = false;
-					}
-				}
-
-				if(hasLowbatBit)
-				{
-					if(packet->payload()->at(0) & 0x80) serviceMessages->set("LOWBAT", true);
-					else serviceMessages->set("LOWBAT", false);
-				}
+				if(packet->payload()->at(0) & 0x80) serviceMessages->set("LOWBAT", true);
+				else serviceMessages->set("LOWBAT", false);
 			}
 
 			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
@@ -2112,6 +2242,9 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 
 					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
+					saveParameter(parameter->databaseID, parameter->data);
+					if(GD::debugLevel >= 4) HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+
 					 //Process error as service message
 					if(i->first.size() >= 5 && i->first == "ERROR" && !i->second.value.empty() && parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
 					{
@@ -2130,17 +2263,14 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 									resendPacket = true;
 								}
 							}
-							else //Don't broadcast value, if packet will be resent
-							{
-								HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
-								valueKeys[*j]->push_back(i->first);
-								rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
-							}
 						}
 					}
-					else
+
+					//The check here is only to save some ressources
+					//If resendPacket is not set for the first parameter, parameters are added
+					//to valueKeys and rpcValues, so we need to check again before broadcasting
+					if(!resendPacket)
 					{
-						HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 						valueKeys[*j]->push_back(i->first);
 						rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
 					}
@@ -2153,6 +2283,13 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				std::shared_ptr<Peer> senderPeer(GD::devices.getCentral()->getPeer(packet->destinationAddress()));
 				if(senderPeer)
 				{
+					//Check for low battery
+					//If values is not empty, packet is valid
+					if(senderPeer->rpcDevice->hasBattery && !a->values.empty() && !packet->payload()->empty() && frame && hasLowbatBit(frame))
+					{
+						if(packet->payload()->at(0) & 0x80) senderPeer->serviceMessages->set("LOWBAT", true);
+						else senderPeer->serviceMessages->set("LOWBAT", false);
+					}
 					for(std::list<uint32_t>::const_iterator i = a->paramsetChannels.begin(); i != a->paramsetChannels.end(); ++i)
 					{
 						std::shared_ptr<RPC::Parameter> rpcParameter(rpcDevice->channels.at(*i)->parameterSets.at(a->parameterSetType)->getParameter("SENDERADDRESS"));
@@ -2160,6 +2297,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 						{
 							RPCConfigurationParameter* parameter = &valuesCentral[*i]["SENDERADDRESS"];
 							parameter->data = rpcParameter->convertToPacket(senderPeer->getSerialNumber() + ":" + std::to_string(*i));
+							saveParameter(parameter->databaseID, parameter->data);
 							valueKeys[*i]->push_back("SENDERADDRESS");
 							rpcValues[*i]->push_back(rpcParameter->convertFromPacket(parameter->data, true));
 						}
@@ -2203,13 +2341,13 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			{
 				GD::devices.getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
 			}
-			if(!rpcValues.empty())
+		}
+		if(!rpcValues.empty() && !resendPacket)
+		{
+			for(std::map<uint32_t, std::shared_ptr<std::vector<std::string>>>::const_iterator j = valueKeys.begin(); j != valueKeys.end(); ++j)
 			{
-				for(std::map<uint32_t, std::shared_ptr<std::vector<std::string>>>::const_iterator j = valueKeys.begin(); j != valueKeys.end(); ++j)
-				{
-					if(j->second->empty()) continue;
-					GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(j->first), j->second, rpcValues.at(j->first));
-				}
+				if(j->second->empty()) continue;
+				GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(j->first), j->second, rpcValues.at(j->first));
 			}
 		}
 		if(resendPacket && sentPacket)
@@ -2218,8 +2356,8 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			queue->noSending = true;
 			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 			*packet = *sentPacket;
-			packet->setMessageCounter(messageCounter);
-			messageCounter++;
+			packet->setMessageCounter(_messageCounter);
+			setMessageCounter(_messageCounter + 1);
 			HelperFunctions::printInfo("Info: Resending values for device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ", because they were not set correctly.");
 			queue->push(sentPacket);
 			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
@@ -2253,11 +2391,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 		std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
 		std::string type;
-		std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(deviceType, firmwareVersion);
+		std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(_deviceType, _firmwareVersion);
 		if(rpcDeviceType) type = rpcDeviceType->id;
 		else
 		{
-			type = HMDeviceType::getString(deviceType);
+			type = HMDeviceType::getString(_deviceType);
 			if(type.empty() && !rpcDevice->supportedTypes.empty()) type = rpcDevice->supportedTypes.at(0)->id;
 		}
 
@@ -2274,10 +2412,10 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 				variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(i->first))));
 			}
 
-			if(firmwareVersion != 0)
+			if(_firmwareVersion != 0)
 			{
 				std::ostringstream stringStream;
-				stringStream << std::setw(2) << std::hex << (int32_t)firmwareVersion << std::dec;
+				stringStream << std::setw(2) << std::hex << (int32_t)_firmwareVersion << std::dec;
 				std::string firmware = stringStream.str();
 				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", firmware.substr(0, 1) + "." + firmware.substr(1))));
 			}
@@ -2391,9 +2529,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 				description->structValue->push_back(array);
 			}
 
-			if(!team.serialNumber.empty() && rpcChannel->hasTeam)
+			if(!_team.serialNumber.empty() && rpcChannel->hasTeam)
 			{
-				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM", team.serialNumber)));
+				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM", _team.serialNumber)));
 
 				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM_TAG", rpcChannel->teamTag)));
 			}
@@ -2530,6 +2668,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				//Continue when value is unchanged except parameter is of the same index as a changed one.
 				if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
+				saveParameter(parameter->databaseID, parameter->data);
 				HelperFunctions::printInfo("Info: Parameter " + (*i)->name + " of device 0x" + HelperFunctions::getHexString(address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
@@ -2559,11 +2698,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				//Only send first packet as burst packet
 				if(firstPacket && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) controlByte |= 0x10;
 				firstPacket = false;
-				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(messageCounter, controlByte, 0x01, central->address(), address, payload));
+				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter, controlByte, 0x01, central->address(), address, payload));
 				queue->push(configPacket);
 				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 				payload.clear();
-				messageCounter++;
+				setMessageCounter(_messageCounter + 1);
 
 				//CONFIG_WRITE_INDEX
 				payload.push_back(channel);
@@ -2578,11 +2717,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 						index++;
 						if(payload.size() == 16)
 						{
-							configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+							configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x01, central->address(), address, payload));
 							queue->push(configPacket);
 							queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 							payload.clear();
-							messageCounter++;
+							setMessageCounter(_messageCounter + 1);
 							payload.push_back(channel);
 							payload.push_back(0x08);
 						}
@@ -2590,22 +2729,22 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				}
 				if(payload.size() > 2)
 				{
-					configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+					configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x01, central->address(), address, payload));
 					queue->push(configPacket);
 					queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 					payload.clear();
-					messageCounter++;
+					setMessageCounter(_messageCounter + 1);
 				}
 				else payload.clear();
 
 				//END_CONFIG
 				payload.push_back(channel);
 				payload.push_back(0x06);
-				configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+				configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x01, central->address(), address, payload));
 				queue->push(configPacket);
 				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 				payload.clear();
-				messageCounter++;
+				setMessageCounter(_messageCounter + 1);
 			}
 
 			pendingBidCoSQueues->push(queue);
@@ -2660,6 +2799,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				//Continue when value is unchanged except parameter is of the same index as a changed one.
 				if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
+				saveParameter(parameter->databaseID, parameter->data);
 				HelperFunctions::printInfo("Info: Parameter " + (*i)->name + " of device 0x" + HelperFunctions::getHexString(address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
@@ -2689,11 +2829,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				//Only send first packet as burst packet
 				if(firstPacket && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) controlByte |= 0x10;
 				firstPacket = false;
-				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(messageCounter, controlByte, 0x01, central->address(), address, payload));
+				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter, controlByte, 0x01, central->address(), address, payload));
 				queue->push(configPacket);
 				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 				payload.clear();
-				messageCounter++;
+				setMessageCounter(_messageCounter + 1);
 
 				//CONFIG_WRITE_INDEX
 				payload.push_back(channel);
@@ -2708,11 +2848,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 						index++;
 						if(payload.size() == 16)
 						{
-							configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+							configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x01, central->address(), address, payload));
 							queue->push(configPacket);
 							queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 							payload.clear();
-							messageCounter++;
+							setMessageCounter(_messageCounter + 1);
 							payload.push_back(channel);
 							payload.push_back(0x08);
 						}
@@ -2720,22 +2860,22 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				}
 				if(payload.size() > 2)
 				{
-					configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+					configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x01, central->address(), address, payload));
 					queue->push(configPacket);
 					queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 					payload.clear();
-					messageCounter++;
+					setMessageCounter(_messageCounter + 1);
 				}
 				else payload.clear();
 
 				//END_CONFIG
 				payload.push_back(channel);
 				payload.push_back(0x06);
-				configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(messageCounter, 0xA0, 0x01, central->address(), address, payload));
+				configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x01, central->address(), address, payload));
 				queue->push(configPacket);
 				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 				payload.clear();
-				messageCounter++;
+				setMessageCounter(_messageCounter + 1);
 			}
 
 			pendingBidCoSQueues->push(queue);
@@ -3610,7 +3750,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 {
 	try
 	{
-		if(deviceType == HMDeviceTypes::HMCCVD && valueKey == "VALVE_STATE" && _peers.find(1) != _peers.end() && _peers[1].size() > 0 && _peers[1].at(0)->hidden)
+		if(_deviceType == HMDeviceTypes::HMCCVD && valueKey == "VALVE_STATE" && _peers.find(1) != _peers.end() && _peers[1].size() > 0 && _peers[1].at(0)->hidden)
 		{
 			if(!_peers[1].at(0)->device)
 			{
@@ -3624,18 +3764,22 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				tc->setValveState(value->integerValue);
 				std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 				if(!rpcParameter) return false;
-				valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
+				RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
+				parameter->data = rpcParameter->convertToPacket(value);
+				saveParameter(parameter->databaseID, parameter->data);
 				HelperFunctions::printInfo("Info: Setting valve state of HM-CC-VD with address 0x" + HelperFunctions::getHexString(address) + " to " + std::to_string(value->integerValue) + "%.");
 				return true;
 			}
 		}
-		else if(deviceType == HMDeviceTypes::HMSECSD)
+		else if(_deviceType == HMDeviceTypes::HMSECSD)
 		{
 			if(valueKey == "STATE")
 			{
 				std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 				if(!rpcParameter) return false;
-				valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
+				RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
+				parameter->data = rpcParameter->convertToPacket(value);
+				saveParameter(parameter->databaseID, parameter->data);
 
 				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 				std::shared_ptr<Peer> associatedPeer = central->getPeer(address);
@@ -3644,11 +3788,12 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 					HelperFunctions::printError("Error: Could not handle \"STATE\", because the main team peer is not paired to this central.");
 					return false;
 				}
-				if(associatedPeer->team.data.empty()) associatedPeer->team.data.push_back(0);
+				if(associatedPeer->getTeamData().empty()) associatedPeer->getTeamData().push_back(0);
 				std::vector<uint8_t> payload;
 				payload.push_back(0x01);
-				payload.push_back(associatedPeer->team.data.at(0));
-				associatedPeer->team.data.at(0)++;
+				payload.push_back(associatedPeer->getTeamData().at(0));
+				associatedPeer->getTeamData().at(0)++;
+				associatedPeer->saveVariable(11, associatedPeer->getTeamData());
 				if(value->booleanValue) payload.push_back(0xC8);
 				else payload.push_back(0x01);
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x41, address, central->address(), payload));
@@ -3660,7 +3805,9 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 			{
 				std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 				if(!rpcParameter) return false;
-				valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
+				RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
+				parameter->data = rpcParameter->convertToPacket(value);
+				saveParameter(parameter->databaseID, parameter->data);
 
 				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 				std::shared_ptr<Peer> associatedPeer = central->getPeer(address);
@@ -3669,11 +3816,12 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 					HelperFunctions::printError("Error: Could not handle \"INSTALL_TEST\", because the main team peer is not paired to this central.");
 					return false;
 				}
-				if(associatedPeer->team.data.empty()) associatedPeer->team.data.push_back(0);
+				if(associatedPeer->getTeamData().empty()) associatedPeer->getTeamData().push_back(0);
 				std::vector<uint8_t> payload;
 				payload.push_back(0x00);
-				payload.push_back(associatedPeer->team.data.at(0));
-				associatedPeer->team.data.at(0)++;
+				payload.push_back(associatedPeer->getTeamData().at(0));
+				associatedPeer->getTeamData().at(0)++;
+				associatedPeer->saveVariable(11, associatedPeer->getTeamData());
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(central->messageCounter()->at(0), 0x94, 0x40, address, central->address(), payload));
 				central->messageCounter()->at(0)++;
 				central->sendPacketMultipleTimes(packet, address, 6, 600, true);
@@ -3741,11 +3889,13 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
 		std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
 		if(!rpcParameter) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
+		RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {valueKey});
 		std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<RPC::RPCVariable>> { value });
 		if(rpcParameter->physicalParameter->interface == RPC::PhysicalParameter::Interface::Enum::store)
 		{
-			valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
+			parameter->data = rpcParameter->convertToPacket(value);
+			saveParameter(parameter->databaseID, parameter->data);
 			GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		}
@@ -3768,9 +3918,10 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 					toggleParam->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeFloat)
 			{
 				int32_t currentToggleValue = (int32_t)toggleParam->data.at(0);
-				if(currentToggleValue != toggleParam->rpcParameter->conversion.at(0)->on) toggleParam->data.at(0) = toggleParam->rpcParameter->conversion.at(0)->on;
-				else toggleParam->data.at(0) = toggleParam->rpcParameter->conversion.at(0)->off;
-				toggleValue = toggleParam->rpcParameter->convertFromPacket(toggleParam->data);
+				std::vector<uint8_t> temp({0});
+				if(currentToggleValue != toggleParam->rpcParameter->conversion.at(0)->on) temp.at(0) = toggleParam->rpcParameter->conversion.at(0)->on;
+				else temp.at(0) = toggleParam->rpcParameter->conversion.at(0)->off;
+				toggleValue = toggleParam->rpcParameter->convertFromPacket(temp);
 			}
 			else return RPC::RPCVariable::createError(-6, "Toggle parameter has to be of type boolean, float or integer.");
 			return setValue(channel, toggleKey, toggleValue);
@@ -3779,7 +3930,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		if(setRequest.empty()) return RPC::RPCVariable::createError(-6, "parameter is read only");
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return RPC::RPCVariable::createError(-6, "frame not found");
 		std::shared_ptr<RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
-		valuesCentral[channel][valueKey].data = rpcParameter->convertToPacket(value);
+		parameter->data = rpcParameter->convertToPacket(value);
+		saveParameter(parameter->databaseID, parameter->data);
 		HelperFunctions::printDebug("Debug: " + valueKey + " of device 0x" + HelperFunctions::getHexString(address) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(valuesCentral[channel][valueKey].data) + ".");
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
@@ -3798,7 +3950,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		}
 		uint8_t controlByte = 0xA0;
 		if(rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst) controlByte |= 0x10;
-		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(messageCounter, controlByte, (uint8_t)frame->type, GD::devices.getCentral()->address(), address, payload));
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter, controlByte, (uint8_t)frame->type, GD::devices.getCentral()->address(), address, payload));
 		for(std::vector<RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 		{
 			if(i->constValue > -1)
@@ -3880,14 +4032,16 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				std::vector<uint8_t> defaultValue = valuesCentral.at(channel).at(*j).rpcParameter->convertToPacket(logicalDefaultValue);
 				if(defaultValue != valuesCentral.at(channel).at(*j).data)
 				{
-					valuesCentral.at(channel).at(*j).data = defaultValue;
+					RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
+					tempParam->data = defaultValue;
+					saveParameter(tempParam->databaseID, tempParam->data);
 					HelperFunctions::printInfo( "Info: Parameter \"" + *j + "\" was reset to " + HelperFunctions::getHexString(defaultValue) + ". Device: 0x" + HelperFunctions::getHexString(address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					valueKeys->push_back(*j);
 					values->push_back(logicalDefaultValue);
 				}
 			}
 		}
-		messageCounter++;
+		setMessageCounter(_messageCounter + 1);
 		queue->push(packet);
 		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		pendingBidCoSQueues->push(queue);

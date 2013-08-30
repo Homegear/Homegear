@@ -683,7 +683,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 			{
 				j = _peers.begin();
 			}
-			if(j->second && j->second->deviceType == HMDeviceTypes::HMCCVD)
+			if(j->second && j->second->getDeviceType() == HMDeviceTypes::HMCCVD)
 			{
 				_currentDutyCycleDeviceAddress = j->first;
 				_peersMutex.unlock();
@@ -727,18 +727,19 @@ void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddre
     }
 }
 
-std::shared_ptr<Peer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
+std::shared_ptr<Peer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(new Peer(false));
+		std::shared_ptr<Peer> peer(new Peer(_address, false));
 		peer->address = address;
-		peer->firmwareVersion = firmwareVersion;
-		peer->deviceType = deviceType;
-		peer->messageCounter = 0;
-		peer->remoteChannel = remoteChannel;
-		if(deviceType == HMDeviceTypes::HMCCVD || deviceType == HMDeviceTypes::HMUNKNOWN) peer->localChannel = 2; else peer->localChannel = 0;
+		peer->setFirmwareVersion(firmwareVersion);
+		peer->setDeviceType(deviceType);
+		peer->setMessageCounter(0);
+		peer->setRemoteChannel(remoteChannel);
+		if(deviceType == HMDeviceTypes::HMCCVD || deviceType == HMDeviceTypes::HMUNKNOWN) peer->setLocalChannel(2); else peer->setLocalChannel(0);
 		peer->setSerialNumber(serialNumber);
+		if(save) peer->save(true, false);
 		return peer;
 	}
     catch(const std::exception& ex)
@@ -794,8 +795,9 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 		if(channel == 2 && _peers.size() < 20)
 		{
 			_peersMutex.lock();
-			_peers[address]->deviceType = HMDeviceTypes::HMCCVD;
+			_peers[address]->setDeviceType(HMDeviceTypes::HMCCVD);
 			_peersMutex.unlock();
+			getPeer(address)->save(true, false);
 			HelperFunctions::printMessage("0x" + HelperFunctions::getHexString(_address) + ": Added HM-CC-VD with address 0x" + HelperFunctions::getHexString(address));
 		}
 	}
@@ -917,7 +919,7 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, st
 	{
 		if(_bidCoSQueueManager.get(packet->senderAddress()) == nullptr) return;
 		std::vector<uint8_t> payload;
-		payload.push_back(_bidCoSQueueManager.get(packet->senderAddress())->peer->remoteChannel);
+		payload.push_back(_bidCoSQueueManager.get(packet->senderAddress())->peer->getRemoteChannel());
 		payload.push_back(0x04);
 		payload.push_back(0);
 		payload.push_back(0);
@@ -960,6 +962,7 @@ void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> p
 			}
 			_peers[queue->peer->address] = queue->peer;
 			_peersMutex.unlock();
+			queue->peer->save(true, false);
 			_pairing = false;
 		}
 	}
