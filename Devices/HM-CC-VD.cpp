@@ -1,7 +1,7 @@
 #include "HM-CC-VD.h"
 #include "../HelperFunctions.h"
 
-HM_CC_VD::HM_CC_VD(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
+HM_CC_VD::HM_CC_VD(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
 {
 	try
 	{
@@ -50,21 +50,18 @@ HM_CC_VD::~HM_CC_VD()
 	dispose();
 }
 
-std::string HM_CC_VD::serialize()
+void HM_CC_VD::saveVariables()
 {
 	try
 	{
-		std::string serializedBase = HomeMaticDevice::serialize();
-		std::ostringstream stringstream;
-		stringstream << std::hex << std::uppercase << std::setfill('0');
-		stringstream << std::setw(8) << serializedBase.size() << serializedBase;
-		stringstream << std::setw(2) << _valveState;
-		stringstream << std::setw(1) << (int32_t)_valveDriveBlocked;
-		stringstream << std::setw(1) << (int32_t)_valveDriveLoose;
-		stringstream << std::setw(1) << (int32_t)_adjustingRangeTooSmall;
-		return  stringstream.str();
+		if(_deviceID == 0) return;
+		HomeMaticDevice::saveVariables();
+		saveVariable(1000, _valveState);
+		saveVariable(1001, (int32_t)_valveDriveBlocked);
+		saveVariable(1002, (int32_t)_valveDriveLoose);
+		saveVariable(1003, (int32_t)_adjustingRangeTooSmall);
 	}
-    catch(const std::exception& ex)
+	catch(const std::exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -76,14 +73,55 @@ std::string HM_CC_VD::serialize()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return "";
 }
 
-void HM_CC_VD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+void HM_CC_VD::loadVariables()
 {
 	try
 	{
-		HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
+		HomeMaticDevice::loadVariables();
+		_databaseMutex.lock();
+		DataTable rows = GD::db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			switch(row->second.at(2)->intValue)
+			{
+			case 1000:
+				_valveState = row->second.at(3)->intValue;
+				break;
+			case 1001:
+				_valveDriveBlocked = row->second.at(3)->intValue;
+				break;
+			case 1002:
+				_valveDriveLoose = row->second.at(3)->intValue;
+				break;
+			case 1003:
+				_adjustingRangeTooSmall = row->second.at(3)->intValue;
+				break;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_databaseMutex.unlock();
+}
+
+void HM_CC_VD::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+{
+	try
+	{
+		HomeMaticDevice::unserialize_0_0_6(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
 		uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
 		_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		_valveDriveBlocked = std::stoll(serializedObject.substr(pos, 1), 0, 16); pos += 1;
@@ -266,14 +304,14 @@ std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVers
 	try
 	{
 		std::shared_ptr<Peer> peer(new Peer(_address, false));
-		peer->address = address;
+		peer->setAddress(address);
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);
 		peer->setMessageCounter(0);
 		peer->setRemoteChannel(remoteChannel);
 		if(deviceType == HMDeviceTypes::HMCCTC || deviceType == HMDeviceTypes::HMUNKNOWN) peer->setLocalChannel(1); else peer->setLocalChannel(0);
 		peer->setSerialNumber(serialNumber);
-		if(save) peer->save(true, false);
+		if(save) peer->save(true, true, false);
 		return peer;
 	}
     catch(const std::exception& ex)
@@ -329,7 +367,7 @@ void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 		}
 		_peers[address]->setDeviceType(HMDeviceTypes::HMCCTC);
 		_peersMutex.unlock();
-		getPeer(address)->save(true, false);
+		getPeer(address)->save(true, true, false);
 	}
 	catch(const std::exception& ex)
     {

@@ -7,7 +7,7 @@ HM_LC_SWX_FM::HM_LC_SWX_FM() : HomeMaticDevice()
 	init();
 }
 
-HM_LC_SWX_FM::HM_LC_SWX_FM(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
+HM_LC_SWX_FM::HM_LC_SWX_FM(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
 {
 	init();
 }
@@ -66,24 +66,16 @@ HM_LC_SWX_FM::~HM_LC_SWX_FM()
 	dispose();
 }
 
-std::string HM_LC_SWX_FM::serialize()
+void HM_LC_SWX_FM::saveVariables()
 {
 	try
 	{
-		std::string serializedBase = HomeMaticDevice::serialize();
-		std::ostringstream stringstream;
-		stringstream << std::hex << std::uppercase << std::setfill('0');
-		stringstream << std::setw(8) << serializedBase.size() << serializedBase;
-		stringstream << std::setw(8) << _states.size();
-		for(std::map<uint32_t, bool>::iterator i = _states.begin(); i != _states.end(); ++i)
-		{
-			stringstream << std::setw(4) << (i->first & 0xFFFF);
-			stringstream << std::setw(1) << i->second;
-		}
-		stringstream << std::setw(8) << _channelCount;
-		return  stringstream.str();
+		if(_deviceID == 0) return;
+		HomeMaticDevice::saveVariables();
+		saveVariable(1000, _channelCount);
+		saveStates(); //1001
 	}
-    catch(const std::exception& ex)
+	catch(const std::exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -95,15 +87,125 @@ std::string HM_LC_SWX_FM::serialize()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return "";
 }
 
-void HM_LC_SWX_FM::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+void HM_LC_SWX_FM::loadVariables()
+{
+	try
+	{
+		HomeMaticDevice::loadVariables();
+		_databaseMutex.lock();
+		DataTable rows = GD::db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			switch(row->second.at(2)->intValue)
+			{
+			case 1000:
+				_channelCount = row->second.at(3)->intValue;
+				break;
+			case 1001:
+				unserializeStates(row->second.at(5)->binaryValue);
+				break;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_databaseMutex.unlock();
+}
+
+void HM_LC_SWX_FM::saveStates()
+{
+	try
+	{
+		std::vector<uint8_t> serializedData;
+		serializeStates(serializedData);
+		saveVariable(1001, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LC_SWX_FM::serializeStates(std::vector<uint8_t>& encodedData)
+{
+	try
+	{
+		BinaryEncoder encoder;
+		encoder.encodeInteger(encodedData, _states.size());
+		for(std::map<uint32_t, bool>::iterator i = _states.begin(); i != _states.end(); ++i)
+		{
+			encoder.encodeInteger(encodedData, i->first);
+			encoder.encodeBoolean(encodedData, i->second);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LC_SWX_FM::unserializeStates(std::shared_ptr<std::vector<char>> serializedData)
+{
+	try
+	{
+		BinaryDecoder decoder;
+		uint32_t position = 0;
+		uint32_t stateSize = decoder.decodeInteger(serializedData, position);
+		for(uint32_t i = 0; i < stateSize; i++)
+		{
+			uint32_t channel = decoder.decodeInteger(serializedData, position);
+			_states[channel] = decoder.decodeBoolean(serializedData, position);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LC_SWX_FM::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
 	try
 	{
 		int32_t baseLength = std::stoll(serializedObject.substr(0, 8), 0, 16);
-		HomeMaticDevice::unserialize(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
+		HomeMaticDevice::unserialize_0_0_6(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
 
 		uint32_t pos = 8 + baseLength;
 		uint32_t stateSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;

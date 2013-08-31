@@ -14,7 +14,7 @@ class HM_CC_TC : public HomeMaticDevice
 {
     public:
         HM_CC_TC();
-        HM_CC_TC(std::string, int32_t);
+        HM_CC_TC(uint32_t deviceID, std::string, int32_t);
         virtual ~HM_CC_TC();
         void dispose();
         void stopThreads();
@@ -29,22 +29,27 @@ class HM_CC_TC : public HomeMaticDevice
         void handleSetPoint(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
         void handleSetValveState(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
         void handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
-        std::string serialize();
-        void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
+        void unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
     protected:
         virtual void setUpBidCoSMessages();
         virtual void init();
+        void loadVariables();
+        void saveVariables();
     private:
-        const int32_t _dutyCycleTimeOffset = 3000;
+        //In table variables
         int32_t _currentDutyCycleDeviceAddress = -1;
         int32_t _temperature = 213;
         int32_t _setPointTemperature = 42;
         int32_t _humidity = 56;
+        int32_t _valveState = 0;
+        int32_t _newValveState = 0;
+        int64_t _lastDutyCycleEvent = 0;
+        //End
+
+        const int32_t _dutyCycleTimeOffset = 3000;
         bool _stopDutyCycleThread = false;
         std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
         std::thread _dutyCycleThread;
-        int32_t _valveState = 0;
-        int32_t _newValveState = 0;
         int32_t _dutyCycleCounter  = 0;
         bool _dutyCycleBroadcast = false;
         std::thread _sendDutyCyclePacketThread;

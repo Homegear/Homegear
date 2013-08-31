@@ -102,7 +102,7 @@ void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
 					col->dataType = DataColumn::DataType::Enum::BLOB;
 					char* binaryData = (char*)sqlite3_column_blob(statement, i);
 					int32_t size = sqlite3_column_bytes(statement, i);
-					col->binaryValue.reset(new std::vector<char>(binaryData, binaryData + size));
+					if(size > 0) col->binaryValue.reset(new std::vector<char>(binaryData, binaryData + size));
 				}
 				else if(columnType == SQLITE_NULL)
 				{
@@ -155,7 +155,8 @@ void Database::escapeData(sqlite3_stmt* statement, DataColumnVector& dataToEscap
 				result = sqlite3_bind_double(statement, index, col->floatValue);
 				break;
 			case DataColumn::DataType::Enum::BLOB:
-				result = sqlite3_bind_blob(statement, index, &col->binaryValue->at(0), col->binaryValue->size(), SQLITE_STATIC);
+				if(col->binaryValue->empty()) result = sqlite3_bind_null(statement, index);
+				else result = sqlite3_bind_blob(statement, index, &col->binaryValue->at(0), col->binaryValue->size(), SQLITE_STATIC);
 				break;
 			case DataColumn::DataType::Enum::TEXT:
 				result = sqlite3_bind_text(statement, index, col->textValue.c_str(), -1, SQLITE_STATIC);

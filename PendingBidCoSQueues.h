@@ -16,8 +16,10 @@ class HomeMaticDevice;
 class PendingBidCoSQueues {
 public:
 	PendingBidCoSQueues();
-	PendingBidCoSQueues(std::string serializedObject, Peer* peer, HomeMaticDevice* device);
 	virtual ~PendingBidCoSQueues() {}
+	void serialize(std::vector<uint8_t>& encodedData);
+	void unserialize(std::shared_ptr<std::vector<char>> serializedData, Peer* peer, HomeMaticDevice* device);
+	void unserialize_0_0_6(std::string serializedObject, Peer* peer, HomeMaticDevice* device);
 
 	void push(std::shared_ptr<BidCoSQueue> queue);
 	void pop();
@@ -25,7 +27,6 @@ public:
 	uint32_t size();
 	std::shared_ptr<BidCoSQueue> front();
 	void clear();
-	std::string serialize();
 private:
 	std::mutex _queuesMutex;
 	//Cannot be unique_ptr because class must be copyable

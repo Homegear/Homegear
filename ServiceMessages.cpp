@@ -2,7 +2,102 @@
 #include "GD.h"
 #include "HelperFunctions.h"
 
-ServiceMessages::ServiceMessages(Peer* peer, std::string serializedObject) : ServiceMessages(peer)
+ServiceMessages::~ServiceMessages()
+{
+	dispose();
+}
+
+void ServiceMessages::dispose()
+{
+	try
+	{
+		_peerMutex.lock();
+		_disposing = true;
+		_peer = nullptr;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peerMutex.unlock();
+}
+
+void ServiceMessages::serialize(std::vector<uint8_t>& encodedData)
+{
+	try
+	{
+		BinaryEncoder encoder;
+		encoder.encodeBoolean(encodedData, _unreach);
+		encoder.encodeBoolean(encodedData, _stickyUnreach);
+		encoder.encodeBoolean(encodedData, _configPending);
+		encoder.encodeBoolean(encodedData, _lowbat);
+		_errorMutex.lock();
+		encoder.encodeInteger(encodedData, _errors.size());
+		for(std::map<uint32_t, uint8_t>::const_iterator i = _errors.begin(); i != _errors.end(); ++i)
+		{
+			encoder.encodeInteger(encodedData, i->first);
+			encodedData.push_back(i->second);
+		}
+		_errorMutex.unlock();
+	}
+	catch(const std::exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_errorMutex.unlock();
+}
+
+void ServiceMessages::unserialize(std::shared_ptr<std::vector<char>> serializedData)
+{
+	try
+	{
+		BinaryDecoder decoder;
+		uint32_t position = 0;
+		_unreach = decoder.decodeBoolean(serializedData, position);
+		_stickyUnreach = decoder.decodeBoolean(serializedData, position);
+		_configPending = decoder.decodeBoolean(serializedData, position);
+		_lowbat = decoder.decodeBoolean(serializedData, position);
+		uint32_t errorSize = decoder.decodeInteger(serializedData, position);
+		_errorMutex.lock();
+		for(uint32_t i = 0; i < errorSize; i++)
+		{
+			int32_t channel = decoder.decodeInteger(serializedData, position);
+			_errors[channel] = serializedData->at(position);
+			position += 1;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _errorMutex.unlock();
+}
+
+void ServiceMessages::unserialize_0_0_6(std::string serializedObject)
 {
 	try
 	{
@@ -36,71 +131,6 @@ ServiceMessages::ServiceMessages(Peer* peer, std::string serializedObject) : Ser
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _errorMutex.unlock();
-}
-
-ServiceMessages::~ServiceMessages()
-{
-	dispose();
-}
-
-void ServiceMessages::dispose()
-{
-	try
-	{
-		_peerMutex.lock();
-		_disposing = true;
-		_peer = nullptr;
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _peerMutex.unlock();
-}
-
-std::string ServiceMessages::serialize()
-{
-	try
-	{
-		std::ostringstream stringstream;
-		stringstream << std::hex << std::uppercase << std::setfill('0');
-		stringstream << std::setw(1) << (int32_t)_unreach;
-		stringstream << std::setw(1) << (int32_t)_stickyUnreach;
-		stringstream << std::setw(1) << (int32_t)_configPending;
-		stringstream << std::setw(1) << (int32_t)_lowbat;
-		_errorMutex.lock();
-		stringstream << std::setw(2) << (int32_t)_errors.size();
-		for(std::map<uint32_t, uint8_t>::const_iterator i = _errors.begin(); i != _errors.end(); ++i)
-		{
-			stringstream << std::setw(2) << i->first;
-			stringstream << std::setw(2) << (int32_t)i->second;
-		}
-		_errorMutex.unlock();
-		stringstream << std::dec;
-		return stringstream.str();
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _errorMutex.unlock();
-    return "";
 }
 
 bool ServiceMessages::set(std::string id, bool value)
@@ -412,8 +442,8 @@ void ServiceMessages::setUnreach(bool value)
 				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 				if(central)
 				{
-					HelperFunctions::printInfo("Info: Queue is not finished (device: 0x" + HelperFunctions::getHexString(_peer->address) + "). Retrying (" + std::to_string(_unreachResendCounter) + ")...");
-					central->enqueuePendingQueues(_peer->address);
+					HelperFunctions::printInfo("Info: Queue is not finished (device: 0x" + HelperFunctions::getHexString(_peer->getAddress()) + "). Retrying (" + std::to_string(_unreachResendCounter) + ")...");
+					central->enqueuePendingQueues(_peer->getAddress());
 					_unreachResendCounter++;
 					_peerMutex.unlock();
 					return;
@@ -422,7 +452,7 @@ void ServiceMessages::setUnreach(bool value)
 			_unreachResendCounter = 0;
 			_unreach = value;
 
-			if(value) HelperFunctions::printInfo("Info: Device 0x" + HelperFunctions::getHexString(_peer->address) + " is unreachable.");
+			if(value) HelperFunctions::printInfo("Info: Device 0x" + HelperFunctions::getHexString(_peer->getAddress()) + " is unreachable.");
 			if(_peer->valuesCentral.at(0).find("UNREACH") != _peer->valuesCentral.at(0).end())
 			{
 				RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(0).at("UNREACH");

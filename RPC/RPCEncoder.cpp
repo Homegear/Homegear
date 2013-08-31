@@ -90,10 +90,10 @@ void RPCEncoder::encodeStruct(std::shared_ptr<std::vector<char>>& packet, std::s
 	try
 	{
 		encodeType(packet, RPCVariableType::rpcStruct);
-		encodeRawInteger(packet, variable->structValue->size());
+		_encoder.encodeInteger(packet, variable->structValue->size());
 		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
 		{
-			encodeRawString(packet, (*i)->name);
+			_encoder.encodeString(packet, (*i)->name);
 			encodeVariable(packet, *i);
 		}
 	}
@@ -116,7 +116,7 @@ void RPCEncoder::encodeArray(std::shared_ptr<std::vector<char>>& packet, std::sh
 	try
 	{
 		encodeType(packet, RPCVariableType::rpcArray);
-		encodeRawInteger(packet, variable->arrayValue->size());
+		_encoder.encodeInteger(packet, variable->arrayValue->size());
 		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->arrayValue->begin(); i != variable->arrayValue->end(); ++i)
 		{
 			encodeVariable(packet, *i);
@@ -138,35 +138,13 @@ void RPCEncoder::encodeArray(std::shared_ptr<std::vector<char>>& packet, std::sh
 
 void RPCEncoder::encodeType(std::shared_ptr<std::vector<char>>& packet, RPCVariableType type)
 {
-	encodeRawInteger(packet, (int32_t)type);
-}
-
-void RPCEncoder::encodeRawInteger(std::shared_ptr<std::vector<char>>& packet, int32_t integer)
-{
-	try
-	{
-		char result[4];
-		HelperFunctions::memcpyBigEndian(result, (char*)&integer, 4);
-		packet->insert(packet->end(), result, result + 4);
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	_encoder.encodeInteger(packet, (int32_t)type);
 }
 
 void RPCEncoder::encodeInteger(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
 {
 	encodeType(packet, RPCVariableType::rpcInteger);
-	encodeRawInteger(packet, variable->integerValue);
+	_encoder.encodeInteger(packet, variable->integerValue);
 }
 
 void RPCEncoder::encodeFloat(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
@@ -174,27 +152,7 @@ void RPCEncoder::encodeFloat(std::shared_ptr<std::vector<char>>& packet, std::sh
 	try
 	{
 		encodeType(packet, RPCVariableType::rpcFloat);
-		double temp = std::abs(variable->floatValue);
-		int32_t exponent = 0;
-		if(temp != 0 && temp < 0.5)
-		{
-			while(temp < 0.5)
-			{
-				temp *= 2;
-				exponent--;
-			}
-		}
-		else while(temp >= 1)
-		{
-			temp /= 2;
-			exponent++;
-		}
-		if(variable->floatValue < 0) temp *= -1;
-		int32_t mantissa = std::lround(temp * 0x40000000);
-		char data[8];
-		HelperFunctions::memcpyBigEndian(data, (char*)&mantissa, 4);
-		HelperFunctions::memcpyBigEndian(data + 4, (char*)&exponent, 4);
-		packet->insert(packet->end(), data, data + 8);
+		_encoder.encodeFloat(packet, variable->floatValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -213,7 +171,7 @@ void RPCEncoder::encodeFloat(std::shared_ptr<std::vector<char>>& packet, std::sh
 void RPCEncoder::encodeBoolean(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
 {
 	encodeType(packet, RPCVariableType::rpcBoolean);
-	packet->push_back((char)variable->booleanValue);
+	_encoder.encodeBoolean(packet, variable->booleanValue);
 }
 
 void RPCEncoder::encodeString(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
@@ -222,34 +180,10 @@ void RPCEncoder::encodeString(std::shared_ptr<std::vector<char>>& packet, std::s
 	{
 		encodeType(packet, RPCVariableType::rpcString);
 		//We could call encodeRawString here, but then the string would have to be copied and that would cost time.
-		encodeRawInteger(packet, variable->stringValue.size());
+		_encoder.encodeInteger(packet, variable->stringValue.size());
 		if(variable->stringValue.size() > 0)
 		{
 			packet->insert(packet->end(), variable->stringValue.begin(), variable->stringValue.end());
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void RPCEncoder::encodeRawString(std::shared_ptr<std::vector<char>>& packet, std::string& string)
-{
-	try
-	{
-		encodeRawInteger(packet, string.size());
-		if(string.size() > 0)
-		{
-			packet->insert(packet->end(), string.begin(), string.end());
 		}
 	}
 	catch(const std::exception& ex)

@@ -8,6 +8,7 @@
 
 #include "../Exception.h"
 #include "RPCVariable.h"
+#include "../BinaryDecoder.h"
 
 namespace RPC
 {
@@ -21,10 +22,8 @@ public:
 	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName);
 	std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<std::vector<char>> packet, uint32_t offset = 0);
 private:
-	int32_t decodeInteger(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
-	double decodeFloat(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
-	bool decodeBoolean(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
-	std::string decodeString(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
+	BinaryDecoder _decoder;
+
 	std::shared_ptr<RPCVariable> decodeParameter(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
 	RPCVariableType decodeType(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
 	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeArray(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);

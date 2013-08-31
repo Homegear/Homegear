@@ -7,7 +7,7 @@ HM_SD::HM_SD() : HomeMaticDevice()
 	init();
 }
 
-HM_SD::HM_SD(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
+HM_SD::HM_SD(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
 {
 	init();
 }
@@ -39,11 +39,230 @@ void HM_SD::init()
     }
 }
 
-void HM_SD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+void HM_SD::saveVariables()
 {
 	try
 	{
-		HomeMaticDevice::unserialize(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
+		if(_deviceID == 0) return;
+		HomeMaticDevice::saveVariables();
+		saveVariable(1000, (int32_t)_enabled);
+		saveFilters(); //1001
+		saveResponsesToOverwrite(); //1002
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_SD::loadVariables()
+{
+	try
+	{
+		HomeMaticDevice::loadVariables();
+		_databaseMutex.lock();
+		DataTable rows = GD::db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			switch(row->second.at(2)->intValue)
+			{
+			case 1000:
+				_enabled = row->second.at(3)->intValue;
+				break;
+			case 1001:
+				unserializeFilters(row->second.at(5)->binaryValue);
+				break;
+			case 1002:
+				unserializeResponsesToOverwrite(row->second.at(5)->binaryValue);
+				break;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_databaseMutex.unlock();
+}
+
+void HM_SD::saveFilters()
+{
+	try
+	{
+		std::vector<uint8_t> serializedData;
+		serializeFilters(serializedData);
+		saveVariable(1001, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_SD::saveResponsesToOverwrite()
+{
+	try
+	{
+		std::vector<uint8_t> serializedData;
+		serializeResponsesToOverwrite(serializedData);
+		saveVariable(1002, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_SD::serializeFilters(std::vector<uint8_t>& encodedData)
+{
+	try
+	{
+		BinaryEncoder encoder;
+		encoder.encodeInteger(encodedData, _filters.size());
+		for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
+		{
+			encoder.encodeInteger(encodedData, (int32_t)i->filterType);
+			encoder.encodeByte(encodedData, i->filterValue);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_SD::unserializeFilters(std::shared_ptr<std::vector<char>> serializedData)
+{
+	try
+	{
+		BinaryDecoder decoder;
+		uint32_t position = 0;
+		uint32_t filtersSize = decoder.decodeInteger(serializedData, position);
+		for(uint32_t i = 0; i < filtersSize; i++)
+		{
+			HM_SD_Filter filter;
+			filter.filterType = (FilterType)decoder.decodeInteger(serializedData, position);
+			filter.filterValue = decoder.decodeInteger(serializedData, position);
+			_filters.push_back(filter);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_SD::serializeResponsesToOverwrite(std::vector<uint8_t>& encodedData)
+{
+	try
+	{
+		BinaryEncoder encoder;
+		encoder.encodeInteger(encodedData, _responsesToOverwrite.size());
+		for(std::list<HM_SD_OverwriteResponse>::iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
+		{
+			encoder.encodeString(encodedData, i->packetPartToCapture);
+			encoder.encodeString(encodedData, i->response);
+			encoder.encodeInteger(encodedData, i->sendAfter);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_SD::unserializeResponsesToOverwrite(std::shared_ptr<std::vector<char>> serializedData)
+{
+	try
+	{
+		BinaryDecoder decoder;
+		uint32_t position = 0;
+		uint32_t responsesToOverwriteSize = decoder.decodeInteger(serializedData, position);
+		for(uint32_t i = 0; i < responsesToOverwriteSize; i++)
+		{
+			HM_SD_OverwriteResponse responseToOverwrite;
+			responseToOverwrite.packetPartToCapture = decoder.decodeString(serializedData, position);
+			responseToOverwrite.response = decoder.decodeString(serializedData, position);
+			responseToOverwrite.sendAfter = decoder.decodeInteger(serializedData, position);
+			_responsesToOverwrite.push_back(responseToOverwrite);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_SD::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+{
+	try
+	{
+		HomeMaticDevice::unserialize_0_0_6(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
 
 		uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
 		uint32_t filtersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -79,48 +298,6 @@ void HM_SD::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCo
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-}
-
-std::string HM_SD::serialize()
-{
-	try
-	{
-		std::string serializedBase = HomeMaticDevice::serialize();
-		std::ostringstream stringstream;
-		stringstream << std::hex << std::uppercase << std::setfill('0');
-		stringstream << std::setw(8) << serializedBase.size() << serializedBase;
-		stringstream << std::setw(8) << _filters.size();
-		for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
-		{
-			stringstream << std::setw(8) << (int32_t)i->filterType;
-			stringstream << std::setw(8) << i->filterValue;
-		}
-		stringstream << std::setw(8) << _responsesToOverwrite.size();
-		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
-		{
-			stringstream << std::setw(8) << i->packetPartToCapture.size();
-			stringstream << i->packetPartToCapture;
-			stringstream << std::setw(8) << i->response.size();
-			stringstream << i->response;
-			stringstream << std::setw(8) << i->sendAfter;
-		}
-		stringstream << std::setw(1) << (int32_t)_enabled;
-		stringstream << std::dec;
-		return stringstream.str();
-	}
-    catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
 }
 
 bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)

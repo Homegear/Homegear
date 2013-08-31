@@ -201,7 +201,7 @@ bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, std::share
 			}
 		}
 		if(access & FULLACCESS) return true;
-		if((access & ACCESSDESTISME) && packet->destinationAddress() != _device->address())
+		if((access & ACCESSDESTISME) && packet->destinationAddress() != _device->getAddress())
 		{
 			//HelperFunctions::printMessage( "Access denied, because the destination address is not me: " << packet->hexString() << std::endl;
 			return false;
@@ -213,7 +213,7 @@ bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, std::share
 		if(access & ACCESSPAIREDTOSENDER)
 		{
 			std::shared_ptr<Peer> currentPeer;
-			if(_device->isInPairingMode() && queue && queue->peer && queue->peer->address == packet->senderAddress()) currentPeer = queue->peer;
+			if(_device->isInPairingMode() && queue && queue->peer && queue->peer->getAddress() == packet->senderAddress()) currentPeer = queue->peer;
 			if(!currentPeer) currentPeer = _device->getPeer(packet->senderAddress());
 			if(!currentPeer) return false;
 		}

@@ -26,19 +26,27 @@ enum class BidCoSQueueType;
 class HomeMaticDevice
 {
     public:
-        int32_t address();
-        std::string serialNumber();
-        int32_t firmwareVersion();
-        HMDeviceTypes deviceType();
+		//In table devices
+        int32_t getAddress() { return _address; }
+        std::string getSerialNumber() { return _serialNumber; }
+        HMDeviceTypes getDeviceType() { return _deviceType; }
+        //End
+
+        //In table variables
+        int32_t getFirmwareVersion() { return _firmwareVersion; }
+        void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
+        int32_t getCentralAddress() { return _centralAddress; }
+        void setCentralAddress(int32_t value) { _centralAddress = value; saveVariable(1, value); }
+        //End
+
         std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
-        virtual int64_t lastDutyCycleEvent() { return _lastDutyCycleEvent; }
         virtual bool isCentral() { return _deviceType == HMDeviceTypes::HMCENTRAL; }
         virtual void stopThreads();
         virtual void checkForDeadlock();
         virtual void reset();
 
         HomeMaticDevice();
-        HomeMaticDevice(std::string serialNumber, int32_t address);
+        HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
         virtual void dispose(bool wait = true);
         virtual bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
@@ -50,16 +58,26 @@ class HomeMaticDevice
         virtual void deletePeersFromDatabase();
         virtual void loadPeers();
         virtual void loadPeers_0_0_6();
-        virtual void savePeersToDatabase(bool full);
-        virtual void saveToDatabase();
+        virtual void savePeers(bool full);
+        virtual void loadVariables();
+        virtual void saveVariables();
+        virtual void saveVariable(uint32_t index, int64_t intValue);
+        virtual void saveVariable(uint32_t index, std::string& stringValue);
+        virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
+        virtual void saveMessageCounters();
+        virtual void saveConfig();
+        virtual void load();
+        virtual void save(bool saveDevice);
+        virtual void serializeMessageCounters(std::vector<uint8_t>& encodedData);
+        virtual void unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData);
+        virtual void serializeConfig(std::vector<uint8_t>& encodedData);
+        virtual void unserializeConfig(std::shared_ptr<std::vector<char>> serializedData);
         virtual void setLowBattery(bool);
         virtual void setChannelCount(uint32_t channelCount) {}
         virtual bool pairDevice(int32_t timeout);
         virtual bool isInPairingMode() { return _pairing; }
-        virtual int32_t getCentralAddress();
         virtual int32_t calculateCycleLength(uint8_t messageCounter);
-        virtual std::string serialize();
-        virtual void unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
+        virtual void unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         virtual int32_t getHexInput();
         virtual std::shared_ptr<BidCoSMessages> getMessages() { return _messages; }
         virtual std::string handleCLICommand(std::string command);
@@ -99,25 +117,34 @@ class HomeMaticDevice
         virtual void sendDutyCycleResponse(int32_t destinationAddress);
         virtual void sendRequestConfig(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet) {}
     protected:
+        //In tables devices
+        int32_t _address;
+        std::string _serialNumber;
+        HMDeviceTypes _deviceType;
+        //End
+
+        //In table variables
+        int32_t _firmwareVersion = 0;
+        int32_t _centralAddress = 0;
+        std::unordered_map<int32_t, uint8_t> _messageCounter;
+        std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>> _config;
+        //End
+
+        int32_t _deviceID = 0;
+        std::map<uint32_t, uint32_t> _variableDatabaseIDs;
         bool _disposing = false;
         bool _stopWorkerThread = false;
         std::thread _workerThread;
-        int32_t _address;
-        std::string _serialNumber;
-        int32_t _firmwareVersion = 0;
-        HMDeviceTypes _deviceType;
+
         int32_t _deviceClass = 0;
         int32_t _channelMin = 0;
         int32_t _channelMax = 0;
         int32_t _lastPairingByte = 0;
-        int32_t _centralAddress = 0;
         int32_t _currentList = 0;
-        std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>> _config;
         std::unordered_map<int32_t, std::shared_ptr<Peer>> _peers;
         std::unordered_map<std::string, std::shared_ptr<Peer>> _peersBySerial;
         std::timed_mutex _peersMutex;
         std::mutex _databaseMutex;
-        std::unordered_map<int32_t, uint8_t> _messageCounter;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
         bool _pairing = false;
         bool _justPairedToOrThroughCentral = false;
@@ -125,7 +152,6 @@ class HomeMaticDevice
         BidCoSPacketManager _receivedPackets;
         BidCoSPacketManager _sentPackets;
         std::shared_ptr<BidCoSMessages> _messages;
-        int64_t _lastDutyCycleEvent = 0;
         bool _initialized = false;
 
         bool _lowBattery = false;

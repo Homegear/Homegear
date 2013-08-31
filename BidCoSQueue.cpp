@@ -12,7 +12,145 @@ BidCoSQueue::BidCoSQueue(BidCoSQueueType queueType) : BidCoSQueue()
 	_queueType = queueType;
 }
 
-BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device) : BidCoSQueue()
+BidCoSQueue::~BidCoSQueue()
+{
+	try
+	{
+		dispose();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void BidCoSQueue::serialize(std::vector<uint8_t>& encodedData)
+{
+	try
+	{
+		BinaryEncoder encoder;
+		_queueMutex.lock();
+		if(_queue.size() == 0)
+		{
+			_queueMutex.unlock();
+			return;
+		}
+		encoder.encodeByte(encodedData, (int32_t)_queueType);
+		encoder.encodeInteger(encodedData, _queue.size());
+		for(std::list<BidCoSQueueEntry>::iterator i = _queue.begin(); i != _queue.end(); ++i)
+		{
+			encoder.encodeByte(encodedData, (uint8_t)i->getType());
+			encoder.encodeBoolean(encodedData, i->stealthy);
+			encoder.encodeBoolean(encodedData, i->forceResend);
+			if(!i->getPacket()) encoder.encodeBoolean(encodedData, false);
+			else
+			{
+				encoder.encodeBoolean(encodedData, true);
+				std::vector<uint8_t> packet = i->getPacket()->byteArray();
+				encoder.encodeByte(encodedData, packet.size());
+				encodedData.insert(encodedData.end(), packet.begin(), packet.end());
+			}
+			std::shared_ptr<BidCoSMessage> message = i->getMessage();
+			if(!message)
+			{
+				encoder.encodeBoolean(encodedData, false);
+				continue;
+			}
+			encoder.encodeBoolean(encodedData, true);
+			encoder.encodeByte(encodedData, message->getDirection());
+			encoder.encodeByte(encodedData, message->getMessageType());
+			std::vector<std::pair<uint32_t, int32_t>>* subtypes = message->getSubtypes();
+			encoder.encodeByte(encodedData, subtypes->size());
+			for(std::vector<std::pair<uint32_t, int32_t>>::iterator j = subtypes->begin(); j != subtypes->end(); ++j)
+			{
+				encoder.encodeByte(encodedData, j->first);
+				encoder.encodeByte(encodedData, j->second);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_queueMutex.unlock();
+}
+
+void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData, HomeMaticDevice* device, uint32_t position)
+{
+	try
+	{
+		BinaryDecoder decoder;
+		_queueMutex.lock();
+		_queueType = (BidCoSQueueType)decoder.decodeByte(serializedData, position);
+		uint32_t queueSize = decoder.decodeInteger(serializedData, position);
+		for(uint32_t i = 0; i < queueSize; i++)
+		{
+			_queue.push_back(BidCoSQueueEntry());
+			BidCoSQueueEntry* entry = &_queue.back();
+			entry->setType((QueueEntryType)decoder.decodeByte(serializedData, position));
+			entry->stealthy = decoder.decodeBoolean(serializedData, position);
+			entry->forceResend = decoder.decodeBoolean(serializedData, position);
+			int32_t packetExists = decoder.decodeBoolean(serializedData, position);
+			if(packetExists)
+			{
+				std::vector<uint8_t> packetData;
+				uint32_t dataSize = decoder.decodeInteger(serializedData, position);
+				if(position + dataSize <= serializedData->size()) packetData.insert(packetData.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
+				position += dataSize;
+				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetData, false));
+				entry->setPacket(packet, false);
+			}
+			int32_t messageExists = decoder.decodeBoolean(serializedData, position);
+			if(!messageExists) continue;
+			int32_t direction = decoder.decodeByte(serializedData, position);
+			int32_t messageType = decoder.decodeByte(serializedData, position);
+			uint32_t subtypeSize = decoder.decodeByte(serializedData, position);
+			std::vector<std::pair<uint32_t, int32_t>> subtypes;
+			for(uint32_t j = 0; j < subtypeSize; j++)
+			{
+				subtypes.push_back(std::pair<uint32_t, int32_t>(decoder.decodeByte(serializedData, position), decoder.decodeByte(serializedData, position)));
+			}
+			entry->setMessage(device->getMessages()->find(direction, messageType, subtypes), false);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	clear();
+    	_pendingQueues.reset();
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	clear();
+    	_pendingQueues.reset();
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	clear();
+    	_pendingQueues.reset();
+    }
+    _queueMutex.unlock();
+}
+
+void BidCoSQueue::unserialize_0_0_6(std::string serializedObject, HomeMaticDevice* device)
 {
 	try
 	{
@@ -71,26 +209,6 @@ BidCoSQueue::BidCoSQueue(std::string serializedObject, HomeMaticDevice* device) 
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	clear();
     	_pendingQueues.reset();
-    }
-}
-
-BidCoSQueue::~BidCoSQueue()
-{
-	try
-	{
-		dispose();
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -980,71 +1098,4 @@ void BidCoSQueue::pop()
     	_queueMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-}
-
-std::string BidCoSQueue::serialize()
-{
-	try
-	{
-		_queueMutex.lock();
-		if(_queue.size() == 0)
-		{
-			_queueMutex.unlock();
-			return "";
-		}
-		std::ostringstream stringstream;
-		stringstream << std::hex << std::uppercase << std::setfill('0');
-		stringstream << std::setw(2) << (uint32_t)_queueType;
-		stringstream << std::setw(4) << _queue.size();
-		for(std::list<BidCoSQueueEntry>::iterator i = _queue.begin(); i != _queue.end(); ++i)
-		{
-			stringstream << std::setw(1) << (int32_t)i->getType();
-			stringstream << std::setw(1) << (int32_t)i->stealthy;
-			stringstream << std::setw(1) << (int32_t)i->forceResend;
-			if(i->getPacket() == nullptr)
-			{
-				stringstream << '0';
-			}
-			else
-			{
-				stringstream << '1';
-				std::string packetHex = i->getPacket()->hexString();
-				stringstream << std::setw(2) << packetHex.size();
-				stringstream << packetHex;
-			}
-			std::shared_ptr<BidCoSMessage> message = i->getMessage();
-			if(message == nullptr)
-			{
-				stringstream << '0';
-				continue;
-			}
-			stringstream << '1';
-			stringstream << std::setw(1) << (int32_t)message->getDirection();
-			stringstream << std::setw(2) << (int32_t)message->getMessageType();
-			std::vector<std::pair<uint32_t, int32_t>>* subtypes = message->getSubtypes();
-			stringstream << std::setw(2) << subtypes->size();
-			for(std::vector<std::pair<uint32_t, int32_t>>::iterator j = subtypes->begin(); j != subtypes->end(); ++j)
-			{
-				stringstream << std::setw(2) << j->first;
-				stringstream << std::setw(2) << j->second;
-			}
-		}
-		stringstream << std::dec;
-		_queueMutex.unlock();
-		return stringstream.str();
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _queueMutex.unlock();
-    return "";
 }

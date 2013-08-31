@@ -7,7 +7,7 @@ HM_CC_TC::HM_CC_TC() : HomeMaticDevice()
 	init();
 }
 
-HM_CC_TC::HM_CC_TC(std::string serialNumber, int32_t address) : HomeMaticDevice(serialNumber, address)
+HM_CC_TC::HM_CC_TC(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
 {
 	init();
 	startDutyCycle(-1);
@@ -256,23 +256,21 @@ void HM_CC_TC::stopThreads()
     }
 }
 
-std::string HM_CC_TC::serialize()
+void HM_CC_TC::saveVariables()
 {
 	try
 	{
-		std::string serializedBase = HomeMaticDevice::serialize();
-		std::ostringstream stringstream;
-		stringstream << std::hex << std::uppercase << std::setfill('0');
-		stringstream << std::setw(8) << serializedBase.size() << serializedBase;
-		stringstream << std::setw(8) << _currentDutyCycleDeviceAddress;
-		stringstream << std::setw(4) << (_temperature & 0xFFFF);
-		stringstream << std::setw(4) << (_setPointTemperature & 0xFFFF);
-		stringstream << std::setw(2) << (_humidity & 0xFF);
-		stringstream << std::setw(2) << (_valveState & 0xFF);
-		stringstream << std::setw(2) << (_newValveState & 0xFF);
-		return  stringstream.str();
+		if(_deviceID == 0) return;
+		HomeMaticDevice::saveVariables();
+		saveVariable(1000, _currentDutyCycleDeviceAddress);
+		saveVariable(1001, _temperature);
+		saveVariable(1002, _setPointTemperature);
+		saveVariable(1003, _humidity);
+		saveVariable(1004, _valveState);
+		saveVariable(1005, _newValveState);
+		saveVariable(1006, _lastDutyCycleEvent);
 	}
-    catch(const std::exception& ex)
+	catch(const std::exception& ex)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -284,15 +282,66 @@ std::string HM_CC_TC::serialize()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return "";
 }
 
-void HM_CC_TC::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+void HM_CC_TC::loadVariables()
+{
+	try
+	{
+		HomeMaticDevice::loadVariables();
+		_databaseMutex.lock();
+		DataTable rows = GD::db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			switch(row->second.at(2)->intValue)
+			{
+			case 1000:
+				_currentDutyCycleDeviceAddress = row->second.at(3)->intValue;
+				break;
+			case 1001:
+				_temperature = row->second.at(3)->intValue;
+				break;
+			case 1002:
+				_setPointTemperature = row->second.at(3)->intValue;
+				break;
+			case 1003:
+				_humidity = row->second.at(3)->intValue;
+				break;
+			case 1004:
+				_valveState = row->second.at(3)->intValue;
+				break;
+			case 1005:
+				_newValveState = row->second.at(3)->intValue;
+				break;
+			case 1006:
+				_lastDutyCycleEvent = row->second.at(3)->intValue;
+				break;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_databaseMutex.unlock();
+}
+
+
+void HM_CC_TC::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
 {
 	try
 	{
 		int32_t baseLength = std::stoll(serializedObject.substr(0, 8), 0, 16);
-		HomeMaticDevice::unserialize(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
+		HomeMaticDevice::unserialize_0_0_6(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
 
 		uint32_t pos = 8 + baseLength;
 		_currentDutyCycleDeviceAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
@@ -460,11 +509,8 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 				_lastDutyCycleEvent = nextDutyCycleEvent;
 				cycleLength = calculateCycleLength(_messageCounter[1]);
 				_messageCounter[1]++;
-				std::ostringstream command;
-				command << "UPDATE devices SET dutyCycleMessageCounter=" << std::dec << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent;
-				_databaseMutex.lock();
-				GD::db.executeCommand(command.str());
-				_databaseMutex.unlock();
+				saveVariable(1006, _lastDutyCycleEvent);
+				saveMessageCounters();
 
 				_dutyCycleCounter = 0;
 			}
@@ -732,14 +778,14 @@ std::shared_ptr<Peer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVers
 	try
 	{
 		std::shared_ptr<Peer> peer(new Peer(_address, false));
-		peer->address = address;
+		peer->setAddress(address);
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);
 		peer->setMessageCounter(0);
 		peer->setRemoteChannel(remoteChannel);
 		if(deviceType == HMDeviceTypes::HMCCVD || deviceType == HMDeviceTypes::HMUNKNOWN) peer->setLocalChannel(2); else peer->setLocalChannel(0);
 		peer->setSerialNumber(serialNumber);
-		if(save) peer->save(true, false);
+		if(save) peer->save(true, true, false);
 		return peer;
 	}
     catch(const std::exception& ex)
@@ -797,7 +843,7 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 			_peersMutex.lock();
 			_peers[address]->setDeviceType(HMDeviceTypes::HMCCVD);
 			_peersMutex.unlock();
-			getPeer(address)->save(true, false);
+			getPeer(address)->save(true, true, false);
 			HelperFunctions::printMessage("0x" + HelperFunctions::getHexString(_address) + ": Added HM-CC-VD with address 0x" + HelperFunctions::getHexString(address));
 		}
 	}
@@ -960,9 +1006,9 @@ void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> p
 				_peersMutex.unlock();
 				return;
 			}
-			_peers[queue->peer->address] = queue->peer;
+			_peers[queue->peer->getAddress()] = queue->peer;
 			_peersMutex.unlock();
-			queue->peer->save(true, false);
+			queue->peer->save(true, true, false);
 			_pairing = false;
 		}
 	}

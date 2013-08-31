@@ -47,7 +47,7 @@ class DataColumn
         {
         	dataType = DataType::Enum::BLOB;
         	binaryValue.reset(new std::vector<char>());
-        	binaryValue->assign(value.begin(), value.end());
+        	binaryValue->insert(binaryValue->begin(), value.begin(), value.end());
         }
         virtual ~DataColumn() {}
 };

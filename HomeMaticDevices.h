@@ -2,6 +2,7 @@
 #define HOMEMATICDEVICES_H_
 
 class HomeMaticDevice;
+class HomeMaticCentral;
 
 #include <string>
 #include <iostream>

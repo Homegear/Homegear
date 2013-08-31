@@ -111,10 +111,11 @@ class BidCoSQueue
         void keepAlive();
         void longKeepAlive();
         void dispose();
-        std::string serialize();
+        void serialize(std::vector<uint8_t>& encodedData);
+        void unserialize(std::shared_ptr<std::vector<char>> serializedData, HomeMaticDevice* device, uint32_t position = 0);
+        void unserialize_0_0_6(std::string serializedObject, HomeMaticDevice* device);
 
         BidCoSQueue();
-        BidCoSQueue(std::string serializedObject, HomeMaticDevice* device);
         BidCoSQueue(BidCoSQueueType queueType);
         virtual ~BidCoSQueue();
 };

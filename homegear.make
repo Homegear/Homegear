@@ -98,6 +98,7 @@ OBJECTS := \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/Peer.o \
 	$(OBJDIR)/GD.o \
+	$(OBJDIR)/BinaryDecoder.o \
 	$(OBJDIR)/BidCoSQueueManager.o \
 	$(OBJDIR)/HomeMaticDevices.o \
 	$(OBJDIR)/HelperFunctions.o \
@@ -109,6 +110,7 @@ OBJECTS := \
 	$(OBJDIR)/HomeMaticDevice.o \
 	$(OBJDIR)/PendingBidCoSQueues.o \
 	$(OBJDIR)/BidCoSPacket.o \
+	$(OBJDIR)/BinaryEncoder.o \
 	$(OBJDIR)/Exception.o \
 	$(OBJDIR)/Settings.o \
 	$(OBJDIR)/HM-LC-SwX-FM.o \
@@ -212,6 +214,9 @@ $(OBJDIR)/Peer.o: Peer.cpp
 $(OBJDIR)/GD.o: GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/BinaryDecoder.o: BinaryDecoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BidCoSQueueManager.o: BidCoSQueueManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -243,6 +248,9 @@ $(OBJDIR)/PendingBidCoSQueues.o: PendingBidCoSQueues.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BidCoSPacket.o: BidCoSPacket.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/BinaryEncoder.o: BinaryEncoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Exception.o: Exception.cpp

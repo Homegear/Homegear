@@ -87,6 +87,14 @@ class Peer
 		virtual ~Peer();
 		void dispose();
 
+		//In table peers:
+		int32_t getParentAddress() { return _parentAddress; }
+		int32_t getAddress() { return _address; }
+		void setAddress(int32_t value) { _address = value; if(peerID > 0) save(true, false, false); }
+		std::string getSerialNumber() { return _serialNumber; }
+		void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 20) return; _serialNumber = serialNumber; if(peerID > 0) save(true, false, false); }
+		//End
+
 		//In table variables:
 		int32_t getFirmwareVersion() { return _firmwareVersion; }
 		void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
@@ -117,11 +125,7 @@ class Peer
 		//Needed, so the peer gets not saved in central's worker thread while being deleted
 		bool deleting = false;
 		std::shared_ptr<ServiceMessages> serviceMessages;
-        int32_t address = 0;
-        std::string getSerialNumber() { return _serialNumber; }
-        void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 100) return; _serialNumber = serialNumber; }
         void setCentralFeatures(bool value) { _centralFeatures = value; }
-        int32_t getParentAddress() { return _parentAddress; }
 
         std::unordered_map<int32_t, int32_t> config;
         std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
@@ -139,19 +143,27 @@ class Peer
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel, bool useConfigFunction);
         void applyConfigFunction(int32_t channel, int32_t address, int32_t remoteChannel);
-        bool load(std::string& serializedObject, HomeMaticDevice* device);
-        void save(bool saveVariables, bool saveCentralConfig);
+        bool load(HomeMaticDevice* device);
+        void save(bool savePeer, bool saveVariables, bool saveCentralConfig);
         void unserialize_0_0_6(std::string& serializedObject, HomeMaticDevice* device);
-        std::string serialize();
-        void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config);
-        void serializeConfig(std::ostringstream& stringstream, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config);
+        void serializePeers(std::vector<uint8_t>& encodedData);
+        void unserializePeers(std::shared_ptr<std::vector<char>> serializedData);
+        void serializeNonCentralConfig(std::vector<uint8_t>& encodedData);
+        void unserializeNonCentralConfig(std::shared_ptr<std::vector<char>> serializedData);
+        void serializeVariablesToReset(std::vector<uint8_t>& encodedData);
+        void unserializeVariablesToReset(std::shared_ptr<std::vector<char>> serializedData);
         void loadConfig();
         void saveConfig();
-        void loadVariables();
+        void loadVariables(HomeMaticDevice* device = nullptr);
         void saveVariables();
         void saveVariable(uint32_t index, int32_t intValue);
         void saveVariable(uint32_t index, std::string& stringValue);
         void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
+        void savePeers();
+        void saveNonCentralConfig();
+        void saveVariablesToReset();
+        void saveServiceMessages();
+        void savePendingQueues();
         void saveParameter(RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress = 0, uint32_t remoteChannel = 0);
         void saveParameter(uint32_t parameterID, std::vector<uint8_t>& value);
         void unserializeConfig_0_0_6(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
@@ -200,13 +212,16 @@ class Peer
         bool _centralFeatures = false;
         uint32_t _lastPacketReceived = 0;
         uint32_t _lastRSSI = 0;
-        std::string _serialNumber;
-        std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
         std::mutex _databaseMutex;
         std::mutex _variablesToResetMutex;
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
         std::map<std::string, uint32_t> _resendCounter;
+
+        //In table peers:
         int32_t _parentAddress = 0;
+        int32_t _address = 0;
+        std::string _serialNumber;
+        //End
 
         //In table variables:
         int32_t _firmwareVersion = 0;
@@ -218,6 +233,7 @@ class Peer
 		bool _pairingComplete = false;
 		int32_t _teamChannel = -1;
 		BasicPeer _team;
+		std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
 		//End
 };
 

@@ -6,7 +6,7 @@ HomeMaticDevice::HomeMaticDevice()
 {
 }
 
-HomeMaticDevice::HomeMaticDevice(std::string serialNumber, int32_t address) : _address(address), _serialNumber(serialNumber)
+HomeMaticDevice::HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address) : _deviceID(deviceID), _address(address), _serialNumber(serialNumber)
 {
 }
 
@@ -356,71 +356,49 @@ std::string HomeMaticDevice::handleCLICommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
-void HomeMaticDevice::unserialize(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+void HomeMaticDevice::save(bool saveDevice)
 {
 	try
 	{
-		HelperFunctions::printDebug("Debug: Unserializing: " + serializedObject);
-		uint32_t pos = 0;
-		_deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_serialNumber = serializedObject.substr(pos, 10); pos += 10;
-		_firmwareVersion = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		_centralAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		uint32_t messageCounterSize = std::stoll(serializedObject.substr(pos, 8), 0, 16) * 10; pos += 8;
-		for(uint32_t i = pos; i < (pos + messageCounterSize); i += 10)
-			_messageCounter[std::stoll(serializedObject.substr(i, 8), 0, 16)] = (uint8_t)std::stoll(serializedObject.substr(i + 8, 2), 0, 16);
-		pos += messageCounterSize;
-		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < configSize; i++)
+		if(saveDevice)
 		{
-			int32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			uint32_t listCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			for(uint32_t j = 0; j < listCount; j++)
-			{
-				int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				for(uint32_t k = 0; k < listSize; k++)
-				{
-					_config[channel][listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
-				}
-			}
+			_databaseMutex.lock();
+			DataColumnVector data;
+			if(_deviceID > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
+			else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_address)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn((uint32_t)_deviceType)));
+			int32_t result = GD::db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?)", data);
+			if(_deviceID == 0) _deviceID = result;
+			_databaseMutex.unlock();
 		}
+		saveVariables();
 	}
-	catch(const std::exception& ex)
+    catch(const std::exception& ex)
     {
+    	_databaseMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_databaseMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_databaseMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void HomeMaticDevice::saveToDatabase()
+void HomeMaticDevice::load()
 {
 	try
 	{
-		std::ostringstream command;
-		command << "SELECT 1 FROM devices WHERE address=" << std::dec << _address;
-		_databaseMutex.lock();
-		DataTable result = GD::db.executeCommand(command.str());
-		if(result.empty())
-		{
-			std::ostringstream command2;
-			command2 << "INSERT INTO devices VALUES(" << _address << "," << (uint32_t)_deviceType << ",'" << serialize() << "'," << (int32_t)_messageCounter.at(1) << "," << _lastDutyCycleEvent << ")";
-			GD::db.executeCommand(command2.str());
-		}
-		else
-		{
-			std::ostringstream command2;
-			command2 << "UPDATE devices SET serializedObject='" << serialize() << "',dutyCycleMessageCounter=" << (int32_t)_messageCounter.at(1) << ",lastDutyCycle=" << _lastDutyCycleEvent << " WHERE address=" << std::dec << _address;
-			GD::db.executeCommand(command2.str());
-		}
+		HelperFunctions::printDebug("Loading device 0x" + HelperFunctions::getHexString(_address, 6));
+
+		loadVariables();
 	}
     catch(const std::exception& ex)
     {
@@ -434,7 +412,6 @@ void HomeMaticDevice::saveToDatabase()
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
 }
 
 void HomeMaticDevice::loadPeers()
@@ -449,9 +426,9 @@ void HomeMaticDevice::loadPeers()
 			int32_t peerID = row->second.at(0)->intValue;
 			int32_t address = row->second.at(2)->intValue;
 			std::shared_ptr<Peer> peer(new Peer(peerID, address, row->second.at(3)->textValue, _address, isCentral()));
-			if(!peer->load(row->second.at(4)->textValue, this)) continue;
+			if(!peer->load(this)) continue;
 			if(!peer->rpcDevice) continue;
-			_peers[peer->address] = peer;
+			_peers[peer->getAddress()] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			if(!peer->getTeamRemoteSerialNumber().empty())
 			{
@@ -504,7 +481,7 @@ void HomeMaticDevice::loadPeers_0_0_6()
 			std::shared_ptr<Peer> peer(new Peer(_address, isCentral()));
 			peer->unserialize_0_0_6(row->second.at(2)->textValue, this);
 			if(!peer->rpcDevice) continue;
-			_peers[peer->address] = peer;
+			_peers[peer->getAddress()] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			if(!peer->getTeamRemoteSerialNumber().empty())
 			{
@@ -542,6 +519,409 @@ void HomeMaticDevice::loadPeers_0_0_6()
     _peersMutex.unlock();
 }
 
+void HomeMaticDevice::saveVariable(uint32_t index, int64_t intValue)
+{
+	try
+	{
+		_databaseMutex.lock();
+		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
+		DataColumnVector data;
+		if(idIsKnown)
+		{
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
+			GD::db.executeWriteCommand("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
+		}
+		else
+		{
+			if(_deviceID == 0) return;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			int32_t result = GD::db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			_variableDatabaseIDs[index] = result;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
+void HomeMaticDevice::saveVariable(uint32_t index, std::string& stringValue)
+{
+	try
+	{
+		_databaseMutex.lock();
+		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
+		DataColumnVector data;
+		if(idIsKnown)
+		{
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
+			GD::db.executeWriteCommand("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
+		}
+		else
+		{
+			if(_deviceID == 0) return;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			int32_t result = GD::db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			_variableDatabaseIDs[index] = result;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
+void HomeMaticDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
+{
+	try
+	{
+		_databaseMutex.lock();
+		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
+		DataColumnVector data;
+		if(idIsKnown)
+		{
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
+			GD::db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
+		}
+		else
+		{
+			if(_deviceID == 0) return;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
+			int32_t result = GD::db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			_variableDatabaseIDs[index] = result;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
+void HomeMaticDevice::saveVariables()
+{
+	try
+	{
+		if(_deviceID == 0) return;
+		saveVariable(0, _firmwareVersion);
+		saveVariable(1, _centralAddress);
+		saveMessageCounters(); //2
+		saveConfig(); //3
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevice::loadVariables()
+{
+	try
+	{
+		_databaseMutex.lock();
+		DataTable rows = GD::db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			switch(row->second.at(2)->intValue)
+			{
+			case 0:
+				_firmwareVersion = row->second.at(3)->intValue;
+				break;
+			case 1:
+				_centralAddress = row->second.at(3)->intValue;
+				break;
+			case 2:
+				unserializeMessageCounters(row->second.at(5)->binaryValue);
+				break;
+			case 3:
+				unserializeConfig(row->second.at(5)->binaryValue);
+				break;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_databaseMutex.unlock();
+}
+
+void HomeMaticDevice::saveMessageCounters()
+{
+	try
+	{
+		std::vector<uint8_t> serializedData;
+		serializeMessageCounters(serializedData);
+		saveVariable(2, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevice::saveConfig()
+{
+	try
+	{
+		std::vector<uint8_t> serializedData;
+		serializeConfig(serializedData);
+		saveVariable(3, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevice::serializeMessageCounters(std::vector<uint8_t>& encodedData)
+{
+	try
+	{
+		BinaryEncoder encoder;
+		encoder.encodeInteger(encodedData, _messageCounter.size());
+		for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
+		{
+			encoder.encodeInteger(encodedData, i->first);
+			encoder.encodeByte(encodedData, i->second);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevice::unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData)
+{
+	try
+	{
+		BinaryDecoder decoder;
+		uint32_t position = 0;
+		uint32_t messageCounterSize = decoder.decodeInteger(serializedData, position);
+		for(uint32_t i = 0; i < messageCounterSize; i++)
+		{
+			int32_t index = decoder.decodeInteger(serializedData, position);
+			_messageCounter[index] = decoder.decodeByte(serializedData, position);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevice::serializeConfig(std::vector<uint8_t>& encodedData)
+{
+	try
+	{
+		BinaryEncoder encoder;
+		encoder.encodeInteger(encodedData, _config.size());
+		for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
+		{
+			encoder.encodeInteger(encodedData, i->first); //Channel
+			encoder.encodeInteger(encodedData, i->second.size());
+			for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				encoder.encodeInteger(encodedData, j->first); //List index
+				encoder.encodeInteger(encodedData, j->second.size());
+				for(std::map<int32_t, int32_t>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
+				{
+					encoder.encodeInteger(encodedData, k->first);
+					encoder.encodeInteger(encodedData, k->second);
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevice::unserializeConfig(std::shared_ptr<std::vector<char>> serializedData)
+{
+	try
+	{
+		BinaryDecoder decoder;
+		uint32_t position = 0;
+		uint32_t configSize = decoder.decodeInteger(serializedData, position);
+		for(uint32_t i = 0; i < configSize; i++)
+		{
+			int32_t channel = decoder.decodeInteger(serializedData, position);
+			uint32_t listCount = decoder.decodeInteger(serializedData, position);
+			for(uint32_t j = 0; j < listCount; j++)
+			{
+				int32_t listIndex = decoder.decodeInteger(serializedData, position);
+				uint32_t listSize = decoder.decodeInteger(serializedData, position);
+				for(uint32_t k = 0; k < listSize; k++)
+				{
+					int32_t parameterIndex = decoder.decodeInteger(serializedData, position);
+					_config[channel][listIndex][parameterIndex] = decoder.decodeInteger(serializedData, position);
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevice::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
+{
+	try
+	{
+		HelperFunctions::printDebug("Debug: Unserializing: " + serializedObject);
+		uint32_t pos = 0;
+		_deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_serialNumber = serializedObject.substr(pos, 10); pos += 10;
+		_firmwareVersion = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+		_centralAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		uint32_t messageCounterSize = std::stoll(serializedObject.substr(pos, 8), 0, 16) * 10; pos += 8;
+		for(uint32_t i = pos; i < (pos + messageCounterSize); i += 10)
+			_messageCounter[std::stoll(serializedObject.substr(i, 8), 0, 16)] = (uint8_t)std::stoll(serializedObject.substr(i + 8, 2), 0, 16);
+		pos += messageCounterSize;
+		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		for(uint32_t i = 0; i < configSize; i++)
+		{
+			int32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			uint32_t listCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+			for(uint32_t j = 0; j < listCount; j++)
+			{
+				int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+				for(uint32_t k = 0; k < listSize; k++)
+				{
+					_config[channel][listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HomeMaticDevice::deletePeersFromDatabase()
 {
 	try
@@ -566,7 +946,7 @@ void HomeMaticDevice::deletePeersFromDatabase()
     _databaseMutex.unlock();
 }
 
-void HomeMaticDevice::savePeersToDatabase(bool full)
+void HomeMaticDevice::savePeers(bool full)
 {
 	try
 	{
@@ -576,8 +956,8 @@ void HomeMaticDevice::savePeersToDatabase(bool full)
 		{
 			if(i->second->getParentAddress() != _address) continue;
 			//We are always printing this, because the init script needs it
-			HelperFunctions::printMessage(" - Saving peer 0x" + HelperFunctions::getHexString(i->second->address, 6) + "...");
-			i->second->save(full, full);
+			HelperFunctions::printMessage(" - Saving peer 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6) + "...");
+			i->second->save(full, full, full);
 		}
 	}
 	catch(const std::exception& ex)
@@ -594,78 +974,6 @@ void HomeMaticDevice::savePeersToDatabase(bool full)
     }
     _databaseMutex.unlock();
 	_peersMutex.unlock();
-}
-
-std::string HomeMaticDevice::serialize()
-{
-	try
-	{
-		std::ostringstream stringstream;
-		stringstream << std::hex << std::uppercase << std::setfill('0');
-		stringstream << std::setw(8) << (uint32_t)_deviceType;
-		stringstream << std::setw(8) << _address;
-		if(_serialNumber.size() != 10) stringstream << "0000000000"; else stringstream << _serialNumber;
-		stringstream << std::setw(2) << _firmwareVersion;
-		stringstream << std::setw(8) << _centralAddress;
-		//cleanUpMessageCounters();
-		stringstream << std::setw(8) << _messageCounter.size();
-		for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
-		{
-			stringstream << std::setw(8) << i->first;
-			stringstream << std::setw(2) << (int32_t)i->second;
-		}
-		stringstream << std::setw(8) << _config.size();
-		for(std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>>::const_iterator i = _config.begin(); i != _config.end(); ++i)
-		{
-			stringstream << std::setw(8) << i->first; //channel
-			stringstream << std::setw(8) << i->second.size();
-			for(std::unordered_map<int32_t, std::map<int32_t, int32_t>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
-			{
-				stringstream << std::setw(8) << j->first; //List index
-				stringstream << std::setw(8) << j->second.size();
-				for(std::map<int32_t, int32_t>::const_iterator k = j->second.begin(); k != j->second.end(); ++k)
-				{
-					stringstream << std::setw(8) << k->first;
-					stringstream << std::setw(8) << k->second;
-				}
-			}
-		}
-		stringstream << std::dec;
-		return stringstream.str();
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
-}
-
-std::string HomeMaticDevice::serialNumber()
-{
-    return _serialNumber;
-}
-
-int32_t HomeMaticDevice::address()
-{
-    return _address;
-}
-
-int32_t HomeMaticDevice::firmwareVersion()
-{
-    return _firmwareVersion;
-}
-
-HMDeviceTypes HomeMaticDevice::deviceType()
-{
-    return _deviceType;
 }
 
 bool HomeMaticDevice::pairDevice(int32_t timeout)
@@ -837,7 +1145,7 @@ void HomeMaticDevice::reset()
 	try
 	{
 		_messageCounter.clear();
-		_centralAddress = 0;
+		setCentralAddress(0);
 		_pairing = false;
 		_justPairedToOrThroughCentral = false;
 		_peersMutex.lock();
@@ -916,7 +1224,7 @@ std::shared_ptr<Peer> HomeMaticDevice::createTeam(int32_t address, HMDeviceTypes
 	try
 	{
 		std::shared_ptr<Peer> team(new Peer(_address, isCentral()));
-		team->address = address;
+		team->setAddress(address);
 		team->setDeviceType(deviceType);
 		team->setSerialNumber(serialNumber);
 		//Do not save team!!!
@@ -1000,9 +1308,9 @@ void HomeMaticDevice::handleConfigEnd(int32_t messageCounter, std::shared_ptr<Bi
 			_peersMutex.lock();
 			try
 			{
-				_peers[queue->peer->address] = queue->peer;
-				queue->peer->save(true, false);
-				_centralAddress = queue->peer->address;
+				_peers[queue->peer->getAddress()] = queue->peer;
+				queue->peer->save(true, true, false);
+				setCentralAddress(queue->peer->getAddress());
 			}
 			catch(const std::exception& ex)
 			{
@@ -1025,7 +1333,7 @@ void HomeMaticDevice::handleConfigEnd(int32_t messageCounter, std::shared_ptr<Bi
 				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			_peersMutex.unlock();
-			_centralAddress = 0;
+			setCentralAddress(0);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1144,7 +1452,7 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, std::shared_ptr<
 		{
 			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRINGCENTRAL, packet->senderAddress());
 			std::shared_ptr<Peer> peer(new Peer(_address, isCentral()));
-			peer->address = packet->senderAddress();
+			peer->setAddress(packet->senderAddress());
 			peer->setDeviceType(HMDeviceTypes::HMRCV50);
 			peer->setMessageCounter(0); //Unknown at this point
 			queue->peer = peer;
@@ -1545,7 +1853,7 @@ void HomeMaticDevice::addPeer(std::shared_ptr<Peer> peer)
 	try
 	{
 		_peersMutex.lock();
-		if(_peers.find(peer->address) == _peers.end()) _peers[peer->address] = peer;
+		if(_peers.find(peer->getAddress()) == _peers.end()) _peers[peer->getAddress()] = peer;
 	}
 	catch(const std::exception& ex)
     {
@@ -1622,11 +1930,6 @@ std::shared_ptr<Peer> HomeMaticDevice::getPeer(std::string serialNumber)
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<Peer>();
-}
-
-int32_t HomeMaticDevice::getCentralAddress()
-{
-    return _centralAddress;
 }
 
 int32_t HomeMaticDevice::calculateCycleLength(uint8_t messageCounter)

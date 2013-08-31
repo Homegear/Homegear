@@ -42,6 +42,7 @@ std::string BidCoSPacket::hexString()
 {
 	try
 	{
+		if(_payload.size() > 100) return "";
 		std::ostringstream stringStream;
 		stringStream << std::hex << std::uppercase << std::setfill('0') << std::setw(2);
 		stringStream << std::setw(2) << (9 + _payload.size());
@@ -73,6 +74,7 @@ std::vector<uint8_t> BidCoSPacket::byteArray()
 	try
 	{
 		std::vector<uint8_t> data;
+		if(_payload.size() > 100) return data;
 		data.push_back(9 + _payload.size());
 		data.push_back(_messageCounter);
 		data.push_back(_controlByte);

@@ -17,10 +17,11 @@ public:
 	void setPeer(Peer* peer) { _peer = peer; }
 
 	ServiceMessages(Peer* peer) { _peer = peer; }
-	ServiceMessages(Peer* peer, std::string serializedObject);
 	virtual ~ServiceMessages();
 
-	std::string serialize();
+	void serialize(std::vector<uint8_t>& encodedData);
+	void unserialize(std::shared_ptr<std::vector<char>> serializedData);
+	void unserialize_0_0_6(std::string serializedObject);
 	bool set(std::string id, bool value);
 	void set(std::string id, uint8_t value, uint32_t channel);
 	std::shared_ptr<RPC::RPCVariable> get();
