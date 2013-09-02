@@ -61,6 +61,7 @@ void BidCoSPacketManager::worker()
 					if(_packets.size() > 0)
 					{
 						int32_t packetsPerSecond = (_packets.size() * 1000) / sleepingTime.count();
+						if(packetsPerSecond <= 0) packetsPerSecond = 1;
 						int32_t timePerPacket = (GD::settings.workerThreadWindow() * 10) / packetsPerSecond;
 						if(timePerPacket < 10) timePerPacket = 10;
 						sleepingTime = std::chrono::milliseconds(timePerPacket);
