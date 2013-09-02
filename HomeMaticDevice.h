@@ -133,6 +133,7 @@ class HomeMaticDevice
         int32_t _deviceID = 0;
         std::map<uint32_t, uint32_t> _variableDatabaseIDs;
         bool _disposing = false;
+        bool _disposed = false;
         bool _stopWorkerThread = false;
         std::thread _workerThread;
 

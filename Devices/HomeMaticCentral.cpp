@@ -606,10 +606,13 @@ void HomeMaticCentral::addPeersToVirtualDevices()
 	try
 	{
 		_peersMutex.lock();
-		for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			std::shared_ptr<HomeMaticDevice> device = i->second->getHiddenPeerDevice();
-			if(device) device->addPeer(i->second);
+			if(device)
+			{
+				device->addPeer(i->second);
+			}
 		}
 		_peersMutex.unlock();
 	}
@@ -1197,7 +1200,6 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 					HelperFunctions::printWarning("Warning: Device type not supported. Sender address 0x" + HelperFunctions::getHexString(packet->senderAddress()) + ".");
 					return;
 				}
-				queue->peer->initializeCentralConfig();
 				peer = queue->peer;
 			}
 
@@ -1464,7 +1466,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			int32_t channel = sentPacket->payload()->at(0);
 			int32_t list = sentPacket->payload()->at(6);
 			int32_t remoteAddress = (sentPacket->payload()->at(2) << 16) + (sentPacket->payload()->at(3) << 8) + sentPacket->payload()->at(4);
-			int32_t remoteChannel = sentPacket->payload()->at(5);
+			int32_t remoteChannel = (remoteAddress == 0) ? 0 : sentPacket->payload()->at(5);
 			RPC::ParameterSet::Type::Enum type = (remoteAddress != 0) ? RPC::ParameterSet::Type::link : RPC::ParameterSet::Type::master;
 			std::shared_ptr<RPC::RPCVariable> parametersToEnforce;
 			if(!peer->getPairingComplete()) parametersToEnforce.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
@@ -1493,7 +1495,9 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 							if(type == RPC::ParameterSet::Type::master)
 							{
 								//This is not working if one parameter is split over two or more packets.
-								peer->configCentral[channel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
+								RPCConfigurationParameter* parameter = &peer->configCentral[channel][(*i)->id];
+								parameter->data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
+								peer->saveParameter(parameter->databaseID, type, channel, (*i)->id, parameter->data);
 								if(!peer->getPairingComplete() && (*i)->logicalParameter->enforce)
 								{
 									parametersToEnforce->structValue->push_back((*i)->logicalParameter->getEnforceValue());
@@ -1501,9 +1505,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 								}
 								if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was set to 0x" + HelperFunctions::getHexString(peer->configCentral[channel][(*i)->id].data) + ".");
 							}
-							else if(peer->getPeer(channel, remoteAddress, remoteChannel))
+							else if(peer->getPeer(channel, remoteAddress, remoteChannel)) //type == link
 							{
-								peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id].data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
+								RPCConfigurationParameter* parameter = &peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id];
+								parameter->data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
+								peer->saveParameter(parameter->databaseID, type, channel, (*i)->id, parameter->data, remoteAddress, remoteChannel);
 								if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was set to 0x" + HelperFunctions::getHexString(peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id].data) + ".");
 							}
 						}
@@ -1553,6 +1559,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 										parametersToEnforce->structValue->push_back((*j)->logicalParameter->getEnforceValue());
 										parametersToEnforce->structValue->back()->name = (*j)->id;
 									}
+									peer->saveParameter(configParam->databaseID, type, channel, (*j)->id, configParam->data, remoteAddress, remoteChannel);
 									if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*j)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*j)->physicalParameter->index) + " and packet index " + std::to_string(position) + " was set to 0x" + HelperFunctions::getHexString(data) + ".");
 								}
 							}
@@ -1814,6 +1821,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
 						_peersMutex.unlock();
 						queue->peer->save(true, true, false);
+						queue->peer->initializeCentralConfig();
 					}
 					catch(const std::exception& ex)
 					{

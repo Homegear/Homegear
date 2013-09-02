@@ -11,15 +11,35 @@ HomeMaticDevices::HomeMaticDevices()
 
 HomeMaticDevices::~HomeMaticDevices()
 {
+	try
+	{
+		if(_removeThread.joinable()) _removeThread.join();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HomeMaticDevices::convertDatabase()
 {
 	try
 	{
-		DataTable rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type='table' AND name='homegearVariables'");
+		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string("table"))));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string("homegearVariables"))));
+		DataTable rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
 		if(!rows.empty()) return;
-		rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type='table' AND name='peers'");
+		data.at(1) = std::shared_ptr<DataColumn>(new DataColumn(std::string("peers")));
+		rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
 		if(rows.empty()) return;
 		//Create a backup
 		GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".old");
@@ -66,10 +86,12 @@ void HomeMaticDevices::initializeDatabase()
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS deviceVariables (variableID INTEGER PRIMARY KEY UNIQUE, deviceID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
 
-		DataTable result = GD::db.executeCommand("SELECT 1 FROM homegearVariables WHERE variableIndex=0");
+		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
+		DataTable result = GD::db.executeCommand("SELECT 1 FROM homegearVariables WHERE variableIndex=?", data);
 		if(result.empty())
 		{
-			DataColumnVector data;
+			data.clear();
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
@@ -155,7 +177,6 @@ void HomeMaticDevices::loadDevicesFromDatabase_0_0_6()
 		}
 		if(!_central) createCentral();
 		if(!spyDeviceExists) createSpyDevice();
-		_central->addPeersToVirtualDevices();
 	}
 	catch(const std::exception& ex)
     {
@@ -221,6 +242,7 @@ void HomeMaticDevices::loadDevicesFromDatabase()
 		}
 		if(!_central) createCentral();
 		if(!spyDeviceExists) createSpyDevice();
+		if(_central) _central->addPeersToVirtualDevices();
 	}
 	catch(const std::exception& ex)
     {
@@ -482,7 +504,28 @@ void HomeMaticDevices::add(HomeMaticDevice* device)
     _devicesMutex.unlock();
 }
 
-bool HomeMaticDevices::remove(int32_t address)
+void HomeMaticDevices::remove(int32_t address)
+{
+	try
+	{
+		if(_removeThread.joinable()) _removeThread.join();
+		_removeThread = std::thread(&HomeMaticDevices::removeThread, this, address);
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HomeMaticDevices::removeThread(int32_t address)
 {
 	try
 	{
@@ -491,16 +534,19 @@ bool HomeMaticDevices::remove(int32_t address)
 		{
 			if((*i)->getAddress() == address)
 			{
-				HelperFunctions::printDebug("Deleting peers from database...");
-				(*i)->deletePeersFromDatabase();
 				HelperFunctions::printDebug("Removing device pointer from device array...");
+				std::shared_ptr<HomeMaticDevice> device = *i;
 				_devices.erase(i);
-				HelperFunctions::printDebug("Deleting database entry...");
-				std::ostringstream command;
-				command << "DELETE FROM devices WHERE address=" << std::dec << address;
-				GD::db.executeCommand(command.str());
 				_devicesMutex.unlock();
-				return true;
+				HelperFunctions::printDebug("Disposing device...");
+				device->dispose(true);
+				HelperFunctions::printDebug("Deleting peers from database...");
+				device->deletePeersFromDatabase();
+				HelperFunctions::printDebug("Deleting database entry...");
+				DataColumnVector data;
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(address)));
+				GD::db.executeCommand("DELETE FROM devices WHERE address=?", data);
+				return;
 			}
 		}
 	}
@@ -517,7 +563,6 @@ bool HomeMaticDevices::remove(int32_t address)
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
-	return false;
 }
 
 std::shared_ptr<HomeMaticDevice> HomeMaticDevices::get(int32_t address)
@@ -730,26 +775,26 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 			switch(deviceType)
 			{
 			case (uint32_t)HMDeviceTypes::HMCCTC:
-				GD::devices.add(new HM_CC_TC(0, serialNumber, address));
+				add(new HM_CC_TC(0, serialNumber, address));
 				stringStream << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			case (uint32_t)HMDeviceTypes::HMCCVD:
-				GD::devices.add(new HM_CC_VD(0, serialNumber, address));
+				add(new HM_CC_VD(0, serialNumber, address));
 				stringStream << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			case (uint32_t)HMDeviceTypes::HMCENTRAL:
-				if(GD::devices.getCentral())
+				if(getCentral())
 				{
 					stringStream << "Cannot create more than one central device." << std::endl;
 				}
 				else
 				{
-					GD::devices.add(new HomeMaticCentral(0, serialNumber, address));
+					add(new HomeMaticCentral(0, serialNumber, address));
 					stringStream << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				}
 				break;
 			case (uint32_t)HMDeviceTypes::HMSD:
-				GD::devices.add(new HM_SD(0, serialNumber, address));
+				add(new HM_SD(0, serialNumber, address));
 				stringStream << "Created HM_SD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			default:
@@ -789,7 +834,11 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 			}
 
 			if(_currentDevice && _currentDevice->getAddress() == address) _currentDevice.reset();
-			if(GD::devices.remove(address)) stringStream << "Device removed." << std::endl;
+			if(get(address))
+			{
+				remove(address);
+				stringStream << "Removing device." << std::endl;
+			}
 			else stringStream << "Device not found." << std::endl;
 			return stringStream.str();
 		}
@@ -824,7 +873,7 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 				return stringStream.str();
 			}
 
-			_currentDevice = GD::devices.get(address);
+			_currentDevice = get(address);
 			if(!_currentDevice) stringStream << "Device not found." << std::endl;
 			else
 			{

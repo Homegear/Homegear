@@ -41,10 +41,16 @@ void ServiceMessages::serialize(std::vector<uint8_t>& encodedData)
 		encoder.encodeBoolean(encodedData, _lowbat);
 		_errorMutex.lock();
 		encoder.encodeInteger(encodedData, _errors.size());
-		for(std::map<uint32_t, uint8_t>::const_iterator i = _errors.begin(); i != _errors.end(); ++i)
+		for(std::map<uint32_t, std::map<std::string, uint8_t>>::iterator i = _errors.begin(); i != _errors.end(); ++i)
 		{
 			encoder.encodeInteger(encodedData, i->first);
-			encodedData.push_back(i->second);
+			encoder.encodeInteger(encodedData, i->second.size());
+			for(std::map<std::string, uint8_t>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				std::string name = j->first;
+				encoder.encodeString(encodedData, name);
+				encodedData.push_back(j->second);
+			}
 		}
 		_errorMutex.unlock();
 	}
@@ -75,11 +81,16 @@ void ServiceMessages::unserialize(std::shared_ptr<std::vector<char>> serializedD
 		_lowbat = decoder.decodeBoolean(serializedData, position);
 		uint32_t errorSize = decoder.decodeInteger(serializedData, position);
 		_errorMutex.lock();
-		for(uint32_t i = 0; i < errorSize; i++)
+		for(uint32_t i = 0; i < errorSize; ++i)
 		{
 			int32_t channel = decoder.decodeInteger(serializedData, position);
-			_errors[channel] = serializedData->at(position);
-			position += 1;
+			uint32_t elementsSize = decoder.decodeInteger(serializedData, position);
+			for(uint32_t j = 0; j < elementsSize; ++j)
+			{
+				std::string name = decoder.decodeString(serializedData, position);
+				_errors[channel][name] = serializedData->at(position);
+				position++;
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -115,7 +126,7 @@ void ServiceMessages::unserialize_0_0_6(std::string serializedObject)
 		for(uint32_t i = 0; i < errorSize; i++)
 		{
 			int32_t channel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-			_errors[channel] = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
+			_errors[channel]["ERROR"] = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		}
 	}
 	catch(const std::exception& ex)
@@ -184,13 +195,14 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
 	try
 	{
 		if(_disposing) return;
-		if(id == "ERROR")
+		_errorMutex.lock();
+		if(value == 0 && _errors.find(channel) != _errors.end() && _errors[channel].find(id) != _errors[channel].end())
 		{
-			_errorMutex.lock();
-			if(_errors.find(channel) != _errors.end() && value == 0) _errors.erase(channel);
-			if(value > 0) _errors[channel] = value;
-			_errorMutex.unlock();
+			_errors[channel].erase(id);
+			if(_errors[channel].empty()) _errors.erase(channel);
 		}
+		if(value > 0) _errors[channel][id] = value;
+		_errorMutex.unlock();
 
 		//RPC Broadcast is done in peer's packetReceived
 	}
@@ -256,14 +268,17 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 			serviceMessages->arrayValue->push_back(array);
 		}
 		_errorMutex.lock();
-		for(std::map<uint32_t, uint8_t>::const_iterator i = _errors.begin(); i != _errors.end(); ++i)
+		for(std::map<uint32_t, std::map<std::string, uint8_t>>::const_iterator i = _errors.begin(); i != _errors.end(); ++i)
 		{
-			if(i->second == 0) continue;
-			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":" + std::to_string(i->first))));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("ERROR"))));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)i->second)));
-			serviceMessages->arrayValue->push_back(array);
+			for(std::map<std::string, uint8_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				if(j->second == 0) continue;
+				array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":" + std::to_string(i->first))));
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first)));
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)j->second)));
+				serviceMessages->arrayValue->push_back(array);
+			}
 		}
 		_errorMutex.unlock();
 		_peerMutex.unlock();
@@ -396,7 +411,7 @@ void ServiceMessages::setConfigPending(bool value)
 		if(value != _configPending)
 		{
 			_configPending = value;
-			if(_peer && _peer->valuesCentral.at(0).find("CONFIG_PENDING") != _peer->valuesCentral.at(0).end())
+			if(_peer->valuesCentral.find(0) != _peer->valuesCentral.end() && _peer->valuesCentral.at(0).find("CONFIG_PENDING") != _peer->valuesCentral.at(0).end())
 			{
 				RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(0).at("CONFIG_PENDING");
 				parameter->data.at(0) = (uint8_t)value;

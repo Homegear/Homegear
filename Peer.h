@@ -90,9 +90,9 @@ class Peer
 		//In table peers:
 		int32_t getParentAddress() { return _parentAddress; }
 		int32_t getAddress() { return _address; }
-		void setAddress(int32_t value) { _address = value; if(peerID > 0) save(true, false, false); }
+		void setAddress(int32_t value) { _address = value; if(_peerID > 0) save(true, false, false); }
 		std::string getSerialNumber() { return _serialNumber; }
-		void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 20) return; _serialNumber = serialNumber; if(peerID > 0) save(true, false, false); }
+		void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 20) return; _serialNumber = serialNumber; if(_peerID > 0) save(true, false, false); }
 		//End
 
 		//In table variables:
@@ -121,7 +121,6 @@ class Peer
 		std::vector<uint8_t>& getTeamData() { return _team.data; }
 		//End
 
-		uint32_t peerID = 0;
 		//Needed, so the peer gets not saved in central's worker thread while being deleted
 		bool deleting = false;
 		std::shared_ptr<ServiceMessages> serviceMessages;
@@ -164,7 +163,7 @@ class Peer
         void saveVariablesToReset();
         void saveServiceMessages();
         void savePendingQueues();
-        void saveParameter(RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress = 0, uint32_t remoteChannel = 0);
+        void saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress = 0, uint32_t remoteChannel = 0);
         void saveParameter(uint32_t parameterID, std::vector<uint8_t>& value);
         void unserializeConfig_0_0_6(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
         void unserializeConfig_0_0_6(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
@@ -207,6 +206,7 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
+        uint32_t _peerID = 0;
         std::map<uint32_t, uint32_t> _variableDatabaseIDs;
         bool _disposing = false;
         bool _centralFeatures = false;

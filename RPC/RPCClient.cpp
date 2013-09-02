@@ -16,7 +16,7 @@ void RPCClient::invokeBroadcast(std::string server, std::string port, std::strin
 		std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
 		if(result.empty())
 		{
-			HelperFunctions::printError("Error: Response for XML RPC method " + methodName + " sent to server " + server + " on port " + port + " is empty.");
+			HelperFunctions::printWarning("Warning: Response is empty. XML RPC method: " + methodName + " Server: " + server + " Port: " + port);
 			return;
 		}
 		std::shared_ptr<RPCVariable> returnValue = _xmlRpcDecoder.decodeResponse(result);
@@ -149,7 +149,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 			switch(receivedBytes)
 			{
 				case 0:
-					HelperFunctions::printError("Error: Reading from XML RPC server " + server + " on port " + port + " timed out.");
+					HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out. Server: " + server + " Port: " + port);
 					break;
 				case -1:
 					HelperFunctions::printError("Error reading from XML RPC server " + server + " on port " + port + ": " + strerror(errno));

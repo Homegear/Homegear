@@ -13,6 +13,11 @@ void Settings::reset()
 	_rpcPort = 2001;
 	_debugLevel = 3;
 	_databasePath = GD::executablePath + "db.sql";
+	_databaseSynchronous = false;
+	_databaseMemoryJournal = true;
+	_mySQLServer = "localhost";
+	_mySQLUser = "homegear";
+	_mySQLPassword = "homegear";
 	_rfDeviceType = "cul";
 	_rfDevice = "/dev/ttyACM0";
 	_logfilePath = "/var/log/homegear/";
@@ -88,6 +93,40 @@ void Settings::load(std::string filename)
 					_databasePath = value;
 					if(_databasePath.empty()) _databasePath = GD::executablePath + "db.sql";
 					HelperFunctions::printDebug("Debug: databasePath set to " + _databasePath);
+				}
+				else if(name == "databasesynchronous")
+				{
+					if(HelperFunctions::toLower(value) == "true") _databaseSynchronous = true;
+					HelperFunctions::printDebug("Debug: databaseSynchronous set to " + std::to_string(_databaseSynchronous));
+				}
+				else if(name == "databasememoryjournal")
+				{
+					if(HelperFunctions::toLower(value) == "false") _databaseMemoryJournal = false;
+					HelperFunctions::printDebug("Debug: databaseMemoryJournal set to " + std::to_string(_databaseMemoryJournal));
+				}
+				else if(name == "mysqlserver")
+				{
+					_mySQLServer = value;
+					if(_mySQLServer.empty()) _mySQLServer = "localhost";
+					HelperFunctions::printDebug("Debug: mySQLServer set to " + _mySQLServer);
+				}
+				else if(name == "mysqldatabase")
+				{
+					_mySQLDatabase = value;
+					if(_mySQLDatabase.empty()) _mySQLDatabase = "homegear";
+					HelperFunctions::printDebug("Debug: mySQLDatabase set to " + _mySQLDatabase);
+				}
+				else if(name == "mysqluser")
+				{
+					_mySQLUser = value;
+					if(_mySQLUser.empty()) _mySQLUser = "homegear";
+					HelperFunctions::printDebug("Debug: mySQLUser set to " + _mySQLUser);
+				}
+				else if(name == "mysqlpassword")
+				{
+					_mySQLPassword = value;
+					if(_mySQLPassword.empty()) _mySQLPassword = "homegear";
+					else HelperFunctions::printDebug("Debug: mySQLPassword was set.");
 				}
 				else if(name == "rfdevicetype")
 				{

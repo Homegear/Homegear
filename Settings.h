@@ -17,6 +17,12 @@ public:
 	int32_t rpcPort() { return _rpcPort; }
 	int32_t debugLevel() { return _debugLevel; }
 	std::string databasePath() { return _databasePath; }
+	bool databaseSynchronous() { return _databaseSynchronous; }
+	bool databaseMemoryJournal() { return _databaseMemoryJournal; }
+	std::string mySQLServer() { return _mySQLServer; }
+	std::string mySQLDatabase() { return _mySQLDatabase; }
+	std::string mySQLUser() { return _mySQLUser; }
+	std::string mySQLPassword() { return _mySQLPassword; }
 	std::string rfDeviceType() { return _rfDeviceType; }
 	std::string rfDevice() { return _rfDevice; }
 	std::string logfilePath() { return _logfilePath; }
@@ -31,6 +37,12 @@ private:
 	int32_t _rpcPort = 2001;
 	int32_t _debugLevel = 3;
 	std::string _databasePath;
+	bool _databaseSynchronous = false;
+	bool _databaseMemoryJournal = true;
+	std::string _mySQLServer;
+	std::string _mySQLDatabase;
+	std::string _mySQLUser;
+	std::string _mySQLPassword;
 	std::string _rfDeviceType;
 	std::string _rfDevice;
 	std::string _logfilePath;

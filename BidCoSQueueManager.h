@@ -23,8 +23,8 @@ public:
 
 class BidCoSQueueManager {
 public:
-	BidCoSQueueManager() {}
-	virtual ~BidCoSQueueManager() {}
+	BidCoSQueueManager();
+	virtual ~BidCoSQueueManager();
 
 	std::shared_ptr<BidCoSQueue> get(int32_t address);
 	std::shared_ptr<BidCoSQueue> createQueue(HomeMaticDevice* device, BidCoSQueueType queueType, int32_t address);
@@ -32,9 +32,13 @@ public:
 	void dispose(bool wait = true);
 protected:
 	bool _disposing = false;
+	bool _stopWorkerThread = true;
+    std::thread _workerThread;
 	uint32_t _id = 0;
 	std::unordered_map<int32_t, std::shared_ptr<BidCoSQueueData>> _queues;
 	std::mutex _queueMutex;
+
+	void worker();
 };
 
 #endif /* BIDCOSQUEUEMANAGER_H_ */

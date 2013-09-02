@@ -110,7 +110,7 @@ void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 			if(packetExists)
 			{
 				std::vector<uint8_t> packetData;
-				uint32_t dataSize = decoder.decodeInteger(serializedData, position);
+				uint32_t dataSize = decoder.decodeByte(serializedData, position);
 				if(position + dataSize <= serializedData->size()) packetData.insert(packetData.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
 				position += dataSize;
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetData, false));

@@ -13,6 +13,7 @@ void Peer::initializeCentralConfig()
 			HelperFunctions::printWarning("Warning: Tried to initialize peer's central config without xmlrpcDevice being set.");
 			return;
 		}
+		GD::db.executeCommand("SAVEPOINT peerConfig" + std::to_string(_address));
 		RPCConfigurationParameter parameter;
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
@@ -27,7 +28,7 @@ void Peer::initializeCentralConfig()
 						parameter.rpcParameter = *j;
 						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 						configCentral[i->first][(*j)->id] = parameter;
-						saveParameter(RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
+						saveParameter(0, RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
 					}
 				}
 			}
@@ -42,7 +43,7 @@ void Peer::initializeCentralConfig()
 						parameter.rpcParameter = *j;
 						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 						valuesCentral[i->first][(*j)->id] = parameter;
-						saveParameter(RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
+						saveParameter(0, RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
 					}
 				}
 			}
@@ -60,12 +61,14 @@ void Peer::initializeCentralConfig()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::db.executeCommand("RELEASE peerConfig" + std::to_string(_address));
 }
 
 void Peer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, int32_t remoteChannel, bool useConfigFunction)
 {
 	try
 	{
+		GD::db.executeCommand("SAVEPOINT peerConfig" + std::to_string(_address));
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 		if(rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
 		std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
@@ -80,7 +83,7 @@ void Peer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, int32_t 
 				parameter.rpcParameter = *j;
 				parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 				linkConfig->insert(std::pair<std::string, RPCConfigurationParameter>((*j)->id, parameter));
-				saveParameter(RPC::ParameterSet::Type::link, channel, (*j)->id, parameter.data, remoteAddress, remoteChannel);
+				saveParameter(0, RPC::ParameterSet::Type::link, channel, (*j)->id, parameter.data, remoteAddress, remoteChannel);
 			}
 		}
 		if(useConfigFunction) applyConfigFunction(channel, remoteAddress, remoteChannel);
@@ -97,6 +100,7 @@ void Peer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, int32_t 
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::db.executeCommand("RELEASE peerConfig" + std::to_string(_address));
 }
 
 void Peer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t remoteChannel)
@@ -220,7 +224,7 @@ Peer::Peer(int32_t id, int32_t address, std::string serialNumber, int32_t parent
 {
 	try
 	{
-		peerID = id;
+		_peerID = id;
 		_address = address;
 		_serialNumber = serialNumber;
 	}
@@ -700,7 +704,13 @@ void Peer::removePeer(int32_t channel, int32_t address, int32_t remoteChannel)
 				_peers[channel].erase(i);
 				if(linksCentral[channel].find(address) != linksCentral[channel].end() && linksCentral[channel][address].find(remoteChannel) != linksCentral[channel][address].end()) linksCentral[channel][address].erase(linksCentral[channel][address].find(remoteChannel));
 				_databaseMutex.lock();
-				GD::db.executeCommand("DELETE FROM parameters WHERE peerID=" + std::to_string(peerID) + " AND parameterSetType=" + std::to_string((int32_t)RPC::ParameterSet::Type::Enum::link) + " AND peerChannel=" + std::to_string(channel) + " AND remotePeer=" + std::to_string(address) + " AND remoteChannel=" + std::to_string(remoteChannel));
+				DataColumnVector data;
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)RPC::ParameterSet::Type::Enum::link)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(channel)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(address)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteChannel)));
+				GD::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND remotePeer=? AND remoteChannel=?", data);
 				_databaseMutex.unlock();
 				savePeers();
 				return;
@@ -730,9 +740,11 @@ void Peer::deleteFromDatabase()
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
 		GD::db.executeCommand("DELETE FROM metadata WHERE objectID=?", data);
-		GD::db.executeCommand("DELETE FROM parameters WHERE peerID=" + std::to_string(peerID));
-		GD::db.executeCommand("DELETE FROM peerVariables WHERE peerID=" + std::to_string(peerID));
-		GD::db.executeCommand("DELETE FROM peers WHERE peerID=" + std::to_string(peerID));
+		data.clear();
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
+		GD::db.executeCommand("DELETE FROM parameters WHERE peerID=?", data);
+		GD::db.executeCommand("DELETE FROM peerVariables WHERE peerID=?", data);
+		GD::db.executeCommand("DELETE FROM peers WHERE peerID=?", data);
 	}
 	catch(const std::exception& ex)
     {
@@ -753,18 +765,19 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 {
 	try
 	{
-		if(deleting) return;
+		if(deleting || isTeam()) return;
+		GD::db.executeCommand("SAVEPOINT peer" + std::to_string(_address));
 		if(savePeer)
 		{
 			_databaseMutex.lock();
 			DataColumnVector data;
-			if(peerID > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
+			if(_peerID > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 			else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_parentAddress)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_address)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
 			int32_t result = GD::db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);
-			if(peerID == 0) peerID = result;
+			if(_peerID == 0) _peerID = result;
 			_databaseMutex.unlock();
 		}
 		if(variables) saveVariables();
@@ -792,6 +805,7 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
     	_databaseMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::db.executeCommand("RELEASE peer" + std::to_string(_address));
 }
 
 void Peer::deletePairedVirtualDevice(int32_t address)
@@ -823,19 +837,20 @@ void Peer::deletePairedVirtualDevices()
 {
 	try
 	{
+		std::map<int32_t, bool> deleted;
 		std::shared_ptr<HomeMaticDevice> device;
 		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			for(std::vector<std::shared_ptr<BasicPeer>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
 				if(!*j) continue;
-				if((*j)->hidden)
+				if((*j)->hidden && deleted.find((*j)->address) == deleted.end())
 				{
 					device = GD::devices.get((*j)->address);
 					if(device)
 					{
 						GD::devices.remove((*j)->address);
-						device->reset();
+						deleted[(*j)->address] = true;
 					}
 				}
 			}
@@ -1034,7 +1049,7 @@ void Peer::unserializeVariablesToReset(std::shared_ptr<std::vector<char>> serial
 			uint32_t dataSize = decoder.decodeInteger(serializedData, position);
 			if(position + dataSize <= serializedData->size()) variable->data.insert(variable->data.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
 			position += dataSize;
-			variable->resetTime = decoder.decodeInteger(serializedData, position) * 1000;
+			variable->resetTime = ((int64_t)decoder.decodeInteger(serializedData, position)) * 1000;
 			variable->isDominoEvent = decoder.decodeBoolean(serializedData, position);
 			try
 			{
@@ -1216,10 +1231,11 @@ void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
 	{
 		if(parameterID == 0)
 		{
-			HelperFunctions::printError("Peer 0x" + HelperFunctions::getHexString(_address, 6) + ": Tried to save parameter without parameterID");
+			if(!isTeam()) HelperFunctions::printError("Peer 0x" + HelperFunctions::getHexString(_address, 6) + ": Tried to save parameter without parameterID");
 			return;
 		}
 		_databaseMutex.lock();
+		GD::db.executeCommand("SAVEPOINT peerParameter" + std::to_string(_address));
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameterID)));
@@ -1237,19 +1253,25 @@ void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::db.executeCommand("RELEASE peerParameter" + std::to_string(_address));
     _databaseMutex.unlock();
 }
 
-void Peer::saveParameter(RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress, uint32_t remoteChannel)
+void Peer::saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress, uint32_t remoteChannel)
 {
 	try
 	{
-		if(peerID == 0) return;
+		if(parameterID > 0)
+		{
+			saveParameter(parameterID, value);
+			return;
+		}
+		if(_peerID == 0 || isTeam()) return;
 		//Creates a new entry for parameter in database
 		_databaseMutex.lock();
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn((uint32_t)parameterSetType)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(channel)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteAddress)));
@@ -1281,7 +1303,7 @@ void Peer::saveConfig()
 {
 	try
 	{
-		if(peerID == 0) return;
+		if(_peerID == 0 || isTeam()) return;
 		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = configCentral.begin(); i != configCentral.end(); ++i)
 		{
 			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j)
@@ -1298,7 +1320,7 @@ void Peer::saveConfig()
 				}
 				std::string name = j->first;
 				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
-				else saveParameter(RPC::ParameterSet::Type::Enum::master, i->first, name, j->second.data);
+				else saveParameter(0, RPC::ParameterSet::Type::Enum::master, i->first, name, j->second.data);
 			}
 		}
 		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = valuesCentral.begin(); i != valuesCentral.end(); ++i)
@@ -1317,7 +1339,7 @@ void Peer::saveConfig()
 				}
 				std::string name = j->first;
 				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
-				else saveParameter(RPC::ParameterSet::Type::Enum::values, i->first, name, j->second.data);
+				else saveParameter(0, RPC::ParameterSet::Type::Enum::values, i->first, name, j->second.data);
 			}
 		}
 		for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>::iterator i = linksCentral.begin(); i != linksCentral.end(); ++i)
@@ -1340,7 +1362,7 @@ void Peer::saveConfig()
 						}
 						std::string name = l->first;
 						if(l->second.databaseID > 0) saveParameter(l->second.databaseID, l->second.data);
-						else saveParameter(RPC::ParameterSet::Type::Enum::link, i->first,name, l->second.data, j->first, k->first);
+						else saveParameter(0, RPC::ParameterSet::Type::Enum::link, i->first,name, l->second.data, j->first, k->first);
 					}
 				}
 			}
@@ -1365,7 +1387,9 @@ void Peer::loadConfig()
 	try
 	{
 		_databaseMutex.lock();
-		DataTable rows = GD::db.executeCommand("SELECT * FROM parameters WHERE peerID=" + std::to_string(peerID));
+		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
+		DataTable rows = GD::db.executeCommand("SELECT * FROM parameters WHERE peerID=?", data);
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			uint32_t databaseID = row->second.at(0)->intValue;
@@ -1378,7 +1402,10 @@ void Peer::loadConfig()
 			{
 				HelperFunctions::printCritical("Critical: Added central config parameter without id. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(channel));
 				_databaseMutex.lock();
-				GD::db.executeCommand("DELETE FROM parameters WHERE peerID=" + std::to_string(peerID) + " AND parameterID=''");
+				data.clear();
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string(""))));
+				GD::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
 				_databaseMutex.unlock();
 				continue;
 			}
@@ -1398,7 +1425,7 @@ void Peer::loadConfig()
 			{
 				HelperFunctions::printError("Error: Deleting parameter " + *parameterName + ", because no corresponding RPC parameter was found. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(channel));
 				DataColumnVector data;
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 				data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)parameterSetType)));
 				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(channel)));
 				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(*parameterName)));
@@ -1441,7 +1468,9 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
 {
 	try
 	{
+		if(isTeam()) return;
 		_databaseMutex.lock();
+		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
@@ -1452,9 +1481,14 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
 		}
 		else
 		{
-			if(peerID == 0) return;
+			if(_peerID == 0)
+			{
+				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+				_databaseMutex.unlock();
+				return;
+			}
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
@@ -1475,6 +1509,7 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
     _databaseMutex.unlock();
 }
 
@@ -1482,7 +1517,9 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
 {
 	try
 	{
+		if(isTeam()) return;
 		_databaseMutex.lock();
+		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
@@ -1493,9 +1530,14 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
 		}
 		else
 		{
-			if(peerID == 0) return;
+			if(_peerID == 0)
+			{
+				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+				_databaseMutex.unlock();
+				return;
+			}
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
@@ -1516,6 +1558,7 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
     _databaseMutex.unlock();
 }
 
@@ -1523,7 +1566,9 @@ void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
 {
 	try
 	{
+		if(isTeam()) return;
 		_databaseMutex.lock();
+		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
@@ -1534,9 +1579,14 @@ void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
 		}
 		else
 		{
-			if(peerID == 0) return;
+			if(_peerID == 0)
+			{
+				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+				_databaseMutex.unlock();
+				return;
+			}
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(peerID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
@@ -1557,6 +1607,7 @@ void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
     _databaseMutex.unlock();
 }
 
@@ -1564,7 +1615,7 @@ void Peer::saveVariables()
 {
 	try
 	{
-		if(peerID == 0) return;
+		if(_peerID == 0 || isTeam()) return;
 		saveVariable(0, _firmwareVersion);
 		saveVariable(1, _remoteChannel);
 		saveVariable(2, _localChannel);
@@ -1714,7 +1765,9 @@ void Peer::loadVariables(HomeMaticDevice* device)
 	try
 	{
 		_databaseMutex.lock();
-		DataTable rows = GD::db.executeCommand("SELECT * FROM peerVariables WHERE peerID=" + std::to_string(peerID));
+		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
+		DataTable rows = GD::db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
@@ -2379,8 +2432,8 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					saveParameter(parameter->databaseID, parameter->data);
 					if(GD::debugLevel >= 4) HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 
-					 //Process error as service message
-					if(i->first.size() >= 5 && i->first == "ERROR" && !i->second.value.empty() && parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
+					 //Process service messages
+					if((parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty() && parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
 					{
 						serviceMessages->set(i->first, i->second.value.at(0), *j);
 					}

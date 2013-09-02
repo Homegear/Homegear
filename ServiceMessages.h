@@ -43,7 +43,7 @@ private:
 	bool _lowbat = false;
 
 	std::mutex _errorMutex;
-	std::map<uint32_t, uint8_t> _errors;
+	std::map<uint32_t, std::map<std::string, uint8_t>> _errors;
 
 	std::mutex _peerMutex;
 	Peer* _peer = nullptr;

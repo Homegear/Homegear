@@ -34,9 +34,31 @@ void Database::openDatabase(std::string databasePath)
 		int result = sqlite3_open(databasePath.c_str(), &_database);
 		if(result)
 		{
-			throw(Exception("Can't open database: " + std::string(sqlite3_errmsg(_database))));
+			HelperFunctions::printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
 			sqlite3_close(_database);
 			_database = nullptr;
+			return;
+		}
+		sqlite3_extended_result_codes(_database, 1);
+		char* errorMessage = nullptr;
+		if(!GD::settings.databaseSynchronous())
+		{
+			sqlite3_exec(_database, "PRAGMA synchronous = OFF", 0, 0, &errorMessage);
+			if(errorMessage)
+			{
+				HelperFunctions::printError("Can't execute \"PRAGMA synchronous = OFF\": " + std::string(errorMessage));
+				sqlite3_free(errorMessage);
+			}
+		}
+
+		if(GD::settings.databaseMemoryJournal())
+		{
+			sqlite3_exec(_database, "PRAGMA journal_mode = MEMORY", 0, 0, &errorMessage);
+			if(errorMessage)
+			{
+				HelperFunctions::printError("Can't execute \"PRAGMA journal_mode = MEMORY\": " + std::string(errorMessage));
+				sqlite3_free(errorMessage);
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -57,6 +79,8 @@ void Database::closeDatabase()
 {
 	try
 	{
+
+		sqlite3_exec(_database, "COMMIT", 0, 0, 0); //Release all savepoints
 		sqlite3_close(_database);
 		_database = nullptr;
 	}
@@ -76,67 +100,52 @@ void Database::closeDatabase()
 
 void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
 {
-	try
+	int32_t result;
+	int32_t row = 0;
+	while((result = sqlite3_step(statement)) == SQLITE_ROW)
 	{
-		int32_t result;
-		int32_t row = 0;
-		while((result = sqlite3_step(statement)) == SQLITE_ROW)
+		for(int32_t i = 0; i < sqlite3_column_count(statement); i++)
 		{
-			for(int32_t i = 0; i < sqlite3_column_count(statement); i++)
+			std::shared_ptr<DataColumn> col(new DataColumn());
+			col->index = i;
+			int32_t columnType = sqlite3_column_type(statement, i);
+			if(columnType == SQLITE_INTEGER)
 			{
-				std::shared_ptr<DataColumn> col(new DataColumn());
-				col->index = i;
-				int32_t columnType = sqlite3_column_type(statement, i);
-				if(columnType == SQLITE_INTEGER)
-				{
-					col->dataType = DataColumn::DataType::Enum::INTEGER;
-					col->intValue = sqlite3_column_int64(statement, i);
-				}
-				else if(columnType == SQLITE_FLOAT)
-				{
-					col->dataType = DataColumn::DataType::Enum::FLOAT;
-					col->floatValue = sqlite3_column_double(statement, i);
-				}
-				else if(columnType == SQLITE_BLOB)
-				{
-					col->dataType = DataColumn::DataType::Enum::BLOB;
-					char* binaryData = (char*)sqlite3_column_blob(statement, i);
-					int32_t size = sqlite3_column_bytes(statement, i);
-					if(size > 0) col->binaryValue.reset(new std::vector<char>(binaryData, binaryData + size));
-				}
-				else if(columnType == SQLITE_NULL)
-				{
-					col->dataType = DataColumn::DataType::Enum::NODATA;
-				}
-				else if(columnType == SQLITE_TEXT) //or SQLITE3_TEXT. As we are not using SQLite version 2 it doesn't matter
-				{
-					col->dataType = DataColumn::DataType::Enum::TEXT;
-					col->textValue = std::string((const char*)sqlite3_column_text(statement, i));
-				}
-				dataRows[row][i] = col;
+				col->dataType = DataColumn::DataType::Enum::INTEGER;
+				col->intValue = sqlite3_column_int64(statement, i);
 			}
-			row++;
+			else if(columnType == SQLITE_FLOAT)
+			{
+				col->dataType = DataColumn::DataType::Enum::FLOAT;
+				col->floatValue = sqlite3_column_double(statement, i);
+			}
+			else if(columnType == SQLITE_BLOB)
+			{
+				col->dataType = DataColumn::DataType::Enum::BLOB;
+				char* binaryData = (char*)sqlite3_column_blob(statement, i);
+				int32_t size = sqlite3_column_bytes(statement, i);
+				if(size > 0) col->binaryValue.reset(new std::vector<char>(binaryData, binaryData + size));
+			}
+			else if(columnType == SQLITE_NULL)
+			{
+				col->dataType = DataColumn::DataType::Enum::NODATA;
+			}
+			else if(columnType == SQLITE_TEXT) //or SQLITE3_TEXT. As we are not using SQLite version 2 it doesn't matter
+			{
+				col->dataType = DataColumn::DataType::Enum::TEXT;
+				col->textValue = std::string((const char*)sqlite3_column_text(statement, i));
+			}
+			dataRows[row][i] = col;
 		}
-		if(result != SQLITE_DONE)
-		{
-			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
-		}
+		row++;
 	}
-	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	if(result != SQLITE_DONE)
+	{
+		throw Exception("Can't execute command (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
+	}
 }
 
-void Database::escapeData(sqlite3_stmt* statement, DataColumnVector& dataToEscape)
+void Database::bindData(sqlite3_stmt* statement, DataColumnVector& dataToEscape)
 {
 	//There is no try/catch block on purpose!
 	int32_t result;
@@ -176,18 +185,19 @@ uint32_t Database::executeWriteCommand(std::string command, DataColumnVector& da
 	{
 		if(!_database) return 0;
 		_databaseMutex.lock();
-		sqlite3_stmt* statement = 0;
+		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
 			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 		}
-		escapeData(statement, dataToEscape);
+		bindData(statement, dataToEscape);
 		result = sqlite3_step(statement);
 		if(result != SQLITE_DONE)
 		{
 			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
 		}
+		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
@@ -220,14 +230,28 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 	{
 		if(!_database) return dataRows;
 		_databaseMutex.lock();
-		sqlite3_stmt* statement = 0;
+		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
 			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
 		}
-		escapeData(statement, dataToEscape);
-		getDataRows(statement, dataRows);
+		bindData(statement, dataToEscape);
+		try
+		{
+			getDataRows(statement, dataRows);
+		}
+		catch(Exception& ex)
+		{
+			if(command.compare(0, 7, "RELEASE") == 0)
+			{
+				HelperFunctions::printWarning(ex.what());
+				sqlite3_clear_bindings(statement);
+				return dataRows;
+			}
+			else HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
@@ -257,17 +281,27 @@ DataTable Database::executeCommand(std::string command)
     {
     	if(!_database) return dataRows;
     	_databaseMutex.lock();
-		sqlite3_stmt* statement = 0;
+		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
-			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
+			HelperFunctions::printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+			_databaseMutex.unlock();
+			return dataRows;
 		}
-		getDataRows(statement, dataRows);
+		try
+		{
+			getDataRows(statement, dataRows);
+		}
+		catch(Exception& ex)
+		{
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
-			throw(Exception("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database))));
+			HelperFunctions::printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
 		}
     }
     catch(const std::exception& ex)
@@ -284,4 +318,249 @@ DataTable Database::executeCommand(std::string command)
     }
     _databaseMutex.unlock();
     return dataRows;
+}
+
+void Database::benchmark1()
+{
+	//Duration for REPLACE in ms: 17836
+	//Duration for UPDATE in ms: 14973
+	std::vector<uint8_t> value({0});
+	int64_t startTime = HelperFunctions::getTime();
+	std::map<uint32_t, uint32_t> ids;
+	for(uint32_t i = 0; i < 10000; ++i)
+	{
+		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(10000000)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(1)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(2)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn("TEST" + std::to_string(i))));
+		value[0] = (i % 256);
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+		ids[i] = executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+	}
+	int64_t duration = HelperFunctions::getTime() - startTime;
+	std::cerr << "Duration for REPLACE in ms: " << duration << std::endl;
+	startTime = HelperFunctions::getTime();
+	for(uint32_t i = 0; i < 10000; ++i)
+	{
+		DataColumnVector data;
+		value[0] = (i % 256);
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(ids[i])));
+		GD::db.executeWriteCommand("UPDATE parameters SET value=? WHERE parameterID=?", data);
+	}
+	duration = HelperFunctions::getTime() - startTime;
+	std::cerr << "Duration for UPDATE in ms: " << duration << std::endl;
+	executeCommand("DELETE FROM parameters WHERE peerID=10000000");
+}
+
+void Database::benchmark2()
+{
+	try
+	{
+		//Duration for REPLACE in ms: 17002
+		//Duration for UPDATE in ms: 14391
+		sqlite3_stmt* statement = nullptr;
+		int32_t result = sqlite3_prepare_v2(_database, "REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", -1, &statement, NULL);
+		if(result)
+		{
+			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+		}
+		std::vector<uint8_t> value({0});
+		int64_t startTime = HelperFunctions::getTime();
+		std::map<uint32_t, uint32_t> ids;
+		for(uint32_t i = 0; i < 10000; ++i)
+		{
+			DataColumnVector data;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(10000000)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(1)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(2)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("TEST" + std::to_string(i))));
+			value[0] = (i % 256);
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+			bindData(statement, data);
+			ids[i] = sqlite3_step(statement);
+			sqlite3_clear_bindings(statement);
+			sqlite3_reset(statement);
+		}
+		sqlite3_finalize(statement);
+		statement = nullptr;
+		sqlite3_prepare_v2(_database, "UPDATE parameters SET value=? WHERE parameterID=?", -1, &statement, NULL);
+		int64_t duration = HelperFunctions::getTime() - startTime;
+		std::cerr << "Duration for REPLACE in ms: " << duration << std::endl;
+		startTime = HelperFunctions::getTime();
+		for(uint32_t i = 0; i < 10000; ++i)
+		{
+			DataColumnVector data;
+			value[0] = (i % 256);
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(ids[i])));
+			bindData(statement, data);
+			ids[i] = sqlite3_step(statement);
+			sqlite3_clear_bindings(statement);
+			sqlite3_reset(statement);
+		}
+		sqlite3_finalize(statement);
+		duration = HelperFunctions::getTime() - startTime;
+		std::cerr << "Duration for UPDATE in ms: " << duration << std::endl;
+		executeCommand("DELETE FROM parameters WHERE peerID=10000000");
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Database::benchmark3()
+{
+	try
+	{
+		sqlite3_stmt* statement = nullptr;
+		int32_t result = sqlite3_prepare_v2(_database, "REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", -1, &statement, NULL);
+		if(result)
+		{
+			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+		}
+		std::vector<uint8_t> value({0});
+		executeCommand("BEGIN IMMEDIATE TRANSACTION");
+		int64_t startTime = HelperFunctions::getTime();
+		std::map<uint32_t, uint32_t> ids;
+		for(uint32_t i = 0; i < 10000; ++i)
+		{
+			DataColumnVector data;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(10000000)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(1)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(2)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("TEST" + std::to_string(i))));
+			value[0] = (i % 256);
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+			bindData(statement, data);
+			ids[i] = sqlite3_step(statement);
+			sqlite3_clear_bindings(statement);
+			sqlite3_reset(statement);
+		}
+		sqlite3_finalize(statement);
+		statement = nullptr;
+		executeCommand("COMMIT TRANSACTION");
+		int64_t duration = HelperFunctions::getTime() - startTime;
+		std::cerr << "Duration for REPLACE in ms: " << duration << std::endl;
+		sqlite3_prepare_v2(_database, "UPDATE parameters SET value=? WHERE parameterID=?", -1, &statement, NULL);
+		executeCommand("BEGIN IMMEDIATE TRANSACTION");
+		startTime = HelperFunctions::getTime();
+		for(uint32_t i = 0; i < 10000; ++i)
+		{
+			DataColumnVector data;
+			value[0] = (i % 256);
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(ids[i])));
+			bindData(statement, data);
+			ids[i] = sqlite3_step(statement);
+			sqlite3_clear_bindings(statement);
+			sqlite3_reset(statement);
+		}
+		sqlite3_finalize(statement);
+		executeCommand("COMMIT TRANSACTION");
+		duration = HelperFunctions::getTime() - startTime;
+		std::cerr << "Duration for UPDATE in ms: " << duration << std::endl;
+		executeCommand("DELETE FROM parameters WHERE peerID=10000000");
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Database::benchmark4()
+{
+	try
+	{
+		sqlite3_stmt* statement = nullptr;
+		int32_t result = sqlite3_prepare_v2(_database, "REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", -1, &statement, NULL);
+		if(result)
+		{
+			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
+		}
+		std::vector<uint8_t> value({0});
+		executeCommand("SAVEPOINT peerConfig");
+		int64_t startTime = HelperFunctions::getTime();
+		std::map<uint32_t, uint32_t> ids;
+		for(uint32_t i = 0; i < 10000; ++i)
+		{
+			DataColumnVector data;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(10000000)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(1)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(2)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("TEST" + std::to_string(i))));
+			value[0] = (i % 256);
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+			bindData(statement, data);
+			ids[i] = sqlite3_step(statement);
+			sqlite3_clear_bindings(statement);
+			sqlite3_reset(statement);
+		}
+		sqlite3_finalize(statement);
+		statement = nullptr;
+		executeCommand("RELEASE peerConfig");
+		int64_t duration = HelperFunctions::getTime() - startTime;
+		std::cerr << "Duration for REPLACE in ms: " << duration << std::endl;
+		sqlite3_prepare_v2(_database, "UPDATE parameters SET value=? WHERE parameterID=?", -1, &statement, NULL);
+		executeCommand("SAVEPOINT peerConfig");
+		startTime = HelperFunctions::getTime();
+		for(uint32_t i = 0; i < 10000; ++i)
+		{
+			DataColumnVector data;
+			value[0] = (i % 256);
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(ids[i])));
+			bindData(statement, data);
+			ids[i] = sqlite3_step(statement);
+			sqlite3_clear_bindings(statement);
+			sqlite3_reset(statement);
+		}
+		sqlite3_finalize(statement);
+		executeCommand("RELEASE peerConfig");
+		duration = HelperFunctions::getTime() - startTime;
+		std::cerr << "Duration for UPDATE in ms: " << duration << std::endl;
+		executeCommand("DELETE FROM parameters WHERE peerID=10000000");
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }

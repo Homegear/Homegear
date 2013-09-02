@@ -138,7 +138,8 @@ HomeMaticDevice::~HomeMaticDevice()
 	try
 	{
 		dispose();
-		std::this_thread::sleep_for(std::chrono::milliseconds(20)); //Wait for received packets, without this, program sometimes SIGABRTs
+		//dispose might have been called by another thread, so wait until dispose is finished
+		while(!_disposed) std::this_thread::sleep_for(std::chrono::milliseconds(50)); //Wait for received packets, without this, program sometimes SIGABRTs
 	}
     catch(const std::exception& ex)
     {
@@ -157,16 +158,32 @@ HomeMaticDevice::~HomeMaticDevice()
 
 void HomeMaticDevice::dispose(bool wait)
 {
-	if(_disposing) return;
-	_disposing = true;
-	HelperFunctions::printDebug("Removing device 0x" + HelperFunctions::getHexString(_address) + " from CUL event queue...");
-	GD::rfDevice->removeHomeMaticDevice(this);
-	int64_t startTime = HelperFunctions::getTime();
-	stopThreads();
-	int64_t timeDifference = HelperFunctions::getTime() - startTime;
-	//Packets might still arrive, after removing this device from the rfDevice, so sleep a little bit
-	//This is not necessary if the rfDevice doesn't listen anymore
-	if(wait && timeDifference >= 0 && timeDifference < 500) std::this_thread::sleep_for(std::chrono::milliseconds(500 - timeDifference));
+	try
+	{
+		if(_disposing) return;
+		_disposing = true;
+		HelperFunctions::printDebug("Removing device 0x" + HelperFunctions::getHexString(_address) + " from CUL event queue...");
+		GD::rfDevice->removeHomeMaticDevice(this);
+		int64_t startTime = HelperFunctions::getTime();
+		stopThreads();
+		int64_t timeDifference = HelperFunctions::getTime() - startTime;
+		//Packets might still arrive, after removing this device from the rfDevice, so sleep a little bit
+		//This is not necessary if the rfDevice doesn't listen anymore
+		if(wait && timeDifference >= 0 && timeDifference < 2000) std::this_thread::sleep_for(std::chrono::milliseconds(2000 - timeDifference));
+	}
+    catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_disposed = true;
 }
 
 void HomeMaticDevice::stopThreads()
@@ -534,7 +551,11 @@ void HomeMaticDevice::saveVariable(uint32_t index, int64_t intValue)
 		}
 		else
 		{
-			if(_deviceID == 0) return;
+			if(_deviceID == 0)
+			{
+				_databaseMutex.unlock();
+				return;
+			}
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
@@ -575,7 +596,11 @@ void HomeMaticDevice::saveVariable(uint32_t index, std::string& stringValue)
 		}
 		else
 		{
-			if(_deviceID == 0) return;
+			if(_deviceID == 0)
+			{
+				_databaseMutex.unlock();
+				return;
+			}
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
@@ -616,7 +641,11 @@ void HomeMaticDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryV
 		}
 		else
 		{
-			if(_deviceID == 0) return;
+			if(_deviceID == 0)
+			{
+				_databaseMutex.unlock();
+				return;
+			}
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));

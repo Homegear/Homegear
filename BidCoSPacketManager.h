@@ -25,8 +25,8 @@ public:
 class BidCoSPacketManager
 {
 public:
-	BidCoSPacketManager() {}
-	virtual ~BidCoSPacketManager() {}
+	BidCoSPacketManager();
+	virtual ~BidCoSPacketManager();
 
 	std::shared_ptr<BidCoSPacket> get(int32_t address);
 	std::shared_ptr<BidCoSPacketInfo> getInfo(int32_t address);
@@ -36,9 +36,13 @@ public:
 	void dispose(bool wait = true);
 protected:
 	bool _disposing = false;
+	bool _stopWorkerThread = false;
+    std::thread _workerThread;
 	uint32_t _id = 0;
 	std::unordered_map<int32_t, std::shared_ptr<BidCoSPacketInfo>> _packets;
 	std::mutex _packetMutex;
+
+	void worker();
 };
 
 #endif /* BIDCOSPACKETMANAGER_H_ */
