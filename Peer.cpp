@@ -2611,7 +2611,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", std::string("?"))));
 			}
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)rpcDevice->uiFlags)));
+			int32_t uiFlags = (int32_t)rpcDevice->uiFlags;
+			if(isTeam()) uiFlags |= RPC::Device::UIFlags::dontdelete;
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", uiFlags)));
 
 			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INTERFACE", GD::devices.getCentral()->getSerialNumber())));
 
@@ -2676,7 +2678,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 			if(rpcChannel->direction != RPC::DeviceChannel::Direction::Enum::none) direction = (int32_t)rpcChannel->direction;
 			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DIRECTION", direction)));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", (int32_t)rpcChannel->uiFlags)));
+			int32_t uiFlags = (int32_t)rpcChannel->uiFlags;
+			if(isTeam()) uiFlags |= RPC::DeviceChannel::UIFlags::dontdelete;
+			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", uiFlags)));
 
 			int32_t groupedWith = getChannelGroupedWith(channel);
 			if(groupedWith > -1)
