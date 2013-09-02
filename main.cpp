@@ -321,9 +321,6 @@ int main(int argc, char* argv[])
         if(!GD::rfDevice->isOpen()) return 1;
         HelperFunctions::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
-        //GD::db.benchmark3();
-        //GD::db.benchmark4();
-    	//exit(0);
         if(_startAsDaemon)
         {
         	HelperFunctions::printInfo("Starting CLI server...");

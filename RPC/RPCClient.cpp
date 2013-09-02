@@ -13,6 +13,15 @@ void RPCClient::invokeBroadcast(std::string server, std::string port, std::strin
 			HelperFunctions::printError("Error: Could not invoke XML RPC method for server " + server + ". methodName is empty.");
 			return;
 		}
+		HelperFunctions::printInfo("Info: Calling XML RPC method " + methodName + " on server " + server + " and port " + port + ".");
+		if(GD::debugLevel >= 5)
+		{
+			HelperFunctions::printDebug("Parameters:");
+			for(std::list<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			{
+				(*i)->print();
+			}
+		}
 		std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
 		if(result.empty())
 		{
@@ -51,6 +60,15 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::string server, std::string p
 	try
 	{
 		if(methodName.empty()) return RPCVariable::createError(-32601, "Method name is empty");
+		HelperFunctions::printInfo("Info: Calling XML RPC method " + methodName + " on server " + server + " and port " + port + ".");
+		if(GD::debugLevel >= 5)
+		{
+			HelperFunctions::printDebug("Parameters:");
+			for(std::list<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			{
+				(*i)->print();
+			}
+		}
 		std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
 		if(result.empty()) return RPCVariable::createError(-32700, "No response data.");
 		return _xmlRpcDecoder.decodeResponse(result);
