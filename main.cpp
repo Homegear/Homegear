@@ -250,9 +250,6 @@ int main(int argc, char* argv[])
 
     	if(_startAsDaemon) startDaemon();
 
-    	if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() < 1000000000000)
-		throw(Exception("Time is in the past. Please run ntp or set date and time manually before starting this program."));
-
     	//Set rlimit for core dumps
     	struct rlimit limits;
     	getrlimit(RLIMIT_CORE, &limits);
@@ -307,6 +304,22 @@ int main(int argc, char* argv[])
 			std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout);
 			std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr);
 		}
+
+		for(uint32_t i = 0; i < 10; ++i)
+		{
+			if(HelperFunctions::getTime() < 1000000000000)
+			{
+				HelperFunctions::printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+			}
+			else break;
+		}
+		if(HelperFunctions::getTime() < 1000000000000)
+		{
+			HelperFunctions::printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
+			exit(1);
+		}
+
     	GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".bak");
     	if(!GD::db.isOpen()) exit(1);
 

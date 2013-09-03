@@ -10,4 +10,4 @@ Today:
 
 Questions:
 - AES handshakes
-- Lazy config, what is that?sath
+- Lazy config, what is that?

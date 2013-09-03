@@ -101,7 +101,9 @@ apt-get update
 apt-get -y install locales console-common ntp openssh-server git-core binutils ca-certificates sudo
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
+mkdir -p /lib/modules
 rpi-update
+rm -Rf /boot.bak
 useradd --create-home --shell /bin/bash --user-group pi
 echo \"pi:raspberry\" | chpasswd
 echo \"root:raspberry\" | chpasswd
@@ -111,6 +113,7 @@ dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg -i /homegear_current_armhf.deb
 service homegear stop
 service ssh stop
+rm -r /var/log/homegear/*
 rm -f third-stage
 " > third-stage
 chmod +x third-stage
@@ -118,9 +121,14 @@ LANG=C chroot $rootfs /third-stage
 
 rm homegear_current_armhf.deb
 
-mkdir /scripts
-chown root:root /scripts
-chmod 750 /scripts
+wget https://raw.github.com/asb/raspi-config/master/raspi-config
+mv raspi-config usr/bin
+chown root:root usr/bin/raspi-config
+chmod 755 usr/bin/raspi-config
+
+mkdir scripts
+chown root:root scripts
+chmod 750 scripts
 
 echo "#!/bin/bash
 return=`ps -A | grep homegear -c`
@@ -142,11 +150,18 @@ if [ $return -lt 1 ] && test -e /var/run/homegear/homegear.pid; then
         fi
 
         /etc/init.d/homegear restart
-fi" > /scripts/checkServices.sh
-chown root:root /scripts/checkServices.sh
-chmod 750 /scripts/checkServices.sh
+fi" > scripts/checkServices.sh
+chown root:root scripts/checkServices.sh
+chmod 750 scripts/checkServices.sh
 
-echo "*/10 *  *       *       *       /scripts/checkServices.sh 2>&1 |/usr/bin/logger -t CheckServices" >> /var/spool/cron/crontabs/root
+echo "*/10 *  *       *       *       /scripts/checkServices.sh 2>&1 |/usr/bin/logger -t CheckServices" >> var/spool/cron/crontabs/root
+
+echo "arm_freq=900
+core_freq=250
+sdram_freq=450
+over_voltage=2" > boot/config.txt
+chown root:root boot/config.txt
+chmod 755 boot/config.txt
 
 echo "deb $deb_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
@@ -160,7 +175,7 @@ LANG=C chroot $rootfs /cleanup
 
 cd
 
-read -p "Copy your boot files into ${bootfs} then hit [Enter] to continue..."
+read -p "Copy additional files into ${rootfs} or ${bootfs} then hit [Enter] to continue..."
 
 umount $bootp
 umount $rootp
