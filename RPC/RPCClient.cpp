@@ -92,6 +92,14 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 {
 	try
 	{
+		_sendCounter++;
+		if(_sendCounter > 100)
+		{
+			HelperFunctions::printCritical("Could not execute XML RPC method on server " + server + " and port " + port + ", because there are more than 100 requests queued. Your server is either not reachable currently or your connection is too slow.");
+			_sendCounter--;
+			return "";
+		}
+		_sendMutex.lock();
 		struct addrinfo hostInfo;
 		struct addrinfo *serverInfo;
 
@@ -104,6 +112,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		if(ipAddress.size() < 8)
 		{
 			HelperFunctions::printError("Error: Server's address too short: " + ipAddress);
+			_sendCounter--;
+			_sendMutex.unlock();
 			return "";
 		}
 		if(ipAddress.substr(0, 7) == "http://") ipAddress = ipAddress.substr(7);
@@ -122,6 +132,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		{
 			HelperFunctions::printError("Error: Could not create socket for XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 			freeaddrinfo(serverInfo);
+			_sendCounter--;
+			_sendMutex.unlock();
 			return "";
 		}
 
@@ -130,6 +142,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 			HelperFunctions::printError("Error: Could not connect to XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 			freeaddrinfo(serverInfo);
 			close(fileDescriptor);
+			_sendCounter--;
+			_sendMutex.unlock();
 			return "";
 		}
 
@@ -142,6 +156,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		{
 			HelperFunctions::printError("Error sending data to XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 			close(fileDescriptor);
+			_sendCounter--;
+			_sendMutex.unlock();
 			return "";
 		}
 
@@ -161,14 +177,18 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		{
 			//Timeout needs to be set every time, so don't put it outside of the while loop
 			timeval timeout;
-			timeout.tv_sec = 10;
+			timeout.tv_sec = 20;
 			timeout.tv_usec = 0;
 			receivedBytes = select(fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			switch(receivedBytes)
 			{
 				case 0:
 					HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out. Server: " + server + " Port: " + port);
-					break;
+					shutdown(fileDescriptor, 0);
+					close(fileDescriptor);
+					_sendCounter--;
+					_sendMutex.unlock();
+					return "";
 				case -1:
 					HelperFunctions::printError("Error reading from XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 					break;
@@ -181,6 +201,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 			{
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
+				_sendCounter--;
+				_sendMutex.unlock();
 				return "";
 			}
 			receivedBytes = recv(fileDescriptor, buffer, 1024, 0);
@@ -189,6 +211,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 				HelperFunctions::printError("Error reading data from XML RPC server " + server + " on port " + port + ": " + strerror(errno));
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
+				_sendCounter--;
+				_sendMutex.unlock();
 				return "";
 			}
 			if(firstPart)
@@ -198,6 +222,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 					HelperFunctions::printError("Error: Response packet from XML RPC server too small " + server + " on port " + port + ".");
 					shutdown(fileDescriptor, 0);
 					close(fileDescriptor);
+					_sendCounter--;
+					_sendMutex.unlock();
 					return "";
 				}
 				std::stringstream receivedData;
@@ -211,6 +237,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 					HelperFunctions::printError("Error receiving response from XML RPC server " + server + " on port " + port + ". Response code: " + line);
 					shutdown(fileDescriptor, 0);
 					close(fileDescriptor);
+					_sendCounter--;
+					_sendMutex.unlock();
 					return "";
 				}
 				while(receivedData.good() && !receivedData.eof())
@@ -228,6 +256,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 							HelperFunctions::printError("Error receiving response from XML RPC server " + server + " on port " + port + ". Content type is not text/xml but " + contentTypeString + ".");
 							shutdown(fileDescriptor, 0);
 							close(fileDescriptor);
+							_sendCounter--;
+							_sendMutex.unlock();
 							return "";
 						}
 					}
@@ -239,6 +269,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 							HelperFunctions::printError("Error receiving response from XML RPC server " + server + " on port " + port + ". Content length is 0.");
 							shutdown(fileDescriptor, 0);
 							close(fileDescriptor);
+							_sendCounter--;
+							_sendMutex.unlock();
 							return "";
 						}
 						HelperFunctions::printDebug("Debug: Receiving packet with length " + std::to_string(dataSize) + " from remote server " + server + " on port " + port + ".");
@@ -274,6 +306,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 					HelperFunctions::printError("Error: Packet size (>=" + std::to_string(response.size() + receivedBytes) + ") is larger than Content-Length (" + std::to_string(dataSize) + ").");
 					shutdown(fileDescriptor, 0);
 					close(fileDescriptor);
+					_sendCounter--;
+					_sendMutex.unlock();
 					return "";
 				}
 				response.append(buffer, receivedBytes);
@@ -283,6 +317,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		shutdown(fileDescriptor, 0);
 		close(fileDescriptor);
 		HelperFunctions::printDebug("Debug: Received packet from server " + server + " on port " + port + ":\n" + response);
+		_sendCounter--;
+		_sendMutex.unlock();
 		return response;
     }
     catch(const std::exception& ex)
@@ -297,6 +333,8 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _sendCounter--;
+	_sendMutex.unlock();
     return "";
 }
 } /* namespace RPC */

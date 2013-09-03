@@ -32,20 +32,20 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
-			HelperFunctions::printMessage("Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")...");
+			HelperFunctions::printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			if(_startAsDaemon)
 			{
-				HelperFunctions::printInfo("Stopping CLI server...");
+				HelperFunctions::printInfo("(Shutdown) => Stopping CLI server");
 				GD::cliServer.stop();
 			}
-			HelperFunctions::printInfo( "Stopping RPC server...");
+			HelperFunctions::printInfo( "(Shutdown) => Stopping RPC server");
 			GD::rpcServer.stop();
-			HelperFunctions::printInfo( "Stopping RPC client...");
+			HelperFunctions::printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
-			HelperFunctions::printInfo( "Closing RF device...");
+			HelperFunctions::printInfo( "(Shutdown) => Closing RF device");
 			GD::rfDevice->stopListening();
 			GD::devices.save(false);
-			HelperFunctions::printMessage("Shutdown complete.");
+			HelperFunctions::printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{
 				fclose(stdout);

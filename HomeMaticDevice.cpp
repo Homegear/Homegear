@@ -985,7 +985,7 @@ void HomeMaticDevice::savePeers(bool full)
 		{
 			if(i->second->getParentAddress() != _address) continue;
 			//We are always printing this, because the init script needs it
-			HelperFunctions::printMessage(" - Saving peer 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6) + "...");
+			HelperFunctions::printMessage("(Shutdown) => Saving peer 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6));
 			i->second->save(full, full, full);
 		}
 	}

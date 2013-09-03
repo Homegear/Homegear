@@ -5,7 +5,7 @@
 #   Klaus M Pfeiffer (http://blog.kmp.or.at/2012/05/build-your-own-raspberry-pi-image/)
 #   Alex Bradbury (http://asbradbury.org/projects/spindle/)
 
-deb_mirror="http://archive.raspbian.org/raspbian/"
+deb_mirror="http://mirrordirector.raspbian.org/raspbian/"
 deb_local_mirror=$deb_mirror
 deb_release="wheezy"
 
@@ -121,15 +121,19 @@ LANG=C chroot $rootfs /third-stage
 
 rm homegear_current_armhf.deb
 
+#Install raspi-config
 wget https://raw.github.com/asb/raspi-config/master/raspi-config
 mv raspi-config usr/bin
 chown root:root usr/bin/raspi-config
 chmod 755 usr/bin/raspi-config
+#End install raspi-config
 
+#Create scripts directory
 mkdir scripts
 chown root:root scripts
 chmod 750 scripts
 
+#Add homegear monitor script
 echo "#!/bin/bash
 return=`ps -A | grep homegear -c`
 if [ $return -lt 1 ] && test -e /var/run/homegear/homegear.pid; then
@@ -154,17 +158,33 @@ fi" > scripts/checkServices.sh
 chown root:root scripts/checkServices.sh
 chmod 750 scripts/checkServices.sh
 
+#Add homegear monitor script to crontab
 echo "*/10 *  *       *       *       /scripts/checkServices.sh 2>&1 |/usr/bin/logger -t CheckServices" >> var/spool/cron/crontabs/root
 
+#Create Raspberry Pi boot config
 echo "arm_freq=900
 core_freq=250
 sdram_freq=450
 over_voltage=2" > boot/config.txt
 chown root:root boot/config.txt
 chmod 755 boot/config.txt
+#End Raspberry Pi boot config
 
 echo "deb $deb_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
+
+#First-start script
+echo "#!/bin/bash
+rm /etc/ssh/ssh_host* 2>&1
+ssh-keygen -A 2>&1
+raspi-config
+sed -i '$ d' /home/pi/.bashrc 2>&1
+rm /scripts/firstStart.sh" > scripts/firstStart.sh
+chown root:root scripts/firstStart.sh
+chmod 755 scripts/firstStart.sh
+
+echo "sudo /scripts/firstStart.sh" >> home/pi/.bashrc
+#End first-start script
 
 echo "#!/bin/bash
 apt-get clean

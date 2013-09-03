@@ -10,7 +10,7 @@ HM_CC_TC::HM_CC_TC() : HomeMaticDevice()
 HM_CC_TC::HM_CC_TC(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
 {
 	init();
-	startDutyCycle(-1);
+	if(deviceID == 0) startDutyCycle(-1); //Device is newly created
 }
 
 void HM_CC_TC::init()
@@ -48,6 +48,7 @@ int64_t HM_CC_TC::calculateLastDutyCycleEvent()
 {
 	try
 	{
+		if(_lastDutyCycleEvent < 0) _lastDutyCycleEvent = 0;
 		int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		if(now - _lastDutyCycleEvent > 1800000000) return -1; //Duty cycle is out of sync anyway so don't bother to calculate
 		int64_t nextDutyCycleEvent = _lastDutyCycleEvent;
@@ -319,6 +320,7 @@ void HM_CC_TC::loadVariables()
 				break;
 			}
 		}
+		startDutyCycle(calculateLastDutyCycleEvent());
 	}
 	catch(const std::exception& ex)
     {
@@ -432,6 +434,11 @@ void HM_CC_TC::startDutyCycle(int64_t lastDutyCycleEvent)
 {
 	try
 	{
+		if(_dutyCycleThread.joinable())
+		{
+			HelperFunctions::printCritical("Device 0x" + HelperFunctions::getHexString(_address, 6) + ": Duty cycle thread already started. Something went very wrong.");
+			return;
+		}
 		_dutyCycleThread = std::thread(&HM_CC_TC::dutyCycleThread, this, lastDutyCycleEvent);
 		HelperFunctions::setThreadPriority(_dutyCycleThread.native_handle(), 35);
 	}

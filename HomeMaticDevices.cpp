@@ -410,7 +410,7 @@ void HomeMaticDevices::dispose()
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			HelperFunctions::printDebug("Debug: Disposing device 0x" + HelperFunctions::getHexString((*i)->getAddress()), 4);
+			HelperFunctions::printDebug("Debug: Disposing device 0x" + HelperFunctions::getHexString((*i)->getAddress()));
 			devices.push_back(*i);
 		}
 		_devicesMutex.unlock();
@@ -443,16 +443,16 @@ void HomeMaticDevices::save(bool full, bool crash)
 	{
 		if(!crash)
 		{
-			HelperFunctions::printInfo("Waiting for duty cycles and worker threads to stop...");
+			HelperFunctions::printMessage("(Shutdown) => Waiting for threads");
 			//The disposing is necessary, because there is a small time gap between setting "_lastDutyCycleEvent" and the duty cycle message counter.
 			//If saving takes place within this gap, the paired duty cycle devices are out of sync after restart of the program.
 			dispose();
 		}
-		HelperFunctions::printInfo("Saving devices...");
+		HelperFunctions::printMessage("(Shutdown) => Saving devices");
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			HelperFunctions::printInfo("Saving device " + HelperFunctions::getHexString((*i)->getAddress(), 6) + "...");
+			HelperFunctions::printMessage("(Shutdown) => Saving device " + HelperFunctions::getHexString((*i)->getAddress(), 6));
 			(*i)->save(full);
 			(*i)->savePeers(full);
 		}
@@ -836,6 +836,7 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 			if(_currentDevice && _currentDevice->getAddress() == address) _currentDevice.reset();
 			if(get(address))
 			{
+				if(_central && address == _central->getAddress()) _central.reset();
 				remove(address);
 				stringStream << "Removing device." << std::endl;
 			}
