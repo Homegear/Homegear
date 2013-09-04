@@ -20,6 +20,7 @@ public:
 	std::pair<std::string, std::string> address;
 	std::string id;
 	std::shared_ptr<std::map<std::string, int32_t>> knownDevices;
+	std::map<std::string, bool> knownMethods;
 };
 
 class Client
@@ -33,7 +34,9 @@ public:
 	Client() { _servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>()); }
 	virtual ~Client();
 
+	void initServerMethods(std::pair<std::string, std::string> address);
 	void broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values);
+	void systemListMethods(std::pair<std::string, std::string> address);
 	void listDevices(std::pair<std::string, std::string> address);
 	void broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions);
 	void broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses);

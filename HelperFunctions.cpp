@@ -272,10 +272,38 @@ std::string HelperFunctions::getHexString(const std::vector<uint8_t>& data)
     return "";
 }
 
+std::string HelperFunctions::getHexString(const std::vector<char>& data)
+{
+	try
+	{
+		std::ostringstream stringstream;
+		stringstream << std::hex << std::setfill('0') << std::uppercase;
+		for(std::vector<char>::const_iterator i = data.begin(); i != data.end(); ++i)
+		{
+			stringstream << std::setw(2) << (int32_t)(*i);
+		}
+		stringstream << std::dec;
+		return stringstream.str();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
+}
+
 std::string HelperFunctions::getHexString(int32_t number, int32_t width)
 {
 	std::ostringstream stringstream;
-	stringstream << std::hex;
+	stringstream << std::hex << std::setfill('0');
 	if(width > -1) stringstream << std::setw(width);
 	stringstream << std::uppercase << number << std::dec;
 	return stringstream.str();

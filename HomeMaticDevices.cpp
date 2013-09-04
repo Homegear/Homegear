@@ -452,7 +452,7 @@ void HomeMaticDevices::save(bool full, bool crash)
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			HelperFunctions::printMessage("(Shutdown) => Saving device " + HelperFunctions::getHexString((*i)->getAddress(), 6));
+			HelperFunctions::printMessage("(Shutdown) => Saving device 0x" + HelperFunctions::getHexString((*i)->getAddress(), 6));
 			(*i)->save(full);
 			(*i)->savePeers(full);
 		}
@@ -850,6 +850,7 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 			std::stringstream stream(command);
 			std::string element;
 			int32_t index = 0;
+			bool central = false;
 			while(std::getline(stream, element, ' '))
 			{
 				if(index < 2)
@@ -860,8 +861,12 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					address = HelperFunctions::getNumber(element, true);
-					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+					if(element == "central") central = true;
+					else
+					{
+						address = HelperFunctions::getNumber(element, true);
+						if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+					}
 				}
 				index++;
 			}
@@ -870,11 +875,11 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 				stringStream << "Description: This command selects a virtual device." << std::endl;
 				stringStream << "Usage: devices select ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe 3 byte address of the device to select in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  ADDRESS:\tThe 3 byte address of the device to select in hexadecimal format or \"central\" as a shortcut to select the central device. Example: 1A03FC" << std::endl;
 				return stringStream.str();
 			}
 
-			_currentDevice = get(address);
+			_currentDevice = central ? getCentral() : get(address);
 			if(!_currentDevice) stringStream << "Device not found." << std::endl;
 			else
 			{

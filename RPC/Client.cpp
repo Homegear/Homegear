@@ -9,6 +9,30 @@ Client::~Client()
 
 }
 
+void Client::initServerMethods(std::pair<std::string, std::string> address)
+{
+	try
+	{
+		//Wait a little before sending these methods
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		systemListMethods(address);
+		listDevices(address);
+		sendUnknownDevices(address);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values)
 {
 	try
@@ -18,6 +42,7 @@ void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vect
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
+			if(!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			std::shared_ptr<RPCVariable> array(new RPCVariable(RPCVariableType::rpcArray));
 			std::shared_ptr<RPCVariable> method;
@@ -35,25 +60,64 @@ void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vect
 				params->arrayValue->push_back(values->at(i));
 			}
 			parameters->push_back(array);
-			//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even if there is only one value.
+			//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
 			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "system.multicall", parameters);
 			t.detach();
 		}
-		_serversMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_serversMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_serversMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_serversMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _serversMutex.unlock();
+}
+
+void Client::systemListMethods(std::pair<std::string, std::string> address)
+{
+	try
+	{
+		std::shared_ptr<RemoteRPCServer> server = getServer(address);
+		if(!server) return;
+		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>> { std::shared_ptr<RPCVariable>(new RPCVariable(server->id)) });
+		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "system.listMethods", parameters);
+		if(result->errorStruct)
+		{
+			HelperFunctions::printWarning("Warning: Error calling XML RPC method system.listMethods on server " + address.first + " with port " + address.second + ". Error struct: ");
+			result->print();
+			return;
+		}
+		if(result->type != RPCVariableType::rpcArray) return;
+		server->knownMethods.clear();
+		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
+		{
+			if((*i)->type == RPCVariableType::rpcString)
+			{
+				std::pair<std::string, bool> method;
+				if((*i)->stringValue.empty()) continue;
+				method.first = (*i)->stringValue;
+				method.second = true;
+				server->knownMethods.insert(method);
+			}
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -64,6 +128,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 	{
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
+		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
 		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>> { std::shared_ptr<RPCVariable>(new RPCVariable(server->id)) });
 		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "listDevices", parameters);
 		if(result->errorStruct)
@@ -117,6 +182,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		if(!central) HelperFunctions::printError("Error: Could not execute RPC method sendUnknownDevices. Please add a central device.");
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
+		if(!server->knownMethods.empty() && server->knownMethods.find("newDevices") == server->knownMethods.end()) return;
 		std::shared_ptr<RPCVariable> devices = GD::devices.getCentral()->listDevices(server->knownDevices);
 		if(devices->arrayValue->empty()) return;
 		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>{ std::shared_ptr<RPCVariable>(new RPCVariable(server->id)), devices });
@@ -151,6 +217,7 @@ void Client::broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions
 		std::string methodName("newDevices");
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
+			if(!(*server)->knownMethods.empty() && (*server)->knownMethods.find("newDevices") == (*server)->knownMethods.end()) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(deviceDescriptions);
@@ -184,6 +251,7 @@ void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
+			if(!(*server)->knownMethods.empty() && (*server)->knownMethods.find("deleteDevices") == (*server)->knownMethods.end()) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(deviceAddresses);
@@ -217,6 +285,7 @@ void Client::broadcastUpdateDevice(std::string address, Hint::Enum hint)
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
+			if(!(*server)->knownMethods.empty() && (*server)->knownMethods.find("updateDevice") == (*server)->knownMethods.end()) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(address)));

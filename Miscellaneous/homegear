@@ -106,7 +106,7 @@ case $1 in
                 		PROCESSCOUNT=`ps --pid $PID | grep -c homegear`
                 		if log_use_fancy_output; then
 					        LOGLINE=`tail -n 20 $LOGPATH/homegear.log | grep -o ".[sS]hutdown. => .*$" | tail -n 1`
-					        MESSAGE=${LOGLINE:14}
+					        MESSAGE=`printf "%-30s" "${LOGLINE:14}"`
 					        if [ ! -z "$LOGLINE" ]; then
 				                $TPUT civis || true
 				                $TPUT sc && \
@@ -126,7 +126,7 @@ case $1 in
 		                $TPUT hpa 36 && \
 		                CYAN=$( $TPUT setaf 6)
 		                NORMAL=$( $TPUT op)
-		                echo -ne "                                " || true
+		                echo -ne "                                   " || true
 		                $TPUT rc || true
 		                $TPUT cnorm || true
 					fi

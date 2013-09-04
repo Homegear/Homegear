@@ -79,7 +79,9 @@ echo "proc            /proc           proc    defaults        0       0
 /dev/mmcblk0p2  /           ext4    defaults        0       1
 " > etc/fstab
 
+#Setup network settings
 echo "homegearpi" > etc/hostname
+echo -e "127.0.0.1\thomegearpi" >> etc/hosts
 
 echo "auto lo
 iface lo inet loopback
@@ -87,6 +89,7 @@ iface lo inet loopback
 auto eth0
 iface eth0 inet dhcp
 " > etc/network/interfaces
+#End network settings
 
 echo "console-common    console-data/keymap/policy      select  Select keymap from full list
 console-common  console-data/keymap/full        select  us
@@ -98,7 +101,7 @@ echo "#!/bin/bash
 debconf-set-selections /debconf.set
 rm -f /debconf.set
 apt-get update
-apt-get -y install locales console-common ntp openssh-server git-core binutils ca-certificates sudo
+apt-get -y install locales console-common ntp openssh-server git-core binutils ca-certificates sudo parted
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules
@@ -175,10 +178,17 @@ echo "deb $deb_mirror $deb_release main contrib non-free rpi
 
 #First-start script
 echo "#!/bin/bash
-rm /etc/ssh/ssh_host* 2>&1
-ssh-keygen -A 2>&1
+echo \"************************************************************\"
+echo \"************************************************************\"
+echo \"************* Welcome to your homegear system! *************\"
+echo \"************************************************************\"
+echo \"************************************************************\"
+echo \"Generating new SSH host keys...\"
+rm /etc/ssh/ssh_host* >/dev/null
+ssh-keygen -A >/dev/null
+echo \"Starting raspi-config...\"
 raspi-config
-sed -i '$ d' /home/pi/.bashrc 2>&1
+sed -i '$ d' /home/pi/.bashrc >/dev/null
 rm /scripts/firstStart.sh" > scripts/firstStart.sh
 chown root:root scripts/firstStart.sh
 chmod 755 scripts/firstStart.sh
@@ -202,7 +212,8 @@ umount $rootp
 
 kpartx -d $image
 
-rm -Rf $rootfs
+mv $image .
+rm -Rf $buildenv
 
 echo "Created Image: $image"
 

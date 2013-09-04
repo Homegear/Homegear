@@ -943,6 +943,26 @@ std::shared_ptr<RPCVariable> RPCGetValue::invoke(std::shared_ptr<std::vector<std
     return RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+RPCInit::~RPCInit()
+{
+	try
+	{
+		if(_initServerThread.joinable()) _initServerThread.join();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
@@ -971,8 +991,8 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 		else
 		{
 			GD::rpcClient.addServer(server, parameters->at(1)->stringValue);
-			GD::rpcClient.listDevices(server);
-			GD::rpcClient.sendUnknownDevices(server);
+			if(_initServerThread.joinable()) _initServerThread.join();
+			_initServerThread = std::thread(&RPC::Client::initServerMethods, &GD::rpcClient, server);
 		}
 
 		return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));

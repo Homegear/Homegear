@@ -197,11 +197,16 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
 {
 	try
 	{
+		//HelperFunctions::printBinary(packet);
 		std::string methodName;
 		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters;
 		if(packetType == PacketType::Enum::binaryRequest) parameters = _rpcDecoder.decodeRequest(packet, methodName);
 		else if(packetType == PacketType::Enum::xmlRequest) parameters = _xmlRpcDecoder.decodeRequest(packet, methodName);
-		if(!parameters) return;
+		if(!parameters)
+		{
+			HelperFunctions::printWarning("Warning: Could not decode RPC packet.");
+			return;
+		}
 		PacketType::Enum responseType = (packetType == PacketType::Enum::binaryRequest) ? PacketType::Enum::binaryResponse : PacketType::Enum::xmlResponse;
 		if(!parameters->empty() && parameters->at(0)->errorStruct)
 		{
@@ -317,7 +322,11 @@ void RPCServer::analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr
 		if(packetType == PacketType::Enum::binaryResponse) response = _rpcDecoder.decodeResponse(packet);
 		else if(packetType == PacketType::Enum::xmlResponse) response = _xmlRpcDecoder.decodeResponse(packet);
 		if(!response) return;
-		if(GD::debugLevel >= 7) response->print();
+		if(GD::debugLevel >= 3)
+		{
+			HelperFunctions::printWarning("Warning: RPC server received RPC response. This shouldn't happen. Response data: ");
+			response->print();
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -454,36 +463,80 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 					t.detach();
 				}
 			}
-			else if(!strncmp(&buffer[0], "POST", 4))
+			else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.1 200 OK", 15))
 			{
+				if(GD::debugLevel >= 5)
+				{
+					std::vector<uint8_t> rawPacket;
+					rawPacket.insert(rawPacket.begin(), buffer, buffer + uBytesRead);
+					HelperFunctions::printDebug("Debug: Packet received: " + HelperFunctions::getHexString(rawPacket));
+				}
+				packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
 				buffer[uBytesRead] = '\0';
 				std::istringstream stringstream(buffer);
 				std::string line;
+				uint32_t position = 0;
 				dataSize = 0;
 				bool contentType = false;
 				bool host = false;
+				bool headerFinished = false;
 				while(stringstream.good() && !stringstream.eof())
 				{
 					stringstream.getline(lineBuffer, lineBufferMax);
 					line = std::string(lineBuffer);
+					position += line.size() + 1;
 					HelperFunctions::toLower(line);
 					if(line.size() > 14 && line.substr(0, 13) == "content-type:")
 					{
 						contentType = true;
-						if(line.substr(14) != "text/xml") break;
+						std::string typeString = line.substr(14);
+						HelperFunctions::trim(typeString);
+						if(typeString != "text/xml")
+						{
+							HelperFunctions::printWarning("Warning: Received packet without content type text/xml.");
+							break;
+						}
 					}
 					else if(line.size() > 16 && line.substr(0, 15) == "content-length:")
 					{
-						try	{ dataSize = std::stoll(line.substr(16)); } catch(...) {}
-						if(dataSize == 0) break;
+						std::string sizeString = line.substr(16);
+						HelperFunctions::trim(sizeString);
+						try	{ dataSize = std::stoll(sizeString); } catch(...) {}
+						if(dataSize == 0)
+						{
+							HelperFunctions::printWarning("Warning: Received packet with unknown content length or a content length of 0.");
+							break;
+						}
+					}
+					else if(line.size() > 19 && line.substr(0, 18) == "transfer-encoding:")
+					{
+						std::string transferEncoding = line.substr(19);
+						HelperFunctions::trim(transferEncoding);
+						if(transferEncoding == "chunked")
+						{
+							HelperFunctions::printWarning("Warning: Received chunked packet. Chunked packets are not supported.");
+							break;
+						}
 					}
 					else if(line.size() > 6 && line.substr(0, 5) == "host:")
 					{
 						host = true; //Required by xml rpc standard
 					}
-					else if(contentType && host && line.size() > 5 && line.substr(0, 5) == "<?xml")
+					else if(line.size() <= 1) headerFinished = true;
+					else if(headerFinished)
 					{
-						packetType = PacketType::Enum::xmlRequest;
+						if(!contentType || (!host && PacketType::Enum::xmlRequest) || line.size() <= 5 || line.substr(0, 5) != "<?xml")
+						{
+							std::vector<uint8_t> rawPacket;
+							rawPacket.insert(rawPacket.begin(), buffer, buffer + uBytesRead);
+							std::string what;
+							if(!contentType) what = "No content type was defined for packet";
+							else if(!host) what = "No host specified in packet";
+							else if(line.size() <= 5) what = "First line of packet is too short";
+							else if(line.substr(0, 5) != "<?xml") what = "Packet doesn't start with \"<?xml\"";
+							HelperFunctions::printWarning("Warning: " + what + ": " + HelperFunctions::getHexString(rawPacket));
+							break;
+						}
 						if(GD::debugLevel >= 6) HelperFunctions::printDebug("Receiving xml rpc packet with content size: " + std::to_string(dataSize), 6);
 						if(dataSize > 104857600)
 						{
@@ -491,7 +544,12 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 							break;
 						}
 						packet.reset(new std::vector<char>());
-						uint32_t pos = (int32_t)stringstream.tellg() - line.length() - 1; //Don't count the new line after the header
+						int32_t pos = position - (line.length() + 1);
+						if(pos < 0)
+						{
+							HelperFunctions::printError("Error: Could not calculate position in packet.");
+							break;
+						}
 						int32_t restLength = uBytesRead - pos;
 						if(restLength < 1)
 						{
@@ -512,6 +570,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 							packetLength = restLength;
 							packet->insert(packet->begin(), buffer + pos, buffer + pos + restLength);
 						}
+						break;
 					}
 				}
 			}
@@ -519,7 +578,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 			{
 				if(packetLength + uBytesRead == dataSize + 1)
 				{
-					//For XML RPC packets the last byte is "\n", which is not counted in "Content-Length"
+					//For XML RPC packets the last byte often is "\n", which is not counted in "Content-Length"
 					uBytesRead -= 1;
 				}
 				if(packetLength + uBytesRead > dataSize)
@@ -538,6 +597,12 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 					t.detach();
 					packetLength = 0;
 				}
+			}
+			else
+			{
+				std::vector<uint8_t> badData;
+				badData.insert(badData.begin(), buffer, buffer + uBytesRead);
+				HelperFunctions::printWarning("Warning: Uninterpretable packet received: " + HelperFunctions::getHexString(badData));
 			}
 		}
 		//This point is only reached, when stopServer is true

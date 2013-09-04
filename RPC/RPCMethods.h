@@ -263,7 +263,11 @@ public:
 	{
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
 	}
+	virtual ~RPCInit();
+
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+private:
+	std::thread _initServerThread;
 };
 
 class RPCListBidcosInterfaces : public RPCMethod

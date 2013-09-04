@@ -485,19 +485,109 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(command == "peers list")
+		else if(command.compare(0, 10, "peers list") == 0)
 		{
 			try
 			{
+				std::string filterType;
+				std::string filterValue;
+
+				std::stringstream stream(command);
+				std::string element;
+				int32_t index = 0;
+				while(std::getline(stream, element, ' '))
+				{
+					if(index < 2)
+					{
+						index++;
+						continue;
+					}
+					else if(index == 2)
+					{
+						if(element == "help")
+						{
+							index = -1;
+							break;
+						}
+						filterType = HelperFunctions::toLower(element);
+					}
+					else if(index == 3) filterValue = element;
+					index++;
+				}
+				if(index == -1)
+				{
+					stringStream << "Description: This command unpairs a peer." << std::endl;
+					stringStream << "Usage: peers list [FILTERTYPE] [FILTERVALUE]" << std::endl << std::endl;
+					stringStream << "Parameters:" << std::endl;
+					stringStream << "  FILTERTYPE:\tSee filter types below." << std::endl;
+					stringStream << "  FILTERVALUE:\tDepends on the filter type. If a number is required, it has to be in hexadecimal format." << std::endl << std::endl;
+					stringStream << "Filter types:" << std::endl;
+					stringStream << "  ADDRESS: Filter by address." << std::endl;
+					stringStream << "      FILTERVALUE: The 3 byte address of the peer to filter (e. g. 1DA44D)." << std::endl;
+					stringStream << "  SERIAL: Filter by serial number." << std::endl;
+					stringStream << "      FILTERVALUE: The serial number of the peer to filter (e. g. JEQ0554309)." << std::endl;
+					stringStream << "  TYPE: Filter by device type." << std::endl;
+					stringStream << "      FILTERVALUE: The 2 byte device type in hexadecimal format." << std::endl;
+					stringStream << "  CONFIGPENDING: List peers with pending config." << std::endl;
+					stringStream << "      FILTERVALUE: empty" << std::endl;
+					stringStream << "  UNREACH: List all unreachable peers." << std::endl;
+					stringStream << "      FILTERVALUE: empty" << std::endl;
+					return stringStream.str();
+				}
+
 				if(_peers.empty())
 				{
 					stringStream << "No peers are paired to this central." << std::endl;
 					return stringStream.str();
 				}
 				_peersMutex.lock();
-				for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+				for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 				{
-					stringStream << "Address: 0x" << std::hex << i->second->getAddress() << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: " << (uint32_t)i->second->getDeviceType() << std::endl << std::dec;
+					if(filterType == "address")
+					{
+						int32_t address = HelperFunctions::getNumber(filterValue, true);
+						if(i->second->getAddress() != address) continue;
+					}
+					else if(filterType == "serial")
+					{
+						if(i->second->getSerialNumber() != filterValue) continue;
+					}
+					else if(filterType == "type")
+					{
+						int32_t deviceType = HelperFunctions::getNumber(filterValue, true);
+						if((int32_t)i->second->getDeviceType() != deviceType) continue;
+					}
+					else if(filterType == "configpending")
+					{
+						if(i->second->serviceMessages)
+						{
+							if(!i->second->serviceMessages->getConfigPending()) continue;
+						}
+					}
+					else if(filterType == "unreach")
+					{
+						if(i->second->serviceMessages)
+						{
+							if(!i->second->serviceMessages->getUnreach()) continue;
+						}
+					}
+
+					stringStream << "Address: 0x" << std::hex << i->second->getAddress() << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType();
+					if(i->second->rpcDevice)
+					{
+						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
+						std::string typeID;
+						if(type) typeID = (" (" + type->id + ")");
+						typeID.resize(25, ' ');
+						stringStream << typeID;
+					}
+					if(i->second->serviceMessages)
+					{
+						std::string configPending(i->second->serviceMessages->getConfigPending() ? "Yes" : "No");
+						std::string unreachable(i->second->serviceMessages->getUnreach() ? "Yes" : "No");
+						stringStream << "\tConfig pending: " << configPending << "\tUnreachable: " << unreachable;
+					}
+					stringStream << std::endl << std::dec;
 				}
 				_peersMutex.unlock();
 				return stringStream.str();

@@ -324,6 +324,11 @@ int main(int argc, char* argv[])
     	if(!GD::db.isOpen()) exit(1);
 
     	GD::rfDevice = RF::RFDevice::create(GD::settings.rfDeviceType());
+    	if(!GD::rfDevice)
+    	{
+    		HelperFunctions::printError("Could not create rf device");
+    		return 1;
+    	}
         GD::rfDevice->init(GD::settings.rfDevice());
         if(!GD::rfDevice) return 1;
         HelperFunctions::printInfo("Loading XML RPC devices...");

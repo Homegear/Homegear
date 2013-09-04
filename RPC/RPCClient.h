@@ -33,7 +33,6 @@ protected:
 	XMLRPCDecoder _xmlRpcDecoder;
 	XMLRPCEncoder _xmlRpcEncoder;
 	int32_t _sendCounter = 0;
-	std::mutex _sendMutex;
 
 	std::string sendRequest(std::string server, std::string port, std::string data);
 };
