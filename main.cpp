@@ -373,7 +373,7 @@ int main(int argc, char* argv[])
 			}
         }
 
-        terminate(15);
+        terminate(SIGTERM);
         return 0;
     }
     catch(const std::exception& ex)

@@ -24,6 +24,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 
+#include "HTTP.h"
 #include "RPCVariable.h"
 #include "RPCMethod.h"
 #include "RPCDecoder.h"
@@ -70,13 +71,13 @@ namespace RPC
 			int32_t getClientFileDescriptor();
 			void mainThread();
 			void readClient(int32_t clientFileDescriptor);
-			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<RPCVariable> error, PacketType::Enum packetType);
-			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> data, bool closeConnection);
-			void packetReceived(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType);
-			void analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType);
-			void analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType);
+			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<RPCVariable> error, PacketType::Enum packetType, bool keepAlive);
+			void sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> data, bool keepAlive);
+			void packetReceived(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive);
+			void analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive);
+			void analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive);
 			void removeClientFileDescriptor(int32_t clientFileDescriptor);
-			void callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType);
+			void callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive);
 			std::string getHttpResponseHeader(uint32_t contentLength);
 	};
 }

@@ -973,10 +973,10 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 		std::pair<std::string, std::string> server = HelperFunctions::split(parameters->at(0)->stringValue, ':');
 		if(server.first.empty() || server.second.empty()) return RPCVariable::createError(-32602, "Server address or port is empty.");
 		if(server.first.size() < 5) return RPCVariable::createError(-32602, "Server address too short.");
-		if(server.first.substr(0, 5) == "https") return RPCVariable::createError(-32602, "https is currently not supported.");
+		if(server.first.compare(0, 5, "https") == 0) return RPCVariable::createError(-32602, "https is currently not supported.");
 		HelperFunctions::toLower(server.first);
 		server.second = std::to_string(HelperFunctions::getNumber(server.second));
-		if(server.second == "0" || server.second.empty()) return RPCVariable::createError(-32602, "Port number is invalid.");
+		if(server.second.empty() || server.second == "0") return RPCVariable::createError(-32602, "Port number is invalid.");
 
 		if(!GD::devices.getCentral())
 		{

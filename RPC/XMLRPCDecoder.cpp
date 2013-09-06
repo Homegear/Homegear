@@ -182,6 +182,7 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNod
 		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
 
 		std::string type(subNode->name());
+		HelperFunctions::toLower(type);
 		std::string value(subNode->value());
 		if(type == "string")
 		{
@@ -216,6 +217,10 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNod
 		else if(type == "struct")
 		{
 			return decodeStruct(subNode);
+		}
+		else if(type == "nil" || type == "ex:nil")
+		{
+			return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
 		}
 		return std::shared_ptr<RPCVariable>(new RPCVariable(value)); //if no type is specified return string
 	}

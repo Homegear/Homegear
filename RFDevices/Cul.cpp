@@ -216,8 +216,10 @@ std::string Cul::readFromDevice()
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(_fileDescriptor, &readFileDescriptor);
 
-		while(localBuffer[0] != '\n')
+		while(!_stopCallbackThread && localBuffer[0] != '\n')
 		{
+			FD_ZERO(&readFileDescriptor);
+			FD_SET(_fileDescriptor, &readFileDescriptor);
 			//Timeout needs to be set every time, so don't put it outside of the while loop
 			timeval timeout;
 			timeout.tv_sec = 0;
@@ -226,9 +228,6 @@ std::string Cul::readFromDevice()
 			switch(i)
 			{
 				case 0: //Timeout
-					FD_ZERO(&readFileDescriptor);
-					FD_SET(_fileDescriptor, &readFileDescriptor);
-					timeout.tv_sec = 3;
 					if(!_stopCallbackThread) continue;
 					else return "";
 					break;

@@ -7,12 +7,10 @@
 class Exception : std::exception
 {
     public:
-        /** Default constructor */
-        Exception(std::string message);
+        Exception(std::string message) {  _message = message; }
 
-        std::string what() { return _message; }
+        virtual std::string what() { return _message; }
     protected:
-    private:
         std::string _message;
 };
 

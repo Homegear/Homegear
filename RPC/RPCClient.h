@@ -14,6 +14,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <poll.h>
 
 #include "XMLRPCEncoder.h"
 #include "XMLRPCDecoder.h"
@@ -34,7 +35,7 @@ protected:
 	XMLRPCEncoder _xmlRpcEncoder;
 	int32_t _sendCounter = 0;
 
-	std::string sendRequest(std::string server, std::string port, std::string data);
+	std::shared_ptr<std::vector<char>> sendRequest(std::string server, std::string port, std::string data, bool& timedout);
 };
 
 } /* namespace RPC */

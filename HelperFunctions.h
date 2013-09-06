@@ -63,7 +63,7 @@ public:
 			return s;
 	}
 
-	static inline std::string &trim(std::string &s)
+	static inline std::string& trim(std::string& s)
 	{
 			return ltrim(rtrim(s));
 	}
@@ -83,7 +83,7 @@ public:
 		return number;
 	}
 
-	static bool isNumber(std::string &s)
+	static bool isNumber(std::string& s)
 	{
 		int32_t xpos = s.find('x');
 		if(xpos == -1) try { std::stoll(s, 0, 10); } catch(...) { return false; }
@@ -91,7 +91,7 @@ public:
 		return true;
 	}
 
-	static int32_t getNumber(std::string &s, bool isHex = false)
+	static int32_t getNumber(std::string& s, bool isHex = false)
 	{
 		int32_t xpos = s.find('x');
 		int32_t number = 0;

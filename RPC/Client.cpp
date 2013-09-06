@@ -16,8 +16,12 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 		//Wait a little before sending these methods
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		systemListMethods(address);
+		std::shared_ptr<RemoteRPCServer> server = getServer(address);
+		if(!server) return; //server is empty when connection timed out
 		listDevices(address);
 		sendUnknownDevices(address);
+		server = getServer(address);
+		if(server) server->initialized = true;
 	}
 	catch(const std::exception& ex)
     {
@@ -42,7 +46,7 @@ void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vect
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
-			if(!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end())) continue;
+			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end()))) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			std::shared_ptr<RPCVariable> array(new RPCVariable(RPCVariableType::rpcArray));
 			std::shared_ptr<RPCVariable> method;
@@ -62,6 +66,7 @@ void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vect
 			parameters->push_back(array);
 			//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
 			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "system.multicall", parameters);
+			HelperFunctions::setThreadPriority(t.native_handle(), 40);
 			t.detach();
 		}
 	}
@@ -107,6 +112,7 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 				server->knownMethods.insert(method);
 			}
 		}
+		return;
 	}
     catch(const std::exception& ex)
     {
@@ -217,7 +223,7 @@ void Client::broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions
 		std::string methodName("newDevices");
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
-			if(!(*server)->knownMethods.empty() && (*server)->knownMethods.find("newDevices") == (*server)->knownMethods.end()) continue;
+			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("newDevices") == (*server)->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(deviceDescriptions);
@@ -251,7 +257,7 @@ void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
-			if(!(*server)->knownMethods.empty() && (*server)->knownMethods.find("deleteDevices") == (*server)->knownMethods.end()) continue;
+			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("deleteDevices") == (*server)->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(deviceAddresses);
@@ -285,7 +291,7 @@ void Client::broadcastUpdateDevice(std::string address, Hint::Enum hint)
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
-			if(!(*server)->knownMethods.empty() && (*server)->knownMethods.find("updateDevice") == (*server)->knownMethods.end()) continue;
+			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("updateDevice") == (*server)->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(address)));

@@ -68,6 +68,7 @@ uint32_t RPCServer::connectionCount()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return 0;
 }
 
 void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method)
@@ -160,7 +161,7 @@ void RPCServer::mainThread()
     }
 }
 
-void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> data, bool closeConnection)
+void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> data, bool keepAlive)
 {
 	try
 	{
@@ -171,7 +172,7 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 			return;
 		}
 		int32_t ret = send(clientFileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
-		if(closeConnection)
+		if(!keepAlive)
 		{
 			removeClientFileDescriptor(clientFileDescriptor);
 			shutdown(clientFileDescriptor, 1);
@@ -193,7 +194,7 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
     }
 }
 
-void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType)
+void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
@@ -210,7 +211,7 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
 		PacketType::Enum responseType = (packetType == PacketType::Enum::binaryRequest) ? PacketType::Enum::binaryResponse : PacketType::Enum::xmlResponse;
 		if(!parameters->empty() && parameters->at(0)->errorStruct)
 		{
-			sendRPCResponseToClient(clientFileDescriptor, parameters->at(0), responseType);
+			sendRPCResponseToClient(clientFileDescriptor, parameters->at(0), responseType, keepAlive);
 			return;
 		}
 		if(GD::debugLevel >= 4)
@@ -221,11 +222,11 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
 				(*i)->print();
 			}
 		}
-		if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(clientFileDescriptor, methodName, parameters, responseType);
-		else if(GD::debugLevel >= 3)
+		if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(clientFileDescriptor, methodName, parameters, responseType, keepAlive);
+		else
 		{
 			HelperFunctions::printError("Warning: RPC method not found: " + methodName);
-			sendRPCResponseToClient(clientFileDescriptor, RPCVariable::createError(-32601, ": Requested method not found."), responseType);
+			sendRPCResponseToClient(clientFileDescriptor, RPCVariable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
 		}
 	}
 	catch(const std::exception& ex)
@@ -242,7 +243,7 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
     }
 }
 
-void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<RPCVariable> variable, PacketType::Enum responseType)
+void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<RPCVariable> variable, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -251,16 +252,27 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 		{
 			std::string xml = _xmlRpcEncoder.encodeResponse(variable);
 			std::string header = getHttpResponseHeader(xml.size());
+			xml.push_back('\r');
 			xml.push_back('\n');
-			data.reset(new std::vector<char>(header.size() + xml.size()));
+			if(GD::debugLevel >= 5)
+			{
+				HelperFunctions::printDebug("Response packet:");
+				std::cout << header << xml << std::endl;
+			}
+			data.reset(new std::vector<char>());
 			data->insert(data->begin(), header.begin(), header.end());
-			data->insert(data->begin() + header.size(), xml.begin(), xml.end());
-			sendRPCResponseToClient(clientFileDescriptor, data, true);
+			data->insert(data->end(), xml.begin(), xml.end());
+			sendRPCResponseToClient(clientFileDescriptor, data, keepAlive);
 		}
 		else if(responseType == PacketType::Enum::binaryResponse)
 		{
 			data = _rpcEncoder.encodeResponse(variable);
-			sendRPCResponseToClient(clientFileDescriptor, data, false);
+			if(GD::debugLevel >= 5)
+			{
+				HelperFunctions::printDebug("Response binary:");
+				HelperFunctions::printBinary(data);
+			}
+			sendRPCResponseToClient(clientFileDescriptor, data, keepAlive);
 		}
 	}
 	catch(const std::exception& ex)
@@ -277,7 +289,7 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
     }
 }
 
-void RPCServer::callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType)
+void RPCServer::callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -287,7 +299,7 @@ void RPCServer::callMethod(int32_t clientFileDescriptor, std::string methodName,
 			HelperFunctions::printDebug("Response: ");
 			ret->print();
 		}
-		sendRPCResponseToClient(clientFileDescriptor, ret, responseType);
+		sendRPCResponseToClient(clientFileDescriptor, ret, responseType, keepAlive);
 	}
 	catch(const std::exception& ex)
     {
@@ -306,15 +318,15 @@ void RPCServer::callMethod(int32_t clientFileDescriptor, std::string methodName,
 std::string RPCServer::getHttpResponseHeader(uint32_t contentLength)
 {
 	std::string header;
-	header.append("HTTP/1.1 200 OK\n");
-	header.append("Connection: close\n");
-	header.append("Content-Type: text/xml\n");
-	header.append("Content-Length: ").append(std::to_string(contentLength)).append("\n\n");
+	header.append("HTTP/1.1 200 OK\r\n");
+	header.append("Connection: close\r\n");
+	header.append("Content-Type: text/xml\r\n");
+	header.append("Content-Length: ").append(std::to_string(contentLength + 21)).append("\r\n\r\n");
 	header.append("<?xml version=\"1.0\"?>");
 	return header;
 }
 
-void RPCServer::analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType)
+void RPCServer::analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
@@ -342,12 +354,12 @@ void RPCServer::analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr
     }
 }
 
-void RPCServer::packetReceived(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType)
+void RPCServer::packetReceived(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
-		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest) analyzeRPC(clientFileDescriptor, packet, packetType);
-		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(clientFileDescriptor, packet, packetType);
+		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest) analyzeRPC(clientFileDescriptor, packet, packetType, keepAlive);
+		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(clientFileDescriptor, packet, packetType, keepAlive);
 	}
     catch(const std::exception& ex)
     {
@@ -402,14 +414,12 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 	{
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
-		int32_t lineBufferMax = 128;
-		char lineBuffer[lineBufferMax];
 		std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
 		uint32_t packetLength = 0;
 		int32_t bytesRead;
-		uint32_t uBytesRead;
 		uint32_t dataSize = 0;
 		PacketType::Enum packetType;
+		HTTP http;
 
 		HelperFunctions::printDebug("Listening for incoming packets from client number " + std::to_string(clientFileDescriptor) + ".");
 		while(!_stopServer)
@@ -439,11 +449,11 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
 				return;
 			}
-			uBytesRead = bytesRead; //To prevent errors comparing signed and unsigned integers
 			if(!strncmp(&buffer[0], "Bin", 3))
 			{
+				http.reset();
 				packetType = (buffer[3] == 0) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryResponse;
-				if(uBytesRead < 8) continue;
+				if(bytesRead < 8) continue;
 				HelperFunctions::memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
 				HelperFunctions::printDebug("Receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
 				if(dataSize == 0) continue;
@@ -453,156 +463,89 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 					continue;
 				}
 				packet.reset(new std::vector<char>());
-				packet->insert(packet->begin(), buffer + 8, buffer + uBytesRead);
-				if(dataSize > uBytesRead - 8) packetLength = uBytesRead - 8;
+				packet->insert(packet->begin(), buffer + 8, buffer + bytesRead);
+				if(dataSize > bytesRead - 8) packetLength = bytesRead - 8;
 				else
 				{
 					packetLength = 0;
-					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
+					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType, true);
 					HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 					t.detach();
 				}
 			}
-			else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.1 200 OK", 15))
+			else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7))
 			{
 				if(GD::debugLevel >= 5)
 				{
 					std::vector<uint8_t> rawPacket;
-					rawPacket.insert(rawPacket.begin(), buffer, buffer + uBytesRead);
+					rawPacket.insert(rawPacket.begin(), buffer, buffer + bytesRead);
 					HelperFunctions::printDebug("Debug: Packet received: " + HelperFunctions::getHexString(rawPacket));
 				}
 				packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
-				buffer[uBytesRead] = '\0';
-				std::istringstream stringstream(buffer);
-				std::string line;
-				uint32_t position = 0;
-				dataSize = 0;
-				bool contentType = false;
-				bool host = false;
-				bool headerFinished = false;
-				while(stringstream.good() && !stringstream.eof())
+				buffer[bytesRead] = '\0';
+
+				try
 				{
-					stringstream.getline(lineBuffer, lineBufferMax);
-					line = std::string(lineBuffer);
-					position += line.size() + 1;
-					HelperFunctions::toLower(line);
-					if(line.size() > 14 && line.substr(0, 13) == "content-type:")
-					{
-						contentType = true;
-						std::string typeString = line.substr(14);
-						HelperFunctions::trim(typeString);
-						if(typeString != "text/xml")
-						{
-							HelperFunctions::printWarning("Warning: Received packet without content type text/xml.");
-							break;
-						}
-					}
-					else if(line.size() > 16 && line.substr(0, 15) == "content-length:")
-					{
-						std::string sizeString = line.substr(16);
-						HelperFunctions::trim(sizeString);
-						try	{ dataSize = std::stoll(sizeString); } catch(...) {}
-						if(dataSize == 0)
-						{
-							HelperFunctions::printWarning("Warning: Received packet with unknown content length or a content length of 0.");
-							break;
-						}
-					}
-					else if(line.size() > 19 && line.substr(0, 18) == "transfer-encoding:")
-					{
-						std::string transferEncoding = line.substr(19);
-						HelperFunctions::trim(transferEncoding);
-						if(transferEncoding == "chunked")
-						{
-							HelperFunctions::printWarning("Warning: Received chunked packet. Chunked packets are not supported.");
-							break;
-						}
-					}
-					else if(line.size() > 6 && line.substr(0, 5) == "host:")
-					{
-						host = true; //Required by xml rpc standard
-					}
-					else if(line.size() <= 1) headerFinished = true;
-					else if(headerFinished)
-					{
-						if(!contentType || (!host && PacketType::Enum::xmlRequest) || line.size() <= 5 || line.substr(0, 5) != "<?xml")
-						{
-							std::vector<uint8_t> rawPacket;
-							rawPacket.insert(rawPacket.begin(), buffer, buffer + uBytesRead);
-							std::string what;
-							if(!contentType) what = "No content type was defined for packet";
-							else if(!host) what = "No host specified in packet";
-							else if(line.size() <= 5) what = "First line of packet is too short";
-							else if(line.substr(0, 5) != "<?xml") what = "Packet doesn't start with \"<?xml\"";
-							HelperFunctions::printWarning("Warning: " + what + ": " + HelperFunctions::getHexString(rawPacket));
-							break;
-						}
-						if(GD::debugLevel >= 6) HelperFunctions::printDebug("Receiving xml rpc packet with content size: " + std::to_string(dataSize), 6);
-						if(dataSize > 104857600)
-						{
-							HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
-							break;
-						}
-						packet.reset(new std::vector<char>());
-						int32_t pos = position - (line.length() + 1);
-						if(pos < 0)
-						{
-							HelperFunctions::printError("Error: Could not calculate position in packet.");
-							break;
-						}
-						int32_t restLength = uBytesRead - pos;
-						if(restLength < 1)
-						{
-							HelperFunctions::printError("Error: No data in xml rpc packet.");
-							break;
-						}
-						if((unsigned)restLength >= dataSize)
-						{
-							packet->insert(packet->begin() + packetLength, buffer + pos, buffer + pos + dataSize);
-							packet->push_back('\0');
-							packetLength = 0;
-							std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-							HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
-							t.detach();
-						}
-						else
-						{
-							packetLength = restLength;
-							packet->insert(packet->begin(), buffer + pos, buffer + pos + restLength);
-						}
-						break;
-					}
+					http.process(buffer, bytesRead);
+				}
+				catch(HTTPException& ex)
+				{
+					HelperFunctions::printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+				}
+
+				if(http.getHeader()->contentLength > 104857600)
+				{
+					HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
+					break;
 				}
 			}
 			else if(packetLength > 0)
 			{
-				if(packetLength + uBytesRead == dataSize + 1)
+				if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::binaryRequest)
 				{
-					//For XML RPC packets the last byte often is "\n", which is not counted in "Content-Length"
-					uBytesRead -= 1;
+					if(packetLength + bytesRead > dataSize)
+					{
+						HelperFunctions::printError("Error: Packet length is wrong.");
+						packetLength = 0;
+						continue;
+					}
+					packet->insert(packet->begin() + packetLength, buffer, buffer + bytesRead);
+					packetLength += bytesRead;
+					if(packetLength == dataSize)
+					{
+						packet->push_back('\0');
+						std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType, true);
+						HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
+						t.detach();
+						packetLength = 0;
+					}
 				}
-				if(packetLength + uBytesRead > dataSize)
+				else
 				{
-					HelperFunctions::printError("Error: Packet length is wrong.");
-					packetLength = 0;
-					continue;
-				}
-				packet->insert(packet->begin() + packetLength, buffer, buffer + uBytesRead);
-				packetLength += uBytesRead;
-				if(packetLength == dataSize)
-				{
-					packet->push_back('\0');
-					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType);
-					HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
-					t.detach();
-					packetLength = 0;
+					try
+					{
+						http.process(buffer, bytesRead);
+					}
+					catch(HTTPException& ex)
+					{
+						HelperFunctions::printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+					}
+
+					if(http.getContentSize() > 104857600)
+					{
+						http.reset();
+						HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
+					}
 				}
 			}
-			else
+			else HelperFunctions::printWarning("Warning: Uninterpretable packet received: " + std::string(buffer, buffer + bytesRead));
+			if(http.isFinished())
 			{
-				std::vector<uint8_t> badData;
-				badData.insert(badData.begin(), buffer, buffer + uBytesRead);
-				HelperFunctions::printWarning("Warning: Uninterpretable packet received: " + HelperFunctions::getHexString(badData));
+				std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, http.getContent(), packetType, http.getHeader()->connection == HTTP::Connection::Enum::keepAlive);
+				HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
+				t.detach();
+				packetLength = 0;
+				http.reset();
 			}
 		}
 		//This point is only reached, when stopServer is true

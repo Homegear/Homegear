@@ -1,6 +1,7 @@
 #include "RPCClient.h"
 #include "../HelperFunctions.h"
 #include "../GD.h"
+#include "../Version.h"
 
 namespace RPC
 {
@@ -22,13 +23,20 @@ void RPCClient::invokeBroadcast(std::string server, std::string port, std::strin
 				(*i)->print();
 			}
 		}
-		std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
-		if(result.empty())
+		bool timedout = false;
+		std::shared_ptr<std::vector<char>> result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters), timedout);
+		if(timedout) return;
+		if(!result || result->empty())
 		{
 			HelperFunctions::printWarning("Warning: Response is empty. XML RPC method: " + methodName + " Server: " + server + " Port: " + port);
 			return;
 		}
 		std::shared_ptr<RPCVariable> returnValue = _xmlRpcDecoder.decodeResponse(result);
+		if(GD::debugLevel >= 5)
+		{
+			HelperFunctions::printDebug("Response was:");
+			returnValue->print();
+		}
 		if(returnValue->errorStruct)
 		{
 			if(returnValue->structValue->size() == 2)
@@ -69,9 +77,17 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::string server, std::string p
 				(*i)->print();
 			}
 		}
-		std::string result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters));
-		if(result.empty()) return RPCVariable::createError(-32700, "No response data.");
-		return _xmlRpcDecoder.decodeResponse(result);
+		bool timedout = false;
+		std::shared_ptr<std::vector<char>> result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters), timedout);
+		if(timedout) return RPCVariable::createError(-32300, "Request timed out.");
+		if(!result || result->empty()) return RPCVariable::createError(-32700, "No response data.");
+		std::shared_ptr<RPCVariable> returnValue = _xmlRpcDecoder.decodeResponse(result);
+		if(GD::debugLevel >= 5)
+		{
+			HelperFunctions::printDebug("Response was:");
+			returnValue->print();
+		}
+		return returnValue;
 	}
     catch(const std::exception& ex)
     {
@@ -88,7 +104,7 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::string server, std::string p
     return RPCVariable::createError(-32700, "No response data.");
 }
 
-std::string RPCClient::sendRequest(std::string server, std::string port, std::string data)
+std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, std::string port, std::string data, bool& timedout)
 {
 	try
 	{
@@ -97,7 +113,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		{
 			HelperFunctions::printCritical("Could not execute XML RPC method on server " + server + " and port " + port + ", because there are more than 100 requests queued. Your server is either not reachable currently or your connection is too slow.");
 			_sendCounter--;
-			return "";
+			return std::shared_ptr<std::vector<char>>();
 		}
 
 		std::string ipAddress = server;
@@ -106,14 +122,14 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 		{
 			HelperFunctions::printError("Error: Server's address too short: " + ipAddress);
 			_sendCounter--;
-			return "";
+			return std::shared_ptr<std::vector<char>>();
 		}
 		if(ipAddress.substr(0, 7) == "http://") ipAddress = ipAddress.substr(7);
 
 		int32_t fileDescriptor = -1;
 
 		//Retry for two minutes
-		for(uint32_t i = 0; i < 12; ++i)
+		for(uint32_t i = 0; i < 6; ++i)
 		{
 			struct addrinfo *serverInfo;
 			struct addrinfo hostInfo;
@@ -155,17 +171,29 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 				HelperFunctions::printError("Error: Could not create socket for XML RPC server " + ipString + " on port " + port + ": " + strerror(errno));
 				freeaddrinfo(serverInfo);
 				_sendCounter--;
-				return "";
+				return std::shared_ptr<std::vector<char>>();
 			}
 
-			if(connect(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen) == -1)
+			if(!(fcntl(fileDescriptor, F_GETFL) & O_NONBLOCK))
 			{
-				if(i < 11)
+				if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK) < 0)
 				{
-					HelperFunctions::printError("Warning: Could not connect to XML RPC server " + ipString + " on port " + port + ": " + strerror(errno) + ". Retrying in 5 seconds...");
+					freeaddrinfo(serverInfo);
+					_sendCounter--;
+					return std::shared_ptr<std::vector<char>>();
+				}
+			}
+
+			int32_t connectResult;
+			if((connectResult = connect(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen)) == -1 && errno != EINPROGRESS)
+			{
+				if(i < 5)
+				{
+					HelperFunctions::printError("Warning: Could not connect to XML RPC server " + ipString + " on port " + port + ": " + strerror(errno) + ". Retrying in 3 seconds...");
 					freeaddrinfo(serverInfo);
 					close(fileDescriptor);
-					std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+					std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+					continue;
 				}
 				else
 				{
@@ -174,17 +202,74 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 					close(fileDescriptor);
 					_sendCounter--;
 					GD::rpcClient.removeServer(std::pair<std::string, std::string>(server, port));
-					return "";
+					timedout = true;
+					return std::shared_ptr<std::vector<char>>();
 				}
 			}
-			else
+			freeaddrinfo(serverInfo);
+
+			if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) ^ O_NONBLOCK) < 0)
 			{
-				freeaddrinfo(serverInfo);
-				break;
+				close(fileDescriptor);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
+			}
+
+			if(connectResult != 0) //We have to wait for the connection
+			{
+				timeval timeout;
+				timeout.tv_sec = 5;
+				timeout.tv_usec = 0;
+
+				pollfd pollstruct
+				{
+					(int)fileDescriptor,
+					(short)(POLLOUT | POLLERR),
+					(short)0
+				};
+
+				int32_t pollResult = poll(&pollstruct, 1, 5000);
+				if(pollResult < 0 || (pollstruct.revents & POLLERR))
+				{
+					HelperFunctions::printError("Error: Could not connect to XML RPC server " + ipString + " on port " + port + ": " + strerror(errno) + ". Poll failed. Error code: " + std::to_string(pollResult));
+					close(fileDescriptor);
+					_sendCounter--;
+					return std::shared_ptr<std::vector<char>>();
+				}
+				else if(pollResult > 0)
+				{
+					socklen_t resultLength = sizeof(connectResult);
+					if(getsockopt(fileDescriptor, SOL_SOCKET, SO_ERROR, &connectResult, &resultLength) < 0)
+					{
+						HelperFunctions::printError("Error: Could not connect to XML RPC server " + ipString + " on port " + port + ": " + strerror(errno) + ".");
+						close(fileDescriptor);
+						_sendCounter--;
+						return std::shared_ptr<std::vector<char>>();
+					}
+					break;
+				}
+				else if(pollResult == 0)
+				{
+					if(i < 5)
+					{
+						HelperFunctions::printError("Warning: Connecting to XML RPC server " + ipString + " on port " + port + " timed out. Retrying...");
+						close(fileDescriptor);
+						continue;
+					}
+					else
+					{
+						HelperFunctions::printError("Error: Connecting to XML RPC server " + ipString + " on port " + port + " timed out. Giving up and removing server. Server has to send init again.");
+						close(fileDescriptor);
+						_sendCounter--;
+						GD::rpcClient.removeServer(std::pair<std::string, std::string>(server, port));
+						timedout = true;
+						return std::shared_ptr<std::vector<char>>();
+					}
+				}
 			}
 		}
 
-		std::string msg("POST /RPC2 HTTP/1.1\nUser_Agent: Homegear\nHost: " + ipString + ":" + port + "\nContent-Type: text/xml\nContent-Length: " + std::to_string(data.length()) + "\n\n" + data + "\n");
+		std::string msg("POST /RPC2 HTTP/1.1\r\nUser_Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + ipString + ":" + port + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data.length()) + "\r\nConnection: close\r\nTE: chunked\r\n\r\n" + data + "\r\n");
 		HelperFunctions::printDebug("Sending packet: " + msg);
 		int32_t sentBytes = send(fileDescriptor, msg.c_str(), msg.size(), MSG_NOSIGNAL);
 		if(sentBytes == 0)
@@ -192,38 +277,35 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 			HelperFunctions::printError("Error sending data to XML RPC server " + ipString + " on port " + port + ": " + strerror(errno));
 			close(fileDescriptor);
 			_sendCounter--;
-			return "";
+			return std::shared_ptr<std::vector<char>>();
 		}
 
 		ssize_t receivedBytes;
 
-		fd_set readFileDescriptor;
-		FD_ZERO(&readFileDescriptor);
-		FD_SET(fileDescriptor, &readFileDescriptor);
+		fd_set socketSet;
+		FD_ZERO(&socketSet);
+		FD_SET(fileDescriptor, &socketSet);
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax];
-		bool firstPart = true;
-		bool chunked = false;
-		int32_t lineBufferMax = 128;
-		char lineBuffer[lineBufferMax];
-		uint32_t dataSize = 0;
-		std::string response;
-		while(true)
+		HTTP http;
+
+		while(!http.isFinished())
 		{
 			//Timeout needs to be set every time, so don't put it outside of the while loop
 			timeval timeout;
-			timeout.tv_sec = 10;
+			timeout.tv_sec = 5;
 			timeout.tv_usec = 0;
 			int64_t startTime = HelperFunctions::getTime();
-			receivedBytes = select(fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+			receivedBytes = select(fileDescriptor + 1, &socketSet, NULL, NULL, &timeout);
 			switch(receivedBytes)
 			{
 				case 0:
 					HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out after " + std::to_string(HelperFunctions::getTime() - startTime) + " ms. Server: " + ipString + " Port: " + port + " Data: " + data);
+					timedout = true;
 					shutdown(fileDescriptor, 0);
 					close(fileDescriptor);
 					_sendCounter--;
-					return "";
+					return std::shared_ptr<std::vector<char>>();
 				case -1:
 					HelperFunctions::printError("Error reading from XML RPC server " + ipString + " on port " + port + ": " + strerror(errno));
 					break;
@@ -237,7 +319,7 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
 				_sendCounter--;
-				return "";
+				return std::shared_ptr<std::vector<char>>();
 			}
 			receivedBytes = recv(fileDescriptor, buffer, 1024, 0);
 			if(receivedBytes < 0)
@@ -246,214 +328,35 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
 				_sendCounter--;
-				return "";
+				return std::shared_ptr<std::vector<char>>();
 			}
-			if(firstPart)
+
+			try
 			{
-				if(GD::debugLevel >= 5)
-				{
-					std::vector<uint8_t> rawPacket;
-					rawPacket.insert(rawPacket.begin(), buffer, buffer + receivedBytes);
-					HelperFunctions::printDebug("Debug: XML RPC client received packet: " + HelperFunctions::getHexString(rawPacket));
-				}
-				if(receivedBytes < 50)
-				{
-					HelperFunctions::printError("Error: Response packet from XML RPC server too small " + ipString + " on port " + port + ".");
-					shutdown(fileDescriptor, 0);
-					close(fileDescriptor);
-					_sendCounter--;
-					return "";
-				}
-				std::stringstream receivedData;
-				receivedData.write(buffer, receivedBytes);
-				bool headerFinished = false;
-				bool contentType = false;
-				receivedData.getline(lineBuffer, lineBufferMax);
-				std::string line(lineBuffer);
-				uint32_t position = line.size() + 1;
-				HelperFunctions::toLower(line);
-				if(line.size() < 15 || line.substr(0, 6) != "http/1" || line.substr(9, 6) != "200 ok")
-				{
-					HelperFunctions::printError("Error receiving response from XML RPC server " + ipString + " on port " + port + ". Response code: " + line);
-					shutdown(fileDescriptor, 0);
-					close(fileDescriptor);
-					_sendCounter--;
-					return "";
-				}
-				while(receivedData.good() && !receivedData.eof())
-				{
-					receivedData.getline(lineBuffer, lineBufferMax);
-					line = std::string(lineBuffer);
-					position += line.size() + 1;
-					HelperFunctions::toLower(line);
-					if(line.size() > 14 && line.substr(0, 13) == "content-type:")
-					{
-						contentType = true;
-						std::string typeString = line.substr(14);
-						HelperFunctions::trim(typeString);
-						if(typeString != "text/xml")
-						{
-							std::string contentTypeString = line.substr(14);
-							HelperFunctions::trim(contentTypeString);
-							HelperFunctions::printError("Error receiving response from XML RPC server " + ipString + " on port " + port + ". Content type is not text/xml but " + contentTypeString + ".");
-							shutdown(fileDescriptor, 0);
-							close(fileDescriptor);
-							_sendCounter--;
-							return "";
-						}
-					}
-					else if(line.size() > 16 && line.substr(0, 15) == "content-length:")
-					{
-						std::string sizeString = line.substr(16);
-						HelperFunctions::trim(sizeString);
-						try	{ dataSize = std::stoll(sizeString); } catch(...) {}
-						if(dataSize == 0)
-						{
-							HelperFunctions::printError("Error receiving response from XML RPC server " + ipString + " on port " + port + ". Content length is 0.");
-							shutdown(fileDescriptor, 0);
-							close(fileDescriptor);
-							_sendCounter--;
-							return "";
-						}
-						HelperFunctions::printDebug("Debug: Receiving packet with length " + std::to_string(dataSize) + " from remote server " + ipString + " on port " + port + ".");
-					}
-					else if(line.size() > 19 && line.substr(0, 18) == "transfer-encoding:")
-					{
-						std::string transferEncoding = line.substr(19);
-						HelperFunctions::trim(transferEncoding);
-						if(transferEncoding == "chunked") chunked = true;
-					}
-					else if(line.size() <= 1)
-					{
-						if(!contentType)
-						{
-							std::string contentTypeString = line.substr(14);
-							HelperFunctions::trim(contentTypeString);
-							HelperFunctions::printError("Error receiving response from XML RPC server " + ipString + " on port " + port + ". No content type specified.");
-							shutdown(fileDescriptor, 0);
-							close(fileDescriptor);
-							_sendCounter--;
-							return "";
-						}
-						headerFinished = true;
-					}
-					else if(chunked && headerFinished && dataSize == 0)
-					{
-						std::string sizeString = line;
-						HelperFunctions::trim(sizeString);
-						try	{ dataSize = HelperFunctions::getNumber(sizeString, true); } catch(...) {}
-						if(dataSize == 0)
-						{
-							HelperFunctions::printError("Error receiving response from XML RPC server " + ipString + " on port " + port + ". Content length is 0.");
-							shutdown(fileDescriptor, 0);
-							close(fileDescriptor);
-							_sendCounter--;
-							return "";
-						}
-					}
-					else if(headerFinished)
-					{
-						if((!contentType && !chunked) || line.size() <= 5 || line.substr(0, 5) != "<?xml")
-						{
-							HelperFunctions::printWarning("Warning: XML RPC client received packet in unknown format.");
-							shutdown(fileDescriptor, 0);
-							close(fileDescriptor);
-							_sendCounter--;
-							return "";
-						}
-						if(dataSize > 104857600)
-						{
-							HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
-							break;
-						}
-						int32_t pos = position - (line.length() + 1);
-						if(pos < 0)
-						{
-							HelperFunctions::printError("Error in XML RPC client: Could not calculate position in packet.");
-							break;
-						}
-						int32_t restLength = receivedBytes - pos;
-						if(restLength < 1)
-						{
-							HelperFunctions::printError("Error: No data in XML RPC packet.");
-							break;
-						}
-						if((unsigned)restLength >= dataSize)
-						{
-							response.append(buffer + pos, dataSize);
-							if(!chunked || (unsigned)restLength - dataSize == 7 && !strncmp(&buffer[pos + dataSize], "\r\n0\r\n\r\n", 7))
-							{
-								shutdown(fileDescriptor, 0);
-								close(fileDescriptor);
-								HelperFunctions::printDebug("Debug: Received packet from server " + ipString + " on port " + port + ":\n" + response);
-								_sendCounter--;
-								return response;
-							}
-						}
-						else response.append(buffer + pos, restLength);
-						break;
-					}
-				}
-				firstPart = false;
+				http.process(buffer, receivedBytes);
 			}
-			else
+			catch(HTTPException& ex)
 			{
-				if(response.size() + receivedBytes == dataSize + 1)
-				{
-					//For XML RPC packets the last byte is "\n", which is not counted in "Content-Length"
-					receivedBytes -= 1;
-				}
-				if(chunked)
-				{
-					if(response.size() + receivedBytes <= dataSize)
-					{
-						response.append(buffer, receivedBytes);
-						if(response.size() == dataSize) break;
-					}
-					else if((response.size() + receivedBytes) - dataSize == 7 && !strncmp(&buffer[receivedBytes - 7], "\r\n0\r\n\r\n", 7))
-					{
-						response.append(buffer, receivedBytes - 7);
-						break;
-					}
-					else if(receivedBytes <= 7) //Shouldn't happen
-					{
-						std::string lastBytes(buffer, receivedBytes);
-						HelperFunctions::trim(lastBytes);
-						if(lastBytes.empty() || HelperFunctions::isNumber(lastBytes)) break;
-						else
-						{
-							lastBytes = std::string(buffer, receivedBytes);
-							HelperFunctions::rtrim(lastBytes); //Preserve left whitespaces
-							response.append(lastBytes);
-							break;
-						}
-					}
-					else if(response.size() + receivedBytes > dataSize)
-					{
-						response.append(buffer, dataSize - response.size());
-						break;
-					}
-				}
-				else if(response.size() + receivedBytes > dataSize)
-				{
-					HelperFunctions::printError("Error: Packet size (>=" + std::to_string(response.size() + receivedBytes) + ") is larger than Content-Length (" + std::to_string(dataSize) + ").");
-					shutdown(fileDescriptor, 0);
-					close(fileDescriptor);
-					_sendCounter--;
-					return "";
-				}
-				else
-				{
-					response.append(buffer, receivedBytes);
-					if(response.size() == dataSize) break;
-				}
+				HelperFunctions::printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
+				shutdown(fileDescriptor, 0);
+				close(fileDescriptor);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
+			}
+			if(http.getContentSize() > 104857600 || http.getHeader()->contentLength > 104857600)
+			{
+				HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
+				shutdown(fileDescriptor, 0);
+				close(fileDescriptor);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
 			}
 		}
 		shutdown(fileDescriptor, 0);
 		close(fileDescriptor);
-		HelperFunctions::printDebug("Debug: Received packet from server " + ipString + " on port " + port + ":\n" + response);
+		HelperFunctions::printDebug("Debug: Received packet from server " + ipString + " on port " + port + ":\n" + HelperFunctions::getHexString(*http.getContent()));
 		_sendCounter--;
-		return response;
+		if(http.isFinished()) return http.getContent(); else return std::shared_ptr<std::vector<char>>();;
     }
     catch(const std::exception& ex)
     {
@@ -468,6 +371,6 @@ std::string RPCClient::sendRequest(std::string server, std::string port, std::st
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _sendCounter--;
-    return "";
+    return std::shared_ptr<std::vector<char>>();
 }
 } /* namespace RPC */

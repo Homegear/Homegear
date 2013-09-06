@@ -111,7 +111,6 @@ OBJECTS := \
 	$(OBJDIR)/PendingBidCoSQueues.o \
 	$(OBJDIR)/BidCoSPacket.o \
 	$(OBJDIR)/BinaryEncoder.o \
-	$(OBJDIR)/Exception.o \
 	$(OBJDIR)/Settings.o \
 	$(OBJDIR)/HM-LC-SwX-FM.o \
 	$(OBJDIR)/HM-CC-TC.o \
@@ -122,6 +121,7 @@ OBJECTS := \
 	$(OBJDIR)/Device.o \
 	$(OBJDIR)/RPCVariable.o \
 	$(OBJDIR)/RPCEncoder.o \
+	$(OBJDIR)/HTTP.o \
 	$(OBJDIR)/RPCMethods.o \
 	$(OBJDIR)/Server.o \
 	$(OBJDIR)/RPCDecoder.o \
@@ -253,9 +253,6 @@ $(OBJDIR)/BidCoSPacket.o: BidCoSPacket.cpp
 $(OBJDIR)/BinaryEncoder.o: BinaryEncoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Exception.o: Exception.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Settings.o: Settings.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -284,6 +281,9 @@ $(OBJDIR)/RPCVariable.o: RPC/RPCVariable.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCEncoder.o: RPC/RPCEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HTTP.o: RPC/HTTP.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCMethods.o: RPC/RPCMethods.cpp
