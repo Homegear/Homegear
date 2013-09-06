@@ -224,7 +224,7 @@ void TICC1100::openDevice()
 			int processID = 0;
 			std::ifstream lockfileStream(_lockfile.c_str());
 			lockfileStream >> processID;
-			if(kill(processID, 0) == 0)
+			if(getpid() != processID && kill(processID, 0) == 0)
 			{
 				HelperFunctions::printCritical("Rf device is in use: " + _rfDevice);
 				return;

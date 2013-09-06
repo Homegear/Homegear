@@ -99,7 +99,7 @@ void Cul::openDevice()
 			int processID = 0;
 			std::ifstream lockfileStream(_lockfile.c_str());
 			lockfileStream >> processID;
-			if(kill(processID, 0) == 0)
+			if(getpid() != processID && kill(processID, 0) == 0)
 			{
 				HelperFunctions::printCritical("CUL device is in use: " + _rfDevice);
 				return;
@@ -208,7 +208,14 @@ std::string Cul::readFromDevice()
 {
 	try
 	{
-		if(_fileDescriptor == -1) throw(Exception("Couldn't read from CUL device, because the file descriptor is not valid: " + _rfDevice));
+		if(_fileDescriptor == -1)
+		{
+			HelperFunctions::printCritical("Couldn't read from CUL device, because the file descriptor is not valid: " + _rfDevice + ". Trying to reopen...");
+			closeDevice();
+			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+			openDevice();
+			if(!isOpen()) return "";
+		}
 		std::string packet;
 		int32_t i;
 		char localBuffer[1];
@@ -216,7 +223,7 @@ std::string Cul::readFromDevice()
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(_fileDescriptor, &readFileDescriptor);
 
-		while(!_stopCallbackThread && localBuffer[0] != '\n')
+		while((!_stopCallbackThread && localBuffer[0] != '\n'))
 		{
 			FD_ZERO(&readFileDescriptor);
 			FD_SET(_fileDescriptor, &readFileDescriptor);
@@ -230,32 +237,33 @@ std::string Cul::readFromDevice()
 				case 0: //Timeout
 					if(!_stopCallbackThread) continue;
 					else return "";
-					break;
 				case -1:
-					throw(Exception("Error reading from CUL device: " + _rfDevice));
-					break;
+					HelperFunctions::printError("Error reading from CUL device: " + _rfDevice);
+					return "";
 				case 1:
 					break;
 				default:
-					throw(Exception("Error reading from CUL device: " + _rfDevice));
-
+					HelperFunctions::printError("Error reading from CUL device: " + _rfDevice);
+					return "";
 			}
 
 			i = read(_fileDescriptor, localBuffer, 1);
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				throw(Exception("Error reading from CUL device: " + _rfDevice));
+				HelperFunctions::printError("Error reading from CUL device: " + _rfDevice);
 			}
 			packet.push_back(localBuffer[0]);
+			if(packet.size() > 200)
+			{
+				HelperFunctions::printError("CUL was disconnected.");
+				closeDevice();
+				return "";
+			}
 		}
 		return packet;
 	}
 	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
