@@ -612,7 +612,8 @@ void RPCServer::getFileDescriptor()
 {
 	try
 	{
-		struct addrinfo hostInfo, *serverInfo;
+		addrinfo hostInfo;
+		addrinfo *serverInfo = nullptr;
 
 		int32_t fileDescriptor = -1;
 		int32_t yes = 1;
@@ -625,7 +626,11 @@ void RPCServer::getFileDescriptor()
 		char buffer[100];
 		std::string port = std::to_string(GD::settings.rpcPort());
 
-		if(getaddrinfo(GD::settings.rpcInterface().c_str(), port.c_str(), &hostInfo, &serverInfo) != 0) throw Exception("Error: Could not get address information.");
+		if(getaddrinfo(GD::settings.rpcInterface().c_str(), port.c_str(), &hostInfo, &serverInfo) != 0)
+		{
+			HelperFunctions::printCritical("Error: Could not get address information: " + std::string(strerror(errno)));
+			return;
+		}
 
 		bool bound = false;
 		int32_t error = 0;

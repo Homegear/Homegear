@@ -1025,7 +1025,7 @@ std::shared_ptr<RPCVariable> RPCListBidcosInterfaces::invoke(std::shared_ptr<std
 		array->arrayValue->push_back(interface);
 		interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("ADDRESS", central->getSerialNumber())));
 		interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("DESCRIPTION", std::string("Homegear default interface"))));
-		interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("CONNECTED", true)));
+		interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("CONNECTED", GD::rfDevice->isOpen())));
 		interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("DEFAULT", true)));
 		return array;
 	}

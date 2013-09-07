@@ -88,6 +88,7 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet dhcp
+iface eth0 inet6 auto
 " > etc/network/interfaces
 #End network settings
 

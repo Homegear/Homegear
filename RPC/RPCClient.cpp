@@ -125,13 +125,27 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 			return std::shared_ptr<std::vector<char>>();
 		}
 		if(ipAddress.substr(0, 7) == "http://") ipAddress = ipAddress.substr(7);
+		if(ipAddress.empty())
+		{
+			HelperFunctions::printError("Error: Server's address is empty.");
+			_sendCounter--;
+			return std::shared_ptr<std::vector<char>>();
+		}
+		//Remove "[" and "]" of IPv6 address
+		if(ipAddress.front() == '[' && ipAddress.back() == ']') ipAddress = ipAddress.substr(1, ipAddress.size() - 2);
+		if(ipAddress.empty())
+		{
+			HelperFunctions::printError("Error: Server's address is empty.");
+			_sendCounter--;
+			return std::shared_ptr<std::vector<char>>();
+		}
 
 		int32_t fileDescriptor = -1;
 
 		//Retry for two minutes
 		for(uint32_t i = 0; i < 6; ++i)
 		{
-			struct addrinfo *serverInfo;
+			struct addrinfo *serverInfo = nullptr;
 			struct addrinfo hostInfo;
 			memset(&hostInfo, 0, sizeof hostInfo);
 
@@ -141,7 +155,8 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 			if(getaddrinfo(ipAddress.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0)
 			{
 				freeaddrinfo(serverInfo);
-				throw Exception("Error: Could not get address information.");
+				HelperFunctions::printError("Error: Could not get address information: " + std::string(strerror(errno)));
+				return std::shared_ptr<std::vector<char>>();
 			}
 
 			if(GD::settings.tunnelClients().find(ipAddress) != GD::settings.tunnelClients().end())
@@ -151,7 +166,8 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 				if(getaddrinfo(ipAddress.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0)
 				{
 					freeaddrinfo(serverInfo);
-					throw Exception("Error: Could not get address information.");
+					HelperFunctions::printError("Error: Could not get address information: " + std::string(strerror(errno)));
+					return std::shared_ptr<std::vector<char>>();
 				}
 			}
 

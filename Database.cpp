@@ -247,6 +247,7 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 			{
 				HelperFunctions::printWarning("Warning: " + ex.what());
 				sqlite3_clear_bindings(statement);
+				_databaseMutex.unlock();
 				return dataRows;
 			}
 			else HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -299,6 +300,7 @@ DataTable Database::executeCommand(std::string command)
 			{
 				HelperFunctions::printWarning("Warning: " + ex.what());
 				sqlite3_clear_bindings(statement);
+				_databaseMutex.unlock();
 				return dataRows;
 			}
 			else HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
