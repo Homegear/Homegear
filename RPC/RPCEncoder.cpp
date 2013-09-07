@@ -62,6 +62,10 @@ void RPCEncoder::encodeVariable(std::shared_ptr<std::vector<char>>& packet, std:
 		{
 			encodeString(packet, variable);
 		}
+		else if(variable->type == RPCVariableType::rpcBase64)
+		{
+			encodeBase64(packet, variable);
+		}
 		else if(variable->type == RPCVariableType::rpcStruct)
 		{
 			encodeStruct(packet, variable);
@@ -179,6 +183,32 @@ void RPCEncoder::encodeString(std::shared_ptr<std::vector<char>>& packet, std::s
 	try
 	{
 		encodeType(packet, RPCVariableType::rpcString);
+		//We could call encodeRawString here, but then the string would have to be copied and that would cost time.
+		_encoder.encodeInteger(packet, variable->stringValue.size());
+		if(variable->stringValue.size() > 0)
+		{
+			packet->insert(packet->end(), variable->stringValue.begin(), variable->stringValue.end());
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void RPCEncoder::encodeBase64(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)
+{
+	try
+	{
+		encodeType(packet, RPCVariableType::rpcBase64);
 		//We could call encodeRawString here, but then the string would have to be copied and that would cost time.
 		_encoder.encodeInteger(packet, variable->stringValue.size());
 		if(variable->stringValue.size() > 0)

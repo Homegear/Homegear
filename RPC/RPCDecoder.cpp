@@ -50,7 +50,7 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(std::shared_ptr<std::ve
 	{
 		RPCVariableType type = decodeType(packet, position);
 		std::shared_ptr<RPCVariable> variable(new RPCVariable(type));
-		if(type == RPCVariableType::rpcString)
+		if(type == RPCVariableType::rpcString || type == RPCVariableType::rpcBase64)
 		{
 			variable->stringValue = _decoder.decodeString(packet, position);
 		}

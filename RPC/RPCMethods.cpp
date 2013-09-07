@@ -1361,6 +1361,8 @@ std::shared_ptr<RPCVariable> RPCSetMetadata::invoke(std::shared_ptr<std::vector<
 		GD::db.executeCommand("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
 
 		std::shared_ptr<std::vector<char>> value = _rpcEncoder.encodeResponse(parameters->at(2));
+		if(!value) return RPC::RPCVariable::createError(-32700, "Could not encode data.");
+		if(value->size() > 1000) return RPC::RPCVariable::createError(-32602, "Data is larger than 1000 bytes.");
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 
 		GD::db.executeCommand("INSERT INTO metadata VALUES(?, ?, ?)", data);

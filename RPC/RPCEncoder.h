@@ -28,6 +28,7 @@ private:
 	void encodeBoolean(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
 	void encodeType(std::shared_ptr<std::vector<char>>& packet, RPCVariableType type);
 	void encodeString(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
+	void encodeBase64(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
 	void encodeVoid(std::shared_ptr<std::vector<char>>& packet);
 	void encodeStruct(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
 	void encodeArray(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
