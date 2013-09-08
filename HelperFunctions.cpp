@@ -397,3 +397,31 @@ void HelperFunctions::printMessage(std::string message, int32_t minDebugLevel)
 	if(GD::debugLevel < minDebugLevel) return;
 	std::cout << getTimeString() << " " << message << std::endl;
 }
+
+std::string HelperFunctions::getSSLError(int32_t errorNumber)
+{
+	switch(errorNumber)
+	{
+	case SSL_ERROR_ZERO_RETURN:
+		return "The connection has been closed.";
+	case SSL_ERROR_WANT_READ:
+		return "Read error: The operation did not complete.";
+	case SSL_ERROR_WANT_WRITE:
+		return "Write error: The operation did not complete.";
+	case SSL_ERROR_WANT_CONNECT:
+		return "The operation did not complete. Not connected yet.";
+	case SSL_ERROR_WANT_ACCEPT:
+		return "The operation did not complete. Not connected yet.";
+	case SSL_ERROR_SYSCALL:
+		errorNumber = ERR_get_error();
+		if(errorNumber > 0) return std::string(ERR_reason_error_string(errorNumber));
+		else return "Some I/O error occured.";
+	case SSL_ERROR_SSL:
+		errorNumber = ERR_get_error();
+		if(errorNumber > 0) return std::string(ERR_reason_error_string(ERR_get_error()));
+		else return "Unknown error.";
+	default:
+		return std::to_string(errorNumber);
+	}
+	return "";
+}

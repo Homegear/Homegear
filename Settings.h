@@ -15,6 +15,9 @@ public:
 
 	std::string rpcInterface() { return _rpcInterface; }
 	int32_t rpcPort() { return _rpcPort; }
+	int32_t rpcSSLPort() { return _rpcSSLPort; }
+	std::string certPath() { return _certPath; }
+	std::string keyPath() { return _keyPath;  }
 	int32_t debugLevel() { return _debugLevel; }
 	std::string databasePath() { return _databasePath; }
 	bool databaseSynchronous() { return _databaseSynchronous; }
@@ -35,6 +38,9 @@ public:
 private:
 	std::string _rpcInterface;
 	int32_t _rpcPort = 2001;
+	int32_t _rpcSSLPort = 2002;
+	std::string _certPath;
+	std::string _keyPath;
 	int32_t _debugLevel = 3;
 	std::string _databasePath;
 	bool _databaseSynchronous = false;

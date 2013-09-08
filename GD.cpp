@@ -9,6 +9,7 @@ std::string GD::workingDirectory = "";
 std::string GD::executablePath = "";
 HomeMaticDevices GD::devices;
 RPC::Server GD::rpcServer;
+RPC::Server GD::rpcServerSSL;
 RPC::Client GD::rpcClient;
 CLI::Server GD::cliServer;
 CLI::Client GD::cliClient;

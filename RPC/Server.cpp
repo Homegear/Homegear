@@ -57,10 +57,10 @@ void Server::registerMethods()
     }
 }
 
-void Server::start()
+void Server::start(bool ssl)
 {
 	registerMethods();
-	_server->start();
+	_server->start(ssl);
 }
 
 void Server::stop()

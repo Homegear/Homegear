@@ -65,7 +65,7 @@ void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vect
 			}
 			parameters->push_back(array);
 			//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
-			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "system.multicall", parameters);
+			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, (*server)->useSSL, "system.multicall", parameters);
 			HelperFunctions::setThreadPriority(t.native_handle(), 40);
 			t.detach();
 		}
@@ -92,7 +92,7 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
 		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>> { std::shared_ptr<RPCVariable>(new RPCVariable(server->id)) });
-		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "system.listMethods", parameters);
+		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, server->useSSL, "system.listMethods", parameters);
 		if(result->errorStruct)
 		{
 			HelperFunctions::printWarning("Warning: Error calling XML RPC method system.listMethods on server " + address.first + " with port " + address.second + ". Error struct: ");
@@ -136,7 +136,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
 		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>> { std::shared_ptr<RPCVariable>(new RPCVariable(server->id)) });
-		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "listDevices", parameters);
+		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, server->useSSL, "listDevices", parameters);
 		if(result->errorStruct)
 		{
 			HelperFunctions::printError("Error calling XML RPC method listDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
@@ -192,7 +192,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<RPCVariable> devices = GD::devices.getCentral()->listDevices(server->knownDevices);
 		if(devices->arrayValue->empty()) return;
 		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>{ std::shared_ptr<RPCVariable>(new RPCVariable(server->id)), devices });
-		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, "newDevices", parameters);
+		std::shared_ptr<RPCVariable> result = _client.invoke(address.first, address.second, server->useSSL, "newDevices", parameters);
 		if(result->errorStruct)
 		{
 			HelperFunctions::printError("Error calling XML RPC method newDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
@@ -227,7 +227,7 @@ void Client::broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(deviceDescriptions);
-			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "newDevices", parameters);
+			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, (*server)->useSSL, "newDevices", parameters);
 			t.detach();
 		}
 		_serversMutex.unlock();
@@ -261,7 +261,7 @@ void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(deviceAddresses);
-			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "deleteDevices", parameters);
+			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, (*server)->useSSL, "deleteDevices", parameters);
 			t.detach();
 		}
 		_serversMutex.unlock();
@@ -296,7 +296,7 @@ void Client::broadcastUpdateDevice(std::string address, Hint::Enum hint)
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(address)));
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)hint)));
-			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, "updateDevice", parameters);
+			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server)->address.first, (*server)->address.second, (*server)->useSSL, "updateDevice", parameters);
 			t.detach();
 		}
 	}
@@ -340,7 +340,7 @@ void Client::reset()
     }
 }
 
-void Client::addServer(std::pair<std::string, std::string> address, std::string id)
+std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::string> address, std::string id)
 {
 	try
 	{
@@ -350,7 +350,7 @@ void Client::addServer(std::pair<std::string, std::string> address, std::string 
 			if((*i)->address == address)
 			{
 				_serversMutex.unlock();
-				return;
+				return std::shared_ptr<RemoteRPCServer>(new RemoteRPCServer());
 			}
 		}
 		std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
@@ -358,22 +358,22 @@ void Client::addServer(std::pair<std::string, std::string> address, std::string 
 		server->id = id;
 		_servers->push_back(server);
 		_serversMutex.unlock();
+		return server;
 	}
 	catch(const std::exception& ex)
     {
-		_serversMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_serversMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_serversMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _serversMutex.unlock();
+    return std::shared_ptr<RemoteRPCServer>(new RemoteRPCServer());
 }
 
 void Client::removeServer(std::pair<std::string, std::string> server)

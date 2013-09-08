@@ -36,11 +36,11 @@ solution "homegear"
  
    configuration { "linux", "gmake" }
       buildoptions { "-std=c++11" }
-      linkoptions { "-l pthread", "-l sqlite3", "-l readline" }
+      linkoptions { "-l pthread", "-l sqlite3", "-l readline", "-l ssl" }
 
    configuration { "rpi", "gmake" }
       buildoptions { "-std=c++11" }
-      linkoptions { "-l pthread", "-l sqlite3", "-l readline" }
+      linkoptions { "-l pthread", "-l sqlite3", "-l readline", "-l ssl" }
       includedirs { "./ARM\ headers" }
       libdirs { "./ARM\ libraries" }
 

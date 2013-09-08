@@ -5,7 +5,51 @@
 
 namespace RPC
 {
-void RPCClient::invokeBroadcast(std::string server, std::string port, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
+RPCClient::RPCClient()
+{
+	try
+	{
+		SSLeay_add_ssl_algorithms();
+		_sslMethod = SSLv23_client_method();
+		SSL_load_error_strings();
+		_sslCTX = SSL_CTX_new(_sslMethod);
+		SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+RPCClient::~RPCClient()
+{
+	try
+	{
+		if(_sslCTX) SSL_CTX_free(_sslCTX);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void RPCClient::invokeBroadcast(std::string server, std::string port, bool useSSL, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
 	{
@@ -24,7 +68,7 @@ void RPCClient::invokeBroadcast(std::string server, std::string port, std::strin
 			}
 		}
 		bool timedout = false;
-		std::shared_ptr<std::vector<char>> result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters), timedout);
+		std::shared_ptr<std::vector<char>> result = sendRequest(server, port, useSSL, _xmlRpcEncoder.encodeRequest(methodName, parameters), timedout);
 		if(timedout) return;
 		if(!result || result->empty())
 		{
@@ -63,7 +107,7 @@ void RPCClient::invokeBroadcast(std::string server, std::string port, std::strin
     }
 }
 
-std::shared_ptr<RPCVariable> RPCClient::invoke(std::string server, std::string port, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
+std::shared_ptr<RPCVariable> RPCClient::invoke(std::string server, std::string port, bool useSSL, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
 	{
@@ -78,7 +122,7 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::string server, std::string p
 			}
 		}
 		bool timedout = false;
-		std::shared_ptr<std::vector<char>> result = sendRequest(server, port, _xmlRpcEncoder.encodeRequest(methodName, parameters), timedout);
+		std::shared_ptr<std::vector<char>> result = sendRequest(server, port, useSSL, _xmlRpcEncoder.encodeRequest(methodName, parameters), timedout);
 		if(timedout) return RPCVariable::createError(-32300, "Request timed out.");
 		if(!result || result->empty()) return RPCVariable::createError(-32700, "No response data.");
 		std::shared_ptr<RPCVariable> returnValue = _xmlRpcDecoder.decodeResponse(result);
@@ -104,42 +148,50 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::string server, std::string p
     return RPCVariable::createError(-32700, "No response data.");
 }
 
-std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, std::string port, std::string data, bool& timedout)
+std::string RPCClient::getIPAddress(std::string address)
 {
 	try
 	{
-		_sendCounter++;
-		if(_sendCounter > 100)
+		if(address.size() < 9)
 		{
-			HelperFunctions::printCritical("Could not execute XML RPC method on server " + server + " and port " + port + ", because there are more than 100 requests queued. Your server is either not reachable currently or your connection is too slow.");
-			_sendCounter--;
-			return std::shared_ptr<std::vector<char>>();
+			HelperFunctions::printError("Error: Server's address too short: " + address);
+			return "";
 		}
-
-		std::string ipAddress = server;
-		std::string ipString;
-		if(ipAddress.size() < 8)
-		{
-			HelperFunctions::printError("Error: Server's address too short: " + ipAddress);
-			_sendCounter--;
-			return std::shared_ptr<std::vector<char>>();
-		}
-		if(ipAddress.substr(0, 7) == "http://") ipAddress = ipAddress.substr(7);
-		if(ipAddress.empty())
+		if(address.substr(0, 7) == "http://") address = address.substr(7);
+		else if(address.substr(0, 8) == "https://") address = address.substr(8);
+		if(address.empty())
 		{
 			HelperFunctions::printError("Error: Server's address is empty.");
-			_sendCounter--;
-			return std::shared_ptr<std::vector<char>>();
+			return "";
 		}
 		//Remove "[" and "]" of IPv6 address
-		if(ipAddress.front() == '[' && ipAddress.back() == ']') ipAddress = ipAddress.substr(1, ipAddress.size() - 2);
-		if(ipAddress.empty())
+		if(address.front() == '[' && address.back() == ']') address = address.substr(1, address.size() - 2);
+		if(address.empty())
 		{
 			HelperFunctions::printError("Error: Server's address is empty.");
-			_sendCounter--;
-			return std::shared_ptr<std::vector<char>>();
+			return "";
 		}
+		return address;
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
+}
 
+int32_t RPCClient::getConnection(std::string& ipAddress, std::string& port, std::string& ipString)
+{
+	try
+	{
 		int32_t fileDescriptor = -1;
 
 		//Retry for two minutes
@@ -156,7 +208,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 			{
 				freeaddrinfo(serverInfo);
 				HelperFunctions::printError("Error: Could not get address information: " + std::string(strerror(errno)));
-				return std::shared_ptr<std::vector<char>>();
+				return -1;
 			}
 
 			if(GD::settings.tunnelClients().find(ipAddress) != GD::settings.tunnelClients().end())
@@ -167,7 +219,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 				{
 					freeaddrinfo(serverInfo);
 					HelperFunctions::printError("Error: Could not get address information: " + std::string(strerror(errno)));
-					return std::shared_ptr<std::vector<char>>();
+					return -1;
 				}
 			}
 
@@ -186,8 +238,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 			{
 				HelperFunctions::printError("Error: Could not create socket for XML RPC server " + ipString + " on port " + port + ": " + strerror(errno));
 				freeaddrinfo(serverInfo);
-				_sendCounter--;
-				return std::shared_ptr<std::vector<char>>();
+				return -1;
 			}
 
 			if(!(fcntl(fileDescriptor, F_GETFL) & O_NONBLOCK))
@@ -195,8 +246,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 				if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK) < 0)
 				{
 					freeaddrinfo(serverInfo);
-					_sendCounter--;
-					return std::shared_ptr<std::vector<char>>();
+					return -1;
 				}
 			}
 
@@ -216,10 +266,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 					HelperFunctions::printError("Error: Could not connect to XML RPC server " + ipString + " on port " + port + ": " + strerror(errno) + ". Removing server. Server has to send init again.");
 					freeaddrinfo(serverInfo);
 					close(fileDescriptor);
-					_sendCounter--;
-					GD::rpcClient.removeServer(std::pair<std::string, std::string>(server, port));
-					timedout = true;
-					return std::shared_ptr<std::vector<char>>();
+					return -2;
 				}
 			}
 			freeaddrinfo(serverInfo);
@@ -227,8 +274,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 			if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) ^ O_NONBLOCK) < 0)
 			{
 				close(fileDescriptor);
-				_sendCounter--;
-				return std::shared_ptr<std::vector<char>>();
+				return -1;
 			}
 
 			if(connectResult != 0) //We have to wait for the connection
@@ -249,8 +295,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 				{
 					HelperFunctions::printError("Error: Could not connect to XML RPC server " + ipString + " on port " + port + ": " + strerror(errno) + ". Poll failed. Error code: " + std::to_string(pollResult));
 					close(fileDescriptor);
-					_sendCounter--;
-					return std::shared_ptr<std::vector<char>>();
+					return -1;
 				}
 				else if(pollResult > 0)
 				{
@@ -259,8 +304,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 					{
 						HelperFunctions::printError("Error: Could not connect to XML RPC server " + ipString + " on port " + port + ": " + strerror(errno) + ".");
 						close(fileDescriptor);
-						_sendCounter--;
-						return std::shared_ptr<std::vector<char>>();
+						return -1;
 					}
 					break;
 				}
@@ -276,12 +320,76 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 					{
 						HelperFunctions::printError("Error: Connecting to XML RPC server " + ipString + " on port " + port + " timed out. Giving up and removing server. Server has to send init again.");
 						close(fileDescriptor);
-						_sendCounter--;
-						GD::rpcClient.removeServer(std::pair<std::string, std::string>(server, port));
-						timedout = true;
-						return std::shared_ptr<std::vector<char>>();
+						return -2;
 					}
 				}
+			}
+		}
+		return fileDescriptor;
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return -1;
+}
+
+std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, std::string port, bool useSSL, std::string data, bool& timedout)
+{
+	try
+	{
+		_sendCounter++;
+		if(_sendCounter > 100)
+		{
+			HelperFunctions::printCritical("Could not execute XML RPC method on server " + server + " and port " + port + ", because there are more than 100 requests queued. Your server is either not reachable currently or your connection is too slow.");
+			_sendCounter--;
+			return std::shared_ptr<std::vector<char>>();
+		}
+
+		std::string ipAddress = getIPAddress(server);
+		if(ipAddress.empty())
+		{
+			_sendCounter--;
+			return std::shared_ptr<std::vector<char>>();
+		}
+
+		std::string ipString;
+
+		int32_t fileDescriptor = getConnection(ipAddress, port, ipString);
+		if(fileDescriptor < 0)
+		{
+			if(fileDescriptor == -2)
+			{
+				timedout = true;
+				GD::rpcClient.removeServer(std::pair<std::string, std::string>(server, port));
+			}
+			_sendCounter--;
+			return std::shared_ptr<std::vector<char>>();
+		}
+
+		SSL_CTX* ctx = nullptr;
+		SSL* ssl = nullptr;
+		if(useSSL)
+		{
+			ssl = SSL_new(ctx);
+			SSL_set_fd(ssl, fileDescriptor);
+			int32_t result = SSL_connect(ssl);
+			if(result < 1)
+			{
+				HelperFunctions::printError("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(ssl, result)));
+				SSL_free(ssl);
+				shutdown(fileDescriptor, 0);
+				close(fileDescriptor);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
 			}
 		}
 

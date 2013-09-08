@@ -97,15 +97,12 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		_queueMutex.lock();
 		if(_stopWorkerThread)
 		{
-			if(_workerThread.joinable())
-			{
-				_queueMutex.unlock();
-				_workerThread.join();
-				_queueMutex.lock();
-			}
+			_queueMutex.unlock();
+			if(_workerThread.joinable()) _workerThread.join();
 			_stopWorkerThread = false;
 			_workerThread = std::thread(&BidCoSQueueManager::worker, this);
 			HelperFunctions::setThreadPriority(_workerThread.native_handle(), 19);
+			_queueMutex.lock();
 		}
 		else if(_queues.find(address) != _queues.end()) _queues.erase(_queues.find(address));
 		_queueMutex.unlock();

@@ -345,7 +345,10 @@ int main(int argc, char* argv[])
         	GD::cliServer.start();
         }
         HelperFunctions::printInfo("Starting XML RPC server...");
-        GD::rpcServer.start();
+        GD::rpcServer.start(false);
+
+        HelperFunctions::printInfo("Starting XML RPC server with SSL support...");
+        GD::rpcServerSSL.start(true);
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 

@@ -15,6 +15,7 @@
 #include <sstream>
 
 #include <pthread.h>
+#include <openssl/err.h>
 
 class HelperFunctions {
 public:
@@ -137,6 +138,7 @@ public:
 	static void printInfo(std::string message);
 	static void printDebug(std::string message, int32_t minDebugLevel = 5);
 	static void printMessage(std::string message, int32_t minDebugLevel = 0);
+	static std::string getSSLError(int32_t errorNumber);
 private:
 	//Non public constructor
 	HelperFunctions();

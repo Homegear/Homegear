@@ -3,12 +3,12 @@ Maintainer: Sathya Laufer <sathya@laufers.net>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.4
-Build-Depends: debhelper (>= 8)
+Build-Depends: debhelper (>= 8), libsqlite3-dev (>= 3.7.13), libreadline6-dev (>= 6.2), libssl-dev (>= 1.0.1e)
 Homepage: https://homegear.eu
 
 Package: homegear
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libsqlite3-0 (>= 3.7.13), libreadline6 (>= 6.2), adduser (>= 3.113)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libsqlite3-0 (>= 3.7.13), libreadline6 (>= 6.2), adduser (>= 3.113), libssl1.0.0 (>= 1.0.1e)
 Description: Program to control your HomeMatic devices
  Homegear a program to interface your home automation software 
  with your HomeMatic devices.

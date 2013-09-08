@@ -19,6 +19,7 @@ public:
 	virtual ~RemoteRPCServer() {}
 
 	bool initialized = false;
+	bool useSSL = false;
 	std::pair<std::string, std::string> address;
 	std::string id;
 	std::shared_ptr<std::map<std::string, int32_t>> knownDevices;
@@ -44,7 +45,7 @@ public:
 	void broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses);
 	void broadcastUpdateDevice(std::string address, Hint::Enum hint);
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
-	void addServer(std::pair<std::string, std::string> address, std::string id);
+	std::shared_ptr<RemoteRPCServer> addServer(std::pair<std::string, std::string> address, std::string id);
 	void removeServer(std::pair<std::string, std::string> address);
 	std::shared_ptr<RemoteRPCServer> getServer(std::pair<std::string, std::string>);
 	void reset();

@@ -245,7 +245,7 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
-				HelperFunctions::printWarning("Warning: " + ex.what());
+				HelperFunctions::printInfo("Info: " + ex.what());
 				sqlite3_clear_bindings(statement);
 				_databaseMutex.unlock();
 				return dataRows;
@@ -298,7 +298,7 @@ DataTable Database::executeCommand(std::string command)
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
-				HelperFunctions::printWarning("Warning: " + ex.what());
+				HelperFunctions::printInfo("Info: " + ex.what());
 				sqlite3_clear_bindings(statement);
 				_databaseMutex.unlock();
 				return dataRows;

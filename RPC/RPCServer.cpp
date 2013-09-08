@@ -19,14 +19,44 @@ RPCServer::~RPCServer()
 	stop();
 }
 
-void RPCServer::start()
+void RPCServer::start(bool ssl)
 {
 	try
 	{
+		_useSSL = ssl;
+		if(ssl)
+		{
+			SSL_load_error_strings();
+			SSLeay_add_ssl_algorithms();
+			const SSL_METHOD* method = SSLv23_server_method();
+			_sslCTX = SSL_CTX_new(method);
+			SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
+			if(!_sslCTX)
+			{
+				HelperFunctions::printError("Could not start RPC Server with SSL support." + std::string(ERR_reason_error_string(ERR_get_error())));
+				return;
+			}
+			if(SSL_CTX_use_certificate_file(_sslCTX, GD::settings.certPath().c_str(), SSL_FILETYPE_PEM) < 1)
+			{
+				SSL_CTX_free(_sslCTX);
+				HelperFunctions::printError("Could not load certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				return;
+			}
+			if(SSL_CTX_use_PrivateKey_file(_sslCTX, GD::settings.keyPath().c_str(), SSL_FILETYPE_PEM) < 1)
+			{
+				SSL_CTX_free(_sslCTX);
+				HelperFunctions::printError("Could not load key from certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				return;
+			}
+			if(!SSL_CTX_check_private_key(_sslCTX))
+			{
+				SSL_CTX_free(_sslCTX);
+				HelperFunctions::printError("Private key does not match the public key");
+				return;
+			}
+		}
 		_mainThread = std::thread(&RPCServer::mainThread, this);
-		//Set very low priority
 		HelperFunctions::setThreadPriority(_mainThread.native_handle(), _threadPriority, _threadPolicy);
-		_mainThread.detach();
 	}
 	catch(const std::exception& ex)
     {
@@ -45,6 +75,8 @@ void RPCServer::start()
 void RPCServer::stop()
 {
 	_stopServer = true;
+	if(_mainThread.joinable()) _mainThread.join();
+	if(_sslCTX) SSL_CTX_free(_sslCTX);
 }
 
 uint32_t RPCServer::connectionCount()
@@ -52,7 +84,7 @@ uint32_t RPCServer::connectionCount()
 	try
 	{
 		_stateMutex.lock();
-		uint32_t connectionCount = _fileDescriptors.size();
+		uint32_t connectionCount = _clients.size();
 		_stateMutex.unlock();
 		return connectionCount;
 	}
@@ -113,7 +145,7 @@ void RPCServer::mainThread()
 					continue;
 				}
 				_stateMutex.lock();
-				if(_fileDescriptors.size() >= _maxConnections)
+				if(_clients.size() >= _maxConnections)
 				{
 					_stateMutex.unlock();
 					HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
@@ -121,12 +153,29 @@ void RPCServer::mainThread()
 					close(clientFileDescriptor);
 					continue;
 				}
-				_fileDescriptors.push_back(clientFileDescriptor);
+				if(_clients.find(clientFileDescriptor) != _clients.end())
+				{
+					HelperFunctions::printError("Tried to add client with the same file descriptor twice.");
+					continue;
+				}
+				std::shared_ptr<Client> client(new Client());
+				client->fileDescriptor = clientFileDescriptor;
+				_clients[clientFileDescriptor] = client;
 				_stateMutex.unlock();
 
-				_readThreads.push_back(std::thread(&RPCServer::readClient, this, clientFileDescriptor));
-				HelperFunctions::setThreadPriority(_readThreads.back().native_handle(), _threadPriority, _threadPolicy);
-				_readThreads.back().detach();
+				if(_useSSL)
+				{
+					getSSLFileDescriptor(client);
+					if(!client->ssl)
+					{
+						removeClientFileDescriptor(client->fileDescriptor);
+						continue;
+					}
+				}
+
+				client->readThread = std::thread(&RPCServer::readClient, this, client);
+				HelperFunctions::setThreadPriority(client->readThread.native_handle(), _threadPriority, _threadPolicy);
+				client->readThread.detach();
 			}
 			catch(const std::exception& ex)
 			{
@@ -161,22 +210,27 @@ void RPCServer::mainThread()
     }
 }
 
-void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> data, bool keepAlive)
+void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> data, bool keepAlive)
 {
 	try
 	{
 		if(!data || data->empty()) return;
+		if(_useSSL && !client->ssl)
+		{
+			HelperFunctions::printError("Error: Could not send data to client. Clients SSL pointer is null.");
+			return;
+		}
 		if(data->size() > 104857600)
 		{
 			HelperFunctions::printError("Error: Data size was larger than 100MB.");
 			return;
 		}
-		int32_t ret = send(clientFileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
+		int32_t ret = _useSSL ? SSL_write(client->ssl, &data->at(0), data->size()) : send(client->fileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
 		if(!keepAlive)
 		{
-			removeClientFileDescriptor(clientFileDescriptor);
-			shutdown(clientFileDescriptor, 1);
-			close(clientFileDescriptor);
+			removeClientFileDescriptor(client->fileDescriptor);
+			shutdown(client->fileDescriptor, 1);
+			close(client->fileDescriptor);
 		}
 		if(ret != (signed)data->size()) HelperFunctions::printWarning("Warning: Error sending data to client.");
 	}
@@ -194,7 +248,7 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
     }
 }
 
-void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
+void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
@@ -211,7 +265,7 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
 		PacketType::Enum responseType = (packetType == PacketType::Enum::binaryRequest) ? PacketType::Enum::binaryResponse : PacketType::Enum::xmlResponse;
 		if(!parameters->empty() && parameters->at(0)->errorStruct)
 		{
-			sendRPCResponseToClient(clientFileDescriptor, parameters->at(0), responseType, keepAlive);
+			sendRPCResponseToClient(client, parameters->at(0), responseType, keepAlive);
 			return;
 		}
 		if(GD::debugLevel >= 4)
@@ -222,11 +276,11 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
 				(*i)->print();
 			}
 		}
-		if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(clientFileDescriptor, methodName, parameters, responseType, keepAlive);
+		if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(client, methodName, parameters, responseType, keepAlive);
 		else
 		{
 			HelperFunctions::printError("Warning: RPC method not found: " + methodName);
-			sendRPCResponseToClient(clientFileDescriptor, RPCVariable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
+			sendRPCResponseToClient(client, RPCVariable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
 		}
 	}
 	catch(const std::exception& ex)
@@ -243,7 +297,7 @@ void RPCServer::analyzeRPC(int32_t clientFileDescriptor, std::shared_ptr<std::ve
     }
 }
 
-void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::shared_ptr<RPCVariable> variable, PacketType::Enum responseType, bool keepAlive)
+void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<RPCVariable> variable, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -262,7 +316,7 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 			data.reset(new std::vector<char>());
 			data->insert(data->begin(), header.begin(), header.end());
 			data->insert(data->end(), xml.begin(), xml.end());
-			sendRPCResponseToClient(clientFileDescriptor, data, keepAlive);
+			sendRPCResponseToClient(client, data, keepAlive);
 		}
 		else if(responseType == PacketType::Enum::binaryResponse)
 		{
@@ -272,7 +326,7 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
 				HelperFunctions::printDebug("Response binary:");
 				HelperFunctions::printBinary(data);
 			}
-			sendRPCResponseToClient(clientFileDescriptor, data, keepAlive);
+			sendRPCResponseToClient(client, data, keepAlive);
 		}
 	}
 	catch(const std::exception& ex)
@@ -289,7 +343,7 @@ void RPCServer::sendRPCResponseToClient(int32_t clientFileDescriptor, std::share
     }
 }
 
-void RPCServer::callMethod(int32_t clientFileDescriptor, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive)
+void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
@@ -299,7 +353,7 @@ void RPCServer::callMethod(int32_t clientFileDescriptor, std::string methodName,
 			HelperFunctions::printDebug("Response: ");
 			ret->print();
 		}
-		sendRPCResponseToClient(clientFileDescriptor, ret, responseType, keepAlive);
+		sendRPCResponseToClient(client, ret, responseType, keepAlive);
 	}
 	catch(const std::exception& ex)
     {
@@ -326,7 +380,7 @@ std::string RPCServer::getHttpResponseHeader(uint32_t contentLength)
 	return header;
 }
 
-void RPCServer::analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
+void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
@@ -354,12 +408,12 @@ void RPCServer::analyzeRPCResponse(int32_t clientFileDescriptor, std::shared_ptr
     }
 }
 
-void RPCServer::packetReceived(int32_t clientFileDescriptor, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
+void RPCServer::packetReceived(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive)
 {
 	try
 	{
-		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest) analyzeRPC(clientFileDescriptor, packet, packetType, keepAlive);
-		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(clientFileDescriptor, packet, packetType, keepAlive);
+		if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::xmlRequest) analyzeRPC(client, packet, packetType, keepAlive);
+		else if(packetType == PacketType::Enum::binaryResponse || packetType == PacketType::Enum::xmlResponse) analyzeRPCResponse(client, packet, packetType, keepAlive);
 	}
     catch(const std::exception& ex)
     {
@@ -380,15 +434,7 @@ void RPCServer::removeClientFileDescriptor(int32_t clientFileDescriptor)
 	try
 	{
 		_stateMutex.lock();
-		for(std::vector<int32_t>::iterator i = _fileDescriptors.begin(); i != _fileDescriptors.end(); ++i)
-		{
-			if(*i == clientFileDescriptor)
-			{
-				_fileDescriptors.erase(i);
-				_stateMutex.unlock();
-				return;
-			}
-		}
+		if(_clients.find(clientFileDescriptor) != _clients.end()) _clients.erase(clientFileDescriptor);
 		_stateMutex.unlock();
 	}
 	catch(const std::exception& ex)
@@ -408,10 +454,11 @@ void RPCServer::removeClientFileDescriptor(int32_t clientFileDescriptor)
     }
 }
 
-void RPCServer::readClient(int32_t clientFileDescriptor)
+void RPCServer::readClient(std::shared_ptr<Client> client)
 {
 	try
 	{
+		if(!client) return;
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
 		std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
@@ -421,7 +468,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 		PacketType::Enum packetType;
 		HTTP http;
 
-		HelperFunctions::printDebug("Listening for incoming packets from client number " + std::to_string(clientFileDescriptor) + ".");
+		HelperFunctions::printDebug("Listening for incoming packets from client number " + std::to_string(client->fileDescriptor) + ".");
 		while(!_stopServer)
 		{
 			//Timeout needs to be set every time, so don't put it outside of the while loop
@@ -430,23 +477,24 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 			timeout.tv_usec = 500000;
 			fd_set readFileDescriptor;
 			FD_ZERO(&readFileDescriptor);
-			FD_SET(clientFileDescriptor, &readFileDescriptor);
-			bytesRead = select(clientFileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+			FD_SET(client->fileDescriptor, &readFileDescriptor);
+			bytesRead = select(client->fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(bytesRead == 0) continue; //timeout
 			if(bytesRead != 1)
 			{
-				removeClientFileDescriptor(clientFileDescriptor);
-				close(clientFileDescriptor);
-				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
+				removeClientFileDescriptor(client->fileDescriptor);
+				close(client->fileDescriptor);
+				HelperFunctions::printDebug("Connection to client number " + std::to_string(client->fileDescriptor) + " closed.");
 				return;
 			}
 
-			bytesRead = read(clientFileDescriptor, buffer, bufferMax);
+			bytesRead = _useSSL ? SSL_read(client->ssl, buffer, bufferMax) : read(client->fileDescriptor, buffer, bufferMax);
 			if(bytesRead <= 0)
 			{
-				removeClientFileDescriptor(clientFileDescriptor);
-				close(clientFileDescriptor);
-				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
+				if(bytesRead < 0 && _useSSL) HelperFunctions::printError("Error reading SSL packet: " + HelperFunctions::getSSLError(SSL_get_error(client->ssl, bytesRead)));
+				removeClientFileDescriptor(client->fileDescriptor);
+				close(client->fileDescriptor);
+				HelperFunctions::printDebug("Connection to client number " + std::to_string(client->fileDescriptor) + " closed.");
 				return;
 			}
 			if(!strncmp(&buffer[0], "Bin", 3))
@@ -468,7 +516,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 				else
 				{
 					packetLength = 0;
-					std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType, true);
+					std::thread t(&RPCServer::packetReceived, this, client, packet, packetType, true);
 					HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 					t.detach();
 				}
@@ -514,7 +562,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 					if(packetLength == dataSize)
 					{
 						packet->push_back('\0');
-						std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, packet, packetType, true);
+						std::thread t(&RPCServer::packetReceived, this, client, packet, packetType, true);
 						HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 						t.detach();
 						packetLength = 0;
@@ -541,7 +589,7 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 			else HelperFunctions::printWarning("Warning: Uninterpretable packet received: " + std::string(buffer, buffer + bytesRead));
 			if(http.isFinished())
 			{
-				std::thread t(&RPCServer::packetReceived, this, clientFileDescriptor, http.getContent(), packetType, http.getHeader()->connection == HTTP::Connection::Enum::keepAlive);
+				std::thread t(&RPCServer::packetReceived, this, client, http.getContent(), packetType, http.getHeader()->connection == HTTP::Connection::Enum::keepAlive);
 				HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 				t.detach();
 				packetLength = 0;
@@ -549,9 +597,9 @@ void RPCServer::readClient(int32_t clientFileDescriptor)
 			}
 		}
 		//This point is only reached, when stopServer is true
-		removeClientFileDescriptor(clientFileDescriptor);
-		shutdown(clientFileDescriptor, 0);
-		close(clientFileDescriptor);
+		removeClientFileDescriptor(client->fileDescriptor);
+		shutdown(client->fileDescriptor, 0);
+		close(client->fileDescriptor);
 	}
     catch(const std::exception& ex)
     {
@@ -608,6 +656,34 @@ int32_t RPCServer::getClientFileDescriptor()
     return -1;
 }
 
+void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
+{
+	try
+	{
+		client->ssl = SSL_new(_sslCTX);
+		SSL_set_fd(client->ssl, client->fileDescriptor);
+		int32_t result = SSL_accept(client->ssl);
+		if(result < 1)
+		{
+			HelperFunctions::printError("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
+			SSL_free(client->ssl);
+			client->ssl = nullptr;
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void RPCServer::getFileDescriptor()
 {
 	try
@@ -624,7 +700,7 @@ void RPCServer::getFileDescriptor()
 		hostInfo.ai_socktype = SOCK_STREAM;
 		hostInfo.ai_flags = AI_PASSIVE;
 		char buffer[100];
-		std::string port = std::to_string(GD::settings.rpcPort());
+		std::string port = _useSSL ? std::to_string(GD::settings.rpcSSLPort()) : std::to_string(GD::settings.rpcPort());
 
 		if(getaddrinfo(GD::settings.rpcInterface().c_str(), port.c_str(), &hostInfo, &serverInfo) != 0)
 		{
@@ -660,7 +736,7 @@ void RPCServer::getFileDescriptor()
 				  address = std::string(buffer);
 				  break;
 			}
-			HelperFunctions::printInfo("Info: RPC Server started listening on address " + address);
+			HelperFunctions::printInfo("Info: RPC Server started listening on address " + address + " and port " + port);
 			bound = true;
 			break;
 		}

@@ -27,6 +27,7 @@ public:
 	static std::string executablePath;
 	static HomeMaticDevices devices;
 	static RPC::Server rpcServer;
+	static RPC::Server rpcServerSSL;
 	static RPC::Client rpcClient;
 	static CLI::Server cliServer;
 	static CLI::Client cliClient;

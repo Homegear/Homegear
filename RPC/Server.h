@@ -13,7 +13,7 @@ public:
 	virtual ~Server() {}
 
 	void registerMethods();
-	void start();
+	void start(bool ssl);
 	void stop();
 	uint32_t connectionCount() { if(_server) return _server->connectionCount(); else return 0; }
 protected:

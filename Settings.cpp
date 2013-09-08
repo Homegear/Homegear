@@ -11,6 +11,9 @@ void Settings::reset()
 {
 	_rpcInterface = "0.0.0.0";
 	_rpcPort = 2001;
+	_rpcSSLPort = 2002;
+	_certPath = "/etc/homegear/homegear.crt";
+	_keyPath = "/etc/homegear/homegear.key";
 	_debugLevel = 3;
 	_databasePath = GD::executablePath + "db.sql";
 	_databaseSynchronous = false;
@@ -74,6 +77,24 @@ void Settings::load(std::string filename)
 					_rpcPort = HelperFunctions::getNumber(value);
 					if(_rpcPort < 1) _rpcPort = 2001;
 					HelperFunctions::printDebug("Debug: rpcPort set to " + std::to_string(_rpcPort));
+				}
+				else if(name == "rpcsslport")
+				{
+					_rpcSSLPort = HelperFunctions::getNumber(value);
+					if(_rpcSSLPort < 1) _rpcSSLPort = 2002;
+					HelperFunctions::printDebug("Debug: rpcSSLPort set to " + std::to_string(_rpcSSLPort));
+				}
+				else if(name == "certpath")
+				{
+					_certPath = value;
+					if(_certPath.empty()) _certPath = "/etc/homegear/homegear.crt";
+					HelperFunctions::printDebug("Debug: certPath set to " + _certPath);
+				}
+				else if(name == "keypath")
+				{
+					_keyPath = value;
+					if(_keyPath.empty()) _keyPath = "/etc/homegear/homegear.key";
+					HelperFunctions::printDebug("Debug: keyPath set to " + _keyPath);
 				}
 				else if(name == "rpcinterface")
 				{
