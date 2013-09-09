@@ -549,7 +549,17 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				if(i < 2) HelperFunctions::printWarning("Warning: Error sending data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno));
 				else
 				{
-					HelperFunctions::printError("Error: Could not send data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno));
+					HelperFunctions::printError("Error: Could not send data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno) + ". Giving up.");
+					_sendCounter--;
+					return std::shared_ptr<std::vector<char>>();
+				}
+			}
+			else if(sentBytes != data->size())
+			{
+				if(i < 2) HelperFunctions::printWarning("Warning: Not all data was send to XML RPC server " + server->ipAddress + " on port " + server->address.second + ". Retrying...");
+				else
+				{
+					HelperFunctions::printError("Error: Could not send all data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ". Giving up.");
 					_sendCounter--;
 					return std::shared_ptr<std::vector<char>>();
 				}
