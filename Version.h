@@ -1,3 +1,5 @@
+#define VERSION "0.1.0"
+
 /* Copyright 2013 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
@@ -26,5 +28,3 @@
  * version.  If you delete this exception statement from all source
  * files in the program, then also delete it here.
  */
-
-#define VERSION "0.1.0"

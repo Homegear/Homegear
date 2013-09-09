@@ -1,5 +1,3 @@
-/usr/share/lintian/overrides/homegear
-
 # Exception was added to license to allow linking with OpenSSL
 homegear binary: possible-gpl-code-linked-with-openssl
 
