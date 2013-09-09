@@ -14,7 +14,7 @@ void Settings::reset()
 	_rpcSSLPort = 2002;
 	_certPath = "/etc/homegear/homegear.crt";
 	_keyPath = "/etc/homegear/homegear.key";
-	_verifyCertificate = false;
+	_verifyCertificate = true;
 	_debugLevel = 3;
 	_databasePath = GD::executablePath + "db.sql";
 	_databaseSynchronous = false;

@@ -574,7 +574,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		{
 			//Timeout needs to be set every time, so don't put it outside of the while loop
 			timeval timeout;
-			timeout.tv_sec = 5;
+			timeout.tv_sec = 10;
 			timeout.tv_usec = 0;
 			int64_t startTime = HelperFunctions::getTime();
 			receivedBytes = select(server->fileDescriptor + 1, &socketSet, NULL, NULL, &timeout);

@@ -42,7 +42,7 @@ private:
 	int32_t _rpcSSLPort = 2002;
 	std::string _certPath;
 	std::string _keyPath;
-	bool _verifyCertificate = false;
+	bool _verifyCertificate = true;
 	int32_t _debugLevel = 3;
 	std::string _databasePath;
 	bool _databaseSynchronous = false;
