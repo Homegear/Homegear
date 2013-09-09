@@ -7,6 +7,7 @@
 #include <vector>
 #include <list>
 #include <mutex>
+#include <map>
 
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
@@ -27,13 +28,33 @@
 
 namespace RPC
 {
+class RemoteRPCServer
+{
+public:
+	RemoteRPCServer() { knownDevices.reset(new std::map<std::string, int32_t>()); }
+	virtual ~RemoteRPCServer() {}
+
+	bool initialized = false;
+	bool useSSL = false;
+	bool keepAlive = false;
+	bool binary = false;
+	std::string hostname;
+	std::string ipAddress;
+	std::pair<std::string, std::string> address;
+	std::string id;
+	std::shared_ptr<std::map<std::string, int32_t>> knownDevices;
+	std::map<std::string, bool> knownMethods;
+	int32_t fileDescriptor = -1;
+	SSL* ssl = nullptr;
+};
+
 class RPCClient {
 public:
 	RPCClient();
 	virtual ~RPCClient();
 
-	void invokeBroadcast(std::string server, std::string port, bool useSSL, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
-	std::shared_ptr<RPCVariable> invoke(std::string server, std::string port, bool useSSL, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
+	void invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
 
 	void reset();
 protected:
@@ -43,9 +64,12 @@ protected:
 	const SSL_METHOD* _sslMethod = nullptr;
 	SSL_CTX* _sslCTX = nullptr;
 
-	std::shared_ptr<std::vector<char>> sendRequest(std::string server, std::string port, bool useSSL, std::string data, bool& timedout);
+	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::string data, bool& timedout);
 	std::string getIPAddress(std::string address);
-	int32_t getConnection(std::string& ipAddress, std::string& port, std::string& ipString);
+	int32_t getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
+	SSL* getSSL(int32_t fileDescriptor);
+	void getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool& timedout);
+	void closeConnection(std::shared_ptr<RemoteRPCServer>& server);
 };
 
 } /* namespace RPC */

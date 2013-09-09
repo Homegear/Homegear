@@ -1,4 +1,5 @@
-- init flags: keep alive, binary
+- init flags: binary
+
 
 When AES is working:
 - enforce $PEER.AES

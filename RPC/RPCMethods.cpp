@@ -968,7 +968,8 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
-		if(error != ParameterError::Enum::noError) return getError(error);
+		ParameterError::Enum error2 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcInteger }));
+		if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError) return getError((error != ParameterError::Enum::noError) ? error : error2);
 
 		std::pair<std::string, std::string> server = HelperFunctions::split(parameters->at(0)->stringValue, ':');
 		if(server.first.empty() || server.second.empty()) return RPCVariable::createError(-32602, "Server address or port is empty.");
@@ -991,6 +992,11 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 		{
 			std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.addServer(server, parameters->at(1)->stringValue);
 			if(eventServer && server.first.compare(0, 5, "https") == 0) eventServer->useSSL = true;
+			if(parameters->size() > 2)
+			{
+				if(parameters->at(2)->integerValue & 1) eventServer->keepAlive = true;
+				if(parameters->at(2)->integerValue & 2) eventServer->binary = true;
+			}
 			if(_initServerThread.joinable()) _initServerThread.join();
 			_initServerThread = std::thread(&RPC::Client::initServerMethods, &GD::rpcClient, server);
 		}

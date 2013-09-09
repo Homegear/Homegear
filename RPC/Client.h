@@ -12,20 +12,6 @@
 
 namespace RPC
 {
-class RemoteRPCServer
-{
-public:
-	RemoteRPCServer() { knownDevices.reset(new std::map<std::string, int32_t>()); }
-	virtual ~RemoteRPCServer() {}
-
-	bool initialized = false;
-	bool useSSL = false;
-	std::pair<std::string, std::string> address;
-	std::string id;
-	std::shared_ptr<std::map<std::string, int32_t>> knownDevices;
-	std::map<std::string, bool> knownMethods;
-};
-
 class Client
 {
 public:
