@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <cstring>
+#include <list>
 
 #include "RPCVariable.h"
 #include "../BinaryEncoder.h"
@@ -13,13 +14,15 @@ namespace RPC
 class RPCEncoder
 {
 public:
-	RPCEncoder() { _packetStart[0] = 'B'; _packetStart[1] = 'i'; _packetStart[2] = 'n'; _packetStart[3] = 1; _packetStartError[0] = 'B'; _packetStartError[1] = 'i'; _packetStartError[2] = 'n'; _packetStartError[3] = 0xFF; }
+	RPCEncoder();
 	virtual ~RPCEncoder() {}
 
+	std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
 	std::shared_ptr<std::vector<char>> encodeResponse(std::shared_ptr<RPCVariable> variable);
 private:
 	BinaryEncoder _encoder;
-	char _packetStart[4];
+	char _packetStartRequest[4];
+	char _packetStartResponse[4];
 	char _packetStartError[4];
 
 	void encodeVariable(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);

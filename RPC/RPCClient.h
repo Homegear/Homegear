@@ -24,6 +24,8 @@
 #include <poll.h>
 #include <signal.h>
 
+#include "RPCEncoder.h"
+#include "RPCDecoder.h"
 #include "XMLRPCEncoder.h"
 #include "XMLRPCDecoder.h"
 
@@ -59,12 +61,14 @@ public:
 
 	void reset();
 protected:
+	RPCDecoder _rpcDecoder;
+	RPCEncoder _rpcEncoder;
 	XMLRPCDecoder _xmlRpcDecoder;
 	XMLRPCEncoder _xmlRpcEncoder;
 	int32_t _sendCounter = 0;
 	SSL_CTX* _sslCTX = nullptr;
 
-	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::string data, bool& timedout);
+	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>>& data, bool& timedout);
 	std::string getIPAddress(std::string address);
 	int32_t getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
 	SSL* getSSL(int32_t fileDescriptor);

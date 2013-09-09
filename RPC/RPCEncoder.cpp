@@ -4,6 +4,53 @@
 
 namespace RPC
 {
+RPCEncoder::RPCEncoder()
+{
+	strncpy(&_packetStartRequest[0], "Bin", 3);
+	_packetStartResponse[3] = 0;
+	strncpy(&_packetStartResponse[0], "Bin", 3);
+	_packetStartResponse[3] = 1;
+	strncpy(&_packetStartError[0], "Bin", 3);
+	_packetStartError[3] = 0xFF;
+}
+
+std::shared_ptr<std::vector<char>> RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
+{
+	//The "Bin", the type byte after that and the length itself are not part of the length
+	std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
+	try
+	{
+		packet->insert(packet->begin(), _packetStartRequest, _packetStartRequest + 4);
+		_encoder.encodeString(packet, methodName);
+		if(!parameters) _encoder.encodeInteger(packet, 0);
+		else _encoder.encodeInteger(packet, parameters->size());
+		if(parameters)
+		{
+			for(std::list<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			{
+				encodeVariable(packet, (*i));
+			}
+		}
+
+		uint32_t dataSize = packet->size() - 4;
+		char result[4];
+		HelperFunctions::memcpyBigEndian(result, (char*)&dataSize, 4);
+		packet->insert(packet->begin() + 4, result, result + 4);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return packet;
+}
 
 std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RPCVariable> variable)
 {
@@ -12,11 +59,11 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RP
 	try
 	{
 		if(variable->errorStruct) packet->insert(packet->begin(), _packetStartError, _packetStartError + 4);
-		else packet->insert(packet->begin(), _packetStart, _packetStart + 4);
+		else packet->insert(packet->begin(), _packetStartResponse, _packetStartResponse + 4);
 
 		encodeVariable(packet, variable);
-		uint32_t dataSize = packet->size() - 4;
 
+		uint32_t dataSize = packet->size() - 4;
 		char result[4];
 		HelperFunctions::memcpyBigEndian(result, (char*)&dataSize, 4);
 		packet->insert(packet->begin() + 4, result, result + 4);

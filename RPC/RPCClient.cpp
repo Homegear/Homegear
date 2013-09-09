@@ -77,14 +77,19 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			}
 		}
 		bool timedout = false;
-		std::shared_ptr<std::vector<char>> result = sendRequest(server, _xmlRpcEncoder.encodeRequest(methodName, parameters), timedout);
+		std::shared_ptr<std::vector<char>> requestData;
+		if(server->binary) requestData = _rpcEncoder.encodeRequest(methodName, parameters);
+		else requestData = _xmlRpcEncoder.encodeRequest(methodName, parameters);
+		std::shared_ptr<std::vector<char>> result = sendRequest(server, requestData, timedout);
 		if(timedout) return;
 		if(!result || result->empty())
 		{
 			HelperFunctions::printWarning("Warning: Response is empty. XML RPC method: " + methodName + " Server: " + server->address.first + " Port: " + server->address.second);
 			return;
 		}
-		std::shared_ptr<RPCVariable> returnValue = _xmlRpcDecoder.decodeResponse(result);
+		std::shared_ptr<RPCVariable> returnValue;
+		if(server->binary) returnValue = _rpcDecoder.decodeResponse(result);
+		else returnValue = _xmlRpcDecoder.decodeResponse(result);
 		if(GD::debugLevel >= 5)
 		{
 			HelperFunctions::printDebug("Response was:");
@@ -131,10 +136,15 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::shared_ptr<RemoteRPCServer> 
 			}
 		}
 		bool timedout = false;
-		std::shared_ptr<std::vector<char>> result = sendRequest(server, _xmlRpcEncoder.encodeRequest(methodName, parameters), timedout);
+		std::shared_ptr<std::vector<char>> requestData;
+		if(server->binary) requestData = _rpcEncoder.encodeRequest(methodName, parameters);
+		else requestData = _xmlRpcEncoder.encodeRequest(methodName, parameters);
+		std::shared_ptr<std::vector<char>> result = sendRequest(server, requestData, timedout);
 		if(timedout) return RPCVariable::createError(-32300, "Request timed out.");
 		if(!result || result->empty()) return RPCVariable::createError(-32700, "No response data.");
-		std::shared_ptr<RPCVariable> returnValue = _xmlRpcDecoder.decodeResponse(result);
+		std::shared_ptr<RPCVariable> returnValue;
+		if(server->binary) returnValue = _rpcDecoder.decodeResponse(result);
+		else returnValue = _xmlRpcDecoder.decodeResponse(result);
 		if(GD::debugLevel >= 5)
 		{
 			HelperFunctions::printDebug("Response was:");
@@ -431,9 +441,6 @@ void RPCClient::getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool
 			close(server->fileDescriptor);
 		}
 
-		if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
-		if(server->hostname.empty()) return;
-
 		server->fileDescriptor = getConnection(server->hostname, server->address.second, server->ipAddress);
 		if(server->fileDescriptor < 0)
 		{
@@ -486,16 +493,19 @@ bool RPCClient::connected(int32_t fileDescriptor)
 	return true;
 }
 
-std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::string data, bool& timedout)
+std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>>& data, bool& timedout)
 {
 	try
 	{
-		if(!server)
+		if(!server || !data)
 		{
-			HelperFunctions::printError("RPC Client: Could not send packet. Pointer to server is nullptr.");
+			HelperFunctions::printError("RPC Client: Could not send packet. Pointer to server or data is nullptr.");
 			return std::shared_ptr<std::vector<char>>();
 		}
 		signal(SIGPIPE, SIG_IGN);
+
+		if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
+		if(server->hostname.empty()) return std::shared_ptr<std::vector<char>>();
 
 		_sendCounter++;
 		if(_sendCounter > 100)
@@ -505,7 +515,13 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			return std::shared_ptr<std::vector<char>>();
 		}
 
-		std::string msg("POST /RPC2 HTTP/1.1\r\nUser_Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->ipAddress + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data.length()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\nTE: chunked\r\n\r\n" + data + "\r\n");
+		if(!server->binary)
+		{
+			std::string header = "POST /RPC2 HTTP/1.1\r\nUser_Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data->size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\nTE: chunked\r\n\r\n";
+			data->insert(data->begin(), header.begin(), header.end());
+			data->push_back('\r');
+			data->push_back('\n');
+		}
 
 		uint32_t i;
 		for(uint32_t i = 0; i < 3; i++)
@@ -524,8 +540,8 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				return std::shared_ptr<std::vector<char>>();
 			}
 
-			HelperFunctions::printDebug("Sending packet: " + msg);
-			int32_t sentBytes = server->useSSL ? SSL_write(server->ssl, msg.c_str(), msg.size()) : send(server->fileDescriptor, msg.c_str(), msg.size(), MSG_NOSIGNAL);
+			if(GD::debugLevel >= 5) HelperFunctions::printDebug("Sending packet: " + HelperFunctions::getHexString(*data));
+			int32_t sentBytes = server->useSSL ? SSL_write(server->ssl, &data->at(0), data->size()) : send(server->fileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
 			if(sentBytes <= 0)
 			{
 				server->ssl = nullptr; //After SSL_write failed, the pointer does not seem to be valid anymore. Calling SSL_free causes segfault.
@@ -549,8 +565,12 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax];
 		HTTP http;
+		uint32_t packetLength = 0;
+		uint32_t dataSize = 0;
+		std::shared_ptr<std::vector<char>> packet;
+		if(server->binary) packet.reset(new std::vector<char>());
 
-		while(!http.isFinished())
+		while(!http.isFinished()) //This is equal to while(true) for binary packets
 		{
 			//Timeout needs to be set every time, so don't put it outside of the while loop
 			timeval timeout;
@@ -561,9 +581,9 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			switch(receivedBytes)
 			{
 				case 0:
-					HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out after " + std::to_string(HelperFunctions::getTime() - startTime) + " ms. Server: " + server->ipAddress + " Port: " + server->address.second + " Data: " + data);
+					HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out after " + std::to_string(HelperFunctions::getTime() - startTime) + " ms. Server: " + server->ipAddress + " Port: " + server->address.second + " Data: " + HelperFunctions::getHexString(*data));
 					timedout = true;
-					closeConnection(server);
+					if(!server->keepAlive) closeConnection(server);
 					_sendCounter--;
 					return std::shared_ptr<std::vector<char>>();
 				case -1:
@@ -581,10 +601,17 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				return std::shared_ptr<std::vector<char>>();
 			}
 			receivedBytes = server->useSSL ? SSL_read(server->ssl, buffer, bufferMax) : recv(server->fileDescriptor, buffer, bufferMax, 0);
-			if(receivedBytes < 0)
+			if(receivedBytes == 0)
+			{
+				HelperFunctions::printError("Connection closed to server " + server->ipAddress + " on port " + server->address.second + ".");
+				closeConnection(server);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
+			}
+			else if(receivedBytes < 0)
 			{
 				HelperFunctions::printError("Error reading data from XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno));
-				closeConnection(server);
+				if(!server->keepAlive) closeConnection(server);
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
@@ -592,29 +619,89 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			//they don't do something in the memory after buffer, we add '\0'
 			buffer[receivedBytes] = '\0';
 
-			try
+			if(server->binary)
 			{
-				http.process(buffer, receivedBytes);
+				if(dataSize == 0)
+				{
+					if(buffer[3] == 0)
+					{
+						HelperFunctions::printError("Error: RPC client received binary request as response from server " + server->ipAddress + " on port " + server->address.second);
+						if(!server->keepAlive) closeConnection(server);
+						_sendCounter--;
+						return std::shared_ptr<std::vector<char>>();
+					}
+					if(receivedBytes < 8)
+					{
+						HelperFunctions::printError("Error: RPC client received binary packet smaller than 8 bytes from server " + server->ipAddress + " on port " + server->address.second);
+						if(!server->keepAlive) closeConnection(server);
+						_sendCounter--;
+						return std::shared_ptr<std::vector<char>>();
+					}
+					HelperFunctions::memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
+					HelperFunctions::printDebug("RPC client receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
+					if(dataSize == 0)
+					{
+						HelperFunctions::printError("Error: RPC client received binary packet without data from server " + server->ipAddress + " on port " + server->address.second);
+						if(!server->keepAlive) closeConnection(server);
+						_sendCounter--;
+						return std::shared_ptr<std::vector<char>>();
+					}
+					if(dataSize > 104857600)
+					{
+						HelperFunctions::printError("Error: RPC client received packet with data larger than 100 MiB received.");
+						if(!server->keepAlive) closeConnection(server);
+						_sendCounter--;
+						return std::shared_ptr<std::vector<char>>();
+					}
+					packetLength = receivedBytes - 8;
+					packet->insert(packet->begin(), buffer + 8, buffer + receivedBytes);
+				}
+				else
+				{
+					if(packetLength + receivedBytes > dataSize)
+					{
+						HelperFunctions::printError("Error: RPC client received response packet larger than the expected data size.");
+						if(!server->keepAlive) closeConnection(server);
+						_sendCounter--;
+						return std::shared_ptr<std::vector<char>>();
+					}
+					packet->insert(packet->end(), buffer, buffer + receivedBytes);
+					packetLength += receivedBytes;
+					if(packetLength == dataSize)
+					{
+						packet->push_back('\0');
+						break;
+					}
+				}
 			}
-			catch(HTTPException& ex)
+			else
 			{
-				HelperFunctions::printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
-				closeConnection(server);
-				_sendCounter--;
-				return std::shared_ptr<std::vector<char>>();
-			}
-			if(http.getContentSize() > 104857600 || http.getHeader()->contentLength > 104857600)
-			{
-				HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
-				closeConnection(server);
-				_sendCounter--;
-				return std::shared_ptr<std::vector<char>>();
+				try
+				{
+					http.process(buffer, receivedBytes);
+				}
+				catch(HTTPException& ex)
+				{
+					HelperFunctions::printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
+					if(!server->keepAlive) closeConnection(server);
+					_sendCounter--;
+					return std::shared_ptr<std::vector<char>>();
+				}
+				if(http.getContentSize() > 104857600 || http.getHeader()->contentLength > 104857600)
+				{
+					HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
+					if(!server->keepAlive) closeConnection(server);
+					_sendCounter--;
+					return std::shared_ptr<std::vector<char>>();
+				}
 			}
 		}
 		if(!server->keepAlive) closeConnection(server);
 		HelperFunctions::printDebug("Debug: Received packet from server " + server->ipAddress + " on port " + server->address.second + ":\n" + HelperFunctions::getHexString(*http.getContent()));
 		_sendCounter--;
-		if(http.isFinished()) return http.getContent(); else return std::shared_ptr<std::vector<char>>();;
+		if(server->binary) return packet;
+		else if(http.isFinished()) return http.getContent();
+		else return std::shared_ptr<std::vector<char>>();;
     }
     catch(const std::exception& ex)
     {

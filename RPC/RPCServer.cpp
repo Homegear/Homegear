@@ -42,7 +42,7 @@ void RPCServer::start(bool ssl)
 				SSL_CTX_free(_sslCTX);
 				return;
 			}
-			if(!DH_generate_parameters_ex(dh, 2, DH_GENERATOR_2, 0))
+			if(!DH_generate_parameters_ex(dh, 128, DH_GENERATOR_5, NULL))
 			{
 				HelperFunctions::printError("Could not start RPC Server with SSL support. Could not generate Diffie Hellman parameters: " + std::string(ERR_reason_error_string(ERR_get_error())));
 				SSL_CTX_free(_sslCTX);
@@ -333,18 +333,15 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 		std::shared_ptr<std::vector<char>> data;
 		if(responseType == PacketType::Enum::xmlResponse)
 		{
-			std::string xml = _xmlRpcEncoder.encodeResponse(variable);
-			std::string header = getHttpResponseHeader(xml.size());
-			xml.push_back('\r');
-			xml.push_back('\n');
+			data = _xmlRpcEncoder.encodeResponse(variable);
+			std::string header = getHttpResponseHeader(data->size());
+			data->push_back('\r');
+			data->push_back('\n');
+			data->insert(data->begin(), header.begin(), header.end());
 			if(GD::debugLevel >= 5)
 			{
-				HelperFunctions::printDebug("Response packet:");
-				std::cout << header << xml << std::endl;
+				HelperFunctions::printDebug("Response packet: " + HelperFunctions::getHexString(*data));
 			}
-			data.reset(new std::vector<char>());
-			data->insert(data->begin(), header.begin(), header.end());
-			data->insert(data->end(), xml.begin(), xml.end());
 			sendRPCResponseToClient(client, data, keepAlive);
 		}
 		else if(responseType == PacketType::Enum::binaryResponse)
@@ -526,6 +523,12 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				HelperFunctions::printDebug("Connection to client number " + std::to_string(client->fileDescriptor) + " closed.");
 				return;
 			}
+			if(GD::debugLevel >= 5)
+			{
+				std::vector<uint8_t> rawPacket;
+				rawPacket.insert(rawPacket.begin(), buffer, buffer + bytesRead);
+				HelperFunctions::printDebug("Debug: Packet received: " + HelperFunctions::getHexString(rawPacket));
+			}
 			if(!strncmp(&buffer[0], "Bin", 3))
 			{
 				http.reset();
@@ -540,7 +543,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					continue;
 				}
 				packet.reset(new std::vector<char>());
-				packet->insert(packet->begin(), buffer + 8, buffer + bytesRead);
+				packet->insert(packet->end(), buffer + 8, buffer + bytesRead);
 				if(dataSize > bytesRead - 8) packetLength = bytesRead - 8;
 				else
 				{
@@ -552,12 +555,6 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			else if(!strncmp(&buffer[0], "POST", 4) || !strncmp(&buffer[0], "HTTP/1.", 7))
 			{
-				if(GD::debugLevel >= 5)
-				{
-					std::vector<uint8_t> rawPacket;
-					rawPacket.insert(rawPacket.begin(), buffer, buffer + bytesRead);
-					HelperFunctions::printDebug("Debug: Packet received: " + HelperFunctions::getHexString(rawPacket));
-				}
 				packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
 				//We are using string functions to process the buffer. So just to make sure,
 				//they don't do something in the memory after buffer, we add '\0'
@@ -588,7 +585,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 						packetLength = 0;
 						continue;
 					}
-					packet->insert(packet->begin() + packetLength, buffer, buffer + bytesRead);
+					packet->insert(packet->end(), buffer, buffer + bytesRead);
 					packetLength += bytesRead;
 					if(packetLength == dataSize)
 					{

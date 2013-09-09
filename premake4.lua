@@ -40,7 +40,7 @@ solution "homegear"
 
    configuration { "rpi", "gmake" }
       buildoptions { "-std=c++11" }
-      linkoptions { "-l pthread", "-l sqlite3", "-l readline", "-l ssl" }
+      linkoptions { "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l crypto" }
       includedirs { "./ARM\ headers" }
       libdirs { "./ARM\ libraries" }
 
