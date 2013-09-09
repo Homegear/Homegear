@@ -184,9 +184,18 @@ echo \"************************************************************\"
 echo \"************* Welcome to your homegear system! *************\"
 echo \"************************************************************\"
 echo \"************************************************************\"
-echo \"Generating new SSH host keys...\"
+echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
+echo \"Generating new SSL keys for Homegear...\"
+rm -f /etc/homegear/homegear.key
+rm -f /etc/homegear/homegear.crt
+openssl genrsa -out /etc/homegear/homegear.key 2048
+openssl req -batch -new -key /etc/homegear/homegear.key -out /etc/homegear/homegear.csr
+openssl x509 -req -in /etc/homegear/homegear.csr -signkey /etc/homegear/homegear.key -out /etc/homegear/homegear.crt
+rm /etc/homegear/homegear.csr
+chown homegear:homegear /etc/homegear/homegear.key
+chmod 400 /etc/homegear/homegear.key
 echo \"Starting raspi-config...\"
 raspi-config
 sed -i '$ d' /home/pi/.bashrc >/dev/null
