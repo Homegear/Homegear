@@ -26,7 +26,7 @@ newplatform {
     gcc = {
         cc = "arm-linux-gnueabihf-gcc",
         cxx = "arm-linux-gnueabihf-g++",
-        cppflags = "-MMD -D_GLIBCXX_USE_NANOSLEEP -DTI_CC1100 -D_FORTIFY_SOURCE=2"
+        cppflags = "-MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2"
     }
 }
 
@@ -37,6 +37,7 @@ solution "homegear"
    configuration { "linux", "gmake" }
       buildoptions { "-std=c++11" }
       linkoptions { "-l pthread", "-l sqlite3", "-l readline", "-l ssl" }
+      defines "FORTIFY_SOURCE=2"
 
    configuration { "rpi", "gmake" }
       buildoptions { "-std=c++11" }
