@@ -14,6 +14,7 @@ void Settings::reset()
 	_rpcSSLPort = 2002;
 	_certPath = "/etc/homegear/homegear.crt";
 	_keyPath = "/etc/homegear/homegear.key";
+	_verifyCertificate = false;
 	_debugLevel = 3;
 	_databasePath = GD::executablePath + "db.sql";
 	_databaseSynchronous = false;
@@ -95,6 +96,11 @@ void Settings::load(std::string filename)
 					_keyPath = value;
 					if(_keyPath.empty()) _keyPath = "/etc/homegear/homegear.key";
 					HelperFunctions::printDebug("Debug: keyPath set to " + _keyPath);
+				}
+				else if(name == "verifycertificate")
+				{
+					if(HelperFunctions::toLower(value) == "true") _verifyCertificate = true;
+					HelperFunctions::printDebug("Debug: verifyCertificate set to " + std::to_string(_verifyCertificate));
 				}
 				else if(name == "rpcinterface")
 				{

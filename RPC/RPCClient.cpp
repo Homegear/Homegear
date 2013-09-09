@@ -14,6 +14,16 @@ RPCClient::RPCClient()
 		SSL_load_error_strings();
 		_sslCTX = SSL_CTX_new(_sslMethod);
 		SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
+		if(!_sslCTX)
+		{
+			HelperFunctions::printError("Could not initialize SSL support for RPC client." + std::string(ERR_reason_error_string(ERR_get_error())));
+			_sslCTX = nullptr;
+			return;
+		}
+		if(!SSL_CTX_load_verify_locations(_sslCTX, NULL, "/etc/ssl/certs"))
+		{
+			HelperFunctions::printError("Could not load root certificates from /etc/ssl/certs." + std::string(ERR_reason_error_string(ERR_get_error())));
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -344,6 +354,7 @@ int32_t RPCClient::getConnection(std::string& ipAddress, std::string& port, std:
 
 std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, std::string port, bool useSSL, std::string data, bool& timedout)
 {
+	SSL* ssl = nullptr;
 	try
 	{
 		_sendCounter++;
@@ -375,16 +386,45 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 			return std::shared_ptr<std::vector<char>>();
 		}
 
-		SSL_CTX* ctx = nullptr;
-		SSL* ssl = nullptr;
 		if(useSSL)
 		{
-			ssl = SSL_new(ctx);
+			if(!_sslCTX)
+			{
+				HelperFunctions::printError("RPC Client: Could not connect to server using SSL. SSL is not initialized. Look for previous error messages.");
+				SSL_free(ssl);
+				shutdown(fileDescriptor, 0);
+				close(fileDescriptor);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
+			}
+			ssl = SSL_new(_sslCTX);
 			SSL_set_fd(ssl, fileDescriptor);
 			int32_t result = SSL_connect(ssl);
-			if(result < 1)
+			if(!ssl || result < 1)
 			{
-				HelperFunctions::printError("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(ssl, result)));
+				HelperFunctions::printError("RPC Client: Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(ssl, result)));
+				SSL_free(ssl);
+				shutdown(fileDescriptor, 0);
+				close(fileDescriptor);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
+			}
+
+			X509* serverCert = SSL_get_peer_certificate(ssl);
+			if(!serverCert)
+			{
+				HelperFunctions::printError("RPC Client: Could not get server certificate.");
+				SSL_free(ssl);
+				shutdown(fileDescriptor, 0);
+				close(fileDescriptor);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
+			}
+
+			//When no certificate was received, verify returns X509_V_OK!
+			if((result = SSL_get_verify_result(ssl)) != X509_V_OK && (result != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT || GD::settings.verifyCertificate()))
+			{
+				HelperFunctions::printError("RPC Client: Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
 				SSL_free(ssl);
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
@@ -395,10 +435,11 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 
 		std::string msg("POST /RPC2 HTTP/1.1\r\nUser_Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + ipString + ":" + port + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data.length()) + "\r\nConnection: close\r\nTE: chunked\r\n\r\n" + data + "\r\n");
 		HelperFunctions::printDebug("Sending packet: " + msg);
-		int32_t sentBytes = send(fileDescriptor, msg.c_str(), msg.size(), MSG_NOSIGNAL);
+		int32_t sentBytes = useSSL ? SSL_write(ssl, msg.c_str(), msg.size()) : send(fileDescriptor, msg.c_str(), msg.size(), MSG_NOSIGNAL);
 		if(sentBytes == 0)
 		{
 			HelperFunctions::printError("Error sending data to XML RPC server " + ipString + " on port " + port + ": " + strerror(errno));
+			SSL_free(ssl);
 			close(fileDescriptor);
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
@@ -426,6 +467,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 				case 0:
 					HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out after " + std::to_string(HelperFunctions::getTime() - startTime) + " ms. Server: " + ipString + " Port: " + port + " Data: " + data);
 					timedout = true;
+					SSL_free(ssl);
 					shutdown(fileDescriptor, 0);
 					close(fileDescriptor);
 					_sendCounter--;
@@ -440,20 +482,25 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 			}
 			if(receivedBytes != 1)
 			{
+				SSL_free(ssl);
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
-			receivedBytes = recv(fileDescriptor, buffer, 1024, 0);
+			receivedBytes = useSSL ? SSL_read(ssl, buffer, bufferMax) : recv(fileDescriptor, buffer, bufferMax, 0);
 			if(receivedBytes < 0)
 			{
 				HelperFunctions::printError("Error reading data from XML RPC server " + ipString + " on port " + port + ": " + strerror(errno));
+				SSL_free(ssl);
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
+			//We are using string functions to process the buffer. So just to make sure,
+			//they don't do something in the memory after buffer, we add '\0'
+			buffer[receivedBytes] = '\0';
 
 			try
 			{
@@ -462,6 +509,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 			catch(HTTPException& ex)
 			{
 				HelperFunctions::printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
+				SSL_free(ssl);
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
 				_sendCounter--;
@@ -470,12 +518,14 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
 			if(http.getContentSize() > 104857600 || http.getHeader()->contentLength > 104857600)
 			{
 				HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
+				SSL_free(ssl);
 				shutdown(fileDescriptor, 0);
 				close(fileDescriptor);
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
 		}
+		SSL_free(ssl);
 		shutdown(fileDescriptor, 0);
 		close(fileDescriptor);
 		HelperFunctions::printDebug("Debug: Received packet from server " + ipString + " on port " + port + ":\n" + HelperFunctions::getHexString(*http.getContent()));
@@ -494,6 +544,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::string server, st
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    SSL_free(ssl);
     _sendCounter--;
     return std::shared_ptr<std::vector<char>>();
 }

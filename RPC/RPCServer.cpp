@@ -169,6 +169,8 @@ void RPCServer::mainThread()
 					if(!client->ssl)
 					{
 						removeClientFileDescriptor(client->fileDescriptor);
+						shutdown(clientFileDescriptor, 0);
+						close(clientFileDescriptor);
 						continue;
 					}
 				}
@@ -530,6 +532,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					HelperFunctions::printDebug("Debug: Packet received: " + HelperFunctions::getHexString(rawPacket));
 				}
 				packetType = (!strncmp(&buffer[0], "POST", 4)) ? PacketType::Enum::xmlRequest : PacketType::Enum::xmlResponse;
+				//We are using string functions to process the buffer. So just to make sure,
+				//they don't do something in the memory after buffer, we add '\0'
 				buffer[bytesRead] = '\0';
 
 				try
@@ -665,10 +669,13 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 		int32_t result = SSL_accept(client->ssl);
 		if(result < 1)
 		{
-			HelperFunctions::printError("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
-			SSL_free(client->ssl);
+			if(client->ssl && result != 0) HelperFunctions::printError("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
+			else if(result == 0) HelperFunctions::printError("The TLS/SSL handshake was unsuccessful. Client number: " + std::to_string(client->fileDescriptor));
+			else HelperFunctions::printError("Fatal error during TLS/SSL handshake. Client number: " + std::to_string(client->fileDescriptor));
+			if(client->ssl) SSL_free(client->ssl);
 			client->ssl = nullptr;
 		}
+		return;
 	}
     catch(const std::exception& ex)
     {
@@ -682,6 +689,8 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    if(client->ssl) SSL_free(client->ssl);
+    client->ssl = nullptr;
 }
 
 void RPCServer::getFileDescriptor()

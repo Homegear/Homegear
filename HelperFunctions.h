@@ -139,6 +139,7 @@ public:
 	static void printDebug(std::string message, int32_t minDebugLevel = 5);
 	static void printMessage(std::string message, int32_t minDebugLevel = 0);
 	static std::string getSSLError(int32_t errorNumber);
+	static std::string getSSLCertVerificationError(int32_t errorNumber);
 private:
 	//Non public constructor
 	HelperFunctions();

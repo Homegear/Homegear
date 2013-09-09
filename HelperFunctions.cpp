@@ -418,10 +418,80 @@ std::string HelperFunctions::getSSLError(int32_t errorNumber)
 		else return "Some I/O error occured.";
 	case SSL_ERROR_SSL:
 		errorNumber = ERR_get_error();
-		if(errorNumber > 0) return std::string(ERR_reason_error_string(ERR_get_error()));
+		if(errorNumber > 0) return std::string(ERR_reason_error_string(errorNumber));
 		else return "Unknown error.";
-	default:
-		return std::to_string(errorNumber);
 	}
-	return "";
+	return std::to_string(errorNumber);
+}
+
+std::string HelperFunctions::getSSLCertVerificationError(int32_t errorNumber)
+{
+	switch(errorNumber)
+	{
+	case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
+		return "Unable to get issuer certificate.";
+	case X509_V_ERR_UNABLE_TO_GET_CRL:
+		return "Unable to get certificate CRL.";
+	case X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE:
+		return "Unable to decrypt certificate's signature.";
+	case X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE:
+		return "Unable to decrypt CRL's signature.";
+	case X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY:
+		return "Unable to decode issuer public key.";
+	case X509_V_ERR_CERT_SIGNATURE_FAILURE:
+		return "Certificate signature failure.";
+	case X509_V_ERR_CRL_SIGNATURE_FAILURE:
+		return "CRL signature failure.";
+	case X509_V_ERR_CERT_NOT_YET_VALID:
+		return "Certificate is not yet valid.";
+	case X509_V_ERR_CERT_HAS_EXPIRED:
+		return "Certificate has expired.";
+	case X509_V_ERR_CRL_NOT_YET_VALID:
+		return "CRL is not yet valid.";
+	case X509_V_ERR_CRL_HAS_EXPIRED:
+		return "CRL has expired.";
+	case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
+		return "Format error in certificate's notBefore field.";
+	case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
+		return "Format error in certificate's notAfter field.";
+	case X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD:
+		return "Format error in CRL's lastUpdate field.";
+	case X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD:
+		return "Format error in CRL's nextUpdate field.";
+	case X509_V_ERR_OUT_OF_MEM:
+		return "Out of memory.";
+	case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+		return "Certificate is a self signed certificate. If you want to use it add the root certificate to your certificate store (recommended) or set \"verifyCertificate\" to false in main.conf (not recommended).";
+	case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+		return "Self signed certificate in certificate chain.";
+	case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+		return "Unable to get local issuer certificate.";
+	case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+		return "Unable to verify the first certificate.";
+	case X509_V_ERR_CERT_CHAIN_TOO_LONG:
+		return "Certificate chain too long.";
+	case X509_V_ERR_CERT_REVOKED:
+		return "Certificate revoked.";
+	case X509_V_ERR_INVALID_CA:
+		return "Invalid CA certificate.";
+	case X509_V_ERR_PATH_LENGTH_EXCEEDED:
+		return "Path length constraint exceeded.";
+	case X509_V_ERR_INVALID_PURPOSE:
+		return "Unsupported certificate purpose.";
+	case X509_V_ERR_CERT_UNTRUSTED:
+		return "Certificate not trusted.";
+	case X509_V_ERR_CERT_REJECTED:
+		return "Certificate rejected.";
+	case X509_V_ERR_SUBJECT_ISSUER_MISMATCH:
+		return "Subject issuer mismatch.";
+	case X509_V_ERR_AKID_SKID_MISMATCH:
+		return "Authority and subject key identifier mismatch.";
+	case X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH:
+		return "Authority and issuer serial number mismatch.";
+	case X509_V_ERR_KEYUSAGE_NO_CERTSIGN:
+		return "Key usage does not include certificate signing.";
+	case X509_V_ERR_APPLICATION_VERIFICATION:
+		return "Application verification failure.";
+	}
+	return "Unknown verification error. Error number: " + std::to_string(errorNumber);
 }

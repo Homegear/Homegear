@@ -18,6 +18,7 @@ public:
 	int32_t rpcSSLPort() { return _rpcSSLPort; }
 	std::string certPath() { return _certPath; }
 	std::string keyPath() { return _keyPath;  }
+	bool verifyCertificate() { return _verifyCertificate; }
 	int32_t debugLevel() { return _debugLevel; }
 	std::string databasePath() { return _databasePath; }
 	bool databaseSynchronous() { return _databaseSynchronous; }
@@ -41,6 +42,7 @@ private:
 	int32_t _rpcSSLPort = 2002;
 	std::string _certPath;
 	std::string _keyPath;
+	bool _verifyCertificate = false;
 	int32_t _debugLevel = 3;
 	std::string _databasePath;
 	bool _databaseSynchronous = false;
