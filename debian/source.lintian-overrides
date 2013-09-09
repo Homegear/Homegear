@@ -1,0 +1,8 @@
+/usr/share/lintian/overrides/homegear
+
+# Exception was added to license to allow linking with OpenSSL
+homegear binary: possible-gpl-code-linked-with-openssl
+homegear binary: hardening-no-relro
+homegear binary: hardening-no-fortify-functions
+homegear binary: new-package-should-close-itp-bug
+homegear source: script-in-etc-init.d-not-registered-via-update-rc.d

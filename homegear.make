@@ -36,7 +36,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -l pthread -l sqlite3 -l readline -l ssl
+  LDFLAGS   += -l pthread -l sqlite3 -l readline -l gnutls -l gnutls-openssl -l crypto
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -58,7 +58,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -l pthread -l sqlite3 -l readline -l ssl
+  LDFLAGS   += -s -l pthread -l sqlite3 -l readline -l gnutls -l gnutls-openssl -l crypto
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -80,7 +80,7 @@ ifeq ($(config),profiling)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -l pthread -l sqlite3 -l readline -l ssl -pg
+  LDFLAGS   += -l pthread -l sqlite3 -l readline -l gnutls -l gnutls-openssl -l crypto -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 

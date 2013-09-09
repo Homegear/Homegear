@@ -1,3 +1,32 @@
+/* Copyright 2013 Sathya Laufer
+ *
+ * Homegear is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Homegear is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Homegear.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * In addition, as a special exception, the copyright holders give
+ * permission to link the code of portions of this program with the
+ * OpenSSL library under certain conditions as described in each
+ * individual source file, and distribute linked combinations
+ * including the two.
+ * You must obey the GNU General Public License in all respects
+ * for all of the code used other than OpenSSL.  If you modify
+ * file(s) with this exception, you may extend this exception to your
+ * version of the file(s), but you are not obligated to do so.  If you
+ * do not wish to do so, delete this exception statement from your
+ * version.  If you delete this exception statement from all source
+ * files in the program, then also delete it here.
+ */
+
 #include "Settings.h"
 #include "HelperFunctions.h"
 #include "GD.h"
@@ -19,9 +48,6 @@ void Settings::reset()
 	_databasePath = GD::executablePath + "db.sql";
 	_databaseSynchronous = false;
 	_databaseMemoryJournal = true;
-	_mySQLServer = "localhost";
-	_mySQLUser = "homegear";
-	_mySQLPassword = "homegear";
 	_rfDeviceType = "cul";
 	_rfDevice = "/dev/ttyACM0";
 	_logfilePath = "/var/log/homegear/";
@@ -130,30 +156,6 @@ void Settings::load(std::string filename)
 				{
 					if(HelperFunctions::toLower(value) == "false") _databaseMemoryJournal = false;
 					HelperFunctions::printDebug("Debug: databaseMemoryJournal set to " + std::to_string(_databaseMemoryJournal));
-				}
-				else if(name == "mysqlserver")
-				{
-					_mySQLServer = value;
-					if(_mySQLServer.empty()) _mySQLServer = "localhost";
-					HelperFunctions::printDebug("Debug: mySQLServer set to " + _mySQLServer);
-				}
-				else if(name == "mysqldatabase")
-				{
-					_mySQLDatabase = value;
-					if(_mySQLDatabase.empty()) _mySQLDatabase = "homegear";
-					HelperFunctions::printDebug("Debug: mySQLDatabase set to " + _mySQLDatabase);
-				}
-				else if(name == "mysqluser")
-				{
-					_mySQLUser = value;
-					if(_mySQLUser.empty()) _mySQLUser = "homegear";
-					HelperFunctions::printDebug("Debug: mySQLUser set to " + _mySQLUser);
-				}
-				else if(name == "mysqlpassword")
-				{
-					_mySQLPassword = value;
-					if(_mySQLPassword.empty()) _mySQLPassword = "homegear";
-					else HelperFunctions::printDebug("Debug: mySQLPassword was set.");
 				}
 				else if(name == "rfdevicetype")
 				{
