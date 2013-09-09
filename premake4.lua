@@ -26,7 +26,7 @@ newplatform {
     gcc = {
         cc = "arm-linux-gnueabihf-gcc",
         cxx = "arm-linux-gnueabihf-g++",
-        cppflags = "-MMD -D_GLIBCXX_USE_NANOSLEEP -DTI_CC1100"
+        cppflags = "-MMD -D_GLIBCXX_USE_NANOSLEEP -DTI_CC1100 -D_FORTIFY_SOURCE=2"
     }
 }
 
