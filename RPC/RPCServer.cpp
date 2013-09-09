@@ -28,14 +28,41 @@ void RPCServer::start(bool ssl)
 		{
 			SSL_load_error_strings();
 			SSLeay_add_ssl_algorithms();
-			const SSL_METHOD* method = SSLv23_server_method();
-			_sslCTX = SSL_CTX_new(method);
-			SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
+			_sslCTX = SSL_CTX_new(SSLv23_server_method());
 			if(!_sslCTX)
 			{
 				HelperFunctions::printError("Could not start RPC Server with SSL support." + std::string(ERR_reason_error_string(ERR_get_error())));
 				return;
 			}
+
+			DH* dh = DH_new();
+			if(!dh)
+			{
+				HelperFunctions::printError("Could not start RPC Server with SSL support. Initialization of Diffie Hellman failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				SSL_CTX_free(_sslCTX);
+				return;
+			}
+			if(!DH_generate_parameters_ex(dh, 2, DH_GENERATOR_2, 0))
+			{
+				HelperFunctions::printError("Could not start RPC Server with SSL support. Could not generate Diffie Hellman parameters: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				SSL_CTX_free(_sslCTX);
+				return;
+			}
+			int32_t codes = 0;
+			if(!DH_check(dh, &codes))
+			{
+				HelperFunctions::printError("Could not start RPC Server with SSL support. Diffie Hellman check failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				SSL_CTX_free(_sslCTX);
+				return;
+			}
+			if(!DH_generate_key(dh))
+			{
+				HelperFunctions::printError("Could not start RPC Server with SSL support. Could not generate Diffie Hellman key: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				SSL_CTX_free(_sslCTX);
+				return;
+			}
+			SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
+			SSL_CTX_set_tmp_dh(_sslCTX, dh);
 			if(SSL_CTX_use_certificate_file(_sslCTX, GD::settings.certPath().c_str(), SSL_FILETYPE_PEM) < 1)
 			{
 				SSL_CTX_free(_sslCTX);
@@ -675,6 +702,7 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 			if(client->ssl) SSL_free(client->ssl);
 			client->ssl = nullptr;
 		}
+		else HelperFunctions::printInfo("Info: New SSL connection to RPC server. Cipher: " + std::string(SSL_get_cipher(client->ssl)) + " (" + std::to_string(SSL_get_cipher_bits(client->ssl, 0)) + " bits)");
 		return;
 	}
     catch(const std::exception& ex)

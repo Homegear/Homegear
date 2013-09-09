@@ -22,6 +22,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <poll.h>
+#include <signal.h>
 
 #include "XMLRPCEncoder.h"
 #include "XMLRPCDecoder.h"
@@ -61,13 +62,13 @@ protected:
 	XMLRPCDecoder _xmlRpcDecoder;
 	XMLRPCEncoder _xmlRpcEncoder;
 	int32_t _sendCounter = 0;
-	const SSL_METHOD* _sslMethod = nullptr;
 	SSL_CTX* _sslCTX = nullptr;
 
 	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::string data, bool& timedout);
 	std::string getIPAddress(std::string address);
 	int32_t getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
 	SSL* getSSL(int32_t fileDescriptor);
+	bool connected(int32_t fileDescriptor);
 	void getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool& timedout);
 	void closeConnection(std::shared_ptr<RemoteRPCServer>& server);
 };

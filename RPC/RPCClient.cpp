@@ -10,9 +10,8 @@ RPCClient::RPCClient()
 	try
 	{
 		SSLeay_add_ssl_algorithms();
-		_sslMethod = SSLv23_client_method();
 		SSL_load_error_strings();
-		_sslCTX = SSL_CTX_new(_sslMethod);
+		_sslCTX = SSL_CTX_new(SSLv23_client_method());
 		SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
 		if(!_sslCTX)
 		{
@@ -250,11 +249,19 @@ int32_t RPCClient::getConnection(std::string& hostname, const std::string& port,
 				freeaddrinfo(serverInfo);
 				return -1;
 			}
+			int32_t optValue = 1;
+			if(setsockopt(fileDescriptor, SOL_SOCKET, SO_KEEPALIVE, (void*)&optValue, sizeof(int32_t)) == -1)
+			{
+				HelperFunctions::printError("Error: Could not set socket options for XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno));
+				freeaddrinfo(serverInfo);
+				return -1;
+			}
 
 			if(!(fcntl(fileDescriptor, F_GETFL) & O_NONBLOCK))
 			{
 				if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK) < 0)
 				{
+					HelperFunctions::printError("Error: Could not set socket options for XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno));
 					freeaddrinfo(serverInfo);
 					return -1;
 				}
@@ -303,9 +310,19 @@ int32_t RPCClient::getConnection(std::string& hostname, const std::string& port,
 				int32_t pollResult = poll(&pollstruct, 1, 5000);
 				if(pollResult < 0 || (pollstruct.revents & POLLERR))
 				{
-					HelperFunctions::printError("Error: Could not connect to XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno) + ". Poll failed. Error code: " + std::to_string(pollResult));
-					close(fileDescriptor);
-					return -1;
+					if(i < 5)
+					{
+						HelperFunctions::printWarning("Warning: Could not connect to XML RPC server " + ipAddress + " on port " + port + ". Poll failed with error code: " + std::to_string(pollResult) + ". Retrying in 3 seconds...");
+						close(fileDescriptor);
+						std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+						continue;
+					}
+					else
+					{
+						HelperFunctions::printError("Error: Could not connect to XML RPC server " + ipAddress + " on port " + port + ". Poll failed with error code: " + std::to_string(pollResult) + ". Giving up and removing server. Server has to send init again.");
+						close(fileDescriptor);
+						return -2;
+					}
 				}
 				else if(pollResult > 0)
 				{
@@ -456,10 +473,17 @@ void RPCClient::getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool
 void RPCClient::closeConnection(std::shared_ptr<RemoteRPCServer>& server)
 {
 	if(!server) return;
-	SSL_free(server->ssl);
+	if(server->ssl) SSL_free(server->ssl);
 	server->ssl = nullptr;
-	close(server->fileDescriptor);
+	if(server->fileDescriptor > -1) close(server->fileDescriptor);
 	server->fileDescriptor = -1;
+}
+
+bool RPCClient::connected(int32_t fileDescriptor)
+{
+	char buffer[1];
+	if(recv(fileDescriptor, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT) == 0) return false;
+	return true;
 }
 
 std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::string data, bool& timedout)
@@ -471,6 +495,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			HelperFunctions::printError("RPC Client: Could not send packet. Pointer to server is nullptr.");
 			return std::shared_ptr<std::vector<char>>();
 		}
+		signal(SIGPIPE, SIG_IGN);
 
 		_sendCounter++;
 		if(_sendCounter > 100)
@@ -486,6 +511,12 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		for(uint32_t i = 0; i < 3; i++)
 		{
 			if(server->fileDescriptor < 0) getFileDescriptor(server, timedout);
+			else if(!connected(server->fileDescriptor))
+			{
+				HelperFunctions::printDebug("RPC Client: Existing connection (" + std::to_string(server->fileDescriptor) + ") has been closed. Reconnecting...");
+				closeConnection(server);
+				getFileDescriptor(server, timedout);
+			}
 			else HelperFunctions::printDebug("RPC Client: Using existing connection: " + std::to_string(server->fileDescriptor));
 			if(server->fileDescriptor < 0)
 			{
@@ -497,6 +528,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			int32_t sentBytes = server->useSSL ? SSL_write(server->ssl, msg.c_str(), msg.size()) : send(server->fileDescriptor, msg.c_str(), msg.size(), MSG_NOSIGNAL);
 			if(sentBytes <= 0)
 			{
+				server->ssl = nullptr; //After SSL_write failed, the pointer does not seem to be valid anymore. Calling SSL_free causes segfault.
 				closeConnection(server);
 				if(i < 2) HelperFunctions::printWarning("Warning: Error sending data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno));
 				else
