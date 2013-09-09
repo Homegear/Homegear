@@ -587,7 +587,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			timeout.tv_sec = 10;
 			timeout.tv_usec = 0;
 			int64_t startTime = HelperFunctions::getTime();
-			receivedBytes = select(server->fileDescriptor + 1, &socketSet, NULL, NULL, &timeout);
+			receivedBytes = select(server->fileDescriptor + 1, &socketSet, NULL, &socketSet, &timeout);
 			switch(receivedBytes)
 			{
 				case 0:

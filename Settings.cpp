@@ -99,7 +99,7 @@ void Settings::load(std::string filename)
 				}
 				else if(name == "verifycertificate")
 				{
-					if(HelperFunctions::toLower(value) == "true") _verifyCertificate = true;
+					if(HelperFunctions::toLower(value) == "false") _verifyCertificate = false;
 					HelperFunctions::printDebug("Debug: verifyCertificate set to " + std::to_string(_verifyCertificate));
 				}
 				else if(name == "rpcinterface")
