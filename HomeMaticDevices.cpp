@@ -114,6 +114,8 @@ void HomeMaticDevices::initializeDatabase()
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType)");
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS deviceVariables (variableID INTEGER PRIMARY KEY UNIQUE, deviceID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
 
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
@@ -688,56 +690,20 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if(command.compare(0, 10, "debuglevel") == 0)
+		if(command == "unselect" && _currentDevice && !_currentDevice->peerSelected())
 		{
-			int32_t debugLevel;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index == 0)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 1)
-				{
-					if(element == "help") break;
-					debugLevel = HelperFunctions::getNumber(element);
-					if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
-				}
-				index++;
-			}
-			if(index == 1)
-			{
-				stringStream << "Description: This command temporarily changes the current debug level." << std::endl;
-				stringStream << "Usage: debuglevel DEBUGLEVEL" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  DEBUGLEVEL:\tThe debug level between 0 and 10." << std::endl;
-				return stringStream.str();
-			}
-
-			GD::debugLevel = debugLevel;
-			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
-			return stringStream.str();
+			_currentDevice.reset();
+			return "Device unselected.\n";
 		}
-		else if(command == "rpc connection count")
-		{
-			stringStream << GD::rpcServer.connectionCount() << std::endl;
-			return stringStream.str();
-		}
-		else if(command.compare(0, 7, "devices") != 0 && (_currentDevice || command != "help"))
+		else if(command.compare(0, 7, "devices") != 0 && _currentDevice)
 		{
 			if(!_currentDevice) return "No device selected.\n";
 			return _currentDevice->handleCLICommand(command);
 		}
-		else if(command == "devices help" || command == "help")
+		else if(command == "devices help")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "debuglevel\t\tChanges the debug level" << std::endl;
 			stringStream << "devices list\t\tList all devices" << std::endl;
 			stringStream << "devices create\t\tCreate a virtual device" << std::endl;
 			stringStream << "devices remove\t\tRemove a virtual device" << std::endl;

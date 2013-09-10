@@ -107,6 +107,7 @@ OBJECTS := \
 	$(OBJDIR)/BidCoSPacketManager.o \
 	$(OBJDIR)/BidCoSMessages.o \
 	$(OBJDIR)/Database.o \
+	$(OBJDIR)/User.o \
 	$(OBJDIR)/HomeMaticDevice.o \
 	$(OBJDIR)/PendingBidCoSQueues.o \
 	$(OBJDIR)/BidCoSPacket.o \
@@ -239,6 +240,9 @@ $(OBJDIR)/BidCoSMessages.o: BidCoSMessages.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Database.o: Database.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/User.o: User.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HomeMaticDevice.o: HomeMaticDevice.cpp

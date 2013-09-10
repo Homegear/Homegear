@@ -55,6 +55,7 @@ public:
 	void load();
 	void save(bool full, bool crash = false);
 	void dispose();
+	bool deviceSelected() { return (bool)_currentDevice; }
 	std::string handleCLICommand(std::string& command);
 
 private:

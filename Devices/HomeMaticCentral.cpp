@@ -349,6 +349,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "unselect\t\tUnselect this device" << std::endl;
 			stringStream << "pairing on\t\tEnables pairing mode" << std::endl;
 			stringStream << "pairing off\t\tDisables pairing mode" << std::endl;
 			stringStream << "peers list\t\tList all peers" << std::endl;

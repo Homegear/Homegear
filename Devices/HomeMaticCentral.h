@@ -107,7 +107,6 @@ protected:
 	std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
 	virtual void worker();
 private:
-	std::shared_ptr<Peer> _currentPeer = nullptr;
 	uint32_t _timeLeftInPairingMode = 0;
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
 	bool _stopPairingModeThread = false;

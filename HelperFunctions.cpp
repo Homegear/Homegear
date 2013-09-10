@@ -338,6 +338,34 @@ std::string HelperFunctions::getHexString(int32_t number, int32_t width)
 	return stringstream.str();
 }
 
+std::vector<char> HelperFunctions::getBinary(std::string hexString)
+{
+	int32_t asciiToBinaryTable[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15};
+    std::vector<char> binary;
+    for (std::string::const_iterator i = hexString.begin(); i != hexString.end(); i += 2)
+    {
+        uint8_t byte = 0;
+        if(isxdigit(*i)) byte = asciiToBinaryTable[std::toupper(*i) - '0'] << 4;
+        if(i + 1 != hexString.end() && isxdigit(*(i + 1))) byte += asciiToBinaryTable[std::toupper(*(i + 1)) - '0'];
+        binary.push_back(byte);
+    }
+    return binary;
+}
+
+std::vector<uint8_t> HelperFunctions::getUBinary(std::string hexString)
+{
+	int32_t asciiToBinaryTable[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15};
+    std::vector<uint8_t> binary;
+    for (std::string::const_iterator i = hexString.begin(); i != hexString.end(); i += 2)
+    {
+        uint8_t byte = 0;
+        if(isxdigit(*i)) byte = (asciiToBinaryTable[std::toupper(*i) - '0'] << 4);
+        if(i + 1 != hexString.end() && isxdigit(*(i + 1))) byte += asciiToBinaryTable[std::toupper(*(i + 1)) - '0'];
+        binary.push_back(byte);
+    }
+    return binary;
+}
+
 void HelperFunctions::copyFile(std::string source, std::string dest)
 {
 	try

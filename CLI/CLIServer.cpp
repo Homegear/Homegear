@@ -326,12 +326,373 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
     }
 }
 
+std::string Server::handleUserCommand(std::string& command)
+{
+	try
+	{
+		std::ostringstream stringStream;
+		if(command.compare(0, 10, "users help") == 0)
+		{
+			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "users list\t\tLists all users." << std::endl;
+			stringStream << "users create\t\tCreate a new user." << std::endl;
+			stringStream << "users update\t\tChange the password of an existing user." << std::endl;
+			stringStream << "users delete\t\tDelete an existing user." << std::endl;
+			return stringStream.str();
+		}
+		if(command.compare(0, 10, "users list") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			bool printHelp = false;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2 && element == "help") printHelp = true;
+				else
+				{
+					printHelp = true;
+					break;
+				}
+				index++;
+			}
+			if(printHelp)
+			{
+				stringStream << "Description: This command lists all known users." << std::endl;
+				stringStream << "Usage: users list" << std::endl << std::endl;
+				return stringStream.str();
+			}
+
+			DataTable rows = GD::db.executeCommand("SELECT userID, name FROM users");
+			if(rows.size() == 0) return "No users exist.\n";
+
+			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
+			for(DataTable::const_iterator i = rows.begin(); i != rows.end(); ++i)
+			{
+				if(!i->second.size() == 2 || !i->second.at(0) || !i->second.at(1)) continue;
+				stringStream << std::setw(6) << i->second.at(0)->intValue << std::setw(30) << i->second.at(1)->textValue << std::endl;
+			}
+
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "users create") == 0)
+		{
+			std::string userName;
+			std::string password;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					else
+					{
+						userName = HelperFunctions::trim(element);
+						if(userName.empty() || !HelperFunctions::isAlphaNumeric(userName))
+						{
+							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
+							return stringStream.str();
+						}
+					}
+				}
+				else if(index == 3)
+				{
+					password = HelperFunctions::trim(element);
+					stringStream << password << std::endl;
+
+					if(password.front() == '"' && password.back() == '"')
+					{
+						HelperFunctions::stringReplace(password, "\\\"", "\"");
+						HelperFunctions::stringReplace(password, "\\\\", "\\");
+					}
+					if(password.size() < 8)
+					{
+						stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+			if(index < 4)
+			{
+				stringStream << "Description: This command creates a new user." << std::endl;
+				stringStream << "Usage: users create USERNAME \"PASSWORD\"" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  USERNAME:\tThe user name of the new user to create. It may contain alphanumeric characters, \"_\"" << std::endl;
+				stringStream << "           \tand \"-\". Example: foo" << std::endl;
+				stringStream << "  PASSWORD:\tThe password for the new user. All characters are allowed. If the password contains spaces," << std::endl;
+				stringStream << "           \twrap it in double quotes." << std::endl;
+				stringStream << "           \tExample: MyPassword" << std::endl;
+				stringStream << "           \tExample with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
+				return stringStream.str();
+			}
+
+			DataColumnVector dataSelect;
+			dataSelect.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
+			DataTable rows = GD::db.executeCommand("SELECT userID FROM users WHERE name=?", dataSelect);
+			if(rows.size() > 0) return "A user with that name already exists.\n";
+
+			std::vector<unsigned char> salt;
+			std::vector<unsigned char> passwordHash = User::generatePBKDF2(password, salt);
+
+			DataColumnVector dataInsert;
+			dataInsert.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
+			dataInsert.push_back(std::shared_ptr<DataColumn>(new DataColumn(passwordHash)));
+			dataInsert.push_back(std::shared_ptr<DataColumn>(new DataColumn(salt)));
+			GD::db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?)", dataInsert);
+
+			rows = GD::db.executeCommand("SELECT userID FROM users WHERE name=?", dataSelect);
+			if(rows.size() > 0) stringStream << "User successfully created." << std::endl;
+			else stringStream << "Error creating user. See log for more details." << std::endl;
+
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "users update") == 0)
+		{
+			std::string userName;
+			std::string password;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					else
+					{
+						userName = HelperFunctions::trim(element);
+						if(userName.empty() || !HelperFunctions::isAlphaNumeric(userName))
+						{
+							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
+							return stringStream.str();
+						}
+					}
+				}
+				else if(index == 3)
+				{
+					password = HelperFunctions::trim(element);
+
+					if(password.front() == '"' && password.back() == '"')
+					{
+						HelperFunctions::stringReplace(password, "\\\"", "\"");
+						HelperFunctions::stringReplace(password, "\\\\", "\\");
+					}
+					if(password.size() < 8)
+					{
+						stringStream << "The password is too short. Please choose a password with at least 8 characters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+			if(index < 4)
+			{
+				stringStream << "Description: This command sets a new password for an existing user." << std::endl;
+				stringStream << "Usage: users update USERNAME \"PASSWORD\"" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  USERNAME:\tThe user name of an existing user. Example: foo" << std::endl;
+				stringStream << "  PASSWORD:\tThe new password for the user. All characters are allowed. If the password contains spaces," << std::endl;
+				stringStream << "           \twrap it in double quotes." << std::endl;
+				stringStream << "           \tExample: MyPassword" << std::endl;
+				stringStream << "           \tExample with spaces and escape characters: \"My_\\\\\\\"Password\" (Translates to: My_\\\"Password)" << std::endl;
+				return stringStream.str();
+			}
+
+			DataColumnVector data;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
+			DataTable rows = GD::db.executeCommand("SELECT userID FROM users WHERE name=?", data);
+			if(rows.size() == 0 || rows.at(0).size() == 0) return "The user doesn't exist.\n";
+			uint32_t userID = rows.at(0).at(0)->intValue;
+
+			std::vector<unsigned char> salt;
+			std::vector<unsigned char> passwordHash = User::generatePBKDF2(password, salt);
+
+			data.clear();
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(passwordHash)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(salt)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(userID)));
+			GD::db.executeCommand("UPDATE users SET password=?, salt=? WHERE userID=?", data);
+
+			rows = GD::db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
+			if(rows.size() > 0) stringStream << "User successfully updated." << std::endl;
+			else stringStream << "Error updating user. See log for more details." << std::endl;
+
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "users delete") == 0)
+		{
+			std::string userName;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					else
+					{
+						userName = HelperFunctions::trim(element);
+						if(userName.empty() || !HelperFunctions::isAlphaNumeric(userName))
+						{
+							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
+							return stringStream.str();
+						}
+					}
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command deletes an existing user." << std::endl;
+				stringStream << "Usage: users delete USERNAME" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  USERNAME:\tThe user name of the user to delete. Example: foo" << std::endl;
+				return stringStream.str();
+			}
+
+			DataColumnVector data;
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
+			DataTable rows = GD::db.executeCommand("SELECT userID FROM users WHERE name=?", data);
+			if(rows.size() == 0 || rows.at(0).size() == 0) return "The user doesn't exist.\n";
+			uint32_t userID = rows.at(0).at(0)->intValue;
+
+			data.clear();
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(userID)));
+			GD::db.executeCommand("DELETE FROM users WHERE userID=?", data);
+
+			rows = GD::db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
+			if(rows.size() == 0) stringStream << "User successfully deleted." << std::endl;
+			else stringStream << "Error deleting user. See log for more details." << std::endl;
+
+			return stringStream.str();
+		}
+		else return "Unknown command.\n";
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "Error executing command. See log file for more details.\n";
+}
+
+std::string Server::handleGlobalCommand(std::string& command)
+{
+	try
+	{
+		std::ostringstream stringStream;
+		if(command == "help" && !GD::devices.deviceSelected())
+		{
+			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "debuglevel\t\tChanges the debug level" << std::endl;
+			stringStream << "users [COMMAND]\t\tExecute user commands. Type \"users help\" for more information." << std::endl;
+			stringStream << "devices [COMMAND]\tExecute device commands. Type \"devices help\" for more information." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 10, "debuglevel") == 0)
+		{
+			int32_t debugLevel;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index == 0)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 1)
+				{
+					if(element == "help") break;
+					debugLevel = HelperFunctions::getNumber(element);
+					if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
+				}
+				index++;
+			}
+			if(index == 1)
+			{
+				stringStream << "Description: This command temporarily changes the current debug level." << std::endl;
+				stringStream << "Usage: debuglevel DEBUGLEVEL" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  DEBUGLEVEL:\tThe debug level between 0 and 10." << std::endl;
+				return stringStream.str();
+			}
+
+			GD::debugLevel = debugLevel;
+			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
+			return stringStream.str();
+		}
+		else if(command == "rpc connection count")
+		{
+			stringStream << GD::rpcServer.connectionCount() << std::endl;
+			return stringStream.str();
+		}
+		return "";
+	}
+    catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "Error executing command. See log file for more details.\n";
+}
+
 void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> clientData)
 {
 	try
 	{
 		if(!command.empty() && command.at(0) == 0) return;
-		std::string response(GD::devices.handleCLICommand(command));
+		std::string response = handleGlobalCommand(command);
+		if(response.empty())
+		{
+			if(command.compare(0, 5, "users") == 0) response = handleUserCommand(command);
+			else response = GD::devices.handleCLICommand(command);
+		}
 		response.push_back(0);
 		if(send(clientData->fileDescriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
 		{

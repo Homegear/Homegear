@@ -43,6 +43,7 @@
 #include <iomanip>
 #include <sstream>
 
+#include <ctype.h>
 #include <pthread.h>
 #include <openssl/err.h>
 
@@ -98,10 +99,23 @@ public:
 			return ltrim(rtrim(s));
 	}
 
-	static inline std::string &toLower (std::string &s)
+	static inline std::string& toLower (std::string& s)
 	{
 		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 		return s;
+	}
+
+	static inline std::string& stringReplace(std::string& haystack, std::string search, std::string replace)
+	{
+		int32_t pos = 0;
+		while(true)
+		{
+			 pos = haystack.find(search, pos);
+			 if (pos == std::string::npos) break;
+			 haystack.replace(pos, search.size(), replace);
+			 pos += search.size();
+		}
+		return haystack;
 	}
 
 	static std::pair<std::string, std::string> split(std::string string, char delimiter);
@@ -111,6 +125,16 @@ public:
 		double number = 0;
 		try { number = std::stod(s); } catch(...) {}
 		return number;
+	}
+
+	static inline bool isNotAlphaNumeric(char c)
+	{
+		return !(isalpha(c) || isdigit(c) || (c == '_') || (c == '-'));
+	}
+
+	static bool isAlphaNumeric(std::string& s)
+	{
+		return find_if(s.begin(), s.end(), isNotAlphaNumeric) == s.end();
 	}
 
 	static bool isNumber(std::string& s)
@@ -160,6 +184,8 @@ public:
 	static std::string getHexString(const std::vector<char>& data);
 	static std::string getHexString(const std::vector<uint8_t>& data);
 	static std::string getHexString(int32_t number, int32_t width = -1);
+	static std::vector<char> getBinary(std::string hexString);
+	static std::vector<uint8_t> getUBinary(std::string hexString);
 	static void printEx(std::string file, uint32_t line, std::string function, std::string what = "");
 	static void printCritical(std::string errorString);
 	static void printError(std::string errorString);
@@ -171,7 +197,7 @@ public:
 	static std::string getSSLCertVerificationError(int32_t errorNumber);
 private:
 	//Non public constructor
-	HelperFunctions();
+	HelperFunctions() {}
 };
 
 #endif /* HELPERFUNCTIONS_H_ */

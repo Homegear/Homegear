@@ -46,6 +46,8 @@ class HomeMaticDevice;
 #include <iostream>
 #include <string>
 
+#include "../User.h"
+
 namespace CLI {
 
 class ClientData
@@ -76,6 +78,8 @@ private:
 	std::vector<std::thread> _readThreads;
 
 	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
+	std::string handleUserCommand(std::string& command);
+	std::string handleGlobalCommand(std::string& command);
 	void getFileDescriptor();
 	int32_t getClientFileDescriptor();
 	void removeClientData(int32_t clientFileDescriptor);

@@ -81,6 +81,7 @@ class HomeMaticDevice
         virtual bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
 
         virtual void addPeer(std::shared_ptr<Peer> peer);
+        bool peerSelected() { return (bool)_currentPeer; }
         bool peerExists(int32_t address);
         std::shared_ptr<Peer> getPeer(int32_t address);
         std::shared_ptr<Peer> getPeer(std::string serialNumber);
@@ -171,6 +172,7 @@ class HomeMaticDevice
         int32_t _channelMax = 0;
         int32_t _lastPairingByte = 0;
         int32_t _currentList = 0;
+        std::shared_ptr<Peer> _currentPeer;
         std::unordered_map<int32_t, std::shared_ptr<Peer>> _peers;
         std::unordered_map<std::string, std::shared_ptr<Peer>> _peersBySerial;
         std::timed_mutex _peersMutex;
