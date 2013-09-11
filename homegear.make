@@ -127,6 +127,7 @@ OBJECTS := \
 	$(OBJDIR)/Server.o \
 	$(OBJDIR)/RPCDecoder.o \
 	$(OBJDIR)/XMLRPCDecoder.o \
+	$(OBJDIR)/ClientSettings.o \
 	$(OBJDIR)/RPCClient.o \
 	$(OBJDIR)/RPCServer.o \
 	$(OBJDIR)/XMLRPCEncoder.o \
@@ -300,6 +301,9 @@ $(OBJDIR)/RPCDecoder.o: RPC/RPCDecoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/XMLRPCDecoder.o: RPC/XMLRPCDecoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/ClientSettings.o: RPC/ClientSettings.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCClient.o: RPC/RPCClient.cpp

@@ -47,3 +47,4 @@ int32_t GD::debugLevel = 7;
 int32_t GD::rpcLogLevel = 1;
 bool GD::bigEndian = false;
 Settings GD::settings;
+RPC::ClientSettings GD::clientSettings;

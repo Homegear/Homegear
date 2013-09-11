@@ -47,7 +47,6 @@ public:
 	int32_t rpcSSLPort() { return _rpcSSLPort; }
 	std::string certPath() { return _certPath; }
 	std::string keyPath() { return _keyPath;  }
-	bool verifyCertificate() { return _verifyCertificate; }
 	int32_t debugLevel() { return _debugLevel; }
 	std::string databasePath() { return _databasePath; }
 	bool databaseSynchronous() { return _databaseSynchronous; }
@@ -60,6 +59,7 @@ public:
 	uint32_t workerThreadWindow() { return _workerThreadWindow; }
 	uint32_t bidCoSResponseDelay() { return _bidCoSResponseDelay; }
 	uint32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
+	std::string clientSettingsPath() { return _clientSettingsPath; }
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
 private:
 	std::string _rpcInterface;
@@ -67,7 +67,6 @@ private:
 	int32_t _rpcSSLPort = 2002;
 	std::string _certPath;
 	std::string _keyPath;
-	bool _verifyCertificate = true;
 	int32_t _debugLevel = 3;
 	std::string _databasePath;
 	bool _databaseSynchronous = false;
@@ -79,6 +78,7 @@ private:
 	uint32_t _workerThreadWindow = 3000;
 	uint32_t _bidCoSResponseDelay = 90;
 	uint32_t _rpcServerThreadPriority = 0;
+	std::string _clientSettingsPath;
 	std::map<std::string, bool> _tunnelClients;
 
 	void reset();

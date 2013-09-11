@@ -27,53 +27,24 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef GD_H_
-#define GD_H_
+#include "User.h"
 
-class Database;
-class HomeMaticDevices;
-
-#include <vector>
-#include <string>
-
-#include "Database.h"
-#include "RFDevices/RFDevice.h"
-#include "HomeMaticDevices.h"
-#include "RPC/Server.h"
-#include "RPC/Client.h"
-#include "CLI/CLIServer.h"
-#include "CLI/CLIClient.h"
-#include "RPC/Devices.h"
-#include "Settings.h"
-#include "RPC/ClientSettings.h"
-
-class GD {
-public:
-	static std::string configPath;
-	static std::string runDir;
-	static std::string pidfilePath;
-	static std::string socketPath;
-	static std::string workingDirectory;
-	static std::string executablePath;
-	static HomeMaticDevices devices;
-	static RPC::Server rpcServer;
-	static RPC::Server rpcServerSSL;
-	static RPC::Client rpcClient;
-	static CLI::Server cliServer;
-	static CLI::Client cliClient;
-	static RPC::Devices rpcDevices;
-	static Settings settings;
-	static RPC::ClientSettings clientSettings;
-	static Database db;
-	static std::shared_ptr<RF::RFDevice> rfDevice;
-	static int32_t debugLevel;
-	static int32_t rpcLogLevel;
-	static bool bigEndian;
-
-	virtual ~GD() { }
-private:
-	//Non public constructor
-	GD();
-};
-
-#endif /* GD_H_ */
+std::vector<unsigned char> User::generatePBKDF2(const std::string& password, std::vector<unsigned char>& salt)
+{
+	std::vector<char> passwordBytes;
+	passwordBytes.insert(passwordBytes.begin(), password.begin(), password.end());
+	if(salt.empty())
+	{
+		std::default_random_engine generator;
+		std::uniform_int_distribution<unsigned char> distribution(0, 255);
+		auto randByte = std::bind(distribution, generator);
+		for(uint32_t i = 0; i < 16; ++i) salt.push_back(randByte());
+	}
+	int32_t keySize = 20;
+	std::vector<unsigned char> keyBytes(keySize);
+	if(PKCS5_PBKDF2_HMAC_SHA1(&passwordBytes.at(0), passwordBytes.size(), &salt.at(0), salt.size(), 4000, keySize, &keyBytes.at(0)) != 0)
+	{
+		return keyBytes;
+	}
+	else return std::vector<unsigned char>();
+}

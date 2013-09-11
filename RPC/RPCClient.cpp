@@ -408,7 +408,7 @@ int32_t RPCClient::getConnection(std::string& hostname, const std::string& port,
     return -1;
 }
 
-SSL* RPCClient::getSSL(int32_t fileDescriptor)
+SSL* RPCClient::getSSL(int32_t fileDescriptor, bool verifyCertificate)
 {
 	try
 	{
@@ -437,7 +437,7 @@ SSL* RPCClient::getSSL(int32_t fileDescriptor)
 		}
 
 		//When no certificate was received, verify returns X509_V_OK!
-		if((result = SSL_get_verify_result(ssl)) != X509_V_OK && (result != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT || GD::settings.verifyCertificate()))
+		if((result = SSL_get_verify_result(ssl)) != X509_V_OK && (result != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT || verifyCertificate))
 		{
 			HelperFunctions::printError("RPC Client: Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
 			SSL_free(ssl);
@@ -483,7 +483,8 @@ void RPCClient::getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool
 
 		if(server->useSSL)
 		{
-			server->ssl = getSSL(server->fileDescriptor);
+			bool verifyCertificate = (!server->settings || server->settings->verifyCertificate) ? true : false;
+			server->ssl = getSSL(server->fileDescriptor, verifyCertificate);
 			if(!server->ssl)
 			{
 				shutdown(server->fileDescriptor, 0);
@@ -535,6 +536,9 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 
 		if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
 		if(server->hostname.empty()) return std::shared_ptr<std::vector<char>>();
+		//Get settings pointer every time this method is executed, because
+		//the settings might change.
+		server->settings = GD::clientSettings.get(server->hostname);
 
 		_sendCounter++;
 		if(_sendCounter > 100)

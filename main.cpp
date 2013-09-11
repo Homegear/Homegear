@@ -86,6 +86,7 @@ void terminate(int32_t signalNumber)
 		{
 			HelperFunctions::printMessage("Reloading settings...");
 			GD::settings.load(GD::configPath + "main.conf");
+			GD::clientSettings.load(GD::settings.clientSettingsPath());
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon)
 			{
@@ -276,6 +277,7 @@ int main(int argc, char* argv[])
 		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
 		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
 		GD::settings.load(GD::configPath + "main.conf");
+		GD::clientSettings.load(GD::settings.clientSettingsPath());
 
     	if(_startAsDaemon) startDaemon();
 

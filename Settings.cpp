@@ -43,7 +43,6 @@ void Settings::reset()
 	_rpcSSLPort = 2002;
 	_certPath = "/etc/homegear/homegear.crt";
 	_keyPath = "/etc/homegear/homegear.key";
-	_verifyCertificate = true;
 	_debugLevel = 3;
 	_databasePath = GD::executablePath + "db.sql";
 	_databaseSynchronous = false;
@@ -55,6 +54,7 @@ void Settings::reset()
 	_workerThreadWindow = 3000;
 	_bidCoSResponseDelay = 90;
 	_rpcServerThreadPriority = 0;
+	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
 	_tunnelClients.clear();
 }
 
@@ -70,7 +70,7 @@ void Settings::load(std::string filename)
 
 		if (!(fin = fopen(filename.c_str(), "r")))
 		{
-			HelperFunctions::printError("Unable to open config file: " + filename);
+			HelperFunctions::printError("Unable to open config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
@@ -122,11 +122,6 @@ void Settings::load(std::string filename)
 					_keyPath = value;
 					if(_keyPath.empty()) _keyPath = "/etc/homegear/homegear.key";
 					HelperFunctions::printDebug("Debug: keyPath set to " + _keyPath);
-				}
-				else if(name == "verifycertificate")
-				{
-					if(HelperFunctions::toLower(value) == "false") _verifyCertificate = false;
-					HelperFunctions::printDebug("Debug: verifyCertificate set to " + std::to_string(_verifyCertificate));
 				}
 				else if(name == "rpcinterface")
 				{
@@ -200,6 +195,12 @@ void Settings::load(std::string filename)
 					if(_rpcServerThreadPriority > 99) _rpcServerThreadPriority = 99;
 					if(_rpcServerThreadPriority < 0) _rpcServerThreadPriority = 0;
 					HelperFunctions::printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
+				}
+				else if(name == "clientsettingspath")
+				{
+					_clientSettingsPath = value;
+					if(_clientSettingsPath.empty()) _clientSettingsPath = "/etc/homegear/rpcclients.conf";
+					HelperFunctions::printDebug("Debug: clientSettingsPath set to " + _clientSettingsPath);
 				}
 				else if(name == "redirecttosshtunnel")
 				{

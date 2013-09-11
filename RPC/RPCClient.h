@@ -53,6 +53,7 @@
 #include <poll.h>
 #include <signal.h>
 
+#include "ClientSettings.h"
 #include "RPCEncoder.h"
 #include "RPCDecoder.h"
 #include "XMLRPCEncoder.h"
@@ -66,6 +67,8 @@ public:
 	RemoteRPCServer() { knownDevices.reset(new std::map<std::string, int32_t>()); }
 	virtual ~RemoteRPCServer() {}
 
+	std::shared_ptr<ClientSettings::Settings> settings;
+
 	bool initialized = false;
 	bool useSSL = false;
 	bool keepAlive = false;
@@ -78,6 +81,7 @@ public:
 	std::map<std::string, bool> knownMethods;
 	int32_t fileDescriptor = -1;
 	SSL* ssl = nullptr;
+
 };
 
 class RPCClient {
@@ -100,7 +104,7 @@ protected:
 	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>>& data, bool& timedout);
 	std::string getIPAddress(std::string address);
 	int32_t getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
-	SSL* getSSL(int32_t fileDescriptor);
+	SSL* getSSL(int32_t fileDescriptor, bool verifyCertificate);
 	bool connected(int32_t fileDescriptor);
 	void getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool& timedout);
 	void closeConnection(std::shared_ptr<RemoteRPCServer>& server);

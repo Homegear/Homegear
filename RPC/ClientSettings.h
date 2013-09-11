@@ -27,53 +27,42 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef GD_H_
-#define GD_H_
+#ifndef CLIENTSETTINGS_H_
+#define CLIENTSETTINGS_H_
 
-class Database;
-class HomeMaticDevices;
+#include "../Exception.h"
 
-#include <vector>
+#include <memory>
+#include <iostream>
 #include <string>
+#include <map>
+#include <cstring>
 
-#include "Database.h"
-#include "RFDevices/RFDevice.h"
-#include "HomeMaticDevices.h"
-#include "RPC/Server.h"
-#include "RPC/Client.h"
-#include "CLI/CLIServer.h"
-#include "CLI/CLIClient.h"
-#include "RPC/Devices.h"
-#include "Settings.h"
-#include "RPC/ClientSettings.h"
-
-class GD {
+namespace RPC
+{
+class ClientSettings
+{
 public:
-	static std::string configPath;
-	static std::string runDir;
-	static std::string pidfilePath;
-	static std::string socketPath;
-	static std::string workingDirectory;
-	static std::string executablePath;
-	static HomeMaticDevices devices;
-	static RPC::Server rpcServer;
-	static RPC::Server rpcServerSSL;
-	static RPC::Client rpcClient;
-	static CLI::Server cliServer;
-	static CLI::Client cliClient;
-	static RPC::Devices rpcDevices;
-	static Settings settings;
-	static RPC::ClientSettings clientSettings;
-	static Database db;
-	static std::shared_ptr<RF::RFDevice> rfDevice;
-	static int32_t debugLevel;
-	static int32_t rpcLogLevel;
-	static bool bigEndian;
+	struct Settings
+	{
+		enum AuthType { none, basic };
 
-	virtual ~GD() { }
+		std::string name;
+		std::string hostname;
+		bool forceSSL = true;
+		AuthType authType = AuthType::none;
+		bool verifyCertificate = true;
+	};
+
+	ClientSettings();
+	virtual ~ClientSettings() {}
+	void load(std::string filename);
+
+	std::shared_ptr<Settings> get(std::string& hostname) { if(_clients.find(hostname) != _clients.end()) return _clients[hostname]; else return std::shared_ptr<Settings>(); }
 private:
-	//Non public constructor
-	GD();
-};
+	std::map<std::string, std::shared_ptr<Settings>> _clients;
 
-#endif /* GD_H_ */
+	void reset();
+};
+}
+#endif /* CLIENTSETTINGS_H_ */

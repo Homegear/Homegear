@@ -27,53 +27,23 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef GD_H_
-#define GD_H_
+#ifndef USER_H_
+#define USER_H_
 
-class Database;
-class HomeMaticDevices;
-
-#include <vector>
+#include <iostream>
+#include <random>
 #include <string>
+#include <vector>
+#include <functional>
 
-#include "Database.h"
-#include "RFDevices/RFDevice.h"
-#include "HomeMaticDevices.h"
-#include "RPC/Server.h"
-#include "RPC/Client.h"
-#include "CLI/CLIServer.h"
-#include "CLI/CLIClient.h"
-#include "RPC/Devices.h"
-#include "Settings.h"
-#include "RPC/ClientSettings.h"
+#include <openssl/evp.h>
 
-class GD {
+class User
+{
 public:
-	static std::string configPath;
-	static std::string runDir;
-	static std::string pidfilePath;
-	static std::string socketPath;
-	static std::string workingDirectory;
-	static std::string executablePath;
-	static HomeMaticDevices devices;
-	static RPC::Server rpcServer;
-	static RPC::Server rpcServerSSL;
-	static RPC::Client rpcClient;
-	static CLI::Server cliServer;
-	static CLI::Client cliClient;
-	static RPC::Devices rpcDevices;
-	static Settings settings;
-	static RPC::ClientSettings clientSettings;
-	static Database db;
-	static std::shared_ptr<RF::RFDevice> rfDevice;
-	static int32_t debugLevel;
-	static int32_t rpcLogLevel;
-	static bool bigEndian;
-
-	virtual ~GD() { }
-private:
-	//Non public constructor
-	GD();
+	User() {}
+	virtual ~User() {}
+	static std::vector<unsigned char> generatePBKDF2(const std::string& password, std::vector<unsigned char>& salt);
 };
 
-#endif /* GD_H_ */
+#endif
