@@ -69,6 +69,7 @@ int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>>& data)
 	for(uint32_t i = 0; i < 3; ++i)
 	{
 		ret = _ssl ? SSL_write(_ssl, &data->at(0), data->size()) : send(_fileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
+		if(ret <= 0) throw SocketOperationException(strerror(errno));
 		if(ret != (signed)data->size() && i == 2) throw SocketSizeMismatchException("Not all data was sent to client.");
 		else break;
 	}

@@ -183,8 +183,8 @@ void HM_SD::serializeFilters(std::vector<uint8_t>& encodedData)
 		encoder.encodeInteger(encodedData, _filters.size());
 		for(std::list<HM_SD_Filter>::const_iterator i = _filters.begin(); i != _filters.end(); ++i)
 		{
-			encoder.encodeInteger(encodedData, (int32_t)i->filterType);
-			encoder.encodeByte(encodedData, i->filterValue);
+			encoder.encodeByte(encodedData, (int32_t)i->filterType);
+			encoder.encodeInteger(encodedData, i->filterValue);
 		}
 	}
 	catch(const std::exception& ex)
@@ -211,7 +211,7 @@ void HM_SD::unserializeFilters(std::shared_ptr<std::vector<char>> serializedData
 		for(uint32_t i = 0; i < filtersSize; i++)
 		{
 			HM_SD_Filter filter;
-			filter.filterType = (FilterType)decoder.decodeInteger(serializedData, position);
+			filter.filterType = (FilterType)decoder.decodeByte(serializedData, position);
 			filter.filterValue = decoder.decodeInteger(serializedData, position);
 			_filters.push_back(filter);
 		}

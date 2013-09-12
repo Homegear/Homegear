@@ -416,6 +416,12 @@ int main(int argc, char* argv[])
 				std::string packetHex("1ACAA0101D94A8FD00010301110B2A221828005800002422482A8A");
 				packet->import(packetHex, false);
 				if(input == "test") GD::devices.getCentral()->packetReceived(packet);
+				else if(input == "test2")
+				{
+					std::vector<uint8_t> payload({2, 1, 1, 0, 0});
+					std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x18, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
+					GD::rfDevice->sendPacket(packet);
+				}
 				else std::cout << GD::devices.handleCLICommand(input);
 			}
         }
