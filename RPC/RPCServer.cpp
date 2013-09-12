@@ -230,6 +230,7 @@ void RPCServer::mainThread()
 						continue;
 					}
 				}
+				client->socket = SocketOperations(client->fileDescriptor, client->ssl);
 
 				client->readThread = std::thread(&RPCServer::readClient, this, client);
 				HelperFunctions::setThreadPriority(client->readThread.native_handle(), _threadPriority, _threadPolicy);
@@ -268,56 +269,26 @@ void RPCServer::mainThread()
     }
 }
 
-int32_t RPCServer::writeSocket(std::shared_ptr<Client>& client, std::shared_ptr<std::vector<char>>& data)
-{
-	try
-	{
-		if(!data || data->empty()) return 0;
-		if(_useSSL && !client->ssl)
-		{
-			HelperFunctions::printError("Error: Could not send data to client. Clients SSL pointer is null.");
-			return -1;
-		}
-		if(data->size() > 104857600)
-		{
-			HelperFunctions::printError("Error: Data size is larger than 100MB.");
-			return -1;
-		}
-		int32_t ret;
-		for(uint32_t i = 0; i < 3; ++i)
-		{
-			ret = _useSSL ? SSL_write(client->ssl, &data->at(0), data->size()) : send(client->fileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
-			if(ret != (signed)data->size())
-			{
-				if(i < 2) HelperFunctions::printWarning("Warning: Not all data was sent to client. Retrying...");
-				else HelperFunctions::printWarning("Warning: Not all data was sent to client. Giving up.");
-			}
-			else break;
-		}
-		return ret;
-	}
-    catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return -1;
-}
-
 void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> data, bool keepAlive)
 {
 	try
 	{
 		if(!data || data->empty()) return;
-		writeSocket(client, data);
-		if(!keepAlive)
+		bool error = false;
+		try
+		{
+			client->socket.proofwrite(data);
+		}
+		catch(SocketDataLimitException ex)
+		{
+			HelperFunctions::printWarning("Warning: " + ex.what());
+		}
+		catch(SocketOperationException ex)
+		{
+			HelperFunctions::printError("Error: " + ex.what());
+			error = true;
+		}
+		if(!keepAlive || error)
 		{
 			removeClientFileDescriptor(client->fileDescriptor);
 			shutdown(client->fileDescriptor, 1);
@@ -541,53 +512,6 @@ void RPCServer::removeClientFileDescriptor(int32_t clientFileDescriptor)
     }
 }
 
-int32_t RPCServer::readSocket(std::shared_ptr<Client>& client, char* buffer, int32_t bufferSize)
-{
-	try
-	{
-		//Timeout needs to be set every time, so don't put it outside of the while loop
-		timeval timeout;
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 500000;
-		fd_set readFileDescriptor;
-		FD_ZERO(&readFileDescriptor);
-		FD_SET(client->fileDescriptor, &readFileDescriptor);
-		int32_t bytesRead = select(client->fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
-		if(bytesRead == 0) return 0; //timeout
-		if(bytesRead != 1)
-		{
-			removeClientFileDescriptor(client->fileDescriptor);
-			close(client->fileDescriptor);
-			HelperFunctions::printDebug("Connection to client number " + std::to_string(client->fileDescriptor) + " closed.");
-			return -1;
-		}
-
-		bytesRead = _useSSL ? SSL_read(client->ssl, buffer, bufferSize) : read(client->fileDescriptor, buffer, bufferSize);
-		if(bytesRead <= 0)
-		{
-			if(bytesRead < 0 && _useSSL) HelperFunctions::printError("Error reading SSL packet: " + HelperFunctions::getSSLError(SSL_get_error(client->ssl, bytesRead)));
-			removeClientFileDescriptor(client->fileDescriptor);
-			close(client->fileDescriptor);
-			HelperFunctions::printDebug("Connection to client number " + std::to_string(client->fileDescriptor) + " closed.");
-			return -1;
-		}
-		return bytesRead;
-	}
-    catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return -1;
-}
-
 void RPCServer::readClient(std::shared_ptr<Client> client)
 {
 	try
@@ -605,8 +529,24 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		HelperFunctions::printDebug("Listening for incoming packets from client number " + std::to_string(client->fileDescriptor) + ".");
 		while(!_stopServer)
 		{
-			if((bytesRead = readSocket(client, buffer, bufferMax)) < 0) return;
-			if(bytesRead == 0) continue;
+			try
+			{
+				bytesRead = client->socket.proofread(buffer, bufferMax);
+			}
+			catch(SocketTimeOutException ex)
+			{
+				continue;
+			}
+			catch(SocketClosedException ex)
+			{
+				HelperFunctions::printInfo("Info: " + ex.what());
+				break;
+			}
+			catch(SocketOperationException ex)
+			{
+				HelperFunctions::printError(ex.what());
+				break;
+			}
 
 			if(GD::debugLevel >= 5)
 			{

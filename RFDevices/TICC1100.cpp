@@ -208,11 +208,14 @@ void TICC1100::setupGPIO(int32_t gpio)
 	{
 
 		int32_t fd = open("/sys/class/gpio/export", O_WRONLY);
-		if(fd == -1) throw(Exception("Couldn't export gpio pin " + std::to_string(gpio)));
+		if(fd == -1) throw(Exception("Couldn't export GPIO pin " + std::to_string(gpio)));
 		std::vector<char> buffer;
 		std::string temp(std::to_string(gpio));
 		buffer.insert(buffer.end(), temp.begin(), temp.end());
-		write(fd, &buffer[0], buffer.size());
+		if(write(fd, &buffer[0], buffer.size()) <= 0)
+		{
+			HelperFunctions::printError("Could not export GPIO pin " + std::to_string(gpio) + ".");
+		}
 		close(fd);
 	}
 	catch(const std::exception& ex)

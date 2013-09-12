@@ -90,8 +90,14 @@ void terminate(int32_t signalNumber)
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon)
 			{
-				std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout);
-				std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr);
+				if(!std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+				{
+					HelperFunctions::printError("Error: Could not redirect output to new log file.");
+				}
+				if(!std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
+				{
+					HelperFunctions::printError("Error: Could not redirect errors to new log file.");
+				}
 			}
 		}
 		else
@@ -268,7 +274,7 @@ int main(int argc, char* argv[])
     	GD::bigEndian = HelperFunctions::isBigEndian();
 
     	char path[1024];
-    	getcwd(path, 1024);
+    	if(!getcwd(path, 1024)) throw Exception("Could not get working directory.");
     	GD::workingDirectory = std::string(path);
 		ssize_t length = readlink("/proc/self/exe", path, sizeof(path) - 1);
 		if (length == -1) throw Exception("Could not get executable path.");
@@ -313,7 +319,8 @@ int main(int argc, char* argv[])
 					HelperFunctions::printError("Error: Homegear is already running - Can't lock PID file.");
 				}
 				std::string pid(std::to_string(getpid()));
-				write(pidfile, pid.c_str(), pid.size());
+				int32_t bytesWritten = write(pidfile, pid.c_str(), pid.size());
+				if(bytesWritten <= 0) HelperFunctions::printError("Error writing to PID file: " + std::string(strerror(errno)));
 				close(pidfile);
 			}
 		}
@@ -332,8 +339,14 @@ int main(int argc, char* argv[])
 
 		if(_startAsDaemon)
 		{
-			std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout);
-			std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr);
+			if(!std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+			{
+				HelperFunctions::printError("Error: Could not redirect output to log file.");
+			}
+			if(!std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
+			{
+				HelperFunctions::printError("Error: Could not redirect errors to log file.");
+			}
 		}
 
 		for(uint32_t i = 0; i < 10; ++i)

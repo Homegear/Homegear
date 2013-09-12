@@ -492,6 +492,7 @@ void RPCClient::getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool
 				server->fileDescriptor = -1;
 			}
 		}
+		server->socket = SocketOperations(server->fileDescriptor, server->ssl);
 	}
     catch(const std::exception& ex)
     {
@@ -516,13 +517,6 @@ void RPCClient::closeConnection(std::shared_ptr<RemoteRPCServer>& server)
 	server->fileDescriptor = -1;
 }
 
-bool RPCClient::connected(int32_t fileDescriptor)
-{
-	char buffer[1];
-	if(recv(fileDescriptor, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT) == 0) return false;
-	return true;
-}
-
 std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>>& data, bool& timedout)
 {
 	try
@@ -539,6 +533,12 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		//Get settings pointer every time this method is executed, because
 		//the settings might change.
 		server->settings = GD::clientSettings.get(server->hostname);
+		if(!server->useSSL && server->settings && server->settings->forceSSL)
+		{
+			HelperFunctions::printError("RPC Client: Tried to send unencrypted packet to " + server->hostname + " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again.");
+			GD::rpcClient.removeServer(server->address);
+			return std::shared_ptr<std::vector<char>>();
+		}
 
 		_sendCounter++;
 		if(_sendCounter > 100)
@@ -556,48 +556,40 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			data->push_back('\n');
 		}
 
-		uint32_t i;
-		for(uint32_t i = 0; i < 3; i++)
-		{
-			if(server->fileDescriptor < 0) getFileDescriptor(server, timedout);
-			else if(!connected(server->fileDescriptor))
-			{
-				HelperFunctions::printDebug("RPC Client: Existing connection (" + std::to_string(server->fileDescriptor) + ") has been closed. Reconnecting...");
-				closeConnection(server);
-				getFileDescriptor(server, timedout);
-			}
-			else HelperFunctions::printDebug("RPC Client: Using existing connection: " + std::to_string(server->fileDescriptor));
-			if(server->fileDescriptor < 0)
-			{
-				_sendCounter--;
-				return std::shared_ptr<std::vector<char>>();
-			}
 
-			if(GD::debugLevel >= 5) HelperFunctions::printDebug("Sending packet: " + HelperFunctions::getHexString(*data));
-			int32_t sentBytes = server->useSSL ? SSL_write(server->ssl, &data->at(0), data->size()) : send(server->fileDescriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
-			if(sentBytes <= 0)
-			{
-				server->ssl = nullptr; //After SSL_write failed, the pointer does not seem to be valid anymore. Calling SSL_free causes segfault.
-				closeConnection(server);
-				if(i < 2) HelperFunctions::printWarning("Warning: Error sending data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno));
-				else
-				{
-					HelperFunctions::printError("Error: Could not send data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno) + ". Giving up.");
-					_sendCounter--;
-					return std::shared_ptr<std::vector<char>>();
-				}
-			}
-			else if(sentBytes != data->size())
-			{
-				if(i < 2) HelperFunctions::printWarning("Warning: Not all data was send to XML RPC server " + server->ipAddress + " on port " + server->address.second + ". Retrying...");
-				else
-				{
-					HelperFunctions::printError("Error: Could not send all data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ". Giving up.");
-					_sendCounter--;
-					return std::shared_ptr<std::vector<char>>();
-				}
-			}
-			else break;
+		if(server->fileDescriptor < 0) getFileDescriptor(server, timedout);
+		else if(!server->socket.connected())
+		{
+			HelperFunctions::printDebug("RPC Client: Existing connection (" + std::to_string(server->fileDescriptor) + ") has been closed. Reconnecting...");
+			closeConnection(server);
+			getFileDescriptor(server, timedout);
+		}
+		else HelperFunctions::printDebug("RPC Client: Using existing connection: " + std::to_string(server->fileDescriptor));
+		if(server->fileDescriptor < 0)
+		{
+			_sendCounter--;
+			return std::shared_ptr<std::vector<char>>();
+		}
+
+		if(GD::debugLevel >= 5) HelperFunctions::printDebug("Sending packet: " + HelperFunctions::getHexString(*data));
+		try
+		{
+			server->socket.proofwrite(data);
+		}
+		catch(SocketDataLimitException ex)
+		{
+			HelperFunctions::printWarning("Warning: " + ex.what());
+			closeConnection(server);
+			_sendCounter--;
+			return std::shared_ptr<std::vector<char>>();
+		}
+		catch(SocketOperationException ex)
+		{
+			HelperFunctions::printError("Error: Could not send data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + ex.what() + ". Giving up.");
+			server->ssl = nullptr; //After SSL_write failed, the pointer does not seem to be valid anymore. Calling SSL_free causes segfault.
+			closeConnection(server);
+			_sendCounter--;
+			return std::shared_ptr<std::vector<char>>();
 		}
 
 		ssize_t receivedBytes;
@@ -615,45 +607,28 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 
 		while(!http.isFinished()) //This is equal to while(true) for binary packets
 		{
-			//Timeout needs to be set every time, so don't put it outside of the while loop
-			timeval timeout;
-			timeout.tv_sec = 10;
-			timeout.tv_usec = 0;
-			int64_t startTime = HelperFunctions::getTime();
-			receivedBytes = select(server->fileDescriptor + 1, &socketSet, NULL, &socketSet, &timeout);
-			switch(receivedBytes)
+			try
 			{
-				case 0:
-					HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out after " + std::to_string(HelperFunctions::getTime() - startTime) + " ms. Server: " + server->ipAddress + " Port: " + server->address.second + " Data: " + HelperFunctions::getHexString(*data));
-					timedout = true;
-					if(!server->keepAlive) closeConnection(server);
-					_sendCounter--;
-					return std::shared_ptr<std::vector<char>>();
-				case -1:
-					HelperFunctions::printError("Error reading from XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno));
-					break;
-				case 1:
-					break;
-				default:
-					HelperFunctions::printError("Error reading from XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno));
+				receivedBytes = server->socket.proofread(buffer, bufferMax);
 			}
-			if(receivedBytes != 1)
+			catch(SocketTimeOutException ex)
 			{
-				closeConnection(server);
+				HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out. Server: " + server->ipAddress + " Port: " + server->address.second + " Data: " + HelperFunctions::getHexString(*data));
+				timedout = true;
+				if(!server->keepAlive) closeConnection(server);
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
-			receivedBytes = server->useSSL ? SSL_read(server->ssl, buffer, bufferMax) : recv(server->fileDescriptor, buffer, bufferMax, 0);
-			if(receivedBytes == 0)
+			catch(SocketClosedException ex)
 			{
-				HelperFunctions::printError("Connection closed to server " + server->ipAddress + " on port " + server->address.second + ".");
-				closeConnection(server);
+				HelperFunctions::printWarning("Warning: " + ex.what());
+				if(!server->keepAlive) closeConnection(server);
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
-			else if(receivedBytes < 0)
+			catch(SocketOperationException ex)
 			{
-				HelperFunctions::printError("Error reading data from XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + strerror(errno));
+				HelperFunctions::printError(ex.what());
 				if(!server->keepAlive) closeConnection(server);
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();

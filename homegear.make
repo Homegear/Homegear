@@ -125,6 +125,7 @@ OBJECTS := \
 	$(OBJDIR)/HTTP.o \
 	$(OBJDIR)/RPCMethods.o \
 	$(OBJDIR)/Server.o \
+	$(OBJDIR)/SocketOperations.o \
 	$(OBJDIR)/RPCDecoder.o \
 	$(OBJDIR)/XMLRPCDecoder.o \
 	$(OBJDIR)/ClientSettings.o \
@@ -295,6 +296,9 @@ $(OBJDIR)/RPCMethods.o: RPC/RPCMethods.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Server.o: RPC/Server.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SocketOperations.o: RPC/SocketOperations.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCDecoder.o: RPC/RPCDecoder.cpp

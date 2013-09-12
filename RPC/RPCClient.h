@@ -58,6 +58,7 @@
 #include "RPCDecoder.h"
 #include "XMLRPCEncoder.h"
 #include "XMLRPCDecoder.h"
+#include "SocketOperations.h"
 
 namespace RPC
 {
@@ -79,6 +80,7 @@ public:
 	std::string id;
 	std::shared_ptr<std::map<std::string, int32_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
+	SocketOperations socket;
 	int32_t fileDescriptor = -1;
 	SSL* ssl = nullptr;
 
@@ -105,7 +107,6 @@ protected:
 	std::string getIPAddress(std::string address);
 	int32_t getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
 	SSL* getSSL(int32_t fileDescriptor, bool verifyCertificate);
-	bool connected(int32_t fileDescriptor);
 	void getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool& timedout);
 	void closeConnection(std::shared_ptr<RemoteRPCServer>& server);
 };

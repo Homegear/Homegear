@@ -3988,7 +3988,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 				parameter->data = rpcParameter->convertToPacket(value);
 				saveParameter(parameter->databaseID, parameter->data);
-				HelperFunctions::printInfo("Info: Setting valve state of HM-CC-VD with address 0x" + HelperFunctions::getHexString(_address) + " to " + std::to_string(value->integerValue) + "%.");
+				HelperFunctions::printInfo("Info: Setting valve state of HM-CC-VD with address 0x" + HelperFunctions::getHexString(_address) + " to " + std::to_string(value->integerValue / 2) + "%.");
 				return true;
 			}
 		}

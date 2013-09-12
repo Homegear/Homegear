@@ -67,6 +67,7 @@
 #include "RPCEncoder.h"
 #include "XMLRPCDecoder.h"
 #include "XMLRPCEncoder.h"
+#include "SocketOperations.h"
 
 namespace RPC
 {
@@ -77,6 +78,7 @@ namespace RPC
 				std::thread readThread;
 				int32_t fileDescriptor = -1;
 				SSL* ssl = nullptr;
+				SocketOperations socket;
 
 				Client() {}
 				virtual ~Client() { if(ssl) SSL_free(ssl); };
@@ -127,8 +129,6 @@ namespace RPC
 			void removeClientFileDescriptor(int32_t clientFileDescriptor);
 			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive);
 			std::string getHttpResponseHeader(uint32_t contentLength);
-			int32_t readSocket(std::shared_ptr<Client>& client, char* buffer, int32_t bufferSize);
-			int32_t writeSocket(std::shared_ptr<Client>& client, std::shared_ptr<std::vector<char>>& data);
 	};
 }
 #endif /* RPCSERVER_H_ */
