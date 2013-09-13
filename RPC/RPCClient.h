@@ -59,6 +59,7 @@
 #include "XMLRPCEncoder.h"
 #include "XMLRPCDecoder.h"
 #include "SocketOperations.h"
+#include "HTTP.h"
 
 namespace RPC
 {

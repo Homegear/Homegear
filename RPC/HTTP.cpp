@@ -96,7 +96,11 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 {
 	if(nameSize == 0 || valueSize == 0 || !name || !value) return;
 	if(!strnaicmp(name, "content-length", nameSize)) _header.contentLength = strtol(value, NULL, 10);
-	else if(!strnaicmp(name, "host", nameSize)) _header.host = std::string(value, valueSize);
+	else if(!strnaicmp(name, "host", nameSize))
+	{
+		_header.host = std::string(value, valueSize);
+		HelperFunctions::toLower(_header.host);
+	}
 	else if(!strnaicmp(name, "content-type", nameSize))
 	{
 		_header.contentType = std::string(value, valueSize);
@@ -117,6 +121,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		else if(!strnaicmp(value, "close", valueSize)) _header.connection = Connection::Enum::close;
 		else throw HTTPException("Unknown value for HTTP header \"Connection\": " + std::string(value, valueSize));
 	}
+	else if(!strnaicmp(name, "authorization", nameSize)) _header.authorization = std::string(value, valueSize);
 }
 
 int32_t HTTP::strnaicmp(char const *a, char const *b, uint32_t size)

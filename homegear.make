@@ -130,6 +130,8 @@ OBJECTS := \
 	$(OBJDIR)/XMLRPCDecoder.o \
 	$(OBJDIR)/ClientSettings.o \
 	$(OBJDIR)/RPCClient.o \
+	$(OBJDIR)/Auth.o \
+	$(OBJDIR)/Base64.o \
 	$(OBJDIR)/RPCServer.o \
 	$(OBJDIR)/XMLRPCEncoder.o \
 	$(OBJDIR)/RPCMethod.o \
@@ -311,6 +313,12 @@ $(OBJDIR)/ClientSettings.o: RPC/ClientSettings.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCClient.o: RPC/RPCClient.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Auth.o: RPC/Auth.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Base64.o: RPC/Base64.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCServer.o: RPC/RPCServer.cpp

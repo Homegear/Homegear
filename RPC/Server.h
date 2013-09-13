@@ -31,20 +31,21 @@
 #define SERVER_H_
 
 #include <memory>
-
-#include "RPCServer.h"
+#include <string>
 
 namespace RPC {
 
+class RPCServer;
+
 class Server {
 public:
-	Server() { _server.reset(new RPCServer); }
+	Server();
 	virtual ~Server() {}
 
 	void registerMethods();
 	void start(bool ssl);
 	void stop();
-	uint32_t connectionCount() { if(_server) return _server->connectionCount(); else return 0; }
+	uint32_t connectionCount();
 protected:
 	std::shared_ptr<RPCServer> _server;
 };

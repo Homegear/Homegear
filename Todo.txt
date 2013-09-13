@@ -1,4 +1,4 @@
-- init flags: binary
+- Settings file to defince RPC Servers mainly to be able to define servers with or without auth
 
 
 When AES is working:

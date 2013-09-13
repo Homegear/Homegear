@@ -279,11 +279,11 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 		{
 			client->socket.proofwrite(data);
 		}
-		catch(SocketDataLimitException ex)
+		catch(SocketDataLimitException& ex)
 		{
 			HelperFunctions::printWarning("Warning: " + ex.what());
 		}
-		catch(SocketOperationException ex)
+		catch(SocketOperationException& ex)
 		{
 			HelperFunctions::printError("Error: " + ex.what());
 			error = true;
@@ -533,16 +533,16 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			{
 				bytesRead = client->socket.proofread(buffer, bufferMax);
 			}
-			catch(SocketTimeOutException ex)
+			catch(SocketTimeOutException& ex)
 			{
 				continue;
 			}
-			catch(SocketClosedException ex)
+			catch(SocketClosedException& ex)
 			{
 				HelperFunctions::printInfo("Info: " + ex.what());
 				break;
 			}
-			catch(SocketOperationException ex)
+			catch(SocketOperationException& ex)
 			{
 				HelperFunctions::printError(ex.what());
 				break;
@@ -597,7 +597,25 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				if(http.getHeader()->contentLength > 104857600)
 				{
 					HelperFunctions::printError("Error: Packet with data larger than 100 MiB received.");
-					break;
+					continue;
+				}
+
+				if(GD::clientSettings.get(http.getHeader()->host)->authType == ClientSettings::Settings::AuthType::basic)
+				{
+					if(!client->auth.initialized()) client->auth = Auth(client->socket, http.getHeader()->host);
+					try
+					{
+						if(!client->auth.basicServer(http))
+						{
+							HelperFunctions::printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
+							break;
+						}
+					}
+					catch(AuthException& ex)
+					{
+						HelperFunctions::printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
+						break;
+					}
 				}
 			}
 			else if(packetLength > 0)

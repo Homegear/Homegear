@@ -71,6 +71,7 @@ public:
 		std::string contentType;
 		TransferEncoding::Enum transferEncoding = TransferEncoding::Enum::none;
 		Connection::Enum connection = Connection::Enum::none;
+		std::string authorization;
 	};
 
 	HTTP();

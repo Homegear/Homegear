@@ -401,7 +401,7 @@ std::string Server::handleUserCommand(std::string& command)
 					if(element == "help") break;
 					else
 					{
-						userName = HelperFunctions::trim(element);
+						userName = HelperFunctions::toLower(HelperFunctions::trim(element));
 						if(userName.empty() || !HelperFunctions::isAlphaNumeric(userName))
 						{
 							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;

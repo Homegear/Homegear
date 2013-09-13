@@ -32,6 +32,10 @@
 
 class Database;
 class HomeMaticDevices;
+namespace CLI
+{
+	class Server;
+}
 
 #include <vector>
 #include <string>

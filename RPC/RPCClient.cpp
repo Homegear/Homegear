@@ -576,14 +576,14 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		{
 			server->socket.proofwrite(data);
 		}
-		catch(SocketDataLimitException ex)
+		catch(SocketDataLimitException& ex)
 		{
 			HelperFunctions::printWarning("Warning: " + ex.what());
 			closeConnection(server);
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
-		catch(SocketOperationException ex)
+		catch(SocketOperationException& ex)
 		{
 			HelperFunctions::printError("Error: Could not send data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + ex.what() + ". Giving up.");
 			server->ssl = nullptr; //After SSL_write failed, the pointer does not seem to be valid anymore. Calling SSL_free causes segfault.
@@ -611,7 +611,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			{
 				receivedBytes = server->socket.proofread(buffer, bufferMax);
 			}
-			catch(SocketTimeOutException ex)
+			catch(SocketTimeOutException& ex)
 			{
 				HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out. Server: " + server->ipAddress + " Port: " + server->address.second + " Data: " + HelperFunctions::getHexString(*data));
 				timedout = true;
@@ -619,14 +619,14 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
-			catch(SocketClosedException ex)
+			catch(SocketClosedException& ex)
 			{
 				HelperFunctions::printWarning("Warning: " + ex.what());
 				if(!server->keepAlive) closeConnection(server);
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
-			catch(SocketOperationException ex)
+			catch(SocketOperationException& ex)
 			{
 				HelperFunctions::printError(ex.what());
 				if(!server->keepAlive) closeConnection(server);

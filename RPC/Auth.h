@@ -27,26 +27,44 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef USER_H_
-#define USER_H_
+#ifndef AUTH_H_
+#define AUTH_H_
 
-#include <iostream>
-#include <random>
 #include <string>
+#include <memory>
 #include <vector>
-#include <functional>
 
-#include <openssl/evp.h>
+#include "../Exception.h"
+#include "SocketOperations.h"
+#include "HTTP.h"
+#include "Base64.h"
+#include "../User.h"
 
-#include "Database.h"
+namespace RPC
+{
 
-class User
+class AuthException : public Exception
 {
 public:
-	User() {}
-	virtual ~User() {}
-	static std::vector<unsigned char> generatePBKDF2(const std::string& password, std::vector<unsigned char>& salt);
-	static bool verify(const std::string& userName, const std::string& password);
+	AuthException(std::string message) : Exception(message) {}
 };
 
-#endif
+class Auth
+{
+public:
+	Auth() {}
+	Auth(SocketOperations& socket, std::string& hostname);
+	virtual ~Auth() {}
+
+	bool initialized() { return !_hostname.empty(); }
+	bool basicServer(std::shared_ptr<std::vector<char>>& binaryPacket);
+	bool basicServer(HTTP& httpPacket);
+protected:
+	std::string _hostname;
+	SocketOperations _socket;
+	std::string _basicAuthHTTPHeader;
+	HTTP _http;
+};
+
+} /* namespace RPC */
+#endif /* AUTH_H_ */

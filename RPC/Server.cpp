@@ -31,7 +31,12 @@
 #include "RPCMethods.h"
 #include "../HelperFunctions.h"
 
-namespace RPC {
+namespace RPC
+{
+Server::Server()
+{
+	_server.reset(new RPCServer());
+}
 
 void Server::registerMethods()
 {
@@ -84,6 +89,11 @@ void Server::registerMethods()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+uint32_t Server::connectionCount()
+{
+	if(_server) return _server->connectionCount(); else return 0;
 }
 
 void Server::start(bool ssl)

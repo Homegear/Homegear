@@ -180,13 +180,6 @@ void TICC1100::setGPIOMode(int32_t gpio, GPIOModes::Enum mode)
 		std::string direction((mode == GPIOModes::INPUT) ? "in" : "out");
 		if (write(fd, direction.c_str(), direction.size()) == -1) throw(Exception("Failed to write direction for gpio pin " + std::to_string(gpio)));
 		close(fd);
-		/*if(!_gpio) return;
-		*(_gpio + (gpio / 10)) &= ~(7 << ((gpio % 10) * 3));
-
-		if(mode == GPIOModes::Enum::OUTPUT)
-		{
-			*(_gpio + (gpio / 10)) |=  (1 << ((gpio % 10) * 3));
-		}*/
 	}
 	catch(const std::exception& ex)
     {
