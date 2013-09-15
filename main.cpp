@@ -419,7 +419,7 @@ int main(int argc, char* argv[])
 				else if(input == "test2")
 				{
 					std::vector<uint8_t> payload({2, 1, 1, 0, 0});
-					std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x18, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
+					std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x2F, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
 					GD::rfDevice->sendPacket(packet);
 				}
 				else std::cout << GD::devices.handleCLICommand(input);
