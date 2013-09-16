@@ -31,7 +31,6 @@
 #define DATABASE_H
 
 #include "Exception.h"
-#include "GD.h"
 
 #include <iostream>
 #include <mutex>

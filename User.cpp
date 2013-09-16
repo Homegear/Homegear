@@ -28,6 +28,8 @@
  */
 
 #include "User.h"
+#include "HelperFunctions.h"
+#include "GD.h"
 
 std::vector<unsigned char> User::generatePBKDF2(const std::string& password, std::vector<unsigned char>& salt)
 {

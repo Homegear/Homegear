@@ -60,6 +60,7 @@
 #include "XMLRPCDecoder.h"
 #include "SocketOperations.h"
 #include "HTTP.h"
+#include "Auth.h"
 
 namespace RPC
 {
@@ -84,7 +85,7 @@ public:
 	SocketOperations socket;
 	int32_t fileDescriptor = -1;
 	SSL* ssl = nullptr;
-
+	Auth auth;
 };
 
 class RPCClient {

@@ -29,6 +29,7 @@
 
 #include "Database.h"
 #include "HelperFunctions.h"
+#include "GD.h"
 
 Database GD::db;
 

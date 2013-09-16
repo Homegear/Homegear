@@ -412,10 +412,10 @@ std::string Server::handleUserCommand(std::string& command)
 				else if(index == 3)
 				{
 					password = HelperFunctions::trim(element);
-					stringStream << password << std::endl;
 
 					if(password.front() == '"' && password.back() == '"')
 					{
+						password = password.substr(1, password.size() - 2);
 						HelperFunctions::stringReplace(password, "\\\"", "\"");
 						HelperFunctions::stringReplace(password, "\\\\", "\\");
 					}

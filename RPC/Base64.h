@@ -37,8 +37,8 @@ class Base64 {
 public:
 	virtual ~Base64() {}
 
-	static std::string base64Encode(unsigned char const* , unsigned int len);
-	static std::string base64Decode(std::string const& s);
+	static std::string encode(std::string const& s);
+	static std::string decode(std::string const& s);
 	static inline bool isBase64(unsigned char c) {
 		return (isalnum(c) || (c == '+') || (c == '/'));
 	}

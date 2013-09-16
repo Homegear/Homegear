@@ -612,6 +612,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
 				{
 					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
+					bool authFailed = false;
 					try
 					{
 						if(!client->auth.basicServer(http))

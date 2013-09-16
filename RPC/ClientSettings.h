@@ -52,6 +52,8 @@ public:
 		bool forceSSL = true;
 		AuthType authType = AuthType::none;
 		bool verifyCertificate = true;
+		std::string userName;
+		std::string password;
 	};
 
 	ClientSettings();

@@ -373,15 +373,8 @@ std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::s
 {
 	try
 	{
+		removeServer(address);
 		_serversMutex.lock();
-		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
-		{
-			if((*i)->address == address)
-			{
-				_serversMutex.unlock();
-				return std::shared_ptr<RemoteRPCServer>(new RemoteRPCServer());
-			}
-		}
 		std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
 		server->address = address;
 		server->id = id;

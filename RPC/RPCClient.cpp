@@ -548,15 +548,6 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			return std::shared_ptr<std::vector<char>>();
 		}
 
-		if(!server->binary)
-		{
-			std::string header = "POST /RPC2 HTTP/1.1\r\nUser_Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data->size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\nTE: chunked\r\n\r\n";
-			data->insert(data->begin(), header.begin(), header.end());
-			data->push_back('\r');
-			data->push_back('\n');
-		}
-
-
 		if(server->fileDescriptor < 0) getFileDescriptor(server, timedout);
 		else if(!server->socket.connected())
 		{
@@ -569,6 +560,32 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		{
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
+		}
+
+		if(server->settings->authType != ClientSettings::Settings::AuthType::none && !server->auth.initialized())
+		{
+			if(server->settings->userName.empty() || server->settings->password.empty())
+			{
+				HelperFunctions::printError("Error: No user name or password specified in config file for XML RPC server " + server->ipAddress + " on port " + server->address.second + ". Closing connection.");
+				closeConnection(server);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
+			}
+			server->auth = Auth(server->socket, server->settings->userName, server->settings->password);
+		}
+
+		if(!server->binary)
+		{
+			std::string header = "POST /RPC2 HTTP/1.1\r\nUser_Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data->size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\nTE: chunked\r\n";
+			if(server->settings->authType == ClientSettings::Settings::AuthType::basic)
+			{
+				HelperFunctions::printDebug("Using Basic Access Authentication.");
+				header += server->auth.basicClient() + "\r\n";
+			}
+			header += "\r\n";
+			data->insert(data->begin(), header.begin(), header.end());
+			data->push_back('\r');
+			data->push_back('\n');
 		}
 
 		if(GD::debugLevel >= 5) HelperFunctions::printDebug("Sending packet: " + HelperFunctions::getHexString(*data));
@@ -638,6 +655,13 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			//We are using string functions to process the buffer. So just to make sure,
 			//they don't do something in the memory after buffer, we add '\0'
 			buffer[receivedBytes] = '\0';
+			if(!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
+			{
+				HelperFunctions::printError("Error: Authentication failed. Server " + server->ipAddress + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
+				if(!server->keepAlive) closeConnection(server);
+				_sendCounter--;
+				return std::shared_ptr<std::vector<char>>();
+			}
 
 			if(server->binary)
 			{

@@ -30,12 +30,7 @@
 #ifndef GD_H_
 #define GD_H_
 
-class Database;
 class HomeMaticDevices;
-namespace CLI
-{
-	class Server;
-}
 
 #include <vector>
 #include <map>

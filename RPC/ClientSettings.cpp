@@ -124,6 +124,22 @@ void ClientSettings::load(std::string filename)
 					if(value == "false") settings->verifyCertificate = false;
 					HelperFunctions::printDebug("Debug: verifyCertificate of RPC client " + settings->name + " set to " + std::to_string(settings->verifyCertificate));
 				}
+				else if(name == "username")
+				{
+					settings->userName = HelperFunctions::toLower(value);
+					HelperFunctions::printDebug("Debug: userName of RPC client " + settings->name + " set to " + settings->userName);
+				}
+				else if(name == "password")
+				{
+					settings->password = HelperFunctions::toLower(value);
+					if(settings->password.front() == '"' && settings->password.back() == '"')
+					{
+						settings->password = settings->password.substr(1, settings->password.size() - 2);
+						HelperFunctions::stringReplace(settings->password, "\\\"", "\"");
+						HelperFunctions::stringReplace(settings->password, "\\\\", "\\");
+					}
+					HelperFunctions::printDebug("Debug: password of RPC client " + settings->name + " was set.");
+				}
 				else
 				{
 					HelperFunctions::printWarning("Warning: RPC client setting not found: " + std::string(input));

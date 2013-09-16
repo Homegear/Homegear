@@ -54,9 +54,11 @@ class Auth
 public:
 	Auth() {}
 	Auth(SocketOperations& socket, std::vector<std::string>& validUsers);
+	Auth(SocketOperations& socket, std::string userName, std::string password);
 	virtual ~Auth() {}
 
 	bool initialized() { return _initialized; }
+	std::string basicClient();
 	bool basicServer(std::shared_ptr<std::vector<char>>& binaryPacket);
 	bool basicServer(HTTP& httpPacket);
 protected:
@@ -64,8 +66,14 @@ protected:
 	std::string _hostname;
 	SocketOperations _socket;
 	std::string _basicAuthHTTPHeader;
+	std::string _basicUnauthHTTPHeader;
 	std::vector<std::string> _validUsers;
+	std::string _userName;
+	std::string _password;
+	std::string _basicAuthString;
 	HTTP _http;
+
+	void sendBasicUnauthorized();
 };
 
 } /* namespace RPC */
