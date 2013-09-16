@@ -38,6 +38,7 @@ namespace CLI
 }
 
 #include <vector>
+#include <map>
 #include <string>
 
 #include "Database.h"
@@ -49,6 +50,7 @@ namespace CLI
 #include "CLI/CLIClient.h"
 #include "RPC/Devices.h"
 #include "Settings.h"
+#include "RPC/ServerSettings.h"
 #include "RPC/ClientSettings.h"
 
 class GD {
@@ -60,13 +62,13 @@ public:
 	static std::string workingDirectory;
 	static std::string executablePath;
 	static HomeMaticDevices devices;
-	static RPC::Server rpcServer;
-	static RPC::Server rpcServerSSL;
+	static std::map<int32_t, RPC::Server> rpcServers;
 	static RPC::Client rpcClient;
 	static CLI::Server cliServer;
 	static CLI::Client cliClient;
 	static RPC::Devices rpcDevices;
 	static Settings settings;
+	static RPC::ServerSettings serverSettings;
 	static RPC::ClientSettings clientSettings;
 	static Database db;
 	static std::shared_ptr<RF::RFDevice> rfDevice;

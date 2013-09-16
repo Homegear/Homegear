@@ -245,6 +245,33 @@ std::pair<std::string, std::string> HelperFunctions::split(std::string string, c
     return std::pair<std::string, std::string>();
 }
 
+void HelperFunctions::printBinary(std::vector<unsigned char>& data)
+{
+	try
+	{
+		std::ostringstream stringstream;
+		stringstream << std::hex << std::setfill('0') << std::uppercase;
+		for(std::vector<unsigned char>::iterator i = data.begin(); i != data.end(); ++i)
+		{
+			stringstream << std::setw(2) << (int32_t)((uint8_t)(*i));
+		}
+		stringstream << std::dec;
+		std::cout << stringstream.str() << std::endl;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HelperFunctions::printBinary(std::shared_ptr<std::vector<char>> data)
 {
 	try

@@ -38,9 +38,6 @@ Settings::Settings()
 
 void Settings::reset()
 {
-	_rpcInterface = "0.0.0.0";
-	_rpcPort = 2001;
-	_rpcSSLPort = 2002;
 	_certPath = "/etc/homegear/homegear.crt";
 	_keyPath = "/etc/homegear/homegear.key";
 	_debugLevel = 3;
@@ -55,6 +52,7 @@ void Settings::reset()
 	_bidCoSResponseDelay = 90;
 	_rpcServerThreadPriority = 0;
 	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
+	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
 	_tunnelClients.clear();
 }
 
@@ -99,19 +97,7 @@ void Settings::load(std::string filename)
 				HelperFunctions::trim(name);
 				std::string value(&input[ptr]);
 				HelperFunctions::trim(value);
-				if(name == "rpcport")
-				{
-					_rpcPort = HelperFunctions::getNumber(value);
-					if(_rpcPort < 1) _rpcPort = 2001;
-					HelperFunctions::printDebug("Debug: rpcPort set to " + std::to_string(_rpcPort));
-				}
-				else if(name == "rpcsslport")
-				{
-					_rpcSSLPort = HelperFunctions::getNumber(value);
-					if(_rpcSSLPort < 1) _rpcSSLPort = 2002;
-					HelperFunctions::printDebug("Debug: rpcSSLPort set to " + std::to_string(_rpcSSLPort));
-				}
-				else if(name == "certpath")
+				if(name == "certpath")
 				{
 					_certPath = value;
 					if(_certPath.empty()) _certPath = "/etc/homegear/homegear.crt";
@@ -122,12 +108,6 @@ void Settings::load(std::string filename)
 					_keyPath = value;
 					if(_keyPath.empty()) _keyPath = "/etc/homegear/homegear.key";
 					HelperFunctions::printDebug("Debug: keyPath set to " + _keyPath);
-				}
-				else if(name == "rpcinterface")
-				{
-					_rpcInterface = value;
-					if(_rpcInterface.empty()) _rpcInterface = "0.0.0.0";
-					HelperFunctions::printDebug("Debug: rpcInterface set to " + _rpcInterface);
 				}
 				else if(name == "debuglevel")
 				{
@@ -195,6 +175,12 @@ void Settings::load(std::string filename)
 					if(_rpcServerThreadPriority > 99) _rpcServerThreadPriority = 99;
 					if(_rpcServerThreadPriority < 0) _rpcServerThreadPriority = 0;
 					HelperFunctions::printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
+				}
+				else if(name == "serversettingspath")
+				{
+					_serverSettingsPath = value;
+					if(_serverSettingsPath.empty()) _serverSettingsPath = "/etc/homegear/rpcservers.conf";
+					HelperFunctions::printDebug("Debug: serverSettingsPath set to " + _serverSettingsPath);
 				}
 				else if(name == "clientsettingspath")
 				{

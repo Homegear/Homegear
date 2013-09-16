@@ -58,9 +58,9 @@ bool User::verify(const std::string& userName, const std::string& password)
 		DataTable rows = GD::db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
 		if(rows.empty() || rows.at(0).empty() || rows.at(0).size() != 2) return false;
 		std::vector<unsigned char> salt;
-		salt.insert(salt.begin(), *rows.at(0).at(1)->binaryValue->begin(), *rows.at(0).at(1)->binaryValue->end());
+		salt.insert(salt.begin(), rows.at(0).at(1)->binaryValue->begin(), rows.at(0).at(1)->binaryValue->end());
 		std::vector<unsigned char> storedHash;
-		storedHash.insert(storedHash.begin(), *rows.at(0).at(0)->binaryValue->begin(), *rows.at(0).at(0)->binaryValue->end());
+		storedHash.insert(storedHash.begin(), rows.at(0).at(0)->binaryValue->begin(), rows.at(0).at(0)->binaryValue->end());
 		std::vector<unsigned char> hash = generatePBKDF2(password, salt);
 		if(hash == storedHash) return true;
 		return false;

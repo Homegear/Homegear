@@ -52,8 +52,32 @@
 #include "Database.h"
 #include "GD.h"
 #include "HelperFunctions.h"
+#include "RPC/ServerSettings.h"
 
 bool _startAsDaemon = false;
+
+void startRPCServers()
+{
+	for(uint32_t i = 0; i < GD::serverSettings.count(); i++)
+	{
+		std::shared_ptr<RPC::ServerSettings::Settings> settings = GD::serverSettings.get(i);
+		std::string info = "Starting XML RPC server " + settings->name + " listening on " + settings->interface + ":" + std::to_string(settings->port);
+		if(settings->ssl) info += ", SSL enabled";
+		if(settings->authType != RPC::ServerSettings::Settings::AuthType::none) info += ", authentification enabled";
+		info += "...";
+		HelperFunctions::printInfo(info);
+		GD::rpcServers[i].start(settings);
+	}
+}
+
+void stopRPCServers()
+{
+	HelperFunctions::printInfo( "(Shutdown) => Stopping RPC servers");
+	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
+	{
+		i->second.stop();
+	}
+}
 
 void terminate(int32_t signalNumber)
 {
@@ -67,8 +91,7 @@ void terminate(int32_t signalNumber)
 				HelperFunctions::printInfo("(Shutdown) => Stopping CLI server");
 				GD::cliServer.stop();
 			}
-			HelperFunctions::printInfo( "(Shutdown) => Stopping RPC server");
-			GD::rpcServer.stop();
+			stopRPCServers();
 			HelperFunctions::printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
 			HelperFunctions::printInfo( "(Shutdown) => Closing RF device");
@@ -84,9 +107,12 @@ void terminate(int32_t signalNumber)
 		}
 		else if(signalNumber == SIGHUP)
 		{
+			stopRPCServers();
 			HelperFunctions::printMessage("Reloading settings...");
 			GD::settings.load(GD::configPath + "main.conf");
 			GD::clientSettings.load(GD::settings.clientSettingsPath());
+			GD::serverSettings.load(GD::settings.serverSettingsPath());
+			startRPCServers();
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon)
 			{
@@ -282,7 +308,11 @@ int main(int argc, char* argv[])
 		GD::executablePath = std::string(path);
 		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
 		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
+		HelperFunctions::printInfo("Loading settings from " + GD::configPath + "main.conf");
 		GD::settings.load(GD::configPath + "main.conf");
+		HelperFunctions::printInfo("Loading RPC server settings from " + GD::settings.serverSettingsPath());
+		GD::serverSettings.load(GD::settings.serverSettingsPath());
+		HelperFunctions::printInfo("Loading RPC client settings from " + GD::settings.clientSettingsPath());
 		GD::clientSettings.load(GD::settings.clientSettingsPath());
 
     	if(_startAsDaemon) startDaemon();
@@ -388,11 +418,8 @@ int main(int argc, char* argv[])
         	HelperFunctions::printInfo("Starting CLI server...");
         	GD::cliServer.start();
         }
-        HelperFunctions::printInfo("Starting XML RPC server...");
-        GD::rpcServer.start(false);
 
-        HelperFunctions::printInfo("Starting XML RPC server with SSL support...");
-        GD::rpcServerSSL.start(true);
+        startRPCServers();
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 

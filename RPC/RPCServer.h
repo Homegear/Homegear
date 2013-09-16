@@ -69,6 +69,7 @@
 #include "XMLRPCEncoder.h"
 #include "SocketOperations.h"
 #include "Auth.h"
+#include "ServerSettings.h"
 
 namespace RPC
 {
@@ -94,14 +95,14 @@ namespace RPC
 			RPCServer();
 			virtual ~RPCServer();
 
-			void start(bool ssl);
+			void start(std::shared_ptr<ServerSettings::Settings>& settings);
 			void stop();
 			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
 			uint32_t connectionCount();
 		protected:
 		private:
-			bool _useSSL = false;
+			std::shared_ptr<ServerSettings::Settings> _settings;
 			SSL_CTX* _sslCTX = nullptr;
 			int32_t _threadPolicy = SCHED_OTHER;
 			int32_t _threadPriority = 0;

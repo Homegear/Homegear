@@ -35,6 +35,7 @@ using namespace RPC;
 
 RPCServer::RPCServer()
 {
+	_settings.reset(new ServerSettings::Settings());
 	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<RPCMethod>>);
 	if(GD::settings.rpcServerThreadPriority() > 0)
 	{
@@ -48,12 +49,17 @@ RPCServer::~RPCServer()
 	stop();
 }
 
-void RPCServer::start(bool ssl)
+void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 {
 	try
 	{
-		_useSSL = ssl;
-		if(ssl)
+		_settings = settings;
+		if(!_settings)
+		{
+			HelperFunctions::printError("settings is nullptr.");
+			return;
+		}
+		if(_settings->ssl)
 		{
 			SSL_load_error_strings();
 			SSLeay_add_ssl_algorithms();
@@ -71,7 +77,8 @@ void RPCServer::start(bool ssl)
 				SSL_CTX_free(_sslCTX);
 				return;
 			}
-			if(!DH_generate_parameters_ex(dh, 128, DH_GENERATOR_5, NULL))
+			HelperFunctions::printInfo("Generating temporary Diffie-Hellman key. This might take some time...");
+			if(!DH_generate_parameters_ex(dh, settings->diffieHellmanKeySize, DH_GENERATOR_5, NULL))
 			{
 				HelperFunctions::printError("Could not start RPC Server with SSL support. Could not generate Diffie Hellman parameters: " + std::string(ERR_reason_error_string(ERR_get_error())));
 				SSL_CTX_free(_sslCTX);
@@ -219,7 +226,7 @@ void RPCServer::mainThread()
 				_clients[clientFileDescriptor] = client;
 				_stateMutex.unlock();
 
-				if(_useSSL)
+				if(_settings->ssl)
 				{
 					getSSLFileDescriptor(client);
 					if(!client->ssl)
@@ -532,6 +539,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			try
 			{
 				bytesRead = client->socket.proofread(buffer, bufferMax);
+				//Some clients send only one byte in the first packet
+				if(packetLength == 0 && bytesRead == 1) bytesRead += client->socket.proofread(&buffer[1], bufferMax - 1);
 			}
 			catch(SocketTimeOutException& ex)
 			{
@@ -600,9 +609,9 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					continue;
 				}
 
-				if(GD::clientSettings.get(http.getHeader()->host)->authType == ClientSettings::Settings::AuthType::basic)
+				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
 				{
-					if(!client->auth.initialized()) client->auth = Auth(client->socket, http.getHeader()->host);
+					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
 					try
 					{
 						if(!client->auth.basicServer(http))
@@ -610,6 +619,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 							HelperFunctions::printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
 							break;
 						}
+						else HelperFunctions::printDebug("Client successfully authorized using basic authentification.");
 					}
 					catch(AuthException& ex)
 					{
@@ -657,7 +667,11 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 				}
 			}
-			else HelperFunctions::printWarning("Warning: Uninterpretable packet received: " + std::string(buffer, buffer + bytesRead));
+			else
+			{
+				HelperFunctions::printError("Error: Uninterpretable packet received. Closing connection. Packet was: " + std::string(buffer, buffer + bytesRead));
+				break;
+			}
 			if(http.isFinished())
 			{
 				std::thread t(&RPCServer::packetReceived, this, client, http.getContent(), packetType, http.getHeader()->connection == HTTP::Connection::Enum::keepAlive);
@@ -777,9 +791,9 @@ void RPCServer::getFileDescriptor()
 		hostInfo.ai_socktype = SOCK_STREAM;
 		hostInfo.ai_flags = AI_PASSIVE;
 		char buffer[100];
-		std::string port = _useSSL ? std::to_string(GD::settings.rpcSSLPort()) : std::to_string(GD::settings.rpcPort());
+		std::string port = std::to_string(_settings->port);
 
-		if(getaddrinfo(GD::settings.rpcInterface().c_str(), port.c_str(), &hostInfo, &serverInfo) != 0)
+		if(getaddrinfo(_settings->interface.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0)
 		{
 			HelperFunctions::printCritical("Error: Could not get address information: " + std::string(strerror(errno)));
 			return;

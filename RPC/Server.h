@@ -33,6 +33,8 @@
 #include <memory>
 #include <string>
 
+#include "ServerSettings.h"
+
 namespace RPC {
 
 class RPCServer;
@@ -43,7 +45,7 @@ public:
 	virtual ~Server() {}
 
 	void registerMethods();
-	void start(bool ssl);
+	void start(std::shared_ptr<ServerSettings::Settings>& settings);
 	void stop();
 	uint32_t connectionCount();
 protected:

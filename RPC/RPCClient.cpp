@@ -610,6 +610,8 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			try
 			{
 				receivedBytes = server->socket.proofread(buffer, bufferMax);
+				//Some clients send only one byte in the first packet
+				if(packetLength == 0 && receivedBytes == 1) receivedBytes += server->socket.proofread(&buffer[1], bufferMax - 1);
 			}
 			catch(SocketTimeOutException& ex)
 			{

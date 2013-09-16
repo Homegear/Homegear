@@ -53,16 +53,18 @@ class Auth
 {
 public:
 	Auth() {}
-	Auth(SocketOperations& socket, std::string& hostname);
+	Auth(SocketOperations& socket, std::vector<std::string>& validUsers);
 	virtual ~Auth() {}
 
-	bool initialized() { return !_hostname.empty(); }
+	bool initialized() { return _initialized; }
 	bool basicServer(std::shared_ptr<std::vector<char>>& binaryPacket);
 	bool basicServer(HTTP& httpPacket);
 protected:
+	bool _initialized = false;
 	std::string _hostname;
 	SocketOperations _socket;
 	std::string _basicAuthHTTPHeader;
+	std::vector<std::string> _validUsers;
 	HTTP _http;
 };
 

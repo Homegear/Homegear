@@ -96,10 +96,10 @@ uint32_t Server::connectionCount()
 	if(_server) return _server->connectionCount(); else return 0;
 }
 
-void Server::start(bool ssl)
+void Server::start(std::shared_ptr<ServerSettings::Settings>& settings)
 {
 	registerMethods();
-	_server->start(ssl);
+	_server->start(settings);
 }
 
 void Server::stop()

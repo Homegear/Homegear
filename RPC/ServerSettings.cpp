@@ -40,7 +40,7 @@ ServerSettings::ServerSettings()
 
 void ServerSettings::reset()
 {
-	_clients.clear();
+	_servers.clear();
 }
 
 void ServerSettings::load(std::string filename)
@@ -48,6 +48,7 @@ void ServerSettings::load(std::string filename)
 	try
 	{
 		reset();
+		int32_t index = 0;
 		char input[1024];
 		FILE *fin;
 		int32_t len, ptr;
@@ -55,7 +56,7 @@ void ServerSettings::load(std::string filename)
 
 		if (!(fin = fopen(filename.c_str(), "r")))
 		{
-			HelperFunctions::printError("Unable to open RPC client config file: " + filename + ". " + strerror(errno));
+			HelperFunctions::printError("Unable to open RPC server config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
@@ -74,7 +75,11 @@ void ServerSettings::load(std::string filename)
 					if (input[ptr] == ']')
 					{
 						input[ptr] = '\0';
-						if(!settings->hostname.empty()) _clients[settings->hostname] = settings;
+						if(settings->port > 0)
+						{
+							settings->index = index;
+							_servers[index++] = settings;
+						}
 						settings.reset(new Settings());
 						settings->name = std::string(&input[1]);
 						break;
@@ -101,28 +106,46 @@ void ServerSettings::load(std::string filename)
 				HelperFunctions::trim(name);
 				std::string value(&input[ptr]);
 				HelperFunctions::trim(value);
-				if(name == "hostname")
+				if(name == "interface")
 				{
-					settings->hostname = HelperFunctions::toLower(value);
-					HelperFunctions::printDebug("Debug: hostname of RPC client " + settings->name + " set to " + settings->hostname);
+					settings->interface = value;
+					if(settings->interface.empty()) settings->interface = "0.0.0.0";
+					HelperFunctions::printDebug("Debug: interface of RPC server " + settings->name + " set to " + settings->interface);
 				}
-				else if(name == "forcessl")
+				else if(name == "port")
+				{
+					settings->port = HelperFunctions::getNumber(value);
+					HelperFunctions::printDebug("Debug: port of RPC server " + settings->name + " set to " + std::to_string(settings->port));
+				}
+				else if(name == "ssl")
 				{
 					HelperFunctions::toLower(value);
-					if(value == "false") settings->forceSSL = false;
-					HelperFunctions::printDebug("Debug: forceSSL of RPC client " + settings->name + " set to " + std::to_string(settings->forceSSL));
+					if(value == "false") settings->ssl = false;
+					HelperFunctions::printDebug("Debug: ssl of RPC server " + settings->name + " set to " + std::to_string(settings->ssl));
 				}
 				else if(name == "authtype")
 				{
 					HelperFunctions::toLower(value);
-					if(value == "basic") settings->authType = Settings::AuthType::basic;
-					HelperFunctions::printDebug("Debug: authType of RPC client " + settings->name + " set to " + std::to_string(settings->authType));
+					if(value == "none") settings->authType = Settings::AuthType::none;
+					else if(value == "basic") settings->authType = Settings::AuthType::basic;
+					HelperFunctions::printDebug("Debug: authType of RPC server " + settings->name + " set to " + std::to_string(settings->authType));
 				}
-				else if(name == "verifycertificate")
+				else if(name == "validusers")
 				{
-					HelperFunctions::toLower(value);
-					if(value == "false") settings->verifyCertificate = false;
-					HelperFunctions::printDebug("Debug: verifyCertificate of RPC client " + settings->name + " set to " + std::to_string(settings->verifyCertificate));
+					std::stringstream stream(value);
+					std::string element;
+					while(std::getline(stream, element, ','))
+					{
+						HelperFunctions::toLower(HelperFunctions::trim(element));
+						settings->validUsers.push_back(element);
+					}
+				}
+				else if(name == "diffiehellmankeysize")
+				{
+					settings->diffieHellmanKeySize = HelperFunctions::getNumber(value);
+					if(settings->diffieHellmanKeySize < 128) settings->diffieHellmanKeySize = 128;
+					if(settings->diffieHellmanKeySize < 1024) HelperFunctions::printWarning("Diffie-Hellman key size of server " + settings->name + " is smaller than 1024 bit.");
+					HelperFunctions::printDebug("Debug: diffieHellmanKeySize of RPC server " + settings->name + " set to " + std::to_string(settings->diffieHellmanKeySize));
 				}
 				else
 				{
@@ -130,7 +153,11 @@ void ServerSettings::load(std::string filename)
 				}
 			}
 		}
-		if(!settings->hostname.empty()) _clients[settings->hostname] = settings;
+		if(settings->port > 0)
+		{
+			settings->index = index;
+			_servers[index] = settings;
+		}
 
 		fclose(fin);
 	}

@@ -32,20 +32,22 @@
 
 namespace RPC
 {
-Auth::Auth(SocketOperations& socket, std::string& hostname)
+Auth::Auth(SocketOperations& socket, std::vector<std::string>& validUsers)
 {
 	_socket = socket;
-	_hostname = hostname;
+	_validUsers = validUsers;
+	_initialized = true;
 }
 
 bool Auth::basicServer(std::shared_ptr<std::vector<char>>& binaryPacket)
 {
+	if(!_initialized) throw AuthException("Not initialized.");
 	throw AuthException("Not implemented yet.");
 }
 
 bool Auth::basicServer(HTTP& httpPacket)
 {
-	if(_hostname.empty()) throw AuthException("hostname is empty.");
+	if(!_initialized) throw AuthException("Not initialized.");
 	_http.reset();
 	uint32_t bufferLength = 1024;
 	char buffer[bufferLength + 1];
@@ -66,6 +68,8 @@ bool Auth::basicServer(HTTP& httpPacket)
 		{
 			_socket.proofwrite(data);
 			int32_t bytesRead = _socket.proofread(buffer, bufferLength);
+			//Some clients send only one byte in the first packet
+			if(bytesRead == 1) bytesRead += _socket.proofread(&buffer[1], bufferLength - 1);
 			buffer[bytesRead] = '\0';
 			try
 			{
@@ -88,6 +92,7 @@ bool Auth::basicServer(HTTP& httpPacket)
 	if(authData.first != "basic") throw AuthException("Authorization type is not basic but: " + authData.first);
 	std::pair<std::string, std::string> credentials = HelperFunctions::split(Base64::base64Decode(authData.second), ':');
 	HelperFunctions::toLower(credentials.first);
+	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end()) throw AuthException("User name " + credentials.first + " is not in the list of valid users.");
 	if(User::verify(credentials.first, credentials.second)) return true;
 	return false;
 }

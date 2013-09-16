@@ -42,9 +42,6 @@ public:
 	virtual ~Settings() {}
 	void load(std::string filename);
 
-	std::string rpcInterface() { return _rpcInterface; }
-	int32_t rpcPort() { return _rpcPort; }
-	int32_t rpcSSLPort() { return _rpcSSLPort; }
 	std::string certPath() { return _certPath; }
 	std::string keyPath() { return _keyPath;  }
 	int32_t debugLevel() { return _debugLevel; }
@@ -60,11 +57,9 @@ public:
 	uint32_t bidCoSResponseDelay() { return _bidCoSResponseDelay; }
 	uint32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
 	std::string clientSettingsPath() { return _clientSettingsPath; }
+	std::string serverSettingsPath() { return _serverSettingsPath; }
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
 private:
-	std::string _rpcInterface;
-	int32_t _rpcPort = 2001;
-	int32_t _rpcSSLPort = 2002;
 	std::string _certPath;
 	std::string _keyPath;
 	int32_t _debugLevel = 3;
@@ -79,6 +74,7 @@ private:
 	uint32_t _bidCoSResponseDelay = 90;
 	uint32_t _rpcServerThreadPriority = 0;
 	std::string _clientSettingsPath;
+	std::string _serverSettingsPath;
 	std::map<std::string, bool> _tunnelClients;
 
 	void reset();

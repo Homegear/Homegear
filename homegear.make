@@ -135,6 +135,7 @@ OBJECTS := \
 	$(OBJDIR)/RPCServer.o \
 	$(OBJDIR)/XMLRPCEncoder.o \
 	$(OBJDIR)/RPCMethod.o \
+	$(OBJDIR)/ServerSettings.o \
 	$(OBJDIR)/Devices.o \
 	$(OBJDIR)/LogicalParameter.o \
 	$(OBJDIR)/PhysicalParameter.o \
@@ -328,6 +329,9 @@ $(OBJDIR)/XMLRPCEncoder.o: RPC/XMLRPCEncoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCMethod.o: RPC/RPCMethod.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/ServerSettings.o: RPC/ServerSettings.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Devices.o: RPC/Devices.cpp

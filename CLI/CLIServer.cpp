@@ -660,11 +660,6 @@ std::string Server::handleGlobalCommand(std::string& command)
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
 			return stringStream.str();
 		}
-		else if(command == "rpc connection count")
-		{
-			stringStream << GD::rpcServer.connectionCount() << std::endl;
-			return stringStream.str();
-		}
 		return "";
 	}
     catch(const std::exception& ex)

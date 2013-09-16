@@ -180,6 +180,7 @@ public:
 	static void memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length);
 	static void memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from);
 	static void memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from);
+	static void printBinary(std::vector<unsigned char>& data);
 	static void printBinary(std::shared_ptr<std::vector<char>> data);
 	static std::string getHexString(const std::vector<char>& data);
 	static std::string getHexString(const std::vector<uint8_t>& data);

@@ -37,30 +37,41 @@
 #include <string>
 #include <map>
 #include <cstring>
+#include <vector>
 
 namespace RPC
 {
 class ServerSettings
 {
 public:
-	struct Settings
+	class Settings
 	{
+	public:
 		enum AuthType { none, basic };
 
+		Settings()
+		{
+			interface = "0.0.0.0";
+		}
+		virtual ~Settings() {}
+		int32_t index = -1;
 		std::string name;
-		std::string hostname;
-		bool forceSSL = true;
-		AuthType authType = AuthType::none;
-		bool verifyCertificate = true;
+		std::string interface;
+		int32_t port = -1;
+		bool ssl = true;
+		AuthType authType = AuthType::basic;
+		std::vector<std::string> validUsers;
+		int32_t diffieHellmanKeySize = 1024;
 	};
 
 	ServerSettings();
 	virtual ~ServerSettings() {}
 	void load(std::string filename);
 
-	std::shared_ptr<Settings> get(std::string& hostname) { if(_clients.find(hostname) != _clients.end()) return _clients[hostname]; else return std::shared_ptr<Settings>(); }
+	int32_t count() { return _servers.size(); }
+	std::shared_ptr<Settings> get(int32_t index) { if(_servers.find(index) != _servers.end()) return _servers[index]; else return std::shared_ptr<Settings>(); }
 private:
-	std::map<std::string, std::shared_ptr<Settings>> _clients;
+	std::map<int32_t, std::shared_ptr<Settings>> _servers;
 
 	void reset();
 };
