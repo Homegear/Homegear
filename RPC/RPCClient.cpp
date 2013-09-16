@@ -667,7 +667,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			{
 				if(dataSize == 0)
 				{
-					if(buffer[3] == 0)
+					if(!(buffer[3] & 1) && buffer[3] != 0xFF)
 					{
 						HelperFunctions::printError("Error: RPC client received binary request as response from server " + server->ipAddress + " on port " + server->address.second);
 						if(!server->keepAlive) closeConnection(server);
@@ -698,7 +698,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 						return std::shared_ptr<std::vector<char>>();
 					}
 					packetLength = receivedBytes - 8;
-					packet->insert(packet->begin(), buffer + 8, buffer + receivedBytes);
+					packet->insert(packet->begin(), buffer, buffer + receivedBytes);
 				}
 				else
 				{

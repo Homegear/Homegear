@@ -27,58 +27,10 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef AUTH_H_
-#define AUTH_H_
-
-#include <string>
-#include <memory>
-#include <vector>
-
-#include "../Exception.h"
-#include "SocketOperations.h"
-#include "HTTP.h"
 #include "RPCHeader.h"
-#include "RPCEncoder.h"
-#include "Base64.h"
-#include "../User.h"
 
 namespace RPC
 {
 
-class AuthException : public Exception
-{
-public:
-	AuthException(std::string message) : Exception(message) {}
-};
-
-class Auth
-{
-public:
-	Auth() {}
-	Auth(SocketOperations& socket, std::vector<std::string>& validUsers);
-	Auth(SocketOperations& socket, std::string userName, std::string password);
-	virtual ~Auth() {}
-
-	bool initialized() { return _initialized; }
-	std::string basicClient();
-	bool basicServer(std::shared_ptr<RPCHeader>& binaryHeader);
-	bool basicServer(HTTP& httpPacket);
-protected:
-	bool _initialized = false;
-	std::string _hostname;
-	SocketOperations _socket;
-	std::string _basicAuthHTTPHeader;
-	std::shared_ptr<std::vector<char>> _basicUnauthBinaryHeader;
-	std::shared_ptr<std::vector<char>> _basicUnauthHTTPHeader;
-	std::vector<std::string> _validUsers;
-	std::string _userName;
-	std::string _password;
-	std::string _basicAuthString;
-	HTTP _http;
-	RPCEncoder _rpcEncoder;
-
-	void sendBasicUnauthorized(bool binary);
-};
 
 } /* namespace RPC */
-#endif /* AUTH_H_ */

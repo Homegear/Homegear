@@ -566,7 +566,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			if(!strncmp(&buffer[0], "Bin", 3))
 			{
 				http.reset();
-				packetType = (buffer[3] == 0) ? PacketType::Enum::binaryRequest : PacketType::Enum::binaryResponse;
+				packetType = ((buffer[3] & 1) || buffer[3] == 0xFF) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
 				if(bytesRead < 8) continue;
 				HelperFunctions::memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
 				HelperFunctions::printDebug("Receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
@@ -577,7 +577,27 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					continue;
 				}
 				packet.reset(new std::vector<char>());
-				packet->insert(packet->end(), buffer + 8, buffer + bytesRead);
+				packet->insert(packet->end(), buffer, buffer + bytesRead);
+				std::shared_ptr<RPCHeader> header = _rpcDecoder.decodeHeader(packet);
+				if(_settings->authType == ServerSettings::Settings::AuthType::basic)
+				{
+					if(!client->auth.initialized()) client->auth = Auth(client->socket, _settings->validUsers);
+					bool authFailed = false;
+					try
+					{
+						if(!client->auth.basicServer(header))
+						{
+							HelperFunctions::printError("Error: Authorization failed. Closing connection.");
+							break;
+						}
+						else HelperFunctions::printDebug("Client successfully authorized using basic authentification.");
+					}
+					catch(AuthException& ex)
+					{
+						HelperFunctions::printError("Error: Authorization failed. Closing connection. Error was: " + ex.what());
+						break;
+					}
+				}
 				if(dataSize > bytesRead - 8) packetLength = bytesRead - 8;
 				else
 				{

@@ -122,6 +122,7 @@ OBJECTS := \
 	$(OBJDIR)/Device.o \
 	$(OBJDIR)/RPCVariable.o \
 	$(OBJDIR)/RPCEncoder.o \
+	$(OBJDIR)/RPCHeader.o \
 	$(OBJDIR)/HTTP.o \
 	$(OBJDIR)/RPCMethods.o \
 	$(OBJDIR)/Server.o \
@@ -290,6 +291,9 @@ $(OBJDIR)/RPCVariable.o: RPC/RPCVariable.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCEncoder.o: RPC/RPCEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCHeader.o: RPC/RPCHeader.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HTTP.o: RPC/HTTP.cpp

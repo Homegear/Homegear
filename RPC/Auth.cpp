@@ -58,32 +58,73 @@ std::string Auth::basicClient()
 	return _basicAuthString;
 }
 
-void Auth::sendBasicUnauthorized()
+void Auth::sendBasicUnauthorized(bool binary)
 {
-	if(_basicUnauthHTTPHeader.empty())
+	if(binary)
 	{
-		_basicUnauthHTTPHeader.append("HTTP/1.1 401 Unauthorized\r\n");
-		_basicUnauthHTTPHeader.append("Connection: Close\r\n");
-		std::string content("<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\"><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"><title>Unauthorized</title></head><body>Unauthorized</body></html>");
-		_basicUnauthHTTPHeader.append("Content-Length: " + std::to_string(content.size()) + "\r\n\r\n");
-		_basicUnauthHTTPHeader.append(content);
+		if(!_basicUnauthBinaryHeader || _basicUnauthBinaryHeader->empty())
+		{
+			std::shared_ptr<RPCVariable> error = RPCVariable::createError(-32603, "Unauthorized");
+			_basicUnauthBinaryHeader = _rpcEncoder.encodeResponse(error);
+		}
+		try
+		{
+			_socket.proofwrite(_basicUnauthBinaryHeader);
+		}
+		catch(SocketOperationException& ex)
+		{
+			throw AuthException("Authorization failed because of socket exception: " + ex.what());
+		}
 	}
-	std::shared_ptr<std::vector<char>> data(new std::vector<char>());
-	data->insert(data->begin(), _basicUnauthHTTPHeader.begin(), _basicUnauthHTTPHeader.end());
-	try
+	else
 	{
-		_socket.proofwrite(data);
-	}
-	catch(SocketOperationException& ex)
-	{
-		throw AuthException("Authorization failed because of socket exception: " + ex.what());
+		if(!_basicUnauthHTTPHeader || _basicUnauthHTTPHeader->empty())
+		{
+			std::string header;
+			header.append("HTTP/1.1 401 Unauthorized\r\n");
+			header.append("Connection: Close\r\n");
+			std::string content("<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\"><html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"><title>Unauthorized</title></head><body>Unauthorized</body></html>");
+			header.append("Content-Length: " + std::to_string(content.size()) + "\r\n\r\n");
+			header.append(content);
+			_basicUnauthHTTPHeader->insert(_basicUnauthHTTPHeader->begin(), header.begin(), header.end());
+		}
+		try
+		{
+			_socket.proofwrite(_basicUnauthHTTPHeader);
+		}
+		catch(SocketOperationException& ex)
+		{
+			throw AuthException("Authorization failed because of socket exception: " + ex.what());
+		}
 	}
 }
 
-bool Auth::basicServer(std::shared_ptr<std::vector<char>>& binaryPacket)
+bool Auth::basicServer(std::shared_ptr<RPCHeader>& binaryHeader)
 {
 	if(!_initialized) throw AuthException("Not initialized.");
-	throw AuthException("Not implemented yet.");
+	if(!binaryHeader) throw AuthException("Header is nullptr.");
+	if(binaryHeader->authorization.empty())
+	{
+		sendBasicUnauthorized(true);
+		throw AuthException("No header field \"Authorization\"");
+	}
+	std::pair<std::string, std::string> authData = HelperFunctions::split(binaryHeader->authorization, ' ');
+	HelperFunctions::toLower(authData.first);
+	if(authData.first != "basic")
+	{
+		sendBasicUnauthorized(true);
+		throw AuthException("Authorization type is not basic but: " + authData.first);
+	}
+	std::pair<std::string, std::string> credentials = HelperFunctions::split(Base64::decode(authData.second), ':');
+	HelperFunctions::toLower(credentials.first);
+	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
+	{
+		sendBasicUnauthorized(true);
+		throw AuthException("User name " + credentials.first + " is not in the list of valid users.");
+	}
+	if(User::verify(credentials.first, credentials.second)) return true;
+	sendBasicUnauthorized(true);
+	return false;
 }
 
 bool Auth::basicServer(HTTP& httpPacket)
@@ -129,25 +170,25 @@ bool Auth::basicServer(HTTP& httpPacket)
 	else _http = httpPacket;
 	if(_http.getHeader()->authorization.empty())
 	{
-		sendBasicUnauthorized();
+		sendBasicUnauthorized(false);
 		throw AuthException("No header field \"Authorization\"");
 	}
 	std::pair<std::string, std::string> authData = HelperFunctions::split(_http.getHeader()->authorization, ' ');
 	HelperFunctions::toLower(authData.first);
 	if(authData.first != "basic")
 	{
-		sendBasicUnauthorized();
+		sendBasicUnauthorized(false);
 		throw AuthException("Authorization type is not basic but: " + authData.first);
 	}
 	std::pair<std::string, std::string> credentials = HelperFunctions::split(Base64::decode(authData.second), ':');
 	HelperFunctions::toLower(credentials.first);
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
-		sendBasicUnauthorized();
+		sendBasicUnauthorized(false);
 		throw AuthException("User name " + credentials.first + " is not in the list of valid users.");
 	}
 	if(User::verify(credentials.first, credentials.second)) return true;
-	sendBasicUnauthorized();
+	sendBasicUnauthorized(false);
 	return false;
 }
 

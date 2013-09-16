@@ -63,6 +63,7 @@
 #include "HTTP.h"
 #include "RPCVariable.h"
 #include "RPCMethod.h"
+#include "RPCHeader.h"
 #include "RPCDecoder.h"
 #include "RPCEncoder.h"
 #include "XMLRPCDecoder.h"

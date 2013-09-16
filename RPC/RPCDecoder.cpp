@@ -32,12 +32,47 @@
 
 namespace RPC
 {
+std::shared_ptr<RPCHeader> RPCDecoder::decodeHeader(std::shared_ptr<std::vector<char>> packet)
+{
+	std::shared_ptr<RPCHeader> header(new RPCHeader());
+	try
+	{
+		if(!(packet->at(3) & 0x40) || packet->size() < 12) return header;
+		uint32_t position = 8;
+		uint32_t headerSize = 0;
+		headerSize = _decoder.decodeInteger(packet, position);
+		uint32_t parameterCount = _decoder.decodeInteger(packet, position);
+		for(uint32_t i = 0; i < parameterCount; i++)
+		{
+			std::string field = _decoder.decodeString(packet, position);
+			HelperFunctions::toLower(field);
+			std::string value = _decoder.decodeString(packet, position);
+			if(field == "authorization") header->authorization = value;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return header;
+}
 
 std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName)
 {
 	try
 	{
-		uint32_t position = 0;
+		uint32_t position = 8;
+		uint32_t headerSize = 0;
+		if(packet->at(3) & 0x40) headerSize = _decoder.decodeInteger(packet, position);
+		position = 8 + 4 + headerSize;
 		methodName = _decoder.decodeString(packet, position);
 		uint32_t parameterCount = _decoder.decodeInteger(packet, position);
 		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters(new std::vector<std::shared_ptr<RPCVariable>>());
@@ -64,8 +99,10 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeReq
 
 std::shared_ptr<RPCVariable> RPCDecoder::decodeResponse(std::shared_ptr<std::vector<char>> packet, uint32_t offset)
 {
-	uint32_t position = offset;
-	return decodeParameter(packet, position);
+	uint32_t position = offset + 8;
+	std::shared_ptr<RPCVariable> response = decodeParameter(packet, position);
+	if(packet->at(3) == 0xFF) response->errorStruct = true;
+	return response;
 }
 
 RPCVariableType RPCDecoder::decodeType(std::shared_ptr<std::vector<char>>& packet, uint32_t& position)
