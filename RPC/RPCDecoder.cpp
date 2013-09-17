@@ -38,9 +38,10 @@ std::shared_ptr<RPCHeader> RPCDecoder::decodeHeader(std::shared_ptr<std::vector<
 	try
 	{
 		if(!(packet->at(3) & 0x40) || packet->size() < 12) return header;
-		uint32_t position = 8;
+		uint32_t position = 4;
 		uint32_t headerSize = 0;
 		headerSize = _decoder.decodeInteger(packet, position);
+		if(headerSize < 4) return header;
 		uint32_t parameterCount = _decoder.decodeInteger(packet, position);
 		for(uint32_t i = 0; i < parameterCount; i++)
 		{
@@ -69,13 +70,18 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeReq
 {
 	try
 	{
-		uint32_t position = 8;
+		uint32_t position = 4;
 		uint32_t headerSize = 0;
-		if(packet->at(3) & 0x40) headerSize = _decoder.decodeInteger(packet, position);
-		position = 8 + 4 + headerSize;
+		if(packet->at(3) & 0x40) headerSize = _decoder.decodeInteger(packet, position) + 4;
+		position = 8 + headerSize;
 		methodName = _decoder.decodeString(packet, position);
 		uint32_t parameterCount = _decoder.decodeInteger(packet, position);
 		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters(new std::vector<std::shared_ptr<RPCVariable>>());
+		if(parameterCount > 100)
+		{
+			HelperFunctions::printError("Parameter count of RPC request is larger than 100.");
+			return parameters;
+		}
 		for(uint32_t i = 0; i < parameterCount; i++)
 		{
 			parameters->push_back(decodeParameter(packet, position));

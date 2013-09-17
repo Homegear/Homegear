@@ -574,13 +574,25 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			server->auth = Auth(server->socket, server->settings->userName, server->settings->password);
 		}
 
-		if(!server->binary)
+		if(server->binary)
+		{
+			std::shared_ptr<RPCHeader> header(new RPCHeader());
+			if(server->settings->authType == ClientSettings::Settings::AuthType::basic)
+			{
+				HelperFunctions::printDebug("Using Basic Access Authentication.");
+				std::pair<std::string, std::string> authField = server->auth.basicClient();
+				header->authorization = authField.second;
+			}
+			_rpcEncoder.insertHeader(data, header);
+		}
+		else
 		{
 			std::string header = "POST /RPC2 HTTP/1.1\r\nUser_Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data->size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\nTE: chunked\r\n";
 			if(server->settings->authType == ClientSettings::Settings::AuthType::basic)
 			{
 				HelperFunctions::printDebug("Using Basic Access Authentication.");
-				header += server->auth.basicClient() + "\r\n";
+				std::pair<std::string, std::string> authField = server->auth.basicClient();
+				header += authField.first + ": " + authField.second + "\r\n";
 			}
 			header += "\r\n";
 			data->insert(data->begin(), header.begin(), header.end());

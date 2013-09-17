@@ -47,13 +47,14 @@ Auth::Auth(SocketOperations& socket, std::string userName, std::string password)
 	if(!_userName.empty() && !_password.empty()) _initialized = true;
 }
 
-std::string Auth::basicClient()
+std::pair<std::string, std::string> Auth::basicClient()
 {
 	if(!_initialized) throw AuthException("Not initialized.");
-	if(_basicAuthString.empty())
+	if(_basicAuthString.second.empty())
 	{
+		_basicAuthString.first = "Authorization";
 		std::string credentials = _userName + ":" + _password;
-		_basicAuthString = "Authorization: Basic " + Base64::encode(credentials);
+		_basicAuthString.second = "Basic " + Base64::encode(credentials);
 	}
 	return _basicAuthString;
 }

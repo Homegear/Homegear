@@ -60,7 +60,7 @@ public:
 	virtual ~Auth() {}
 
 	bool initialized() { return _initialized; }
-	std::string basicClient();
+	std::pair<std::string, std::string> basicClient();
 	bool basicServer(std::shared_ptr<RPCHeader>& binaryHeader);
 	bool basicServer(HTTP& httpPacket);
 protected:
@@ -73,7 +73,7 @@ protected:
 	std::vector<std::string> _validUsers;
 	std::string _userName;
 	std::string _password;
-	std::string _basicAuthString;
+	std::pair<std::string, std::string> _basicAuthString;
 	HTTP _http;
 	RPCEncoder _rpcEncoder;
 

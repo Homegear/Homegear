@@ -43,13 +43,19 @@ RPCEncoder::RPCEncoder()
 	_packetStartError[3] = 0xFF;
 }
 
-std::shared_ptr<std::vector<char>> RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters)
+std::shared_ptr<std::vector<char>> RPCEncoder::encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::shared_ptr<RPCHeader> header)
 {
 	//The "Bin", the type byte after that and the length itself are not part of the length
 	std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
 	try
 	{
 		packet->insert(packet->begin(), _packetStartRequest, _packetStartRequest + 4);
+		uint32_t headerSize = 0;
+		if(header)
+		{
+			packet->at(3) |= 0x40;
+			headerSize = encodeHeader(packet, header) + 4;
+		}
 		_encoder.encodeString(packet, methodName);
 		if(!parameters) _encoder.encodeInteger(packet, 0);
 		else _encoder.encodeInteger(packet, parameters->size());
@@ -61,10 +67,10 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeRequest(std::string methodN
 			}
 		}
 
-		uint32_t dataSize = packet->size() - 4;
+		uint32_t dataSize = packet->size() - 4 - headerSize;
 		char result[4];
 		HelperFunctions::memcpyBigEndian(result, (char*)&dataSize, 4);
-		packet->insert(packet->begin() + 4, result, result + 4);
+		packet->insert(packet->begin() + 4 + headerSize, result, result + 4);
 	}
 	catch(const std::exception& ex)
     {
@@ -112,6 +118,38 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RP
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return packet;
+}
+
+void RPCEncoder::insertHeader(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCHeader>& header)
+{
+	std::shared_ptr<std::vector<char>> headerData(new std::vector<char>());
+	uint32_t headerSize = encodeHeader(headerData, header);
+	if(headerSize > 0)
+	{
+		packet->at(3) |= 0x40;
+		packet->insert(packet->begin() + 4, headerData->begin(), headerData->end());
+	}
+}
+
+uint32_t RPCEncoder::encodeHeader(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCHeader>& header)
+{
+	uint32_t oldPacketSize = packet->size();
+	uint32_t parameterCount = 0;
+	if(!header->authorization.empty())
+	{
+		parameterCount++;
+		std::string temp("Authorization");
+		_encoder.encodeString(packet, temp);
+		_encoder.encodeString(packet, header->authorization);
+	}
+	char result[4];
+	HelperFunctions::memcpyBigEndian(result, (char*)&parameterCount, 4);
+	packet->insert(packet->begin() + oldPacketSize, result, result + 4);
+
+	uint32_t headerSize = packet->size() - oldPacketSize;
+	HelperFunctions::memcpyBigEndian(result, (char*)&headerSize, 4);
+	packet->insert(packet->begin() + oldPacketSize, result, result + 4);
+	return headerSize;
 }
 
 void RPCEncoder::encodeVariable(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable)

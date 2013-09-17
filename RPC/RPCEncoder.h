@@ -34,6 +34,7 @@
 #include <cstring>
 #include <list>
 
+#include "RPCHeader.h"
 #include "RPCVariable.h"
 #include "../BinaryEncoder.h"
 
@@ -46,7 +47,8 @@ public:
 	RPCEncoder();
 	virtual ~RPCEncoder() {}
 
-	std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
+	void insertHeader(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCHeader>& header);
+	std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::shared_ptr<RPCHeader> header = std::shared_ptr<RPCHeader>());
 	std::shared_ptr<std::vector<char>> encodeResponse(std::shared_ptr<RPCVariable> variable);
 private:
 	BinaryEncoder _encoder;
@@ -54,6 +56,7 @@ private:
 	char _packetStartResponse[4];
 	char _packetStartError[4];
 
+	uint32_t encodeHeader(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCHeader>& header);
 	void encodeVariable(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
 	void encodeInteger(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
 	void encodeFloat(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
