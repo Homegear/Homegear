@@ -85,6 +85,7 @@ echo -e "127.0.0.1\thomegearpi" >> etc/hosts
 
 echo "auto lo
 iface lo inet loopback
+iface lo inet6 loopback
 
 auto eth0
 iface eth0 inet dhcp
