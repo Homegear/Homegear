@@ -70,19 +70,45 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 				return;
 			}
 
-			DH* dh = DH_new();
-			if(!dh)
+			DH* dh = nullptr;
+			if(GD::settings.loadDHParamsFromFile())
 			{
-				HelperFunctions::printError("Could not start RPC Server with SSL support. Initialization of Diffie Hellman failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
-				SSL_CTX_free(_sslCTX);
-				return;
+				BIO* bio = BIO_new_file(GD::settings.dhParamPath().c_str(), "r");
+				if(!bio)
+				{
+					HelperFunctions::printInfo("Info: Could not start RPC Server with SSL support. Could not load Diffie-Hellman parameter file (" + GD::settings.dhParamPath() + "): " + std::string(ERR_reason_error_string(ERR_get_error())));
+					BIO_free(bio);
+					SSL_CTX_free(_sslCTX);
+					return;
+				}
+
+				dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
+				if(!dh)
+				{
+					HelperFunctions::printError("Could not start RPC Server with SSL support. Reading of Diffie-Hellman parameters failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
+					BIO_free(bio);
+					SSL_CTX_free(_sslCTX);
+					return;
+				}
+
+				BIO_free(bio);
 			}
-			HelperFunctions::printInfo("Generating temporary Diffie-Hellman key. This might take some time...");
-			if(!DH_generate_parameters_ex(dh, settings->diffieHellmanKeySize, DH_GENERATOR_5, NULL))
+			else
 			{
-				HelperFunctions::printError("Could not start RPC Server with SSL support. Could not generate Diffie Hellman parameters: " + std::string(ERR_reason_error_string(ERR_get_error())));
-				SSL_CTX_free(_sslCTX);
-				return;
+				dh = DH_new();
+				if(!dh)
+				{
+					HelperFunctions::printError("Could not start RPC Server with SSL support. Initialization of Diffie-Hellman parameters failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
+					SSL_CTX_free(_sslCTX);
+					return;
+				}
+				HelperFunctions::printInfo("Generating temporary Diffie-Hellman parameters. This might take a long time...");
+				if(!DH_generate_parameters_ex(dh, settings->diffieHellmanKeySize, DH_GENERATOR_5, NULL))
+				{
+					HelperFunctions::printError("Could not start RPC Server with SSL support. Could not generate Diffie Hellman parameters: " + std::string(ERR_reason_error_string(ERR_get_error())));
+					SSL_CTX_free(_sslCTX);
+					return;
+				}
 			}
 			int32_t codes = 0;
 			if(!DH_check(dh, &codes))
@@ -813,10 +839,10 @@ void RPCServer::getFileDescriptor()
 		hostInfo.ai_flags = AI_PASSIVE;
 		char buffer[100];
 		std::string port = std::to_string(_settings->port);
-
-		if(getaddrinfo(_settings->interface.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0)
+		int32_t result;
+		if((result = getaddrinfo(_settings->interface.c_str(), port.c_str(), &hostInfo, &serverInfo)) != 0)
 		{
-			HelperFunctions::printCritical("Error: Could not get address information: " + std::string(strerror(errno)));
+			HelperFunctions::printCritical("Error: Could not get address information: " + std::string(gai_strerror(result)));
 			return;
 		}
 
@@ -840,13 +866,13 @@ void RPCServer::getFileDescriptor()
 			switch (info->ai_family)
 			{
 				case AF_INET:
-				  inet_ntop (info->ai_family, &((struct sockaddr_in *) info->ai_addr)->sin_addr, buffer, 100);
-				  address = std::string(buffer);
-				  break;
+					inet_ntop (info->ai_family, &((struct sockaddr_in *) info->ai_addr)->sin_addr, buffer, 100);
+					address = std::string(buffer);
+					break;
 				case AF_INET6:
-				  inet_ntop (info->ai_family, &((struct sockaddr_in6 *) info->ai_addr)->sin6_addr, buffer, 100);
-				  address = std::string(buffer);
-				  break;
+					inet_ntop (info->ai_family, &((struct sockaddr_in6 *) info->ai_addr)->sin6_addr, buffer, 100);
+					address = std::string(buffer);
+					break;
 			}
 			HelperFunctions::printInfo("Info: RPC Server started listening on address " + address + " and port " + port);
 			bound = true;

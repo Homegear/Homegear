@@ -40,6 +40,7 @@ void Settings::reset()
 {
 	_certPath = "/etc/homegear/homegear.crt";
 	_keyPath = "/etc/homegear/homegear.key";
+	_dhParamPath = "/etc/homegear/dh2048.pem";
 	_debugLevel = 3;
 	_databasePath = GD::executablePath + "db.sql";
 	_databaseSynchronous = false;
@@ -108,6 +109,18 @@ void Settings::load(std::string filename)
 					_keyPath = value;
 					if(_keyPath.empty()) _keyPath = "/etc/homegear/homegear.key";
 					HelperFunctions::printDebug("Debug: keyPath set to " + _keyPath);
+				}
+				else if(name == "loaddhparamsfromfile")
+				{
+					if(HelperFunctions::toLower(value) == "true") _loadDHParamsFromFile = true;
+					else if(HelperFunctions::toLower(value) == "false") _loadDHParamsFromFile = false;
+					HelperFunctions::printDebug("Debug: loadDHParamsFromFile set to " + std::to_string(_loadDHParamsFromFile));
+				}
+				else if(name == "dhparampath")
+				{
+					_dhParamPath = value;
+					if(_dhParamPath.empty()) _dhParamPath = "/etc/homegear/dh2048.pem";
+					HelperFunctions::printDebug("Debug: dhParamPath set to " + _dhParamPath);
 				}
 				else if(name == "debuglevel")
 				{

@@ -109,7 +109,7 @@ void ServerSettings::load(std::string filename)
 				if(name == "interface")
 				{
 					settings->interface = value;
-					if(settings->interface.empty()) settings->interface = "0.0.0.0";
+					if(settings->interface.empty()) settings->interface = "::";
 					HelperFunctions::printDebug("Debug: interface of RPC server " + settings->name + " set to " + settings->interface);
 				}
 				else if(name == "port")

@@ -187,7 +187,7 @@ echo \"************************************************************\"
 echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null
-echo \"Generating new SSL keys for Homegear...\"
+echo \"Generating new SSL keys and Diffie-Hellman parameters for Homegear. This might take a long time...\"
 rm -f /etc/homegear/homegear.key
 rm -f /etc/homegear/homegear.crt
 openssl genrsa -out /etc/homegear/homegear.key 2048
@@ -196,6 +196,9 @@ openssl x509 -req -in /etc/homegear/homegear.csr -signkey /etc/homegear/homegear
 rm /etc/homegear/homegear.csr
 chown homegear:homegear /etc/homegear/homegear.key
 chmod 400 /etc/homegear/homegear.key
+openssl dhparam -check -text -5 2048 -out /etc/homegear/dh2048.pem
+chown homegear:homegear /etc/homegear/dh2048.pem
+chmod 400 /etc/homegear/dh2048.pem
 echo \"Starting raspi-config...\"
 raspi-config
 sed -i '$ d' /home/pi/.bashrc >/dev/null

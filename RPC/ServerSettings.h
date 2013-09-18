@@ -51,7 +51,7 @@ public:
 
 		Settings()
 		{
-			interface = "0.0.0.0";
+			interface = "::";
 		}
 		virtual ~Settings() {}
 		int32_t index = -1;

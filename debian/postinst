@@ -32,6 +32,9 @@ case $1 in
 			rm /etc/homegear/homegear.csr
 			chown homegear:homegear /etc/homegear/homegear.key
 			chmod 400 /etc/homegear/homegear.key
+			openssl dhparam -check -text -5 2048 -out /etc/homegear/dh2048.pem
+			chown homegear:homegear /etc/homegear/dh2048.pem
+			chmod 400 /etc/homegear/dh2048.pem
 		fi
 
 		chown root:homegear /dev/ttyACM0 >/dev/null 2>&1

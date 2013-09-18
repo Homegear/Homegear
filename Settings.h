@@ -44,6 +44,8 @@ public:
 
 	std::string certPath() { return _certPath; }
 	std::string keyPath() { return _keyPath;  }
+	bool loadDHParamsFromFile() { return _loadDHParamsFromFile; }
+	std::string dhParamPath() { return _dhParamPath;  }
 	int32_t debugLevel() { return _debugLevel; }
 	std::string databasePath() { return _databasePath; }
 	bool databaseSynchronous() { return _databaseSynchronous; }
@@ -62,6 +64,8 @@ public:
 private:
 	std::string _certPath;
 	std::string _keyPath;
+	bool _loadDHParamsFromFile = true;
+	std::string _dhParamPath;
 	int32_t _debugLevel = 3;
 	std::string _databasePath;
 	bool _databaseSynchronous = false;
