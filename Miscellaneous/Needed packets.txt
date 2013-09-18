@@ -1,1 +1,1 @@
-sqlite3 libsqlite3-dev libreadline6 libncurses6-dev
+sqlite3 libsqlite3-dev libreadline6 libncurses6-dev libssl-dev
