@@ -1279,6 +1279,57 @@ std::shared_ptr<RPCVariable> RPCRemoveLink::invoke(std::shared_ptr<std::vector<s
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCRunScript::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+		ParameterError::Enum error2 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcBoolean }));
+		ParameterError::Enum error3 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		ParameterError::Enum error4 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcBoolean }));
+		if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError && error3 != ParameterError::Enum::noError && error4 != ParameterError::Enum::noError) return getError((error != ParameterError::Enum::noError) ? error : ((error2 != ParameterError::Enum::noError) ? error2 : ((error3 != ParameterError::Enum::noError) ? error3 : error4)));
+
+		bool wait = false;
+		std::string filename;
+		std::string arguments;
+
+		filename = parameters->at(0)->stringValue;
+
+		if(parameters->size() == 2)
+		{
+			if(parameters->at(1)->type == RPCVariableType::rpcBoolean) wait = parameters->at(1)->booleanValue;
+			else arguments = parameters->at(1)->stringValue;
+		}
+		if(parameters->size() == 3)
+		{
+			arguments = parameters->at(1)->stringValue;
+			wait = parameters->at(2)->booleanValue;
+		}
+
+		std::string command = GD::settings.scriptPath() + filename + " " + arguments;
+		if(!wait) command += "&";
+
+		int32_t exitCode = std::system(command.c_str());
+		int32_t signal = WIFSIGNALED(exitCode);
+		if(signal) return RPCVariable::createError(-32400, "Script exited with signal: " + std::to_string(signal));
+		exitCode = WEXITSTATUS(exitCode);
+		return std::shared_ptr<RPCVariable>(new RPCVariable(exitCode));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try

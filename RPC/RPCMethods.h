@@ -32,6 +32,7 @@
 
 #include <vector>
 #include <memory>
+#include <cstdlib>
 
 #include "RPCServer.h"
 #include "RPCVariable.h"
@@ -357,6 +358,19 @@ public:
 	RPCRemoveLink()
 	{
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCRunScript : public RPCMethod
+{
+public:
+	RPCRunScript()
+	{
+		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcBoolean});
+		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcBoolean});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };

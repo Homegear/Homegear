@@ -60,6 +60,7 @@ public:
 	uint32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
 	std::string clientSettingsPath() { return _clientSettingsPath; }
 	std::string serverSettingsPath() { return _serverSettingsPath; }
+	std::string scriptPath() { return _scriptPath; }
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
 private:
 	std::string _certPath;
@@ -79,6 +80,7 @@ private:
 	uint32_t _rpcServerThreadPriority = 0;
 	std::string _clientSettingsPath;
 	std::string _serverSettingsPath;
+	std::string _scriptPath;
 	std::map<std::string, bool> _tunnelClients;
 
 	void reset();

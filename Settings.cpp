@@ -54,6 +54,7 @@ void Settings::reset()
 	_rpcServerThreadPriority = 0;
 	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
 	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
+	_scriptPath = "/var/lib/homegear/scripts/";
 	_tunnelClients.clear();
 }
 
@@ -162,7 +163,7 @@ void Settings::load(std::string filename)
 				{
 					_logfilePath = value;
 					if(_logfilePath.empty()) _logfilePath = "/var/log/homegear/";
-					if(_logfilePath[_logfilePath.size() - 1] != '/') _logfilePath.push_back('/');
+					if(_logfilePath.back() != '/') _logfilePath.push_back('/');
 					HelperFunctions::printDebug("Debug: logfilePath set to " + _logfilePath);
 				}
 				else if(name == "prioritizethreads")
@@ -200,6 +201,13 @@ void Settings::load(std::string filename)
 					_clientSettingsPath = value;
 					if(_clientSettingsPath.empty()) _clientSettingsPath = "/etc/homegear/rpcclients.conf";
 					HelperFunctions::printDebug("Debug: clientSettingsPath set to " + _clientSettingsPath);
+				}
+				else if(name == "scriptpath")
+				{
+					_scriptPath = value;
+					if(_scriptPath.empty()) _scriptPath = "/var/lib/homegear/scripts/";
+					if(_scriptPath.back() != '/') _scriptPath.push_back('/');
+					HelperFunctions::printDebug("Debug: scriptPath set to " + _scriptPath);
 				}
 				else if(name == "redirecttosshtunnel")
 				{
