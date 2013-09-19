@@ -1306,9 +1306,23 @@ std::shared_ptr<RPCVariable> RPCRunScript::invoke(std::shared_ptr<std::vector<st
 			wait = parameters->at(2)->booleanValue;
 		}
 
-		std::string command = GD::settings.scriptPath() + filename + " " + arguments;
+		std::string path = GD::settings.scriptPath() + filename;
+		std::string command = path + " " + arguments;
 		if(!wait) command += "&";
 
+		struct stat statStruct;
+		if(stat(path.c_str(), &statStruct) < 0) return RPCVariable::createError(-32400, "Could not execute script: " + std::string(strerror(errno)));
+		int32_t uid = getuid();
+		int32_t gid = getgid();
+		if((statStruct.st_mode & S_IXOTH) == 0)
+		{
+			if(statStruct.st_gid != gid || (statStruct.st_gid == gid && (statStruct.st_mode & S_IXGRP) == 0))
+			{
+				if(statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0)) return RPCVariable::createError(-32400, "Could not execute script. No permission or executable bit is not set.");
+			}
+		}
+		if((statStruct.st_mode & (S_IXGRP | S_IXUSR)) == 0) return RPCVariable::createError(-32400, "Could not execute script. Executable bit is not set for user or group.");
+		if((statStruct.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) return RPCVariable::createError(-32400, "Could not execute script. The file mode is not set to executable.");
 		int32_t exitCode = std::system(command.c_str());
 		int32_t signal = WIFSIGNALED(exitCode);
 		if(signal) return RPCVariable::createError(-32400, "Script exited with signal: " + std::to_string(signal));
