@@ -95,11 +95,17 @@ public:
 protected:
 	bool _disposing = false;
 	int32_t _triggerThreadCount = 0;
-	std::vector<std::shared_ptr<Event>> _timedEvents;
+	std::mutex _eventsMutex;
+	std::map<int32_t, std::shared_ptr<Event>> _timedEvents;
 	std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>> _triggeredEvents;
-	std::vector<std::shared_ptr<Event>> _eventsToReset;
+	std::map<int32_t, std::shared_ptr<Event>> _eventsToReset;
+	bool _stopThread = false;
+	std::thread _mainThread;
+	std::mutex _mainThreadMutex;
 
 	void triggerThreadMultipleVariables(std::string address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
 	void triggerThread(std::string address, std::string variable, std::shared_ptr<RPC::RPCVariable> value);
+	void mainThread();
+	int32_t getNextExecution(int32_t startTime, int32_t recurEvery);
 };
 #endif /* EVENTHANDLER_H_ */

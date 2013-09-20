@@ -31,6 +31,10 @@
 #include "HelperFunctions.h"
 #include "GD.h"
 
+//TODO Thread to reset events to execute timed events
+//TODO Save to database (newEvents and lastRaised and lastValue)
+//TODO Load from database on startup
+
 EventHandler::EventHandler()
 {
 
@@ -40,10 +44,44 @@ EventHandler::EventHandler()
 EventHandler::~EventHandler()
 {
 	_disposing = true;
+	_stopThread = true;
 	uint32_t i = 0;
 	while(_triggerThreadCount > 0 && i < 300)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::milliseconds(100)); //TODO Don't sleep when we processed event
+	}
+	if(_mainThread.joinable()) _mainThread.join();
+}
+
+void EventHandler::mainThread()
+{
+	while(!_stopThread && !_disposing)
+	{
+		try
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+
+
+			_mainThreadMutex.lock();
+			if(_timedEvents.empty() && _eventsToReset.empty()) _stopThread = true;
+			_mainThreadMutex.unlock();
+		}
+		catch(const std::exception& ex)
+		{
+			_mainThreadMutex.unlock();
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(Exception& ex)
+		{
+			_mainThreadMutex.unlock();
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			_mainThreadMutex.unlock();
+			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
 	}
 }
 
@@ -105,28 +143,46 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 						event->resetAfter = resetStruct->structValue->at("RESETAFTER")->integerValue;
 				}
 			}
+			_eventsMutex.lock();
 			_triggeredEvents[event->address][event->variable].push_back(event);
+			_eventsMutex.unlock();
 		}
 		else
 		{
 			if(eventDescription->structValue->find("EVENTTIME") == eventDescription->structValue->end()) return RPC::RPCVariable::createError(-5, "No time specified.");
 			if(eventDescription->structValue->find("RECUREVERY") != eventDescription->structValue->end())
 				event->recurEvery = eventDescription->structValue->at("RECUREVERY")->integerValue;
-			_timedEvents.push_back(event);
+			int32_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
+			_eventsMutex.lock();
+			_timedEvents[nextExecution] = event;
+			_eventsMutex.unlock();
+			_mainThreadMutex.lock();
+			if(_stopThread || !_mainThread.joinable())
+			{
+				_stopThread = false;
+				_mainThread = std::thread(&EventHandler::mainThread, this);
+			}
+			_mainThreadMutex.unlock();
 		}
 
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
+		_eventsMutex.unlock();
+		_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_eventsMutex.unlock();
+    	_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_eventsMutex.unlock();
+    	_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -136,17 +192,22 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::remove(std::string name)
 {
 	try
 	{
+		_eventsMutex.lock();
+		_eventsMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
+		_eventsMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_eventsMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_eventsMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -158,6 +219,7 @@ void EventHandler::trigger(std::string& address, std::shared_ptr<std::vector<std
 	{
 		if(_disposing) return;
 		std::thread t(&EventHandler::triggerThreadMultipleVariables, this, address, variables, values);
+		HelperFunctions::setThreadPriority(t.native_handle(), 44);
 		t.detach();
 	}
 	catch(const std::exception& ex)
@@ -174,12 +236,38 @@ void EventHandler::trigger(std::string& address, std::shared_ptr<std::vector<std
     }
 }
 
+int32_t EventHandler::getNextExecution(int32_t startTime, int32_t recurEvery)
+{
+	try
+	{
+		int32_t time = HelperFunctions::getTimeSeconds();
+		if(startTime >= time) return startTime;
+		if(recurEvery == 0) return -1;
+		int32_t difference = time - startTime;
+		return time + (recurEvery - (difference % recurEvery));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return -1;
+}
+
 void EventHandler::trigger(std::string& address, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value)
 {
 	try
 	{
 		if(_disposing) return;
 		std::thread t(&EventHandler::triggerThread, this, address, variable, value);
+		HelperFunctions::setThreadPriority(t.native_handle(), 44);
 		t.detach();
 	}
 	catch(const std::exception& ex)
@@ -276,20 +364,34 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 					HelperFunctions::printError("Could not execute RPC method for event from address " + address + " and variable " + variable + ". Error struct:");
 					result->print();
 				}
-				else if((*i)->resetAfter > 0 || (*i)->initialTime > 0) _eventsToReset.push_back(*i);
+				else if((*i)->resetAfter > 0 || (*i)->initialTime > 0)
+				{
+					if((*i)->initialTime == 0) _eventsToReset[HelperFunctions::getTimeSeconds() + (*i)->resetAfter] =  *i;
+					else {} //TODO implement
+					_mainThreadMutex.lock();
+					if(_stopThread || !_mainThread.joinable())
+					{
+						_stopThread = false;
+						_mainThread = std::thread(&EventHandler::mainThread, this);
+					}
+					_mainThreadMutex.unlock();
+				}
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
+		_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _triggerThreadCount--;

@@ -59,6 +59,13 @@ public:
 		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	}
 
+	static inline int32_t getTimeSeconds()
+	{
+		int32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();;
+		if(time < 0) time == 0;
+		return time;
+	}
+
 	static inline std::string getTimeString(int64_t time = 0)
 	{
 		const char timeFormat[] = "%x %X";
