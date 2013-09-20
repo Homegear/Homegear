@@ -80,6 +80,105 @@ std::shared_ptr<RPCVariable> RPCVariable::createError(int32_t faultCode, std::st
 	return error;
 }
 
+bool RPCVariable::operator==(const RPCVariable& rhs)
+{
+	if(type != rhs.type) return false;
+	if(type == RPCVariableType::rpcBoolean) return booleanValue == rhs.booleanValue;
+	if(type == RPCVariableType::rpcString) return stringValue == rhs.stringValue;
+	if(type == RPCVariableType::rpcFloat) return floatValue == rhs.floatValue;
+	if(type == RPCVariableType::rpcArray)
+	{
+		if(arrayValue->size() != rhs.arrayValue->size()) return false;
+		for(std::pair<RPCArray::iterator, RPCArray::iterator> i(arrayValue->begin(), rhs.arrayValue->begin()); i.first != arrayValue->end(); ++i.first, ++i.second)
+		{
+			if(*(i.first) != *(i.second)) return false;
+		}
+	}
+	if(type == RPCVariableType::rpcStruct)
+	{
+		if(structValue->size() != rhs.structValue->size()) return false;
+		for(std::pair<RPCStruct::iterator, RPCStruct::iterator> i(structValue->begin(), rhs.structValue->begin()); i.first != structValue->end(); ++i.first, ++i.second)
+		{
+			if(i.first->first != i.first->first || *(i.second->second) != *(i.second->second)) return false;
+		}
+	}
+	if(type == RPCVariableType::rpcBase64) return stringValue == rhs.stringValue;
+	return false;
+}
+
+bool RPCVariable::operator<(const RPCVariable& rhs)
+{
+	if(type == RPCVariableType::rpcBoolean) return booleanValue < rhs.booleanValue;
+	if(type == RPCVariableType::rpcString) return stringValue < rhs.stringValue;
+	if(type == RPCVariableType::rpcFloat) return floatValue < rhs.floatValue;
+	if(type == RPCVariableType::rpcArray)
+	{
+		if(arrayValue->size() < rhs.arrayValue->size()) return true; else return false;
+	}
+	if(type == RPCVariableType::rpcStruct)
+	{
+		if(structValue->size() < rhs.structValue->size()) return true; else return false;
+	}
+	if(type == RPCVariableType::rpcBase64) return stringValue < rhs.stringValue;
+	return false;
+}
+
+bool RPCVariable::operator<=(const RPCVariable& rhs)
+{
+	if(type == RPCVariableType::rpcBoolean) return booleanValue <= rhs.booleanValue;
+	if(type == RPCVariableType::rpcString) return stringValue <= rhs.stringValue;
+	if(type == RPCVariableType::rpcFloat) return floatValue <= rhs.floatValue;
+	if(type == RPCVariableType::rpcArray)
+	{
+		if(arrayValue->size() <= rhs.arrayValue->size()) return true; else return false;
+	}
+	if(type == RPCVariableType::rpcStruct)
+	{
+		if(structValue->size() <= rhs.structValue->size()) return true; else return false;
+	}
+	if(type == RPCVariableType::rpcBase64) return stringValue <= rhs.stringValue;
+	return false;
+}
+
+bool RPCVariable::operator>(const RPCVariable& rhs)
+{
+	if(type == RPCVariableType::rpcBoolean) return booleanValue > rhs.booleanValue;
+	if(type == RPCVariableType::rpcString) return stringValue > rhs.stringValue;
+	if(type == RPCVariableType::rpcFloat) return floatValue > rhs.floatValue;
+	if(type == RPCVariableType::rpcArray)
+	{
+		if(arrayValue->size() > rhs.arrayValue->size()) return true; else return false;
+	}
+	if(type == RPCVariableType::rpcStruct)
+	{
+		if(structValue->size() > rhs.structValue->size()) return true; else return false;
+	}
+	if(type == RPCVariableType::rpcBase64) return stringValue > rhs.stringValue;
+	return false;
+}
+
+bool RPCVariable::operator>=(const RPCVariable& rhs)
+{
+	if(type == RPCVariableType::rpcBoolean) return booleanValue >= rhs.booleanValue;
+	if(type == RPCVariableType::rpcString) return stringValue >= rhs.stringValue;
+	if(type == RPCVariableType::rpcFloat) return floatValue >= rhs.floatValue;
+	if(type == RPCVariableType::rpcArray)
+	{
+		if(arrayValue->size() >= rhs.arrayValue->size()) return true; else return false;
+	}
+	if(type == RPCVariableType::rpcStruct)
+	{
+		if(structValue->size() >= rhs.structValue->size()) return true; else return false;
+	}
+	if(type == RPCVariableType::rpcBase64) return stringValue >= rhs.stringValue;
+	return false;
+}
+
+bool RPCVariable::operator!=(const RPCVariable& rhs)
+{
+	return !(operator==(rhs));
+}
+
 void RPCVariable::print()
 {
 	try

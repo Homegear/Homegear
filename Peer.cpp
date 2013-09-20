@@ -2563,7 +2563,9 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			for(std::map<uint32_t, std::shared_ptr<std::vector<std::string>>>::const_iterator j = valueKeys.begin(); j != valueKeys.end(); ++j)
 			{
 				if(j->second->empty()) continue;
-				GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(j->first), j->second, rpcValues.at(j->first));
+				std::string address(_serialNumber + ":" + std::to_string(j->first));
+				GD::eventHandler.trigger(address, j->second, rpcValues.at(j->first));
+				GD::rpcClient.broadcastEvent(address, j->second, rpcValues.at(j->first));
 			}
 		}
 		if(resendPacket && sentPacket)

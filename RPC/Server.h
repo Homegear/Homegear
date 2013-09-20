@@ -34,6 +34,7 @@
 #include <string>
 
 #include "ServerSettings.h"
+#include "RPCVariable.h"
 
 namespace RPC {
 
@@ -48,6 +49,7 @@ public:
 	void start(std::shared_ptr<ServerSettings::Settings>& settings);
 	void stop();
 	uint32_t connectionCount();
+	std::shared_ptr<RPCVariable> callMethod(std::string methodName, std::shared_ptr<RPCVariable> parameters);
 protected:
 	std::shared_ptr<RPCServer> _server;
 };

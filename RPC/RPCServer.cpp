@@ -346,7 +346,6 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::shared_ptr<std::
 {
 	try
 	{
-		//HelperFunctions::printBinary(packet);
 		std::string methodName;
 		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters;
 		if(packetType == PacketType::Enum::binaryRequest) parameters = _rpcDecoder.decodeRequest(packet, methodName);
@@ -370,12 +369,7 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::shared_ptr<std::
 				(*i)->print();
 			}
 		}
-		if(_rpcMethods->find(methodName) != _rpcMethods->end()) callMethod(client, methodName, parameters, responseType, keepAlive);
-		else
-		{
-			HelperFunctions::printError("Warning: RPC method not found: " + methodName);
-			sendRPCResponseToClient(client, RPCVariable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
-		}
+		callMethod(client, methodName, parameters, responseType, keepAlive);
 	}
 	catch(const std::exception& ex)
     {
@@ -434,10 +428,48 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
     }
 }
 
+std::shared_ptr<RPCVariable> RPCServer::callMethod(std::string& methodName, std::shared_ptr<RPCVariable>& parameters)
+{
+	try
+	{
+		if(!parameters) parameters = std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
+		if(_rpcMethods->find(methodName) == _rpcMethods->end())
+		{
+			HelperFunctions::printError("Warning: RPC method not found: " + methodName);
+			return RPCVariable::createError(-32601, ": Requested method not found.");
+		}
+		std::shared_ptr<RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters->arrayValue);
+		if(GD::debugLevel >= 5)
+		{
+			HelperFunctions::printDebug("Response: ");
+			ret->print();
+		}
+		return ret;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPCVariable::createError(-32500, ": Unknown application error.");
+}
+
 void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive)
 {
 	try
 	{
+		if(_rpcMethods->find(methodName) == _rpcMethods->end())
+		{
+			HelperFunctions::printError("Warning: RPC method not found: " + methodName);
+			sendRPCResponseToClient(client, RPCVariable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
+		}
 		std::shared_ptr<RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters);
 		if(GD::debugLevel >= 5)
 		{

@@ -78,6 +78,12 @@ public:
 	void print();
 	static std::string getTypeString(RPCVariableType type);
 	static std::shared_ptr<RPCVariable> fromString(std::string value, RPCVariableType type);
+	bool operator==(const RPCVariable& rhs);
+	bool operator<(const RPCVariable& rhs);
+	bool operator<=(const RPCVariable& rhs);
+	bool operator>(const RPCVariable& rhs);
+	bool operator>=(const RPCVariable& rhs);
+	bool operator!=(const RPCVariable& rhs);
 private:
 	void print(std::shared_ptr<RPCVariable>, std::string indent);
 	void printStruct(std::shared_ptr<std::map<std::string, std::shared_ptr<RPCVariable>>> rpcStruct, std::string indent);

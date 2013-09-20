@@ -101,6 +101,7 @@ namespace RPC
 			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
 			uint32_t connectionCount();
+			std::shared_ptr<RPCVariable> callMethod(std::string& methodName, std::shared_ptr<RPCVariable>& parameters);
 		protected:
 		private:
 			std::shared_ptr<ServerSettings::Settings> _settings;

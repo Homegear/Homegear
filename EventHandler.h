@@ -33,6 +33,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <mutex>
 
 #include "Exception.h"
 #include "Database.h"
@@ -62,17 +63,20 @@ public:
 	std::string address;
 	std::string variable;
 	Trigger::Enum trigger = Trigger::Enum::none;
+	std::shared_ptr<RPC::RPCVariable> triggerValue;
 	std::string eventMethod;
 	std::shared_ptr<RPC::RPCVariable> eventMethodParameters;
 	uint32_t resetAfter = 0;
 	uint32_t initialTime = 0;
-	Operation::Enum incrementOperator = Operation::Enum::none;
-	double incrementBy = 0;
-	uint32_t maxTime = 0;
+	Operation::Enum operation = Operation::Enum::none;
+	double factor = 0;
+	uint32_t limit = 0;
 	std::string resetMethod;
 	std::shared_ptr<RPC::RPCVariable> resetMethodParameters;
 	uint32_t eventTime = 0;
-	uint32_t recurAfter = 0;
+	uint32_t recurEvery = 0;
+	std::shared_ptr<RPC::RPCVariable> lastValue;
+	int64_t lastRaised = 0;
 
 	Event() {}
 	virtual ~Event() {}
@@ -86,8 +90,16 @@ public:
 
 	std::shared_ptr<RPC::RPCVariable> add(std::shared_ptr<RPC::RPCVariable> eventDescription);
 	std::shared_ptr<RPC::RPCVariable> remove(std::string name);
+	void trigger(std::string& address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	void trigger(std::string& address, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value);
 protected:
+	bool _disposing = false;
+	int32_t _triggerThreadCount = 0;
 	std::vector<std::shared_ptr<Event>> _timedEvents;
 	std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>> _triggeredEvents;
+	std::vector<std::shared_ptr<Event>> _eventsToReset;
+
+	void triggerThreadMultipleVariables(std::string address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	void triggerThread(std::string address, std::string variable, std::shared_ptr<RPC::RPCVariable> value);
 };
 #endif /* EVENTHANDLER_H_ */

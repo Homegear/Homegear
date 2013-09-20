@@ -68,6 +68,11 @@ void startRPCServers()
 		HelperFunctions::printInfo(info);
 		GD::rpcServers[i].start(settings);
 	}
+	if(GD::rpcServers.size() == 0)
+	{
+		HelperFunctions::printCritical("Critical: No RPC servers are running. Terminating Homegear.");
+		exit(1);
+	}
 }
 
 void stopRPCServers()
@@ -468,6 +473,6 @@ int main(int argc, char* argv[])
 	{
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	terminate(15);
+	terminate(SIGTERM);
     return 1;
 }

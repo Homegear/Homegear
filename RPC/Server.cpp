@@ -97,6 +97,11 @@ uint32_t Server::connectionCount()
 	if(_server) return _server->connectionCount(); else return 0;
 }
 
+std::shared_ptr<RPCVariable> Server::callMethod(std::string methodName, std::shared_ptr<RPCVariable> parameters)
+{
+	return _server->callMethod(methodName, parameters);
+}
+
 void Server::start(std::shared_ptr<ServerSettings::Settings>& settings)
 {
 	registerMethods();
