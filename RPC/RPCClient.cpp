@@ -126,9 +126,9 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		}
 		if(returnValue->errorStruct)
 		{
-			if(returnValue->structValue->size() == 2)
+			if(returnValue->structValue->find("faultCode") != returnValue->structValue->end() && returnValue->structValue->find("faultString") != returnValue->structValue->end())
 			{
-				HelperFunctions::printError("Error reading response from XML RPC server " + server->address.first + " on port " + server->address.second + ". Fault code: " + std::to_string(returnValue->structValue->at(0)->integerValue) + ". Fault string: " + returnValue->structValue->at(1)->stringValue);
+				HelperFunctions::printError("Error reading response from XML RPC server " + server->address.first + " on port " + server->address.second + ". Fault code: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + ". Fault string: " + returnValue->structValue->at("faultString")->stringValue);
 			}
 			else
 			{

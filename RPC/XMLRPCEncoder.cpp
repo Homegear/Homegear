@@ -226,13 +226,14 @@ void XMLRPCEncoder::encodeStruct(xml_document<>* doc, xml_node<>* node, std::sha
 		xml_node<> *structNode = doc->allocate_node(node_element, "struct");
 		node->append_node(structNode);
 
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
+		for(RPCStruct::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
 		{
+			if(i->first.empty() || !i->second) continue;
 			xml_node<> *memberNode = doc->allocate_node(node_element, "member");
 			structNode->append_node(memberNode);
-			xml_node<> *nameNode = doc->allocate_node(node_element, "name", (*i)->name.c_str());
+			xml_node<> *nameNode = doc->allocate_node(node_element, "name", i->first.c_str());
 			memberNode->append_node(nameNode);
-			encodeVariable(doc, memberNode, *i);
+			encodeVariable(doc, memberNode, i->second);
 		}
 	}
 	catch(const std::exception& ex)

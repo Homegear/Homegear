@@ -903,8 +903,8 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<Peer> peer, int
 		std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		if(peer->getDeviceType() == HMDeviceTypes::HMRC19 || peer->getDeviceType() == HMDeviceTypes::HMRC19B || peer->getDeviceType() == HMDeviceTypes::HMRC19SW)
 		{
-			paramset->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LCD_SYMBOL", 2)));
-			paramset->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LCD_LEVEL_INTERP", 1)));
+			paramset->structValue->insert(RPC::RPCStructElement("LCD_SYMBOL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(2))));
+			paramset->structValue->insert(RPC::RPCStructElement("LCD_LEVEL_INTERP", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(1))));
 		}
 
 		std::vector<uint8_t> payload;
@@ -1620,8 +1620,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 								peer->saveParameter(parameter->databaseID, type, channel, (*i)->id, parameter->data);
 								if(!peer->getPairingComplete() && (*i)->logicalParameter->enforce)
 								{
-									parametersToEnforce->structValue->push_back((*i)->logicalParameter->getEnforceValue());
-									parametersToEnforce->structValue->back()->name = (*i)->id;
+									parametersToEnforce->structValue->insert(RPC::RPCStructElement((*i)->id, (*i)->logicalParameter->getEnforceValue()));
 								}
 								if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was set to 0x" + HelperFunctions::getHexString(peer->configCentral[channel][(*i)->id].data) + ".");
 							}
@@ -1676,8 +1675,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 									configParam->data.at(index - (*j)->physicalParameter->startIndex) = data;
 									if(!peer->getPairingComplete() && (*j)->logicalParameter->enforce)
 									{
-										parametersToEnforce->structValue->push_back((*j)->logicalParameter->getEnforceValue());
-										parametersToEnforce->structValue->back()->name = (*j)->id;
+										parametersToEnforce->structValue->insert(RPC::RPCStructElement((*j)->id, (*j)->logicalParameter->getEnforceValue()));
 									}
 									peer->saveParameter(configParam->databaseID, type, channel, (*j)->id, configParam->data, remoteAddress, remoteChannel);
 									if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*j)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*j)->physicalParameter->index) + " and packet index " + std::to_string(position) + " was set to 0x" + HelperFunctions::getHexString(data) + ".");
@@ -2199,8 +2197,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 			std::unordered_map<std::string, RPCConfigurationParameter>* linkConfig = &sender->linksCentral.at(senderChannelIndex).at(receiver->getAddress()).at(receiverChannelIndex);
 			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator i = linkConfig->begin(); i != linkConfig->end(); ++i)
 			{
-				paramset->structValue->push_back(i->second.rpcParameter->convertFromPacket(i->second.data));
-				paramset->structValue->back()->name = i->first;
+				paramset->structValue->insert(RPC::RPCStructElement(i->first, i->second.rpcParameter->convertFromPacket(i->second.data)));
 			}
 			//putParamset pushes the packets on pendingQueues, but does not send immediately
 			sender->putParamset(senderChannelIndex, RPC::ParameterSet::Type::Enum::link, receiverSerialNumber, receiverChannelIndex, paramset, true, true);
@@ -2214,8 +2211,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 					std::shared_ptr<RPC::Parameter> parameter = linkset->getParameter((*i)->id);
 					if(parameter)
 					{
-						paramset->structValue->push_back((*i)->getValue(parameter->logicalParameter->type));
-						paramset->structValue->back()->name = (*i)->id;
+						paramset->structValue->insert(RPC::RPCStructElement((*i)->id, (*i)->getValue(parameter->logicalParameter->type)));
 					}
 				}
 				//putParamset pushes the packets on pendingQueues, but does not send immediately
@@ -2283,8 +2279,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 			std::unordered_map<std::string, RPCConfigurationParameter>* linkConfig = &receiver->linksCentral.at(receiverChannelIndex).at(sender->getAddress()).at(senderChannelIndex);
 			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator i = linkConfig->begin(); i != linkConfig->end(); ++i)
 			{
-				paramset->structValue->push_back(i->second.rpcParameter->convertFromPacket(i->second.data));
-				paramset->structValue->back()->name = i->first;
+				paramset->structValue->insert(RPC::RPCStructElement(i->first, i->second.rpcParameter->convertFromPacket(i->second.data)));
 			}
 			//putParamset pushes the packets on pendingQueues, but does not send immediately
 			receiver->putParamset(receiverChannelIndex, RPC::ParameterSet::Type::Enum::link, senderSerialNumber, senderChannelIndex, paramset, true, true);
@@ -2298,8 +2293,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 					std::shared_ptr<RPC::Parameter> parameter = linkset->getParameter((*i)->id);
 					if(parameter)
 					{
-						paramset->structValue->push_back((*i)->getValue(parameter->logicalParameter->type));
-						paramset->structValue->back()->name = (*i)->id;
+						paramset->structValue->insert(RPC::RPCStructElement((*i)->id, (*i)->getValue(parameter->logicalParameter->type)));
 					}
 				}
 				//putParamset pushes the packets on pendingQueues, but does not send immediately
@@ -2968,7 +2962,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string seri
 		if(serialNumber == "BidCoS-RF" && channel == 0 && type == RPC::ParameterSet::Type::Enum::master)
 		{
 			std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-			paramset->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("AES_KEY", 1)));
+			paramset->structValue->insert(RPC::RPCStructElement("AES_KEY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(1))));
 			return paramset;
 		}
 		else

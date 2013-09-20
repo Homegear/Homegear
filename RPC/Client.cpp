@@ -83,10 +83,9 @@ void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vect
 			{
 				method.reset(new RPCVariable(RPCVariableType::rpcStruct));
 				array->arrayValue->push_back(method);
-				method->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("methodName", methodName)));
+				method->structValue->insert(RPCStructElement("methodName", std::shared_ptr<RPCVariable>(new RPCVariable(methodName))));
 				std::shared_ptr<RPCVariable> params(new RPCVariable(RPCVariableType::rpcArray));
-				method->structValue->push_back(params);
-				params->name = "params";
+				method->structValue->insert(RPCStructElement("params", params));
 				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
 				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(deviceAddress)));
 				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(valueKeys->at(i))));
@@ -179,16 +178,17 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 			if((*i)->type == RPCVariableType::rpcStruct)
 			{
 				std::pair<std::string, int32_t> device;
-				for(std::vector<std::shared_ptr<RPCVariable>>::iterator j = (*i)->structValue->begin(); j != (*i)->structValue->end(); ++j)
+				for(RPCStruct::iterator j = (*i)->structValue->begin(); j != (*i)->structValue->end(); ++j)
 				{
-					if((*j)->name == "ADDRESS")
+					if(!j->second) continue;
+					if(j->first == "ADDRESS")
 					{
-						device.first = (*j)->stringValue;
+						device.first = j->second->stringValue;
 						if(device.first.empty()) break;
 					}
-					else if((*j)->name == "VERSION")
+					else if(j->first == "VERSION")
 					{
-						device.second = (*j)->integerValue;
+						device.second = j->second->integerValue;
 					}
 				}
 				server->knownDevices->insert(device);

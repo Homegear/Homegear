@@ -284,8 +284,7 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeStruct(xml_node<>* structNode)
 			subNode = subNode->next_sibling("value");
 			if(subNode == nullptr) continue;
 			std::shared_ptr<RPCVariable> element = decodeParameter(subNode);
-			element->name = name;
-			rpcStruct->structValue->push_back(element);
+			rpcStruct->structValue->insert(RPCStructElement(name, element));
 		}
 	}
 	catch(const std::exception& ex)

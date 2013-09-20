@@ -48,3 +48,4 @@ bool GD::bigEndian = false;
 Settings GD::settings;
 RPC::ServerSettings GD::serverSettings;
 RPC::ClientSettings GD::clientSettings;
+EventHandler GD::eventHandler;

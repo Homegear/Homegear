@@ -75,12 +75,8 @@ std::shared_ptr<RPCVariable> RPCVariable::createError(int32_t faultCode, std::st
 {
 	std::shared_ptr<RPCVariable> error(new RPCVariable(RPCVariableType::rpcStruct));
 	error->errorStruct = true;
-	error->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger)));
-	error->structValue->back()->name = "faultCode";
-	error->structValue->back()->integerValue = faultCode;
-	error->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcString)));
-	error->structValue->back()->name = "faultString";
-	error->structValue->back()->stringValue = faultString;
+	error->structValue->insert(RPCStructElement("faultCode", std::shared_ptr<RPCVariable>(new RPCVariable(faultCode))));
+	error->structValue->insert(RPCStructElement("faultString", std::shared_ptr<RPCVariable>(new RPCVariable(faultString))));
 	return error;
 }
 
@@ -224,7 +220,7 @@ void RPCVariable::printArray(std::shared_ptr<std::vector<std::shared_ptr<RPCVari
     }
 }
 
-void RPCVariable::printStruct(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> rpcStruct, std::string indent)
+void RPCVariable::printStruct(std::shared_ptr<std::map<std::string, std::shared_ptr<RPCVariable>>> rpcStruct, std::string indent)
 {
 	try
 	{
@@ -232,10 +228,10 @@ void RPCVariable::printStruct(std::shared_ptr<std::vector<std::shared_ptr<RPCVar
 		std::string currentIndent = indent;
 		currentIndent.push_back(' ');
 		currentIndent.push_back(' ');
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = rpcStruct->begin(); i != rpcStruct->end(); ++i)
+		for(std::map<std::string, std::shared_ptr<RPCVariable>>::iterator i = rpcStruct->begin(); i != rpcStruct->end(); ++i)
 		{
-			std::cout << currentIndent << "[" << (*i)->name << "]" << std::endl << currentIndent << "{" << std::endl;
-			print(*i, currentIndent + "  ");
+			std::cout << currentIndent << "[" << i->first << "]" << std::endl << currentIndent << "{" << std::endl;
+			print(i->second, currentIndent + "  ");
 			std::cout << currentIndent << "}" << std::endl;
 		}
 		std::cout << indent << "}" << std::endl;

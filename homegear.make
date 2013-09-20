@@ -101,6 +101,7 @@ OBJECTS := \
 	$(OBJDIR)/BinaryDecoder.o \
 	$(OBJDIR)/BidCoSQueueManager.o \
 	$(OBJDIR)/HomeMaticDevices.o \
+	$(OBJDIR)/EventHandler.o \
 	$(OBJDIR)/HelperFunctions.o \
 	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/BidCoSQueue.o \
@@ -228,6 +229,9 @@ $(OBJDIR)/BidCoSQueueManager.o: BidCoSQueueManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HomeMaticDevices.o: HomeMaticDevices.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/EventHandler.o: EventHandler.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HelperFunctions.o: HelperFunctions.cpp

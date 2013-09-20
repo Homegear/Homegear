@@ -44,22 +44,19 @@ std::shared_ptr<RPCVariable> RPCSystemGetCapabilities::invoke(std::shared_ptr<st
 		std::shared_ptr<RPCVariable> capabilities(new RPCVariable(RPCVariableType::rpcStruct));
 
 		std::shared_ptr<RPCVariable> element(new RPCVariable(RPCVariableType::rpcStruct));
-		element->name = "xmlrpc";
-		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specUrl", std::string("http://www.xmlrpc.com/spec"))));
-		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specVersion", 1)));
-		capabilities->structValue->push_back(element);
+		element->structValue->insert(RPCStructElement("specUrl", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("http://www.xmlrpc.com/spec")))));
+		element->structValue->insert(RPCStructElement("specVersion", std::shared_ptr<RPCVariable>(new RPCVariable(1))));
+		capabilities->structValue->insert(RPCStructElement("xmlrpc", element));
 
 		element.reset(new RPCVariable(RPCVariableType::rpcStruct));
-		element->name = "faults_interop";
-		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specUrl", std::string("http://xmlrpc-epi.sourceforge.net/specs/rfc.fault_codes.php"))));
-		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specVersion", 20010516)));
-		capabilities->structValue->push_back(element);
+		element->structValue->insert(RPCStructElement("specUrl", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("http://xmlrpc-epi.sourceforge.net/specs/rfc.fault_codes.php")))));
+		element->structValue->insert(RPCStructElement("specVersion", std::shared_ptr<RPCVariable>(new RPCVariable(20010516))));
+		capabilities->structValue->insert(RPCStructElement("faults_interop", element));
 
 		element.reset(new RPCVariable(RPCVariableType::rpcStruct));
-		element->name = "introspection";
-		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specUrl", std::string("http://scripts.incutio.com/xmlrpc/introspection.html"))));
-		element->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("specVersion", 1)));
-		capabilities->structValue->push_back(element);
+		element->structValue->insert(RPCStructElement("specUrl", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("http://scripts.incutio.com/xmlrpc/introspection.html")))));
+		element->structValue->insert(RPCStructElement("specVersion", std::shared_ptr<RPCVariable>(new RPCVariable(1))));
+		capabilities->structValue->insert(RPCStructElement("introspection", element));
 
 		return capabilities;
 	}
@@ -202,18 +199,18 @@ std::shared_ptr<RPCVariable> RPCSystemMulticall::invoke(std::shared_ptr<std::vec
 				returns->arrayValue->push_back(RPCVariable::createError(-32602, "Struct has wrong size."));
 				continue;
 			}
-			if((*i)->structValue->at(0)->name != "methodName" || (*i)->structValue->at(0)->type != RPCVariableType::rpcString)
+			if((*i)->structValue->find("methodName") == (*i)->structValue->end() || (*i)->structValue->at("methodName")->type != RPCVariableType::rpcString)
 			{
 				returns->arrayValue->push_back(RPCVariable::createError(-32602, "No method name provided."));
 				continue;
 			}
-			if((*i)->structValue->at(1)->name != "params" || (*i)->structValue->at(1)->type != RPCVariableType::rpcArray)
+			if((*i)->structValue->find("params") == (*i)->structValue->end() || (*i)->structValue->at("params")->type != RPCVariableType::rpcArray)
 			{
 				returns->arrayValue->push_back(RPCVariable::createError(-32602, "No parameters provided."));
 				continue;
 			}
 			std::string methodName = (*i)->structValue->at(0)->stringValue;
-			std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters = (*i)->structValue->at(1)->arrayValue;
+			std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters = (*i)->structValue->at("params")->arrayValue;
 
 			if(methodName == "system.multicall") returns->arrayValue->push_back(RPCVariable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
 			else if(methods->find(methodName) == methods->end()) returns->arrayValue->push_back(RPCVariable::createError(-32601, "Requested method not found."));
@@ -261,6 +258,30 @@ std::shared_ptr<RPCVariable> RPCAddDevice::invoke(std::shared_ptr<std::vector<st
 		}
 
 		return central->addDevice(serialNumber);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPCVariable> RPCAddEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcStruct }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::eventHandler.add(parameters->at(0));
 	}
 	catch(const std::exception& ex)
     {
@@ -431,8 +452,7 @@ std::shared_ptr<RPCVariable> RPCGetAllMetadata::invoke(std::shared_ptr<std::vect
 		{
 			if(i->second.size() < 2) continue;
 			std::shared_ptr<RPCVariable> metadata = _rpcDecoder.decodeResponse(i->second.at(1)->binaryValue, 8);
-			metadata->name = i->second.at(0)->textValue;
-			metadataStruct->structValue->push_back(metadata);
+			metadataStruct->structValue->insert(RPCStructElement(i->second.at(0)->textValue, metadata));
 		}
 
 		//getAllMetadata is called repetitively for all central peers. That takes a lot of ressources, so we wait a little after each call.
@@ -1058,10 +1078,10 @@ std::shared_ptr<RPCVariable> RPCListBidcosInterfaces::invoke(std::shared_ptr<std
 		std::shared_ptr<RPCVariable> array(new RPCVariable(RPCVariableType::rpcArray));
 		std::shared_ptr<RPCVariable> interface(new RPCVariable(RPCVariableType::rpcStruct));
 		array->arrayValue->push_back(interface);
-		interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("ADDRESS", central->getSerialNumber())));
-		interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("DESCRIPTION", std::string("Homegear default interface"))));
-		interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("CONNECTED", GD::rfDevice->isOpen())));
-		interface->structValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable("DEFAULT", true)));
+		interface->structValue->insert(RPCStructElement("ADDRESS", std::shared_ptr<RPCVariable>(new RPCVariable(central->getSerialNumber()))));
+		interface->structValue->insert(RPCStructElement("DESCRIPTION", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("Homegear default interface")))));
+		interface->structValue->insert(RPCStructElement("CONNECTED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::rfDevice->isOpen()))));
+		interface->structValue->insert(RPCStructElement("DEFAULT", std::shared_ptr<RPCVariable>(new RPCVariable(true))));
 		return array;
 	}
 	catch(const std::exception& ex)
@@ -1321,7 +1341,8 @@ std::shared_ptr<RPCVariable> RPCRunScript::invoke(std::shared_ptr<std::vector<st
 				if(statStruct.st_uid != uid || (statStruct.st_uid == uid && (statStruct.st_mode & S_IXUSR) == 0)) return RPCVariable::createError(-32400, "Could not execute script. No permission or executable bit is not set.");
 			}
 		}
-		if((statStruct.st_mode & (S_IXGRP | S_IXUSR)) == 0) return RPCVariable::createError(-32400, "Could not execute script. Executable bit is not set for user or group.");
+		if((statStruct.st_mode & (S_IXGRP | S_IXUSR)) == 0) //At least in Debian it is not possible to execute scripts, when the execution bit is only set for "other".
+			return RPCVariable::createError(-32400, "Could not execute script. Executable bit is not set for user or group.");
 		if((statStruct.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0) return RPCVariable::createError(-32400, "Could not execute script. The file mode is not set to executable.");
 		int32_t exitCode = std::system(command.c_str());
 		int32_t signal = WIFSIGNALED(exitCode);

@@ -2617,11 +2617,11 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 
 		if(channel == -1) //Base device
 		{
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", _serialNumber)));
+			description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
-			RPC::RPCVariable* variable = description->structValue->back().get();
-			variable->name = "CHILDREN";
+			std::shared_ptr<RPC::RPCVariable> variable = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			description->structValue->insert(RPC::RPCStructElement("CHILDREN", variable));
+
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 			{
 				if(i->second->hidden) continue;
@@ -2633,33 +2633,32 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 				std::ostringstream stringStream;
 				stringStream << std::setw(2) << std::hex << (int32_t)_firmwareVersion << std::dec;
 				std::string firmware = stringStream.str();
-				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", firmware.substr(0, 1) + "." + firmware.substr(1))));
+				description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(firmware.substr(0, 1) + "." + firmware.substr(1)))));
 			}
 			else
 			{
-				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FIRMWARE", std::string("?"))));
+				description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("?")))));
 			}
 
 			int32_t uiFlags = (int32_t)rpcDevice->uiFlags;
 			if(isTeam()) uiFlags |= RPC::Device::UIFlags::dontdelete;
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", uiFlags)));
+			description->structValue->insert(RPC::RPCStructElement("FLAGS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(uiFlags))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INTERFACE", GD::devices.getCentral()->getSerialNumber())));
+			description->structValue->insert(RPC::RPCStructElement("INTERFACE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::devices.getCentral()->getSerialNumber()))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
-			variable = description->structValue->back().get();
-			variable->name = "PARAMSETS";
+			variable = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			description->structValue->insert(RPC::RPCStructElement("PARAMSETS", variable));
 			variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("MASTER")))); //Always MASTER
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", std::string(""))));
+			description->structValue->insert(RPC::RPCStructElement("PARENT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("")))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RF_ADDRESS", std::to_string(_address))));
+			description->structValue->insert(RPC::RPCStructElement("RF_ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::to_string(_address)))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ROAMING", 0)));
+			description->structValue->insert(RPC::RPCStructElement("ROAMING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(0))));
 
-			if(!type.empty()) description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", type)));
+			if(!type.empty()) description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(type))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
+			description->structValue->insert(RPC::RPCStructElement("VERSION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcDevice->version))));
 		}
 		else
 		{
@@ -2667,14 +2666,14 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 			std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
 			if(rpcChannel->hidden) return description;
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ADDRESS", _serialNumber + ":" + std::to_string(channel))));
+			description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 
 			int32_t aesActive = 0;
 			if(configCentral.find(channel) != configCentral.end() && configCentral.at(channel).find("AES_ACTIVE") != configCentral.at(channel).end() && !configCentral.at(channel).at("AES_ACTIVE").data.empty() && configCentral.at(channel).at("AES_ACTIVE").data.at(0) != 0)
 			{
 				aesActive = 1;
 			}
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("AES_ACTIVE", aesActive)));
+			description->structValue->insert(RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(aesActive))));
 
 			int32_t direction = 0;
 			std::ostringstream linkSourceRoles;
@@ -2705,27 +2704,26 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 
 			//Overwrite direction when manually set
 			if(rpcChannel->direction != RPC::DeviceChannel::Direction::Enum::none) direction = (int32_t)rpcChannel->direction;
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DIRECTION", direction)));
+			description->structValue->insert(RPC::RPCStructElement("DIRECTION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(direction))));
 
 			int32_t uiFlags = (int32_t)rpcChannel->uiFlags;
 			if(isTeam()) uiFlags |= RPC::DeviceChannel::UIFlags::dontdelete;
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", uiFlags)));
+			description->structValue->insert(RPC::RPCStructElement("FLAGS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(uiFlags))));
 
 			int32_t groupedWith = getChannelGroupedWith(channel);
 			if(groupedWith > -1)
 			{
-				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("GROUP", _serialNumber + ":" + std::to_string(groupedWith))));
+				description->structValue->insert(RPC::RPCStructElement("GROUP", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(groupedWith)))));
 			}
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("INDEX", channel)));
+			description->structValue->insert(RPC::RPCStructElement("INDEX", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(channel))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LINK_SOURCE_ROLES", linkSourceRoles.str())));
+			description->structValue->insert(RPC::RPCStructElement("LINK_SOURCE_ROLES", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(linkSourceRoles.str()))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("LINK_TARGET_ROLES", linkTargetRoles.str())));
+			description->structValue->insert(RPC::RPCStructElement("LINK_TARGET_ROLES", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(linkTargetRoles.str()))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray)));
-			RPC::RPCVariable* variable = description->structValue->back().get();
-			variable->name = "PARAMSETS";
+			std::shared_ptr<RPC::RPCVariable> variable = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			description->structValue->insert(RPC::RPCStructElement("PARAMSETS", variable));
 			for(std::map<RPC::ParameterSet::Type::Enum, std::shared_ptr<RPC::ParameterSet>>::iterator j = rpcChannel->parameterSets.begin(); j != rpcChannel->parameterSets.end(); ++j)
 			{
 				variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second->typeString())));
@@ -2734,35 +2732,34 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 			//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::master) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::master)->typeString())));
 			//if(rpcChannel->parameterSets.find(RPC::ParameterSet::Type::Enum::values) != rpcChannel->parameterSets.end()) variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->parameterSets.at(RPC::ParameterSet::Type::Enum::values)->typeString())));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT", _serialNumber)));
+			description->structValue->insert(RPC::RPCStructElement("PARENT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber))));
 
-			if(!type.empty()) description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("PARENT_TYPE", type)));
+			if(!type.empty()) description->structValue->insert(RPC::RPCStructElement("PARENT_TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(type))));
 
 			if(!teamChannels.empty() && !rpcChannel->teamTag.empty())
 			{
 				std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-				array->name = "TEAM_CHANNELS";
 				for(std::vector<std::pair<std::string, uint32_t>>::iterator j = teamChannels.begin(); j != teamChannels.end(); ++j)
 				{
 					array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first + ":" + std::to_string(j->second))));
 				}
-				description->structValue->push_back(array);
+				description->structValue->insert(RPC::RPCStructElement("TEAM_CHANNELS", array));
 			}
 
 			if(!_team.serialNumber.empty() && rpcChannel->hasTeam)
 			{
-				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM", _team.serialNumber)));
+				description->structValue->insert(RPC::RPCStructElement("TEAM", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_team.serialNumber))));
 
-				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM_TAG", rpcChannel->teamTag)));
+				description->structValue->insert(RPC::RPCStructElement("TEAM_TAG", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->teamTag))));
 			}
 			else if(!_serialNumber.empty() && _serialNumber[0] == '*' && !rpcChannel->teamTag.empty())
 			{
-				description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TEAM_TAG", rpcChannel->teamTag)));
+				description->structValue->insert(RPC::RPCStructElement("TEAM_TAG", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->teamTag))));
 			}
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("TYPE", rpcChannel->type)));
+			description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcChannel->type))));
 
-			description->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VERSION", rpcDevice->version)));
+			description->structValue->insert(RPC::RPCStructElement("VERSION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcDevice->version))));
 		}
 		return description;
 	}
@@ -2853,7 +2850,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(type == RPC::ParameterSet::Type::none) type = RPC::ParameterSet::Type::link;
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
-		if(variables->structValue->empty() || variables->structValue->front()->name.empty()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+		if(variables->structValue->empty()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 
 		if(type == RPC::ParameterSet::Type::Enum::master)
 		{
@@ -2861,14 +2858,14 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			//allParameters is necessary to temporarily store all values. It is used to set changedParameters.
 			//This is necessary when there are multiple variables per index and not all of them are changed.
 			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> allParameters;
-			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
+			for(RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
-				if((*i)->name.empty()) continue;
+				if(i->first.empty() || !i->second) continue;
 				std::vector<uint8_t> value;
-				if(configCentral[channel].find((*i)->name) == configCentral[channel].end()) continue;
-				RPCConfigurationParameter* parameter = &configCentral[channel][(*i)->name];
+				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
+				RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
 				if(!parameter->rpcParameter) continue;
-				value = parameter->rpcParameter->convertToPacket(*i);
+				value = parameter->rpcParameter->convertToPacket(i->second);
 				std::vector<uint8_t> shiftedValue = value;
 				parameter->rpcParameter->adjustBitPosition(shiftedValue);
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
@@ -2889,7 +2886,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
 				saveParameter(parameter->databaseID, parameter->data);
-				HelperFunctions::printInfo("Info: Parameter " + (*i)->name + " of device 0x" + HelperFunctions::getHexString(_address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
+				HelperFunctions::printInfo("Info: Parameter " + i->first + " of device 0x" + HelperFunctions::getHexString(_address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
@@ -2974,10 +2971,10 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 		}
 		else if(type == RPC::ParameterSet::Type::Enum::values)
 		{
-			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
+			for(RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
-				if((*i)->name.empty()) continue;
-				setValue(channel, (*i)->name, (*i));
+				if(i->first.empty() || !i->second) continue;
+				setValue(channel, i->first, i->second);
 			}
 		}
 		else if(type == RPC::ParameterSet::Type::Enum::link)
@@ -2992,14 +2989,14 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			//allParameters is necessary to temporarily store all values. It is used to set changedParameters.
 			//This is necessary when there are multiple variables per index and not all of them are changed.
 			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> allParameters;
-			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
+			for(RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
-				if((*i)->name.empty()) continue;
+				if(i->first.empty() || !i->second) continue;
 				std::vector<uint8_t> value;
-				if(linksCentral[channel][remotePeer->address][remotePeer->channel].find((*i)->name) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;
-				RPCConfigurationParameter* parameter = &linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->name];
+				if(linksCentral[channel][remotePeer->address][remotePeer->channel].find(i->first) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;
+				RPCConfigurationParameter* parameter = &linksCentral[channel][remotePeer->address][remotePeer->channel][i->first];
 				if(!parameter->rpcParameter) continue;
-				value = parameter->rpcParameter->convertToPacket(*i);
+				value = parameter->rpcParameter->convertToPacket(i->second);
 				std::vector<uint8_t> shiftedValue = value;
 				parameter->rpcParameter->adjustBitPosition(shiftedValue);
 				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
@@ -3020,7 +3017,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 				if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
 				saveParameter(parameter->databaseID, parameter->data);
-				HelperFunctions::printInfo("Info: Parameter " + (*i)->name + " of device 0x" + HelperFunctions::getHexString(_address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
+				HelperFunctions::printInfo("Info: Parameter " + i->first + " of device 0x" + HelperFunctions::getHexString(_address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
@@ -3164,8 +3161,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamset(int32_t channel, RPC::Parame
 
 			if(!element || element->errorStruct) continue;
 			if(element->type == RPC::RPCVariableType::rpcVoid) continue;
-			element->name = (*i)->id;
-			variables->structValue->push_back(element);
+			variables->structValue->insert(RPC::RPCStructElement((*i)->id, element));
 		}
 		return variables;
 	}
@@ -3194,8 +3190,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkInfo(int32_t senderChannel, std::
 		if(!remotePeer) return RPC::RPCVariable::createError(-2, "No peer found for sender channel and receiver serial number.");
 		if(remotePeer->channel != receiverChannel)  RPC::RPCVariable::createError(-2, "No peer found for receiver channel.");
 		std::shared_ptr<RPC::RPCVariable> response(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-		response->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DESCRIPTION", remotePeer->linkDescription)));
-		response->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("NAME", remotePeer->linkName)));
+		response->structValue->insert(RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(remotePeer->linkDescription))));
+		response->structValue->insert(RPC::RPCStructElement("NAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(remotePeer->linkName))));
 		return response;
 	}
 	catch(const std::exception& ex)
@@ -3376,20 +3372,19 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 				if(brokenFlags == 0 && remotePeer && remotePeer->serviceMessages->getUnreach()) brokenFlags = 2;
 				if(serviceMessages->getUnreach()) brokenFlags |= 1;
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("DESCRIPTION", (*i)->linkDescription)));
-				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("FLAGS", brokenFlags)));
-				element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("NAME", (*i)->linkName)));
+				element->structValue->insert(RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->linkDescription))));
+				element->structValue->insert(RPC::RPCStructElement("FLAGS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(brokenFlags))));
+				element->structValue->insert(RPC::RPCStructElement("NAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->linkName))));
 				if(isSender)
 				{
-					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RECEIVER", peerSerial + ":" + std::to_string((*i)->channel))));
+					element->structValue->insert(RPC::RPCStructElement("RECEIVER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel)))));
 					if(flags & 4)
 					{
 						std::shared_ptr<RPC::RPCVariable> paramset;
 						if(!(brokenFlags & 2) && remotePeer) paramset = remotePeer->getParamset((*i)->channel, RPC::ParameterSet::Type::Enum::link, _serialNumber, channel);
 						else paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						if(paramset->errorStruct) paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						paramset->name = "RECEIVER_PARAMSET";
-						element->structValue->push_back(paramset);
+						element->structValue->insert(RPC::RPCStructElement("RECEIVER_PARAMSET", paramset));
 					}
 					if(flags & 16)
 					{
@@ -3397,18 +3392,16 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 						if(!(brokenFlags & 2) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel);
 						else description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						if(description->errorStruct) description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						description->name = "RECEIVER_DESCRIPTION";
-						element->structValue->push_back(description);
+						element->structValue->insert(RPC::RPCStructElement("RECEIVER_DESCRIPTION", description));
 					}
-					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("SENDER", _serialNumber + ":" + std::to_string(channel))));
+					element->structValue->insert(RPC::RPCStructElement("SENDER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 					if(flags & 2)
 					{
 						std::shared_ptr<RPC::RPCVariable> paramset;
 						if(!(brokenFlags & 1)) paramset = getParamset(channel, RPC::ParameterSet::Type::Enum::link, peerSerial, (*i)->channel);
 						else paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						if(paramset->errorStruct) paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						paramset->name = "SENDER_PARAMSET";
-						element->structValue->push_back(paramset);
+						element->structValue->insert(RPC::RPCStructElement("SENDER_PARAMSET", paramset));
 					}
 					if(flags & 8)
 					{
@@ -3416,29 +3409,26 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 						if(!(brokenFlags & 1)) description = getDeviceDescription(channel);
 						else description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						if(description->errorStruct) description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						description->name = "SENDER_DESCRIPTION";
-						element->structValue->push_back(description);
+						element->structValue->insert(RPC::RPCStructElement("SENDER_DESCRIPTION", description));
 					}
 				}
 				else //When sender is broken
 				{
-					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("RECEIVER", _serialNumber + ":" + std::to_string(channel))));
+					element->structValue->insert(RPC::RPCStructElement("RECEIVER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 					if(flags & 4)
 					{
 						std::shared_ptr<RPC::RPCVariable> paramset;
 						//Sender is broken, so just insert empty paramset
 						paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						paramset->name = "RECEIVER_PARAMSET";
-						element->structValue->push_back(paramset);
+						element->structValue->insert(RPC::RPCStructElement("RECEIVER_PARAMSET", paramset));
 					}
-					element->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("SENDER", peerSerial + ":" + std::to_string((*i)->channel))));
+					element->structValue->insert(RPC::RPCStructElement("SENDER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel)))));
 					if(flags & 2)
 					{
 						std::shared_ptr<RPC::RPCVariable> paramset;
 						//Sender is broken, so just insert empty paramset
 						paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						paramset->name = "SENDER_PARAMSET";
-						element->structValue->push_back(paramset);
+						element->structValue->insert(RPC::RPCStructElement("SENDER_PARAMSET", paramset));
 					}
 				}
 				array->arrayValue->push_back(element);
@@ -3517,7 +3507,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 		{
 			if((*i)->id.empty()) continue;
 			if(!((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::internal)) continue;
-			description->name = (*i)->id;
 			if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeBoolean)
 			{
 				RPC::LogicalParameterBoolean* parameter = (RPC::LogicalParameterBoolean*)(*i)->logicalParameter.get();
@@ -3525,58 +3514,48 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 				if(!(*i)->control.empty())
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-					element->name = "CONTROL";
 					element->stringValue = (*i)->control;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
 				}
 
 				if(parameter->defaultValueExists)
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
-					element->name = "DEFAULT";
 					element->booleanValue = parameter->defaultValue;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
 				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "FLAGS";
 				element->integerValue = (*i)->uiFlags;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "ID";
 				element->stringValue = (*i)->id;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
-				element->name = "MAX";
 				element->booleanValue = parameter->max;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
-				element->name = "MIN";
 				element->booleanValue = parameter->min;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "OPERATIONS";
 				element->integerValue = (*i)->operations;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "TAB_ORDER";
 				element->integerValue = index;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "TYPE";
 				element->stringValue = "BOOL";
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "UNIT";
 				element->stringValue = parameter->unit;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
 			}
 			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeString)
 			{
@@ -3585,58 +3564,48 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 				if(!(*i)->control.empty())
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-					element->name = "CONTROL";
 					element->stringValue = (*i)->control;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
 				}
 
 				if(parameter->defaultValueExists)
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-					element->name = "DEFAULT";
 					element->stringValue = parameter->defaultValue;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
 				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "FLAGS";
 				element->integerValue = (*i)->uiFlags;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "ID";
 				element->stringValue = (*i)->id;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "MAX";
 				element->stringValue = parameter->max;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "MIN";
 				element->stringValue = parameter->min;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "OPERATIONS";
 				element->integerValue = (*i)->operations;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "TAB_ORDER";
 				element->integerValue = index;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "TYPE";
 				element->stringValue = "STRING";
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "UNIT";
 				element->stringValue = parameter->unit;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
 			}
 			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeAction)
 			{
@@ -3645,58 +3614,48 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 				if(!(*i)->control.empty())
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-					element->name = "CONTROL";
 					element->stringValue = (*i)->control;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
 				}
 
 				if(parameter->defaultValueExists)
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
-					element->name = "DEFAULT";
 					element->booleanValue = parameter->defaultValue;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
 				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "FLAGS";
 				element->integerValue = (*i)->uiFlags;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "ID";
 				element->stringValue = (*i)->id;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
-				element->name = "MAX";
 				element->booleanValue = parameter->max;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
-				element->name = "MIN";
 				element->booleanValue = parameter->min;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "OPERATIONS";
 				element->integerValue = (*i)->operations;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "TAB_ORDER";
 				element->integerValue = index;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "TYPE";
 				element->stringValue = "ACTION";
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "UNIT";
 				element->stringValue = parameter->unit;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
 			}
 			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeInteger)
 			{
@@ -3705,72 +3664,61 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 				if(!(*i)->control.empty())
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-					element->name = "CONTROL";
 					element->stringValue = (*i)->control;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
 				}
 
 				if(parameter->defaultValueExists)
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-					element->name = "DEFAULT";
 					element->integerValue = parameter->defaultValue;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
 				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "FLAGS";
 				element->integerValue = (*i)->uiFlags;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "ID";
 				element->stringValue = (*i)->id;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "MAX";
 				element->integerValue = parameter->max;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "MIN";
 				element->integerValue = parameter->min;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "OPERATIONS";
 				element->integerValue = (*i)->operations;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
 
 				if(!parameter->specialValues.empty())
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-					element->name = "SPECIAL";
 					for(std::unordered_map<std::string, int32_t>::iterator j = parameter->specialValues.begin(); j != parameter->specialValues.end(); ++j)
 					{
 						std::shared_ptr<RPC::RPCVariable> specialElement(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						specialElement->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ID", j->first)));
-						specialElement->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VALUE", j->second)));
-						element->structValue->push_back(specialElement);
+						specialElement->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first))));
+						specialElement->structValue->insert(RPC::RPCStructElement("VALUE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second))));
+						element->arrayValue->push_back(specialElement);
 					}
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("SPECIAL", element));
 				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "TAB_ORDER";
 				element->integerValue = index;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "TYPE";
 				element->stringValue = "INTEGER";
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "UNIT";
 				element->stringValue = parameter->unit;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
 			}
 			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeEnum)
 			{
@@ -3779,66 +3727,55 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 				if(!(*i)->control.empty())
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-					element->name = "CONTROL";
 					element->stringValue = (*i)->control;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
 				}
 
 				if(parameter->defaultValueExists)
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-					element->name = "DEFAULT";
 					element->integerValue = parameter->defaultValue;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
 				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "FLAGS";
 				element->integerValue = (*i)->uiFlags;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "ID";
 				element->stringValue = (*i)->id;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "MAX";
 				element->integerValue = parameter->max;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "MIN";
 				element->integerValue = parameter->min;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "OPERATIONS";
 				element->integerValue = (*i)->operations;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "TAB_ORDER";
 				element->integerValue = index;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "TYPE";
 				element->stringValue = "ENUM";
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "UNIT";
 				element->stringValue = parameter->unit;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-				element->name = "VALUE_LIST";
 				for(std::vector<RPC::ParameterOption>::iterator j = parameter->options.begin(); j != parameter->options.end(); ++j)
 				{
 					element->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->id)));
 				}
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("VALUE_LIST", element));
 			}
 			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeFloat)
 			{
@@ -3847,76 +3784,65 @@ std::shared_ptr<RPC::RPCVariable> Peer::getParamsetDescription(int32_t channel, 
 				if(!(*i)->control.empty())
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-					element->name = "CONTROL";
 					element->stringValue = (*i)->control;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
 				}
 
 				if(parameter->defaultValueExists)
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcFloat));
-					element->name = "DEFAULT";
 					element->floatValue = parameter->defaultValue;
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
 				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "FLAGS";
 				element->integerValue = (*i)->uiFlags;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "ID";
 				element->stringValue = (*i)->id;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcFloat));
-				element->name = "MAX";
 				element->floatValue = parameter->max;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcFloat));
-				element->name = "MIN";
 				element->floatValue = parameter->min;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "OPERATIONS";
 				element->integerValue = (*i)->operations;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
 
 				if(!parameter->specialValues.empty())
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-					element->name = "SPECIAL";
 					for(std::unordered_map<std::string, double>::iterator j = parameter->specialValues.begin(); j != parameter->specialValues.end(); ++j)
 					{
 						std::shared_ptr<RPC::RPCVariable> specialElement(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-						specialElement->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("ID", j->first)));
-						specialElement->structValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable("VALUE", j->second)));
-						element->structValue->push_back(specialElement);
+						specialElement->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first))));
+						specialElement->structValue->insert(RPC::RPCStructElement("VALUE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second))));
+						element->arrayValue->push_back(specialElement);
 					}
-					description->structValue->push_back(element);
+					description->structValue->insert(RPC::RPCStructElement("SPECIAL", element));
 				}
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
-				element->name = "TAB_ORDER";
 				element->integerValue = index;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "TYPE";
 				element->stringValue = "FLOAT";
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
 
 				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
-				element->name = "UNIT";
 				element->stringValue = parameter->unit;
-				description->structValue->push_back(element);
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
 			}
 
 			index++;
-			descriptions->structValue->push_back(description);
+			descriptions->structValue->insert(RPC::RPCStructElement((*i)->id, description));
 			description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		}
 		return descriptions;

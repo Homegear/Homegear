@@ -47,6 +47,7 @@ class HomeMaticDevices;
 #include "Settings.h"
 #include "RPC/ServerSettings.h"
 #include "RPC/ClientSettings.h"
+#include "EventHandler.h"
 
 class GD {
 public:
@@ -70,6 +71,7 @@ public:
 	static int32_t debugLevel;
 	static int32_t rpcLogLevel;
 	static bool bigEndian;
+	static EventHandler eventHandler;
 
 	virtual ~GD() { }
 private:

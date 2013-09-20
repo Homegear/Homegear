@@ -27,39 +27,67 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef RPCDECODER_H_
-#define RPCDECODER_H_
+#ifndef EVENTHANDLER_H_
+#define EVENTHANDLER_H_
 
 #include <memory>
-#include <vector>
-#include <cstring>
-#include <cmath>
+#include <string>
+#include <map>
 
-#include "../Exception.h"
-#include "RPCVariable.h"
-#include "../BinaryDecoder.h"
-#include "RPCHeader.h"
+#include "Exception.h"
+#include "Database.h"
+#include "RPC/RPCVariable.h"
 
-namespace RPC
-{
-
-class RPCDecoder
+class Event
 {
 public:
-	RPCDecoder() {}
-	virtual ~RPCDecoder() {}
+	struct Type
+	{
+		enum Enum { triggered, timed };
+	};
 
-	std::shared_ptr<RPCHeader> decodeHeader(std::shared_ptr<std::vector<char>> packet);
-	std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName);
-	std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<std::vector<char>> packet, uint32_t offset = 0);
-private:
-	BinaryDecoder _decoder;
+	struct Trigger
+	{
+		enum Enum { none, change, update, value, belowThreshold, aboveThreshold };
+	};
 
-	std::shared_ptr<RPCVariable> decodeParameter(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
-	RPCVariableType decodeType(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
-	std::shared_ptr<RPCArray> decodeArray(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
-	std::shared_ptr<RPCStruct> decodeStruct(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
+	struct Operation
+	{
+		enum Enum { none, addition, substraction, multiplication, division };
+	};
+
+	uint32_t id = 0;
+	Type::Enum type = Type::Enum::triggered;
+	std::string name;
+	std::string address;
+	std::string variable;
+	Trigger::Enum trigger = Trigger::Enum::none;
+	std::string eventMethod;
+	std::shared_ptr<RPC::RPCVariable> eventMethodParameters;
+	uint32_t resetAfter = 0;
+	uint32_t initialTime = 0;
+	Operation::Enum incrementOperator = Operation::Enum::none;
+	double incrementBy = 0;
+	uint32_t maxTime = 0;
+	std::string resetMethod;
+	std::shared_ptr<RPC::RPCVariable> resetMethodParameters;
+	uint32_t eventTime = 0;
+	uint32_t recurAfter = 0;
+
+	Event() {}
+	virtual ~Event() {}
 };
 
-} /* namespace RPC */
-#endif /* RPCDECODER_H_ */
+class EventHandler
+{
+public:
+	EventHandler();
+	virtual ~EventHandler();
+
+	std::shared_ptr<RPC::RPCVariable> add(std::shared_ptr<RPC::RPCVariable> eventDescription);
+	std::shared_ptr<RPC::RPCVariable> remove(std::string name);
+protected:
+	std::vector<std::shared_ptr<Event>> _timedEvents;
+	std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>> _triggeredEvents;
+};
+#endif /* EVENTHANDLER_H_ */

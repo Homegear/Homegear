@@ -163,7 +163,7 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(std::shared_ptr<std::ve
     return std::shared_ptr<RPCVariable>();
 }
 
-std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeArray(std::shared_ptr<std::vector<char>>& packet, uint32_t& position)
+std::shared_ptr<RPCArray> RPCDecoder::decodeArray(std::shared_ptr<std::vector<char>>& packet, uint32_t& position)
 {
 	try
 	{
@@ -190,17 +190,16 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeArr
     return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>();
 }
 
-std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeStruct(std::shared_ptr<std::vector<char>>& packet, uint32_t& position)
+std::shared_ptr<RPCStruct> RPCDecoder::decodeStruct(std::shared_ptr<std::vector<char>>& packet, uint32_t& position)
 {
 	try
 	{
 		uint32_t structLength = _decoder.decodeInteger(packet, position);
-		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> rpcStruct(new std::vector<std::shared_ptr<RPCVariable>>());
+		std::shared_ptr<RPCStruct> rpcStruct(new RPCStruct());
 		for(uint32_t i = 0; i < structLength; i++)
 		{
 			std::string name = _decoder.decodeString(packet, position);
-			rpcStruct->push_back(decodeParameter(packet, position));
-			rpcStruct->back()->name = name;
+			rpcStruct->insert(RPCStructElement(name, decodeParameter(packet, position)));
 		}
 		return rpcStruct;
 	}
@@ -216,7 +215,7 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeStr
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>();
+    return std::shared_ptr<RPCStruct>();
 }
 
 } /* namespace RPC */

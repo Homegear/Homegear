@@ -209,10 +209,12 @@ void RPCEncoder::encodeStruct(std::shared_ptr<std::vector<char>>& packet, std::s
 	{
 		encodeType(packet, RPCVariableType::rpcStruct);
 		_encoder.encodeInteger(packet, variable->structValue->size());
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
+		for(RPCStruct::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
 		{
-			_encoder.encodeString(packet, (*i)->name);
-			encodeVariable(packet, *i);
+			if(i->first.empty() || !i->second) continue;
+			std::string name = i->first;
+			_encoder.encodeString(packet, name);
+			encodeVariable(packet, i->second);
 		}
 	}
 	catch(const std::exception& ex)
