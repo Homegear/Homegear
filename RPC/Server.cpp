@@ -99,18 +99,20 @@ uint32_t Server::connectionCount()
 
 std::shared_ptr<RPCVariable> Server::callMethod(std::string methodName, std::shared_ptr<RPCVariable> parameters)
 {
+	if(!_server) return RPCVariable::createError(-32500, "Server is nullptr.");
 	return _server->callMethod(methodName, parameters);
 }
 
 void Server::start(std::shared_ptr<ServerSettings::Settings>& settings)
 {
+	if(!_server) return;
 	registerMethods();
 	_server->start(settings);
 }
 
 void Server::stop()
 {
-	_server->stop();
+	if(_server) _server->stop();
 }
 
 } /* namespace RPC */

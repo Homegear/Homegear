@@ -37,8 +37,6 @@
 
 EventHandler::EventHandler()
 {
-
-
 }
 
 EventHandler::~EventHandler()
@@ -136,7 +134,10 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 					if(resetStruct->structValue->find("OPERATION") != resetStruct->structValue->end())
 						event->operation = (Event::Operation::Enum)resetStruct->structValue->at("INITIALTIME")->integerValue;
 					if(resetStruct->structValue->find("FACTOR") != resetStruct->structValue->end())
+					{
 						event->factor = resetStruct->structValue->at("FACTOR")->floatValue;
+						if(event->factor <= 0) return RPC::RPCVariable::createError(-5, "Factor is less or equal 0. Please provide a positive value");
+					}
 					if(resetStruct->structValue->find("LIMIT") != resetStruct->structValue->end())
 						event->limit = resetStruct->structValue->at("LIMIT")->integerValue;
 					if(resetStruct->structValue->find("RESETAFTER") != resetStruct->structValue->end())
@@ -164,7 +165,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 			}
 			_mainThreadMutex.unlock();
 		}
-
+		save(event);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -193,6 +194,9 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::remove(std::string name)
 	try
 	{
 		_eventsMutex.lock();
+		//TODO Make sure removing and saving do not occur at the same time:
+		//     Remove pointer from maps first. Then wait a little and remove
+		//     Event from Database
 		_eventsMutex.unlock();
 	}
 	catch(const std::exception& ex)
@@ -309,6 +313,110 @@ void EventHandler::triggerThreadMultipleVariables(std::string address, std::shar
 	_triggerThreadCount--;
 }
 
+void EventHandler::removeEventToReset(uint32_t id)
+{
+	_eventsMutex.lock();
+	try
+	{
+		for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _eventsToReset.begin(); i != _eventsToReset.end(); ++i)
+		{
+			if(i->second->id == id)
+			{
+				_eventsToReset.erase(i);
+				_eventsMutex.unlock();
+				return;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventsMutex.unlock();
+}
+
+void EventHandler::removeTimeToReset(uint32_t id)
+{
+	_eventsMutex.lock();
+	try
+	{
+		for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timesToReset.begin(); i != _timesToReset.end(); ++i)
+		{
+			if(i->second->id == id)
+			{
+				_timesToReset.erase(i);
+				_eventsMutex.unlock();
+				return;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventsMutex.unlock();
+}
+
+bool EventHandler::eventExists(uint32_t id)
+{
+	_eventsMutex.lock();
+	try
+	{
+		for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+		{
+			if(i->second->id == id)
+			{
+				_eventsMutex.unlock();
+				return true;
+			}
+		}
+		for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+		{
+			for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+				{
+					if((*k)->id == id)
+					{
+						_eventsMutex.unlock();
+						return true;
+					}
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventsMutex.unlock();
+    return false;
+}
+
 void EventHandler::triggerThread(std::string address, std::string variable, std::shared_ptr<RPC::RPCVariable> value)
 {
 	_triggerThreadCount++;
@@ -366,8 +474,49 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				}
 				else if((*i)->resetAfter > 0 || (*i)->initialTime > 0)
 				{
-					if((*i)->initialTime == 0) _eventsToReset[HelperFunctions::getTimeSeconds() + (*i)->resetAfter] =  *i;
-					else {} //TODO implement
+					removeEventToReset((*i)->id);
+					if((*i)->initialTime == 0) //Simple reset
+					{
+						_eventsMutex.lock();
+						_eventsToReset[HelperFunctions::getTimeSeconds() + (*i)->resetAfter] =  *i;
+						_eventsMutex.unlock();
+					}
+					else //Complex reset
+					{
+						removeTimeToReset((*i)->id);
+						_eventsMutex.lock();
+						_timesToReset[HelperFunctions::getTimeSeconds() + (*i)->resetAfter] = *i;
+						_eventsMutex.unlock();
+						if((*i)->currentTime == 0) (*i)->currentTime = (*i)->initialTime;
+						if((*i)->factor <= 0)
+						{
+							HelperFunctions::printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from address " + address + " and variable " + variable + ".");
+							(*i)->factor = 1;
+						}
+						_eventsMutex.lock();
+						_eventsToReset[HelperFunctions::getTimeSeconds() + (*i)->currentTime] =  *i;
+						_eventsMutex.unlock();
+						if((*i)->operation == Event::Operation::Enum::addition)
+						{
+							(*i)->currentTime += (*i)->factor;
+							if((*i)->currentTime > (*i)->limit) (*i)->currentTime = (*i)->limit;
+						}
+						else if((*i)->operation == Event::Operation::Enum::subtraction)
+						{
+							(*i)->currentTime -= (*i)->factor;
+							if((*i)->currentTime < (*i)->limit) (*i)->currentTime = (*i)->limit;
+						}
+						else if((*i)->operation == Event::Operation::Enum::multiplication)
+						{
+							(*i)->currentTime *= (*i)->factor;
+							if((*i)->currentTime > (*i)->limit) (*i)->currentTime = (*i)->limit;
+						}
+						else if((*i)->operation == Event::Operation::Enum::division)
+						{
+							(*i)->currentTime /= (*i)->factor;
+							if((*i)->currentTime < (*i)->limit) (*i)->currentTime = (*i)->limit;
+						}
+					}
 					_mainThreadMutex.lock();
 					if(_stopThread || !_mainThread.joinable())
 					{
@@ -376,23 +525,101 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 					}
 					_mainThreadMutex.unlock();
 				}
+				save(*i);
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
+		_eventsMutex.unlock();
 		_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_eventsMutex.unlock();
     	_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_eventsMutex.unlock();
     	_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _triggerThreadCount--;
+}
+
+void EventHandler::load()
+{
+	try
+	{
+		_databaseMutex.lock();
+
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
+void EventHandler::save(std::shared_ptr<Event> event)
+{
+	try
+	{
+		//The eventExists is necessary so we don't safe an event that is being deleted
+		if(!event || _disposing || (event->id > 0 && !eventExists(event->id))) return;
+		_databaseMutex.lock();
+		GD::db.executeCommand("SAVEPOINT event" + std::to_string(event->id));
+		DataColumnVector data;
+		if(event->id > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->id)));
+		else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->name)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)event->type)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->address)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->variable)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)event->trigger)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->eventMethod)));
+		std::shared_ptr<std::vector<char>> value = _rpcEncoder.encodeResponse(event->eventMethodParameters);
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->resetAfter)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->initialTime)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)event->operation)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->factor)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->limit)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->resetMethod)));
+		value = _rpcEncoder.encodeResponse(event->resetMethodParameters);
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->eventTime)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->recurEvery)));
+		value = _rpcEncoder.encodeResponse(event->lastValue);
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->lastRaised)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->currentTime)));
+		int32_t result = GD::db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
+		if(event->id == 0) event->id = result;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    GD::db.executeCommand("RELEASE event" + std::to_string(event->id));
+    _databaseMutex.unlock();
 }

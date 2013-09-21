@@ -56,7 +56,7 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 		_settings = settings;
 		if(!_settings)
 		{
-			HelperFunctions::printError("settings is nullptr.");
+			HelperFunctions::printError("Error: settings is nullptr.");
 			return;
 		}
 		if(_settings->ssl)
@@ -66,7 +66,7 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 			_sslCTX = SSL_CTX_new(SSLv23_server_method());
 			if(!_sslCTX)
 			{
-				HelperFunctions::printError("Could not start RPC Server with SSL support." + std::string(ERR_reason_error_string(ERR_get_error())));
+				HelperFunctions::printError("Error: Could not start RPC Server with SSL support." + std::string(ERR_reason_error_string(ERR_get_error())));
 				return;
 			}
 
@@ -76,18 +76,20 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 				BIO* bio = BIO_new_file(GD::settings.dhParamPath().c_str(), "r");
 				if(!bio)
 				{
-					HelperFunctions::printInfo("Info: Could not start RPC Server with SSL support. Could not load Diffie-Hellman parameter file (" + GD::settings.dhParamPath() + "): " + std::string(ERR_reason_error_string(ERR_get_error())));
+					HelperFunctions::printError("Error: Could not start RPC Server with SSL support. Could not load Diffie-Hellman parameter file (" + GD::settings.dhParamPath() + "): " + std::string(ERR_reason_error_string(ERR_get_error())));
 					BIO_free(bio);
 					SSL_CTX_free(_sslCTX);
+					_sslCTX = nullptr;
 					return;
 				}
 
 				dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
 				if(!dh)
 				{
-					HelperFunctions::printError("Could not start RPC Server with SSL support. Reading of Diffie-Hellman parameters failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
+					HelperFunctions::printError("Error: Could not start RPC Server with SSL support. Reading of Diffie-Hellman parameters failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
 					BIO_free(bio);
 					SSL_CTX_free(_sslCTX);
+					_sslCTX = nullptr;
 					return;
 				}
 
@@ -98,29 +100,33 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 				dh = DH_new();
 				if(!dh)
 				{
-					HelperFunctions::printError("Could not start RPC Server with SSL support. Initialization of Diffie-Hellman parameters failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
+					HelperFunctions::printError("Error: Could not start RPC Server with SSL support. Initialization of Diffie-Hellman parameters failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
 					SSL_CTX_free(_sslCTX);
+					_sslCTX = nullptr;
 					return;
 				}
 				HelperFunctions::printInfo("Generating temporary Diffie-Hellman parameters. This might take a long time...");
 				if(!DH_generate_parameters_ex(dh, settings->diffieHellmanKeySize, DH_GENERATOR_5, NULL))
 				{
-					HelperFunctions::printError("Could not start RPC Server with SSL support. Could not generate Diffie Hellman parameters: " + std::string(ERR_reason_error_string(ERR_get_error())));
+					HelperFunctions::printError("Error: Could not start RPC Server with SSL support. Could not generate Diffie Hellman parameters: " + std::string(ERR_reason_error_string(ERR_get_error())));
 					SSL_CTX_free(_sslCTX);
+					_sslCTX = nullptr;
 					return;
 				}
 			}
 			int32_t codes = 0;
 			if(!DH_check(dh, &codes))
 			{
-				HelperFunctions::printError("Could not start RPC Server with SSL support. Diffie Hellman check failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				HelperFunctions::printError("Error: Could not start RPC Server with SSL support. Diffie Hellman check failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
 				SSL_CTX_free(_sslCTX);
+				_sslCTX = nullptr;
 				return;
 			}
 			if(!DH_generate_key(dh))
 			{
-				HelperFunctions::printError("Could not start RPC Server with SSL support. Could not generate Diffie Hellman key: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				HelperFunctions::printError("Error: Could not start RPC Server with SSL support. Could not generate Diffie Hellman key: " + std::string(ERR_reason_error_string(ERR_get_error())));
 				SSL_CTX_free(_sslCTX);
+				_sslCTX = nullptr;
 				return;
 			}
 			SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
@@ -128,19 +134,22 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 			if(SSL_CTX_use_certificate_file(_sslCTX, GD::settings.certPath().c_str(), SSL_FILETYPE_PEM) < 1)
 			{
 				SSL_CTX_free(_sslCTX);
-				HelperFunctions::printError("Could not load certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				_sslCTX = nullptr;
+				HelperFunctions::printError("Error: Could not load certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
 				return;
 			}
 			if(SSL_CTX_use_PrivateKey_file(_sslCTX, GD::settings.keyPath().c_str(), SSL_FILETYPE_PEM) < 1)
 			{
 				SSL_CTX_free(_sslCTX);
-				HelperFunctions::printError("Could not load key from certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
+				_sslCTX = nullptr;
+				HelperFunctions::printError("Error: Could not load key from certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
 				return;
 			}
 			if(!SSL_CTX_check_private_key(_sslCTX))
 			{
 				SSL_CTX_free(_sslCTX);
-				HelperFunctions::printError("Private key does not match the public key");
+				_sslCTX = nullptr;
+				HelperFunctions::printError("Error: Private key does not match the public key");
 				return;
 			}
 		}

@@ -34,10 +34,12 @@
 #include <string>
 #include <map>
 #include <mutex>
+#include <thread>
 
 #include "Exception.h"
 #include "Database.h"
 #include "RPC/RPCVariable.h"
+#include "RPC/RPCEncoder.h"
 
 class Event
 {
@@ -54,7 +56,7 @@ public:
 
 	struct Operation
 	{
-		enum Enum { none, addition, substraction, multiplication, division };
+		enum Enum { none, addition, subtraction, multiplication, division };
 	};
 
 	uint32_t id = 0;
@@ -68,8 +70,9 @@ public:
 	std::shared_ptr<RPC::RPCVariable> eventMethodParameters;
 	uint32_t resetAfter = 0;
 	uint32_t initialTime = 0;
+	uint32_t currentTime = 0;
 	Operation::Enum operation = Operation::Enum::none;
-	double factor = 0;
+	double factor = 1;
 	uint32_t limit = 0;
 	std::string resetMethod;
 	std::shared_ptr<RPC::RPCVariable> resetMethodParameters;
@@ -77,6 +80,7 @@ public:
 	uint32_t recurEvery = 0;
 	std::shared_ptr<RPC::RPCVariable> lastValue;
 	int64_t lastRaised = 0;
+	int64_t lastReset = 0;
 
 	Event() {}
 	virtual ~Event() {}
@@ -88,6 +92,7 @@ public:
 	EventHandler();
 	virtual ~EventHandler();
 
+	void load();
 	std::shared_ptr<RPC::RPCVariable> add(std::shared_ptr<RPC::RPCVariable> eventDescription);
 	std::shared_ptr<RPC::RPCVariable> remove(std::string name);
 	void trigger(std::string& address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
@@ -99,13 +104,20 @@ protected:
 	std::map<int32_t, std::shared_ptr<Event>> _timedEvents;
 	std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>> _triggeredEvents;
 	std::map<int32_t, std::shared_ptr<Event>> _eventsToReset;
+	std::map<int32_t, std::shared_ptr<Event>> _timesToReset;
 	bool _stopThread = false;
 	std::thread _mainThread;
 	std::mutex _mainThreadMutex;
+	std::mutex _databaseMutex;
+	RPC::RPCEncoder _rpcEncoder;
 
 	void triggerThreadMultipleVariables(std::string address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
 	void triggerThread(std::string address, std::string variable, std::shared_ptr<RPC::RPCVariable> value);
 	void mainThread();
 	int32_t getNextExecution(int32_t startTime, int32_t recurEvery);
+	void removeEventToReset(uint32_t id);
+	void removeTimeToReset(uint32_t id);
+	bool eventExists(uint32_t id);
+	void save(std::shared_ptr<Event>);
 };
 #endif /* EVENTHANDLER_H_ */
