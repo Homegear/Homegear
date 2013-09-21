@@ -555,7 +555,32 @@ void EventHandler::load()
 	try
 	{
 		_databaseMutex.lock();
-
+		DataTable rows = GD::db.executeCommand("SELECT * FROM events");
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			std::shared_ptr<Event> event(new Event());
+			event->id = row->second.at(0)->intValue;
+			event->name = row->second.at(1)->textValue;
+			event->type = (Event::Type::Enum)row->second.at(2)->intValue;
+			event->address = row->second.at(3)->textValue;
+			event->variable = row->second.at(4)->textValue;
+			event->trigger = (Event::Trigger::Enum)row->second.at(5)->intValue;
+			event->eventMethod = row->second.at(6)->textValue;
+			event->eventMethodParameters = _rpcDecoder.decodeResponse(row->second.at(7)->binaryValue);
+			event->resetAfter = row->second.at(8)->intValue;
+			event->initialTime = row->second.at(9)->intValue;
+			event->operation = (Event::Operation::Enum)row->second.at(10)->intValue;
+			event->factor = row->second.at(11)->floatValue;
+			event->limit = row->second.at(12)->intValue;
+			event->resetMethod = row->second.at(13)->textValue;
+			event->resetMethodParameters = _rpcDecoder.decodeResponse(row->second.at(14)->binaryValue);
+			event->eventTime = row->second.at(15)->intValue;
+			event->recurEvery = row->second.at(16)->intValue;
+			event->lastValue = _rpcDecoder.decodeResponse(row->second.at(17)->binaryValue);
+			event->lastRaised = row->second.at(18)->intValue;
+			event->currentTime = row->second.at(19)->intValue;
+		}
+		//TODO Initialize everything
 	}
 	catch(const std::exception& ex)
     {

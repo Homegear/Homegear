@@ -40,6 +40,7 @@
 #include "Database.h"
 #include "RPC/RPCVariable.h"
 #include "RPC/RPCEncoder.h"
+#include "RPC/RPCDecoder.h"
 
 class Event
 {
@@ -110,6 +111,7 @@ protected:
 	std::mutex _mainThreadMutex;
 	std::mutex _databaseMutex;
 	RPC::RPCEncoder _rpcEncoder;
+	RPC::RPCDecoder _rpcDecoder;
 
 	void triggerThreadMultipleVariables(std::string address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
 	void triggerThread(std::string address, std::string variable, std::shared_ptr<RPC::RPCVariable> value);
