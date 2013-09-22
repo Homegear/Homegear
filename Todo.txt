@@ -1,6 +1,3 @@
-- Settings file to defince RPC Servers mainly to be able to define servers with or without auth
-
-
 When AES is working:
 - enforce $PEER.AES
 - Check if wake up is working, for the HM-Sec-MDIR it works differently with AES enabled
