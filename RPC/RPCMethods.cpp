@@ -1245,6 +1245,30 @@ std::shared_ptr<RPCVariable> RPCPutParamset::invoke(std::shared_ptr<std::vector<
     return RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+std::shared_ptr<RPCVariable> RPCRemoveEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::eventHandler.remove(parameters->at(0)->stringValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCRemoveLink::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try

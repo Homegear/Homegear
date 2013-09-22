@@ -426,6 +426,10 @@ int main(int argc, char* argv[])
 
         startRPCServers();
 
+        HelperFunctions::printInfo("Loading events...");
+        GD::eventHandler.load();
+        HelperFunctions::printInfo("Startup complete.");
+
         rl_bind_key('\t', rl_abort); //no autocompletion
 
 		char* inputBuffer;

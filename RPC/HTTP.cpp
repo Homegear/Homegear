@@ -43,6 +43,7 @@ void HTTP::process(char* buffer, int32_t bufferLength)
 	if(bufferLength <= 0 || _finished) return;
 	uint32_t position = 0;
 	if(!_header.parsed) processHeader(&buffer, bufferLength);
+	_dataProcessed = true;
 	if(_header.transferEncoding == TransferEncoding::Enum::chunked) processChunkedContent(buffer, bufferLength); else processContent(buffer, bufferLength);
 }
 
@@ -142,6 +143,7 @@ void HTTP::reset()
 	_chunk.reset(new std::vector<char>());
 	_type = Type::Enum::none;
 	_finished = false;
+	_dataProcessed = false;
 }
 
 void HTTP::processContent(char* buffer, int32_t bufferLength)

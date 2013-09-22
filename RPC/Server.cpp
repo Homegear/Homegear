@@ -48,6 +48,7 @@ void Server::registerMethods()
 		_server->registerMethod("system.methodSignature", std::shared_ptr<RPCMethod>(new RPCSystemMethodSignature(_server)));
 		_server->registerMethod("system.multicall", std::shared_ptr<RPCMethod>(new RPCSystemMulticall(_server)));
 		_server->registerMethod("addDevice", std::shared_ptr<RPCMethod>(new RPCAddDevice()));
+		_server->registerMethod("addEvent", std::shared_ptr<RPCMethod>(new RPCAddEvent()));
 		_server->registerMethod("addLink", std::shared_ptr<RPCMethod>(new RPCAddLink()));
 		_server->registerMethod("deleteDevice", std::shared_ptr<RPCMethod>(new RPCDeleteDevice()));
 		_server->registerMethod("deleteMetadata", std::shared_ptr<RPCMethod>(new RPCDeleteMetadata()));
@@ -70,6 +71,7 @@ void Server::registerMethods()
 		_server->registerMethod("listTeams", std::shared_ptr<RPCMethod>(new RPCListTeams()));
 		_server->registerMethod("logLevel", std::shared_ptr<RPCMethod>(new RPCLogLevel()));
 		_server->registerMethod("putParamset", std::shared_ptr<RPCMethod>(new RPCPutParamset()));
+		_server->registerMethod("removeEvent", std::shared_ptr<RPCMethod>(new RPCRemoveEvent()));
 		_server->registerMethod("removeLink", std::shared_ptr<RPCMethod>(new RPCRemoveLink()));
 		_server->registerMethod("runScript", std::shared_ptr<RPCMethod>(new RPCRunScript()));
 		_server->registerMethod("setInstallMode", std::shared_ptr<RPCMethod>(new RPCSetInstallMode()));

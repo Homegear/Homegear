@@ -93,6 +93,7 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RP
 	std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
 	try
 	{
+		if(!variable) return packet;
 		if(variable->errorStruct) packet->insert(packet->begin(), _packetStartError, _packetStartError + 4);
 		else packet->insert(packet->begin(), _packetStartResponse, _packetStartResponse + 4);
 

@@ -84,7 +84,9 @@ public:
 	Header* getHeader() { return &_header; }
 	void reset();
 	void process(char* buffer, int32_t bufferLength);
+	bool dataProcessed() { return _dataProcessed; }
 private:
+	bool _dataProcessed = false;;
 	bool _crlf = true;
 	Header _header;
 	Type::Enum _type = Type::Enum::none;

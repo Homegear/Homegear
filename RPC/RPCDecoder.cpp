@@ -107,6 +107,7 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeResponse(std::shared_ptr<std::vec
 {
 	uint32_t position = offset + 8;
 	std::shared_ptr<RPCVariable> response = decodeParameter(packet, position);
+	if(packet->empty()) return response; //response is Void when packet is empty.
 	if(packet->at(3) == 0xFF) response->errorStruct = true;
 	return response;
 }

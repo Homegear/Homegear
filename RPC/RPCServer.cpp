@@ -683,6 +683,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 
 				try
 				{
+					http.reset();
 					http.process(buffer, bytesRead);
 				}
 				catch(HTTPException& ex)
@@ -716,7 +717,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 				}
 			}
-			else if(packetLength > 0)
+			else if(packetLength > 0 || http.dataProcessed())
 			{
 				if(packetType == PacketType::Enum::binaryRequest || packetType == PacketType::Enum::binaryRequest)
 				{

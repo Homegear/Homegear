@@ -47,17 +47,17 @@ class Event
 public:
 	struct Type
 	{
-		enum Enum { triggered, timed };
+		enum Enum { triggered = 0, timed = 1 };
 	};
 
 	struct Trigger
 	{
-		enum Enum { none, change, update, value, belowThreshold, aboveThreshold };
+		enum Enum { none = 0, unchanged = 1, changed = 2, greater = 3, less = 4, greaterOrUnchanged = 5, lessOrUnchanged = 6, updated = 7, value = 8, notValue = 9, greaterValue = 10, lessValue = 11, greaterOrEqualValue = 12, lessOrEqualValue = 13 };
 	};
 
 	struct Operation
 	{
-		enum Enum { none, addition, subtraction, multiplication, division };
+		enum Enum { none = 0, addition = 1, subtraction = 2, multiplication = 3, division = 4 };
 	};
 
 	uint32_t id = 0;
@@ -78,6 +78,7 @@ public:
 	std::string resetMethod;
 	std::shared_ptr<RPC::RPCVariable> resetMethodParameters;
 	uint32_t eventTime = 0;
+	uint32_t endTime = 0;
 	uint32_t recurEvery = 0;
 	std::shared_ptr<RPC::RPCVariable> lastValue;
 	int64_t lastRaised = 0;
@@ -119,7 +120,9 @@ protected:
 	int32_t getNextExecution(int32_t startTime, int32_t recurEvery);
 	void removeEventToReset(uint32_t id);
 	void removeTimeToReset(uint32_t id);
+	void removeTimedEvent(uint32_t id);
 	bool eventExists(uint32_t id);
+	bool eventExists(std::string name);
 	void save(std::shared_ptr<Event>);
 };
 #endif /* EVENTHANDLER_H_ */
