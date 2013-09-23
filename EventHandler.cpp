@@ -70,7 +70,7 @@ void EventHandler::mainThread()
 					}
 					save(event);
 				}
-				if(event->recurEvery == 0 || (event->endTime > 0 && currentTime > event->endTime))
+				if(event->recurEvery == 0 || (event->endTime > 0 && currentTime >= event->endTime))
 				{
 					HelperFunctions::printInfo("Info: Removing event " + event->name + ", because the end time is reached.");
 					remove(event->name);
@@ -185,6 +185,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 			event->trigger = (Event::Trigger::Enum)eventDescription->structValue->at("TRIGGER")->integerValue;
 			if(eventDescription->structValue->find("TRIGGERVALUE") != eventDescription->structValue->end())
 				event->triggerValue = eventDescription->structValue->at("TRIGGERVALUE");
+			if((int32_t)event->trigger >= (int32_t)Event::Trigger::value && (!event->triggerValue || event->triggerValue->type == RPC::RPCVariableType::rpcVoid)) return RPC::RPCVariable::createError(-5, "No trigger value specified.");
 
 			if(eventDescription->structValue->find("RESETAFTER") != eventDescription->structValue->end())
 			{
@@ -269,6 +270,113 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
     	_mainThreadMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string address, std::string variable)
+{
+	try
+	{
+		std::vector<std::shared_ptr<Event>> events;
+		_eventsMutex.lock();
+		//Copy all events first, because listEvents takes very long and we don't want to lock _eventsMutex too long
+		if(type < 0 || type == 1)
+		{
+			for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+			{
+				events.push_back(i->second);
+			}
+		}
+		if(type <= 0)
+		{
+			for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+			{
+				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					{
+						if(address.empty() && variable.empty()) events.push_back(*k);
+						else if(!address.empty())
+						{
+							if((*k)->address == address)
+							{
+								if(variable.empty() || (*k)->variable == variable) events.push_back(*k);
+							}
+						}
+						else if(!variable.empty() && (*k)->variable == variable) events.push_back(*k);
+					}
+				}
+			}
+		}
+		_eventsMutex.unlock();
+
+		std::shared_ptr<RPC::RPCVariable> eventList(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		for(std::vector<std::shared_ptr<Event>>::iterator i = events.begin(); i != events.end(); ++i)
+		{
+			//listEvents really needs a lot of resources, so wait a little bit after each event
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			std::shared_ptr<RPC::RPCVariable> event(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+
+			if((*i)->type == Event::Type::timed)
+			{
+				event->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->type))));
+				event->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->name))));
+				event->structValue->insert(RPC::RPCStructElement("EVENTTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->eventTime))));
+				if((*i)->recurEvery > 0)
+				{
+					event->structValue->insert(RPC::RPCStructElement("RECUREVERY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->recurEvery))));
+					if((*i)->endTime > 0) event->structValue->insert(RPC::RPCStructElement("ENDTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->endTime))));
+				}
+				event->structValue->insert(RPC::RPCStructElement("EVENTMETHOD", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->eventMethod))));
+				if((*i)->eventMethodParameters) event->structValue->insert(RPC::RPCStructElement("EVENTMETHODPARAMS", (*i)->eventMethodParameters));
+			}
+			else
+			{
+				event->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->type))));
+				event->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->name))));
+				event->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->address))));
+				event->structValue->insert(RPC::RPCStructElement("VARIABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->variable))));
+				event->structValue->insert(RPC::RPCStructElement("TRIGGER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->trigger))));
+				if((*i)->triggerValue) event->structValue->insert(RPC::RPCStructElement("TRIGGERVALUE", (*i)->triggerValue));
+				event->structValue->insert(RPC::RPCStructElement("EVENTMETHOD", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->eventMethod))));
+				if((*i)->eventMethodParameters) event->structValue->insert(RPC::RPCStructElement("EVENTMETHODPARAMS", (*i)->eventMethodParameters));
+				if((*i)->resetAfter > 0 || (*i)->initialTime > 0)
+				{
+					if((*i)->initialTime > 0)
+					{
+						std::shared_ptr<RPC::RPCVariable> resetStruct(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+
+						resetStruct->structValue->insert(RPC::RPCStructElement("INITIALTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->initialTime))));
+						resetStruct->structValue->insert(RPC::RPCStructElement("RESETAFTER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->resetAfter))));
+						resetStruct->structValue->insert(RPC::RPCStructElement("OPERATION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->operation))));
+						resetStruct->structValue->insert(RPC::RPCStructElement("FACTOR", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->factor))));
+						resetStruct->structValue->insert(RPC::RPCStructElement("LIMIT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->limit))));
+
+						event->structValue->insert(RPC::RPCStructElement("RESETAFTER", resetStruct));
+					}
+					else event->structValue->insert(RPC::RPCStructElement("RESETAFTER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->resetAfter))));
+					event->structValue->insert(RPC::RPCStructElement("RESETMETHOD", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->resetMethod))));
+					if((*i)->eventMethodParameters) event->structValue->insert(RPC::RPCStructElement("RESETMETHODPARAMS", (*i)->resetMethodParameters));
+				}
+			}
+
+			eventList->arrayValue->push_back(event);
+		}
+		return eventList;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventsMutex.unlock();
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
@@ -692,14 +800,14 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 				}
 			}
-			else if((*i)->trigger == Event::Trigger::greaterValue)
+			else if((*i)->trigger == Event::Trigger::greaterThanValue)
 			{
 				if(*value > *((*i)->triggerValue))
 				{
 					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 				}
 			}
-			else if((*i)->trigger == Event::Trigger::lessValue)
+			else if((*i)->trigger == Event::Trigger::lessThanValue)
 			{
 				if(*value < *((*i)->triggerValue))
 				{

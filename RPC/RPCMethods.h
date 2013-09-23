@@ -331,6 +331,18 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
+class RPCListEvents : public RPCMethod
+{
+public:
+	RPCListEvents()
+	{
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcInteger}));
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString}));
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString, RPCVariableType::rpcString}));
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCListTeams : public RPCMethod
 {
 public:

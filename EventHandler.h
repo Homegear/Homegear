@@ -52,7 +52,7 @@ public:
 
 	struct Trigger
 	{
-		enum Enum { none = 0, unchanged = 1, changed = 2, greater = 3, less = 4, greaterOrUnchanged = 5, lessOrUnchanged = 6, updated = 7, value = 8, notValue = 9, greaterValue = 10, lessValue = 11, greaterOrEqualValue = 12, lessOrEqualValue = 13 };
+		enum Enum { none = 0, unchanged = 1, changed = 2, greater = 3, less = 4, greaterOrUnchanged = 5, lessOrUnchanged = 6, updated = 7, value = 8, notValue = 9, greaterThanValue = 10, lessThanValue = 11, greaterOrEqualValue = 12, lessOrEqualValue = 13 };
 	};
 
 	struct Operation
@@ -97,6 +97,7 @@ public:
 	void load();
 	std::shared_ptr<RPC::RPCVariable> add(std::shared_ptr<RPC::RPCVariable> eventDescription);
 	std::shared_ptr<RPC::RPCVariable> remove(std::string name);
+	std::shared_ptr<RPC::RPCVariable> list(int32_t type, std::string address, std::string variable);
 	void trigger(std::string& address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
 	void trigger(std::string& address, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value);
 protected:

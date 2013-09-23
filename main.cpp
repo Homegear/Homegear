@@ -82,6 +82,7 @@ void stopRPCServers()
 	{
 		i->second.stop();
 	}
+	GD::rpcServers.clear();
 }
 
 void terminate(int32_t signalNumber)

@@ -53,6 +53,7 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 {
 	try
 	{
+		_stopServer = false;
 		_settings = settings;
 		if(!_settings)
 		{

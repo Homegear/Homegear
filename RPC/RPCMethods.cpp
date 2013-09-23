@@ -1132,6 +1132,44 @@ std::shared_ptr<RPCVariable> RPCListDevices::invoke(std::shared_ptr<std::vector<
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCListEvents::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		if(parameters->size() > 0)
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcInteger }));
+			ParameterError::Enum error2 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+			ParameterError::Enum error3 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+			if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError && error3 != ParameterError::Enum::noError) return getError((error != ParameterError::Enum::noError) ? error : ((error2 != ParameterError::Enum::noError) ? error2 : error3));
+		}
+
+		int32_t type = -1;
+		std::string address;
+		std::string variable;
+		if(parameters->size() > 0)
+		{
+			if(parameters->at(0)->type == RPCVariableType::rpcInteger) type = parameters->at(0)->integerValue;
+			else address = parameters->at(0)->stringValue;
+			if(parameters->size() == 2) variable = parameters->at(1)->stringValue;
+		}
+		return GD::eventHandler.list(type, address, variable);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCListTeams::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
@@ -1458,7 +1496,6 @@ std::shared_ptr<RPCVariable> RPCSetLinkInfo::invoke(std::shared_ptr<std::vector<
 			if(parameters->at(3)->stringValue.size() > 1000) return RPC::RPCVariable::createError(-32602, "Description has more than 1000 characters.");
 			description = parameters->at(3)->stringValue;
 		}
-
 
 		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
 		if(!central)
