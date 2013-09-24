@@ -738,94 +738,100 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 		{
 			std::shared_ptr<RPC::RPCVariable> result;
 			HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\".");
-			//Comparison with previous value
-			if((*i)->trigger == Event::Trigger::updated)
+			if((int32_t)(*i)->trigger < 8)
 			{
-				result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
-			}
-			else if((*i)->trigger == Event::Trigger::unchanged)
-			{
-				if(*((*i)->lastValue) == *value)
+				//Comparison with previous value
+				if((*i)->trigger == Event::Trigger::updated)
 				{
 					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 				}
-			}
-			else if((*i)->trigger == Event::Trigger::changed)
-			{
-				if(*((*i)->lastValue) != *value)
+				else if((*i)->trigger == Event::Trigger::unchanged)
 				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					if(*((*i)->lastValue) == *value)
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
+				}
+				else if((*i)->trigger == Event::Trigger::changed)
+				{
+					if(*((*i)->lastValue) != *value)
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
+				}
+				else if((*i)->trigger == Event::Trigger::greater)
+				{
+					if(*((*i)->lastValue) > *value)
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
+				}
+				else if((*i)->trigger == Event::Trigger::less)
+				{
+					if(*((*i)->lastValue) < *value)
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
+				}
+				else if((*i)->trigger == Event::Trigger::greaterOrUnchanged)
+				{
+					if(*((*i)->lastValue) >= *value)
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
+				}
+				else if((*i)->trigger == Event::Trigger::lessOrUnchanged)
+				{
+					if(*((*i)->lastValue) <= *value)
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
 				}
 			}
-			else if((*i)->trigger == Event::Trigger::greater)
+			else if((*i)->triggerValue)
 			{
-				if(*((*i)->lastValue) > *value)
+				//Comparison with trigger value
+				if((*i)->trigger == Event::Trigger::value)
 				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					if(*value == *((*i)->triggerValue))
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
 				}
-			}
-			else if((*i)->trigger == Event::Trigger::less)
-			{
-				if(*((*i)->lastValue) < *value)
+				else if((*i)->trigger == Event::Trigger::notValue)
 				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					if(*value != *((*i)->triggerValue))
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
 				}
-			}
-			else if((*i)->trigger == Event::Trigger::greaterOrUnchanged)
-			{
-				if(*((*i)->lastValue) >= *value)
+				else if((*i)->trigger == Event::Trigger::greaterThanValue)
 				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					if(*value > *((*i)->triggerValue))
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
 				}
-			}
-			else if((*i)->trigger == Event::Trigger::lessOrUnchanged)
-			{
-				if(*((*i)->lastValue) <= *value)
+				else if((*i)->trigger == Event::Trigger::lessThanValue)
 				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					if(*value < *((*i)->triggerValue))
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
 				}
-			}
-			//Comparison with trigger value
-			else if((*i)->trigger == Event::Trigger::value)
-			{
-				if(*value == *((*i)->triggerValue))
+				else if((*i)->trigger == Event::Trigger::greaterOrEqualValue)
 				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					if(*value >= *((*i)->triggerValue))
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
 				}
-			}
-			else if((*i)->trigger == Event::Trigger::notValue)
-			{
-				if(*value != *((*i)->triggerValue))
+				else if((*i)->trigger == Event::Trigger::lessOrEqualValue)
 				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
-				}
-			}
-			else if((*i)->trigger == Event::Trigger::greaterThanValue)
-			{
-				if(*value > *((*i)->triggerValue))
-				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
-				}
-			}
-			else if((*i)->trigger == Event::Trigger::lessThanValue)
-			{
-				if(*value < *((*i)->triggerValue))
-				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
-				}
-			}
-			else if((*i)->trigger == Event::Trigger::greaterOrEqualValue)
-			{
-				if(*value >= *((*i)->triggerValue))
-				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
-				}
-			}
-			else if((*i)->trigger == Event::Trigger::lessOrEqualValue)
-			{
-				if(*value <= *((*i)->triggerValue))
-				{
-					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					if(*value <= *((*i)->triggerValue))
+					{
+						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
+					}
 				}
 			}
 
