@@ -1,4 +1,4 @@
-- Test listEvents
+- setMetadata not working
 
 When AES is working:
 - enforce $PEER.AES
