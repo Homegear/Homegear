@@ -738,7 +738,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 		{
 			std::shared_ptr<RPC::RPCVariable> result;
 			HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\".");
-			if((int32_t)(*i)->trigger < 8)
+			if(((int32_t)(*i)->trigger) < 8)
 			{
 				//Comparison with previous value
 				if((*i)->trigger == Event::Trigger::updated)
@@ -941,22 +941,23 @@ void EventHandler::load()
 			event->address = row->second.at(3)->textValue;
 			event->variable = row->second.at(4)->textValue;
 			event->trigger = (Event::Trigger::Enum)row->second.at(5)->intValue;
-			event->eventMethod = row->second.at(6)->textValue;
-			event->eventMethodParameters = _rpcDecoder.decodeResponse(row->second.at(7)->binaryValue);
-			event->resetAfter = row->second.at(8)->intValue;
-			event->initialTime = row->second.at(9)->intValue;
-			event->operation = (Event::Operation::Enum)row->second.at(10)->intValue;
-			event->factor = row->second.at(11)->floatValue;
-			event->limit = row->second.at(12)->intValue;
-			event->resetMethod = row->second.at(13)->textValue;
-			event->resetMethodParameters = _rpcDecoder.decodeResponse(row->second.at(14)->binaryValue);
-			event->eventTime = row->second.at(15)->intValue;
-			event->endTime = row->second.at(16)->intValue;
-			event->recurEvery = row->second.at(17)->intValue;
-			event->lastValue = _rpcDecoder.decodeResponse(row->second.at(18)->binaryValue);
-			event->lastRaised = row->second.at(19)->intValue;
-			event->lastReset = row->second.at(20)->intValue;
-			event->currentTime = row->second.at(21)->intValue;
+			event->triggerValue = _rpcDecoder.decodeResponse(row->second.at(6)->binaryValue);
+			event->eventMethod = row->second.at(7)->textValue;
+			event->eventMethodParameters = _rpcDecoder.decodeResponse(row->second.at(8)->binaryValue);
+			event->resetAfter = row->second.at(9)->intValue;
+			event->initialTime = row->second.at(10)->intValue;
+			event->operation = (Event::Operation::Enum)row->second.at(11)->intValue;
+			event->factor = row->second.at(12)->floatValue;
+			event->limit = row->second.at(13)->intValue;
+			event->resetMethod = row->second.at(14)->textValue;
+			event->resetMethodParameters = _rpcDecoder.decodeResponse(row->second.at(15)->binaryValue);
+			event->eventTime = row->second.at(16)->intValue;
+			event->endTime = row->second.at(17)->intValue;
+			event->recurEvery = row->second.at(18)->intValue;
+			event->lastValue = _rpcDecoder.decodeResponse(row->second.at(19)->binaryValue);
+			event->lastRaised = row->second.at(20)->intValue;
+			event->lastReset = row->second.at(21)->intValue;
+			event->currentTime = row->second.at(22)->intValue;
 			_eventsMutex.lock();
 			if(event->eventTime > 0)
 			{
@@ -1028,8 +1029,10 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->address)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->variable)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)event->trigger)));
+		std::shared_ptr<std::vector<char>> value = _rpcEncoder.encodeResponse(event->triggerValue);
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->eventMethod)));
-		std::shared_ptr<std::vector<char>> value = _rpcEncoder.encodeResponse(event->eventMethodParameters);
+		value = _rpcEncoder.encodeResponse(event->eventMethodParameters);
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->resetAfter)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->initialTime)));
