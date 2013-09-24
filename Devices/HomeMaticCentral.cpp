@@ -1023,7 +1023,11 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t c
 				peer->getDeviceType() == HMDeviceTypes::HMRC19SW ||
 				peer->getDeviceType() == HMDeviceTypes::RCH ||
 				peer->getDeviceType() == HMDeviceTypes::ATENT ||
-				peer->getDeviceType() == HMDeviceTypes::ZELSTGRMHS4) addHomegearFeaturesRemote(peer, channel, pushPendingBidCoSQueues);
+				peer->getDeviceType() == HMDeviceTypes::ZELSTGRMHS4 ||
+				peer->getDeviceType() == HMDeviceTypes::HMRC42 ||
+				peer->getDeviceType() == HMDeviceTypes::HMRCSEC42 ||
+				peer->getDeviceType() == HMDeviceTypes::HMRCKEY42 ||
+				peer->getDeviceType() == HMDeviceTypes::HMPB6WM55) addHomegearFeaturesRemote(peer, channel, pushPendingBidCoSQueues);
 		else if(peer->getDeviceType() == HMDeviceTypes::HMSECMDIR ||
 				peer->getDeviceType() == HMDeviceTypes::HMSECMDIRSCHUECO ||
 				peer->getDeviceType() == HMDeviceTypes::HMSENMDIRSM ||
