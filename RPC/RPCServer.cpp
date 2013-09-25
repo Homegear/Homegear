@@ -371,14 +371,6 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::shared_ptr<std::
 			sendRPCResponseToClient(client, parameters->at(0), responseType, keepAlive);
 			return;
 		}
-		if(GD::debugLevel >= 4)
-		{
-			HelperFunctions::printInfo("Info: Method called: " + methodName + " Parameters:");
-			for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
-			{
-				(*i)->print();
-			}
-		}
 		callMethod(client, methodName, parameters, responseType, keepAlive);
 	}
 	catch(const std::exception& ex)
@@ -448,6 +440,14 @@ std::shared_ptr<RPCVariable> RPCServer::callMethod(std::string& methodName, std:
 			HelperFunctions::printError("Warning: RPC method not found: " + methodName);
 			return RPCVariable::createError(-32601, ": Requested method not found.");
 		}
+		if(GD::debugLevel >= 4)
+		{
+			HelperFunctions::printInfo("Info: Method called: " + methodName + " Parameters:");
+			for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->arrayValue->begin(); i != parameters->arrayValue->end(); ++i)
+			{
+				(*i)->print();
+			}
+		}
 		std::shared_ptr<RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters->arrayValue);
 		if(GD::debugLevel >= 5)
 		{
@@ -479,6 +479,14 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		{
 			HelperFunctions::printError("Warning: RPC method not found: " + methodName);
 			sendRPCResponseToClient(client, RPCVariable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
+		}
+		if(GD::debugLevel >= 4)
+		{
+			HelperFunctions::printInfo("Info: Method called: " + methodName + " Parameters:");
+			for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
+			{
+				(*i)->print();
+			}
 		}
 		std::shared_ptr<RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters);
 		if(GD::debugLevel >= 5)

@@ -451,7 +451,7 @@ std::shared_ptr<RPCVariable> RPCGetAllMetadata::invoke(std::shared_ptr<std::vect
 		for(DataTable::iterator i = rows.begin(); i != rows.end(); ++i)
 		{
 			if(i->second.size() < 2) continue;
-			std::shared_ptr<RPCVariable> metadata = _rpcDecoder.decodeResponse(i->second.at(1)->binaryValue, 8);
+			std::shared_ptr<RPCVariable> metadata = _rpcDecoder.decodeResponse(i->second.at(1)->binaryValue);
 			metadataStruct->structValue->insert(RPCStructElement(i->second.at(0)->textValue, metadata));
 		}
 
@@ -733,7 +733,7 @@ std::shared_ptr<RPCVariable> RPCGetMetadata::invoke(std::shared_ptr<std::vector<
 		DataTable rows = GD::db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
 		if(rows.empty() || rows.at(0).empty()) return RPCVariable::createError(-1, "No metadata found.");
 
-		std::shared_ptr<RPCVariable> metadata = _rpcDecoder.decodeResponse(rows.at(0).at(0)->binaryValue, 8);
+		std::shared_ptr<RPCVariable> metadata = _rpcDecoder.decodeResponse(rows.at(0).at(0)->binaryValue);
 		return metadata;
 	}
 	catch(const std::exception& ex)

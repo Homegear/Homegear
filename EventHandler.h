@@ -81,8 +81,8 @@ public:
 	uint32_t endTime = 0;
 	uint32_t recurEvery = 0;
 	std::shared_ptr<RPC::RPCVariable> lastValue;
-	int64_t lastRaised = 0;
-	int64_t lastReset = 0;
+	int32_t lastRaised = 0;
+	int32_t lastReset = 0;
 
 	Event() {}
 	virtual ~Event() {}

@@ -43,6 +43,7 @@ EventHandler::~EventHandler()
 	while(_triggerThreadCount > 0 && i < 300)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		i++;
 	}
 	if(_mainThread.joinable()) _mainThread.join();
 }
@@ -329,6 +330,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string a
 				}
 				event->structValue->insert(RPC::RPCStructElement("EVENTMETHOD", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->eventMethod))));
 				if((*i)->eventMethodParameters) event->structValue->insert(RPC::RPCStructElement("EVENTMETHODPARAMS", (*i)->eventMethodParameters));
+				event->structValue->insert(RPC::RPCStructElement("LASTRAISED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->lastRaised))));
 			}
 			else
 			{
@@ -351,13 +353,17 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string a
 						resetStruct->structValue->insert(RPC::RPCStructElement("OPERATION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->operation))));
 						resetStruct->structValue->insert(RPC::RPCStructElement("FACTOR", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->factor))));
 						resetStruct->structValue->insert(RPC::RPCStructElement("LIMIT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->limit))));
+						resetStruct->structValue->insert(RPC::RPCStructElement("CURRENTTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->currentTime == 0 ? (*i)->initialTime : (*i)->currentTime))));
 
 						event->structValue->insert(RPC::RPCStructElement("RESETAFTER", resetStruct));
 					}
 					else event->structValue->insert(RPC::RPCStructElement("RESETAFTER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->resetAfter))));
 					event->structValue->insert(RPC::RPCStructElement("RESETMETHOD", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->resetMethod))));
 					if((*i)->eventMethodParameters) event->structValue->insert(RPC::RPCStructElement("RESETMETHODPARAMS", (*i)->resetMethodParameters));
+					event->structValue->insert(RPC::RPCStructElement("LASTRESET", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->lastReset))));
 				}
+				event->structValue->insert(RPC::RPCStructElement("LASTVALUE", (*i)->lastValue));
+				event->structValue->insert(RPC::RPCStructElement("LASTRAISED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->lastRaised))));
 			}
 
 			eventList->arrayValue->push_back(event);
@@ -737,18 +743,29 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 		for(std::vector<std::shared_ptr<Event>>::iterator i = _triggeredEvents.at(address).at(variable).begin(); i !=  _triggeredEvents.at(address).at(variable).end(); ++i)
 		{
 			std::shared_ptr<RPC::RPCVariable> result;
-			HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\".");
+			int32_t currentTime = HelperFunctions::getTimeSeconds();
+			//Don't raise the same event multiple times
+			if((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 5)
+			{
+				_triggerThreadCount--;
+				return;
+			}
+			(*i)->lastValue = value;
 			if(((int32_t)(*i)->trigger) < 8)
 			{
 				//Comparison with previous value
 				if((*i)->trigger == Event::Trigger::updated)
 				{
+					HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"updated\"");
+					(*i)->lastRaised = currentTime;
 					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 				}
 				else if((*i)->trigger == Event::Trigger::unchanged)
 				{
 					if(*((*i)->lastValue) == *value)
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"unchanged\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -756,6 +773,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) != *value)
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"changed\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -763,6 +782,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) > *value)
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"greater\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -770,6 +791,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) < *value)
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"less\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -777,6 +800,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) >= *value)
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"greaterOrUnchanged\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -784,6 +809,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) <= *value)
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"lessOrUnchanged\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -795,6 +822,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value == *((*i)->triggerValue))
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"value\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -802,6 +831,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value != *((*i)->triggerValue))
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"notValue\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -809,6 +840,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value > *((*i)->triggerValue))
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"greaterThanValue\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -816,6 +849,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value < *((*i)->triggerValue))
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"lessThanValue\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -823,6 +858,8 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value >= *((*i)->triggerValue))
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"greaterOrEqualValue\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
@@ -830,14 +867,13 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value <= *((*i)->triggerValue))
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"lessOrEqualValue\"");
+						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
 				}
 			}
 
-			int32_t currentTime = HelperFunctions::getTimeSeconds();
-			(*i)->lastRaised = currentTime;
-			(*i)->lastValue = value;
 			if(result)
 			{
 				if(result->errorStruct)
@@ -850,6 +886,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 					removeEventToReset((*i)->id);
 					if((*i)->initialTime == 0) //Simple reset
 					{
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" for device \"" + address + "\" and variable \"" + variable + "\" will be reset in " + std::to_string((*i)->resetAfter) + " seconds.");
 						_eventsMutex.lock();
 						_eventsToReset[currentTime + (*i)->resetAfter] =  *i;
 						_eventsMutex.unlock();
@@ -857,6 +894,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 					else //Complex reset
 					{
 						removeTimeToReset((*i)->id);
+						HelperFunctions::printInfo("Info: INITIALTIME for event \"" + (*i)->name + "\" will be reset in " + std::to_string((*i)->resetAfter) + " seconds.");
 						_eventsMutex.lock();
 						_timesToReset[currentTime + (*i)->resetAfter] = *i;
 						_eventsMutex.unlock();
@@ -869,7 +907,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 						_eventsMutex.lock();
 						_eventsToReset[currentTime + (*i)->currentTime] =  *i;
 						_eventsMutex.unlock();
-						HelperFunctions::printDebug("Event " + (*i)->name + " will be reset in " + std::to_string((*i)->currentTime) + " seconds.");
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" will be reset in " + std::to_string((*i)->currentTime) + " seconds.");
 						if((*i)->operation == Event::Operation::Enum::addition)
 						{
 							(*i)->currentTime += (*i)->factor;
@@ -1050,7 +1088,7 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->lastRaised)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->lastReset)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->currentTime)));
-		int32_t result = GD::db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
+		uint32_t result = GD::db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
 		if(event->id == 0) event->id = result;
 	}
 	catch(const std::exception& ex)
