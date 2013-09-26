@@ -1,4 +1,4 @@
-- setMetadata not working
+- RPC Server nur neu starten, wenn config-Dateien geändert
 
 When AES is working:
 - enforce $PEER.AES
