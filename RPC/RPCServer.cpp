@@ -175,7 +175,11 @@ void RPCServer::stop()
 {
 	_stopServer = true;
 	if(_mainThread.joinable()) _mainThread.join();
-	if(_sslCTX) SSL_CTX_free(_sslCTX);
+	if(_sslCTX)
+	{
+		SSL_CTX_free(_sslCTX);
+		_sslCTX = nullptr;
+	}
 }
 
 uint32_t RPCServer::connectionCount()

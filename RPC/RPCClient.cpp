@@ -71,7 +71,11 @@ RPCClient::~RPCClient()
 {
 	try
 	{
-		if(_sslCTX) SSL_CTX_free(_sslCTX);
+		if(_sslCTX)
+		{
+			SSL_CTX_free(_sslCTX);
+			_sslCTX = nullptr;
+		}
 	}
 	catch(const std::exception& ex)
     {

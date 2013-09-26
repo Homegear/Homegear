@@ -114,6 +114,8 @@ void terminate(int32_t signalNumber)
 		else if(signalNumber == SIGHUP)
 		{
 			stopRPCServers();
+			//Binding fails sometimes with "address is already in use" without waiting.
+			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			HelperFunctions::printMessage("Reloading settings...");
 			GD::settings.load(GD::configPath + "main.conf");
 			GD::clientSettings.load(GD::settings.clientSettingsPath());
