@@ -232,7 +232,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 		{
 			if(eventDescription->structValue->find("EVENTTIME") != eventDescription->structValue->end())
 				event->eventTime = eventDescription->structValue->at("EVENTTIME")->integerValue;
-			if(event->eventTime == 0) return RPC::RPCVariable::createError(-5, "No event time specified.");
+			if(event->eventTime == 0) event->eventTime = HelperFunctions::getTimeSeconds();
 			if(eventDescription->structValue->find("ENDTIME") != eventDescription->structValue->end())
 				event->endTime = eventDescription->structValue->at("ENDTIME")->integerValue;
 			if(eventDescription->structValue->find("RECUREVERY") != eventDescription->structValue->end())
