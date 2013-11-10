@@ -1,6 +1,7 @@
 - RPC Server nur neu starten, wenn config-Dateien geändert
 - Datum in Wandthermostaten irgendwie regelmäßig aktualisieren (Hauptproblem Zeitumstellung)
 - Batterie leer von Rauchmelder testen
+- XML-Datei-Patch
 
 When AES is working:
 - enforce $PEER.AES
