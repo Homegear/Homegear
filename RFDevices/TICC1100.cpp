@@ -85,7 +85,7 @@ TICC1100::TICC1100()
 			0x00, //28: RCCTRL0
 		};
 
-		openGPIO(22);
+		openGPIO(23);
 	}
     catch(const std::exception& ex)
     {
@@ -900,7 +900,7 @@ void TICC1100::mainThread()
 				HelperFunctions::printError("Error: Could not poll gpio: " + std::string(strerror(errno)) + ". Reopening...");
 				closeGPIO();
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				openGPIO(22);
+				openGPIO(23);
 			}
 			//pollResult == 0 is timeout
 		}
