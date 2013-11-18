@@ -185,7 +185,6 @@ std::shared_ptr<RPCVariable> RPCSystemMulticall::invoke(std::shared_ptr<std::vec
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> methods = _server->getMethods();
-
 		std::shared_ptr<RPCVariable> returns(new RPCVariable(RPCVariableType::rpcArray));
 		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
 		{
@@ -209,7 +208,7 @@ std::shared_ptr<RPCVariable> RPCSystemMulticall::invoke(std::shared_ptr<std::vec
 				returns->arrayValue->push_back(RPCVariable::createError(-32602, "No parameters provided."));
 				continue;
 			}
-			std::string methodName = (*i)->structValue->at(0)->stringValue;
+			std::string methodName = (*i)->structValue->at("methodName")->stringValue;
 			std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters = (*i)->structValue->at("params")->arrayValue;
 
 			if(methodName == "system.multicall") returns->arrayValue->push_back(RPCVariable::createError(-32602, "Recursive calls to system.multicall are not allowed."));
