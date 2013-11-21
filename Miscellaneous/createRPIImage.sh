@@ -103,7 +103,7 @@ echo "#!/bin/bash
 debconf-set-selections /debconf.set
 rm -f /debconf.set
 apt-get update
-apt-get -y install locales console-common ntp openssh-server git-core binutils ca-certificates sudo parted
+apt-get -y install locales console-common ntp openssh-server git-core binutils ca-certificates sudo parted unzip p7zip-full
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules
