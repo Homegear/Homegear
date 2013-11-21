@@ -51,6 +51,7 @@ void Server::registerMethods()
 		_server->registerMethod("addDevice", std::shared_ptr<RPCMethod>(new RPCAddDevice()));
 		_server->registerMethod("addEvent", std::shared_ptr<RPCMethod>(new RPCAddEvent()));
 		_server->registerMethod("addLink", std::shared_ptr<RPCMethod>(new RPCAddLink()));
+		_server->registerMethod("clientServerInitialized", std::shared_ptr<RPCMethod>(new RPCClientServerInitialized()));
 		_server->registerMethod("deleteDevice", std::shared_ptr<RPCMethod>(new RPCDeleteDevice()));
 		_server->registerMethod("deleteMetadata", std::shared_ptr<RPCMethod>(new RPCDeleteMetadata()));
 		_server->registerMethod("getAllMetadata", std::shared_ptr<RPCMethod>(new RPCGetAllMetadata()));
@@ -68,6 +69,7 @@ void Server::registerMethods()
 		_server->registerMethod("getValue", std::shared_ptr<RPCMethod>(new RPCGetValue()));
 		_server->registerMethod("init", std::shared_ptr<RPCMethod>(new RPCInit()));
 		_server->registerMethod("listBidcosInterfaces", std::shared_ptr<RPCMethod>(new RPCListBidcosInterfaces()));
+		_server->registerMethod("listClientServers", std::shared_ptr<RPCMethod>(new RPCListClientServers()));
 		_server->registerMethod("listDevices", std::shared_ptr<RPCMethod>(new RPCListDevices()));
 		_server->registerMethod("listEvents", std::shared_ptr<RPCMethod>(new RPCListEvents()));
 		_server->registerMethod("listTeams", std::shared_ptr<RPCMethod>(new RPCListTeams()));

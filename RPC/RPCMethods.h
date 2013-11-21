@@ -139,6 +139,16 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
+class RPCClientServerInitialized : public RPCMethod
+{
+public:
+	RPCClientServerInitialized()
+	{
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString}));
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCDeleteDevice : public RPCMethod
 {
 public:
@@ -339,6 +349,17 @@ public:
 		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcInteger}));
 		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString}));
 		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString, RPCVariableType::rpcString}));
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCListClientServers : public RPCMethod
+{
+public:
+	RPCListClientServers()
+	{
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString}));
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };

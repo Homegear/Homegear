@@ -462,4 +462,92 @@ std::shared_ptr<RemoteRPCServer> Client::getServer(std::pair<std::string, std::s
     return std::shared_ptr<RemoteRPCServer>();
 }
 
+std::shared_ptr<RPCVariable> Client::listClientServers(std::string id)
+{
+	try
+	{
+		std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> servers(new std::vector<std::shared_ptr<RemoteRPCServer>>());
+		_serversMutex.lock();
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+		{
+			if(!id.empty() && (*i)->id != id) continue;
+			servers->push_back(*i);
+		}
+		_serversMutex.unlock();
+		std::shared_ptr<RPCVariable> serverInfos(new RPCVariable(RPCVariableType::rpcArray));
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = servers->begin(); i != servers->end(); ++i)
+		{
+			std::shared_ptr<RPCVariable> serverInfo(new RPCVariable(RPCVariableType::rpcStruct));
+			serverInfo->structValue->insert(RPC::RPCStructElement("INTERFACE_ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->id))));
+			serverInfo->structValue->insert(RPC::RPCStructElement("HOSTNAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->hostname))));
+			serverInfo->structValue->insert(RPC::RPCStructElement("IPADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->ipAddress))));
+			serverInfo->structValue->insert(RPC::RPCStructElement("PORT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->address.second))));
+			serverInfo->structValue->insert(RPC::RPCStructElement("SSL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->useSSL))));
+			serverInfo->structValue->insert(RPC::RPCStructElement("BINARY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->binary))));
+			serverInfo->structValue->insert(RPC::RPCStructElement("KEEP_ALIVE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->keepAlive))));
+			if((*i)->settings)
+			{
+				serverInfo->structValue->insert(RPC::RPCStructElement("FORCESSL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->settings->forceSSL))));
+				serverInfo->structValue->insert(RPC::RPCStructElement("AUTH_TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)(*i)->settings->authType))));
+				serverInfo->structValue->insert(RPC::RPCStructElement("VERIFICATION_HOSTNAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->settings->hostname))));
+				serverInfo->structValue->insert(RPC::RPCStructElement("VERIFY_CERTIFICATE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->settings->verifyCertificate))));
+			}
+
+			serverInfos->arrayValue->push_back(serverInfo);
+		}
+		return serverInfos;
+	}
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPCVariable> Client::clientServerInitialized(std::string id)
+{
+	try
+	{
+		bool initialized = false;
+		_serversMutex.lock();
+		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = _servers->begin(); i != _servers->end(); ++i)
+		{
+			if((*i)->id == id)
+			{
+				initialized = true;
+				break;
+			}
+		}
+		_serversMutex.unlock();
+		return std::shared_ptr<RPCVariable>(new RPCVariable(initialized));
+	}
+	catch(const std::exception& ex)
+    {
+		_serversMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_serversMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_serversMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 } /* namespace RPC */

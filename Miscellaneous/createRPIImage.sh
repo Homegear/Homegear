@@ -118,6 +118,7 @@ dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg -i /homegear_current_armhf.deb
 service homegear stop
 service ssh stop
+rm /etc/homegear/Device\ types/*
 rm -r /var/log/homegear/*
 rm -f third-stage
 " > third-stage
@@ -185,6 +186,8 @@ echo \"************************************************************\"
 echo \"************* Welcome to your homegear system! *************\"
 echo \"************************************************************\"
 echo \"************************************************************\"
+echo \"Downloading device XML files...\"
+/etc/homegear/GetDeviceFiles.sh
 echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null

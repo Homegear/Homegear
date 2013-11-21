@@ -366,6 +366,30 @@ std::shared_ptr<RPCVariable> RPCAddLink::invoke(std::shared_ptr<std::vector<std:
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCClientServerInitialized::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+		std::string id = parameters->at(0)->stringValue;
+		return GD::rpcClient.clientServerInitialized(id);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCDeleteDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
@@ -1082,6 +1106,34 @@ std::shared_ptr<RPCVariable> RPCListBidcosInterfaces::invoke(std::shared_ptr<std
 		interface->structValue->insert(RPCStructElement("CONNECTED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::rfDevice->isOpen()))));
 		interface->structValue->insert(RPCStructElement("DEFAULT", std::shared_ptr<RPCVariable>(new RPCVariable(true))));
 		return array;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPCVariable> RPCListClientServers::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		std::string id;
+		if(parameters->size() > 0)
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+			if(error != ParameterError::Enum::noError) return getError(error);
+			id = parameters->at(0)->stringValue;
+		}
+		return GD::rpcClient.listClientServers(id);
 	}
 	catch(const std::exception& ex)
     {

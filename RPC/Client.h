@@ -63,6 +63,8 @@ public:
 	std::shared_ptr<RemoteRPCServer> addServer(std::pair<std::string, std::string> address, std::string id);
 	void removeServer(std::pair<std::string, std::string> address);
 	std::shared_ptr<RemoteRPCServer> getServer(std::pair<std::string, std::string>);
+	std::shared_ptr<RPCVariable> listClientServers(std::string id);
+	std::shared_ptr<RPCVariable> clientServerInitialized(std::string id);
 	void reset();
 private:
 	RPCClient _client;

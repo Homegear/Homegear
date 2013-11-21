@@ -25,6 +25,10 @@ case $1 in
 		chown homegear:homegear /var/log/homegear
 		chmod 750 /var/log/homegear
 
+		if test ! -e /etc/homegear/Device\ types/rf_s.xml; then
+			/etc/homegear/GetDeviceFiles.sh
+		fi
+
 		if test ! -e /etc/homegear/homegear.crt; then
 			openssl genrsa -out /etc/homegear/homegear.key 2048
 			openssl req -batch -new -key /etc/homegear/homegear.key -out /etc/homegear/homegear.csr
