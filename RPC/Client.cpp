@@ -474,6 +474,7 @@ std::shared_ptr<RPCVariable> Client::listClientServers(std::string id)
 			servers->push_back(*i);
 		}
 		_serversMutex.unlock();
+		if(servers->empty()) return RPC::RPCVariable::createError(-32602, "Server is unknown.");
 		std::shared_ptr<RPCVariable> serverInfos(new RPCVariable(RPCVariableType::rpcArray));
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = servers->begin(); i != servers->end(); ++i)
 		{
