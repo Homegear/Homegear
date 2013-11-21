@@ -1,0 +1,233 @@
+diff -Naur Original/rf_rc_12.xml Patched/rf_rc_12.xml
+--- Original/rf_rc_12.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_rc_12.xml	2013-10-18 10:02:30.000000000 +0200
+@@ -1,5 +1,10 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes:
++	- Added parameter for TEST_COUNTER
++	- Added parameter for SIM_COUNTER
++-->
+ <device version="8" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
+ 	<supported_types>
+ 		<type name="HM Remote 12 buttons" id="HM-RC-12" priority="2">
+@@ -139,6 +144,20 @@
+ 				</physical>
+ 				<conversion type="action_key_same_counter" sim_counter="SIM_CONT_COUNTER"/>
+ 			</parameter>
++			<parameter id="TEST_COUNTER" operations="read,event">
++				<logical type="integer"/>
++				<physical type="integer" interface="command" value_id="TEST_COUNTER">
++					<event frame="KEY_EVENT_SHORT" auth_violate_policy="reject"/>
++					<event frame="KEY_EVENT_LONG" auth_violate_policy="reject"/>
++				</physical>
++			</parameter>
++			<parameter id="SIM_COUNTER" operations="read,event">
++				<logical type="integer"/>
++				<physical type="integer" interface="command" value_id="SIM_COUNTER">
++					<event frame="KEY_SIM_SHORT"/>
++					<event frame="KEY_SIM_LONG"/>
++				</physical>
++			</parameter>
+ 			<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
+ 				<logical type="action"/>
+ 				<physical type="integer" interface="command" value_id="TEST_COUNTER">
+diff -Naur Original/rf_rc_19.xml Patched/rf_rc_19.xml
+--- Original/rf_rc_19.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rc_19.xml	2013-10-18 10:02:30.000000000 +0200
+@@ -1,5 +1,11 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes:
++	- Added parameter for TEST_COUNTER
++	- Added parameter for SIM_COUNTER
++	- Added parameter for COMMA
++-->
+ <device version="14" rx_modes="CONFIG,BURST" peering_sysinfo_expect_channel="false" supports_aes="true">
+ 	<supported_types>
+ 		<type name="HM Remote 19 buttons" id="HM-RC-19" priority="2">
+@@ -113,6 +119,20 @@
+ 					</physical>
+ 					<conversion type="action_key_same_counter" sim_counter="SIM_COUNTER"/>
+ 				</parameter>
++				<parameter id="TEST_COUNTER" operations="read,event">
++					<logical type="integer"/>
++					<physical type="integer" interface="command" value_id="TEST_COUNTER">
++						<event frame="KEY_EVENT_SHORT" auth_violate_policy="reject"/>
++						<event frame="KEY_EVENT_LONG" auth_violate_policy="reject"/>
++					</physical>
++				</parameter>
++				<parameter id="SIM_COUNTER" operations="read,event">
++					<logical type="integer"/>
++					<physical type="integer" interface="command" value_id="SIM_COUNTER">
++						<event frame="KEY_SIM_SHORT"/>
++						<event frame="KEY_SIM_LONG"/>
++					</physical>
++				</parameter>
+ 				<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
+ 					<logical type="action"/>
+ 					<physical type="integer" interface="command" value_id="TEST_COUNTER">
+@@ -157,6 +177,20 @@
+ 					</physical>
+ 					<conversion type="action_key_same_counter" sim_counter="SIM_CONT_COUNTER"/>
+ 				</parameter>
++				<parameter id="TEST_COUNTER" operations="read,event">
++					<logical type="integer"/>
++					<physical type="integer" interface="command" value_id="TEST_COUNTER">
++						<event frame="KEY_EVENT_SHORT" auth_violate_policy="reject"/>
++						<event frame="KEY_EVENT_LONG" auth_violate_policy="reject"/>
++					</physical>
++				</parameter>
++				<parameter id="SIM_COUNTER" operations="read,event">
++					<logical type="integer"/>
++					<physical type="integer" interface="command" value_id="SIM_COUNTER">
++						<event frame="KEY_SIM_SHORT"/>
++						<event frame="KEY_SIM_LONG"/>
++					</physical>
++				</parameter>
+ 				<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
+ 					<logical type="action"/>
+ 					<physical type="integer" interface="command" value_id="TEST_COUNTER">
+@@ -284,6 +318,10 @@
+ 					<logical type="action"/>
+ 					<physical type="integer" interface="store" volatile="true" id="ARROW_DOWN"/>
+ 				</parameter>
++				<parameter id="COMMA" operations="write">
++					<logical type="action"/>
++					<physical type="integer" interface="store" volatile="true" id="COMMA"/>
++				</parameter>
+ 				<parameter id="UNIT" operations="write" control="RC19_DISPLAY.UNIT">
+ 					<logical type="option">
+ 						<option id="NONE" index="0" default="true"/>
+@@ -335,6 +373,7 @@
+ 						<reset_after_send param="CLOCK"/>
+ 						<reset_after_send param="ARROW_UP"/>
+ 						<reset_after_send param="ARROW_DOWN"/>
++						<reset_after_send param="COMMA"/>
+ 						<reset_after_send param="UNIT"/>
+ 						<reset_after_send param="BEEP"/>
+ 						<reset_after_send param="BACKLIGHT"/>
+diff -Naur Original/rf_rc.xml Patched/rf_rc.xml
+--- Original/rf_rc.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rc.xml	2013-10-18 10:02:30.000000000 +0200
+@@ -1,5 +1,10 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes:
++	- Added parameter for TEST_COUNTER
++	- Added parameter for SIM_COUNTER
++-->
+ <device version="11" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
+ 	<supported_types>
+ 		<type name="HM Remote 4 buttons" id="HM-RC-4" priority="2">
+@@ -156,6 +161,20 @@
+ 				</physical>
+ 				<conversion type="action_key_same_counter" sim_counter="SIM_CONT_COUNTER"/>
+ 			</parameter>
++			<parameter id="TEST_COUNTER" operations="read,event">
++				<logical type="integer"/>
++				<physical type="integer" interface="command" value_id="TEST_COUNTER">
++					<event frame="KEY_EVENT_SHORT" auth_violate_policy="reject"/>
++					<event frame="KEY_EVENT_LONG" auth_violate_policy="reject"/>
++				</physical>
++			</parameter>
++			<parameter id="SIM_COUNTER" operations="read,event">
++				<logical type="integer"/>
++				<physical type="integer" interface="command" value_id="SIM_COUNTER">
++					<event frame="KEY_SIM_SHORT"/>
++					<event frame="KEY_SIM_LONG"/>
++				</physical>
++			</parameter>
+ 			<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
+ 				<logical type="action"/>
+ 				<physical type="integer" interface="command" value_id="TEST_COUNTER">
+diff -Naur Original/rf_s_1conf_644_le_v2_1.xml Patched/rf_s_1conf_644_le_v2_1.xml
+--- Original/rf_s_1conf_644_le_v2_1.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_s_1conf_644_le_v2_1.xml	2013-10-18 10:02:30.000000000 +0200
+@@ -1,5 +1,9 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes: 
++	- Added event to parameter INHIBIT
++-->
+ <device version="4" supports_aes="true">
+ 	<supported_types>
+ 		<type name="radio-controlled switch actuator 1-channel (flush-mount)" id="HM-LC-Sw1PBU-FM" priority="2">
+@@ -133,6 +137,7 @@
+ 				<logical type="boolean"/>
+ 				<physical type="integer" interface="command" value_id="INHIBIT">
+ 					<set request="SET_LOCK"/>
++					<event frame="INFO_POWERON"/>
+ 				</physical>
+ 			</parameter>
+ 			<parameter id="WORKING" operations="read,event" ui_flags="internal">
+diff -Naur Original/rf_s_1conf_644.xml Patched/rf_s_1conf_644.xml
+--- Original/rf_s_1conf_644.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_s_1conf_644.xml	2013-10-18 10:02:30.000000000 +0200
+@@ -1,5 +1,9 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes: 
++	- Added event to parameter INHIBIT
++-->
+ <device version="5" supports_aes="true">
+ 	<supported_types>
+ 		<type name="radio-controlled switch actuator 1-channel (flush-mount)" id="HM-LC-Sw1PBU-FM" priority="2">
+@@ -135,6 +139,7 @@
+ 				<logical type="boolean"/>
+ 				<physical type="integer" interface="command" value_id="INHIBIT">
+ 					<set request="SET_LOCK"/>
++					<event frame="INFO_POWERON"/>
+ 				</physical>
+ 			</parameter>
+ 			<parameter id="WORKING" operations="read,event" ui_flags="internal">
+diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
+--- Original/rf_sec_sd.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sec_sd.xml	2013-10-18 10:02:30.000000000 +0200
+@@ -1,5 +1,9 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes:
++	- Added parameter SENDERADDRESS
++-->
+ <device version="8" rx_modes="BURST" supports_aes="false" cyclic_timeout="1209600">
+ 	<supported_types>
+ 		<type name="HM Smoke Detector" id="HM-Sec-SD" priority="2">
+@@ -119,6 +123,10 @@
+ 							<event frame="EVENT"/>
+ 						</physical>
+ 					</parameter>
++					<parameter id="SENDERADDRESS" operations="read,event">
++						<logical type="string"/>
++						<physical type="string" interface="command" />
++					</parameter>
+ 				</paramset>
+ 				<paramset type="LINK" id="sd_team_ch_link">
+ 				</paramset>
+diff -Naur Original/rf_s.xml Patched/rf_s.xml
+--- Original/rf_s.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_s.xml	2013-10-18 10:02:30.000000000 +0200
+@@ -1,5 +1,9 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes: 
++	- Added event to parameter INHIBIT
++-->
+ <device version="20" supports_aes="true">
+ 	<supported_types>
+ 		<type name="radio-controlled socket adapter switch actuator 1-channel" id="HM-LC-Sw1-Pl" priority="2">
+@@ -191,6 +195,7 @@
+ 				<logical type="boolean"/>
+ 				<physical type="integer" interface="command" value_id="INHIBIT">
+ 					<set request="SET_LOCK"/>
++					<event frame="INFO_POWERON"/>
+ 				</physical>
+ 			</parameter>
+ 			<parameter id="WORKING" operations="read,event" ui_flags="internal">
