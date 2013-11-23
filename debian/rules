@@ -20,7 +20,6 @@ override_dh_auto_install:
 	cp $(CURDIR)/bin/Release/homegear $(CURDIR)/debian/homegear/usr/bin
 	chown root:root $(CURDIR)/debian/homegear/usr/bin/homegear
 	chmod 750 $(CURDIR)/debian/homegear/usr/bin/homegear
-
 	
 	mkdir -p $(CURDIR)/debian/homegear/etc/homegear
 	cp $(CURDIR)/Miscellaneous/main.conf $(CURDIR)/debian/homegear/etc/homegear
