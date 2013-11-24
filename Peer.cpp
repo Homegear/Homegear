@@ -2462,9 +2462,16 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					if(GD::debugLevel >= 4) HelperFunctions::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
-					if((parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty() && parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
+					if((parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
 					{
-						serviceMessages->set(i->first, i->second.value.at(0), *j);
+						if(parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
+						{
+							serviceMessages->set(i->first, i->second.value.at(0), *j);
+						}
+						else if(parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeBoolean)
+						{
+							serviceMessages->set(i->first, (bool)i->second.value.at(0));
+						}
 					}
 
 					if(!sentFrameValues.empty())
