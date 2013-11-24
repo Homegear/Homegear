@@ -25,20 +25,22 @@ case $1 in
 		chown homegear:homegear /var/log/homegear
 		chmod 750 /var/log/homegear
 
-		if test ! -e /etc/homegear/Device\ types/rf_s.xml; then
-			/etc/homegear/GetDeviceFiles.sh
-		fi
-
-		if test ! -e /etc/homegear/homegear.crt; then
-			openssl genrsa -out /etc/homegear/homegear.key 2048
-			openssl req -batch -new -key /etc/homegear/homegear.key -out /etc/homegear/homegear.csr
-			openssl x509 -req -in /etc/homegear/homegear.csr -signkey /etc/homegear/homegear.key -out /etc/homegear/homegear.crt
-			rm /etc/homegear/homegear.csr
-			chown homegear:homegear /etc/homegear/homegear.key
-			chmod 400 /etc/homegear/homegear.key
-			openssl dhparam -check -text -5 2048 -out /etc/homegear/dh2048.pem
-			chown homegear:homegear /etc/homegear/dh2048.pem
-			chmod 400 /etc/homegear/dh2048.pem
+		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
+			if test ! -e /etc/homegear/Device\ types/rf_s.xml; then
+				/etc/homegear/GetDeviceFiles.sh
+			fi
+	
+			if test ! -e /etc/homegear/homegear.crt; then
+				openssl genrsa -out /etc/homegear/homegear.key 2048
+				openssl req -batch -new -key /etc/homegear/homegear.key -out /etc/homegear/homegear.csr
+				openssl x509 -req -in /etc/homegear/homegear.csr -signkey /etc/homegear/homegear.key -out /etc/homegear/homegear.crt
+				rm /etc/homegear/homegear.csr
+				chown homegear:homegear /etc/homegear/homegear.key
+				chmod 400 /etc/homegear/homegear.key
+				openssl dhparam -check -text -5 2048 -out /etc/homegear/dh2048.pem
+				chown homegear:homegear /etc/homegear/dh2048.pem
+				chmod 400 /etc/homegear/dh2048.pem
+			fi
 		fi
 
 		chown root:homegear /dev/ttyACM0 >/dev/null 2>&1

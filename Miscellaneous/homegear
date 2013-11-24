@@ -60,10 +60,10 @@ case $1 in
         		fi
 
 				if test -d /sys/class/gpio; then
-					if test ! -d /sys/class/gpio/gpio22; then echo 22 > /sys/class/gpio/export; fi
-					echo in > /sys/class/gpio/gpio22/direction
-					echo both > /sys/class/gpio/gpio22/edge
-					if test ! -d /sys/class/gpio/gpio22; then echo Could not export gpio22; fi
+					if test ! -d /sys/class/gpio/gpio23; then echo 23 > /sys/class/gpio/export; fi
+					echo in > /sys/class/gpio/gpio23/direction
+					echo both > /sys/class/gpio/gpio23/edge
+					if test ! -d /sys/class/gpio/gpio23; then echo Could not export gpio23; fi
 				fi
 				
 				if test ! -d $PIDPATH; then 

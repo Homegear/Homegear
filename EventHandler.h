@@ -69,20 +69,20 @@ public:
 	std::shared_ptr<RPC::RPCVariable> triggerValue;
 	std::string eventMethod;
 	std::shared_ptr<RPC::RPCVariable> eventMethodParameters;
-	uint32_t resetAfter = 0;
-	uint32_t initialTime = 0;
-	uint32_t currentTime = 0;
+	uint64_t resetAfter = 0;
+	uint64_t initialTime = 0;
+	uint64_t currentTime = 0;
 	Operation::Enum operation = Operation::Enum::none;
 	double factor = 1;
-	uint32_t limit = 0;
+	uint64_t limit = 0;
 	std::string resetMethod;
 	std::shared_ptr<RPC::RPCVariable> resetMethodParameters;
-	uint32_t eventTime = 0;
-	uint32_t endTime = 0;
-	uint32_t recurEvery = 0;
+	uint64_t eventTime = 0;
+	uint64_t endTime = 0;
+	uint64_t recurEvery = 0;
 	std::shared_ptr<RPC::RPCVariable> lastValue;
-	int32_t lastRaised = 0;
-	int32_t lastReset = 0;
+	uint64_t lastRaised = 0;
+	uint64_t lastReset = 0;
 
 	Event() {}
 	virtual ~Event() {}
@@ -104,10 +104,10 @@ protected:
 	bool _disposing = false;
 	int32_t _triggerThreadCount = 0;
 	std::mutex _eventsMutex;
-	std::map<int32_t, std::shared_ptr<Event>> _timedEvents;
+	std::map<uint64_t, std::shared_ptr<Event>> _timedEvents;
 	std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>> _triggeredEvents;
-	std::map<int32_t, std::shared_ptr<Event>> _eventsToReset;
-	std::map<int32_t, std::shared_ptr<Event>> _timesToReset;
+	std::map<uint64_t, std::shared_ptr<Event>> _eventsToReset;
+	std::map<uint64_t, std::shared_ptr<Event>> _timesToReset;
 	bool _stopThread = false;
 	std::thread _mainThread;
 	std::mutex _mainThreadMutex;
@@ -118,7 +118,7 @@ protected:
 	void triggerThreadMultipleVariables(std::string address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
 	void triggerThread(std::string address, std::string variable, std::shared_ptr<RPC::RPCVariable> value);
 	void mainThread();
-	int32_t getNextExecution(int32_t startTime, int32_t recurEvery);
+	uint64_t getNextExecution(uint64_t startTime, uint64_t recurEvery);
 	void removeEventToReset(uint32_t id);
 	void removeTimeToReset(uint32_t id);
 	void removeTimedEvent(uint32_t id);

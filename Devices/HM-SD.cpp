@@ -816,19 +816,19 @@ std::string HM_SD::handleCLICommand(std::string command)
 			int32_t index = 0;
 			while(std::getline(stream, element, ' '))
 			{
-				if(index < 2)
+				if(index < 1)
 				{
 					index++;
 					continue;
 				}
-				else if(index == 2)
+				else if(index == 1)
 				{
 					if(element == "help") break;
 					packetHex = element;
 				}
 				index++;
 			}
-			if(index == 2)
+			if(index == 1)
 			{
 				stringStream << "Description: Sends a BidCoS packet." << std::endl;
 				stringStream << "Usage: send PACKET" << std::endl << std::endl;

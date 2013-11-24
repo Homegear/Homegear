@@ -115,7 +115,9 @@ echo \"root:raspberry\" | chpasswd
 echo \"pi ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers
 sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
+touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 dpkg -i /homegear_current_armhf.deb
+rm /tmp/HOMEGEAR_STATIC_INSTALLATION
 service homegear stop
 service ssh stop
 rm /etc/homegear/Device\ types/*
@@ -181,6 +183,7 @@ echo "deb $deb_mirror $deb_release main contrib non-free rpi
 
 #First-start script
 echo "#!/bin/bash
+sed -i '$ d' /home/pi/.bashrc >/dev/null
 echo \"************************************************************\"
 echo \"************************************************************\"
 echo \"************* Welcome to your homegear system! *************\"
@@ -205,8 +208,9 @@ chown homegear:homegear /etc/homegear/dh2048.pem
 chmod 400 /etc/homegear/dh2048.pem
 echo \"Starting raspi-config...\"
 raspi-config
-sed -i '$ d' /home/pi/.bashrc >/dev/null
-rm /scripts/firstStart.sh" > scripts/firstStart.sh
+rm /scripts/firstStart.sh
+rm -Rf /var/log/homegear/*
+reboot" > scripts/firstStart.sh
 chown root:root scripts/firstStart.sh
 chmod 755 scripts/firstStart.sh
 

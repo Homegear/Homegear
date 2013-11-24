@@ -54,7 +54,7 @@ void EventHandler::mainThread()
 	{
 		try
 		{
-			int32_t currentTime = HelperFunctions::getTimeSeconds();
+			int64_t currentTime = HelperFunctions::getTime();
 			_eventsMutex.lock();
 			if(!_timedEvents.empty() && _timedEvents.begin()->first <= currentTime)
 			{
@@ -78,12 +78,12 @@ void EventHandler::mainThread()
 				}
 				else if(event->recurEvery > 0)
 				{
-					uint32_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
+					uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
 					HelperFunctions::printInfo("Info: Next execution for event " + event->name + ": " + std::to_string(nextExecution));
 					_eventsMutex.lock();
 					//We don't call removeTimedEvents here, so we don't need to release the lock. Otherwise there is the possibility that the event
 					//is recreated after being deleted.
-					for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+					for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
 					{
 						if(i->second->id == event->id)
 						{
@@ -200,13 +200,13 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 
 				if(eventDescription->structValue->at("RESETAFTER")->type == RPC::RPCVariableType::rpcInteger)
 				{
-					event->resetAfter = eventDescription->structValue->at("RESETAFTER")->integerValue;
+					event->resetAfter = eventDescription->structValue->at("RESETAFTER")->integerValue * 1000;
 				}
 				else if(eventDescription->structValue->at("RESETAFTER")->type == RPC::RPCVariableType::rpcStruct)
 				{
 					std::shared_ptr<RPC::RPCVariable> resetStruct = eventDescription->structValue->at("RESETAFTER");
 					if(resetStruct->structValue->find("INITIALTIME") == resetStruct->structValue->end() || resetStruct->structValue->at("INITIALTIME")->integerValue == 0) return RPC::RPCVariable::createError(-5, "Initial time in reset struct not specified.");
-					event->initialTime = resetStruct->structValue->at("INITIALTIME")->integerValue;
+					event->initialTime = resetStruct->structValue->at("INITIALTIME")->integerValue * 1000;
 					if(resetStruct->structValue->find("OPERATION") != resetStruct->structValue->end())
 						event->operation = (Event::Operation::Enum)resetStruct->structValue->at("OPERATION")->integerValue;
 					if(resetStruct->structValue->find("FACTOR") != resetStruct->structValue->end())
@@ -217,10 +217,10 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 					if(resetStruct->structValue->find("LIMIT") != resetStruct->structValue->end())
 					{
 						if(resetStruct->structValue->at("LIMIT")->integerValue < 0) return RPC::RPCVariable::createError(-5, "Limit is negative. Please provide a positive value");
-						event->limit = resetStruct->structValue->at("LIMIT")->integerValue;
+						event->limit = resetStruct->structValue->at("LIMIT")->integerValue * 1000;
 					}
 					if(resetStruct->structValue->find("RESETAFTER") != resetStruct->structValue->end())
-						event->resetAfter = resetStruct->structValue->at("RESETAFTER")->integerValue;
+						event->resetAfter = resetStruct->structValue->at("RESETAFTER")->integerValue * 1000;
 					if(event->resetAfter == 0) return RPC::RPCVariable::createError(-5, "RESETAFTER is not specified or 0.");
 				}
 			}
@@ -231,14 +231,15 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 		else
 		{
 			if(eventDescription->structValue->find("EVENTTIME") != eventDescription->structValue->end())
-				event->eventTime = eventDescription->structValue->at("EVENTTIME")->integerValue;
+				event->eventTime = eventDescription->structValue->at("EVENTTIME")->integerValue * 1000;
 			if(event->eventTime == 0) event->eventTime = HelperFunctions::getTimeSeconds();
 			if(eventDescription->structValue->find("ENDTIME") != eventDescription->structValue->end())
-				event->endTime = eventDescription->structValue->at("ENDTIME")->integerValue;
+				event->endTime = eventDescription->structValue->at("ENDTIME")->integerValue * 1000;
 			if(eventDescription->structValue->find("RECUREVERY") != eventDescription->structValue->end())
-				event->recurEvery = eventDescription->structValue->at("RECUREVERY")->integerValue;
-			int32_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
+				event->recurEvery = eventDescription->structValue->at("RECUREVERY")->integerValue * 1000;
+			uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
 			_eventsMutex.lock();
+			while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
 			_timedEvents[nextExecution] = event;
 			_eventsMutex.unlock();
 			_mainThreadMutex.lock();
@@ -283,7 +284,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string a
 		//Copy all events first, because listEvents takes very long and we don't want to lock _eventsMutex too long
 		if(type < 0 || type == 1)
 		{
-			for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+			for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
 			{
 				events.push_back(i->second);
 			}
@@ -322,15 +323,15 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string a
 			{
 				event->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->type))));
 				event->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->name))));
-				event->structValue->insert(RPC::RPCStructElement("EVENTTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->eventTime))));
+				event->structValue->insert(RPC::RPCStructElement("EVENTTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->eventTime / 1000)))));
 				if((*i)->recurEvery > 0)
 				{
-					event->structValue->insert(RPC::RPCStructElement("RECUREVERY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->recurEvery))));
-					if((*i)->endTime > 0) event->structValue->insert(RPC::RPCStructElement("ENDTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->endTime))));
+					event->structValue->insert(RPC::RPCStructElement("RECUREVERY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->recurEvery / 1000)))));
+					if((*i)->endTime > 0) event->structValue->insert(RPC::RPCStructElement("ENDTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->endTime / 1000)))));
 				}
 				event->structValue->insert(RPC::RPCStructElement("EVENTMETHOD", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->eventMethod))));
 				if((*i)->eventMethodParameters) event->structValue->insert(RPC::RPCStructElement("EVENTMETHODPARAMS", (*i)->eventMethodParameters));
-				event->structValue->insert(RPC::RPCStructElement("LASTRAISED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->lastRaised))));
+				event->structValue->insert(RPC::RPCStructElement("LASTRAISED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->lastRaised / 1000)))));
 			}
 			else
 			{
@@ -348,22 +349,22 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string a
 					{
 						std::shared_ptr<RPC::RPCVariable> resetStruct(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
-						resetStruct->structValue->insert(RPC::RPCStructElement("INITIALTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->initialTime))));
-						resetStruct->structValue->insert(RPC::RPCStructElement("RESETAFTER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->resetAfter))));
+						resetStruct->structValue->insert(RPC::RPCStructElement("INITIALTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->initialTime / 1000)))));
+						resetStruct->structValue->insert(RPC::RPCStructElement("RESETAFTER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->resetAfter / 1000)))));
 						resetStruct->structValue->insert(RPC::RPCStructElement("OPERATION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->operation))));
 						resetStruct->structValue->insert(RPC::RPCStructElement("FACTOR", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->factor))));
-						resetStruct->structValue->insert(RPC::RPCStructElement("LIMIT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->limit))));
-						resetStruct->structValue->insert(RPC::RPCStructElement("CURRENTTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->currentTime == 0 ? (*i)->initialTime : (*i)->currentTime))));
+						resetStruct->structValue->insert(RPC::RPCStructElement("LIMIT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->limit / 1000)))));
+						resetStruct->structValue->insert(RPC::RPCStructElement("CURRENTTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->currentTime == 0 ? (uint32_t)((*i)->initialTime / 1000) : (uint32_t)((*i)->currentTime / 1000)))));
 
 						event->structValue->insert(RPC::RPCStructElement("RESETAFTER", resetStruct));
 					}
-					else event->structValue->insert(RPC::RPCStructElement("RESETAFTER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->resetAfter))));
+					else event->structValue->insert(RPC::RPCStructElement("RESETAFTER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->resetAfter / 1000)))));
 					event->structValue->insert(RPC::RPCStructElement("RESETMETHOD", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->resetMethod))));
 					if((*i)->eventMethodParameters) event->structValue->insert(RPC::RPCStructElement("RESETMETHODPARAMS", (*i)->resetMethodParameters));
-					event->structValue->insert(RPC::RPCStructElement("LASTRESET", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->lastReset))));
+					event->structValue->insert(RPC::RPCStructElement("LASTRESET", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->lastReset / 1000)))));
 				}
 				event->structValue->insert(RPC::RPCStructElement("LASTVALUE", (*i)->lastValue));
-				event->structValue->insert(RPC::RPCStructElement("LASTRAISED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->lastRaised))));
+				event->structValue->insert(RPC::RPCStructElement("LASTRAISED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->lastRaised / 1000)))));
 			}
 
 			eventList->arrayValue->push_back(event);
@@ -392,7 +393,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::remove(std::string name)
 	{
 		_eventsMutex.lock();
 		std::shared_ptr<Event> event;
-		for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
 		{
 			if(i->second->name == name)
 			{
@@ -479,14 +480,14 @@ void EventHandler::trigger(std::string& address, std::shared_ptr<std::vector<std
     }
 }
 
-int32_t EventHandler::getNextExecution(int32_t startTime, int32_t recurEvery)
+uint64_t EventHandler::getNextExecution(uint64_t startTime, uint64_t recurEvery)
 {
 	try
 	{
-		int32_t time = HelperFunctions::getTimeSeconds();
+		uint64_t time = HelperFunctions::getTime();
 		if(startTime >= time) return startTime;
 		if(recurEvery == 0) return -1;
-		int32_t difference = time - startTime;
+		uint64_t difference = time - startTime;
 		return time + (recurEvery - (difference % recurEvery));
 	}
 	catch(const std::exception& ex)
@@ -557,7 +558,7 @@ void EventHandler::removeEventToReset(uint32_t id)
 	_eventsMutex.lock();
 	try
 	{
-		for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _eventsToReset.begin(); i != _eventsToReset.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _eventsToReset.begin(); i != _eventsToReset.end(); ++i)
 		{
 			if(i->second->id == id)
 			{
@@ -587,7 +588,7 @@ void EventHandler::removeTimeToReset(uint32_t id)
 	_eventsMutex.lock();
 	try
 	{
-		for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timesToReset.begin(); i != _timesToReset.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timesToReset.begin(); i != _timesToReset.end(); ++i)
 		{
 			if(i->second->id == id)
 			{
@@ -617,7 +618,7 @@ void EventHandler::removeTimedEvent(uint32_t id)
 	_eventsMutex.lock();
 	try
 	{
-		for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
 		{
 			if(i->second->id == id)
 			{
@@ -647,7 +648,7 @@ bool EventHandler::eventExists(uint32_t id)
 	_eventsMutex.lock();
 	try
 	{
-		for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
 		{
 			if(i->second->id == id)
 			{
@@ -691,7 +692,7 @@ bool EventHandler::eventExists(std::string name)
 	_eventsMutex.lock();
 	try
 	{
-		for(std::map<int32_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
 		{
 			if(i->second->name == name)
 			{
@@ -740,16 +741,19 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 			_triggerThreadCount--;
 			return;
 		}
+		std::vector<std::shared_ptr<Event>> triggeredEvents;
+		uint64_t currentTime = HelperFunctions::getTime();
+		_eventsMutex.lock();
 		for(std::vector<std::shared_ptr<Event>>::iterator i = _triggeredEvents.at(address).at(variable).begin(); i !=  _triggeredEvents.at(address).at(variable).end(); ++i)
 		{
-			std::shared_ptr<RPC::RPCVariable> result;
-			int32_t currentTime = HelperFunctions::getTimeSeconds();
 			//Don't raise the same event multiple times
-			if((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 5)
-			{
-				_triggerThreadCount--;
-				return;
-			}
+			if((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 5000) continue;
+			triggeredEvents.push_back(*i);
+		}
+		_eventsMutex.unlock();
+		for(std::vector<std::shared_ptr<Event>>::iterator i = triggeredEvents.begin(); i !=  triggeredEvents.end(); ++i)
+		{
+			std::shared_ptr<RPC::RPCVariable> result;
 			(*i)->lastValue = value;
 			if(((int32_t)(*i)->trigger) < 8)
 			{
@@ -884,19 +888,23 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				else if((*i)->resetAfter > 0 || (*i)->initialTime > 0)
 				{
 					removeEventToReset((*i)->id);
+					uint64_t resetTime = currentTime + (*i)->resetAfter;
 					if((*i)->initialTime == 0) //Simple reset
 					{
-						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" for device \"" + address + "\" and variable \"" + variable + "\" will be reset in " + std::to_string((*i)->resetAfter) + " seconds.");
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" for device \"" + address + "\" and variable \"" + variable + "\" will be reset in " + std::to_string((*i)->resetAfter / 1000) + " seconds.");
+
 						_eventsMutex.lock();
-						_eventsToReset[currentTime + (*i)->resetAfter] =  *i;
+						while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
+						_eventsToReset[resetTime] =  *i;
 						_eventsMutex.unlock();
 					}
 					else //Complex reset
 					{
 						removeTimeToReset((*i)->id);
-						HelperFunctions::printInfo("Info: INITIALTIME for event \"" + (*i)->name + "\" will be reset in " + std::to_string((*i)->resetAfter) + " seconds.");
+						HelperFunctions::printInfo("Info: INITIALTIME for event \"" + (*i)->name + "\" will be reset in " + std::to_string((*i)->resetAfter / 1000)+ " seconds.");
 						_eventsMutex.lock();
-						_timesToReset[currentTime + (*i)->resetAfter] = *i;
+						while(_timesToReset.find(resetTime) != _timesToReset.end()) resetTime++;
+						_timesToReset[resetTime] = *i;
 						_eventsMutex.unlock();
 						if((*i)->currentTime == 0) (*i)->currentTime = (*i)->initialTime;
 						if((*i)->factor <= 0)
@@ -904,10 +912,12 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 							HelperFunctions::printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from address " + address + " and variable " + variable + ".");
 							(*i)->factor = 1;
 						}
+						resetTime = currentTime + (*i)->currentTime;
 						_eventsMutex.lock();
-						_eventsToReset[currentTime + (*i)->currentTime] =  *i;
+						while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
+						_eventsToReset[resetTime] =  *i;
 						_eventsMutex.unlock();
-						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" will be reset in " + std::to_string((*i)->currentTime) + " seconds.");
+						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" will be reset in " + std::to_string((*i)->currentTime / 1000) + " seconds.");
 						if((*i)->operation == Event::Operation::Enum::addition)
 						{
 							(*i)->currentTime += (*i)->factor;
