@@ -259,7 +259,9 @@ void RPCServer::mainThread()
 				if(_clients.find(clientFileDescriptor) != _clients.end())
 				{
 					HelperFunctions::printError("Tried to add client with the same file descriptor twice.");
-					continue;
+					//This error actually occured. I don't know why. If this happens, close the old connection.
+					shutdown(clientFileDescriptor, 0);
+					close(clientFileDescriptor);
 				}
 				std::shared_ptr<Client> client(new Client());
 				client->fileDescriptor = clientFileDescriptor;

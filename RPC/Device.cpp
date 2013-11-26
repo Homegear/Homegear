@@ -784,6 +784,11 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		}
 		else HelperFunctions::printWarning("Warning: Unknown subnode for \"parameter\": " + nodeName);
 	}
+	if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
+	{
+		LogicalParameterFloat* parameter = (LogicalParameterFloat*)logicalParameter.get();
+		if(parameter->min < 0 && parameter->min != std::numeric_limits<double>::min()) isSigned = true;
+	}
 }
 
 void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
@@ -1584,7 +1589,20 @@ void Device::parseXML(xml_node<>* node)
 				if(!(*j)->physicalParameter->setRequest.empty() && framesByID.find((*j)->physicalParameter->setRequest) != framesByID.end()) framesByID[(*j)->physicalParameter->setRequest]->associatedValues.push_back(*j);
 				for(std::vector<std::shared_ptr<PhysicalParameterEvent>>::iterator k = (*j)->physicalParameter->eventFrames.begin(); k != (*j)->physicalParameter->eventFrames.end(); ++k)
 				{
-					if(framesByID.find((*k)->frame) != framesByID.end()) framesByID[(*k)->frame]->associatedValues.push_back(*j);
+					if(framesByID.find((*k)->frame) != framesByID.end())
+					{
+						std::shared_ptr<DeviceFrame> frame = framesByID[(*k)->frame];
+						frame->associatedValues.push_back(*j);
+						//For float variables the frame is the only location to find out if it is signed
+						for(std::vector<Parameter>::iterator l = frame->parameters.begin(); l != frame->parameters.end(); l++)
+						{
+							if(l->isSigned && (l->param == (*j)->id || l->additionalParameter == (*j)->id))
+							{
+								(*j)->isSigned = true;
+								(*j)->physicalParameter->size = l->size;
+							}
+						}
+					}
 				}
 			}
 		}
