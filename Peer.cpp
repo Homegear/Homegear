@@ -2892,7 +2892,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 					}
 				}
 				//Continue when value is unchanged except parameter is of the same index as a changed one.
-				if(parameter->data == value && !putUnchanged) continue;
+				//if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
 				saveParameter(parameter->databaseID, parameter->data);
 				HelperFunctions::printInfo("Info: Parameter " + i->first + " of device 0x" + HelperFunctions::getHexString(_address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");

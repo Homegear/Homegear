@@ -1436,8 +1436,11 @@ void HomeMaticDevice::handleTimeRequest(int32_t messageCounter, std::shared_ptr<
 	{
 		std::vector<uint8_t> payload;
 		payload.push_back(0x02);
-		payload.push_back(0x04);
-		uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() - 946684800;
+		payload.push_back(0x02);
+		const auto timePoint = std::chrono::system_clock::now();
+		time_t t = std::chrono::system_clock::to_time_t(timePoint);
+		tm* localTime = std::localtime(&t);
+		uint32_t time = (uint32_t)((t - 946684800) + localTime->tm_gmtoff);
 		payload.push_back(time >> 24);
 		payload.push_back((time >> 16) & 0xFF);
 		payload.push_back((time >> 8) & 0xFF);

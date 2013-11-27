@@ -78,7 +78,7 @@ public:
 		}
 		else
 		{
-			auto timePoint = std::chrono::system_clock::now();
+			const auto timePoint = std::chrono::system_clock::now();
 			t = std::chrono::system_clock::to_time_t(timePoint);
 			milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(timePoint.time_since_epoch()).count() % 1000;
 		}
