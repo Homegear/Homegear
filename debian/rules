@@ -41,5 +41,11 @@ override_dh_auto_install:
 	cp $(CURDIR)/Miscellaneous/logrotate $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
 	chown root:root $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/logrotate.d/homegear
+	mkdir -p $(CURDIR)/debian/homegear/etc/security/limits.d
+	chown root:root $(CURDIR)/debian/homegear/etc/security/limits.d
+	echo "homegear        soft    rtprio          100
+homegear        hard    rtprio          100" > $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
+	chown root:root $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
+	chmod 644 $(CURDIR)/debian/homegear/etc/security/limits.d/homegear
 %:
 	dh $@

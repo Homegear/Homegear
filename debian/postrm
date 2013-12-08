@@ -15,6 +15,7 @@ case "$1" in
                 insserv -rf homegear >/dev/null 2>&1
                 rm -f /etc/init.d/homegear > /dev/null 2>&1
                 rm -f /etc/logrotate.d/homegear > /dev/null 2>&1
+                rm -f /etc/security/limits.d/homegear > /dev/null 2>&1
 		deluser homegear > /dev/null 2>&1
                 ;;
 
