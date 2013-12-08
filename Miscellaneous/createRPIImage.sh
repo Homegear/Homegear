@@ -180,6 +180,9 @@ chmod 755 boot/config.txt
 
 echo "deb $deb_mirror $deb_release main contrib non-free rpi
 " > etc/apt/sources.list
+echo "*               soft    core            unlimited
+homegear        soft    rtprio          100
+homegear        hard    rtprio          100" > etc/security/limits.d/homegear
 
 #First-start script
 echo "#!/bin/bash

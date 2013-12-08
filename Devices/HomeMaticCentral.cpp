@@ -1308,6 +1308,8 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			return;
 		}
 
+		if((packet->controlByte() & 0x20) && packet->destinationAddress() == _address) sendOK(packet->messageCounter(), packet->senderAddress());
+
 		std::vector<uint8_t> payload;
 
 		std::shared_ptr<BidCoSQueue> queue;
@@ -1382,8 +1384,8 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			_messageCounter[0]++;
 
 			//Don't check for rxModes here! All rxModes are allowed.
-			if(!peerExists(packet->senderAddress())) //Only request config when peer is not already paired to central
-			{
+			//if(!peerExists(packet->senderAddress())) //Only request config when peer is not already paired to central
+			//{
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 				{
 					std::shared_ptr<BidCoSQueue> pendingQueue;
@@ -1428,7 +1430,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 						peer->pendingBidCoSQueues->push(pendingQueue);
 					}
 				}
-			}
+			//}
 		}
 		//not in pairing mode
 		else queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, packet->senderAddress());
