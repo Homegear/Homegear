@@ -231,6 +231,38 @@ void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod
     }
 }
 
+void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
+{
+	try
+	{
+		_stateMutex.lock();
+		if(_clients.find(client->fileDescriptor) != _clients.end())
+		{
+			std::shared_ptr<Client> currentClient = _clients.at(client->fileDescriptor);
+			if(currentClient->id != client->id) return;
+		}
+		_stateMutex.unlock();
+		removeClientFileDescriptor(client->fileDescriptor);
+		shutdown(client->fileDescriptor, 0);
+		close(client->fileDescriptor);
+	}
+	catch(const std::exception& ex)
+    {
+		_stateMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_stateMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_stateMutex.unlock();
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void RPCServer::mainThread()
 {
 	try
@@ -252,16 +284,24 @@ void RPCServer::mainThread()
 					close(clientFileDescriptor);
 					continue;
 				}
-				if(_clients.find(clientFileDescriptor) != _clients.end())
+				if(_clients.find(clientFileDescriptor) != _clients.end()) _clients.at(clientFileDescriptor)->connectionClosed = true;
+				/*if(_clients.find(clientFileDescriptor) != _clients.end())
 				{
+					//Old connection with this file descriptor is closed, but Homegear doesn't know it yet.
 					_stateMutex.unlock();
-					//This error actually occured. I don't know why. If this happens, close the old connection.
-					removeClientFileDescriptor(clientFileDescriptor);
-					shutdown(clientFileDescriptor, 0);
-					close(clientFileDescriptor);
-					continue;
-				}
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					if(_clients.find(clientFileDescriptor) != _clients.end())
+					{
+						HelperFunctions::printWarning("Tried to add client with the same file descriptor twice.");
+						removeClientFileDescriptor(clientFileDescriptor);
+						shutdown(clientFileDescriptor, 0);
+						close(clientFileDescriptor);
+						continue;
+					}
+					_stateMutex.lock();
+				}*/
 				std::shared_ptr<Client> client(new Client());
+				client->id = _currentClientID++;
 				client->fileDescriptor = clientFileDescriptor;
 				_clients[clientFileDescriptor] = client;
 				_stateMutex.unlock();
@@ -271,9 +311,7 @@ void RPCServer::mainThread()
 					getSSLFileDescriptor(client);
 					if(!client->ssl)
 					{
-						removeClientFileDescriptor(client->fileDescriptor);
-						shutdown(clientFileDescriptor, 0);
-						close(clientFileDescriptor);
+						closeClientConnection(client);
 						continue;
 					}
 				}
@@ -316,10 +354,39 @@ void RPCServer::mainThread()
     }
 }
 
+bool RPCServer::clientValid(std::shared_ptr<Client>& client)
+{
+	try
+	{
+		_stateMutex.lock();
+		if(_clients.find(client->fileDescriptor) != _clients.end() && _clients.at(client->fileDescriptor)->id != client->id)
+		{
+			_stateMutex.unlock();
+			return false;
+		}
+		_stateMutex.unlock();
+		return true;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> data, bool keepAlive)
 {
 	try
 	{
+		if(!clientValid(client)) return;
 		if(!data || data->empty()) return;
 		bool error = false;
 		try
@@ -335,12 +402,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 			HelperFunctions::printError("Error: " + ex.what());
 			error = true;
 		}
-		if(!keepAlive || error)
-		{
-			removeClientFileDescriptor(client->fileDescriptor);
-			shutdown(client->fileDescriptor, 1);
-			close(client->fileDescriptor);
-		}
+		if(!keepAlive || error) closeClientConnection(client);
 	}
     catch(const std::exception& ex)
     {
@@ -614,7 +676,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		HTTP http;
 
 		HelperFunctions::printDebug("Listening for incoming packets from client number " + std::to_string(client->fileDescriptor) + ".");
-		while(!_stopServer)
+		while(!_stopServer && !client->connectionClosed)
 		{
 			try
 			{
@@ -636,6 +698,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				HelperFunctions::printError(ex.what());
 				break;
 			}
+
+			if(!clientValid(client)) break;
 
 			if(GD::debugLevel >= 5)
 			{
@@ -783,10 +847,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				http.reset();
 			}
 		}
-		//This point is only reached, when stopServer is true
-		removeClientFileDescriptor(client->fileDescriptor);
-		shutdown(client->fileDescriptor, 0);
-		close(client->fileDescriptor);
+		//This point is only reached, when stopServer is true or the socket is closed
+		closeClientConnection(client);
 	}
     catch(const std::exception& ex)
     {

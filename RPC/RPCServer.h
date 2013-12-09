@@ -78,11 +78,13 @@ namespace RPC
 		public:
 			class Client {
 			public:
+				int32_t id = -1;
 				std::thread readThread;
 				int32_t fileDescriptor = -1;
 				SSL* ssl = nullptr;
 				SocketOperations socket;
 				Auth auth;
+				bool connectionClosed = false;
 
 				Client() {}
 				virtual ~Client() { if(ssl) SSL_free(ssl); };
@@ -104,6 +106,7 @@ namespace RPC
 			std::shared_ptr<RPCVariable> callMethod(std::string& methodName, std::shared_ptr<RPCVariable>& parameters);
 		protected:
 		private:
+			int32_t _currentClientID = 0;
 			std::shared_ptr<ServerSettings::Settings> _settings;
 			SSL_CTX* _sslCTX = nullptr;
 			int32_t _threadPolicy = SCHED_OTHER;
@@ -134,6 +137,8 @@ namespace RPC
 			void removeClientFileDescriptor(int32_t clientFileDescriptor);
 			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive);
 			std::string getHttpResponseHeader(uint32_t contentLength);
+			void closeClientConnection(std::shared_ptr<Client> client);
+			bool clientValid(std::shared_ptr<Client>& client);
 	};
 }
 #endif /* RPCSERVER_H_ */

@@ -113,7 +113,12 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		std::shared_ptr<std::vector<char>> requestData;
 		if(server->binary) requestData = _rpcEncoder.encodeRequest(methodName, parameters);
 		else requestData = _xmlRpcEncoder.encodeRequest(methodName, parameters);
-		std::shared_ptr<std::vector<char>> result = sendRequest(server, requestData, timedout);
+		std::shared_ptr<std::vector<char>> result;
+		for(uint32_t i = 0; i < 5; ++i)
+		{
+			result = sendRequest(server, requestData, timedout);
+			if(!timedout) break;
+		}
 		if(timedout) return;
 		if(!result || result->empty())
 		{
@@ -172,7 +177,12 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::shared_ptr<RemoteRPCServer> 
 		std::shared_ptr<std::vector<char>> requestData;
 		if(server->binary) requestData = _rpcEncoder.encodeRequest(methodName, parameters);
 		else requestData = _xmlRpcEncoder.encodeRequest(methodName, parameters);
-		std::shared_ptr<std::vector<char>> result = sendRequest(server, requestData, timedout);
+		std::shared_ptr<std::vector<char>> result;
+		for(uint32_t i = 0; i < 5; ++i)
+		{
+			result = sendRequest(server, requestData, timedout);
+			if(!timedout) break;
+		}
 		if(timedout) return RPCVariable::createError(-32300, "Request timed out.");
 		if(!result || result->empty()) return RPCVariable::createError(-32700, "No response data.");
 		std::shared_ptr<RPCVariable> returnValue;
@@ -648,7 +658,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 			catch(SocketTimeOutException& ex)
 			{
-				HelperFunctions::printWarning("Warning: Reading from XML RPC server timed out. Server: " + server->ipAddress + " Port: " + server->address.second + " Data: " + HelperFunctions::getHexString(*data));
+				HelperFunctions::printInfo("Info: Reading from XML RPC server timed out. Server: " + server->ipAddress + " Port: " + server->address.second);
 				timedout = true;
 				if(!server->keepAlive) closeConnection(server);
 				_sendCounter--;
