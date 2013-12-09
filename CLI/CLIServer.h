@@ -80,7 +80,7 @@ private:
 	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
 	std::string handleUserCommand(std::string& command);
 	std::string handleGlobalCommand(std::string& command);
-	void getFileDescriptor();
+	void getFileDescriptor(bool deleteOldSocket = false);
 	int32_t getClientFileDescriptor();
 	void removeClientData(int32_t clientFileDescriptor);
 	void mainThread();

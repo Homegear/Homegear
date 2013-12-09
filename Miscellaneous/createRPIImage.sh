@@ -119,7 +119,7 @@ touch /tmp/HOMEGEAR_STATIC_INSTALLATION
 dpkg -i /homegear_current_armhf.deb
 rm /tmp/HOMEGEAR_STATIC_INSTALLATION
 service homegear stop
-echo "*               soft    core            unlimited" >> /etc/security/limits.d/homegear
+echo \"*               soft    core            unlimited\" >> /etc/security/limits.d/homegear
 service ssh stop
 rm /etc/homegear/Device\ types/*
 rm -r /var/log/homegear/*

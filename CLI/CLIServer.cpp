@@ -91,18 +91,19 @@ void Server::mainThread()
 {
 	try
 	{
-		getFileDescriptor();
-		if(_serverFileDescriptor == -1) return;
+		getFileDescriptor(true); //Deletes an existing socket file
 		while(!_stopServer)
 		{
 			try
 			{
-				int32_t clientFileDescriptor = getClientFileDescriptor();
-				if(clientFileDescriptor < 0)
+				getFileDescriptor();
+				if(_serverFileDescriptor == -1)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					continue;
 				}
+				int32_t clientFileDescriptor = getClientFileDescriptor();
+				if(clientFileDescriptor < 0) continue;
 				if(clientFileDescriptor > _maxConnections)
 				{
 					HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
@@ -155,6 +156,14 @@ int32_t Server::getClientFileDescriptor()
 {
 	try
 	{
+		timeval timeout;
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		fd_set readFileDescriptor;
+		FD_ZERO(&readFileDescriptor);
+		FD_SET(_serverFileDescriptor, &readFileDescriptor);
+		if(!select(_serverFileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout)) return -1;
+
 		sockaddr_un clientAddress;
 		socklen_t addressSize = sizeof(addressSize);
 		int32_t clientFileDescriptor = accept(_serverFileDescriptor, (struct sockaddr *) &clientAddress, &addressSize);
@@ -212,7 +221,7 @@ void Server::removeClientData(int32_t clientFileDescriptor)
     }
 }
 
-void Server::getFileDescriptor()
+void Server::getFileDescriptor(bool deleteOldSocket)
 {
 	try
 	{
@@ -228,7 +237,11 @@ void Server::getFileDescriptor()
 			HelperFunctions::printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
 			return;
 		}
-		if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+		if(deleteOldSocket)
+		{
+			if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+		}
+		else if(stat(GD::socketPath.c_str(), &sb) == 0) return;
 		int32_t fileDescriptor;
 		if((fileDescriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1) throw(Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
 		sockaddr_un serverAddress;
@@ -284,10 +297,8 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 				removeClientData(clientFileDescriptor);
 				close(clientFileDescriptor);
 				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
+				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
 				close(_serverFileDescriptor);
-				//Socket file gets deleted when closing connection, so create it again
-				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-				getFileDescriptor();
 				return;
 			}
 
@@ -297,10 +308,8 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 				removeClientData(clientFileDescriptor);
 				close(clientFileDescriptor);
 				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
+				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
 				close(_serverFileDescriptor);
-				//Socket file gets deleted when closing connection, so create it again
-				std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-				getFileDescriptor();
 				return;
 			}
 

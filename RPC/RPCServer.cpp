@@ -242,11 +242,7 @@ void RPCServer::mainThread()
 			try
 			{
 				clientFileDescriptor = getClientFileDescriptor();
-				if(clientFileDescriptor < 0)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(100));
-					continue;
-				}
+				if(clientFileDescriptor < 0) continue;
 				_stateMutex.lock();
 				if(_clients.size() >= _maxConnections)
 				{
@@ -808,6 +804,14 @@ int32_t RPCServer::getClientFileDescriptor()
 {
 	try
 	{
+		timeval timeout;
+		timeout.tv_sec = 5;
+		timeout.tv_usec = 0;
+		fd_set readFileDescriptor;
+		FD_ZERO(&readFileDescriptor);
+		FD_SET(_serverFileDescriptor, &readFileDescriptor);
+		if(!select(_serverFileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout)) return -1;
+
 		struct sockaddr_storage clientInfo;
 		socklen_t addressSize = sizeof(addressSize);
 		int32_t clientFileDescriptor = accept(_serverFileDescriptor, (struct sockaddr *) &clientInfo, &addressSize);
