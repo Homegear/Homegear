@@ -104,7 +104,7 @@ public:
 	int32_t getFiledescriptor() { return _fileDescriptor; }
 	bool connected();
 	int32_t proofread(char* buffer, int32_t bufferSize);
-	int32_t proofwrite(std::shared_ptr<std::vector<char>>& data);
+	int32_t proofwrite(std::shared_ptr<std::vector<char>> data);
 protected:
 	int32_t _fileDescriptor = -1;
 	SSL* _ssl = nullptr;

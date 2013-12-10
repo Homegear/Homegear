@@ -47,7 +47,7 @@ public:
 	RPCEncoder();
 	virtual ~RPCEncoder() {}
 
-	void insertHeader(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCHeader>& header);
+	void insertHeader(std::shared_ptr<std::vector<char>> packet, std::shared_ptr<RPCHeader> header);
 	std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::shared_ptr<RPCHeader> header = std::shared_ptr<RPCHeader>());
 	std::shared_ptr<std::vector<char>> encodeResponse(std::shared_ptr<RPCVariable> variable);
 private:

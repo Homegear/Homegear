@@ -203,6 +203,7 @@ uint32_t RPCServer::connectionCount()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _stateMutex.unlock();
     return 0;
 }
 
@@ -239,7 +240,11 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 		if(_clients.find(client->fileDescriptor) != _clients.end())
 		{
 			std::shared_ptr<Client> currentClient = _clients.at(client->fileDescriptor);
-			if(currentClient->id != client->id) return;
+			if(currentClient->id != client->id)
+			{
+				_stateMutex.unlock();
+				return;
+			}
 		}
 		_stateMutex.unlock();
 		removeClientFileDescriptor(client->fileDescriptor);
@@ -287,18 +292,13 @@ void RPCServer::mainThread()
 				if(_clients.find(clientFileDescriptor) != _clients.end()) _clients.at(clientFileDescriptor)->connectionClosed = true;
 				/*if(_clients.find(clientFileDescriptor) != _clients.end())
 				{
-					//Old connection with this file descriptor is closed, but Homegear doesn't know it yet.
+					//Old connection with this file descriptor is closed
 					_stateMutex.unlock();
-					std::this_thread::sleep_for(std::chrono::milliseconds(100));
-					if(_clients.find(clientFileDescriptor) != _clients.end())
-					{
-						HelperFunctions::printWarning("Tried to add client with the same file descriptor twice.");
-						removeClientFileDescriptor(clientFileDescriptor);
-						shutdown(clientFileDescriptor, 0);
-						close(clientFileDescriptor);
-						continue;
-					}
-					_stateMutex.lock();
+					HelperFunctions::printWarning("Tried to add client with the same file descriptor twice.");
+					removeClientFileDescriptor(clientFileDescriptor);
+					shutdown(clientFileDescriptor, 0);
+					close(clientFileDescriptor);
+					continue;
 				}*/
 				std::shared_ptr<Client> client(new Client());
 				client->id = _currentClientID++;
@@ -379,6 +379,7 @@ bool RPCServer::clientValid(std::shared_ptr<Client>& client)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _stateMutex.unlock();
     return false;
 }
 
@@ -391,6 +392,8 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 		bool error = false;
 		try
 		{
+			//Todo Remove
+			if(strstr(&data->at(0), "POST")) HelperFunctions::printError("POST in data.");
 			client->socket.proofwrite(data);
 		}
 		catch(SocketDataLimitException& ex)
@@ -642,23 +645,20 @@ void RPCServer::removeClientFileDescriptor(int32_t clientFileDescriptor)
 	{
 		_stateMutex.lock();
 		if(_clients.find(clientFileDescriptor) != _clients.end()) _clients.erase(clientFileDescriptor);
-		_stateMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-    	_stateMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_stateMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_stateMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _stateMutex.unlock();
 }
 
 void RPCServer::readClient(std::shared_ptr<Client> client)

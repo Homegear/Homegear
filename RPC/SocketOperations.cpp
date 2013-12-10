@@ -60,7 +60,7 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	return bytesRead;
 }
 
-int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>>& data)
+int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>> data)
 {
 	if(_fileDescriptor < 0) throw SocketOperationException("Filedescriptor is invalid.");
 	if(!data || data->empty()) return 0;

@@ -84,6 +84,7 @@ public:
 	std::map<std::string, bool> knownMethods;
 	SocketOperations socket;
 	int32_t fileDescriptor = -1;
+	std::mutex sendMutex;
 	SSL* ssl = nullptr;
 	Auth auth;
 };
@@ -105,7 +106,7 @@ protected:
 	int32_t _sendCounter = 0;
 	SSL_CTX* _sslCTX = nullptr;
 
-	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>>& data, bool& timedout);
+	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>> data, bool insertHeader, bool& timedout);
 	std::string getIPAddress(std::string address);
 	int32_t getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
 	SSL* getSSL(int32_t fileDescriptor, bool verifyCertificate);

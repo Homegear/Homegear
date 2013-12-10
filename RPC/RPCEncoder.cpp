@@ -121,7 +121,7 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RP
     return packet;
 }
 
-void RPCEncoder::insertHeader(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCHeader>& header)
+void RPCEncoder::insertHeader(std::shared_ptr<std::vector<char>> packet, std::shared_ptr<RPCHeader> header)
 {
 	std::shared_ptr<std::vector<char>> headerData(new std::vector<char>());
 	uint32_t headerSize = encodeHeader(headerData, header);
