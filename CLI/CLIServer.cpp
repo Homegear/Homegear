@@ -97,21 +97,21 @@ void Server::mainThread()
 			try
 			{
 				getFileDescriptor();
-				if(_serverFileDescriptor == -1)
+				if(_serverFileDescriptor->descriptor == -1)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					continue;
 				}
-				int32_t clientFileDescriptor = getClientFileDescriptor();
-				if(clientFileDescriptor < 0) continue;
-				if(clientFileDescriptor > _maxConnections)
+				std::shared_ptr<FileDescriptor> clientFileDescriptor = getClientFileDescriptor();
+				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
+				if(clientFileDescriptor->descriptor > _maxConnections)
 				{
 					HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
-					shutdown(clientFileDescriptor, 0);
-					close(clientFileDescriptor);
+					GD::fileDescriptorManager.shutdown(clientFileDescriptor);
 					continue;
 				}
 				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
+				clientData->id = _currentClientID++;
 				_stateMutex.lock();
 				_fileDescriptors.push_back(clientData);
 				_stateMutex.unlock();
@@ -135,8 +135,7 @@ void Server::mainThread()
 				_stateMutex.unlock();
 			}
 		}
-		close(_serverFileDescriptor);
-		_serverFileDescriptor = -1;
+		GD::fileDescriptorManager.close(_serverFileDescriptor);
 	}
     catch(const std::exception& ex)
     {
@@ -152,8 +151,9 @@ void Server::mainThread()
     }
 }
 
-int32_t Server::getClientFileDescriptor()
+std::shared_ptr<FileDescriptor> Server::getClientFileDescriptor()
 {
+	std::shared_ptr<FileDescriptor> descriptor;
 	try
 	{
 		timeval timeout;
@@ -161,17 +161,18 @@ int32_t Server::getClientFileDescriptor()
 		timeout.tv_usec = 0;
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
-		FD_SET(_serverFileDescriptor, &readFileDescriptor);
-		if(!select(_serverFileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout)) return -1;
+		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
+		if(!select(_serverFileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout)) return descriptor;
 
 		sockaddr_un clientAddress;
 		socklen_t addressSize = sizeof(addressSize);
-		int32_t clientFileDescriptor = accept(_serverFileDescriptor, (struct sockaddr *) &clientAddress, &addressSize);
-		if(clientFileDescriptor == -1) return -1;
+		int32_t clientFileDescriptor = accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize);
+		if(clientFileDescriptor == -1) return descriptor;
+		GD::fileDescriptorManager.add(clientFileDescriptor);
 
 		HelperFunctions::printInfo("Info: CLI connection accepted. Client number: " + std::to_string(clientFileDescriptor));
 
-		return clientFileDescriptor;
+		return descriptor;
 	}
     catch(const std::exception& ex)
     {
@@ -185,17 +186,17 @@ int32_t Server::getClientFileDescriptor()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return -1;
+    return descriptor;
 }
 
-void Server::removeClientData(int32_t clientFileDescriptor)
+void Server::removeClientData(int32_t clientID)
 {
 	try
 	{
 		_stateMutex.lock();
 		for(std::vector<std::shared_ptr<ClientData>>::iterator i = _fileDescriptors.begin(); i != _fileDescriptors.end(); ++i)
 		{
-			if((*i)->fileDescriptor == clientFileDescriptor)
+			if((*i)->id == clientID)
 			{
 				_fileDescriptors.erase(i);
 				_stateMutex.unlock();
@@ -250,7 +251,7 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 		bool bound = (bind(fileDescriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + sizeof(serverAddress.sun_family)) != -1);
 		if(!bound && fileDescriptor > -1) close(fileDescriptor);
 		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1 || !bound) throw Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
-		_serverFileDescriptor = fileDescriptor;
+		_serverFileDescriptor = GD::fileDescriptorManager.add(fileDescriptor);
 		chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
     }
     catch(const std::exception& ex)
@@ -271,7 +272,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 {
 	try
 	{
-		int32_t clientFileDescriptor = clientData->fileDescriptor;
+		int32_t clientFileDescriptor = clientData->fileDescriptor->descriptor;
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
 		int32_t lineBufferMax = 128;
@@ -294,22 +295,22 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			if(bytesRead == 0) continue;
 			if(bytesRead != 1)
 			{
-				removeClientData(clientFileDescriptor);
-				close(clientFileDescriptor);
+				removeClientData(clientData->id);
+				GD::fileDescriptorManager.close(clientData->fileDescriptor);
 				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
 				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
-				close(_serverFileDescriptor);
+				GD::fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 
 			bytesRead = read(clientFileDescriptor, buffer, bufferMax);
 			if(bytesRead <= 0)
 			{
-				removeClientData(clientFileDescriptor);
-				close(clientFileDescriptor);
+				removeClientData(clientData->id);
+				GD::fileDescriptorManager.close(clientData->fileDescriptor);
 				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
 				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
-				close(_serverFileDescriptor);
+				GD::fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 
@@ -318,8 +319,8 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			handleCommand(command, clientData);
 		}
 		//This point is only reached, when stopServer is true
-		removeClientData(clientFileDescriptor);
-		close(clientFileDescriptor);
+		removeClientData(clientData->id);
+		GD::fileDescriptorManager.close(clientData->fileDescriptor);
 	}
     catch(const std::exception& ex)
     {
@@ -698,9 +699,9 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 			else response = GD::devices.handleCLICommand(command);
 		}
 		response.push_back(0);
-		if(send(clientData->fileDescriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
+		if(send(clientData->fileDescriptor->descriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
 		{
-			HelperFunctions::printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor));
+			HelperFunctions::printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 		}
 	}
     catch(const std::exception& ex)

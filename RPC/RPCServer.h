@@ -86,7 +86,7 @@ namespace RPC
 				SocketOperations socket;
 				Auth auth;
 
-				Client() { fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor); }
+				Client() { fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor()); }
 				virtual ~Client() { if(ssl) SSL_free(ssl); };
 			};
 

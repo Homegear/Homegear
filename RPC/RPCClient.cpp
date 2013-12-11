@@ -507,6 +507,7 @@ void RPCClient::getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool
 		GD::fileDescriptorManager.shutdown(server->fileDescriptor);
 
 		server->fileDescriptor = getConnection(server->hostname, server->address.second, server->ipAddress);
+		if(!server->fileDescriptor) return;
 		if(server->fileDescriptor->descriptor < 0)
 		{
 			if(server->fileDescriptor->descriptor == -2)

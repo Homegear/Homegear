@@ -35,7 +35,7 @@ namespace CLI {
 
 Client::Client()
 {
-
+	_fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor());
 }
 
 Client::~Client()
@@ -69,7 +69,7 @@ void Client::ping()
 			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 			_sendMutex.lock();
 			if(_closed) return;
-			if(send(_fileDescriptor, buffer, 1, MSG_NOSIGNAL) == -1)
+			if(send(_fileDescriptor->descriptor, buffer, 1, MSG_NOSIGNAL) == -1)
 			{
 				_closed = true;
 				std::cout << std::endl << "Connection closed." << std::endl;
@@ -101,12 +101,12 @@ void Client::start()
 	try
 	{
 		int32_t fileDescriptor = socket(AF_UNIX, SOCK_STREAM, 0);
-		_fileDescriptor = fileDescriptor;
 		if(fileDescriptor == -1)
 		{
 			HelperFunctions::printError("Could not create socket.");
 			return;
 		}
+		_fileDescriptor = GD::fileDescriptorManager.add(fileDescriptor);
 		if(GD::debugLevel >= 4) std::cout << "Info: Trying to connect..." << std::endl;
 		sockaddr_un remoteAddress;
 		remoteAddress.sun_family = AF_UNIX;
@@ -135,7 +135,7 @@ void Client::start()
 			if(strcmp(sendBuffer, "quit") == 0 || strcmp(sendBuffer, "exit") == 0)
 			{
 				_closed = true;
-				close(fileDescriptor);
+				GD::fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -144,7 +144,7 @@ void Client::start()
 			if(send(fileDescriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
 			{
 				HelperFunctions::printError("Error sending to socket.");
-				close(fileDescriptor);
+				GD::fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -172,7 +172,7 @@ void Client::start()
 				{
 					if(bytes < 0) std::cerr << "Error receiving data from socket." << std::endl;
 					else std::cout << "Connection closed." << std::endl;
-					close(fileDescriptor);
+					GD::fileDescriptorManager.close(_fileDescriptor);
 					return;
 				}
 			}

@@ -44,6 +44,8 @@
 #include <iostream>
 #include <string>
 
+#include "../FileDescriptorManager.h"
+
 namespace CLI {
 
 class Client {
@@ -53,7 +55,7 @@ public:
 
 	void start();
 private:
-	int32_t _fileDescriptor;
+	std::shared_ptr<FileDescriptor> _fileDescriptor;
 	bool _stopPingThread = false;
 	std::thread _pingThread;
 	bool _closed = false;

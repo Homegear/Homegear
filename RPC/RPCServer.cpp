@@ -370,13 +370,6 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 		bool error = false;
 		try
 		{
-			//Todo Remove
-			if(strstr(&data->at(0), "POST"))
-			{
-				HelperFunctions::printError("POST in data: ");
-				HelperFunctions::printInfo("POST in data: ");
-				HelperFunctions::printBinary(data);
-			}
 			client->socket.proofwrite(data);
 		}
 		catch(SocketDataLimitException& ex)

@@ -47,6 +47,7 @@ class HomeMaticDevice;
 #include <string>
 
 #include "../User.h"
+#include "../FileDescriptorManager.h"
 
 namespace CLI {
 
@@ -54,10 +55,11 @@ class ClientData
 {
 public:
 	ClientData() {}
-	ClientData(int32_t clientFileDescriptor) { fileDescriptor = clientFileDescriptor; }
+	ClientData(std::shared_ptr<FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; }
 	virtual ~ClientData() {}
 
-	int32_t fileDescriptor;
+	int32_t id = 0;
+	std::shared_ptr<FileDescriptor> fileDescriptor;
 };
 
 class Server {
@@ -71,17 +73,18 @@ private:
 	bool _stopServer = false;
 	std::thread _mainThread;
 	int32_t _backlog = 10;
-	int32_t _serverFileDescriptor = 0;
+	std::shared_ptr<FileDescriptor> _serverFileDescriptor;
 	int32_t _maxConnections = 100;
 	std::mutex _stateMutex;
 	std::vector<std::shared_ptr<ClientData>> _fileDescriptors;
 	std::vector<std::thread> _readThreads;
+	int32_t _currentClientID = 0;
 
 	void handleCommand(std::string& command, std::shared_ptr<ClientData> clientData);
 	std::string handleUserCommand(std::string& command);
 	std::string handleGlobalCommand(std::string& command);
 	void getFileDescriptor(bool deleteOldSocket = false);
-	int32_t getClientFileDescriptor();
+	std::shared_ptr<FileDescriptor> getClientFileDescriptor();
 	void removeClientData(int32_t clientFileDescriptor);
 	void mainThread();
 	void readClient(std::shared_ptr<ClientData> clientData);
