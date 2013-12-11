@@ -61,13 +61,14 @@
 #include "SocketOperations.h"
 #include "HTTP.h"
 #include "Auth.h"
+#include "../FileDescriptorManager.h"
 
 namespace RPC
 {
 class RemoteRPCServer
 {
 public:
-	RemoteRPCServer() { knownDevices.reset(new std::map<std::string, int32_t>()); }
+	RemoteRPCServer() { knownDevices.reset(new std::map<std::string, int32_t>()); fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor()); }
 	virtual ~RemoteRPCServer() {}
 
 	std::shared_ptr<ClientSettings::Settings> settings;
@@ -83,7 +84,7 @@ public:
 	std::shared_ptr<std::map<std::string, int32_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
 	SocketOperations socket;
-	int32_t fileDescriptor = -1;
+	std::shared_ptr<FileDescriptor> fileDescriptor;
 	std::mutex sendMutex;
 	SSL* ssl = nullptr;
 	Auth auth;
@@ -108,7 +109,7 @@ protected:
 
 	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>> data, bool insertHeader, bool& timedout);
 	std::string getIPAddress(std::string address);
-	int32_t getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
+	std::shared_ptr<FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
 	SSL* getSSL(int32_t fileDescriptor, bool verifyCertificate);
 	void getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool& timedout);
 	void closeConnection(std::shared_ptr<RemoteRPCServer>& server);

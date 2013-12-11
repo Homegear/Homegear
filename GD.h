@@ -48,6 +48,7 @@ class HomeMaticDevices;
 #include "RPC/ServerSettings.h"
 #include "RPC/ClientSettings.h"
 #include "EventHandler.h"
+#include "FileDescriptorManager.h"
 
 class GD {
 public:
@@ -72,6 +73,7 @@ public:
 	static int32_t rpcLogLevel;
 	static bool bigEndian;
 	static EventHandler eventHandler;
+	static FileDescriptorManager fileDescriptorManager;
 
 	virtual ~GD() { }
 private:

@@ -27,26 +27,46 @@
  * files in the program, then also delete it here.
  */
 
-#include "GD.h"
+#ifndef FILEDESCRIPTORMANAGER_H_
+#define FILEDESCRIPTORMANAGER_H_
 
-std::shared_ptr<RF::RFDevice> GD::rfDevice;
-std::string GD::configPath = "";
-std::string GD::pidfilePath = "";
-std::string GD::runDir = "/var/run/homegear/";
-std::string GD::socketPath = GD::runDir + "homegear.sock";
-std::string GD::workingDirectory = "";
-std::string GD::executablePath = "";
-HomeMaticDevices GD::devices;
-std::map<int32_t, RPC::Server> GD::rpcServers;
-RPC::Client GD::rpcClient;
-CLI::Server GD::cliServer;
-CLI::Client GD::cliClient;
-RPC::Devices GD::rpcDevices;
-int32_t GD::debugLevel = 7;
-int32_t GD::rpcLogLevel = 1;
-bool GD::bigEndian = false;
-Settings GD::settings;
-RPC::ServerSettings GD::serverSettings;
-RPC::ClientSettings GD::clientSettings;
-EventHandler GD::eventHandler;
-FileDescriptorManager GD::fileDescriptorManager;
+#include <memory>
+#include <string>
+#include <map>
+#include <mutex>
+
+#include <unistd.h>
+#include <sys/socket.h>
+
+#include "Exception.h"
+
+class FileDescriptor
+{
+public:
+	virtual ~FileDescriptor() {}
+	FileDescriptor() {}
+
+	int32_t id = -1;
+	int32_t descriptor = -1;
+};
+
+class FileDescriptorManager
+{
+public:
+	virtual ~FileDescriptorManager() {}
+	FileDescriptorManager() {};
+
+	std::shared_ptr<FileDescriptor> add(int32_t fileDescriptor);
+	void remove(std::shared_ptr<FileDescriptor> descriptor);
+	void close(std::shared_ptr<FileDescriptor> descriptor);
+	void shutdown(std::shared_ptr<FileDescriptor> descriptor);
+	std::shared_ptr<FileDescriptor> get(int32_t fileDescriptor);
+	bool isValid(int32_t fileDescriptor, int32_t id);
+	bool isValid(std::shared_ptr<FileDescriptor> descriptor);
+private:
+	uint32_t _currentID = 0;
+	std::mutex _descriptorsMutex;
+	std::map<int32_t, std::shared_ptr<FileDescriptor>> _descriptors;
+};
+
+#endif

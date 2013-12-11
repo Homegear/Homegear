@@ -98,6 +98,7 @@ OBJECTS := \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/Peer.o \
 	$(OBJDIR)/GD.o \
+	$(OBJDIR)/FileDescriptorManager.o \
 	$(OBJDIR)/BinaryDecoder.o \
 	$(OBJDIR)/BidCoSQueueManager.o \
 	$(OBJDIR)/HomeMaticDevices.o \
@@ -220,6 +221,9 @@ $(OBJDIR)/Peer.o: Peer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/GD.o: GD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/FileDescriptorManager.o: FileDescriptorManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BinaryDecoder.o: BinaryDecoder.cpp

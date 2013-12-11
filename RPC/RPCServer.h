@@ -71,6 +71,7 @@
 #include "SocketOperations.h"
 #include "Auth.h"
 #include "ServerSettings.h"
+#include "../FileDescriptorManager.h"
 
 namespace RPC
 {
@@ -80,13 +81,12 @@ namespace RPC
 			public:
 				int32_t id = -1;
 				std::thread readThread;
-				int32_t fileDescriptor = -1;
+				std::shared_ptr<FileDescriptor> fileDescriptor;
 				SSL* ssl = nullptr;
 				SocketOperations socket;
 				Auth auth;
-				bool connectionClosed = false;
 
-				Client() {}
+				Client() { fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor); }
 				virtual ~Client() { if(ssl) SSL_free(ssl); };
 			};
 
@@ -114,7 +114,7 @@ namespace RPC
 			bool _stopServer = false;
 			std::thread _mainThread;
 			int32_t _backlog = 10;
-			int32_t _serverFileDescriptor = 0;
+			std::shared_ptr<FileDescriptor> _serverFileDescriptor;
 			int32_t _maxConnections = 100;
 			std::mutex _stateMutex;
 			std::map<int32_t, std::shared_ptr<Client>> _clients;
@@ -125,7 +125,7 @@ namespace RPC
 			XMLRPCEncoder _xmlRpcEncoder;
 
 			void getFileDescriptor();
-			int32_t getClientFileDescriptor();
+			std::shared_ptr<FileDescriptor> getClientFileDescriptor();
 			void getSSLFileDescriptor(std::shared_ptr<Client>);
 			void mainThread();
 			void readClient(std::shared_ptr<Client> client);
@@ -134,7 +134,7 @@ namespace RPC
 			void packetReceived(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive);
 			void analyzeRPC(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive);
 			void analyzeRPCResponse(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive);
-			void removeClientFileDescriptor(int32_t clientFileDescriptor);
+			void removeClient(int32_t clientID);
 			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive);
 			std::string getHttpResponseHeader(uint32_t contentLength);
 			void closeClientConnection(std::shared_ptr<Client> client);

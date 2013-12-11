@@ -236,20 +236,8 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 {
 	try
 	{
-		_stateMutex.lock();
-		if(_clients.find(client->fileDescriptor) != _clients.end())
-		{
-			std::shared_ptr<Client> currentClient = _clients.at(client->fileDescriptor);
-			if(currentClient->id != client->id)
-			{
-				_stateMutex.unlock();
-				return;
-			}
-		}
-		_stateMutex.unlock();
-		removeClientFileDescriptor(client->fileDescriptor);
-		shutdown(client->fileDescriptor, 0);
-		close(client->fileDescriptor);
+		removeClient(client->id);
+		GD::fileDescriptorManager.shutdown(client->fileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -273,23 +261,20 @@ void RPCServer::mainThread()
 	try
 	{
 		getFileDescriptor();
-		int32_t clientFileDescriptor;
 		while(!_stopServer)
 		{
 			try
 			{
-				clientFileDescriptor = getClientFileDescriptor();
-				if(clientFileDescriptor < 0) continue;
+				std::shared_ptr<FileDescriptor> clientFileDescriptor = getClientFileDescriptor();
+				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
 				_stateMutex.lock();
 				if(_clients.size() >= _maxConnections)
 				{
 					_stateMutex.unlock();
 					HelperFunctions::printError("Error: Client connection rejected, because there are too many clients connected to me.");
-					shutdown(clientFileDescriptor, 0);
-					close(clientFileDescriptor);
+					GD::fileDescriptorManager.shutdown(clientFileDescriptor);
 					continue;
 				}
-				if(_clients.find(clientFileDescriptor) != _clients.end()) _clients.at(clientFileDescriptor)->connectionClosed = true;
 				/*if(_clients.find(clientFileDescriptor) != _clients.end())
 				{
 					//Old connection with this file descriptor is closed
@@ -303,7 +288,7 @@ void RPCServer::mainThread()
 				std::shared_ptr<Client> client(new Client());
 				client->id = _currentClientID++;
 				client->fileDescriptor = clientFileDescriptor;
-				_clients[clientFileDescriptor] = client;
+				_clients[client->id] = client;
 				_stateMutex.unlock();
 
 				if(_settings->ssl)
@@ -315,7 +300,7 @@ void RPCServer::mainThread()
 						continue;
 					}
 				}
-				client->socket = SocketOperations(client->fileDescriptor, client->ssl);
+				client->socket = SocketOperations(client->fileDescriptor->descriptor, client->ssl);
 
 				client->readThread = std::thread(&RPCServer::readClient, this, client);
 				HelperFunctions::setThreadPriority(client->readThread.native_handle(), _threadPriority, _threadPolicy);
@@ -337,8 +322,7 @@ void RPCServer::mainThread()
 				_stateMutex.unlock();
 			}
 		}
-		close(_serverFileDescriptor);
-		_serverFileDescriptor = -1;
+		GD::fileDescriptorManager.close(_serverFileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -358,13 +342,7 @@ bool RPCServer::clientValid(std::shared_ptr<Client>& client)
 {
 	try
 	{
-		_stateMutex.lock();
-		if(_clients.find(client->fileDescriptor) != _clients.end() && _clients.at(client->fileDescriptor)->id != client->id)
-		{
-			_stateMutex.unlock();
-			return false;
-		}
-		_stateMutex.unlock();
+		if(client->fileDescriptor->descriptor < 0) return false;
 		return true;
 	}
 	catch(const std::exception& ex)
@@ -393,7 +371,12 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 		try
 		{
 			//Todo Remove
-			if(strstr(&data->at(0), "POST")) HelperFunctions::printError("POST in data.");
+			if(strstr(&data->at(0), "POST"))
+			{
+				HelperFunctions::printError("POST in data: ");
+				HelperFunctions::printInfo("POST in data: ");
+				HelperFunctions::printBinary(data);
+			}
 			client->socket.proofwrite(data);
 		}
 		catch(SocketDataLimitException& ex)
@@ -639,12 +622,12 @@ void RPCServer::packetReceived(std::shared_ptr<Client> client, std::shared_ptr<s
     }
 }
 
-void RPCServer::removeClientFileDescriptor(int32_t clientFileDescriptor)
+void RPCServer::removeClient(int32_t clientID)
 {
 	try
 	{
 		_stateMutex.lock();
-		if(_clients.find(clientFileDescriptor) != _clients.end()) _clients.erase(clientFileDescriptor);
+		if(_clients.find(clientID) != _clients.end()) _clients.erase(clientID);
 	}
 	catch(const std::exception& ex)
     {
@@ -675,8 +658,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		PacketType::Enum packetType;
 		HTTP http;
 
-		HelperFunctions::printDebug("Listening for incoming packets from client number " + std::to_string(client->fileDescriptor) + ".");
-		while(!_stopServer && !client->connectionClosed)
+		HelperFunctions::printDebug("Listening for incoming packets from client number " + std::to_string(client->fileDescriptor->descriptor) + ".");
+		while(!_stopServer)
 		{
 			try
 			{
@@ -864,8 +847,9 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
     }
 }
 
-int32_t RPCServer::getClientFileDescriptor()
+std::shared_ptr<FileDescriptor> RPCServer::getClientFileDescriptor()
 {
+	std::shared_ptr<FileDescriptor> fileDescriptor;
 	try
 	{
 		timeval timeout;
@@ -873,13 +857,14 @@ int32_t RPCServer::getClientFileDescriptor()
 		timeout.tv_usec = 0;
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
-		FD_SET(_serverFileDescriptor, &readFileDescriptor);
-		if(!select(_serverFileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout)) return -1;
+		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
+		if(!select(_serverFileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout)) return fileDescriptor;
 
 		struct sockaddr_storage clientInfo;
 		socklen_t addressSize = sizeof(addressSize);
-		int32_t clientFileDescriptor = accept(_serverFileDescriptor, (struct sockaddr *) &clientInfo, &addressSize);
-		if(clientFileDescriptor == -1) return -1;
+		int32_t clientFileDescriptor = accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientInfo, &addressSize);
+		if(clientFileDescriptor == -1) return fileDescriptor;
+		fileDescriptor = GD::fileDescriptorManager.add(clientFileDescriptor);
 		getpeername(clientFileDescriptor, (struct sockaddr*)&clientInfo, &addressSize);
 
 		uint32_t port;
@@ -895,8 +880,6 @@ int32_t RPCServer::getClientFileDescriptor()
 		}
 		std::string ipString2(&ipString[0]);
 		HelperFunctions::printInfo("Info: Connection from " + ipString2 + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(clientFileDescriptor));
-
-		return clientFileDescriptor;
 	}
     catch(const std::exception& ex)
     {
@@ -910,7 +893,7 @@ int32_t RPCServer::getClientFileDescriptor()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return -1;
+    return fileDescriptor;
 }
 
 void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
@@ -918,13 +901,13 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 	try
 	{
 		client->ssl = SSL_new(_sslCTX);
-		SSL_set_fd(client->ssl, client->fileDescriptor);
+		SSL_set_fd(client->ssl, client->fileDescriptor->descriptor);
 		int32_t result = SSL_accept(client->ssl);
 		if(result < 1)
 		{
 			if(client->ssl && result != 0) HelperFunctions::printError("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
-			else if(result == 0) HelperFunctions::printError("The TLS/SSL handshake was unsuccessful. Client number: " + std::to_string(client->fileDescriptor));
-			else HelperFunctions::printError("Fatal error during TLS/SSL handshake. Client number: " + std::to_string(client->fileDescriptor));
+			else if(result == 0) HelperFunctions::printError("The TLS/SSL handshake was unsuccessful. Client number: " + std::to_string(client->fileDescriptor->descriptor));
+			else HelperFunctions::printError("Fatal error during TLS/SSL handshake. Client number: " + std::to_string(client->fileDescriptor->descriptor));
 			if(client->ssl) SSL_free(client->ssl);
 			client->ssl = nullptr;
 		}
@@ -1015,7 +998,7 @@ void RPCServer::getFileDescriptor()
 			HelperFunctions::printCritical("Error: Server could not start listening: " + std::string(strerror(errno)));
 			return;
 		}
-		_serverFileDescriptor = fileDescriptor;
+		_serverFileDescriptor = GD::fileDescriptorManager.add(fileDescriptor);
     }
     catch(const std::exception& ex)
     {
