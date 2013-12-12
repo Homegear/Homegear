@@ -36,7 +36,11 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescripto
 	{
 		if(fileDescriptor < 0) return std::shared_ptr<FileDescriptor>();
 		_descriptorsMutex.lock();
-		if(_descriptors.find(fileDescriptor) != _descriptors.end()) _descriptors.at(fileDescriptor)->descriptor = -1;
+		if(_descriptors.find(fileDescriptor) != _descriptors.end())
+		{
+			HelperFunctions::printInfo("Old file descriptor " + std::to_string(fileDescriptor) + " was invalidated.");
+			_descriptors.at(fileDescriptor)->descriptor = -1;
+		}
 		std::shared_ptr<FileDescriptor> descriptor(new FileDescriptor());
 		descriptor->id = _currentID++;
 		descriptor->descriptor = fileDescriptor;
