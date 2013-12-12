@@ -54,7 +54,7 @@ namespace CLI {
 class ClientData
 {
 public:
-	ClientData() {}
+	ClientData() { fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor()); }
 	ClientData(std::shared_ptr<FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; }
 	virtual ~ClientData() {}
 

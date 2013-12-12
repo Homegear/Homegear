@@ -168,7 +168,7 @@ std::shared_ptr<FileDescriptor> Server::getClientFileDescriptor()
 		socklen_t addressSize = sizeof(addressSize);
 		int32_t clientFileDescriptor = accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize);
 		if(clientFileDescriptor == -1) return descriptor;
-		GD::fileDescriptorManager.add(clientFileDescriptor);
+		descriptor = GD::fileDescriptorManager.add(clientFileDescriptor);
 
 		HelperFunctions::printInfo("Info: CLI connection accepted. Client number: " + std::to_string(clientFileDescriptor));
 
@@ -272,7 +272,6 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 {
 	try
 	{
-		int32_t clientFileDescriptor = clientData->fileDescriptor->descriptor;
 		int32_t bufferMax = 1024;
 		char buffer[bufferMax + 1];
 		int32_t lineBufferMax = 128;
@@ -281,7 +280,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 		uint32_t packetLength = 0;
 		int32_t bytesRead;
 		uint32_t dataSize = 0;
-		HelperFunctions::printDebug("Listening for incoming commands from client number " + std::to_string(clientFileDescriptor) + ".");
+		HelperFunctions::printDebug("Listening for incoming commands from client number " + std::to_string(clientData->fileDescriptor->descriptor) + ".");
 		while(!_stopServer)
 		{
 			//Timeout needs to be set every time, so don't put it outside of the while loop
@@ -290,25 +289,25 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			timeout.tv_usec = 0;
 			fd_set readFileDescriptor;
 			FD_ZERO(&readFileDescriptor);
-			FD_SET(clientFileDescriptor, &readFileDescriptor);
-			bytesRead = select(clientFileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+			FD_SET(clientData->fileDescriptor->descriptor, &readFileDescriptor);
+			bytesRead = select(clientData->fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(bytesRead == 0) continue;
 			if(bytesRead != 1)
 			{
 				removeClientData(clientData->id);
+				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
 				GD::fileDescriptorManager.close(clientData->fileDescriptor);
-				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
 				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
 				GD::fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 
-			bytesRead = read(clientFileDescriptor, buffer, bufferMax);
+			bytesRead = read(clientData->fileDescriptor->descriptor, buffer, bufferMax);
 			if(bytesRead <= 0)
 			{
 				removeClientData(clientData->id);
+				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
 				GD::fileDescriptorManager.close(clientData->fileDescriptor);
-				HelperFunctions::printDebug("Connection to client number " + std::to_string(clientFileDescriptor) + " closed.");
 				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
 				GD::fileDescriptorManager.close(_serverFileDescriptor);
 				return;

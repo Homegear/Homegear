@@ -111,7 +111,7 @@ void Client::start()
 		sockaddr_un remoteAddress;
 		remoteAddress.sun_family = AF_UNIX;
 		strcpy(remoteAddress.sun_path, GD::socketPath.c_str());
-		if(connect(fileDescriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
+		if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
 		{
 			HelperFunctions::printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
 			return;
@@ -141,8 +141,9 @@ void Client::start()
 			}
 			_sendMutex.lock();
 			if(_closed) break;
-			if(send(fileDescriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
+			if(send(_fileDescriptor->descriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
 			{
+				_sendMutex.unlock();
 				HelperFunctions::printError("Error sending to socket.");
 				GD::fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
@@ -162,7 +163,7 @@ void Client::start()
 
 			while(true)
 			{
-				if((bytes = recv(fileDescriptor, receiveBuffer, 1024, 0)) > 0)
+				if((bytes = recv(_fileDescriptor->descriptor, receiveBuffer, 1024, 0)) > 0)
 				{
 					receiveBuffer[bytes] = 0;
 					std::cout << receiveBuffer;
@@ -170,6 +171,7 @@ void Client::start()
 				}
 				else
 				{
+					_sendMutex.unlock();
 					if(bytes < 0) std::cerr << "Error receiving data from socket." << std::endl;
 					else std::cout << "Connection closed." << std::endl;
 					GD::fileDescriptorManager.close(_fileDescriptor);
