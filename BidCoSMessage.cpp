@@ -221,7 +221,7 @@ bool BidCoSMessage::checkAccess(std::shared_ptr<BidCoSPacket> packet, std::share
 
 		int32_t access = _device->isInPairingMode() ? _accessPairing : _access;
 		if(access == NOACCESS) return false;
-		if(queue && !queue->isEmpty())
+		if(queue && !queue->isEmpty() && packet->destinationAddress() == _device->getAddress())
 		{
 			if(queue->front()->getType() == QueueEntryType::PACKET || (queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())))
 			{

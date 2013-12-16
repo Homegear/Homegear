@@ -2538,7 +2538,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				}
 			}
 
-			if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == _address && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional
+			if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == _address && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty() && (packet->destinationAddress() == GD::devices.getCentral()->getAddress() || packet->destinationAddress() == 0)) //Packet is wake me up packet and not bidirectional
 			{
 				if(packet->controlByte() & 32) //Bidirectional?
 				{
