@@ -417,8 +417,8 @@ int main(int argc, char* argv[])
         GD::rpcDevices.load();
         GD::devices.convertDatabase();
         HelperFunctions::printInfo("Start listening for BidCoS packets...");
-        //GD::rfDevice->startListening();
-        //if(!GD::rfDevice->isOpen()) return 1;
+        GD::rfDevice->startListening();
+        if(!GD::rfDevice->isOpen()) return 1;
         HelperFunctions::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
         if(_startAsDaemon)
