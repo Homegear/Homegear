@@ -154,6 +154,7 @@ std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwar
 			{
 				if((*j)->matches(deviceType, firmwareVersion))
 				{
+					if((*i)->countFromSysinfoIndex > -1 && countFromSysinfo < 0) continue; //Ignore device, because countFromSysinfo is mandatory
 					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo)
 					{
 						if((*i)->getCountFromSysinfo() == -1) partialMatch = *i;

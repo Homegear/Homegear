@@ -308,8 +308,12 @@ std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firm
 		peer->setSerialNumber(serialNumber);
 		peer->setRemoteChannel(remoteChannel);
 		peer->setMessageCounter(messageCounter);
-		peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, packet);
-		if(!peer->rpcDevice) peer->rpcDevice = GD::rpcDevices.find(HMDeviceType::getString(deviceType), packet);
+		if(packet)
+		{
+			peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, packet);
+			if(!peer->rpcDevice) peer->rpcDevice = GD::rpcDevices.find(HMDeviceType::getString(deviceType), packet);
+		}
+		else peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, -1);
 		if(!peer->rpcDevice) return std::shared_ptr<Peer>();
 		if(peer->rpcDevice->countFromSysinfoIndex > -1) peer->setCountFromSysinfo(peer->rpcDevice->getCountFromSysinfo());
 		if(save) peer->save(true, true, false); //Save and create peerID
@@ -353,6 +357,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			stringStream << "pairing on\t\tEnables pairing mode" << std::endl;
 			stringStream << "pairing off\t\tDisables pairing mode" << std::endl;
 			stringStream << "peers list\t\tList all peers" << std::endl;
+			stringStream << "peers add\t\tManually adds a peer (without pairing it! Only for testing)" << std::endl;
 			stringStream << "peers remove\t\tRemove a peer (without unpairing)" << std::endl;
 			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
 			stringStream << "peers select\t\tSelect a peer" << std::endl;
@@ -420,6 +425,93 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 
 			setInstallMode(false, -1, false);
 			stringStream << "Pairing mode disabled." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 9, "peers add") == 0)
+		{
+			HMDeviceTypes deviceType;
+			int32_t peerAddress = 0;
+			std::string serialNumber;
+			int32_t firmwareVersion = 0;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					int32_t temp = HelperFunctions::getNumber(element, true);
+					if(temp == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
+					deviceType = (HMDeviceTypes)temp;
+				}
+				else if(index == 3)
+				{
+					peerAddress = HelperFunctions::getNumber(element, true);
+					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+				}
+				else if(index == 4)
+				{
+					if(element.length() != 10) return "Invalid serial number. Please provide a serial number with a length of 10 characters.\n";
+					serialNumber = element;
+				}
+				else if(index == 5)
+				{
+					firmwareVersion = HelperFunctions::getNumber(element, true);
+					if(firmwareVersion == 0) return "Invalid firmware version. The firmware version has to be passed in hexadecimal format.\n";
+				}
+				index++;
+			}
+			if(index < 6)
+			{
+				stringStream << "Description: This command manually adds a peer without pairing. Please only use this command for testing." << std::endl;
+				stringStream << "Usage: peers add DEVICETYPE ADDRESS SERIALNUMBER FIRMWAREVERSION" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  DEVICETYPE:\t\tThe 2 byte device type of the peer to add in hexadecimal format. Example: 0039" << std::endl;
+				stringStream << "  ADDRESS:\t\tThe 3 byte address of the peer to add in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  SERIALNUMBER:\t\tThe 10 character long serial number of the peer to add. Example: JEQ0123456" << std::endl;
+				stringStream << "  FIRMWAREVERSION:\tThe 1 byte firmware version of the peer to add in hexadecimal format. Example: 1F" << std::endl;
+				return stringStream.str();
+			}
+			if(peerExists(peerAddress)) stringStream << "This peer is already paired to this central." << std::endl;
+			else
+			{
+				std::shared_ptr<Peer> peer = createPeer(peerAddress, firmwareVersion, deviceType, serialNumber, 0, 0, std::shared_ptr<BidCoSPacket>(), false);
+				if(!peer || !peer->rpcDevice) return "Device type not supported.";
+
+				try
+				{
+					_peersMutex.lock();
+					_peers[peer->getAddress()] = peer;
+					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+					_peersMutex.unlock();
+					peer->save(true, true, false);
+					peer->initializeCentralConfig();
+				}
+				catch(const std::exception& ex)
+				{
+					_peersMutex.unlock();
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(Exception& ex)
+				{
+					_peersMutex.unlock();
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					_peersMutex.unlock();
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+
+				stringStream << "Added peer 0x" << std::hex << peerAddress << " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << " and firmware version 0x" << firmwareVersion << "." << std::dec << std::endl;
+			}
 			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "peers remove") == 0)
