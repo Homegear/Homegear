@@ -37,6 +37,7 @@ RPCServer::RPCServer()
 {
 	_settings.reset(new ServerSettings::Settings());
 	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<RPCMethod>>);
+	_serverFileDescriptor.reset(new FileDescriptor);
 	if(GD::settings.rpcServerThreadPriority() > 0)
 	{
 		_threadPriority = GD::settings.rpcServerThreadPriority();
@@ -265,6 +266,12 @@ void RPCServer::mainThread()
 		{
 			try
 			{
+				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor < 0)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+					getFileDescriptor();
+					continue;
+				}
 				std::shared_ptr<FileDescriptor> clientFileDescriptor = getClientFileDescriptor();
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
 				_stateMutex.lock();
@@ -275,16 +282,6 @@ void RPCServer::mainThread()
 					GD::fileDescriptorManager.shutdown(clientFileDescriptor);
 					continue;
 				}
-				/*if(_clients.find(clientFileDescriptor) != _clients.end())
-				{
-					//Old connection with this file descriptor is closed
-					_stateMutex.unlock();
-					HelperFunctions::printWarning("Tried to add client with the same file descriptor twice.");
-					removeClientFileDescriptor(clientFileDescriptor);
-					shutdown(clientFileDescriptor, 0);
-					close(clientFileDescriptor);
-					continue;
-				}*/
 				std::shared_ptr<Client> client(new Client());
 				client->id = _currentClientID++;
 				client->fileDescriptor = clientFileDescriptor;
@@ -983,12 +980,12 @@ void RPCServer::getFileDescriptor()
 		if(!bound)
 		{
 			if(fileDescriptor > -1)	close(fileDescriptor);
-			HelperFunctions::printCritical("Error: Server could not start listening: " + std::string(strerror(error)));
+			HelperFunctions::printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(error)));
 			return;
 		}
 		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1 || !bound)
 		{
-			HelperFunctions::printCritical("Error: Server could not start listening: " + std::string(strerror(errno)));
+			HelperFunctions::printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
 			return;
 		}
 		_serverFileDescriptor = GD::fileDescriptorManager.add(fileDescriptor);
