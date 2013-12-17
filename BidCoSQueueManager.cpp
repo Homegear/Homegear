@@ -147,27 +147,30 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		{
 			_queueMutex.unlock();
 			_workerThreadMutex.lock();
-			while(_workerThreadRunning) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-			if(_workerThread.joinable())
+			while(_workerThreadRunning && _stopWorkerThread) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			if(_stopWorkerThread)
 			{
-				//_workerThread.join might very rarely cause the exception "Resource deadlock avoided".
-				//That's the reason for the try...catch block here.
-				try
+				if(_workerThread.joinable())
 				{
-					_workerThread.join();
+					//_workerThread.join might very rarely cause the exception "Resource deadlock avoided".
+					//That's the reason for the try...catch block here.
+					try
+					{
+						_workerThread.join();
+					}
+					catch(const std::exception& ex)
+					{
+						HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					}
+					catch(...)
+					{
+						HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+					}
 				}
-				catch(const std::exception& ex)
-				{
-					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				}
+				_stopWorkerThread = false;
+				_workerThread = std::thread(&BidCoSQueueManager::worker, this);
+				HelperFunctions::setThreadPriority(_workerThread.native_handle(), 19);
 			}
-			_stopWorkerThread = false;
-			_workerThread = std::thread(&BidCoSQueueManager::worker, this);
-			HelperFunctions::setThreadPriority(_workerThread.native_handle(), 19);
 			_workerThreadMutex.unlock();
 			_queueMutex.lock();
 		}
