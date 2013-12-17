@@ -63,6 +63,7 @@ protected:
 	bool _disposing = false;
 	bool _stopWorkerThread = true;
     std::thread _workerThread;
+    std::mutex _workerThreadMutex;
 	uint32_t _id = 0;
 	std::unordered_map<int32_t, std::shared_ptr<BidCoSQueueData>> _queues;
 	std::mutex _queueMutex;
