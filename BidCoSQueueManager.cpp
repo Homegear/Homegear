@@ -73,6 +73,7 @@ void BidCoSQueueManager::dispose(bool wait)
 
 void BidCoSQueueManager::worker()
 {
+	_workerThreadRunning = true;
 	try
 	{
 		std::chrono::milliseconds sleepingTime(100);
@@ -133,6 +134,7 @@ void BidCoSQueueManager::worker()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _workerThreadRunning = false;
 }
 
 std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* device, BidCoSQueueType queueType, int32_t address)
@@ -145,6 +147,7 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		{
 			_queueMutex.unlock();
 			_workerThreadMutex.lock();
+			while(_workerThreadRunning) std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			if(_workerThread.joinable())
 			{
 				//_workerThread.join might very rarely cause the exception "Resource deadlock avoided".

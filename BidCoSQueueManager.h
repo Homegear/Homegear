@@ -62,6 +62,7 @@ public:
 protected:
 	bool _disposing = false;
 	bool _stopWorkerThread = true;
+	bool _workerThreadRunning = false;
     std::thread _workerThread;
     std::mutex _workerThreadMutex;
 	uint32_t _id = 0;
