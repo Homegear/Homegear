@@ -154,25 +154,21 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 			_workerThreadMutex.lock();
 			if(_stopWorkerThread)
 			{
-				if(_workerThread.joinable())
+				try //Catch "Resource deadlock avoided". Error should be fixed, but just in case.
 				{
-					//Catch "Resource deadlock avoided". Error should be fixed.
-					try
-					{
-						_workerThread.join();
-					}
-					catch(const std::exception& ex)
-					{
-						HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-					}
-					catch(...)
-					{
-						HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-					}
+					if(_workerThread.joinable()) _workerThread.join();
+					_stopWorkerThread = false;
+					_workerThread = std::thread(&BidCoSQueueManager::worker, this);
+					HelperFunctions::setThreadPriority(_workerThread.native_handle(), 19);
 				}
-				_stopWorkerThread = false;
-				_workerThread = std::thread(&BidCoSQueueManager::worker, this);
-				HelperFunctions::setThreadPriority(_workerThread.native_handle(), 19);
+				catch(const std::exception& ex)
+				{
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
 			}
 			_workerThreadMutex.unlock();
 			_queueMutex.lock();
