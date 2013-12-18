@@ -4203,7 +4203,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		pendingBidCoSQueues->push(queue);
 		if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))
 		{
-			if(valueKey == "STATE") queue->retries = 12;
+			if(HMDeviceType::isDimmer(_deviceType) || HMDeviceType::isSwitch(_deviceType)) queue->retries = 12;
 			GD::devices.getCentral()->enqueuePendingQueues(_address);
 		}
 		else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");

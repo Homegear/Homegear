@@ -49,6 +49,7 @@ BidCoSQueueManager::~BidCoSQueueManager()
 		if(!_disposing) dispose();
 		_workerThreadMutex.lock();
 		if(_workerThread.joinable()) _workerThread.join();
+		if(_resetQueueThread.joinable()) _resetQueueThread.join(); //After waiting for worker thread!
 	}
     catch(const std::exception& ex)
     {
@@ -73,7 +74,6 @@ void BidCoSQueueManager::dispose(bool wait)
 
 void BidCoSQueueManager::worker()
 {
-	_workerThreadRunning = true;
 	try
 	{
 		std::chrono::milliseconds sleepingTime(100);
@@ -103,7 +103,13 @@ void BidCoSQueueManager::worker()
 				std::shared_ptr<BidCoSQueueData> queue;
 				if(_queues.find(lastQueue) != _queues.end()) queue = _queues.at(lastQueue);
 				_queueMutex.unlock();
-				if(queue) resetQueue(lastQueue, queue->id);
+				if(queue)
+				{
+					if(_resetQueueThread.joinable()) _resetQueueThread.join();
+					//Has to be called in a thread as resetQueue might cause queuing (retrying in setUnreach) and therefore a deadlock
+					_resetQueueThread = std::thread(&BidCoSQueueManager::resetQueue, this, lastQueue, queue->id);
+					_resetQueueThread.detach();
+				}
 			}
 			catch(const std::exception& ex)
 			{
@@ -134,7 +140,6 @@ void BidCoSQueueManager::worker()
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _workerThreadRunning = false;
 }
 
 std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* device, BidCoSQueueType queueType, int32_t address)
@@ -147,13 +152,11 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		{
 			_queueMutex.unlock();
 			_workerThreadMutex.lock();
-			while(_workerThreadRunning && _stopWorkerThread) std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			if(_stopWorkerThread)
 			{
 				if(_workerThread.joinable())
 				{
-					//_workerThread.join might very rarely cause the exception "Resource deadlock avoided".
-					//That's the reason for the try...catch block here.
+					//Catch "Resource deadlock avoided". Error should be fixed.
 					try
 					{
 						_workerThread.join();
