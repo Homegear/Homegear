@@ -816,6 +816,15 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 			data.clear();
 			data.push_back(value << (std::lround(i * 10) % 10));
 		}
+		//Adjust data size. See for example ENDTIME_SATURDAY_1 and TEMPERATURE_SATURDAY_1 of HM-CC-RT-DN
+		if((int32_t)physicalParameter->size > data.size())
+		{
+			uint32_t bytesMissing = (int32_t)physicalParameter->size - data.size();
+			std::vector<uint8_t> oldData = data;
+			data.clear();
+			for(uint32_t i = 0; i < bytesMissing; i++) data.push_back(0);
+			for(uint32_t i = 0; i < oldData.size(); i++) data.push_back(oldData.at(i));
+		}
 	}
 	catch(const std::exception& ex)
     {

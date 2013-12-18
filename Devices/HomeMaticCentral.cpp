@@ -1605,10 +1605,82 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 {
 	try
 	{
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
-		if(!queue) return;
 		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
 		if(!peer) return;
+		//Config changed in device
+		if(packet->payload()->size() > 7 && packet->payload()->at(0) == 0x05)
+		{
+			if(packet->controlByte() & 0x20) sendOK(packet->messageCounter(), packet->senderAddress());
+			if(packet->payload()->size() == 8) return; //End packet
+			int32_t list = packet->payload()->at(6);
+			int32_t channel = packet->payload()->at(1); //??? Not sure if this really is the channel
+			int32_t remoteAddress = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + packet->payload()->at(4);
+			int32_t remoteChannel = (remoteAddress == 0) ? 0 : packet->payload()->at(5);
+			RPC::ParameterSet::Type::Enum type = (remoteAddress != 0) ? RPC::ParameterSet::Type::link : RPC::ParameterSet::Type::master;
+			int32_t startIndex = packet->payload()->at(7);
+			int32_t endIndex = startIndex + packet->payload()->size() - 9;
+			if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end() || peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
+			{
+				HelperFunctions::printError("Error: Received config for non existant parameter set.");
+			}
+			else
+			{
+				std::vector<std::shared_ptr<RPC::Parameter>> packetParameters = peer->rpcDevice->channels[channel]->parameterSets[type]->getIndices(startIndex, endIndex, list);
+				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = packetParameters.begin(); i != packetParameters.end(); ++i)
+				{
+					if(!(*i)->id.empty())
+					{
+						double position = ((*i)->physicalParameter->index - startIndex) + 8 + 9;
+						if(position < 0)
+						{
+							HelperFunctions::printError("Error: Packet position is negative. Device: " + HelperFunctions::getHexString(peer->getAddress()) + " Serial number: " + peer->getSerialNumber() + " Channel: " + std::to_string(channel) + " List: " + std::to_string((*i)->physicalParameter->list) + " Parameter index: " + std::to_string((*i)->index));
+							continue;
+						}
+						RPCConfigurationParameter* parameter = nullptr;
+						if(type == RPC::ParameterSet::Type::master) parameter = &peer->configCentral[channel][(*i)->id];
+						//type == link
+						else if(peer->getPeer(channel, remoteAddress, remoteChannel)) parameter = &peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id];
+						if(!parameter) continue;
+
+						if(position < 9 + 8)
+						{
+							uint32_t byteOffset = 9 + 8 - position;
+							uint32_t missingBytes = (*i)->physicalParameter->size - byteOffset;
+							if(missingBytes >= (*i)->physicalParameter->size)
+							{
+								HelperFunctions::printError("Error: Device tried to set parameter with more bytes than specified. Device: " + HelperFunctions::getHexString(peer->getAddress()) + " Serial number: " + peer->getSerialNumber() + " Channel: " + std::to_string(channel) + " List: " + std::to_string((*i)->physicalParameter->list) + " Parameter index: " + std::to_string((*i)->index));
+								continue;
+							}
+							while(parameter->partialData.size() < (*i)->physicalParameter->size) parameter->partialData.push_back(0);
+							position = 9 + 8;
+							std::vector<uint8_t> data = packet->getPosition(position, missingBytes, (*i)->physicalParameter->mask);
+							for(uint32_t j = 0; j < byteOffset; j++) parameter->data.at(j) = parameter->partialData.at(j);
+							for(uint32_t j = byteOffset; j < (*i)->physicalParameter->size; j++) parameter->data.at(j) = data.at(j - byteOffset);
+							//Don't clear partialData - packet might be resent
+							peer->saveParameter(parameter->databaseID, type, channel, (*i)->id, parameter->data, remoteAddress, remoteChannel);
+							if(GD::debugLevel >= 4) HelperFunctions::printInfo("Info: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was set to 0x" + HelperFunctions::getHexString(parameter->data) + " after being partially set in the last packet.");
+						}
+						else if(position + (int32_t)(*i)->physicalParameter->size >= packet->length())
+						{
+							parameter->partialData.clear();
+							parameter->partialData = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
+							if(GD::debugLevel >= 4) HelperFunctions::printInfo("Info: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was partially set to 0x" + HelperFunctions::getHexString(parameter->partialData) + ".");
+						}
+						else
+						{
+							parameter->data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
+							peer->saveParameter(parameter->databaseID, type, channel, (*i)->id, parameter->data, remoteAddress, remoteChannel);
+							if(GD::debugLevel >= 4) HelperFunctions::printInfo("Info: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was set to 0x" + HelperFunctions::getHexString(parameter->data) + ".");
+						}
+					}
+					else HelperFunctions::printError("Error: Device tried to set parameter without id. Device: " + HelperFunctions::getHexString(peer->getAddress()) + " Serial number: " + peer->getSerialNumber() + " Channel: " + std::to_string(channel) + " List: " + std::to_string((*i)->physicalParameter->list) + " Parameter index: " + std::to_string((*i)->index));
+				}
+			}
+			return;
+		}
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+		if(!queue) return;
+		//Config was requested by central
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
 		bool continuousData = false;
 		bool multiPacket = false;
@@ -1698,7 +1770,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			{
 				int32_t startIndex = packet->payload()->at(1);
 				int32_t endIndex = startIndex + packet->payload()->size() - 3;
-				if(peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
+				if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end() || peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
 				{
 					HelperFunctions::printError("Error: Received config for non existant parameter set.");
 				}
@@ -1710,24 +1782,48 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 						if(!(*i)->id.empty())
 						{
 							double position = ((*i)->physicalParameter->index - startIndex) + 2 + 9;
-							if(type == RPC::ParameterSet::Type::master)
+							RPCConfigurationParameter* parameter = nullptr;
+							if(type == RPC::ParameterSet::Type::master) parameter = &peer->configCentral[channel][(*i)->id];
+							//type == link
+							else if(peer->getPeer(channel, remoteAddress, remoteChannel)) parameter = &peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id];
+							if(!parameter) continue;
+							if(position < 9 + 2)
 							{
-								//This is not working if one parameter is split over two or more packets.
-								RPCConfigurationParameter* parameter = &peer->configCentral[channel][(*i)->id];
-								parameter->data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
-								peer->saveParameter(parameter->databaseID, type, channel, (*i)->id, parameter->data);
-								if(!peer->getPairingComplete() && (*i)->logicalParameter->enforce)
+								uint32_t byteOffset = 9 + 2 - position;
+								uint32_t missingBytes = (*i)->physicalParameter->size - byteOffset;
+								if(missingBytes >= (*i)->physicalParameter->size)
+								{
+									HelperFunctions::printError("Error: Device tried to set parameter with more bytes than specified. Device: " + HelperFunctions::getHexString(peer->getAddress()) + " Serial number: " + peer->getSerialNumber() + " Channel: " + std::to_string(channel) + " List: " + std::to_string((*i)->physicalParameter->list) + " Parameter index: " + std::to_string((*i)->index));
+									continue;
+								}
+								while(parameter->partialData.size() < (*i)->physicalParameter->size) parameter->partialData.push_back(0);
+								position = 9 + 2;
+								std::vector<uint8_t> data = packet->getPosition(position, missingBytes, (*i)->physicalParameter->mask);
+								for(uint32_t j = 0; j < byteOffset; j++) parameter->data.at(j) = parameter->partialData.at(j);
+								for(uint32_t j = byteOffset; j < (*i)->physicalParameter->size; j++) parameter->data.at(j) = data.at(j - byteOffset);
+								//Don't clear partialData - packet might be resent
+								peer->saveParameter(parameter->databaseID, type, channel, (*i)->id, parameter->data, remoteAddress, remoteChannel);
+								if(type == RPC::ParameterSet::Type::master && !peer->getPairingComplete() && (*i)->logicalParameter->enforce)
 								{
 									parametersToEnforce->structValue->insert(RPC::RPCStructElement((*i)->id, (*i)->logicalParameter->getEnforceValue()));
 								}
-								if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was set to 0x" + HelperFunctions::getHexString(peer->configCentral[channel][(*i)->id].data) + ".");
+								if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was set to 0x" + HelperFunctions::getHexString(parameter->data) + " after being partially set in the last packet.");
 							}
-							else if(peer->getPeer(channel, remoteAddress, remoteChannel)) //type == link
+							else if(position + (int32_t)(*i)->physicalParameter->size >= packet->length())
 							{
-								RPCConfigurationParameter* parameter = &peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id];
+								parameter->partialData.clear();
+								parameter->partialData = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
+								if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was partially set to 0x" + HelperFunctions::getHexString(parameter->partialData) + ".");
+							}
+							else
+							{
 								parameter->data = packet->getPosition(position, (*i)->physicalParameter->size, (*i)->physicalParameter->mask);
 								peer->saveParameter(parameter->databaseID, type, channel, (*i)->id, parameter->data, remoteAddress, remoteChannel);
-								if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was set to 0x" + HelperFunctions::getHexString(peer->linksCentral[channel][remoteAddress][remoteChannel][(*i)->id].data) + ".");
+								if(type == RPC::ParameterSet::Type::master && !peer->getPairingComplete() && (*i)->logicalParameter->enforce)
+								{
+									parametersToEnforce->structValue->insert(RPC::RPCStructElement((*i)->id, (*i)->logicalParameter->getEnforceValue()));
+								}
+								if(GD::debugLevel >= 5) HelperFunctions::printDebug("Debug: Parameter " + (*i)->id + " of device 0x" + HelperFunctions::getHexString(peer->getAddress()) + " at index " + std::to_string((*i)->physicalParameter->index) + " and packet index " + std::to_string(position) + " with size " + std::to_string((*i)->physicalParameter->size) + " was set to 0x" + HelperFunctions::getHexString(parameter->data) + ".");
 							}
 						}
 						else HelperFunctions::printError("Error: Device tried to set parameter without id. Device: " + HelperFunctions::getHexString(peer->getAddress()) + " Serial number: " + peer->getSerialNumber() + " Channel: " + std::to_string(channel) + " List: " + std::to_string((*i)->physicalParameter->list) + " Parameter index: " + std::to_string((*i)->index));
@@ -1736,7 +1832,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			}
 			else if(!multiPacketEnd)
 			{
-				if(peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
+				if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end() || peer->rpcDevice->channels[channel]->parameterSets.find(type) == peer->rpcDevice->channels[channel]->parameterSets.end() || !peer->rpcDevice->channels[channel]->parameterSets[type])
 				{
 					HelperFunctions::printError("Error: Received config for non existant parameter set.");
 				}

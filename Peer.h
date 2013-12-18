@@ -106,6 +106,7 @@ public:
 	uint32_t databaseID = 0;
 	std::shared_ptr<RPC::Parameter> rpcParameter;
 	std::vector<uint8_t> data;
+	std::vector<uint8_t> partialData;
 };
 
 class Peer
