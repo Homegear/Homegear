@@ -245,7 +245,7 @@ class Peer
         std::mutex _databaseMutex;
         std::mutex _variablesToResetMutex;
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
-        std::map<std::string, uint32_t> _resendCounter;
+        //std::map<std::string, uint32_t> _resendCounter;
 
         //In table peers:
         int32_t _parentAddress = 0;

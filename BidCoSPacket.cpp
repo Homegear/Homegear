@@ -332,11 +332,22 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 			uint32_t bitSize = std::lround(size * 10) % 10;
 			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
-			if(bytes > value.size()) bytes = value.size();
-			_payload.at(intByteIndex) = value.at(0) & _bitmask[bitSize];
-			for(uint32_t i = 1; i < bytes; i++)
+			//if(bytes > value.size()) bytes = value.size();
+			if(bytes <= value.size())
 			{
-				_payload.at(intByteIndex + i) = value.at(i);
+				_payload.at(intByteIndex) = value.at(0) & _bitmask[bitSize];
+				for(uint32_t i = 1; i < bytes; i++)
+				{
+					_payload.at(intByteIndex + i) = value.at(i);
+				}
+			}
+			else
+			{
+				uint32_t missingBytes = bytes - value.size();
+				for(uint32_t i = 0; i < value.size(); i++)
+				{
+					_payload.at(intByteIndex + missingBytes + i) = value.at(i);
+				}
 			}
 		}
 	}
@@ -424,9 +435,13 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 			result.push_back(currentByte);
 			for(uint32_t i = 1; i < bytes; i++)
 			{
-				currentByte = _payload.at(index + i);
-				if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - i - 1) * 8));
-				result.push_back(currentByte);
+				if((index + i) >= _payload.size()) result.push_back(0);
+				else
+				{
+					currentByte = _payload.at(index + i);
+					if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - i - 1) * 8));
+					result.push_back(currentByte);
+				}
 			}
 		}
 		if(result.empty()) result.push_back(0);

@@ -1559,6 +1559,7 @@ void Device::parseXML(xml_node<>* node)
 
 		if(!parameterSetDefinitions.empty())
 		{
+			std::map<uint32_t, std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>> parameterSetsToAdd;
 			for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
 			{
 				for(std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>::iterator j = i->second->parameterSets.begin(); j != i->second->parameterSets.end(); ++j)
@@ -1568,11 +1569,19 @@ void Device::parseXML(xml_node<>* node)
 					*parameterSet = *parameterSetDefinitions.at(j->second->subsetReference);
 					parameterSet->type = j->second->type;
 					parameterSet->id = j->second->id;
-					i->second->parameterSets[parameterSet->type] = parameterSet;
+					//We can't change the map while we are iterating through it, so we temporarily store the parameterSet
+					parameterSetsToAdd[i->first][j->first] = parameterSet;
 					for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
 					{
 						(*i)->parentParameterSet = parameterSet.get();
 					}
+				}
+			}
+			for(std::map<uint32_t, std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>>::iterator i = parameterSetsToAdd.begin(); i != parameterSetsToAdd.end(); ++i)
+			{
+				for(std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					channels[i->first]->parameterSets[j->first] = j->second;
 				}
 			}
 		}

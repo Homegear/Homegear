@@ -2240,7 +2240,6 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector
 							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
 							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
 							if(!rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
-							if(startChannel == endChannel && rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType).get() != (*k)->parentParameterSet) continue;
 							currentFrameValues.paramsetChannels.push_back(l);
 							currentFrameValues.values[(*k)->id].channels.push_back(l);
 							setValues = true;
@@ -2253,7 +2252,6 @@ void Peer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector
 							if(rpcDevice->channels.find(*l) == rpcDevice->channels.end()) continue;
 							if(rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(*l)->parameterSets.end()) continue;
 							if(!rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
-							if(currentFrameValues.paramsetChannels.size() == 1 && rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType).get() != (*k)->parentParameterSet) continue; //Shouldn't happen as all parameters should be in the same parameter set
 							currentFrameValues.values[(*k)->id].channels.push_back(*l);
 							setValues = true;
 						}
@@ -2407,6 +2405,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
+		if(!packet) return;
 		if(!_centralFeatures || _disposing) return;
 		if(packet->senderAddress() != _address && (!hasTeam() || packet->senderAddress() != _team.address)) return;
 		if(!rpcDevice) return;
@@ -2415,7 +2414,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		serviceMessages->endUnreach();
 		std::vector<FrameValues> frameValues;
 		getValuesFromPacket(packet, frameValues);
-		bool resendPacket = false;
+		//bool resendPacket = false;
 		std::shared_ptr<BidCoSPacket> sentPacket;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>>> rpcValues;
@@ -2436,7 +2435,6 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					getValuesFromPacket(sentPacket, sentFrameValues);
 				}
 			}
-
 			//Check for low battery
 			//If values is not empty, packet is valid
 			if(rpcDevice->hasBattery && !a->values.empty() && !packet->payload()->empty() && frame && hasLowbatBit(frame))
@@ -2474,7 +2472,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 						}
 					}
 
-					if(!sentFrameValues.empty())
+					/*if(!sentFrameValues.empty())
 					{
 						for(std::vector<FrameValues>::iterator b = sentFrameValues.begin(); b != sentFrameValues.end(); ++b)
 						{
@@ -2487,16 +2485,16 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 								}
 							}
 						}
-					}
+					}*/
 
 					//The check here is only to save some ressources
 					//If resendPacket is not set for the first parameter, parameters are added
 					//to valueKeys and rpcValues, so we need to check again before broadcasting
-					if(!resendPacket)
-					{
+					//if(!resendPacket)
+					//{
 						valueKeys[*j]->push_back(i->first);
 						rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
-					}
+					//}
 				}
 			}
 
@@ -2565,7 +2563,8 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				GD::devices.getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
 			}
 		}
-		if(!rpcValues.empty() && !resendPacket)
+		//if(!rpcValues.empty() && !resendPacket)
+		if(!rpcValues.empty())
 		{
 			for(std::map<uint32_t, std::shared_ptr<std::vector<std::string>>>::const_iterator j = valueKeys.begin(); j != valueKeys.end(); ++j)
 			{
@@ -2575,7 +2574,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				GD::rpcClient.broadcastEvent(address, j->second, rpcValues.at(j->first));
 			}
 		}
-		if(resendPacket && sentPacket)
+		/*if(resendPacket && sentPacket)
 		{
 			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
 			queue->noSending = true;
@@ -2592,7 +2591,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				pendingBidCoSQueues->push(queue);
 				HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			}
-		}
+		}*/
 	}
 	catch(const std::exception& ex)
     {
@@ -4056,7 +4055,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		}
 		else if(rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::command) return RPC::RPCVariable::createError(-6, "Parameter is not settable.");
-		_resendCounter[valueKey] = 0;
+		//_resendCounter[valueKey] = 0;
 		if(!rpcParameter->conversion.empty() && rpcParameter->conversion.at(0)->type == RPC::ParameterConversion::Type::Enum::toggle)
 		{
 			//Handle toggle parameter
@@ -4126,7 +4125,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 				if(!i->omitIfSet || intValue != i->omitIf)
 				{
 					//Don't set ON_TIME when value is false
-					if(i->additionalParameter != "ON_TIME" || value->booleanValue) packet->setPosition(i->index, i->size, additionalParameter->data);
+					if(i->additionalParameter != "ON_TIME" || (rpcParameter->physicalParameter->valueID == "STATE" && value->booleanValue) || (rpcParameter->physicalParameter->valueID == "LEVEL" && value->floatValue > 0)) packet->setPosition(i->index, i->size, additionalParameter->data);
 				}
 			}
 			//param sometimes is ambiguous (e. g. LEVEL of HM-CC-TC), so don't search and use the given parameter when possible
@@ -4149,9 +4148,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 			}
 			if(i->additionalParameter == "ON_TIME" && additionalParameter)
 			{
-				if(rpcParameter->physicalParameter->valueID != "STATE" || rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeBoolean)
+				if((rpcParameter->physicalParameter->valueID != "STATE" && rpcParameter->physicalParameter->valueID != "LEVEL") || (rpcParameter->physicalParameter->valueID == "STATE" && rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeBoolean) || (rpcParameter->physicalParameter->valueID == "LEVEL" && rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeFloat))
 				{
-					HelperFunctions::printError("Error: Can't set \"ON_TIME\" for " + rpcParameter->physicalParameter->valueID + ". Currently \"ON_TIME\" is only supported for \"STATE\" of type \"boolean\". Device: 0x" + HelperFunctions::getHexString(_address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+					HelperFunctions::printError("Error: Can't set \"ON_TIME\" for " + rpcParameter->physicalParameter->valueID + ". Currently \"ON_TIME\" is only supported for \"STATE\" of type \"boolean\" or \"LEVEL\" of type \"float\". Device: 0x" + HelperFunctions::getHexString(_address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					continue;
 				}
 				if(!_variablesToReset.empty())
@@ -4168,7 +4167,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 					}
 					_variablesToResetMutex.unlock();
 				}
-				if(!value->booleanValue || additionalParameter->data.empty() || additionalParameter->data.at(0) == 0) continue;
+				if((rpcParameter->physicalParameter->valueID == "STATE" && !value->booleanValue) || (rpcParameter->physicalParameter->valueID == "LEVEL" && value->floatValue == 0) || additionalParameter->data.empty() || additionalParameter->data.at(0) == 0) continue;
 				std::shared_ptr<CallbackFunctionParameter> parameters(new CallbackFunctionParameter());
 				parameters->integers.push_back(channel);
 				parameters->integers.push_back(0); //false = off
