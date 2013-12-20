@@ -144,9 +144,9 @@ OBJECTS := \
 	$(OBJDIR)/PhysicalParameter.o \
 	$(OBJDIR)/CLIServer.o \
 	$(OBJDIR)/CLIClient.o \
-	$(OBJDIR)/RFDevice.o \
 	$(OBJDIR)/TICC1100.o \
 	$(OBJDIR)/Cul.o \
+	$(OBJDIR)/PhysicalDevice.o \
 
 RESOURCES := \
 
@@ -361,13 +361,13 @@ $(OBJDIR)/CLIServer.o: CLI/CLIServer.cpp
 $(OBJDIR)/CLIClient.o: CLI/CLIClient.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RFDevice.o: RFDevices/RFDevice.cpp
+$(OBJDIR)/TICC1100.o: PhysicalDevices/TICC1100.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/TICC1100.o: RFDevices/TICC1100.cpp
+$(OBJDIR)/Cul.o: PhysicalDevices/Cul.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Cul.o: RFDevices/Cul.cpp
+$(OBJDIR)/PhysicalDevice.o: PhysicalDevices/PhysicalDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

@@ -370,7 +370,7 @@ bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				packet->import(packetString, false);
 				std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
 				HelperFunctions::printMessage("Captured: " + packetHex + " Responding with: " + packet->hexString());
-				GD::rfDevice->sendPacket(packet);
+				GD::physicalDevice->sendPacket(packet);
 			}
 		}
 	}

@@ -29,7 +29,7 @@
 
 #include "GD.h"
 
-std::shared_ptr<RF::RFDevice> GD::rfDevice;
+std::shared_ptr<PhysicalDevices::PhysicalDevice> GD::physicalDevice;
 std::string GD::configPath = "";
 std::string GD::pidfilePath = "";
 std::string GD::runDir = "/var/run/homegear/";

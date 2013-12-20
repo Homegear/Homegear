@@ -53,7 +53,7 @@ solution "homegear"
       files { "./Devices/*.h", "./Devices/*.cpp" }
       files { "./RPC/*.h", "./RPC/*.cpp" }
       files { "./CLI/*.h", "./CLI/*.cpp" }
-      files { "./RFDevices/*.h", "./RFDevices/*.cpp" }
+      files { "./PhysicalDevices/*.h", "./PhysicalDevices/*.cpp" }
  
       configuration "Debug"
          defines { "DEBUG" }

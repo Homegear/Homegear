@@ -47,7 +47,7 @@ void HomeMaticDevice::init()
 		_messages = std::shared_ptr<BidCoSMessages>(new BidCoSMessages());
 		_deviceType = HMDeviceTypes::HMUNKNOWN;
 
-		GD::rfDevice->addHomeMaticDevice(this);
+		GD::physicalDevice->addHomeMaticDevice(this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
 		_messageCounter[1] = 0; //Duty cycle message counter
@@ -192,7 +192,7 @@ void HomeMaticDevice::dispose(bool wait)
 		if(_disposing) return;
 		_disposing = true;
 		HelperFunctions::printDebug("Removing device 0x" + HelperFunctions::getHexString(_address) + " from CUL event queue...");
-		GD::rfDevice->removeHomeMaticDevice(this);
+		GD::physicalDevice->removeHomeMaticDevice(this);
 		int64_t startTime = HelperFunctions::getTime();
 		stopThreads();
 		int64_t timeDifference = HelperFunctions::getTime() - startTime;
@@ -1132,7 +1132,7 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool stea
 			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		}
 		else HelperFunctions::printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
-		GD::rfDevice->sendPacket(packet);
+		GD::physicalDevice->sendPacket(packet);
 	}
 	catch(const std::exception& ex)
     {
@@ -1164,7 +1164,7 @@ void HomeMaticDevice::sendPacketMultipleTimes(std::shared_ptr<BidCoSPacket> pack
 		{
 			_sentPackets.set(packet->destinationAddress(), packet);
 			int64_t start = HelperFunctions::getTime();
-			GD::rfDevice->sendPacket(packet);
+			GD::physicalDevice->sendPacket(packet);
 			if(useCentralMessageCounter)
 			{
 				packet->setMessageCounter(_messageCounter[0]);
@@ -1628,7 +1628,7 @@ void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destination
 		payload.push_back(0x00);
 		std::this_thread::sleep_for(std::chrono::milliseconds(GD::settings.bidCoSResponseDelay()));
 		std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(messageCounter, 0x80, 0x02, _address, destinationAddress, payload));
-		GD::rfDevice->sendPacket(ok);
+		GD::physicalDevice->sendPacket(ok);
 	}
 	catch(const std::exception& ex)
     {

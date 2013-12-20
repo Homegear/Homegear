@@ -27,40 +27,40 @@
  * files in the program, then also delete it here.
  */
 
-#include "RFDevice.h"
+#include "PhysicalDevice.h"
 #include "../GD.h"
 #include "../HelperFunctions.h"
 #include "Cul.h"
 #include "TICC1100.h"
 
-namespace RF
+namespace PhysicalDevices
 {
 
-RFDevice::RFDevice()
-{
-
-}
-
-RFDevice::~RFDevice()
+PhysicalDevice::PhysicalDevice()
 {
 
 }
 
-std::shared_ptr<RFDevice> RFDevice::create(std::string rfDeviceType)
+PhysicalDevice::~PhysicalDevice()
+{
+
+}
+
+std::shared_ptr<PhysicalDevice> PhysicalDevice::create(std::string deviceType)
 {
 	try
 	{
-		if(rfDeviceType == "cul")
+		if(deviceType == "cul")
 		{
-			return std::shared_ptr<RFDevice>(new Cul());
+			return std::shared_ptr<PhysicalDevice>(new Cul());
 		}
-		else if(rfDeviceType == "cc1100")
+		else if(deviceType == "cc1100")
 		{
-			return std::shared_ptr<RFDevice>(new TICC1100());
+			return std::shared_ptr<PhysicalDevice>(new TICC1100());
 		}
 		else
 		{
-			HelperFunctions::printError("Error: Unsupported rf device type: " + rfDeviceType);
+			HelperFunctions::printError("Error: Unsupported rf device type: " + deviceType);
 		}
 	}
     catch(const std::exception& ex)
@@ -75,10 +75,10 @@ std::shared_ptr<RFDevice> RFDevice::create(std::string rfDeviceType)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<RFDevice>();
+    return std::shared_ptr<PhysicalDevice>();
 }
 
-void RFDevice::addHomeMaticDevice(HomeMaticDevice* device)
+void PhysicalDevice::addHomeMaticDevice(HomeMaticDevice* device)
 {
 	try
 	{
@@ -100,7 +100,7 @@ void RFDevice::addHomeMaticDevice(HomeMaticDevice* device)
     _homeMaticDevicesMutex.unlock();
 }
 
-void RFDevice::removeHomeMaticDevice(HomeMaticDevice* device)
+void PhysicalDevice::removeHomeMaticDevice(HomeMaticDevice* device)
 {
 	try
 	{
@@ -122,7 +122,7 @@ void RFDevice::removeHomeMaticDevice(HomeMaticDevice* device)
     _homeMaticDevicesMutex.unlock();
 }
 
-void RFDevice::callCallback(std::shared_ptr<BidCoSPacket> packet)
+void PhysicalDevice::callCallback(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{

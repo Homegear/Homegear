@@ -31,7 +31,7 @@
 #include "../GD.h"
 #include "../HelperFunctions.h"
 
-namespace RF
+namespace PhysicalDevices
 {
 
 TICC1100::TICC1100()

@@ -45,8 +45,8 @@ void Settings::reset()
 	_databasePath = GD::executablePath + "db.sql";
 	_databaseSynchronous = false;
 	_databaseMemoryJournal = true;
-	_rfDeviceType = "cul";
-	_rfDevice = "/dev/ttyACM0";
+	_physicalDeviceType = "cul";
+	_physicalDevice = "/dev/ttyACM0";
 	_logfilePath = "/var/log/homegear/";
 	_prioritizeThreads = true;
 	_workerThreadWindow = 3000;
@@ -146,18 +146,18 @@ void Settings::load(std::string filename)
 					if(HelperFunctions::toLower(value) == "false") _databaseMemoryJournal = false;
 					HelperFunctions::printDebug("Debug: databaseMemoryJournal set to " + std::to_string(_databaseMemoryJournal));
 				}
-				else if(name == "rfdevicetype")
+				else if(name == "rfdevicetype" || name == "physicaldevicetype")
 				{
 					HelperFunctions::toLower(value);
-					_rfDeviceType = value;
-					if(_rfDeviceType.empty()) _rfDeviceType = "cul";
-					HelperFunctions::printDebug("Debug: rfDeviceType set to " + _rfDeviceType);
+					_physicalDeviceType = value;
+					if(_physicalDeviceType.empty()) _physicalDeviceType = "cul";
+					HelperFunctions::printDebug("Debug: rfDeviceType set to " + _physicalDeviceType);
 				}
-				else if(name == "rfdevice")
+				else if(name == "rfdevice" || name == "physicaldevice")
 				{
-					_rfDevice = value;
-					if(_rfDevice.empty()) _rfDevice = "/dev/ttyACM0";
-					HelperFunctions::printDebug("Debug: rfDevice set to " + _rfDevice);
+					_physicalDevice = value;
+					if(_physicalDevice.empty()) _physicalDevice = "/dev/ttyACM0";
+					HelperFunctions::printDebug("Debug: rfDevice set to " + _physicalDevice);
 				}
 				else if(name == "logfilepath")
 				{

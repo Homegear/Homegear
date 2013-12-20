@@ -49,11 +49,11 @@
 #include <fcntl.h>
 #include <signal.h>
 
-#include "RFDevice.h"
+#include "PhysicalDevice.h"
 
-namespace RF
+namespace PhysicalDevices
 {
-class TICC1100 : public RFDevice
+class TICC1100 : public PhysicalDevice
 {
 public:
 	struct GPIOModes

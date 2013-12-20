@@ -45,12 +45,12 @@
 #include <termios.h>
 #include <signal.h>
 
-#include "RFDevice.h"
+#include "PhysicalDevice.h"
 
-namespace RF
+namespace PhysicalDevices
 {
 
-class Cul  : public RFDevice
+class Cul  : public PhysicalDevice
 {
     public:
         Cul();

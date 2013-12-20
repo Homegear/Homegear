@@ -27,25 +27,25 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef RFDEVICE_H_
-#define RFDEVICE_H_
+#ifndef PHYSICALDEVICE_H_
+#define PHYSICALDEVICE_H_
 
 #include "../Exception.h"
 #include "../HomeMaticDevice.h"
 
-namespace RF
+namespace PhysicalDevices
 {
 
-class RFDevice
+class PhysicalDevice
 {
 public:
-	RFDevice();
+	PhysicalDevice();
 
-	virtual void init(std::string rfDevice) {}
+	virtual void init(std::string physicalDevice) {}
 
-	virtual ~RFDevice();
+	virtual ~PhysicalDevice();
 
-	static std::shared_ptr<RFDevice> create(std::string rfDeviceType);
+	static std::shared_ptr<PhysicalDevice> create(std::string deviceType);
 
 
 	virtual void startListening() {}
@@ -69,4 +69,4 @@ protected:
 };
 
 }
-#endif /* RFDEVICE_H_ */
+#endif /* PHYSICALDEVICE_H_ */

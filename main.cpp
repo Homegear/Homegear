@@ -101,7 +101,7 @@ void terminate(int32_t signalNumber)
 			HelperFunctions::printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
 			HelperFunctions::printInfo( "(Shutdown) => Closing RF device");
-			GD::rfDevice->stopListening();
+			GD::physicalDevice->stopListening();
 			GD::devices.save(false);
 			HelperFunctions::printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
@@ -405,20 +405,20 @@ int main(int argc, char* argv[])
     	GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".bak");
     	if(!GD::db.isOpen()) exit(1);
 
-    	GD::rfDevice = RF::RFDevice::create(GD::settings.rfDeviceType());
-    	if(!GD::rfDevice)
+    	GD::physicalDevice = PhysicalDevices::PhysicalDevice::create(GD::settings.physicalDeviceType());
+    	if(!GD::physicalDevice)
     	{
     		HelperFunctions::printError("Could not create rf device");
     		return 1;
     	}
-        GD::rfDevice->init(GD::settings.rfDevice());
-        if(!GD::rfDevice) return 1;
+        GD::physicalDevice->init(GD::settings.physicalDevice());
+        if(!GD::physicalDevice) return 1;
         HelperFunctions::printInfo("Loading XML RPC devices...");
         GD::rpcDevices.load();
         GD::devices.convertDatabase();
         HelperFunctions::printInfo("Start listening for BidCoS packets...");
-        GD::rfDevice->startListening();
-        if(!GD::rfDevice->isOpen()) return 1;
+        GD::physicalDevice->startListening();
+        if(!GD::physicalDevice->isOpen()) return 1;
         HelperFunctions::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
         if(_startAsDaemon)
@@ -459,7 +459,7 @@ int main(int argc, char* argv[])
 				{
 					std::vector<uint8_t> payload({2, 1, 1, 0, 0});
 					std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x2F, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
-					GD::rfDevice->sendPacket(packet);
+					GD::physicalDevice->sendPacket(packet);
 				}
 				else std::cout << GD::devices.handleCLICommand(input);
 			}

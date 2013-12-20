@@ -50,8 +50,8 @@ public:
 	std::string databasePath() { return _databasePath; }
 	bool databaseSynchronous() { return _databaseSynchronous; }
 	bool databaseMemoryJournal() { return _databaseMemoryJournal; }
-	std::string rfDeviceType() { return _rfDeviceType; }
-	std::string rfDevice() { return _rfDevice; }
+	std::string physicalDeviceType() { return _physicalDeviceType; }
+	std::string physicalDevice() { return _physicalDevice; }
 	std::string logfilePath() { return _logfilePath; }
 	bool prioritizeThreads() { return _prioritizeThreads; }
 	void setPrioritizeThreads(bool value) { _prioritizeThreads = value; }
@@ -71,8 +71,8 @@ private:
 	std::string _databasePath;
 	bool _databaseSynchronous = false;
 	bool _databaseMemoryJournal = true;
-	std::string _rfDeviceType;
-	std::string _rfDevice;
+	std::string _physicalDeviceType;
+	std::string _physicalDevice;
 	std::string _logfilePath;
 	bool _prioritizeThreads = true;
 	uint32_t _workerThreadWindow = 3000;

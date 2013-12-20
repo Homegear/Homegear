@@ -37,7 +37,7 @@ class HomeMaticDevices;
 #include <string>
 
 #include "Database.h"
-#include "RFDevices/RFDevice.h"
+#include "PhysicalDevices/PhysicalDevice.h"
 #include "HomeMaticDevices.h"
 #include "RPC/Server.h"
 #include "RPC/Client.h"
@@ -68,7 +68,7 @@ public:
 	static RPC::ServerSettings serverSettings;
 	static RPC::ClientSettings clientSettings;
 	static Database db;
-	static std::shared_ptr<RF::RFDevice> rfDevice;
+	static std::shared_ptr<PhysicalDevices::PhysicalDevice> physicalDevice;
 	static int32_t debugLevel;
 	static int32_t rpcLogLevel;
 	static bool bigEndian;
