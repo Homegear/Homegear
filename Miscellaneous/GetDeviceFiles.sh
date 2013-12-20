@@ -13,3 +13,4 @@ rm -Rf /tmp/HomegearDeviceTypes
 chown -R root:root /etc/homegear/Device\ types
 chmod 755 /etc/homegear/Device\ types
 chmod 644 /etc/homegear/Device\ types/*
+rm -f /etc/homegear/Device\ types/rf_cmm.xml

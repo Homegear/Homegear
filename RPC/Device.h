@@ -248,6 +248,7 @@ public:
 	bool hasTeam = false;
 	bool aesDefault = false;
 	bool aesAlways = false;
+	bool aesCBC = false;
 	bool hidden = false;
 	bool autoregister = false;
 	bool paired = false;
@@ -305,7 +306,7 @@ public:
 	};
 	struct RXModes
 	{
-		enum Enum { none = 0, config = 1, wakeUp = 2, burst = 4, always = 8 };
+		enum Enum { none = 0, config = 1, wakeUp = 2, burst = 4, always = 8, lazyConfig = 16 };
 	};
 
 	bool loaded() { return _loaded; }

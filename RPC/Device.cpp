@@ -682,7 +682,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		else if(attributeName == "cond_op")
 		{
 			HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
-			if(attributeValue == "e") booleanOperator = BooleanOperator::Enum::e;
+			if(attributeValue == "e" || attributeValue == "eq") booleanOperator = BooleanOperator::Enum::e;
 			else if(attributeValue == "g") booleanOperator = BooleanOperator::Enum::g;
 			else if(attributeValue == "l") booleanOperator = BooleanOperator::Enum::l;
 			else if(attributeValue == "ge") booleanOperator = BooleanOperator::Enum::ge;
@@ -1246,6 +1246,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
 		else if(attributeName == "aes_always") { if(attributeValue == "true") aesDefault = true; }
+		else if(attributeName == "aes_cbc") { if(attributeValue == "true") aesCBC = true; }
 		else if(attributeName == "team_tag") teamTag = attributeValue;
 		else if(attributeName == "paired") { if(attributeValue == "true") paired = true; }
 		else if(attributeName == "function") function = attributeValue;
@@ -1441,6 +1442,7 @@ void Device::parseXML(xml_node<>* node)
 					else if(element == "config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::config);
 					else if(element == "burst") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::burst);
 					else if(element == "always") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::always);
+					else if(element == "lazy_config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::lazyConfig);
 					else HelperFunctions::printWarning("Warning: Unknown rx mode for \"device\": " + element);
 				}
 				if(rxModes == RXModes::Enum::none) rxModes = RXModes::Enum::always;
