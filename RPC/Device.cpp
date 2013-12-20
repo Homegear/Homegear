@@ -195,6 +195,10 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		{
 			value->stringValue = std::to_string((uint32_t)value->integerValue);
 		}
+		else if(type == Type::Enum::blindTest)
+		{
+			value->integerValue = HelperFunctions::getNumber(stringValue);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -290,6 +294,10 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		{
 			value->integerValue = HelperFunctions::getUnsignedNumber(value->stringValue);
 		}
+		else if(type == Type::Enum::blindTest)
+		{
+			value->integerValue = HelperFunctions::getNumber(stringValue);
+		}
 		value->type = RPCVariableType::rpcInteger;
 	}
 	catch(const std::exception& ex)
@@ -326,6 +334,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "action_key_counter") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "action_key_same_counter") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "rc19display") type = Type::Enum::none; //ignore, no conversion necessary
+			else if(attributeValue == "blind_test") type = Type::Enum::blindTest;
 			else HelperFunctions::printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -564,7 +573,7 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 			if(value->integerValue > parameter->max) value->integerValue = parameter->max;
 			if(value->integerValue < parameter->min) value->integerValue = parameter->min;
 		}
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeAction && conversion.empty())
 		{
 			value->integerValue = (int32_t)value->booleanValue;
 		}

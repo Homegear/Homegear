@@ -4083,7 +4083,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		}
 		std::string setRequest = rpcParameter->physicalParameter->setRequest;
 		if(setRequest.empty()) return RPC::RPCVariable::createError(-6, "parameter is read only");
-		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return RPC::RPCVariable::createError(-6, "frame not found");
+		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return RPC::RPCVariable::createError(-6, "No frame was found for parameter " + valueKey);
 		std::shared_ptr<RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 		parameter->data = rpcParameter->convertToPacket(value);
 		saveParameter(parameter->databaseID, parameter->data);
