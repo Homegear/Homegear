@@ -144,6 +144,54 @@ diff -Naur Original/rf_rc.xml Patched/rf_rc.xml
  			<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
  				<logical type="action"/>
  				<physical type="integer" interface="command" value_id="TEST_COUNTER">
+diff -Naur Original/rf_roto_wdf_solar.xml Patched/rf_roto_wdf_solar.xml
+--- Original/rf_roto_wdf_solar.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_roto_wdf_solar.xml	2013-12-22 11:33:59.506016208 +0100
+@@ -1,5 +1,9 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes: 
++	- Removed unnecessary parameters outside of parameter set in "paramset_defs"
++-->
+ <device version="2" supports_aes="true" rx_modes="BURST">
+ 	<supported_types>
+ 		<type name="ROTO WDF solar" id="WDF solar" updatable="true" priority="2">
+@@ -167,34 +171,6 @@
+ 		</frame>
+ 	</frames>
+ 	<paramset_defs>
+-		<parameter id="ERROR_M1" operations="read,event" ui_flags="service" control="NONE">
+-			<logical type="boolean" default="false"/>
+-			<physical type="integer" interface="command" value_id="ERROR_M1">
+-				<event frame="INFO_LEV_ERR"/>
+-				<event frame="ACK_STAT_ERR"/>
+-			</physical>
+-		</parameter>
+-		<parameter id="ERROR_M2" operations="read,event" ui_flags="service" control="NONE">
+-			<logical type="boolean" default="false"/>
+-			<physical type="integer" interface="command" value_id="ERROR_M2">
+-				<event frame="INFO_LEV_ERR"/>
+-				<event frame="ACK_STAT_ERR"/>
+-			</physical>
+-		</parameter>
+-		<parameter id="ERROR_M3" operations="read,event" ui_flags="service" control="NONE">
+-			<logical type="boolean" default="false"/>
+-			<physical type="integer" interface="command" value_id="ERROR_M3">
+-				<event frame="INFO_LEV_ERR"/>
+-				<event frame="ACK_STAT_ERR"/>
+-			</physical>
+-		</parameter>
+-		<parameter id="ERROR_BATTERY" operations="read,event" ui_flags="service" control="NONE">
+-			<logical type="boolean" default="false"/>
+-			<physical type="integer" interface="command" value_id="ERROR_BATTERY">
+-				<event frame="INFO_LEV_ERR"/>
+-				<event frame="ACK_STAT_ERR"/>
+-			</physical>
+-		</parameter>
+ 		<paramset id="winmatic_valueset">
+ 			<parameter id="LEVEL" operations="read,write,event" control="WINDOW.LEVEL">
+ 				<logical type="float" default="0.0" min="0.0" max="1.0" unit="100%">
 diff -Naur Original/rf_s_1conf_644_le_v2_1.xml Patched/rf_s_1conf_644_le_v2_1.xml
 --- Original/rf_s_1conf_644_le_v2_1.xml	2013-11-21 14:36:30.045775855 +0100
 +++ Patched/rf_s_1conf_644_le_v2_1.xml	2013-10-18 10:02:30.000000000 +0200
@@ -253,3 +301,30 @@ diff -Naur Original/rf_s.xml Patched/rf_s.xml
  				</physical>
  			</parameter>
  			<parameter id="WORKING" operations="read,event" ui_flags="internal">
+diff -Naur Original/rf_tc_it_wm-w-eu.xml Patched/rf_tc_it_wm-w-eu.xml
+--- Original/rf_tc_it_wm-w-eu.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_tc_it_wm-w-eu.xml	2013-12-22 11:23:15.894019503 +0100
+@@ -1,5 +1,9 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes: 
++	- Removed unlogical "physical", "conversion" and "description" outside of "parameter" in channel 1 "VALUES" parameter set
++-->
+ <device version="1" rx_modes="CONFIG,WAKEUP" supports_aes="true">
+ 	<supported_types>
+ 		<type name="ThermalControl-IndoorTemperatureSensor" id="HM-TC-IT-WM-W-EU" updatable="true">
+@@ -2968,13 +2972,6 @@
+ 						<field id="AutoconfRoles" value="WEATHER"/>
+ 					</description>
+ 				</parameter>
+-				<physical type="integer" interface="command" value_id="TEMPERATURE">
+-					<event frame="WEATHER_EVENT"/>
+-				</physical>
+-				<conversion type="float_integer_scale" factor="10.0"/>
+-				<description>
+-					<field id="AutoconfRoles" value="WEATHER"/>
+-				</description>
+ 				<parameter id="HUMIDITY" operations="read,event" control="NONE">
+ 					<logical type="integer" min="0" max="99" unit="%"/>
+ 					<physical type="integer" interface="command" value_id="HUMIDITY">

@@ -335,6 +335,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "action_key_same_counter") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "rc19display") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "blind_test") type = Type::Enum::blindTest;
+			else if(attributeValue == "cfm") type = Type::Enum::none; //Used in "SUBMIT" of HM-OU-CFM-Pl. No idea what it is for.
 			else HelperFunctions::printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);

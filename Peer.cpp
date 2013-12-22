@@ -332,19 +332,16 @@ void Peer::worker()
 	}
 	catch(const std::exception& ex)
 	{
-		std::cerr << _address << std::endl;
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_variablesToResetMutex.unlock();
 	}
 	catch(Exception& ex)
 	{
-		std::cerr << _address << std::endl;
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_variablesToResetMutex.unlock();
 	}
 	catch(...)
 	{
-		std::cerr << _address << std::endl;
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		_variablesToResetMutex.unlock();
 	}
