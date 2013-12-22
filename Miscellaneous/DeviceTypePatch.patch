@@ -1,3 +1,25 @@
+diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
+--- Original/rf_es_pmsw.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_es_pmsw.xml	2013-12-22 17:47:07.807547698 +0100
+@@ -1,5 +1,9 @@
+ <?xml version="1.0" encoding="iso-8859-1"?>
+ <?xml-stylesheet type="text/xsl" href="device.xsl"?>
++<!-- Modified from original
++	Changes: 
++	- Renamed wrongly spelled operation to operations (parameter with ID BOOT)
++-->
+ <device version="5" supports_aes="true" cyclic_timeout="600">
+ 	<supported_types>
+ 		<type name="power meter switch actuator 1-channel" id="HM-ES-PMSw1-Pl" updatable="true" priority="2">
+@@ -171,7 +175,7 @@
+ 					</physical>
+ 					<conversion type="float_integer_scale" factor="100" offset="-50.00"/>
+ 				</parameter>
+-				<parameter id="BOOT" operation="read,write,event" control="POWERMETER.BOOT">
++				<parameter id="BOOT" operations="read,write,event" control="POWERMETER.BOOT">
+ 					<logical type="boolean" default="false"/>
+ 					<physical type="integer" interface="command" value_id="BOOT" no_init="true">
+ 						<event frame="POWER_EVENT_CYCLIC"/>
 diff -Naur Original/rf_rc_12.xml Patched/rf_rc_12.xml
 --- Original/rf_rc_12.xml	2013-11-21 14:36:30.037775856 +0100
 +++ Patched/rf_rc_12.xml	2013-10-18 10:02:30.000000000 +0200
