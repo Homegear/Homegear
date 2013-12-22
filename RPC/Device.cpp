@@ -251,8 +251,14 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 				bits += std::lround(valueSize * 10) % 10;
 				if(bits == 0) bits = 7;
 				uint32_t maxNumber = 1 << bits;
-				if(value->floatValue <= maxNumber - 1) value->integerValue = std::lround(value->floatValue / factor);
-				else value->integerValue = maxNumber + std::lround(value->floatValue / factor2);
+				if(value->floatValue <= maxNumber - 1)
+				{
+					if(factor != 0) value->integerValue = std::lround(value->floatValue / factor);
+				}
+				else
+				{
+					if(factor2 != 0) value->integerValue = maxNumber + std::lround(value->floatValue / factor2);
+				}
 			}
 			else
 			{
@@ -279,7 +285,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 			int64_t exponent = 0;
 			if(maxMantissa > 0)
 			{
-				while(value->integerValue >= maxMantissa)
+				while(mantissa >= maxMantissa)
 				{
 					mantissa = mantissa >> 1;
 					exponent++;
@@ -335,7 +341,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 			else if(attributeValue == "action_key_same_counter") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "rc19display") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "blind_test") type = Type::Enum::blindTest;
-			else if(attributeValue == "cfm") type = Type::Enum::none; //Used in "SUBMIT" of HM-OU-CFM-Pl. No idea what it is for.
+			else if(attributeValue == "cfm") type = Type::Enum::cfm; //Used in "SUBMIT" of HM-OU-CFM-Pl
 			else HelperFunctions::printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
@@ -585,6 +591,45 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 				data.insert(data.end(), value->stringValue.begin(), value->stringValue.end());
 			}
 			if(data.size() < std::lround(physicalParameter->size)) data.push_back(0); //0 termination. Otherwise parts of old string will still be visible
+		}
+		else if(!conversion.empty() && conversion.at(0)->type == ParameterConversion::Type::cfm)
+		{
+			std::shared_ptr<RPCVariable> variable(new RPC::RPCVariable());
+			*variable = *value;
+			//Cannot currently easily be handled by ParameterConversion::toPacket
+			data.resize(14, 0);
+			if(variable->stringValue.empty() || variable->stringValue == "0") return data;
+			std::istringstream stringStream(variable->stringValue);
+			std::string element;
+
+			for(uint32_t i = 0; std::getline(stringStream, element, ',') && i < 13; i++)
+			{
+				if(i == 0)
+				{
+					data.at(0) = std::lround(200 * HelperFunctions::getDouble(element));
+				}
+				else if(i == 1)
+				{
+					data.at(1) = HelperFunctions::getNumber(element);
+				}
+				else if(i == 2)
+				{
+					variable->integerValue = std::lround(HelperFunctions::getDouble(element) * 10);
+					ParameterConversion conversion;
+					conversion.type = ParameterConversion::Type::integerTinyFloat;
+					conversion.toPacket(variable);
+					std::vector<uint8_t> time;
+					HelperFunctions::memcpyBigEndian(time, variable->integerValue);
+					if(time.size() == 1) data.at(13) = time.at(0);
+					else
+					{
+						data.at(12) = time.at(0);
+						data.at(13) = time.at(1);
+					}
+				}
+				else data.at(i - 1) = HelperFunctions::getNumber(element);
+			}
+			return data;
 		}
 		else
 		{

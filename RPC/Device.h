@@ -81,7 +81,7 @@ class ParameterConversion
 public:
 	struct Type
 	{
-		enum Enum { none, toggle, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat, stringUnsignedInteger, blindTest };
+		enum Enum { none, toggle, floatIntegerScale, integerIntegerScale, booleanInteger, integerIntegerMap, floatConfigTime, optionInteger, integerTinyFloat, stringUnsignedInteger, blindTest, cfm };
 	};
 	Type::Enum type = Type::Enum::none;
 	std::unordered_map<int32_t, int32_t> integerValueMapDevice;
