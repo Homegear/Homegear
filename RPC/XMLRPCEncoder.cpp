@@ -163,7 +163,7 @@ void XMLRPCEncoder::encodeVariable(xml_document<>* doc, xml_node<>* node, std::s
 	{
 		xml_node<> *valueNode = doc->allocate_node(node_element, "value");
 		node->append_node(valueNode);
-		if(variable->type == RPCVariableType::rpcVoid)
+		if(!variable || variable->type == RPCVariableType::rpcVoid)
 		{
 			//leave valueNode empty
 		}

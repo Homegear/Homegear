@@ -85,6 +85,7 @@ public:
 	std::shared_ptr<RPC::RPCVariable> removeLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
 	std::shared_ptr<RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);
 	std::shared_ptr<RPC::RPCVariable> deleteMetadata(std::string objectID, std::string dataID = "");
+	std::shared_ptr<RPC::RPCVariable> getDeviceDescriptionCentral();
 	std::shared_ptr<RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel);
 	std::shared_ptr<RPC::RPCVariable> getInstallMode();
 	std::shared_ptr<RPC::RPCVariable> getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);

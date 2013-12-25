@@ -30,6 +30,7 @@
 #include "HomeMaticCentral.h"
 #include "../GD.h"
 #include "../HelperFunctions.h"
+#include "../Version.h"
 
 HomeMaticCentral::HomeMaticCentral() : HomeMaticDevice()
 {
@@ -203,6 +204,19 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	try
 	{
 		if(_disposing) return false;
+		if(packet->senderAddress() == _address) //Packet spoofed
+		{
+			std::shared_ptr<Peer> peer(getPeer(packet->destinationAddress()));
+			if(peer)
+			{
+				peer->serviceMessages->set("CENTRAL_ADDRESS_SPOOFED", 1, 0);
+				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> { "CENTRAL_ADDRESS_SPOOFED" });
+				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<RPC::RPCVariable>> { std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)1)) });
+				GD::rpcClient.broadcastEvent(peer->getSerialNumber() + ":0", valueKeys, values);
+				return true;
+			}
+			return false;
+		}
 		bool handled = HomeMaticDevice::packetReceived(packet);
 		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
 		if(!peer) return false;
@@ -2707,6 +2721,13 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 		}
 		_peersMutex.unlock();
 
+		//Get this central's device description
+		if(!knownDevices || knownDevices->find(_serialNumber) == knownDevices->end())
+		{
+			std::shared_ptr<RPC::RPCVariable> centralDescription = getDeviceDescriptionCentral();
+			if(centralDescription) array->arrayValue->push_back(centralDescription);
+		}
+
 		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
 		{
 			//listDevices really needs a lot of resources, so wait a little bit after each device
@@ -2891,10 +2912,60 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescriptionCentral()
+{
+	try
+	{
+		std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+
+		description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber))));
+
+		std::shared_ptr<RPC::RPCVariable> variable = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		description->structValue->insert(RPC::RPCStructElement("CHILDREN", variable));
+
+		description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string(VERSION)))));
+
+		int32_t uiFlags = (int32_t)RPC::Device::UIFlags::dontdelete | (int32_t)RPC::Device::UIFlags::visible;
+		description->structValue->insert(RPC::RPCStructElement("FLAGS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(uiFlags))));
+
+		description->structValue->insert(RPC::RPCStructElement("INTERFACE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber))));
+
+		variable = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		description->structValue->insert(RPC::RPCStructElement("PARAMSETS", variable));
+		variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("MASTER")))); //Always MASTER
+
+		description->structValue->insert(RPC::RPCStructElement("PARENT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("")))));
+
+		description->structValue->insert(RPC::RPCStructElement("RF_ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::to_string(_address)))));
+
+		description->structValue->insert(RPC::RPCStructElement("ROAMING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(0))));
+
+		description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("Homegear Central")))));
+
+		description->structValue->insert(RPC::RPCStructElement("VERSION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)10))));
+
+		return description;
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescription(std::string serialNumber, int32_t channel)
 {
 	try
 	{
+		if(serialNumber == _serialNumber) return getDeviceDescriptionCentral();
 		std::shared_ptr<Peer> peer(getPeer(serialNumber));
 		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 
@@ -3098,9 +3169,18 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::string se
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeer(serialNumber));
-		if(peer) return peer->getParamsetId(channel, type, remoteSerialNumber, remoteChannel);
-		return RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(serialNumber == _serialNumber)
+		{
+			if(channel > 0) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+			if(type != RPC::ParameterSet::Type::Enum::master) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("rf_homegear_central_master")));
+		}
+		else
+		{
+			std::shared_ptr<Peer> peer(getPeer(serialNumber));
+			if(peer) return peer->getParamsetId(channel, type, remoteSerialNumber, remoteChannel);
+			return RPC::RPCVariable::createError(-2, "Unknown device.");
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -3153,10 +3233,15 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string seri
 {
 	try
 	{
-		if(serialNumber == "BidCoS-RF" && channel == 0 && type == RPC::ParameterSet::Type::Enum::master)
+		if(serialNumber == "BidCoS-RF" && (channel == 0 || channel == -1) && type == RPC::ParameterSet::Type::Enum::master)
 		{
 			std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 			paramset->structValue->insert(RPC::RPCStructElement("AES_KEY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(1))));
+			return paramset;
+		}
+		else if(serialNumber == _serialNumber && (channel == 0 || channel == -1) && type == RPC::ParameterSet::Type::Enum::master)
+		{
+			std::shared_ptr<RPC::RPCVariable> paramset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 			return paramset;
 		}
 		else
@@ -3185,9 +3270,17 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeer(serialNumber));
-		if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
-		return RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(serialNumber == _serialNumber && (channel == 0 || channel == -1) && type == RPC::ParameterSet::Type::Enum::master)
+		{
+			std::shared_ptr<RPC::RPCVariable> descriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+			return descriptions;
+		}
+		else
+		{
+			std::shared_ptr<Peer> peer(getPeer(serialNumber));
+			if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
+			return RPC::RPCVariable::createError(-2, "Unknown device.");
+		}
 	}
 	catch(const std::exception& ex)
     {

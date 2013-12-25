@@ -1,6 +1,380 @@
+diff -Naur Original/rf_4dis.xml Patched/rf_4dis.xml
+--- Original/rf_4dis.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_4dis.xml	2013-12-25 16:04:42.864510371 +0100
+@@ -54,6 +54,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+diff -Naur Original/rf_ash550.xml Patched/rf_ash550.xml
+--- Original/rf_ash550.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_ash550.xml	2013-12-25 16:04:42.876510371 +0100
+@@ -62,6 +62,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="WEATHER">
+diff -Naur Original/rf_bl_conf_644_le_v2_1.xml Patched/rf_bl_conf_644_le_v2_1.xml
+--- Original/rf_bl_conf_644_le_v2_1.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_bl_conf_644_le_v2_1.xml	2013-12-25 16:04:42.888510371 +0100
+@@ -52,6 +52,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="BLIND" count_from_sysinfo="23.0:1.0">
+diff -Naur Original/rf_bl_conf_644.xml Patched/rf_bl_conf_644.xml
+--- Original/rf_bl_conf_644.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_bl_conf_644.xml	2013-12-25 16:04:42.904510372 +0100
+@@ -54,6 +54,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="BLIND" count_from_sysinfo="23.0:1.0">
+diff -Naur Original/rf_bl.xml Patched/rf_bl.xml
+--- Original/rf_bl.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_bl.xml	2013-12-25 16:04:42.916510370 +0100
+@@ -60,6 +60,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="BLIND" count_from_sysinfo="23.0:1.0">
+diff -Naur Original/rf_cc_rt_dn_bom.xml Patched/rf_cc_rt_dn_bom.xml
+--- Original/rf_cc_rt_dn_bom.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_cc_rt_dn_bom.xml	2013-12-25 16:04:42.928510372 +0100
+@@ -1149,6 +1149,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="INHIBIT" operations="read,write,event" control="NONE" loopback="true">
+ 					<logical type="boolean"/>
+ 					<physical type="integer" interface="command" value_id="INHIBIT">
+diff -Naur Original/rf_cc_rt_dn.xml Patched/rf_cc_rt_dn.xml
+--- Original/rf_cc_rt_dn.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_cc_rt_dn.xml	2013-12-25 16:04:42.944510372 +0100
+@@ -1178,6 +1178,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="INHIBIT" operations="read,write,event" control="NONE" loopback="true">
+ 					<logical type="boolean"/>
+ 					<physical type="integer" interface="command" value_id="INHIBIT">
+diff -Naur Original/rf_cc_tc_le_v1_9.xml Patched/rf_cc_tc_le_v1_9.xml
+--- Original/rf_cc_tc_le_v1_9.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_cc_tc_le_v1_9.xml	2013-12-25 16:04:42.960510372 +0100
+@@ -64,6 +64,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="WEATHER">
+diff -Naur Original/rf_cc_tc.xml Patched/rf_cc_tc.xml
+--- Original/rf_cc_tc.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_cc_tc.xml	2013-12-25 16:04:42.972510372 +0100
+@@ -68,6 +68,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="WEATHER">
+diff -Naur Original/rf_cc_vd.xml Patched/rf_cc_vd.xml
+--- Original/rf_cc_vd.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_cc_vd.xml	2013-12-25 16:04:42.984510372 +0100
+@@ -40,6 +40,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="CLIMATECONTROL_VENT_DRIVE">
+diff -Naur Original/rf_cfm.xml Patched/rf_cfm.xml
+--- Original/rf_cfm.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_cfm.xml	2013-12-25 16:04:43.000510373 +0100
+@@ -53,6 +53,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="SIGNAL_LED" count="1">
+diff -Naur Original/rf_cf.xml Patched/rf_cf.xml
+--- Original/rf_cf.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_cf.xml	2013-12-25 16:04:43.012510371 +0100
+@@ -47,6 +47,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="SIGNAL_LED" count="1">
+diff -Naur Original/rf_cmm.xml Patched/rf_cmm.xml
+--- Original/rf_cmm.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_cmm.xml	2013-12-25 16:04:43.024510373 +0100
+@@ -37,6 +37,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="ENERGY_MANAGMENT" count="3">
+diff -Naur Original/rf_cm.xml Patched/rf_cm.xml
+--- Original/rf_cm.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_cm.xml	2013-12-25 16:04:43.032510373 +0100
+@@ -53,6 +53,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="SIGNAL_CHIME" count="1">
+diff -Naur Original/rf_ddc.xml Patched/rf_ddc.xml
+--- Original/rf_ddc.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_ddc.xml	2013-12-25 16:04:43.044510373 +0100
+@@ -45,6 +45,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="DDC" count_from_sysinfo="23.0:1.0">
+diff -Naur Original/rf_dim_1l_644.xml Patched/rf_dim_1l_644.xml
+--- Original/rf_dim_1l_644.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_dim_1l_644.xml	2013-12-25 16:04:43.064510373 +0100
+@@ -64,6 +64,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+diff -Naur Original/rf_dim_1pwm_644.xml Patched/rf_dim_1pwm_644.xml
+--- Original/rf_dim_1pwm_644.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_dim_1pwm_644.xml	2013-12-25 16:04:43.080510373 +0100
+@@ -55,6 +55,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+diff -Naur Original/rf_dim_1t_644.xml Patched/rf_dim_1t_644.xml
+--- Original/rf_dim_1t_644.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_dim_1t_644.xml	2013-12-25 16:04:43.096510374 +0100
+@@ -71,6 +71,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+diff -Naur Original/rf_dim_1tconf_644.xml Patched/rf_dim_1tconf_644.xml
+--- Original/rf_dim_1tconf_644.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_dim_1tconf_644.xml	2013-12-25 16:04:43.112510373 +0100
+@@ -49,6 +49,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+diff -Naur Original/rf_dim_2l_644.xml Patched/rf_dim_2l_644.xml
+--- Original/rf_dim_2l_644.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_dim_2l_644.xml	2013-12-25 16:04:43.128510374 +0100
+@@ -56,6 +56,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+diff -Naur Original/rf_dim_2t_644.xml Patched/rf_dim_2t_644.xml
+--- Original/rf_dim_2t_644.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_dim_2t_644.xml	2013-12-25 16:04:43.144510374 +0100
+@@ -55,6 +55,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+diff -Naur Original/rf_d_le_v1_7.xml Patched/rf_d_le_v1_7.xml
+--- Original/rf_d_le_v1_7.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_d_le_v1_7.xml	2013-12-25 16:04:43.164510374 +0100
+@@ -58,6 +58,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="DIMMER" count_from_sysinfo="23.0:0.2">
 diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
 --- Original/rf_es_pmsw.xml	2013-11-21 14:36:30.037775856 +0100
-+++ Patched/rf_es_pmsw.xml	2013-12-22 17:47:07.807547698 +0100
++++ Patched/rf_es_pmsw.xml	2013-12-25 16:04:43.184510373 +0100
 @@ -1,5 +1,9 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -11,7 +385,21 @@ diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
  <device version="5" supports_aes="true" cyclic_timeout="600">
  	<supported_types>
  		<type name="power meter switch actuator 1-channel" id="HM-ES-PMSw1-Pl" updatable="true" priority="2">
-@@ -171,7 +175,7 @@
+@@ -54,6 +58,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+@@ -171,7 +182,7 @@
  					</physical>
  					<conversion type="float_integer_scale" factor="100" offset="-50.00"/>
  				</parameter>
@@ -20,9 +408,111 @@ diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
  					<logical type="boolean" default="false"/>
  					<physical type="integer" interface="command" value_id="BOOT" no_init="true">
  						<event frame="POWER_EVENT_CYCLIC"/>
+diff -Naur Original/rf_fs_ba.xml Patched/rf_fs_ba.xml
+--- Original/rf_fs_ba.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_fs_ba.xml	2013-12-25 16:04:43.196510375 +0100
+@@ -61,6 +61,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="STATUS_INDICATOR" count="1">
+diff -Naur Original/rf_keymatic.xml Patched/rf_keymatic.xml
+--- Original/rf_keymatic.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_keymatic.xml	2013-12-25 16:04:43.208510374 +0100
+@@ -71,6 +71,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="KEYMATIC" count="1" aes_always="true">
+diff -Naur Original/rf_ks550.xml Patched/rf_ks550.xml
+--- Original/rf_ks550.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_ks550.xml	2013-12-25 16:04:43.220510375 +0100
+@@ -53,6 +53,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="WEATHER">
+diff -Naur Original/rf_ou_led16_ge_v1_1.xml Patched/rf_ou_led16_ge_v1_1.xml
+--- Original/rf_ou_led16_ge_v1_1.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_ou_led16_ge_v1_1.xml	2013-12-25 16:04:43.232510375 +0100
+@@ -68,6 +68,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="LED_STATUS" operations="write" control="NONE">
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="command" value_id="LED_STATUS">
+diff -Naur Original/rf_ou_led16_le_v1_0.xml Patched/rf_ou_led16_le_v1_0.xml
+--- Original/rf_ou_led16_le_v1_0.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_ou_led16_le_v1_0.xml	2013-12-25 16:04:43.240510375 +0100
+@@ -64,6 +64,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="LED_STATUS" operations="write" control="NONE">
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="command" value_id="LED_STATUS">
+diff -Naur Original/rf_pbi.xml Patched/rf_pbi.xml
+--- Original/rf_pbi.xml	2013-11-21 14:36:30.037775856 +0100
++++ Patched/rf_pbi.xml	2013-12-25 16:04:43.252510375 +0100
+@@ -50,6 +50,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" pair_function="BA" function="T" paired="false" aes_default="true">
 diff -Naur Original/rf_rc_12.xml Patched/rf_rc_12.xml
 --- Original/rf_rc_12.xml	2013-11-21 14:36:30.037775856 +0100
-+++ Patched/rf_rc_12.xml	2013-10-18 10:02:30.000000000 +0200
++++ Patched/rf_rc_12.xml	2013-12-25 16:04:43.264510375 +0100
 @@ -1,5 +1,10 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -34,7 +524,21 @@ diff -Naur Original/rf_rc_12.xml Patched/rf_rc_12.xml
  <device version="8" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
  	<supported_types>
  		<type name="HM Remote 12 buttons" id="HM-RC-12" priority="2">
-@@ -139,6 +144,20 @@
+@@ -60,6 +65,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" pair_function="BA" function="A" paired="true" aes_default="true">
+@@ -139,6 +151,20 @@
  				</physical>
  				<conversion type="action_key_same_counter" sim_counter="SIM_CONT_COUNTER"/>
  			</parameter>
@@ -57,7 +561,7 @@ diff -Naur Original/rf_rc_12.xml Patched/rf_rc_12.xml
  				<physical type="integer" interface="command" value_id="TEST_COUNTER">
 diff -Naur Original/rf_rc_19.xml Patched/rf_rc_19.xml
 --- Original/rf_rc_19.xml	2013-11-21 14:36:30.045775855 +0100
-+++ Patched/rf_rc_19.xml	2013-10-18 10:02:30.000000000 +0200
++++ Patched/rf_rc_19.xml	2013-12-25 16:04:43.276510375 +0100
 @@ -1,5 +1,11 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -70,7 +574,21 @@ diff -Naur Original/rf_rc_19.xml Patched/rf_rc_19.xml
  <device version="14" rx_modes="CONFIG,BURST" peering_sysinfo_expect_channel="false" supports_aes="true">
  	<supported_types>
  		<type name="HM Remote 19 buttons" id="HM-RC-19" priority="2">
-@@ -113,6 +119,20 @@
+@@ -71,6 +77,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="KEY" count="16" pair_function="BA" function="A" paired="true" aes_default="true">
+@@ -113,6 +126,20 @@
  					</physical>
  					<conversion type="action_key_same_counter" sim_counter="SIM_COUNTER"/>
  				</parameter>
@@ -91,7 +609,7 @@ diff -Naur Original/rf_rc_19.xml Patched/rf_rc_19.xml
  				<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
  					<logical type="action"/>
  					<physical type="integer" interface="command" value_id="TEST_COUNTER">
-@@ -157,6 +177,20 @@
+@@ -157,6 +184,20 @@
  					</physical>
  					<conversion type="action_key_same_counter" sim_counter="SIM_CONT_COUNTER"/>
  				</parameter>
@@ -112,7 +630,7 @@ diff -Naur Original/rf_rc_19.xml Patched/rf_rc_19.xml
  				<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
  					<logical type="action"/>
  					<physical type="integer" interface="command" value_id="TEST_COUNTER">
-@@ -284,6 +318,10 @@
+@@ -284,6 +325,10 @@
  					<logical type="action"/>
  					<physical type="integer" interface="store" volatile="true" id="ARROW_DOWN"/>
  				</parameter>
@@ -123,7 +641,7 @@ diff -Naur Original/rf_rc_19.xml Patched/rf_rc_19.xml
  				<parameter id="UNIT" operations="write" control="RC19_DISPLAY.UNIT">
  					<logical type="option">
  						<option id="NONE" index="0" default="true"/>
-@@ -335,6 +373,7 @@
+@@ -335,6 +380,7 @@
  						<reset_after_send param="CLOCK"/>
  						<reset_after_send param="ARROW_UP"/>
  						<reset_after_send param="ARROW_DOWN"/>
@@ -131,9 +649,94 @@ diff -Naur Original/rf_rc_19.xml Patched/rf_rc_19.xml
  						<reset_after_send param="UNIT"/>
  						<reset_after_send param="BEEP"/>
  						<reset_after_send param="BACKLIGHT"/>
+diff -Naur Original/rf_rc-4-2.xml Patched/rf_rc-4-2.xml
+--- Original/rf_rc-4-2.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rc-4-2.xml	2013-12-25 16:04:43.284510375 +0100
+@@ -48,6 +48,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="DEVICE_IN_BOOTLOADER" operations="read,event" ui_flags="service">
+ 					<logical type="boolean"/>
+ 					<physical type="integer" interface="internal" value_id="DEVICE_IN_BOOTLOADER"/>
+diff -Naur Original/rf_rc-key4-2.xml Patched/rf_rc-key4-2.xml
+--- Original/rf_rc-key4-2.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rc-key4-2.xml	2013-12-25 16:04:43.296510375 +0100
+@@ -45,6 +45,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="KEY" count="2" pair_function="AB" paired="true" aes_default="true">
+diff -Naur Original/rf_rc-sec4-2.xml Patched/rf_rc-sec4-2.xml
+--- Original/rf_rc-sec4-2.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rc-sec4-2.xml	2013-12-25 16:04:43.304510375 +0100
+@@ -45,6 +45,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="KEY" count="2" pair_function="BA" paired="true" aes_default="true">
+diff -Naur Original/rf_rc_single_on.xml Patched/rf_rc_single_on.xml
+--- Original/rf_rc_single_on.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rc_single_on.xml	2013-12-25 16:04:43.316510376 +0100
+@@ -44,6 +44,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" function="A" paired="false" aes_default="true">
+diff -Naur Original/rf_rc_wakeup.xml Patched/rf_rc_wakeup.xml
+--- Original/rf_rc_wakeup.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rc_wakeup.xml	2013-12-25 16:04:43.328510376 +0100
+@@ -47,6 +47,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" pair_function="BA" function="A" paired="true" aes_default="true">
 diff -Naur Original/rf_rc.xml Patched/rf_rc.xml
 --- Original/rf_rc.xml	2013-11-21 14:36:30.045775855 +0100
-+++ Patched/rf_rc.xml	2013-10-18 10:02:30.000000000 +0200
++++ Patched/rf_rc.xml	2013-12-25 16:04:43.340510376 +0100
 @@ -1,5 +1,10 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -145,7 +748,21 @@ diff -Naur Original/rf_rc.xml Patched/rf_rc.xml
  <device version="11" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
  	<supported_types>
  		<type name="HM Remote 4 buttons" id="HM-RC-4" priority="2">
-@@ -156,6 +161,20 @@
+@@ -77,6 +82,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="KEY" count_from_sysinfo="23.0:1.0" pair_function="BA" function="A" paired="true" aes_default="true">
+@@ -156,6 +168,20 @@
  				</physical>
  				<conversion type="action_key_same_counter" sim_counter="SIM_CONT_COUNTER"/>
  			</parameter>
@@ -166,9 +783,128 @@ diff -Naur Original/rf_rc.xml Patched/rf_rc.xml
  			<parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
  				<logical type="action"/>
  				<physical type="integer" interface="command" value_id="TEST_COUNTER">
+diff -Naur Original/rf_rd_le_v1_3.xml Patched/rf_rd_le_v1_3.xml
+--- Original/rf_rd_le_v1_3.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rd_le_v1_3.xml	2013-12-25 16:04:43.348510376 +0100
+@@ -62,6 +62,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="RAINDETECTOR" count="1">
+diff -Naur Original/rf_rd.xml Patched/rf_rd.xml
+--- Original/rf_rd.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rd.xml	2013-12-25 16:04:43.360510376 +0100
+@@ -62,6 +62,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="RAINDETECTOR" count="1">
+diff -Naur Original/rf_rep.xml Patched/rf_rep.xml
+--- Original/rf_rep.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rep.xml	2013-12-25 16:04:43.372510376 +0100
+@@ -49,6 +49,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="REPEATER">
+diff -Naur Original/rf_resc_win_pcb_sc.xml Patched/rf_resc_win_pcb_sc.xml
+--- Original/rf_resc_win_pcb_sc.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_resc_win_pcb_sc.xml	2013-12-25 16:04:43.384510377 +0100
+@@ -63,6 +63,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="ENTER_BOOTLOADER" operations="write" ui_flags="internal">
+ 					<logical type="action"/>
+ 					<physical type="integer" interface="command">
+diff -Naur Original/rf_rhs_e_v1_7.xml Patched/rf_rhs_e_v1_7.xml
+--- Original/rf_rhs_e_v1_7.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rhs_e_v1_7.xml	2013-12-25 16:04:43.396510375 +0100
+@@ -72,6 +72,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="ROTARY_HANDLE_SENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_rhs_le_v1_6.xml Patched/rf_rhs_le_v1_6.xml
+--- Original/rf_rhs_le_v1_6.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rhs_le_v1_6.xml	2013-12-25 16:04:43.408510377 +0100
+@@ -72,6 +72,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="ROTARY_HANDLE_SENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_rhs.xml Patched/rf_rhs.xml
+--- Original/rf_rhs.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_rhs.xml	2013-12-25 16:04:43.416510377 +0100
+@@ -80,6 +80,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="ROTARY_HANDLE_SENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
 diff -Naur Original/rf_roto_wdf_solar.xml Patched/rf_roto_wdf_solar.xml
 --- Original/rf_roto_wdf_solar.xml	2013-11-21 14:36:30.045775855 +0100
-+++ Patched/rf_roto_wdf_solar.xml	2013-12-22 11:33:59.506016208 +0100
++++ Patched/rf_roto_wdf_solar.xml	2013-12-25 16:04:43.432510377 +0100
 @@ -1,5 +1,9 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -179,7 +915,21 @@ diff -Naur Original/rf_roto_wdf_solar.xml Patched/rf_roto_wdf_solar.xml
  <device version="2" supports_aes="true" rx_modes="BURST">
  	<supported_types>
  		<type name="ROTO WDF solar" id="WDF solar" updatable="true" priority="2">
-@@ -167,34 +171,6 @@
+@@ -79,6 +83,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="DEVICE_IN_BOOTLOADER" operations="read,event" ui_flags="service">
+ 					<logical type="boolean"/>
+ 					<physical type="integer" interface="internal" value_id="DEVICE_IN_BOOTLOADER"/>
+@@ -167,34 +178,6 @@
  		</frame>
  	</frames>
  	<paramset_defs>
@@ -216,7 +966,7 @@ diff -Naur Original/rf_roto_wdf_solar.xml Patched/rf_roto_wdf_solar.xml
  				<logical type="float" default="0.0" min="0.0" max="1.0" unit="100%">
 diff -Naur Original/rf_s_1conf_644_le_v2_1.xml Patched/rf_s_1conf_644_le_v2_1.xml
 --- Original/rf_s_1conf_644_le_v2_1.xml	2013-11-21 14:36:30.045775855 +0100
-+++ Patched/rf_s_1conf_644_le_v2_1.xml	2013-10-18 10:02:30.000000000 +0200
++++ Patched/rf_s_1conf_644_le_v2_1.xml	2013-12-25 16:04:43.444510377 +0100
 @@ -1,5 +1,9 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -227,7 +977,21 @@ diff -Naur Original/rf_s_1conf_644_le_v2_1.xml Patched/rf_s_1conf_644_le_v2_1.xm
  <device version="4" supports_aes="true">
  	<supported_types>
  		<type name="radio-controlled switch actuator 1-channel (flush-mount)" id="HM-LC-Sw1PBU-FM" priority="2">
-@@ -133,6 +137,7 @@
+@@ -51,6 +55,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+@@ -133,6 +144,7 @@
  				<logical type="boolean"/>
  				<physical type="integer" interface="command" value_id="INHIBIT">
  					<set request="SET_LOCK"/>
@@ -237,7 +1001,7 @@ diff -Naur Original/rf_s_1conf_644_le_v2_1.xml Patched/rf_s_1conf_644_le_v2_1.xm
  			<parameter id="WORKING" operations="read,event" ui_flags="internal">
 diff -Naur Original/rf_s_1conf_644.xml Patched/rf_s_1conf_644.xml
 --- Original/rf_s_1conf_644.xml	2013-11-21 14:36:30.045775855 +0100
-+++ Patched/rf_s_1conf_644.xml	2013-10-18 10:02:30.000000000 +0200
++++ Patched/rf_s_1conf_644.xml	2013-12-25 16:04:43.456510377 +0100
 @@ -1,5 +1,9 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -248,7 +1012,21 @@ diff -Naur Original/rf_s_1conf_644.xml Patched/rf_s_1conf_644.xml
  <device version="5" supports_aes="true">
  	<supported_types>
  		<type name="radio-controlled switch actuator 1-channel (flush-mount)" id="HM-LC-Sw1PBU-FM" priority="2">
-@@ -135,6 +139,7 @@
+@@ -53,6 +57,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+@@ -135,6 +146,7 @@
  				<logical type="boolean"/>
  				<physical type="integer" interface="command" value_id="INHIBIT">
  					<set request="SET_LOCK"/>
@@ -256,9 +1034,196 @@ diff -Naur Original/rf_s_1conf_644.xml Patched/rf_s_1conf_644.xml
  				</physical>
  			</parameter>
  			<parameter id="WORKING" operations="read,event" ui_flags="internal">
+diff -Naur Original/rf_s_4_ba.xml Patched/rf_s_4_ba.xml
+--- Original/rf_s_4_ba.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_s_4_ba.xml	2013-12-25 16:04:43.468510377 +0100
+@@ -65,6 +65,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="SWITCH" count_from_sysinfo="23.0:0.4">
+diff -Naur Original/rf_s550ia.xml Patched/rf_s550ia.xml
+--- Original/rf_s550ia.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_s550ia.xml	2013-12-25 16:04:43.480510377 +0100
+@@ -44,6 +44,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="WEATHER">
+diff -Naur Original/rf_s_ba.xml Patched/rf_s_ba.xml
+--- Original/rf_s_ba.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_s_ba.xml	2013-12-25 16:04:43.488510378 +0100
+@@ -61,6 +61,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="SWITCH" count_from_sysinfo="23.0:0.4">
+diff -Naur Original/rf_scd_v1_0.xml Patched/rf_scd_v1_0.xml
+--- Original/rf_scd_v1_0.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_scd_v1_0.xml	2013-12-25 16:04:43.500510377 +0100
+@@ -53,6 +53,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="SENSOR_FOR_CARBON_DIOXIDE" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_sc_e_v1_7.xml Patched/rf_sc_e_v1_7.xml
+--- Original/rf_sc_e_v1_7.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sc_e_v1_7.xml	2013-12-25 16:04:43.512510378 +0100
+@@ -68,6 +68,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="SHUTTER_CONTACT" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_sci_3.xml Patched/rf_sci_3.xml
+--- Original/rf_sci_3.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sci_3.xml	2013-12-25 16:04:43.520510378 +0100
+@@ -67,6 +67,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="SHUTTER_CONTACT" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_sc_le_v1_6.xml Patched/rf_sc_le_v1_6.xml
+--- Original/rf_sc_le_v1_6.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sc_le_v1_6.xml	2013-12-25 16:04:43.532510378 +0100
+@@ -68,6 +68,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="SHUTTER_CONTACT" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_sc.xml Patched/rf_sc.xml
+--- Original/rf_sc.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sc.xml	2013-12-25 16:04:43.544510378 +0100
+@@ -80,6 +80,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="SHUTTER_CONTACT" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_sec_mdir_v1_5.xml Patched/rf_sec_mdir_v1_5.xml
+--- Original/rf_sec_mdir_v1_5.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sec_mdir_v1_5.xml	2013-12-25 16:04:43.556510378 +0100
+@@ -73,6 +73,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="ENTER_BOOTLOADER" operations="write" ui_flags="internal">
+ 					<logical type="action"/>
+ 					<physical type="integer" interface="command">
+diff -Naur Original/rf_sec_mdir.xml Patched/rf_sec_mdir.xml
+--- Original/rf_sec_mdir.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sec_mdir.xml	2013-12-25 16:04:43.564510378 +0100
+@@ -73,6 +73,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="ENTER_BOOTLOADER" operations="write" ui_flags="internal">
+ 					<logical type="action"/>
+ 					<physical type="integer" interface="command">
+diff -Naur Original/rf_sec_sd_schueco.xml Patched/rf_sec_sd_schueco.xml
+--- Original/rf_sec_sd_schueco.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sec_sd_schueco.xml	2013-12-25 16:04:43.576510378 +0100
+@@ -41,6 +41,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="SMOKE_DETECTOR" count="1" direction="sender" has_team="true" team_tag="smoke_detector">
 diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
 --- Original/rf_sec_sd.xml	2013-11-21 14:36:30.045775855 +0100
-+++ Patched/rf_sec_sd.xml	2013-11-24 18:32:09.410088411 +0100
++++ Patched/rf_sec_sd.xml	2013-12-25 16:04:43.588510378 +0100
 @@ -1,5 +1,10 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -281,7 +1246,21 @@ diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
  				</parameter>
  				<parameter id="DUTYCYCLE" operations="read,event" ui_flags="service">
  					<logical type="boolean"/>
-@@ -79,6 +86,9 @@
+@@ -44,6 +51,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="SMOKE_DETECTOR" count="1" direction="sender" has_team="true" team_tag="smoke_detector">
+@@ -79,6 +93,9 @@
  		<frame id="INFO_LEVEL" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x10" subtype="6" subtype_index="9" channel_field="10">
  			<parameter type="integer" index="11.0" size="1.0" param="STATE"/>
  		</frame>
@@ -291,7 +1270,7 @@ diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
  		<frame id="LEVEL_GET" direction="to_device" type="0x01" channel_field="9">
  			<parameter type="integer" index="10.0" size="1.0" const_value="14"/>
  		</frame>
-@@ -119,6 +129,10 @@
+@@ -119,6 +136,10 @@
  							<event frame="EVENT"/>
  						</physical>
  					</parameter>
@@ -302,9 +1281,145 @@ diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
  				</paramset>
  				<paramset type="LINK" id="sd_team_ch_link">
  				</paramset>
+diff -Naur Original/rf_sec_sfa.xml Patched/rf_sec_sfa.xml
+--- Original/rf_sec_sfa.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sec_sfa.xml	2013-12-25 16:04:43.600510379 +0100
+@@ -65,6 +65,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="ERROR_POWER" operations="read,event" ui_flags="service" control="NONE">
+ 					<logical type="option">
+ 						<option id="NO_ERROR" index="0" default="true"/>
+diff -Naur Original/rf_sen_ep.xml Patched/rf_sen_ep.xml
+--- Original/rf_sen_ep.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sen_ep.xml	2013-12-25 16:04:43.612510379 +0100
+@@ -44,6 +44,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="PULSE_SENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_sen_mdir_v1_5.xml Patched/rf_sen_mdir_v1_5.xml
+--- Original/rf_sen_mdir_v1_5.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sen_mdir_v1_5.xml	2013-12-25 16:04:43.620510379 +0100
+@@ -66,6 +66,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="ENTER_BOOTLOADER" operations="write" ui_flags="internal">
+ 					<logical type="action"/>
+ 					<physical type="integer" interface="command">
+diff -Naur Original/rf_sen_mdir.xml Patched/rf_sen_mdir.xml
+--- Original/rf_sen_mdir.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sen_mdir.xml	2013-12-25 16:04:43.632510379 +0100
+@@ -66,6 +66,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="ENTER_BOOTLOADER" operations="write" ui_flags="internal">
+ 					<logical type="action"/>
+ 					<physical type="integer" interface="command">
+diff -Naur Original/rf_sen_wa_od.xml Patched/rf_sen_wa_od.xml
+--- Original/rf_sen_wa_od.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_sen_wa_od.xml	2013-12-25 16:04:43.644510379 +0100
+@@ -66,6 +66,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="DEVICE_IN_BOOTLOADER" operations="read,event" ui_flags="service">
+ 					<logical type="boolean"/>
+ 					<physical type="integer" interface="internal" value_id="DEVICE_IN_BOOTLOADER"/>
+diff -Naur Original/rf_s_le_v1_5.xml Patched/rf_s_le_v1_5.xml
+--- Original/rf_s_le_v1_5.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_s_le_v1_5.xml	2013-12-25 16:04:43.656510379 +0100
+@@ -74,6 +74,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="SWITCH" count_from_sysinfo="23.0:1.0">
+diff -Naur Original/rf_s_mega168.xml Patched/rf_s_mega168.xml
+--- Original/rf_s_mega168.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_s_mega168.xml	2013-12-25 16:04:43.664510379 +0100
+@@ -42,6 +42,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="SWITCH" count_from_sysinfo="23.0:1.0">
+diff -Naur Original/rf_swi.xml Patched/rf_swi.xml
+--- Original/rf_swi.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_swi.xml	2013-12-25 16:04:43.676510380 +0100
+@@ -50,6 +50,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="SWITCH_INTERFACE" count_from_sysinfo="23.0:1.0" pair_function="BA" function="T" paired="false" aes_default="true">
 diff -Naur Original/rf_s.xml Patched/rf_s.xml
 --- Original/rf_s.xml	2013-11-21 14:36:30.045775855 +0100
-+++ Patched/rf_s.xml	2013-10-18 10:02:30.000000000 +0200
++++ Patched/rf_s.xml	2013-12-25 16:04:43.688510378 +0100
 @@ -1,5 +1,9 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -315,7 +1430,21 @@ diff -Naur Original/rf_s.xml Patched/rf_s.xml
  <device version="20" supports_aes="true">
  	<supported_types>
  		<type name="radio-controlled socket adapter switch actuator 1-channel" id="HM-LC-Sw1-Pl" priority="2">
-@@ -191,6 +195,7 @@
+@@ -109,6 +113,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+@@ -191,6 +202,7 @@
  				<logical type="boolean"/>
  				<physical type="integer" interface="command" value_id="INHIBIT">
  					<set request="SET_LOCK"/>
@@ -325,7 +1454,7 @@ diff -Naur Original/rf_s.xml Patched/rf_s.xml
  			<parameter id="WORKING" operations="read,event" ui_flags="internal">
 diff -Naur Original/rf_tc_it_wm-w-eu.xml Patched/rf_tc_it_wm-w-eu.xml
 --- Original/rf_tc_it_wm-w-eu.xml	2013-11-21 14:36:30.045775855 +0100
-+++ Patched/rf_tc_it_wm-w-eu.xml	2013-12-22 11:23:15.894019503 +0100
++++ Patched/rf_tc_it_wm-w-eu.xml	2013-12-25 16:04:43.704510380 +0100
 @@ -1,5 +1,9 @@
  <?xml version="1.0" encoding="iso-8859-1"?>
  <?xml-stylesheet type="text/xsl" href="device.xsl"?>
@@ -336,7 +1465,21 @@ diff -Naur Original/rf_tc_it_wm-w-eu.xml Patched/rf_tc_it_wm-w-eu.xml
  <device version="1" rx_modes="CONFIG,WAKEUP" supports_aes="true">
  	<supported_types>
  		<type name="ThermalControl-IndoorTemperatureSensor" id="HM-TC-IT-WM-W-EU" updatable="true">
-@@ -2968,13 +2972,6 @@
+@@ -2937,6 +2941,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="INHIBIT" operations="read,write,event" control="NONE" loopback="true">
+ 					<logical type="boolean"/>
+ 					<physical type="integer" interface="command" value_id="INHIBIT">
+@@ -2968,13 +2979,6 @@
  						<field id="AutoconfRoles" value="WEATHER"/>
  					</description>
  				</parameter>
@@ -350,3 +1493,139 @@ diff -Naur Original/rf_tc_it_wm-w-eu.xml Patched/rf_tc_it_wm-w-eu.xml
  				<parameter id="HUMIDITY" operations="read,event" control="NONE">
  					<logical type="integer" min="0" max="99" unit="%"/>
  					<physical type="integer" interface="command" value_id="HUMIDITY">
+diff -Naur Original/rf_tis_le_v1_0.xml Patched/rf_tis_le_v1_0.xml
+--- Original/rf_tis_le_v1_0.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_tis_le_v1_0.xml	2013-12-25 16:04:43.720510380 +0100
+@@ -61,6 +61,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="TILT_SENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_tis.xml Patched/rf_tis.xml
+--- Original/rf_tis.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_tis.xml	2013-12-25 16:04:43.728510380 +0100
+@@ -65,6 +65,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="TILT_SENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_wds30_ot2.xml Patched/rf_wds30_ot2.xml
+--- Original/rf_wds30_ot2.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_wds30_ot2.xml	2013-12-25 16:04:43.740510380 +0100
+@@ -59,6 +59,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="WEATHER" count="4">
+diff -Naur Original/rf_wds40_th_i_2.xml Patched/rf_wds40_th_i_2.xml
+--- Original/rf_wds40_th_i_2.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_wds40_th_i_2.xml	2013-12-25 16:04:43.752510380 +0100
+@@ -45,6 +45,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 				<parameter id="AES_KEY" operations="read" ui_flags="invisible">
+ 					<logical type="integer" min="0" max="127"/>
+ 					<physical type="integer" interface="internal" value_id="AES_KEY"/>
+diff -Naur Original/rf_wds_v1_0.xml Patched/rf_wds_v1_0.xml
+--- Original/rf_wds_v1_0.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_wds_v1_0.xml	2013-12-25 16:04:43.760510380 +0100
+@@ -61,6 +61,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="WATERDETECTIONSENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_wds_v1_1.xml Patched/rf_wds_v1_1.xml
+--- Original/rf_wds_v1_1.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_wds_v1_1.xml	2013-12-25 16:04:43.772510381 +0100
+@@ -69,6 +69,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel autoregister="true" index="1" type="WATERDETECTIONSENSOR" count_from_sysinfo="23.0:0.3" aes_default="true">
+diff -Naur Original/rf_winmatic.xml Patched/rf_winmatic.xml
+--- Original/rf_winmatic.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_winmatic.xml	2013-12-25 16:04:43.784510379 +0100
+@@ -64,6 +64,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="WINMATIC" count="1" aes_always="true">
+diff -Naur Original/rf_ws550.xml Patched/rf_ws550.xml
+--- Original/rf_ws550.xml	2013-11-21 14:36:30.045775855 +0100
++++ Patched/rf_ws550.xml	2013-12-25 16:04:43.796510381 +0100
+@@ -52,6 +52,13 @@
+ 					<logical type="integer"/>
+ 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+ 				</parameter>
++ 				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
++					<logical type="option">
++						<option id="UNSET" index="0" default="true"/>
++						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
++					</logical>
++					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED" />
++				</parameter>
+ 			</paramset>
+ 		</channel>
+ 		<channel index="1" type="WS_TH" count="8">

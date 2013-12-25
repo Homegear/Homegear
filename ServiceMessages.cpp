@@ -182,7 +182,39 @@ bool ServiceMessages::set(std::string id, bool value)
 		else if(id == "STICKY_UNREACH" && value != _stickyUnreach) _stickyUnreach = value;
 		else if(id == "CONFIG_PENDING" && value != _configPending) _configPending = value;
 		else if(id == "LOWBAT" && value != _lowbat) _lowbat = value;
-		else return false;
+		else if(!value) //false == 0, a little dirty, but it works
+		{
+			_errorMutex.lock();
+			for(std::map<uint32_t, std::map<std::string, uint8_t>>::iterator i = _errors.begin(); i != _errors.end(); ++i)
+			{
+				if(i->second.find(id) != i->second.end())
+				{
+					_peerMutex.lock();
+					i->second.at(id) = 0;
+					if(!_peer)
+					{
+						_peerMutex.unlock();
+						_errorMutex.unlock();
+						return false;
+					}
+					if(_peer->valuesCentral.at(i->first).find(id) != _peer->valuesCentral.at(i->first).end())
+					{
+						RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(i->first).at(id);
+						parameter->data.at(0) = (uint8_t)value;
+						_peer->saveParameter(parameter->databaseID, parameter->data);
+
+						std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({id}));
+						std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
+						rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+
+						GD::rpcClient.broadcastEvent(_peer->getSerialNumber() + ":" + std::to_string(i->first), valueKeys, rpcValues);
+					}
+					_peerMutex.unlock();
+				}
+			}
+			_errorMutex.unlock();
+			return true;
+		}
 
 		_peerMutex.lock();
 		if(!_peer)
@@ -205,14 +237,17 @@ bool ServiceMessages::set(std::string id, bool value)
 	}
 	catch(const std::exception& ex)
     {
+		_errorMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_errorMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_errorMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peerMutex.unlock();
