@@ -78,6 +78,7 @@ class HM_SD : public HomeMaticDevice
         std::list<HM_SD_Filter> _filters;
         std::list<HM_SD_OverwriteResponse> _responsesToOverwrite;
         //End
+        bool _hack = false;
 
         void init();
 };

