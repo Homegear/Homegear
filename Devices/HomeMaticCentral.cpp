@@ -996,7 +996,7 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<Peer> peer, int
 		{
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
 			{
-				if(i->second->type != "KEY" && i->second->type != "MOTION_DETECTOR") continue;
+				if(i->second->type != "KEY" && i->second->type != "MOTION_DETECTOR" && i->second->type != "SWITCH_INTERFACE") continue;
 				switchPeer.reset(new BasicPeer());
 				switchPeer->address = sw->getAddress();
 				switchPeer->serialNumber = sw->getSerialNumber();
@@ -1041,7 +1041,7 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<Peer> peer, int
 		{
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
 			{
-				if(i->second->type != "KEY" && i->second->type != "MOTION_DETECTOR") continue;
+				if(i->second->type != "KEY" && i->second->type != "MOTION_DETECTOR" && i->second->type != "SWITCH_INTERFACE") continue;
 				std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 				pendingQueue->noSending = true;
 
@@ -1133,7 +1133,10 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t c
 				peer->getDeviceType() == HMDeviceTypes::HMRC42 ||
 				peer->getDeviceType() == HMDeviceTypes::HMRCSEC42 ||
 				peer->getDeviceType() == HMDeviceTypes::HMRCKEY42 ||
-				peer->getDeviceType() == HMDeviceTypes::HMPB6WM55) addHomegearFeaturesRemote(peer, channel, pushPendingBidCoSQueues);
+				peer->getDeviceType() == HMDeviceTypes::HMPB6WM55 ||
+				peer->getDeviceType() == HMDeviceTypes::HMSWI3FM ||
+				peer->getDeviceType() == HMDeviceTypes::HMSWI3FMSCHUECO ||
+				peer->getDeviceType() == HMDeviceTypes::HMSWI3FMROTO) addHomegearFeaturesRemote(peer, channel, pushPendingBidCoSQueues);
 		else if(peer->getDeviceType() == HMDeviceTypes::HMSECMDIR ||
 				peer->getDeviceType() == HMDeviceTypes::HMSECMDIRSCHUECO ||
 				peer->getDeviceType() == HMDeviceTypes::HMSENMDIRSM ||

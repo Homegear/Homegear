@@ -235,6 +235,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 		{
+			//Value is not changed, when not in map. That is the desired behavior.
 			if(integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end()) value->integerValue = integerValueMapParameter[value->integerValue];
 		}
 		else if(type == Type::Enum::booleanInteger)
