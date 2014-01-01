@@ -497,7 +497,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			else
 			{
 				std::shared_ptr<Peer> peer = createPeer(peerAddress, firmwareVersion, deviceType, serialNumber, 0, 0, std::shared_ptr<BidCoSPacket>(), false);
-				if(!peer || !peer->rpcDevice) return "Device type not supported.";
+				if(!peer || !peer->rpcDevice) return "Device type not supported.\n";
 
 				try
 				{
