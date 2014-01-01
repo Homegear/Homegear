@@ -408,7 +408,7 @@ int main(int argc, char* argv[])
     	GD::physicalDevice = PhysicalDevices::PhysicalDevice::create(GD::settings.physicalDeviceType());
     	if(!GD::physicalDevice)
     	{
-    		HelperFunctions::printError("Could not create rf device");
+    		HelperFunctions::printError("Could not create physical device of type " + GD::settings.physicalDeviceType());
     		return 1;
     	}
         GD::physicalDevice->init(GD::settings.physicalDevice());

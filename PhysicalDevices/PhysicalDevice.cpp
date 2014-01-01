@@ -32,6 +32,7 @@
 #include "../HelperFunctions.h"
 #include "Cul.h"
 #include "TICC1100.h"
+#include "CRC_RS485.h"
 
 namespace PhysicalDevices
 {
@@ -58,9 +59,13 @@ std::shared_ptr<PhysicalDevice> PhysicalDevice::create(std::string deviceType)
 		{
 			return std::shared_ptr<PhysicalDevice>(new TICC1100());
 		}
+		else if(deviceType == "crc_rs485")
+		{
+			return std::shared_ptr<PhysicalDevice>(new CRCRS485());
+		}
 		else
 		{
-			HelperFunctions::printError("Error: Unsupported rf device type: " + deviceType);
+			HelperFunctions::printError("Error: Unsupported physical device type: " + deviceType);
 		}
 	}
     catch(const std::exception& ex)
