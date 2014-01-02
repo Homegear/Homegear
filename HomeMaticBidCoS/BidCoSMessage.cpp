@@ -28,7 +28,7 @@
  */
 
 #include "BidCoSMessage.h"
-#include "HelperFunctions.h"
+#include "../HelperFunctions.h"
 
 BidCoSMessage::BidCoSMessage()
 {

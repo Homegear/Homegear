@@ -28,8 +28,8 @@
  */
 
 #include "BidCoSQueueManager.h"
-#include "GD.h"
-#include "HelperFunctions.h"
+#include "../GD.h"
+#include "../HelperFunctions.h"
 
 BidCoSQueueData::BidCoSQueueData()
 {

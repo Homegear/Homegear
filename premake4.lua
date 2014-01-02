@@ -50,7 +50,8 @@ solution "homegear"
       kind "ConsoleApp"
       language "C++"
       files { "*.h", "*.cpp" }
-      files { "./Devices/*.h", "./Devices/*.cpp" }
+      files { "./HomeMaticBidCoS/*.h", "./HomeMaticBidCoS/*.cpp" }
+      files { "./HomeMaticBidCoS/Devices/*.h", "./HomeMaticBidCoS/Devices/*.cpp" }
       files { "./RPC/*.h", "./RPC/*.cpp" }
       files { "./CLI/*.h", "./CLI/*.cpp" }
       files { "./PhysicalDevices/*.h", "./PhysicalDevices/*.cpp" }

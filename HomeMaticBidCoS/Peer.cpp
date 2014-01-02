@@ -30,8 +30,8 @@
 class CallbackFunctionParameter;
 
 #include "Peer.h"
-#include "GD.h"
-#include "HelperFunctions.h"
+#include "../GD.h"
+#include "../HelperFunctions.h"
 
 void Peer::initializeCentralConfig()
 {

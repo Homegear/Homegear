@@ -28,8 +28,8 @@
  */
 
 #include "HomeMaticDevice.h"
-#include "GD.h"
-#include "HelperFunctions.h"
+#include "../GD.h"
+#include "../HelperFunctions.h"
 
 HomeMaticDevice::HomeMaticDevice()
 {
@@ -47,7 +47,7 @@ void HomeMaticDevice::init()
 		_messages = std::shared_ptr<BidCoSMessages>(new BidCoSMessages());
 		_deviceType = HMDeviceTypes::HMUNKNOWN;
 
-		GD::physicalDevice->addHomeMaticDevice(this);
+		GD::physicalDevice->addLogicalDevice(this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
 		_messageCounter[1] = 0; //Duty cycle message counter
@@ -192,7 +192,7 @@ void HomeMaticDevice::dispose(bool wait)
 		if(_disposing) return;
 		_disposing = true;
 		HelperFunctions::printDebug("Removing device 0x" + HelperFunctions::getHexString(_address) + " from CUL event queue...");
-		GD::physicalDevice->removeHomeMaticDevice(this);
+		GD::physicalDevice->removeLogicalDevice(this);
 		int64_t startTime = HelperFunctions::getTime();
 		stopThreads();
 		int64_t timeDifference = HelperFunctions::getTime() - startTime;
@@ -1070,17 +1070,19 @@ bool HomeMaticDevice::pairDevice(int32_t timeout)
     return false;
 }
 
-bool HomeMaticDevice::packetReceived(std::shared_ptr<BidCoSPacket> packet)
+bool HomeMaticDevice::packetReceived(std::shared_ptr<Packet> packet)
 {
 	try
 	{
 		if(_disposing) return false;
-		_receivedPackets.set(packet->senderAddress(), packet, packet->timeReceived());
-		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, packet);
-		if(message && message->checkAccess(packet, _bidCoSQueueManager.get(packet->senderAddress())))
+		std::shared_ptr<BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoSPacket>(packet));
+		if(!bidCoSPacket) return false;
+		_receivedPackets.set(bidCoSPacket->senderAddress(), bidCoSPacket, bidCoSPacket->timeReceived());
+		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, bidCoSPacket);
+		if(message && message->checkAccess(bidCoSPacket, _bidCoSQueueManager.get(bidCoSPacket->senderAddress())))
 		{
-			HelperFunctions::printDebug("Debug: Device " + HelperFunctions::getHexString(_address) + ": Access granted for packet " + packet->hexString(), 6);
-			message->invokeMessageHandlerIncoming(packet);
+			HelperFunctions::printDebug("Debug: Device " + HelperFunctions::getHexString(_address) + ": Access granted for packet " + bidCoSPacket->hexString(), 6);
+			message->invokeMessageHandlerIncoming(bidCoSPacket);
 			return true;
 		}
 	}

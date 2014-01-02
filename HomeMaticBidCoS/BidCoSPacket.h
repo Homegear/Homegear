@@ -30,7 +30,8 @@
 #ifndef BIDCOSPACKET_H
 #define BIDCOSPACKET_H
 
-#include "Exception.h"
+#include "../Exception.h"
+#include "../Packet.h"
 
 #include <iostream>
 #include <string>
@@ -40,24 +41,24 @@
 #include <algorithm>
 #include <cmath>
 
-class BidCoSPacket
+class BidCoSPacket : public Packet
 {
     public:
         //Properties
-        uint8_t length();
-        uint8_t messageCounter();
-        void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
-        uint8_t controlByte();
-        uint8_t messageType();
-        int32_t senderAddress();
-        int32_t destinationAddress();
-        uint8_t rssi() { return _rssi; }
-        std::vector<uint8_t>* payload();
-        std::string hexString();
-        std::vector<uint8_t> byteArray();
-        int64_t timeReceived() { return _timeReceived; }
-        int64_t timeSending() { return _timeSending; }
-        void setTimeSending(int64_t time) { _timeSending = time; }
+        virtual uint8_t length();
+        virtual uint8_t messageCounter();
+        virtual void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
+        virtual uint8_t controlByte();
+        virtual uint8_t messageType();
+        virtual int32_t senderAddress();
+        virtual int32_t destinationAddress();
+        virtual uint8_t rssi() { return _rssi; }
+        virtual std::vector<uint8_t>* payload();
+        virtual std::string hexString();
+        virtual std::vector<uint8_t> byteArray();
+        virtual int64_t timeReceived() { return _timeReceived; }
+        virtual int64_t timeSending() { return _timeSending; }
+        virtual void setTimeSending(int64_t time) { _timeSending = time; }
 
         /** Default constructor */
         BidCoSPacket();

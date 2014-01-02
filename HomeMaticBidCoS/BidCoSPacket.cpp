@@ -28,8 +28,8 @@
  */
 
 #include "BidCoSPacket.h"
-#include "GD.h"
-#include "HelperFunctions.h"
+#include "../GD.h"
+#include "../HelperFunctions.h"
 
 //Properties
 uint8_t BidCoSPacket::length()

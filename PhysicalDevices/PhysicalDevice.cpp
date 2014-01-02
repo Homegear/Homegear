@@ -83,12 +83,12 @@ std::shared_ptr<PhysicalDevice> PhysicalDevice::create(std::string deviceType)
     return std::shared_ptr<PhysicalDevice>();
 }
 
-void PhysicalDevice::addHomeMaticDevice(HomeMaticDevice* device)
+void PhysicalDevice::addLogicalDevice(LogicalDevice* device)
 {
 	try
 	{
-		_homeMaticDevicesMutex.lock();
-		_homeMaticDevices.push_back(device);
+		_logicalDevicesMutex.lock();
+		_logicalDevices.push_back(device);
     }
     catch(const std::exception& ex)
     {
@@ -102,15 +102,15 @@ void PhysicalDevice::addHomeMaticDevice(HomeMaticDevice* device)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _homeMaticDevicesMutex.unlock();
+    _logicalDevicesMutex.unlock();
 }
 
-void PhysicalDevice::removeHomeMaticDevice(HomeMaticDevice* device)
+void PhysicalDevice::removeLogicalDevice(LogicalDevice* device)
 {
 	try
 	{
-		_homeMaticDevicesMutex.lock();
-		_homeMaticDevices.remove(device);
+		_logicalDevicesMutex.lock();
+		_logicalDevices.remove(device);
     }
     catch(const std::exception& ex)
     {
@@ -124,39 +124,39 @@ void PhysicalDevice::removeHomeMaticDevice(HomeMaticDevice* device)
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _homeMaticDevicesMutex.unlock();
+    _logicalDevicesMutex.unlock();
 }
 
-void PhysicalDevice::callCallback(std::shared_ptr<BidCoSPacket> packet)
+void PhysicalDevice::callCallback(std::shared_ptr<Packet> packet)
 {
 	try
 	{
-		std::vector<HomeMaticDevice*> devices;
-		_homeMaticDevicesMutex.lock();
+		std::vector<LogicalDevice*> devices;
+		_logicalDevicesMutex.lock();
 		//We need to copy all elements. In packetReceived so much can happen, that _homeMaticDevicesMutex might deadlock
-		for(std::list<HomeMaticDevice*>::const_iterator i = _homeMaticDevices.begin(); i != _homeMaticDevices.end(); ++i)
+		for(std::list<LogicalDevice*>::const_iterator i = _logicalDevices.begin(); i != _logicalDevices.end(); ++i)
 		{
 			devices.push_back(*i);
 		}
-		_homeMaticDevicesMutex.unlock();
-		for(std::vector<HomeMaticDevice*>::iterator i = devices.begin(); i != devices.end(); ++i)
+		_logicalDevicesMutex.unlock();
+		for(std::vector<LogicalDevice*>::iterator i = devices.begin(); i != devices.end(); ++i)
 		{
 			(*i)->packetReceived(packet);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	_homeMaticDevicesMutex.unlock();
+    	_logicalDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_homeMaticDevicesMutex.unlock();
+    	_logicalDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_homeMaticDevicesMutex.unlock();
+    	_logicalDevicesMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 

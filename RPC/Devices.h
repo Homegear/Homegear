@@ -38,7 +38,7 @@ class BidCoSPacket;
 #include <memory>
 
 #include "Device.h"
-#include "../HMDeviceTypes.h"
+#include "../HomeMaticBidCoS/HMDeviceTypes.h"
 
 namespace RPC {
 

@@ -28,11 +28,11 @@
  */
 
 #include "HomeMaticDevices.h"
-#include "GD.h"
+#include "../GD.h"
 #include "Devices/HM-CC-VD.h"
 #include "Devices/HM-CC-TC.h"
 #include "Devices/HM-SD.h"
-#include "HelperFunctions.h"
+#include "../HelperFunctions.h"
 
 HomeMaticDevices::HomeMaticDevices()
 {

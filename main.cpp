@@ -44,11 +44,11 @@
 #include <algorithm>
 
 #include "Version.h"
-#include "Devices/HM-SD.h"
-#include "Devices/HM-CC-VD.h"
-#include "Devices/HM-CC-TC.h"
-#include "Devices/HomeMaticCentral.h"
-#include "HomeMaticDevice.h"
+//#include "Devices/HM-SD.h"
+//#include "Devices/HM-CC-VD.h"
+//#include "Devices/HM-CC-TC.h"
+//#include "Devices/HomeMaticCentral.h"
+//#include "HomeMaticDevice.h"
 #include "Database.h"
 #include "GD.h"
 #include "HelperFunctions.h"

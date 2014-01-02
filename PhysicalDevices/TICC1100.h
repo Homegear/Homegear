@@ -196,12 +196,12 @@ public:
 	};
 
 	TICC1100();
-	void init(std::string rfDevice);
+	void init(std::string physicalDevice);
 	virtual ~TICC1100();
 
 	void startListening();
 	void stopListening();
-	void sendPacket(std::shared_ptr<BidCoSPacket> packet);
+	void sendPacket(std::shared_ptr<Packet> packet);
 	bool isOpen() { return _fileDescriptor > -1; }
 protected:
 	//const int32_t BCM2708_PERI_BASE = 0x20000000;

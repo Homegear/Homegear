@@ -38,7 +38,7 @@ class HomeMaticDevices;
 
 #include "Database.h"
 #include "PhysicalDevices/PhysicalDevice.h"
-#include "HomeMaticDevices.h"
+#include "HomeMaticBidCoS/HomeMaticDevices.h"
 #include "RPC/Server.h"
 #include "RPC/Client.h"
 #include "CLI/CLIServer.h"

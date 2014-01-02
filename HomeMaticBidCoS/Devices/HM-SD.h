@@ -56,7 +56,7 @@ class HM_SD : public HomeMaticDevice
         HM_SD();
         HM_SD(uint32_t deviceID, std::string serialNumber, int32_t address);
         virtual ~HM_SD();
-        bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
+        bool packetReceived(std::shared_ptr<Packet> packet);
         void addFilter(FilterType, int32_t);
         void removeFilter(FilterType, int32_t);
         void addOverwriteResponse(std::string packetPartToCapture, std::string response, int32_t sendAfter);

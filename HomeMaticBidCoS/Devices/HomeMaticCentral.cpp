@@ -199,14 +199,16 @@ void HomeMaticCentral::worker()
     }
 }
 
-bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
+bool HomeMaticCentral::packetReceived(std::shared_ptr<Packet> packet)
 {
 	try
 	{
 		if(_disposing) return false;
-		if(packet->senderAddress() == _address) //Packet spoofed
+		std::shared_ptr<BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoSPacket>(packet));
+		if(!bidCoSPacket) return false;
+		if(bidCoSPacket->senderAddress() == _address) //Packet spoofed
 		{
-			std::shared_ptr<Peer> peer(getPeer(packet->destinationAddress()));
+			std::shared_ptr<Peer> peer(getPeer(bidCoSPacket->destinationAddress()));
 			if(peer)
 			{
 				peer->serviceMessages->set("CENTRAL_ADDRESS_SPOOFED", 1, 0);
@@ -217,32 +219,32 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			}
 			return false;
 		}
-		bool handled = HomeMaticDevice::packetReceived(packet);
-		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
+		bool handled = HomeMaticDevice::packetReceived(bidCoSPacket);
+		std::shared_ptr<Peer> peer(getPeer(bidCoSPacket->senderAddress()));
 		if(!peer) return false;
 		std::shared_ptr<Peer> team;
-		if(peer->hasTeam() && packet->senderAddress() == peer->getTeamRemoteAddress()) team = getPeer(peer->getTeamRemoteSerialNumber());
+		if(peer->hasTeam() && bidCoSPacket->senderAddress() == peer->getTeamRemoteAddress()) team = getPeer(peer->getTeamRemoteSerialNumber());
 		if(handled)
 		{
 			//This block is not necessary for teams as teams will never have queues.
-			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(bidCoSPacket->senderAddress());
 			if(queue && queue->getQueueType() != BidCoSQueueType::PEER)
 			{
 				peer->setLastPacketReceived();
 				peer->serviceMessages->endUnreach();
-				peer->setRSSI(packet->rssi());
+				peer->setRSSI(bidCoSPacket->rssi());
 				return true; //Packet is handled by queue. Don't check if queue is empty!
 			}
 		}
 		if(team)
 		{
-			team->packetReceived(packet);
+			team->packetReceived(bidCoSPacket);
 			for(std::vector<std::pair<std::string, uint32_t>>::const_iterator i = team->teamChannels.begin(); i != team->teamChannels.end(); ++i)
 			{
-				getPeer(i->first)->packetReceived(packet);
+				getPeer(i->first)->packetReceived(bidCoSPacket);
 			}
 		}
-		else peer->packetReceived(packet);
+		else peer->packetReceived(bidCoSPacket);
 	}
 	catch(const std::exception& ex)
     {

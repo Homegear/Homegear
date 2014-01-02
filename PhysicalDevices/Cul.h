@@ -54,11 +54,11 @@ class Cul  : public PhysicalDevice
 {
     public:
         Cul();
-        void init(std::string rfDevice);
+        void init(std::string physicalDevice);
         virtual ~Cul();
         void startListening();
         void stopListening();
-        void sendPacket(std::shared_ptr<BidCoSPacket> packet);
+        void sendPacket(std::shared_ptr<Packet> packet);
         bool isOpen() { return _fileDescriptor > -1; }
     protected:
         int32_t _fileDescriptor = -1;

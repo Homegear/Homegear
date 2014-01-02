@@ -28,7 +28,7 @@
  */
 
 #include "BidCoSMessages.h"
-#include "HelperFunctions.h"
+#include "../HelperFunctions.h"
 
 void BidCoSMessages::add(std::shared_ptr<BidCoSMessage> message)
 {

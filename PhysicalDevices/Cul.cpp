@@ -39,9 +39,9 @@ Cul::Cul()
 
 }
 
-void Cul::init(std::string rfDevice)
+void Cul::init(std::string physicalDevice)
 {
-	_rfDevice = rfDevice;
+	_physicalDevice = physicalDevice;
 }
 
 Cul::~Cul()
@@ -69,7 +69,7 @@ Cul::~Cul()
     }
 }
 
-void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)
+void Cul::sendPacket(std::shared_ptr<Packet> packet)
 {
 	try
 	{
@@ -84,7 +84,7 @@ void Cul::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 			deviceWasClosed = true;
 			openDevice();
 		}
-		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _rfDevice));
+		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _physicalDevice));
 		if(packet->payload()->size() > 54)
 		{
 			if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
@@ -115,7 +115,7 @@ void Cul::openDevice()
 	{
 		if(_fileDescriptor != -1) closeDevice();
 
-		_lockfile = "/var/lock" + _rfDevice.substr(_rfDevice.find_last_of('/')) + ".lock";
+		_lockfile = "/var/lock" + _physicalDevice.substr(_physicalDevice.find_last_of('/')) + ".lock";
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 		if(lockfileDescriptor == -1)
 		{
@@ -130,7 +130,7 @@ void Cul::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				HelperFunctions::printCritical("CUL device is in use: " + _rfDevice);
+				HelperFunctions::printCritical("CUL device is in use: " + _physicalDevice);
 				return;
 			}
 			unlink(_lockfile.c_str());
@@ -146,11 +146,11 @@ void Cul::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = open(_rfDevice.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+		_fileDescriptor = open(_physicalDevice.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
 
 		if(_fileDescriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open CUL device: " + _rfDevice);
+			HelperFunctions::printCritical("Couldn't open CUL device: " + _physicalDevice);
 			return;
 		}
 
@@ -207,15 +207,15 @@ void Cul::setupDevice()
 		term.c_cc[VTIME] = 0;
 		cfsetispeed(&term, B9600);
 		cfsetospeed(&term, B9600);
-		if(tcflush(_fileDescriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CUL device " + _rfDevice));
-		if(tcsetattr(_fileDescriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CUL device settings: " + _rfDevice));
+		if(tcflush(_fileDescriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CUL device " + _physicalDevice));
+		if(tcsetattr(_fileDescriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CUL device settings: " + _physicalDevice));
 
 		int flags = fcntl(_fileDescriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))
 		{
 			if(fcntl(_fileDescriptor, F_SETFL, flags | O_NONBLOCK) == -1)
 			{
-				throw(Exception("Couldn't set CUL device to non blocking mode: " + _rfDevice));
+				throw(Exception("Couldn't set CUL device to non blocking mode: " + _physicalDevice));
 			}
 		}
 	}
@@ -239,7 +239,7 @@ std::string Cul::readFromDevice()
 	{
 		if(_fileDescriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't read from CUL device, because the file descriptor is not valid: " + _rfDevice + ". Trying to reopen...");
+			HelperFunctions::printCritical("Couldn't read from CUL device, because the file descriptor is not valid: " + _physicalDevice + ". Trying to reopen...");
 			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
@@ -267,12 +267,12 @@ std::string Cul::readFromDevice()
 					if(!_stopCallbackThread) continue;
 					else return "";
 				case -1:
-					HelperFunctions::printError("Error reading from CUL device: " + _rfDevice);
+					HelperFunctions::printError("Error reading from CUL device: " + _physicalDevice);
 					return "";
 				case 1:
 					break;
 				default:
-					HelperFunctions::printError("Error reading from CUL device: " + _rfDevice);
+					HelperFunctions::printError("Error reading from CUL device: " + _physicalDevice);
 					return "";
 			}
 
@@ -280,7 +280,7 @@ std::string Cul::readFromDevice()
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				HelperFunctions::printError("Error reading from CUL device: " + _rfDevice);
+				HelperFunctions::printError("Error reading from CUL device: " + _physicalDevice);
 			}
 			packet.push_back(localBuffer[0]);
 			if(packet.size() > 200)
@@ -308,7 +308,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
     try
     {
     	if(_stopped) return;
-        if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _rfDevice));
+        if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _physicalDevice));
         int32_t bytesWritten = 0;
         int32_t i;
         //struct timeval timeout;
@@ -343,7 +343,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
             if(i == -1)
             {
                 if(errno == EAGAIN) continue;
-                throw(Exception("Error writing to CUL device (3, " + std::to_string(errno) + "): " + _rfDevice));
+                throw(Exception("Error writing to CUL device (3, " + std::to_string(errno) + "): " + _physicalDevice));
             }
             bytesWritten += i;
         }

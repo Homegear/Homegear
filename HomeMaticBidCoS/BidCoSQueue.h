@@ -43,8 +43,8 @@ class ServiceMessages;
 #include <thread>
 #include <mutex>
 
-#include "delegate.hpp"
-#include "Exception.h"
+#include "../delegate.hpp"
+#include "../Exception.h"
 #include "PendingBidCoSQueues.h"
 
 enum class QueueEntryType { UNDEFINED, MESSAGE, PACKET };

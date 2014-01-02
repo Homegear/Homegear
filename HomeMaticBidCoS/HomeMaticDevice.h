@@ -34,6 +34,7 @@ class BidCoSPacket;
 class BidCoSMessages;
 enum class BidCoSQueueType;
 
+#include "../LogicalDevice.h"
 #include "HMDeviceTypes.h"
 #include "BidCoSQueue.h"
 #include "Peer.h"
@@ -52,7 +53,7 @@ enum class BidCoSQueueType;
 #include <chrono>
 #include "pthread.h"
 
-class HomeMaticDevice
+class HomeMaticDevice : public LogicalDevice
 {
     public:
 		//In table devices
@@ -78,7 +79,7 @@ class HomeMaticDevice
         HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
         virtual void dispose(bool wait = true);
-        virtual bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
+        virtual bool packetReceived(std::shared_ptr<Packet> packet);
 
         virtual void addPeer(std::shared_ptr<Peer> peer);
         bool peerSelected() { return (bool)_currentPeer; }

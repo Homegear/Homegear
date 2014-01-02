@@ -225,9 +225,9 @@ void TICC1100::setupGPIO(int32_t gpio)
     }
 }
 
-void TICC1100::init(std::string rfDevice)
+void TICC1100::init(std::string physicalDevice)
 {
-	_rfDevice = rfDevice;
+	_physicalDevice = physicalDevice;
 }
 
 void TICC1100::openDevice()
@@ -236,7 +236,7 @@ void TICC1100::openDevice()
 	{
 		if(_fileDescriptor != -1) closeDevice();
 
-		_lockfile = "/var/lock" + _rfDevice.substr(_rfDevice.find_last_of('/')) + ".lock";
+		_lockfile = "/var/lock" + _physicalDevice.substr(_physicalDevice.find_last_of('/')) + ".lock";
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 		if(lockfileDescriptor == -1)
 		{
@@ -251,7 +251,7 @@ void TICC1100::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				HelperFunctions::printCritical("Rf device is in use: " + _rfDevice);
+				HelperFunctions::printCritical("Rf device is in use: " + _physicalDevice);
 				return;
 			}
 			unlink(_lockfile.c_str());
@@ -265,12 +265,12 @@ void TICC1100::openDevice()
 		dprintf(lockfileDescriptor, "%10i", getpid());
 		close(lockfileDescriptor);
 
-		_fileDescriptor = open(_rfDevice.c_str(), O_RDWR);
+		_fileDescriptor = open(_physicalDevice.c_str(), O_RDWR);
 		usleep(1000);
 
 		if(_fileDescriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open rf device: " + _rfDevice);
+			HelperFunctions::printCritical("Couldn't open rf device: " + _physicalDevice);
 			return;
 		}
 
@@ -323,14 +323,14 @@ void TICC1100::setupDevice()
 		uint8_t bits = 8;
 		uint32_t speed = 4000000; //4MHz, see page 25 in datasheet
 
-		if(ioctl(_fileDescriptor, SPI_IOC_WR_MODE, &mode)) throw(Exception("Couldn't set spi mode on device " + _rfDevice));
-		if(ioctl(_fileDescriptor, SPI_IOC_RD_MODE, &mode)) throw(Exception("Couldn't get spi mode off device " + _rfDevice));
+		if(ioctl(_fileDescriptor, SPI_IOC_WR_MODE, &mode)) throw(Exception("Couldn't set spi mode on device " + _physicalDevice));
+		if(ioctl(_fileDescriptor, SPI_IOC_RD_MODE, &mode)) throw(Exception("Couldn't get spi mode off device " + _physicalDevice));
 
-		if(ioctl(_fileDescriptor, SPI_IOC_WR_BITS_PER_WORD, &bits)) throw(Exception("Couldn't set bits per word on device " + _rfDevice));
-		if(ioctl(_fileDescriptor, SPI_IOC_RD_BITS_PER_WORD, &bits)) throw(Exception("Couldn't get bits per word off device " + _rfDevice));
+		if(ioctl(_fileDescriptor, SPI_IOC_WR_BITS_PER_WORD, &bits)) throw(Exception("Couldn't set bits per word on device " + _physicalDevice));
+		if(ioctl(_fileDescriptor, SPI_IOC_RD_BITS_PER_WORD, &bits)) throw(Exception("Couldn't get bits per word off device " + _physicalDevice));
 
-		if(ioctl(_fileDescriptor, SPI_IOC_WR_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't set speed on device " + _rfDevice));
-		if(ioctl(_fileDescriptor, SPI_IOC_RD_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't get speed off device " + _rfDevice));
+		if(ioctl(_fileDescriptor, SPI_IOC_WR_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't set speed on device " + _physicalDevice));
+		if(ioctl(_fileDescriptor, SPI_IOC_RD_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't get speed off device " + _physicalDevice));
 	}
 	catch(const std::exception& ex)
     {
@@ -346,7 +346,7 @@ void TICC1100::setupDevice()
     }
 }
 
-void TICC1100::sendPacket(std::shared_ptr<BidCoSPacket> packet)
+void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 {
 	try
 	{
@@ -426,7 +426,7 @@ void TICC1100::readwrite(std::vector<uint8_t>& data)
 			}
 			std::cout << std::dec << std::endl;
 		}
-		if(!ioctl(_fileDescriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(Exception("Couldn't write to device " + _rfDevice));
+		if(!ioctl(_fileDescriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(Exception("Couldn't write to device " + _physicalDevice));
 		if(GD::debugLevel >= 6)
 		{
 			std::cout << HelperFunctions::getTimeString() << " Received: " << std::hex << std::setfill('0');
@@ -745,7 +745,7 @@ void TICC1100::startListening()
 	try
 	{
 		stopListening();
-		if(_gpioDescriptor == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _rfDevice));
+		if(_gpioDescriptor == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _physicalDevice));
 		openDevice();
 		if(_fileDescriptor == -1) return;
 		_stopped = false;

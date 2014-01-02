@@ -45,7 +45,7 @@ class BidCoSPacket;
 #include "rapidxml.hpp"
 #include "LogicalParameter.h"
 #include "PhysicalParameter.h"
-#include "../HMDeviceTypes.h"
+#include "../HomeMaticBidCoS/HMDeviceTypes.h"
 
 using namespace rapidxml;
 

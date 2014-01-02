@@ -28,8 +28,8 @@
  */
 
 #include "PendingBidCoSQueues.h"
-#include "GD.h"
-#include "HelperFunctions.h"
+#include "../GD.h"
+#include "../HelperFunctions.h"
 
 PendingBidCoSQueues::PendingBidCoSQueues()
 {

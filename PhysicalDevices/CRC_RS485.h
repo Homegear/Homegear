@@ -54,11 +54,11 @@ class CRCRS485  : public PhysicalDevice
 {
     public:
         CRCRS485();
-        void init(std::string rfDevice);
+        void init(std::string physicalDevice);
         virtual ~CRCRS485();
         void startListening();
         void stopListening();
-        void sendPacket(std::shared_ptr<BidCoSPacket> packet);
+        void sendPacket(std::shared_ptr<Packet> packet);
         bool isOpen() { return _fileDescriptor > -1; }
     protected:
         int32_t _fileDescriptor = -1;

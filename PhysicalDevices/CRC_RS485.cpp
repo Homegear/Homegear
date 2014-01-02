@@ -39,9 +39,9 @@ CRCRS485::CRCRS485()
 
 }
 
-void CRCRS485::init(std::string rfDevice)
+void CRCRS485::init(std::string physicalDevice)
 {
-	_rfDevice = rfDevice;
+	_physicalDevice = physicalDevice;
 }
 
 CRCRS485::~CRCRS485()
@@ -69,7 +69,7 @@ CRCRS485::~CRCRS485()
     }
 }
 
-void CRCRS485::sendPacket(std::shared_ptr<BidCoSPacket> packet)
+void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
 {
 	try
 	{
@@ -84,7 +84,7 @@ void CRCRS485::sendPacket(std::shared_ptr<BidCoSPacket> packet)
 			deviceWasClosed = true;
 			openDevice();
 		}
-		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _rfDevice));
+		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _physicalDevice));
 		if(packet->payload()->size() > 54)
 		{
 			if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
@@ -115,7 +115,7 @@ void CRCRS485::openDevice()
 	{
 		if(_fileDescriptor != -1) closeDevice();
 
-		_lockfile = "/var/lock" + _rfDevice.substr(_rfDevice.find_last_of('/')) + ".lock";
+		_lockfile = "/var/lock" + _physicalDevice.substr(_physicalDevice.find_last_of('/')) + ".lock";
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 		if(lockfileDescriptor == -1)
 		{
@@ -130,7 +130,7 @@ void CRCRS485::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				HelperFunctions::printCritical("CRC RS485 device is in use: " + _rfDevice);
+				HelperFunctions::printCritical("CRC RS485 device is in use: " + _physicalDevice);
 				return;
 			}
 			unlink(_lockfile.c_str());
@@ -146,11 +146,11 @@ void CRCRS485::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = open(_rfDevice.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+		_fileDescriptor = open(_physicalDevice.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
 
 		if(_fileDescriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open CRC RS485 device: " + _rfDevice);
+			HelperFunctions::printCritical("Couldn't open CRC RS485 device: " + _physicalDevice);
 			return;
 		}
 
@@ -207,15 +207,15 @@ void CRCRS485::setupDevice()
 		term.c_cc[VTIME] = 0;
 		cfsetispeed(&term, B19200);
 		cfsetospeed(&term, B19200);
-		if(tcflush(_fileDescriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CRC RS485 device " + _rfDevice));
-		if(tcsetattr(_fileDescriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CRC RS485 device settings: " + _rfDevice));
+		if(tcflush(_fileDescriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CRC RS485 device " + _physicalDevice));
+		if(tcsetattr(_fileDescriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CRC RS485 device settings: " + _physicalDevice));
 
 		int flags = fcntl(_fileDescriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))
 		{
 			if(fcntl(_fileDescriptor, F_SETFL, flags | O_NONBLOCK) == -1)
 			{
-				throw(Exception("Couldn't set CRC RS485 device to non blocking mode: " + _rfDevice));
+				throw(Exception("Couldn't set CRC RS485 device to non blocking mode: " + _physicalDevice));
 			}
 		}
 	}
@@ -239,7 +239,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 	{
 		if(_fileDescriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't read from CRC RS485 device, because the file descriptor is not valid: " + _rfDevice + ". Trying to reopen...");
+			HelperFunctions::printCritical("Couldn't read from CRC RS485 device, because the file descriptor is not valid: " + _physicalDevice + ". Trying to reopen...");
 			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
@@ -269,12 +269,12 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 					if(!_stopCallbackThread) continue;
 					else return std::vector<uint8_t>();
 				case -1:
-					HelperFunctions::printError("Error reading from CRC RS485 device: " + _rfDevice);
+					HelperFunctions::printError("Error reading from CRC RS485 device: " + _physicalDevice);
 					return std::vector<uint8_t>();
 				case 1:
 					break;
 				default:
-					HelperFunctions::printError("Error reading from CRC RS485 device: " + _rfDevice);
+					HelperFunctions::printError("Error reading from CRC RS485 device: " + _physicalDevice);
 					return std::vector<uint8_t>();
 			}
 
@@ -282,7 +282,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				HelperFunctions::printError("Error reading from CRC RS485 device: " + _rfDevice);
+				HelperFunctions::printError("Error reading from CRC RS485 device: " + _physicalDevice);
 			}
 			timeoutTime = 5000;
 			packet.push_back(localBuffer[0]);
@@ -311,7 +311,7 @@ void CRCRS485::writeToDevice(std::string data, bool printSending)
     try
     {
     	if(_stopped) return;
-        if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _rfDevice));
+        if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _physicalDevice));
         int32_t bytesWritten = 0;
         int32_t i;
         if(GD::debugLevel > 3 && printSending)
@@ -325,7 +325,7 @@ void CRCRS485::writeToDevice(std::string data, bool printSending)
             if(i == -1)
             {
                 if(errno == EAGAIN) continue;
-                throw(Exception("Error writing to CRC RS485 device (3, " + std::to_string(errno) + "): " + _rfDevice));
+                throw(Exception("Error writing to CRC RS485 device (3, " + std::to_string(errno) + "): " + _physicalDevice));
             }
             bytesWritten += i;
         }
@@ -422,10 +422,10 @@ void CRCRS485::listen()
         	std::vector<uint8_t> packet = readFromDevice();
         	if(packet.size() > 20) //20 is minimal packet length (=10 Byte)
         	{
-				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, HelperFunctions::getTime()));
-				std::thread t(&CRCRS485::callCallback, this, packet);
-				HelperFunctions::setThreadPriority(t.native_handle(), 45);
-				t.detach();
+				//std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, HelperFunctions::getTime()));
+				//std::thread t(&CRCRS485::callCallback, this, packet);
+				//HelperFunctions::setThreadPriority(t.native_handle(), 45);
+				//t.detach();
         	}
         }
     }

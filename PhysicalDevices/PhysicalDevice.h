@@ -31,7 +31,12 @@
 #define PHYSICALDEVICE_H_
 
 #include "../Exception.h"
-#include "../HomeMaticDevice.h"
+#include "../LogicalDevice.h"
+#include "../Packet.h"
+
+#include <list>
+#include <thread>
+#include <mutex>
 
 namespace PhysicalDevices
 {
@@ -50,14 +55,14 @@ public:
 
 	virtual void startListening() {}
 	virtual void stopListening() {}
-	virtual void addHomeMaticDevice(HomeMaticDevice*);
-	virtual void removeHomeMaticDevice(HomeMaticDevice*);
-	virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet) {}
+	virtual void addLogicalDevice(LogicalDevice*);
+	virtual void removeLogicalDevice(LogicalDevice*);
+	virtual void sendPacket(std::shared_ptr<Packet> packet) {}
 	virtual bool isOpen() { return false; }
 protected:
-	std::mutex _homeMaticDevicesMutex;
-    std::list<HomeMaticDevice*> _homeMaticDevices;
-    std::string _rfDevice;
+	std::mutex _logicalDevicesMutex;
+    std::list<LogicalDevice*> _logicalDevices;
+    std::string _physicalDevice;
 	std::thread _listenThread;
 	std::thread _callbackThread;
 	bool _stopCallbackThread;
@@ -65,7 +70,7 @@ protected:
 	std::mutex _sendMutex;
 	bool _stopped = false;
 
-	virtual void callCallback(std::shared_ptr<BidCoSPacket> packet);
+	virtual void callCallback(std::shared_ptr<Packet> packet);
 };
 
 }

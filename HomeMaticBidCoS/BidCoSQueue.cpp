@@ -28,8 +28,8 @@
  */
 
 #include "BidCoSQueue.h"
-#include "GD.h"
-#include "HelperFunctions.h"
+#include "../GD.h"
+#include "../HelperFunctions.h"
 
 BidCoSQueue::BidCoSQueue() : _queueType(BidCoSQueueType::EMPTY)
 {

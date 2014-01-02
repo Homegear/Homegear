@@ -40,7 +40,7 @@ class HomeMaticDevice;
 #include <queue>
 #include <mutex>
 
-#include "Exception.h"
+#include "../Exception.h"
 
 class PendingBidCoSQueues {
 public:

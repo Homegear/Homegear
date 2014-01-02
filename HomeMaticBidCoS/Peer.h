@@ -46,10 +46,10 @@ class HomeMaticDevice;
 class BidCoSQueue;
 class BidCoSMessages;
 
-#include "delegate.hpp"
-#include "RPC/Device.h"
-#include "RPC/RPCVariable.h"
-#include "ServiceMessages.h"
+#include "../delegate.hpp"
+#include "../RPC/Device.h"
+#include "../RPC/RPCVariable.h"
+#include "../ServiceMessages.h"
 
 class VariableToReset
 {

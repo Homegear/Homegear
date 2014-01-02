@@ -49,7 +49,7 @@ public:
 	HomeMaticCentral(uint32_t deviceID, std::string, int32_t);
 	virtual ~HomeMaticCentral();
 	void init();
-	bool packetReceived(std::shared_ptr<BidCoSPacket> packet);
+	bool packetReceived(std::shared_ptr<Packet> packet);
 	void enablePairingMode() { _pairing = true; }
 	void disablePairingMode() { _pairing = false; }
 	void unpair(int32_t address, bool defer);
