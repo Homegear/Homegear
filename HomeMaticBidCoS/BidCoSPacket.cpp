@@ -32,41 +32,6 @@
 #include "../HelperFunctions.h"
 
 //Properties
-uint8_t BidCoSPacket::length()
-{
-    return _length;
-}
-
-uint8_t BidCoSPacket::messageCounter()
-{
-    return _messageCounter;
-}
-
-uint8_t BidCoSPacket::controlByte()
-{
-    return _controlByte;
-}
-
-uint8_t BidCoSPacket::messageType()
-{
-    return _messageType;
-}
-
-int32_t BidCoSPacket::senderAddress()
-{
-    return _senderAddress;
-}
-
-int32_t BidCoSPacket::destinationAddress()
-{
-    return _destinationAddress;
-}
-
-std::vector<uint8_t>* BidCoSPacket::payload()
-{
-    return &_payload;
-}
-
 std::string BidCoSPacket::hexString()
 {
 	try
@@ -150,9 +115,14 @@ BidCoSPacket::BidCoSPacket(std::vector<uint8_t>& packet, bool rssiByte, int64_t 
 }
 
 BidCoSPacket::BidCoSPacket(uint8_t messageCounter, uint8_t controlByte, uint8_t messageType, int32_t senderAddress, int32_t destinationAddress, std::vector<uint8_t> payload)
-     : _messageCounter(messageCounter), _controlByte(controlByte), _messageType(messageType), _senderAddress(senderAddress), _destinationAddress(destinationAddress), _payload(payload)
 {
     _length = 9 + _payload.size();
+    _messageCounter = messageCounter;
+    _controlByte = controlByte;
+    _messageType = messageType;
+    _senderAddress = senderAddress;
+    _destinationAddress = destinationAddress;
+    _payload = payload;
 }
 
 BidCoSPacket::~BidCoSPacket()

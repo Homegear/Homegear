@@ -36,23 +36,29 @@
 class Packet
 {
 public:
-	virtual uint8_t length() { return 0; }
-	virtual uint8_t messageCounter() { return 0; }
-	virtual void setMessageCounter(uint8_t counter) {  }
-	virtual uint8_t controlByte() { return 0; }
-	virtual uint8_t messageType() { return 0; }
-	virtual int32_t senderAddress() { return 0; }
-	virtual int32_t destinationAddress() { return 0; }
-	virtual uint8_t rssi() { return 0; }
-	virtual std::vector<uint8_t>* payload() { return nullptr; }
+	virtual uint8_t length() { return _length; }
+	virtual uint8_t controlByte() { return _controlByte; }
+	virtual int32_t senderAddress() { return _senderAddress; }
+	virtual int32_t destinationAddress() { return _destinationAddress; }
+	virtual std::vector<uint8_t>* payload() { return &_payload; }
 	virtual std::string hexString() { return ""; }
 	virtual std::vector<uint8_t> byteArray() { return std::vector<uint8_t>(); }
-	virtual int64_t timeReceived() { return 0; }
-	virtual int64_t timeSending() { return 0; }
-	virtual void setTimeSending(int64_t time) { }
+	virtual int64_t timeReceived() { return _timeReceived; }
+	virtual int64_t timeSending() { return _timeSending; }
+	virtual void setTimeSending(int64_t time) { _timeSending = time; }
 
 	Packet();
 	virtual ~Packet();
+protected:
+	uint8_t _length = 0;
+    uint8_t _controlByte = 0;
+    uint32_t _senderAddress = 0;
+    uint32_t _destinationAddress = 0;
+    std::vector<uint8_t> _payload;
+    uint32_t _bitmask[8] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
+	int64_t _timeReceived = 0;
+    int64_t _timeSending = 0;
+
 };
 
 #endif /* PACKET_H_ */

@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,49 +27,25 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef BIDCOSPACKET_H
-#define BIDCOSPACKET_H
+#ifndef HMWIREDPACKET_H_
+#define HMWIREDPACKET_H_
 
-#include "../Exception.h"
 #include "../Packet.h"
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <sstream>
-#include <iomanip>
-#include <algorithm>
-#include <cmath>
-
-class BidCoSPacket : public Packet
+namespace HMWired
+{
+class HMWiredPacket : public Packet
 {
     public:
         //Properties
-        uint8_t messageCounter() { return _messageCounter; }
-        void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
-        uint8_t messageType() { return _messageType; }
-        uint8_t rssi() { return _rssi; }
-        virtual std::string hexString();
-        virtual std::vector<uint8_t> byteArray();
-
-        BidCoSPacket();
-        BidCoSPacket(std::string&, int64_t timeReceived = 0);
-        BidCoSPacket(std::vector<uint8_t>&, bool rssiByte, int64_t timeReceived = 0);
-        BidCoSPacket(uint8_t, uint8_t, uint8_t, int32_t, int32_t, std::vector<uint8_t>);
-        /** Default destructor */
-        virtual ~BidCoSPacket();
-        void import(std::string&, bool removeFirstCharacter = true);
-        void import(std::vector<uint8_t>&, bool rssiByte);
-        std::vector<uint8_t> getPosition(double index, double size, int32_t mask);
-        void setPosition(double index, double size, std::vector<uint8_t>& value);
+        HMWiredPacket();
+        HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived = 0);
+        virtual ~HMWiredPacket();
+        void import(std::vector<uint8_t>&);
     protected:
     private:
-        uint8_t _messageCounter = 0;
-        uint8_t _messageType = 0;
-        uint8_t _rssi = 0;
-
-        uint8_t getByte(std::string);
-        int32_t getInt(std::string);
+        std::vector<uint8_t> _checksum;
 };
 
-#endif // BIDCOSPACKET_H
+} /* namespace HMWired */
+#endif /* HMWIREDPACKET_H_ */

@@ -30,6 +30,7 @@
 #include "CRC_RS485.h"
 #include "../GD.h"
 #include "../HelperFunctions.h"
+#include "../HomeMaticWired/HMWiredPacket.h"
 
 namespace PhysicalDevices
 {
@@ -85,13 +86,13 @@ void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
 			openDevice();
 		}
 		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _physicalDevice));
-		if(packet->payload()->size() > 54)
-		{
-			if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
-			return;
-		}
+		//if(packet->payload()->size() > 54)
+		//{
+		//	if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
+		//	return;
+		//}
 
-		writeToDevice("As" + packet->hexString() + "\r\n", true);
+		//writeToDevice("As" + packet->hexString() + "\r\n", true);
 
 		if(deviceWasClosed) closeDevice();
 	}
@@ -419,13 +420,13 @@ void CRCRS485::listen()
         		if(_stopCallbackThread) return;
         		continue;
         	}
-        	std::vector<uint8_t> packet = readFromDevice();
-        	if(packet.size() > 20) //20 is minimal packet length (=10 Byte)
+        	std::vector<uint8_t> rawPacket = readFromDevice();
+        	if(rawPacket.size() > 10) //11 is minimal packet length
         	{
-				//std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, HelperFunctions::getTime()));
-				//std::thread t(&CRCRS485::callCallback, this, packet);
-				//HelperFunctions::setThreadPriority(t.native_handle(), 45);
-				//t.detach();
+				std::shared_ptr<HMWired::HMWiredPacket> packet(new HMWired::HMWiredPacket(rawPacket, HelperFunctions::getTime()));
+				std::thread t(&CRCRS485::callCallback, this, packet);
+				HelperFunctions::setThreadPriority(t.native_handle(), 45);
+				t.detach();
         	}
         }
     }

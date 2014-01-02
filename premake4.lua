@@ -52,6 +52,7 @@ solution "homegear"
       files { "*.h", "*.cpp" }
       files { "./HomeMaticBidCoS/*.h", "./HomeMaticBidCoS/*.cpp" }
       files { "./HomeMaticBidCoS/Devices/*.h", "./HomeMaticBidCoS/Devices/*.cpp" }
+      files { "./HomeMaticWired/*.h", "./HomeMaticWired/*.cpp" }
       files { "./RPC/*.h", "./RPC/*.cpp" }
       files { "./CLI/*.h", "./CLI/*.cpp" }
       files { "./PhysicalDevices/*.h", "./PhysicalDevices/*.cpp" }
