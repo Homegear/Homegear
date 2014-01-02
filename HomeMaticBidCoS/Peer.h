@@ -132,8 +132,8 @@ class Peer
 		void setRemoteChannel(int32_t value) { _remoteChannel = value; saveVariable(1, value); }
 		int32_t getLocalChannel() { return _localChannel; }
 		void setLocalChannel(int32_t value) { _localChannel = value; saveVariable(2, value); }
-		HMDeviceTypes getDeviceType() { return _deviceType; }
-		void setDeviceType(HMDeviceTypes value) { _deviceType = value; saveVariable(3, (int32_t)value); }
+		DeviceTypes getDeviceType() { return _deviceType; }
+		void setDeviceType(DeviceTypes value) { _deviceType = value; saveVariable(3, (int32_t)value); }
 		int32_t getCountFromSysinfo() { return _countFromSysinfo; }
 		void setCountFromSysinfo(int32_t value) { _countFromSysinfo = value; saveVariable(4, value); }
 		int32_t getMessageCounter() { return _messageCounter; }
@@ -257,7 +257,7 @@ class Peer
         int32_t _firmwareVersion = 0;
 		int32_t _remoteChannel = 0;
 		int32_t _localChannel = 0;
-		HMDeviceTypes _deviceType;
+		DeviceTypes _deviceType;
 		int32_t _countFromSysinfo = 0;
 		uint8_t _messageCounter = 0;
 		bool _pairingComplete = false;

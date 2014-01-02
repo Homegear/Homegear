@@ -35,7 +35,6 @@ class BidCoSMessages;
 enum class BidCoSQueueType;
 
 #include "../LogicalDevice.h"
-#include "HMDeviceTypes.h"
 #include "BidCoSQueue.h"
 #include "Peer.h"
 #include "BidCoSMessage.h"
@@ -57,9 +56,9 @@ class HomeMaticDevice : public LogicalDevice
 {
     public:
 		//In table devices
-        int32_t getAddress() { return _address; }
-        std::string getSerialNumber() { return _serialNumber; }
-        HMDeviceTypes getDeviceType() { return _deviceType; }
+        virtual int32_t getAddress() { return _address; }
+        virtual std::string getSerialNumber() { return _serialNumber; }
+        DeviceTypes getDeviceType() { return _deviceType; }
         //End
 
         //In table variables
@@ -70,7 +69,7 @@ class HomeMaticDevice : public LogicalDevice
         //End
 
         std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
-        virtual bool isCentral() { return _deviceType == HMDeviceTypes::HMCENTRAL; }
+        virtual bool isCentral() { return _deviceType == DeviceTypes::HMCENTRAL; }
         virtual void stopThreads();
         virtual void checkForDeadlock();
         virtual void reset();
@@ -78,11 +77,12 @@ class HomeMaticDevice : public LogicalDevice
         HomeMaticDevice();
         HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
+        virtual LogicalDevice::Type::Enum physicalDeviceType() { return LogicalDevice::Type::Enum::HomeMaticBidCoS; }
         virtual void dispose(bool wait = true);
         virtual bool packetReceived(std::shared_ptr<Packet> packet);
 
         virtual void addPeer(std::shared_ptr<Peer> peer);
-        bool peerSelected() { return (bool)_currentPeer; }
+        virtual bool peerSelected() { return (bool)_currentPeer; }
         bool peerExists(int32_t address);
         std::shared_ptr<Peer> getPeer(int32_t address);
         std::shared_ptr<Peer> getPeer(std::string serialNumber);
@@ -151,7 +151,7 @@ class HomeMaticDevice : public LogicalDevice
         //In tables devices
         int32_t _address;
         std::string _serialNumber;
-        HMDeviceTypes _deviceType;
+        DeviceTypes _deviceType;
         //End
 
         //In table variables
@@ -189,8 +189,8 @@ class HomeMaticDevice : public LogicalDevice
 
         bool _lowBattery = false;
 
-        virtual std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
-        virtual std::shared_ptr<Peer> createTeam(int32_t address, HMDeviceTypes deviceType, std::string serialNumber);
+        virtual std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, DeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
+        virtual std::shared_ptr<Peer> createTeam(int32_t address, DeviceTypes deviceType, std::string serialNumber);
         virtual void worker();
 
         virtual void init();

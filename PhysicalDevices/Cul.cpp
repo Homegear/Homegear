@@ -36,7 +36,7 @@ namespace PhysicalDevices
 
 Cul::Cul()
 {
-
+	_supportedDeviceType = LogicalDevice::Type::Enum::HomeMaticBidCoS;
 }
 
 void Cul::init(std::string physicalDevice)

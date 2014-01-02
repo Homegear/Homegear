@@ -32,7 +32,8 @@
 
 #include "../Exception.h"
 #include "../LogicalDevice.h"
-#include "../Packet.h"
+
+class Packet;
 
 #include <list>
 #include <thread>
@@ -69,6 +70,7 @@ protected:
 	std::string _lockfile;
 	std::mutex _sendMutex;
 	bool _stopped = false;
+	LogicalDevice::Type::Enum _supportedDeviceType = LogicalDevice::Type::Enum::none;
 
 	virtual void callCallback(std::shared_ptr<Packet> packet);
 };

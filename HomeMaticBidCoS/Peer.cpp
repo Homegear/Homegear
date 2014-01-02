@@ -139,7 +139,7 @@ void Peer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t rem
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 		if(rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
 		std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central) return; //Shouldn't happen
 		std::shared_ptr<Peer> remotePeer(central->getPeer(peerAddress));
 		if(!remotePeer || !remotePeer->rpcDevice) return; //Shouldn't happen
@@ -618,7 +618,7 @@ std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, std::string serialNumb
 		{
 			if((*i)->serialNumber.empty())
 			{
-				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+				std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 				if(central)
 				{
 					std::shared_ptr<Peer> peer(central->getPeer((*i)->address));
@@ -652,7 +652,7 @@ std::shared_ptr<HomeMaticDevice> Peer::getHiddenPeerDevice()
 		{
 			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = j->second.begin(); i != j->second.end(); ++i)
 			{
-				if((*i)->hidden) return GD::devices.get((*i)->address);
+				if((*i)->hidden) return GD::devices.getHomeMatic((*i)->address);
 			}
 		}
 	}
@@ -838,7 +838,7 @@ void Peer::deletePairedVirtualDevice(int32_t address)
 {
 	try
 	{
-		std::shared_ptr<HomeMaticDevice> device(GD::devices.get(address));
+		std::shared_ptr<HomeMaticDevice> device(GD::devices.getHomeMatic(address));
 		if(device)
 		{
 			GD::devices.remove(address);
@@ -872,7 +872,7 @@ void Peer::deletePairedVirtualDevices()
 				if(!*j) continue;
 				if((*j)->hidden && deleted.find((*j)->address) == deleted.end())
 				{
-					device = GD::devices.get((*j)->address);
+					device = GD::devices.getHomeMatic((*j)->address);
 					if(device)
 					{
 						GD::devices.remove((*j)->address);
@@ -1126,7 +1126,7 @@ void Peer::unserialize_0_0_6(std::string& serializedObject, HomeMaticDevice* dev
 		_firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		_remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		_localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		_deviceType = (HMDeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_deviceType = (DeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		_countFromSysinfo = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
 		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
@@ -1809,7 +1809,7 @@ void Peer::loadVariables(HomeMaticDevice* device)
 				_localChannel = row->second.at(3)->intValue;
 				break;
 			case 3:
-				_deviceType = (HMDeviceTypes)row->second.at(3)->intValue;
+				_deviceType = (DeviceTypes)row->second.at(3)->intValue;
 				break;
 			case 4:
 				_countFromSysinfo = row->second.at(3)->intValue;
@@ -2425,7 +2425,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			bool pushPendingQueues = false;
 			if(packet->messageType() == 0x02) //ACK packet: Check if all values were set correctly. If not set value again
 			{
-				sentPacket = GD::devices.getCentral()->getSentPacket(_address);
+				sentPacket = GD::devices.getHomeMaticCentral()->getSentPacket(_address);
 				if(sentPacket && sentPacket->messageType() > 0 && !sentPacket->payload()->empty())
 				{
 					RPC::ParameterSet::Type::Enum sentParameterSetType;
@@ -2498,7 +2498,7 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			if(isTeam() && !valueKeys.empty())
 			{
 				//Set SENDERADDRESS so that the we can identify the sending peer in our home automation software
-				std::shared_ptr<Peer> senderPeer(GD::devices.getCentral()->getPeer(packet->destinationAddress()));
+				std::shared_ptr<Peer> senderPeer(GD::devices.getHomeMaticCentral()->getPeer(packet->destinationAddress()));
 				if(senderPeer)
 				{
 					//Check for low battery
@@ -2539,25 +2539,25 @@ void Peer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				{
 					std::vector<uint8_t> payload;
 					payload.push_back(0x00);
-					std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x81, 0x02, GD::devices.getCentral()->getAddress(), _address, payload));
-					GD::devices.getCentral()->sendPacket(ok);
-					GD::devices.getCentral()->enqueuePendingQueues(_address);
+					std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x81, 0x02, GD::devices.getHomeMaticCentral()->getAddress(), _address, payload));
+					GD::devices.getHomeMaticCentral()->sendPacket(ok);
+					GD::devices.getHomeMaticCentral()->enqueuePendingQueues(_address);
 				}
 				else
 				{
 					std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
 					queue->noSending = true;
 					std::vector<uint8_t> payload;
-					std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(packet->messageCounter(), 0xA1, 0x12, GD::devices.getCentral()->getAddress(), _address, payload));
+					std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(packet->messageCounter(), 0xA1, 0x12, GD::devices.getHomeMaticCentral()->getAddress(), _address, payload));
 					queue->push(configPacket);
-					queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+					queue->push(GD::devices.getHomeMaticCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 
-					GD::devices.getCentral()->enqueuePackets(_address, queue, true);
+					GD::devices.getHomeMaticCentral()->enqueuePackets(_address, queue, true);
 				}
 			}
-			else if(!a->values.empty() && (packet->controlByte() & 32) && packet->destinationAddress() == GD::devices.getCentral()->getAddress())
+			else if(!a->values.empty() && (packet->controlByte() & 32) && packet->destinationAddress() == GD::devices.getHomeMaticCentral()->getAddress())
 			{
-				GD::devices.getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
+				GD::devices.getHomeMaticCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
 			}
 		}
 		//if(!rpcValues.empty() && !resendPacket)
@@ -2616,7 +2616,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 		if(rpcDeviceType) type = rpcDeviceType->id;
 		else
 		{
-			type = HMDeviceType::getString(_deviceType);
+			type = LogicalDeviceType::getString(_deviceType);
 			if(type.empty() && !rpcDevice->supportedTypes.empty()) type = rpcDevice->supportedTypes.at(0)->id;
 		}
 
@@ -2649,7 +2649,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 			if(isTeam()) uiFlags |= RPC::Device::UIFlags::dontdelete;
 			description->structValue->insert(RPC::RPCStructElement("FLAGS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(uiFlags))));
 
-			description->structValue->insert(RPC::RPCStructElement("INTERFACE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::devices.getCentral()->getSerialNumber()))));
+			description->structValue->insert(RPC::RPCStructElement("INTERFACE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::devices.getHomeMaticCentral()->getSerialNumber()))));
 
 			variable = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 			description->structValue->insert(RPC::RPCStructElement("PARAMSETS", variable));
@@ -2903,7 +2903,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			queue->noSending = true;
 			serviceMessages->setConfigPending(true);
 			std::vector<uint8_t> payload;
-			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+			std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 			bool firstPacket = true;
 
 			for(std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>>::iterator i = changedParameters.begin(); i != changedParameters.end(); ++i)
@@ -2970,7 +2970,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getCentral()->enqueuePendingQueues(_address);
+			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getHomeMaticCentral()->enqueuePendingQueues(_address);
 			else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		}
@@ -3034,7 +3034,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			queue->noSending = true;
 			if(serviceMessages) serviceMessages->setConfigPending(true);
 			std::vector<uint8_t> payload;
-			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+			std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 			bool firstPacket = true;
 
 			for(std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>>::iterator i = changedParameters.begin(); i != changedParameters.end(); ++i)
@@ -3101,7 +3101,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::putParamset(int32_t channel, RPC::Parame
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getCentral()->enqueuePendingQueues(_address);
+			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) GD::devices.getHomeMaticCentral()->enqueuePendingQueues(_address);
 			else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		}
@@ -3256,7 +3256,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel)
 			//Return if there are no link roles defined
 			std::shared_ptr<RPC::LinkRole> linkRoles = rpcDevice->channels.at(channel)->linkRoles;
 			if(!linkRoles) return array;
-			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+			std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 			if(!central) return array; //central actually should always be set at this point
 			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
 			{
@@ -3335,7 +3335,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 			if(!linkRoles) return array;
 			if(!linkRoles->sourceNames.empty()) isSender = true;
 			else if(linkRoles->targetNames.empty()) return array;
-			std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+			std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 			if(!central) return array; //central actually should always be set at this point
 			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
 			{
@@ -3902,16 +3902,16 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 {
 	try
 	{
-		if(_deviceType == HMDeviceTypes::HMCCVD && valueKey == "VALVE_STATE" && _peers.find(1) != _peers.end() && _peers[1].size() > 0 && _peers[1].at(0)->hidden)
+		if(_deviceType == DeviceTypes::HMCCVD && valueKey == "VALVE_STATE" && _peers.find(1) != _peers.end() && _peers[1].size() > 0 && _peers[1].at(0)->hidden)
 		{
 			if(!_peers[1].at(0)->device)
 			{
-				_peers[1].at(0)->device = GD::devices.get(_peers[1].at(0)->address);
-				if(_peers[1].at(0)->device->getDeviceType() != HMDeviceTypes::HMCCTC) return false;
+				_peers[1].at(0)->device = GD::devices.getHomeMatic(_peers[1].at(0)->address);
+				if(_peers[1].at(0)->device->getDeviceType() != DeviceTypes::HMCCTC) return false;
 			}
 			if(_peers[1].at(0)->device)
 			{
-				if(_peers[1].at(0)->device->getDeviceType() != HMDeviceTypes::HMCCTC) return false;
+				if(_peers[1].at(0)->device->getDeviceType() != DeviceTypes::HMCCTC) return false;
 				HM_CC_TC* tc = (HM_CC_TC*)_peers[1].at(0)->device.get();
 				tc->setValveState(value->integerValue);
 				std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
@@ -3923,7 +3923,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				return true;
 			}
 		}
-		else if(_deviceType == HMDeviceTypes::HMSECSD)
+		else if(_deviceType == DeviceTypes::HMSECSD)
 		{
 			if(valueKey == "STATE")
 			{
@@ -3933,7 +3933,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				parameter->data = rpcParameter->convertToPacket(value);
 				saveParameter(parameter->databaseID, parameter->data);
 
-				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+				std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 				std::shared_ptr<Peer> associatedPeer = central->getPeer(_address);
 				if(!associatedPeer)
 				{
@@ -3961,7 +3961,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				parameter->data = rpcParameter->convertToPacket(value);
 				saveParameter(parameter->databaseID, parameter->data);
 
-				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+				std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 				std::shared_ptr<Peer> associatedPeer = central->getPeer(_address);
 				if(!associatedPeer)
 				{
@@ -4102,7 +4102,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		}
 		uint8_t controlByte = 0xA0;
 		if(rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst) controlByte |= 0x10;
-		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter, controlByte, (uint8_t)frame->type, GD::devices.getCentral()->getAddress(), _address, payload));
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter, controlByte, (uint8_t)frame->type, GD::devices.getHomeMaticCentral()->getAddress(), _address, payload));
 		for(std::vector<RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 		{
 			if(i->constValue > -1)
@@ -4195,12 +4195,12 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		}
 		setMessageCounter(_messageCounter + 1);
 		queue->push(packet);
-		queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		queue->push(GD::devices.getHomeMaticCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		pendingBidCoSQueues->push(queue);
 		if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))
 		{
-			if(HMDeviceType::isDimmer(_deviceType) || HMDeviceType::isSwitch(_deviceType)) queue->retries = 12;
-			GD::devices.getCentral()->enqueuePendingQueues(_address);
+			if(LogicalDeviceType::isDimmer(_deviceType) || LogicalDeviceType::isSwitch(_deviceType)) queue->retries = 12;
+			GD::devices.getHomeMaticCentral()->enqueuePendingQueues(_address);
 		}
 		else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 

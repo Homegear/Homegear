@@ -249,7 +249,7 @@ std::shared_ptr<RPCVariable> RPCAddDevice::invoke(std::shared_ptr<std::vector<st
 		}
 		else serialNumber = parameters->at(0)->stringValue;
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
@@ -342,7 +342,7 @@ std::shared_ptr<RPCVariable> RPCAddLink::invoke(std::shared_ptr<std::vector<std:
 		}
 
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
@@ -397,13 +397,13 @@ std::shared_ptr<RPCVariable> RPCDeleteDevice::invoke(std::shared_ptr<std::vector
 		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcInteger }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getDeviceDescription. Please add a central device.");
 		}
-		return GD::devices.getCentral()->deleteDevice(parameters->at(0)->stringValue, parameters->at(1)->integerValue);
+		return central->deleteDevice(parameters->at(0)->stringValue, parameters->at(1)->integerValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -432,13 +432,13 @@ std::shared_ptr<RPCVariable> RPCDeleteMetadata::invoke(std::shared_ptr<std::vect
 		std::string dataID;
 		if(parameters->size() > 1) dataID = parameters->at(1)->stringValue;
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getDeviceDescription. Please add a central device.");
 		}
-		return GD::devices.getCentral()->deleteMetadata(parameters->at(0)->stringValue, dataID);
+		return central->deleteMetadata(parameters->at(0)->stringValue, dataID);
 	}
 	catch(const std::exception& ex)
     {
@@ -515,13 +515,13 @@ std::shared_ptr<RPCVariable> RPCGetDeviceDescription::invoke(std::shared_ptr<std
 		}
 		else serialNumber = parameters->at(0)->stringValue;
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
 			return RPCVariable::createError(-32500, ": Could not execute RPC method getDeviceDescription. Please add a central device.");
 		}
-		return GD::devices.getCentral()->getDeviceDescription(serialNumber, channel);
+		return central->getDeviceDescription(serialNumber, channel);
 	}
 	catch(const std::exception& ex)
     {
@@ -544,7 +544,7 @@ std::shared_ptr<RPCVariable> RPCGetInstallMode::invoke(std::shared_ptr<std::vect
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getInstallMode. Please add a central device.");
@@ -621,7 +621,7 @@ std::shared_ptr<RPCVariable> RPCGetLinkInfo::invoke(std::shared_ptr<std::vector<
 		else receiverSerialNumber = parameters->at(1)->stringValue;
 
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
@@ -666,7 +666,7 @@ std::shared_ptr<RPCVariable> RPCGetLinkPeers::invoke(std::shared_ptr<std::vector
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
@@ -716,7 +716,7 @@ std::shared_ptr<RPCVariable> RPCGetLinks::invoke(std::shared_ptr<std::vector<std
 			if(parameters->size() == 2) flags = parameters->at(1)->integerValue;
 		}
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
@@ -808,7 +808,7 @@ std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<s
 			else remoteSerialNumber = parameters->at(1)->stringValue;
 		}
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getParamsetId. Please add a central device.");
@@ -865,7 +865,7 @@ std::shared_ptr<RPCVariable> RPCGetParamsetId::invoke(std::shared_ptr<std::vecto
 			else remoteSerialNumber = parameters->at(1)->stringValue;
 		}
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getParamsetId. Please add a central device.");
@@ -923,7 +923,7 @@ std::shared_ptr<RPCVariable> RPCGetParamset::invoke(std::shared_ptr<std::vector<
 			else remoteSerialNumber = parameters->at(1)->stringValue;
 		}
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getParamsetId. Please add a central device.");
@@ -953,7 +953,7 @@ std::shared_ptr<RPCVariable> RPCGetServiceMessages::invoke(std::shared_ptr<std::
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getValue. Please add a central device.");
@@ -992,7 +992,7 @@ std::shared_ptr<RPCVariable> RPCGetValue::invoke(std::shared_ptr<std::vector<std
 		}
 		else serialNumber = parameters->at(0)->stringValue;
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getValue. Please add a central device.");
@@ -1050,7 +1050,7 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 		server.second = std::to_string(HelperFunctions::getNumber(server.second));
 		if(server.second.empty() || server.second == "0") return RPCVariable::createError(-32602, "Port number is invalid.");
 
-		if(!GD::devices.getCentral())
+		if(!GD::devices.getHomeMaticCentral())
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method init. Please add a central device.");
 			return RPCVariable::createError(-32500, ": Could not execute RPC method init. Please add a central device.");
@@ -1096,7 +1096,7 @@ std::shared_ptr<RPCVariable> RPCListBidcosInterfaces::invoke(std::shared_ptr<std
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
 		std::shared_ptr<RPCVariable> array(new RPCVariable(RPCVariableType::rpcArray));
 		std::shared_ptr<RPCVariable> interface(new RPCVariable(RPCVariableType::rpcStruct));
@@ -1160,7 +1160,7 @@ std::shared_ptr<RPCVariable> RPCListDevices::invoke(std::shared_ptr<std::vector<
 			ParameterError::Enum error2 = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
 			if(error != ParameterError::Enum::noError && error2 != ParameterError::Enum::noError) return getError((error != ParameterError::Enum::noError) ? error : error2);
 		}
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method listDevices. Please add a central device.");
@@ -1226,7 +1226,7 @@ std::shared_ptr<RPCVariable> RPCListTeams::invoke(std::shared_ptr<std::vector<st
 	try
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method listDevices. Please add a central device.");
@@ -1310,7 +1310,7 @@ std::shared_ptr<RPCVariable> RPCPutParamset::invoke(std::shared_ptr<std::vector<
 			else remoteSerialNumber = parameters->at(1)->stringValue;
 		}
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getParamsetId. Please add a central device.");
@@ -1388,7 +1388,7 @@ std::shared_ptr<RPCVariable> RPCRemoveLink::invoke(std::shared_ptr<std::vector<s
 		else receiverSerialNumber = parameters->at(1)->stringValue;
 
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
@@ -1485,7 +1485,7 @@ std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vect
 		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcBoolean }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method setInstallMode. Please add a central device.");
@@ -1548,7 +1548,7 @@ std::shared_ptr<RPCVariable> RPCSetLinkInfo::invoke(std::shared_ptr<std::vector<
 			description = parameters->at(3)->stringValue;
 		}
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
@@ -1650,7 +1650,7 @@ std::shared_ptr<RPCVariable> RPCSetTeam::invoke(std::shared_ptr<std::vector<std:
 			else teamSerialNumber = parameters->at(1)->stringValue;
 		}
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method getLinks. Please add a central device.");
@@ -1691,7 +1691,7 @@ std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std
 		}
 		else serialNumber = parameters->at(0)->stringValue;
 
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central)
 		{
 			HelperFunctions::printError("Error: Could not execute RPC method setValue. Please add a central device.");

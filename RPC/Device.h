@@ -45,7 +45,7 @@ class BidCoSPacket;
 #include "rapidxml.hpp"
 #include "LogicalParameter.h"
 #include "PhysicalParameter.h"
-#include "../HomeMaticBidCoS/HMDeviceTypes.h"
+#include "../DeviceTypes.h"
 
 using namespace rapidxml;
 
@@ -175,7 +175,7 @@ public:
 
 	bool matches(std::shared_ptr<BidCoSPacket> packet);
 	bool matches(std::string typeID);
-	bool matches(HMDeviceTypes deviceType, uint32_t firmwareVersion);
+	bool matches(DeviceTypes deviceType, uint32_t firmwareVersion);
 };
 
 typedef std::vector<std::pair<std::string, std::string>> DefaultValue;
@@ -330,7 +330,7 @@ public:
 	Device();
 	Device(std::string xmlFilename);
 	virtual ~Device();
-	std::shared_ptr<DeviceType> getType(HMDeviceTypes deviceType, int32_t firmwareVersion);
+	std::shared_ptr<DeviceType> getType(DeviceTypes deviceType, int32_t firmwareVersion);
 	int32_t getCountFromSysinfo() { return _countFromSysinfo; }
 	int32_t getCountFromSysinfo(std::shared_ptr<BidCoSPacket> packet);
 	void setCountFromSysinfo(int32_t countFromSysinfo);

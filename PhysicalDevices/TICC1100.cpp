@@ -38,6 +38,8 @@ TICC1100::TICC1100()
 {
 	try
 	{
+		_supportedDeviceType = LogicalDevice::Type::Enum::HomeMaticBidCoS;
+
 		_transfer =  { (uint64_t)0, (uint64_t)0, (uint32_t)0, (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
 
 		_config = //Read from HM-CC-VD

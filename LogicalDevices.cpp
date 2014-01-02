@@ -27,18 +27,18 @@
  * files in the program, then also delete it here.
  */
 
-#include "HomeMaticDevices.h"
-#include "../GD.h"
-#include "Devices/HM-CC-VD.h"
-#include "Devices/HM-CC-TC.h"
-#include "Devices/HM-SD.h"
-#include "../HelperFunctions.h"
+#include "LogicalDevices.h"
+#include "GD.h"
+#include "HomeMaticBidCoS/Devices/HM-CC-VD.h"
+#include "HomeMaticBidCoS/Devices/HM-CC-TC.h"
+#include "HomeMaticBidCoS/Devices/HM-SD.h"
+#include "HelperFunctions.h"
 
-HomeMaticDevices::HomeMaticDevices()
+LogicalDevices::LogicalDevices()
 {
 }
 
-HomeMaticDevices::~HomeMaticDevices()
+LogicalDevices::~LogicalDevices()
 {
 	try
 	{
@@ -58,7 +58,7 @@ HomeMaticDevices::~HomeMaticDevices()
     }
 }
 
-void HomeMaticDevices::convertDatabase()
+void LogicalDevices::convertDatabase()
 {
 	try
 	{
@@ -96,7 +96,7 @@ void HomeMaticDevices::convertDatabase()
     }
 }
 
-void HomeMaticDevices::initializeDatabase()
+void LogicalDevices::initializeDatabase()
 {
 	try
 	{
@@ -147,7 +147,7 @@ void HomeMaticDevices::initializeDatabase()
     }
 }
 
-void HomeMaticDevices::loadDevicesFromDatabase_0_0_6()
+void LogicalDevices::loadDevicesFromDatabase_0_0_6()
 {
 	try
 	{
@@ -155,14 +155,14 @@ void HomeMaticDevices::loadDevicesFromDatabase_0_0_6()
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
-			HMDeviceTypes deviceType = HMDeviceTypes::HMUNKNOWN;
+			DeviceTypes deviceType = DeviceTypes::UNKNOWN;
 			std::string serializedObject;
 			uint8_t dutyCycleMessageCounter = 0;
 			for(std::map<uint32_t, std::shared_ptr<DataColumn>>::iterator col = row->second.begin(); col != row->second.end(); ++col)
 			{
 				if(col->second->index == 1)
 				{
-					deviceType = (HMDeviceTypes)col->second->intValue;
+					deviceType = (DeviceTypes)col->second->intValue;
 				}
 				else if(col->second->index == 2)
 				{
@@ -177,20 +177,20 @@ void HomeMaticDevices::loadDevicesFromDatabase_0_0_6()
 					std::shared_ptr<HomeMaticDevice> device;
 					switch(deviceType)
 					{
-					case HMDeviceTypes::HMCCTC:
+					case DeviceTypes::HMCCTC:
 						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_TC());
 						break;
-					case HMDeviceTypes::HMLCSW1FM:
+					case DeviceTypes::HMLCSW1FM:
 						device = std::shared_ptr<HomeMaticDevice>(new HM_LC_SWX_FM());
 						break;
-					case HMDeviceTypes::HMCCVD:
+					case DeviceTypes::HMCCVD:
 						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_VD());
 						break;
-					case HMDeviceTypes::HMCENTRAL:
-						_central = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral());
-						device = _central;
+					case DeviceTypes::HMCENTRAL:
+						_homeMaticCentral = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral());
+						device = _homeMaticCentral;
 						break;
-					case HMDeviceTypes::HMSD:
+					case DeviceTypes::HMSD:
 						spyDeviceExists = true;
 						device = std::shared_ptr<HomeMaticDevice>(new HM_SD());
 						break;
@@ -208,7 +208,7 @@ void HomeMaticDevices::loadDevicesFromDatabase_0_0_6()
 				}
 			}
 		}
-		if(!_central) createCentral();
+		if(!_homeMaticCentral) createCentral();
 		if(!spyDeviceExists) createSpyDevice();
 	}
 	catch(const std::exception& ex)
@@ -228,7 +228,7 @@ void HomeMaticDevices::loadDevicesFromDatabase_0_0_6()
     }
 }
 
-void HomeMaticDevices::loadDevicesFromDatabase()
+void LogicalDevices::loadDevicesFromDatabase()
 {
 	try
 	{
@@ -239,25 +239,25 @@ void HomeMaticDevices::loadDevicesFromDatabase()
 			uint32_t deviceID = row->second.at(0)->intValue;
 			int32_t address = row->second.at(1)->intValue;
 			std::string serialNumber = row->second.at(2)->textValue;
-			HMDeviceTypes deviceType = (HMDeviceTypes)row->second.at(3)->intValue;
+			DeviceTypes deviceType = (DeviceTypes)row->second.at(3)->intValue;
 
 			std::shared_ptr<HomeMaticDevice> device;
 			switch(deviceType)
 			{
-			case HMDeviceTypes::HMCCTC:
+			case DeviceTypes::HMCCTC:
 				device = std::shared_ptr<HomeMaticDevice>(new HM_CC_TC(deviceID, serialNumber, address));
 				break;
-			case HMDeviceTypes::HMLCSW1FM:
+			case DeviceTypes::HMLCSW1FM:
 				device = std::shared_ptr<HomeMaticDevice>(new HM_LC_SWX_FM(deviceID, serialNumber, address));
 				break;
-			case HMDeviceTypes::HMCCVD:
+			case DeviceTypes::HMCCVD:
 				device = std::shared_ptr<HomeMaticDevice>(new HM_CC_VD(deviceID, serialNumber, address));
 				break;
-			case HMDeviceTypes::HMCENTRAL:
-				_central = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral(deviceID, serialNumber, address));
-				device = _central;
+			case DeviceTypes::HMCENTRAL:
+				_homeMaticCentral = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral(deviceID, serialNumber, address));
+				device = _homeMaticCentral;
 				break;
-			case HMDeviceTypes::HMSD:
+			case DeviceTypes::HMSD:
 				spyDeviceExists = true;
 				device = std::shared_ptr<HomeMaticDevice>(new HM_SD(deviceID, serialNumber, address));
 				break;
@@ -273,9 +273,9 @@ void HomeMaticDevices::loadDevicesFromDatabase()
 				_devicesMutex.unlock();
 			}
 		}
-		if(!_central) createCentral();
+		if(!_homeMaticCentral) createCentral();
 		if(!spyDeviceExists) createSpyDevice();
-		if(_central) _central->addPeersToVirtualDevices();
+		if(_homeMaticCentral) _homeMaticCentral->addPeersToVirtualDevices();
 	}
 	catch(const std::exception& ex)
     {
@@ -294,7 +294,7 @@ void HomeMaticDevices::loadDevicesFromDatabase()
     }
 }
 
-void HomeMaticDevices::load()
+void LogicalDevices::load()
 {
 	try
 	{
@@ -315,16 +315,16 @@ void HomeMaticDevices::load()
     }
 }
 
-void HomeMaticDevices::createSpyDevice()
+void LogicalDevices::createSpyDevice()
 {
 	try
 	{
-		if(!_central) return;
+		if(!_homeMaticCentral) return;
 
 		int32_t seed = 0xfe0000 + HelperFunctions::getRandomNumber(1, 500);
 
-		int32_t address = _central->getUniqueAddress(seed);
-		std::string serialNumber(_central->getUniqueSerialNumber("VSD", HelperFunctions::getRandomNumber(1, 9999999)));
+		int32_t address = _homeMaticCentral->getUniqueAddress(seed);
+		std::string serialNumber(_homeMaticCentral->getUniqueSerialNumber("VSD", HelperFunctions::getRandomNumber(1, 9999999)));
 
 		add(new HM_SD(0, serialNumber, address));
 		HelperFunctions::printMessage("Created HM_SD with address 0x" + HelperFunctions::getHexString(address) + " and serial number " + serialNumber);
@@ -344,11 +344,11 @@ void HomeMaticDevices::createSpyDevice()
 }
 
 
-void HomeMaticDevices::createCentral()
+void LogicalDevices::createCentral()
 {
 	try
 	{
-		if(_central) return;
+		if(_homeMaticCentral) return;
 
 		int32_t address = getUniqueAddress(0xfd);
 		std::string serialNumber(getUniqueSerialNumber("VCL"));
@@ -370,18 +370,18 @@ void HomeMaticDevices::createCentral()
     }
 }
 
-std::shared_ptr<HomeMaticCentral> HomeMaticDevices::getCentral()
+std::shared_ptr<HomeMaticCentral> LogicalDevices::getHomeMaticCentral()
 {
 	try
 	{
 		_devicesMutex.lock();
-		if(!_central)
+		if(!_homeMaticCentral)
 		{
 			_devicesMutex.unlock();
 			return std::shared_ptr<HomeMaticCentral>();
 		}
 
-		std::shared_ptr<HomeMaticCentral> central(_central);
+		std::shared_ptr<HomeMaticCentral> central(_homeMaticCentral);
 		_devicesMutex.unlock();
 		return central;
 	}
@@ -401,7 +401,7 @@ std::shared_ptr<HomeMaticCentral> HomeMaticDevices::getCentral()
     return std::shared_ptr<HomeMaticCentral>();
 }
 
-int32_t HomeMaticDevices::getUniqueAddress(uint8_t firstByte)
+int32_t LogicalDevices::getUniqueAddress(uint8_t firstByte)
 {
 	int32_t prefix = firstByte << 16;
 	int32_t seed = HelperFunctions::getRandomNumber(1, 9999);
@@ -414,7 +414,7 @@ int32_t HomeMaticDevices::getUniqueAddress(uint8_t firstByte)
 	return prefix + seed;
 }
 
-std::string HomeMaticDevices::getUniqueSerialNumber(std::string seedPrefix)
+std::string LogicalDevices::getUniqueSerialNumber(std::string seedPrefix)
 {
 	if(seedPrefix.size() != 3) throw Exception("seedPrefix must have a size of 3.");
 	uint32_t i = 0;
@@ -435,19 +435,19 @@ std::string HomeMaticDevices::getUniqueSerialNumber(std::string seedPrefix)
 	return temp2;
 }
 
-void HomeMaticDevices::dispose()
+void LogicalDevices::dispose()
 {
 	try
 	{
-		std::vector<std::shared_ptr<HomeMaticDevice>> devices;
+		std::vector<std::shared_ptr<LogicalDevice>> devices;
 		_devicesMutex.lock();
-		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			HelperFunctions::printDebug("Debug: Disposing device 0x" + HelperFunctions::getHexString((*i)->getAddress()));
 			devices.push_back(*i);
 		}
 		_devicesMutex.unlock();
-		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = devices.begin(); i != devices.end(); ++i)
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = devices.begin(); i != devices.end(); ++i)
 		{
 			(*i)->dispose(false);
 		}
@@ -470,7 +470,7 @@ void HomeMaticDevices::dispose()
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
-void HomeMaticDevices::save(bool full, bool crash)
+void LogicalDevices::save(bool full, bool crash)
 {
 	try
 	{
@@ -483,7 +483,7 @@ void HomeMaticDevices::save(bool full, bool crash)
 		}
 		HelperFunctions::printMessage("(Shutdown) => Saving devices");
 		_devicesMutex.lock();
-		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			HelperFunctions::printMessage("(Shutdown) => Saving device 0x" + HelperFunctions::getHexString((*i)->getAddress(), 6));
 			(*i)->save(full);
@@ -505,21 +505,21 @@ void HomeMaticDevices::save(bool full, bool crash)
     _devicesMutex.unlock();
 }
 
-void HomeMaticDevices::add(HomeMaticDevice* device)
+void LogicalDevices::add(LogicalDevice* device)
 {
 	try
 	{
 		if(!device) return;
 		_devicesMutex.lock();
 		device->save(true);
-		if(device->getDeviceType() == HMDeviceTypes::HMCENTRAL)
+		if(device->getDeviceType() == DeviceTypes::HMCENTRAL)
 		{
-			_central = std::shared_ptr<HomeMaticCentral>((HomeMaticCentral*)device);
-			_devices.push_back(_central);
+			_homeMaticCentral = std::shared_ptr<HomeMaticCentral>((HomeMaticCentral*)device);
+			_devices.push_back(_homeMaticCentral);
 		}
 		else
 		{
-			_devices.push_back(std::shared_ptr<HomeMaticDevice>(device));
+			_devices.push_back(std::shared_ptr<LogicalDevice>(device));
 		}
 	}
 	catch(const std::exception& ex)
@@ -537,12 +537,12 @@ void HomeMaticDevices::add(HomeMaticDevice* device)
     _devicesMutex.unlock();
 }
 
-void HomeMaticDevices::remove(int32_t address)
+void LogicalDevices::remove(int32_t address)
 {
 	try
 	{
 		if(_removeThread.joinable()) _removeThread.join();
-		_removeThread = std::thread(&HomeMaticDevices::removeThread, this, address);
+		_removeThread = std::thread(&LogicalDevices::removeThread, this, address);
 	}
 	catch(const std::exception& ex)
     {
@@ -558,17 +558,17 @@ void HomeMaticDevices::remove(int32_t address)
     }
 }
 
-void HomeMaticDevices::removeThread(int32_t address)
+void LogicalDevices::removeThread(int32_t address)
 {
 	try
 	{
 		_devicesMutex.lock();
-		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			if((*i)->getAddress() == address)
 			{
 				HelperFunctions::printDebug("Removing device pointer from device array...");
-				std::shared_ptr<HomeMaticDevice> device = *i;
+				std::shared_ptr<LogicalDevice> device = *i;
 				_devices.erase(i);
 				_devicesMutex.unlock();
 				HelperFunctions::printDebug("Disposing device...");
@@ -598,12 +598,12 @@ void HomeMaticDevices::removeThread(int32_t address)
     _devicesMutex.unlock();
 }
 
-std::shared_ptr<HomeMaticDevice> HomeMaticDevices::get(int32_t address)
+std::shared_ptr<LogicalDevice> LogicalDevices::get(int32_t address)
 {
 	try
 	{
 		_devicesMutex.lock();
-		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			if((*i)->getAddress() == address)
 			{
@@ -625,16 +625,48 @@ std::shared_ptr<HomeMaticDevice> HomeMaticDevices::get(int32_t address)
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
-	return std::shared_ptr<HomeMaticDevice>();
+	return std::shared_ptr<LogicalDevice>();
 }
 
-std::vector<std::shared_ptr<HomeMaticDevice>> HomeMaticDevices::getDevices()
+std::shared_ptr<HomeMaticDevice> LogicalDevices::getHomeMatic(int32_t address)
 {
 	try
 	{
 		_devicesMutex.lock();
-		std::vector<std::shared_ptr<HomeMaticDevice>> devices;
-		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		{
+			if((*i)->physicalDeviceType() == LogicalDevice::Type::HomeMaticBidCoS && (*i)->getAddress() == address)
+			{
+				std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(*i));
+				if(!device) continue;
+				_devicesMutex.unlock();
+				return device;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _devicesMutex.unlock();
+	return std::shared_ptr<HomeMaticDevice>();
+}
+
+std::vector<std::shared_ptr<LogicalDevice>> LogicalDevices::getDevices()
+{
+	try
+	{
+		_devicesMutex.lock();
+		std::vector<std::shared_ptr<LogicalDevice>> devices;
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			devices.push_back(*i);
 		}
@@ -654,15 +686,15 @@ std::vector<std::shared_ptr<HomeMaticDevice>> HomeMaticDevices::getDevices()
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
-	return std::vector<std::shared_ptr<HomeMaticDevice>>();
+	return std::vector<std::shared_ptr<LogicalDevice>>();
 }
 
-std::shared_ptr<HomeMaticDevice> HomeMaticDevices::get(std::string serialNumber)
+std::shared_ptr<LogicalDevice> LogicalDevices::get(std::string serialNumber)
 {
 	try
 	{
 		_devicesMutex.lock();
-		for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
 			if((*i)->getSerialNumber() == serialNumber)
 			{
@@ -687,7 +719,39 @@ std::shared_ptr<HomeMaticDevice> HomeMaticDevices::get(std::string serialNumber)
 	return std::shared_ptr<HomeMaticDevice>();
 }
 
-std::string HomeMaticDevices::handleCLICommand(std::string& command)
+std::shared_ptr<HomeMaticDevice> LogicalDevices::getHomeMatic(std::string serialNumber)
+{
+	try
+	{
+		_devicesMutex.lock();
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		{
+			if((*i)->physicalDeviceType() == LogicalDevice::Type::HomeMaticBidCoS && (*i)->getSerialNumber() == serialNumber)
+			{
+				std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(*i));
+				if(!device) continue;
+				_devicesMutex.unlock();
+				return device;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _devicesMutex.unlock();
+	return std::shared_ptr<HomeMaticDevice>();
+}
+
+std::string LogicalDevices::handleCLICommand(std::string& command)
 {
 	try
 	{
@@ -715,8 +779,8 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 		else if(command == "devices list")
 		{
 			_devicesMutex.lock();
-			std::vector<std::shared_ptr<HomeMaticDevice>> devices;
-			for(std::vector<std::shared_ptr<HomeMaticDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+			std::vector<std::shared_ptr<LogicalDevice>> devices;
+			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 			{
 				stringStream << "Address: 0x" << std::hex << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (uint32_t)(*i)->getDeviceType() << std::endl << std::dec;
 			}
@@ -764,25 +828,25 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 				stringStream << "Currently supported virtual device types:" << std::endl;
 				stringStream << "  FFFFFFFD:\tCentral device" << std::endl;
 				stringStream << "  FFFFFFFE:\tSpy device" << std::endl;
-				stringStream << "  39:\t\tHM-CC-TC" << std::endl;
-				stringStream << "  3A:\t\tHM-CC-VD" << std::endl;
+				stringStream << "  FF000039:\t\tHM-CC-TC" << std::endl;
+				stringStream << "  FF00003A:\t\tHM-CC-VD" << std::endl;
 				return stringStream.str();
 			}
 
 			switch(deviceType)
 			{
-			case (uint32_t)HMDeviceTypes::HMCCTC:
+			case (uint32_t)DeviceTypes::HMCCTC:
 				add(new HM_CC_TC(0, serialNumber, address));
 				stringStream << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
-			case (uint32_t)HMDeviceTypes::HMCCVD:
+			case (uint32_t)DeviceTypes::HMCCVD:
 				add(new HM_CC_VD(0, serialNumber, address));
 				stringStream << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
-			case (uint32_t)HMDeviceTypes::HMCENTRAL:
-				if(getCentral())
+			case (uint32_t)DeviceTypes::HMCENTRAL:
+				if(getHomeMaticCentral())
 				{
-					stringStream << "Cannot create more than one central device." << std::endl;
+					stringStream << "Cannot create more than one HomeMatic BidCoS central device." << std::endl;
 				}
 				else
 				{
@@ -790,7 +854,7 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 					stringStream << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				}
 				break;
-			case (uint32_t)HMDeviceTypes::HMSD:
+			case (uint32_t)DeviceTypes::HMSD:
 				add(new HM_SD(0, serialNumber, address));
 				stringStream << "Created HM_SD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
@@ -833,7 +897,7 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 			if(_currentDevice && _currentDevice->getAddress() == address) _currentDevice.reset();
 			if(get(address))
 			{
-				if(_central && address == _central->getAddress()) _central.reset();
+				if(_homeMaticCentral && address == _homeMaticCentral->getAddress()) _homeMaticCentral.reset();
 				remove(address);
 				stringStream << "Removing device." << std::endl;
 			}
@@ -876,7 +940,7 @@ std::string HomeMaticDevices::handleCLICommand(std::string& command)
 				return stringStream.str();
 			}
 
-			_currentDevice = central ? getCentral() : get(address);
+			_currentDevice = central ? getHomeMaticCentral() : get(address);
 			if(!_currentDevice) stringStream << "Device not found." << std::endl;
 			else
 			{

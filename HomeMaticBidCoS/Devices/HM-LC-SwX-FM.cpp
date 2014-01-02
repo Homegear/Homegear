@@ -47,7 +47,7 @@ void HM_LC_SWX_FM::init()
 	{
 		HomeMaticDevice::init();
 
-		_deviceType = HMDeviceTypes::HMLCSW1FM;
+		_deviceType = DeviceTypes::HMLCSW1FM;
 		_firmwareVersion = 0x16;
 
 		setUpBidCoSMessages();
@@ -272,7 +272,7 @@ void HM_LC_SWX_FM::handleStateChangeRemote(int32_t messageCounter, std::shared_p
 		if(packet->payload()->empty()) return;
 		int32_t channel = packet->payload()->at(0) & 0x3F;
 		if(channel > _channelCount) return;
-		std::shared_ptr<HomeMaticCentral> central(GD::devices.getCentral());
+		std::shared_ptr<HomeMaticCentral> central(GD::devices.getHomeMaticCentral());
 		std::shared_ptr<Peer> peer(central->getPeer(packet->senderAddress()));
 		//Check if channel is paired to me
 		std::shared_ptr<BasicPeer> me(peer->getPeer(channel, _address, channel));
@@ -314,7 +314,7 @@ void HM_LC_SWX_FM::handleStateChangeMotionDetector(int32_t messageCounter, std::
 		if(packet->payload()->empty()) return;
 		int32_t channel = packet->payload()->at(0) & 0x3F;
 		if(channel > _channelCount) return;
-		std::shared_ptr<HomeMaticCentral> central(GD::devices.getCentral());
+		std::shared_ptr<HomeMaticCentral> central(GD::devices.getHomeMaticCentral());
 		std::shared_ptr<Peer> peer(central->getPeer(packet->senderAddress()));
 		//Check if channel is paired to me
 		std::shared_ptr<BasicPeer> me(peer->getPeer(channel, _address, channel));

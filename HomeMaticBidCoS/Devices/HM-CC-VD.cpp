@@ -35,7 +35,7 @@ HM_CC_VD::HM_CC_VD(uint32_t deviceID, std::string serialNumber, int32_t address)
 {
 	try
 	{
-		_deviceType = HMDeviceTypes::HMCCVD;
+		_deviceType = DeviceTypes::HMCCVD;
 		_firmwareVersion = 0x20;
 		_deviceClass = 0x58;
 		_channelMin = 0x01;
@@ -205,7 +205,7 @@ void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<Bid
 	{
 		HomeMaticDevice::handleDutyCyclePacket(messageCounter, packet);
 		std::shared_ptr<Peer> peer = getPeer(packet->senderAddress());
-		if(!peer || peer->getDeviceType() != HMDeviceTypes::HMCCTC) return;
+		if(!peer || peer->getDeviceType() != DeviceTypes::HMCCTC) return;
 		int32_t oldValveState = _valveState;
 		_valveState = (packet->payload()->at(1) * 100) / 256;
 		HelperFunctions::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": New valve state " + std::to_string(_valveState));
@@ -329,7 +329,7 @@ void HM_CC_VD::sendConfigParamsType2(int32_t messageCounter, int32_t destination
     }
 }
 
-std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, HMDeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
+std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, DeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
 {
 	try
 	{
@@ -339,7 +339,7 @@ std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVers
 		peer->setDeviceType(deviceType);
 		peer->setMessageCounter(0);
 		peer->setRemoteChannel(remoteChannel);
-		if(deviceType == HMDeviceTypes::HMCCTC || deviceType == HMDeviceTypes::HMUNKNOWN) peer->setLocalChannel(1); else peer->setLocalChannel(0);
+		if(deviceType == DeviceTypes::HMCCTC || deviceType == DeviceTypes::UNKNOWN) peer->setLocalChannel(1); else peer->setLocalChannel(0);
 		peer->setSerialNumber(serialNumber);
 		if(save) peer->save(true, true, false);
 		return peer;
@@ -395,7 +395,7 @@ void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 			_peersMutex.unlock();
 			return;
 		}
-		_peers[address]->setDeviceType(HMDeviceTypes::HMCCTC);
+		_peers[address]->setDeviceType(DeviceTypes::HMCCTC);
 		_peersMutex.unlock();
 		getPeer(address)->save(true, true, false);
 	}

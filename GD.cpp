@@ -36,7 +36,7 @@ std::string GD::runDir = "/var/run/homegear/";
 std::string GD::socketPath = GD::runDir + "homegear.sock";
 std::string GD::workingDirectory = "";
 std::string GD::executablePath = "";
-HomeMaticDevices GD::devices;
+LogicalDevices GD::devices;
 std::map<int32_t, RPC::Server> GD::rpcServers;
 RPC::Client GD::rpcClient;
 CLI::Server GD::cliServer;

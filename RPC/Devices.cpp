@@ -94,7 +94,7 @@ void Devices::load()
     }
 }
 
-std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVersion, std::shared_ptr<BidCoSPacket> packet)
+std::shared_ptr<Device> Devices::find(DeviceTypes deviceType, uint32_t firmwareVersion, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -143,7 +143,7 @@ std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwar
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(HMDeviceTypes deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo)
+std::shared_ptr<Device> Devices::find(DeviceTypes deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo)
 {
 	try
 	{

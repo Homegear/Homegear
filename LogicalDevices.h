@@ -30,6 +30,7 @@
 #ifndef HOMEMATICDEVICES_H_
 #define HOMEMATICDEVICES_H_
 
+class LogicalDevice;
 class HomeMaticDevice;
 class HomeMaticCentral;
 
@@ -39,18 +40,21 @@ class HomeMaticCentral;
 #include <memory>
 #include <mutex>
 
-#include "Devices/HomeMaticCentral.h"
+#include "HomeMaticBidCoS/Devices/HomeMaticCentral.h"
 
-class HomeMaticDevices {
+class LogicalDevices
+{
 public:
-	HomeMaticDevices();
-	virtual ~HomeMaticDevices();
-	void add(HomeMaticDevice* device);
+	LogicalDevices();
+	virtual ~LogicalDevices();
+	void add(LogicalDevice* device);
 	void remove(int32_t address);
-	std::shared_ptr<HomeMaticDevice> get(int32_t address);
-	std::shared_ptr<HomeMaticDevice> get(std::string serialNumber);
-	std::shared_ptr<HomeMaticCentral> getCentral();
-	std::vector<std::shared_ptr<HomeMaticDevice>> getDevices();
+	std::shared_ptr<LogicalDevice> get(int32_t address);
+	std::shared_ptr<HomeMaticDevice> getHomeMatic(int32_t address);
+	std::shared_ptr<LogicalDevice> get(std::string serialNumber);
+	std::shared_ptr<HomeMaticDevice> getHomeMatic(std::string serialNumber);
+	std::shared_ptr<HomeMaticCentral> getHomeMaticCentral();
+	std::vector<std::shared_ptr<LogicalDevice>> getDevices();
 	void convertDatabase();
 	void load();
 	void save(bool full, bool crash = false);
@@ -59,10 +63,10 @@ public:
 	std::string handleCLICommand(std::string& command);
 
 private:
-	std::shared_ptr<HomeMaticDevice> _currentDevice;
+	std::shared_ptr<LogicalDevice> _currentDevice;
 	std::mutex _devicesMutex;
-	std::vector<std::shared_ptr<HomeMaticDevice>> _devices;
-	std::shared_ptr<HomeMaticCentral> _central;
+	std::vector<std::shared_ptr<LogicalDevice>> _devices;
+	std::shared_ptr<HomeMaticCentral> _homeMaticCentral;
 	std::thread _removeThread;
 
 	void initializeDatabase();

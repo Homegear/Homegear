@@ -213,12 +213,12 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 {
 	try
 	{
-		std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 		if(!central) HelperFunctions::printError("Error: Could not execute RPC method sendUnknownDevices. Please add a central device.");
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("newDevices") == server->knownMethods.end()) return;
-		std::shared_ptr<RPCVariable> devices = GD::devices.getCentral()->listDevices(server->knownDevices);
+		std::shared_ptr<RPCVariable> devices = GD::devices.getHomeMaticCentral()->listDevices(server->knownDevices);
 		if(devices->arrayValue->empty()) return;
 		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>{ std::shared_ptr<RPCVariable>(new RPCVariable(server->id)), devices });
 		std::shared_ptr<RPCVariable> result = _client.invoke(server, "newDevices", parameters);

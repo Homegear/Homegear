@@ -136,7 +136,7 @@ void PhysicalDevice::callCallback(std::shared_ptr<Packet> packet)
 		//We need to copy all elements. In packetReceived so much can happen, that _homeMaticDevicesMutex might deadlock
 		for(std::list<LogicalDevice*>::const_iterator i = _logicalDevices.begin(); i != _logicalDevices.end(); ++i)
 		{
-			devices.push_back(*i);
+			if((*i)->physicalDeviceType() == _supportedDeviceType) devices.push_back(*i);
 		}
 		_logicalDevicesMutex.unlock();
 		for(std::vector<LogicalDevice*>::iterator i = devices.begin(); i != devices.end(); ++i)

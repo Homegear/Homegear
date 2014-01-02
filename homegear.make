@@ -172,6 +172,7 @@ OBJECTS := \
 	$(OBJDIR)/FileDescriptorManager.o \
 	$(OBJDIR)/BinaryDecoder.o \
 	$(OBJDIR)/EventHandler.o \
+	$(OBJDIR)/LogicalDevices.o \
 	$(OBJDIR)/HelperFunctions.o \
 	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/Database.o \
@@ -182,7 +183,6 @@ OBJECTS := \
 	$(OBJDIR)/BidCoSMessage.o \
 	$(OBJDIR)/Peer.o \
 	$(OBJDIR)/BidCoSQueueManager.o \
-	$(OBJDIR)/HomeMaticDevices.o \
 	$(OBJDIR)/BidCoSQueue.o \
 	$(OBJDIR)/BidCoSPacketManager.o \
 	$(OBJDIR)/BidCoSMessages.o \
@@ -305,6 +305,9 @@ $(OBJDIR)/BinaryDecoder.o: BinaryDecoder.cpp
 $(OBJDIR)/EventHandler.o: EventHandler.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/LogicalDevices.o: LogicalDevices.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HelperFunctions.o: HelperFunctions.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -333,9 +336,6 @@ $(OBJDIR)/Peer.o: HomeMaticBidCoS/Peer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BidCoSQueueManager.o: HomeMaticBidCoS/BidCoSQueueManager.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HomeMaticDevices.o: HomeMaticBidCoS/HomeMaticDevices.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BidCoSQueue.o: HomeMaticBidCoS/BidCoSQueue.cpp

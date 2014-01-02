@@ -518,7 +518,7 @@ void ServiceMessages::setUnreach(bool value)
 		{
 			if(value == true && _unreachResendCounter < 3 && _peer->rpcDevice && ((_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && !_peer->pendingBidCoSQueues->empty())
 			{
-				std::shared_ptr<HomeMaticCentral> central = GD::devices.getCentral();
+				std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
 				if(central)
 				{
 					HelperFunctions::printInfo("Info: Queue is not finished (device: 0x" + HelperFunctions::getHexString(_peer->getAddress()) + "). Retrying (" + std::to_string(_unreachResendCounter) + ")...");

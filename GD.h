@@ -38,7 +38,7 @@ class HomeMaticDevices;
 
 #include "Database.h"
 #include "PhysicalDevices/PhysicalDevice.h"
-#include "HomeMaticBidCoS/HomeMaticDevices.h"
+#include "LogicalDevices.h"
 #include "RPC/Server.h"
 #include "RPC/Client.h"
 #include "CLI/CLIServer.h"
@@ -58,7 +58,7 @@ public:
 	static std::string socketPath;
 	static std::string workingDirectory;
 	static std::string executablePath;
-	static HomeMaticDevices devices;
+	static LogicalDevices devices;
 	static std::map<int32_t, RPC::Server> rpcServers;
 	static RPC::Client rpcClient;
 	static CLI::Server cliServer;

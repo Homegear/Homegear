@@ -38,7 +38,7 @@ class BidCoSPacket;
 #include <memory>
 
 #include "Device.h"
-#include "../HomeMaticBidCoS/HMDeviceTypes.h"
+#include "../DeviceTypes.h"
 
 namespace RPC {
 
@@ -49,8 +49,8 @@ public:
 	void load();
 	std::shared_ptr<Device> find(std::shared_ptr<BidCoSPacket> packet);
 	std::shared_ptr<Device> find(std::string typeID, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>());
-	std::shared_ptr<Device> find(HMDeviceTypes deviceType, uint32_t firmwareVersion, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>());
-	std::shared_ptr<Device> find(HMDeviceTypes deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo);
+	std::shared_ptr<Device> find(DeviceTypes deviceType, uint32_t firmwareVersion, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>());
+	std::shared_ptr<Device> find(DeviceTypes deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo);
 protected:
 	std::vector<std::shared_ptr<Device>> _devices;
 };

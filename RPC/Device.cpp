@@ -896,7 +896,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
     }
 }
 
-bool DeviceType::matches(HMDeviceTypes deviceType, uint32_t firmwareVersion)
+bool DeviceType::matches(DeviceTypes deviceType, uint32_t firmwareVersion)
 {
 	try
 	{
@@ -1760,7 +1760,7 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
     }
 }
 
-std::shared_ptr<DeviceType> Device::getType(HMDeviceTypes deviceType, int32_t firmwareVersion)
+std::shared_ptr<DeviceType> Device::getType(DeviceTypes deviceType, int32_t firmwareVersion)
 {
 	try
 	{
