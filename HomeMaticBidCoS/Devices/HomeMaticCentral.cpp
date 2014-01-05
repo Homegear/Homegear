@@ -89,11 +89,6 @@ void HomeMaticCentral::init()
     }
 }
 
-void HomeMaticCentral::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
-{
-	HomeMaticDevice::unserialize_0_0_6(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
-}
-
 void HomeMaticCentral::setUpBidCoSMessages()
 {
 	try
@@ -1411,7 +1406,9 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 		std::string serialNumber;
 		for(uint32_t i = 3; i < 13; i++)
 			serialNumber.push_back((char)packet->payload()->at(i));
-		LogicalDeviceType deviceType = GD::deviceTypes.get(DeviceFamily::HomeMaticBidCoS, (packet->payload()->at(1) << 8) + packet->payload()->at(2));
+		uint32_t rawType = (packet->payload()->at(1) << 8) + packet->payload()->at(2);
+		LogicalDeviceType deviceType = GD::deviceTypes.get(DeviceFamily::HomeMaticBidCoS, rawType);
+		if(deviceType.id() == DeviceID::UNKNOWN) deviceType = LogicalDeviceType(DeviceID::UNKNOWN, DeviceFamily::HomeMaticBidCoS, rawType, "");
 
 		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
 		if(peer && (peer->getSerialNumber() != serialNumber || peer->getDeviceType() != deviceType))

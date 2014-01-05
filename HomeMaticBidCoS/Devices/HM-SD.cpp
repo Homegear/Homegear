@@ -287,48 +287,6 @@ void HM_SD::unserializeResponsesToOverwrite(std::shared_ptr<std::vector<char>> s
     }
 }
 
-void HM_SD::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
-{
-	try
-	{
-		HomeMaticDevice::unserialize_0_0_6(serializedObject.substr(8, std::stoll(serializedObject.substr(0, 8), 0, 16)), dutyCycleMessageCounter, lastDutyCycleEvent);
-
-		uint32_t pos = 8 + std::stoll(serializedObject.substr(0, 8), 0, 16);
-		uint32_t filtersSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < filtersSize; i++)
-		{
-			HM_SD_Filter filter;
-			filter.filterType = (FilterType)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			filter.filterValue = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			_filters.push_back(filter);
-		}
-		uint32_t responsesToOverwriteSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < responsesToOverwriteSize; i++)
-		{
-			HM_SD_OverwriteResponse responseToOverwrite;
-			uint32_t size = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			responseToOverwrite.packetPartToCapture = serializedObject.substr(pos, size); pos += size;
-			size = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			responseToOverwrite.response = serializedObject.substr(pos, size); pos += size;
-			responseToOverwrite.sendAfter = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			_responsesToOverwrite.push_back(responseToOverwrite);
-		}
-		_enabled = std::stol(serializedObject.substr(pos, 1)); pos += 1;
-	}
-	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 bool HM_SD::packetReceived(std::shared_ptr<Packet> packet)
 {
 	try

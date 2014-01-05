@@ -87,7 +87,6 @@ class HomeMaticDevice : public LogicalDevice
         std::shared_ptr<Peer> getPeer(std::string serialNumber);
         virtual void deletePeersFromDatabase();
         virtual void loadPeers();
-        virtual void loadPeers_0_0_6();
         virtual void savePeers(bool full);
         virtual void loadVariables();
         virtual void saveVariables();
@@ -107,7 +106,6 @@ class HomeMaticDevice : public LogicalDevice
         virtual bool pairDevice(int32_t timeout);
         virtual bool isInPairingMode() { return _pairing; }
         virtual int32_t calculateCycleLength(uint8_t messageCounter);
-        virtual void unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
         virtual int32_t getHexInput();
         virtual std::shared_ptr<BidCoSMessages> getMessages() { return _messages; }
         virtual std::string handleCLICommand(std::string command);

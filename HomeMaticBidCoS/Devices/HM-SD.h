@@ -70,7 +70,6 @@ class HM_SD : public HomeMaticDevice
         void unserializeFilters(std::shared_ptr<std::vector<char>> serializedData);
         void serializeResponsesToOverwrite(std::vector<uint8_t>& encodedData);
         void unserializeResponsesToOverwrite(std::shared_ptr<std::vector<char>> serializedData);
-        void unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
     protected:
     private:
         //In table variables

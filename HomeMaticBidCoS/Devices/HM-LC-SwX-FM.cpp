@@ -229,37 +229,6 @@ void HM_LC_SWX_FM::unserializeStates(std::shared_ptr<std::vector<char>> serializ
     }
 }
 
-void HM_LC_SWX_FM::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
-{
-	try
-	{
-		int32_t baseLength = std::stoll(serializedObject.substr(0, 8), 0, 16);
-		HomeMaticDevice::unserialize_0_0_6(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
-
-		uint32_t pos = 8 + baseLength;
-		uint32_t stateSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < stateSize; i++)
-		{
-			uint32_t channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-			bool state = std::stol(serializedObject.substr(pos, 1)); pos += 1;
-			_states[channel] = state;
-		}
-		_channelCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-	}
-	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 std::string HM_LC_SWX_FM::handleCLICommand(std::string command)
 {
 	return HomeMaticDevice::handleCLICommand(command);

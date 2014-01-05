@@ -58,7 +58,6 @@ class HM_CC_TC : public HomeMaticDevice
         void handleSetPoint(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
         void handleSetValveState(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
         void handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
-        void unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
     protected:
         virtual void setUpBidCoSMessages();
         virtual void init();

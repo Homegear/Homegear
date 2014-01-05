@@ -517,59 +517,6 @@ void HomeMaticDevice::loadPeers()
     _peersMutex.unlock();
 }
 
-void HomeMaticDevice::loadPeers_0_0_6()
-{
-	try
-	{
-		_peersMutex.lock();
-		_databaseMutex.lock();
-		std::ostringstream command;
-		command << "SELECT * FROM peers WHERE parent=" << std::dec << std::to_string(_address);
-		DataTable rows = GD::db.executeCommand(command.str());
-		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
-		{
-			if(row->second.at(2)->textValue.empty()) continue;
-			std::shared_ptr<Peer> peer(new Peer(_address, isCentral()));
-			peer->unserialize_0_0_6(row->second.at(2)->textValue, this);
-			if(!peer->rpcDevice) continue;
-			_peers[peer->getAddress()] = peer;
-			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-			if(!peer->getTeamRemoteSerialNumber().empty())
-			{
-				if(_peersBySerial.find(peer->getTeamRemoteSerialNumber()) == _peersBySerial.end())
-				{
-					std::shared_ptr<Peer> team = createTeam(peer->getTeamRemoteAddress(), peer->getDeviceType(), peer->getTeamRemoteSerialNumber());
-					team->rpcDevice = peer->rpcDevice->team;
-					team->initializeCentralConfig();
-					_peersBySerial[team->getSerialNumber()] = team;
-				}
-				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
-				{
-					if(i->second->hasTeam)
-					{
-						_peersBySerial[peer->getTeamRemoteSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), peer->getTeamRemoteChannel()));
-						break;
-					}
-				}
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
-    _peersMutex.unlock();
-}
-
 void HomeMaticDevice::saveVariable(uint32_t index, int64_t intValue)
 {
 	try
@@ -937,51 +884,6 @@ void HomeMaticDevice::unserializeConfig(std::shared_ptr<std::vector<char>> seria
     catch(...)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void HomeMaticDevice::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
-{
-	try
-	{
-		HelperFunctions::printDebug("Debug: Unserializing: " + serializedObject);
-		uint32_t pos = 0;
-		_deviceType = GD::deviceTypes.get((DeviceID)std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-		_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_serialNumber = serializedObject.substr(pos, 10); pos += 10;
-		_firmwareVersion = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		_centralAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		uint32_t messageCounterSize = std::stoll(serializedObject.substr(pos, 8), 0, 16) * 10; pos += 8;
-		for(uint32_t i = pos; i < (pos + messageCounterSize); i += 10)
-			_messageCounter[std::stoll(serializedObject.substr(i, 8), 0, 16)] = (uint8_t)std::stoll(serializedObject.substr(i + 8, 2), 0, 16);
-		pos += messageCounterSize;
-		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < configSize; i++)
-		{
-			int32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			uint32_t listCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			for(uint32_t j = 0; j < listCount; j++)
-			{
-				int32_t listIndex = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				uint32_t listSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				for(uint32_t k = 0; k < listSize; k++)
-				{
-					_config[channel][listIndex][std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
-				}
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

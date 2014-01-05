@@ -1111,146 +1111,6 @@ void Peer::unserializeVariablesToReset(std::shared_ptr<std::vector<char>> serial
     }
 }
 
-void Peer::unserialize_0_0_6(std::string& serializedObject, HomeMaticDevice* device)
-{
-	try
-	{
-		if(serializedObject.empty()) return;
-		HelperFunctions::printDebug("Unserializing peer: " + serializedObject, 5);
-
-		std::string entry;
-		uint32_t pos = 0;
-		_address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		int32_t stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		_serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize;
-		_firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		_localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		_deviceType = GD::deviceTypes.get((DeviceID)std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-		_countFromSysinfo = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
-		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
-		if(!rpcDevice)
-		{
-			HelperFunctions::printError("Error: Device id not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.id()) + " Firmware version: " + std::to_string(_firmwareVersion));
-			return;
-		}
-		_messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		_pairingComplete = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
-		_teamChannel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_team.address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_team.channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		if(stringSize > 0) { _team.serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize; }
-		uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < dataSize; i++)
-		{
-			_team.data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
-		}
-		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
-		for(uint32_t i = 0; i < configSize; i++)
-		{
-			config[std::stoll(serializedObject.substr(pos, 8), 0, 16)] = std::stoll(serializedObject.substr(pos + 8, 8), 0, 16); pos += 16;
-		}
-		uint32_t peersSize = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-		for(uint32_t i = 0; i < peersSize; i++)
-		{
-			uint32_t channel = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-			uint32_t peerCount = (std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-			for(uint32_t j = 0; j < peerCount; j++)
-			{
-				std::shared_ptr<BasicPeer> basicPeer(new BasicPeer());
-				basicPeer->address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				basicPeer->channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-				stringSize = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-				basicPeer->serialNumber = serializedObject.substr(pos, stringSize); pos += stringSize;
-				basicPeer->hidden = std::stoll(serializedObject.substr(pos, 1)); pos += 1;
-				_peers[channel].push_back(basicPeer);
-				stringSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				basicPeer->linkName = serializedObject.substr(pos, stringSize); pos += stringSize;
-				stringSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				basicPeer->linkDescription = serializedObject.substr(pos, stringSize); pos += stringSize;
-				dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				for(uint32_t k = 0; k < dataSize; k++)
-				{
-					basicPeer->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
-				}
-			}
-		}
-		unserializeConfig_0_0_6(serializedObject, configCentral, RPC::ParameterSet::Type::master, pos);
-		unserializeConfig_0_0_6(serializedObject, valuesCentral, RPC::ParameterSet::Type::values, pos);
-		unserializeConfig_0_0_6(serializedObject, linksCentral, RPC::ParameterSet::Type::link, pos);
-		uint32_t serializedServiceMessagesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		if(_centralFeatures)
-		{
-			serviceMessages.reset(new ServiceMessages(this));
-			serviceMessages->unserialize_0_0_6(serializedObject.substr(pos, serializedServiceMessagesSize));
-		}
-		pos += serializedServiceMessagesSize;
-		uint32_t pendingQueuesSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		if(_centralFeatures)
-		{
-			pendingBidCoSQueues.reset(new PendingBidCoSQueues());
-			pendingBidCoSQueues->unserialize_0_0_6(serializedObject.substr(pos, pendingQueuesSize), this, device);
-		}
-		pos += pendingQueuesSize;
-		uint32_t variablesToResetSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < variablesToResetSize; i++)
-		{
-			std::shared_ptr<VariableToReset> variable(new VariableToReset());
-			variable->channel = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-			uint32_t keyLength = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-			variable->key = serializedObject.substr(pos, keyLength); pos += keyLength;
-			dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			for(uint32_t j = 0; j < dataSize; j++)
-			{
-				variable->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
-			}
-			variable->resetTime = std::stoll(serializedObject.substr(pos, 8), 0, 16) * 1000; pos += 8;
-			variable->isDominoEvent = std::stol(serializedObject.substr(pos, 1)); pos += 1;
-			try
-			{
-				_variablesToResetMutex.lock();
-				_variablesToReset.push_back(variable);
-			}
-			catch(const std::exception& ex)
-			{
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(Exception& ex)
-			{
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			_variablesToResetMutex.unlock();
-		}
-		initializeCentralConfig();
-
-		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
-		{
-			for(std::vector<std::shared_ptr<BasicPeer>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
-			{
-				initializeLinkConfig(i->first, (*j)->address, (*j)->channel, false);
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
 {
 	try
@@ -1539,6 +1399,55 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
     _databaseMutex.unlock();
 }
 
+void Peer::saveVariable(uint32_t index, int64_t intValue)
+{
+	try
+	{
+		if(isTeam()) return;
+		_databaseMutex.lock();
+		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
+		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
+		DataColumnVector data;
+		if(idIsKnown)
+		{
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
+			GD::db.executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
+		}
+		else
+		{
+			if(_peerID == 0)
+			{
+				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+				_databaseMutex.unlock();
+				return;
+			}
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			int32_t result = GD::db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			_variableDatabaseIDs[index] = result;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+    _databaseMutex.unlock();
+}
+
 void Peer::saveVariable(uint32_t index, std::string& stringValue)
 {
 	try
@@ -1645,7 +1554,12 @@ void Peer::saveVariables()
 		saveVariable(0, _firmwareVersion);
 		saveVariable(1, _remoteChannel);
 		saveVariable(2, _localChannel);
-		saveVariable(3, (int32_t)_deviceType.id());
+		if(_deviceType.id() == DeviceID::UNKNOWN)
+		{
+			int64_t deviceID = (((int64_t)_deviceType.type()) << 32) + (int64_t)DeviceID::UNKNOWN;
+			saveVariable(3, deviceID);
+		}
+		else saveVariable(3, (int32_t)_deviceType.id());
 		saveVariable(4, _countFromSysinfo);
 		saveVariable(5, _messageCounter);
 		saveVariable(6, _pairingComplete);
@@ -1809,10 +1723,14 @@ void Peer::loadVariables(HomeMaticDevice* device)
 				_localChannel = row->second.at(3)->intValue;
 				break;
 			case 3:
-				_deviceType = GD::deviceTypes.get((DeviceID)row->second.at(3)->intValue);
-				if(_deviceType.id() == DeviceID::UNKNOWN)
+				if(((uint64_t)row->second.at(3)->intValue) > 0xFFFFFFFF) _deviceType = LogicalDeviceType(DeviceID::UNKNOWN, DeviceFamily::HomeMaticBidCoS, (row->second.at(3)->intValue >> 32), "");
+				else
 				{
-					HelperFunctions::printError("Error loading peer 0x" + HelperFunctions::getHexString(_address) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+					_deviceType = GD::deviceTypes.get((DeviceID)row->second.at(3)->intValue);
+					if(_deviceType.id() == DeviceID::UNKNOWN)
+					{
+						HelperFunctions::printError("Error loading peer 0x" + HelperFunctions::getHexString(_address) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+					}
 				}
 				break;
 			case 4:
@@ -1922,123 +1840,6 @@ bool Peer::load(HomeMaticDevice* device)
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
-}
-
-void Peer::unserializeConfig_0_0_6(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos)
-{
-	try
-	{
-		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < configSize; i++)
-		{
-			uint32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			uint32_t parameterCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) continue;
-			if(rpcDevice->channels[channel]->parameterSets.find(parameterSetType) == rpcDevice->channels[channel]->parameterSets.end()) continue;
-			for(uint32_t k = 0; k < parameterCount; k++)
-			{
-				uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				std::string id;
-				if(idLength == 0) HelperFunctions::printCritical("Critical: Added central config parameter without id. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(channel));
-				if(idLength > 0) { id = serializedObject.substr(pos, idLength); pos += idLength; }
-				else id = "Parameter" + std::to_string(k);
-				RPCConfigurationParameter* parameter = &config[channel][id];
-				uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				for(uint32_t l = 0; l < dataSize; l++)
-				{
-					parameter->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
-				}
-				if(!rpcDevice)
-				{
-					HelperFunctions::printError("Critical: No xml rpc device found for peer 0x" + HelperFunctions::getHexString(_address) + ".");
-					continue;
-				}
-				parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
-				if(!parameter->rpcParameter)
-				{
-					HelperFunctions::printError("Error: Deleting parameter " + id + ", because no corresponding RPC parameter was found. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(channel));
-					config[channel].erase(id);
-				}
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void Peer::unserializeConfig_0_0_6(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos)
-{
-	try
-	{
-		uint32_t configSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		for(uint32_t i = 0; i < configSize; i++)
-		{
-			uint32_t channel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) continue;
-			if(rpcDevice->channels[channel]->parameterSets.find(parameterSetType) == rpcDevice->channels[channel]->parameterSets.end()) continue;
-			uint32_t peerCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			for(uint32_t j = 0; j < peerCount; j++)
-			{
-				int32_t address = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				uint32_t channelCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-				for(uint32_t k = 0; k < channelCount; k++)
-				{
-					int32_t remoteChannel = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-					uint32_t parameterCount = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-					for(uint32_t l = 0; l < parameterCount; l++)
-					{
-						uint32_t idLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-						std::string id;
-						if(idLength == 0) HelperFunctions::printError("Critical: Added central config parameter without id. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(channel));
-						if(idLength > 0) { id = serializedObject.substr(pos, idLength); pos += idLength; }
-						else id = "Parameter" + std::to_string(l);
-						RPCConfigurationParameter* parameter = &config[channel][address][remoteChannel][id];
-						uint32_t dataSize = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-						for(uint32_t m = 0; m < dataSize; m++)
-						{
-							parameter->data.push_back(std::stol(serializedObject.substr(pos, 2), 0, 16)); pos += 2;
-						}
-						if(!rpcDevice)
-						{
-							HelperFunctions::printError("Critical: No xml rpc device found for peer 0x" + HelperFunctions::getHexString(address) + ".");
-							continue;
-						}
-						parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(id);
-						if(!parameter->rpcParameter)
-						{
-							HelperFunctions::printError("Error: Deleting parameter " + id + ", because no corresponding RPC parameter was found. Device: 0x" + HelperFunctions::getHexString(address) + " Channel: " + std::to_string(channel));
-							config[channel][address][remoteChannel].erase(id);
-						}
-						//Clean up - delete if the peer doesn't exist anymore
-						if(!getPeer(channel, address, remoteChannel)) config[channel][address].erase(remoteChannel);
-						if(config[channel][address].empty()) config[channel].erase(address);
-					}
-				}
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 std::string Peer::printConfig()

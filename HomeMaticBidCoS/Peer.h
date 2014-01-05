@@ -133,7 +133,7 @@ class Peer
 		int32_t getLocalChannel() { return _localChannel; }
 		void setLocalChannel(int32_t value) { _localChannel = value; saveVariable(2, value); }
 		LogicalDeviceType getDeviceType() { return _deviceType; }
-		void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(3, (uint32_t)value.id()); }
+		void setDeviceType(LogicalDeviceType value) { _deviceType = value; if(_deviceType.id() == DeviceID::UNKNOWN) { int64_t deviceID = (((int64_t)_deviceType.type()) << 32) + (int64_t)DeviceID::UNKNOWN; saveVariable(3, deviceID); } else saveVariable(3, (int32_t)value.id()); }
 		int32_t getCountFromSysinfo() { return _countFromSysinfo; }
 		void setCountFromSysinfo(int32_t value) { _countFromSysinfo = value; saveVariable(4, value); }
 		int32_t getMessageCounter() { return _messageCounter; }
@@ -174,7 +174,6 @@ class Peer
         void applyConfigFunction(int32_t channel, int32_t address, int32_t remoteChannel);
         bool load(HomeMaticDevice* device);
         void save(bool savePeer, bool saveVariables, bool saveCentralConfig);
-        void unserialize_0_0_6(std::string& serializedObject, HomeMaticDevice* device);
         void serializePeers(std::vector<uint8_t>& encodedData);
         void unserializePeers(std::shared_ptr<std::vector<char>> serializedData);
         void serializeNonCentralConfig(std::vector<uint8_t>& encodedData);
@@ -186,6 +185,7 @@ class Peer
         void loadVariables(HomeMaticDevice* device = nullptr);
         void saveVariables();
         void saveVariable(uint32_t index, int32_t intValue);
+        void saveVariable(uint32_t index, int64_t intValue);
         void saveVariable(uint32_t index, std::string& stringValue);
         void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
         void savePeers();
@@ -195,8 +195,6 @@ class Peer
         void savePendingQueues();
         void saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress = 0, uint32_t remoteChannel = 0);
         void saveParameter(uint32_t parameterID, std::vector<uint8_t>& value);
-        void unserializeConfig_0_0_6(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
-        void unserializeConfig_0_0_6(std::string& serializedObject, std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>& config, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t& pos);
         void deleteFromDatabase();
         void deletePairedVirtualDevice(int32_t address);
         void deletePairedVirtualDevices();

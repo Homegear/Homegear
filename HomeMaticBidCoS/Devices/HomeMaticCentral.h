@@ -61,7 +61,6 @@ public:
 	void addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel, int32_t address, uint32_t teamChannel);
 	void removePeerFromTeam(std::shared_ptr<Peer> peer);
 	void resetTeam(std::shared_ptr<Peer> peer, uint32_t channel);
-	void unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
 	std::string handleCLICommand(std::string command);
 	virtual void enqueuePackets(int32_t deviceAddress, std::shared_ptr<BidCoSQueue> packets, bool pushPendingBidCoSQueues = false);
 	virtual void enqueuePendingQueues(int32_t deviceAddress);

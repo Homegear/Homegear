@@ -366,40 +366,6 @@ void HM_CC_TC::loadVariables()
 	_databaseMutex.unlock();
 }
 
-
-void HM_CC_TC::unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent)
-{
-	try
-	{
-		int32_t baseLength = std::stoll(serializedObject.substr(0, 8), 0, 16);
-		HomeMaticDevice::unserialize_0_0_6(serializedObject.substr(8, baseLength), dutyCycleMessageCounter, lastDutyCycleEvent);
-
-		uint32_t pos = 8 + baseLength;
-		_currentDutyCycleDeviceAddress = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-		_temperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		_setPointTemperature = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		_humidity = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		_valveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		_newValveState = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-
-		_messageCounter[1] = dutyCycleMessageCounter;
-		_lastDutyCycleEvent = lastDutyCycleEvent;
-		startDutyCycle(calculateLastDutyCycleEvent());
-	}
-	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 std::string HM_CC_TC::handleCLICommand(std::string command)
 {
 	try

@@ -45,7 +45,6 @@ class HM_CC_VD : public HomeMaticDevice
         std::string handleCLICommand(std::string command);
 
         void handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
-        void unserialize_0_0_6(std::string serializedObject, uint8_t dutyCycleMessageCounter, int64_t lastDutyCycleEvent);
     protected:
         virtual void setUpBidCoSMessages();
         virtual void init();
