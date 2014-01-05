@@ -32,32 +32,30 @@
 
 #include "Packet.h"
 #include "DeviceTypes.h"
+#include "DeviceFamily.h"
 
 #include <memory>
 
 class LogicalDevice
 {
 public:
-	struct Type
-	{
-		enum Enum { none, HomeMaticBidCoS, HomeMaticWired };
-	};
-
 	LogicalDevice();
 	virtual ~LogicalDevice();
 
 	virtual bool packetReceived(std::shared_ptr<Packet> packet) { return false; }
-	virtual Type::Enum physicalDeviceType() { return Type::Enum::none; }
+	virtual DeviceFamily deviceFamily() { return DeviceFamily::none; }
 
 	virtual int32_t getAddress() { return 0; }
 	virtual std::string getSerialNumber() { return ""; }
-	DeviceTypes getDeviceType() { return DeviceTypes::UNKNOWN; }
+	LogicalDeviceType getDeviceType() { return _deviceType; }
 	virtual std::string handleCLICommand(std::string command) { return ""; }
 	virtual bool peerSelected() { return false; }
 	virtual void dispose(bool wait = true) {}
 	virtual void deletePeersFromDatabase() {}
 	virtual void save(bool saveDevice) {}
 	virtual void savePeers(bool full) {}
+protected:
+	LogicalDeviceType _deviceType;
 };
 
 #endif /* LOGICALDEVICE_H_ */

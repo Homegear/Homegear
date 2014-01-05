@@ -47,7 +47,7 @@ void HM_LC_SWX_FM::init()
 	{
 		HomeMaticDevice::init();
 
-		_deviceType = DeviceTypes::HMLCSW1FM;
+		_deviceType = GD::deviceTypes.get(DeviceID::HMLCSW1FM);
 		_firmwareVersion = 0x16;
 
 		setUpBidCoSMessages();

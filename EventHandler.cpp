@@ -60,17 +60,15 @@ void EventHandler::mainThread()
 			{
 				std::shared_ptr<Event> event = _timedEvents.begin()->second;
 				_eventsMutex.unlock();
-				std::shared_ptr<RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod(event->eventMethod, event->eventMethodParameters);
-				if(result)
+				std::shared_ptr<RPC::RPCVariable> result;
+				if(event->enabled) result = GD::rpcServers.begin()->second.callMethod(event->eventMethod, event->eventMethodParameters);
+				event->lastRaised = currentTime;
+				if(result && result->errorStruct)
 				{
-					event->lastRaised = currentTime;
-					if(result->errorStruct)
-					{
-						HelperFunctions::printError("Could not execute RPC method \"" + event->eventMethod + "\" for timed event \"" + event->name + "\". Error struct:");
-						result->print();
-					}
-					save(event);
+					HelperFunctions::printError("Could not execute RPC method \"" + event->eventMethod + "\" for timed event \"" + event->name + "\". Error struct:");
+					result->print();
 				}
+				save(event);
 				if(event->recurEvery == 0 || (event->endTime > 0 && currentTime >= event->endTime))
 				{
 					HelperFunctions::printInfo("Info: Removing event " + event->name + ", because the end time is reached.");
@@ -101,7 +99,8 @@ void EventHandler::mainThread()
 				std::shared_ptr<Event> event = _eventsToReset.begin()->second;
 				HelperFunctions::printInfo("Info: Resetting event " + event->name + ".");
 				_eventsMutex.unlock();
-				std::shared_ptr<RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod(event->resetMethod, event->resetMethodParameters);
+				std::shared_ptr<RPC::RPCVariable> result;
+				if(event->enabled) result = GD::rpcServers.begin()->second.callMethod(event->resetMethod, event->resetMethodParameters);
 				if(result && result->errorStruct)
 				{
 					HelperFunctions::printError("Could not execute RPC method \"" + event->eventMethod + "\" for timed event \"" + event->name + "\". Error struct:");
@@ -187,6 +186,11 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 			if(eventDescription->structValue->find("TRIGGERVALUE") != eventDescription->structValue->end())
 				event->triggerValue = eventDescription->structValue->at("TRIGGERVALUE");
 			if((int32_t)event->trigger >= (int32_t)Event::Trigger::value && (!event->triggerValue || event->triggerValue->type == RPC::RPCVariableType::rpcVoid)) return RPC::RPCVariable::createError(-5, "No trigger value specified.");
+
+			if(eventDescription->structValue->find("ENABLED") != eventDescription->structValue->end())
+			{
+				event->enabled = eventDescription->structValue->at("ENABLED")->booleanValue;
+			}
 
 			if(eventDescription->structValue->find("RESETAFTER") != eventDescription->structValue->end())
 			{
@@ -323,6 +327,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string a
 			{
 				event->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->type))));
 				event->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->name))));
+				event->structValue->insert(RPC::RPCStructElement("ENABLED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->enabled))));
 				event->structValue->insert(RPC::RPCStructElement("EVENTTIME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)((*i)->eventTime / 1000)))));
 				if((*i)->recurEvery > 0)
 				{
@@ -337,6 +342,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string a
 			{
 				event->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->type))));
 				event->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->name))));
+				event->structValue->insert(RPC::RPCStructElement("ENABLED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->enabled))));
 				event->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->address))));
 				event->structValue->insert(RPC::RPCStructElement("VARIABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->variable))));
 				event->structValue->insert(RPC::RPCStructElement("TRIGGER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->trigger))));
@@ -438,6 +444,116 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::remove(std::string name)
 		GD::db.executeCommand("DELETE FROM events WHERE name=?", data);
 		GD::db.executeCommand("RELEASE eventREMOVE");
 		_databaseMutex.unlock();
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventsMutex.unlock();
+    _databaseMutex.unlock();
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> EventHandler::disable(std::string name)
+{
+	try
+	{
+		_eventsMutex.lock();
+		std::shared_ptr<Event> event;
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+		{
+			if(i->second->name == name)
+			{
+				event = i->second;
+				break;
+			}
+		}
+		if(!event)
+		{
+			for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+			{
+				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					{
+						if((*k)->name == name)
+						{
+							event = *k;
+							break;
+						}
+					}
+				}
+			}
+		}
+		_eventsMutex.unlock();
+
+		event->enabled = false;
+		removeEventToReset(event->id);
+		removeTimeToReset(event->id);
+		save(event);
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventsMutex.unlock();
+    _databaseMutex.unlock();
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> EventHandler::enable(std::string name)
+{
+	try
+	{
+		_eventsMutex.lock();
+		std::shared_ptr<Event> event;
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+		{
+			if(i->second->name == name)
+			{
+				event = i->second;
+				break;
+			}
+		}
+		if(!event)
+		{
+			for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+			{
+				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					{
+						if((*k)->name == name)
+						{
+							event = *k;
+							break;
+						}
+					}
+				}
+			}
+		}
+		_eventsMutex.unlock();
+
+		event->enabled = true;
+		save(event);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -747,7 +863,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 		for(std::vector<std::shared_ptr<Event>>::iterator i = _triggeredEvents.at(address).at(variable).begin(); i !=  _triggeredEvents.at(address).at(variable).end(); ++i)
 		{
 			//Don't raise the same event multiple times
-			if((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 5000) continue;
+			if(!(*i)->enabled || ((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 5000)) continue;
 			triggeredEvents.push_back(*i);
 		}
 		_eventsMutex.unlock();
@@ -1006,6 +1122,7 @@ void EventHandler::load()
 			event->lastRaised = row->second.at(20)->intValue;
 			event->lastReset = row->second.at(21)->intValue;
 			event->currentTime = row->second.at(22)->intValue;
+			event->enabled = row->second.at(23)->intValue;
 			_eventsMutex.lock();
 			if(event->eventTime > 0)
 			{
@@ -1098,7 +1215,8 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->lastRaised)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->lastReset)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->currentTime)));
-		uint32_t result = GD::db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->enabled)));
+		uint32_t result = GD::db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
 		if(event->id == 0) event->id = result;
 	}
 	catch(const std::exception& ex)

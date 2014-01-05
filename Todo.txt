@@ -1,5 +1,4 @@
-- Add prefix to device types received as packet
-- Change devices::find and/or ?::match so that type is checked (HM Wired, HM BidCoS, ...)
+- Add all devices to device types
 - RPC Server nur neu starten, wenn config-Dateien geändert
 - Batterie leer von Rauchmelder testen
 

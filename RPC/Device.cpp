@@ -896,18 +896,18 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
     }
 }
 
-bool DeviceType::matches(DeviceTypes deviceType, uint32_t firmwareVersion)
+bool DeviceType::matches(LogicalDeviceType deviceType, uint32_t firmwareVersion)
 {
 	try
 	{
-		if(parameters.empty()) return false;
+		if(parameters.empty() || (device && deviceType.family() != device->family)) return false;
 		bool match = true;
 		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
 			//This might not be the optimal way to get the xml rpc device, because it assumes the device type is unique
 			//When the device type is not at index 10 of the pairing packet, the device is not supported
 			//The "priority" attribute is ignored, for the standard devices "priority" seems not important
-			if(i->index == 10.0) { if(i->constValue != (int32_t)deviceType) match = false; }
+			if(i->index == 10.0) { if(i->constValue != deviceType.type()) match = false; }
 			else if(i->index == 9.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
 			else match = false; //Unknown index
 		}
@@ -928,10 +928,11 @@ bool DeviceType::matches(DeviceTypes deviceType, uint32_t firmwareVersion)
     return false;
 }
 
-bool DeviceType::matches(std::string typeID)
+bool DeviceType::matches(DeviceFamily family, std::string typeID)
 {
 	try
 	{
+		if(device && family != device->family) return false;
 		if(id == typeID) return true;
 	}
 	catch(const std::exception& ex)
@@ -949,11 +950,11 @@ bool DeviceType::matches(std::string typeID)
     return false;
 }
 
-bool DeviceType::matches(std::shared_ptr<BidCoSPacket> packet)
+bool DeviceType::matches(DeviceFamily family, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
-		if(parameters.empty()) return false;
+		if(parameters.empty() || (device && family != device->family)) return false;
 		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
 			int32_t intValue = 0;
@@ -1486,6 +1487,11 @@ void Device::parseXML(xml_node<>* node)
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
 			if(attributeName == "version") version = HelperFunctions::getNumber(attributeValue);
+			else if(attributeName == "family")
+			{
+				if(attributeValue == "HomeMaticBidCoS") family = DeviceFamily::HomeMaticBidCoS;
+				else if(attributeValue == "HomeMaticWired") family = DeviceFamily::HomeMaticWired;
+			}
 			else if(attributeName == "rx_modes")
 			{
 				std::stringstream stream(attributeValue);
@@ -1529,7 +1535,9 @@ void Device::parseXML(xml_node<>* node)
 			{
 				for(xml_node<>* typeNode = node->first_node("type"); typeNode; typeNode = typeNode->next_sibling())
 				{
-					supportedTypes.push_back(std::shared_ptr<DeviceType>(new DeviceType(typeNode)));
+					std::shared_ptr<DeviceType> deviceType(new DeviceType(typeNode));
+					deviceType->device = this;
+					supportedTypes.push_back(deviceType);
 				}
 			}
 			else if(nodeName == "paramset")
@@ -1760,7 +1768,7 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
     }
 }
 
-std::shared_ptr<DeviceType> Device::getType(DeviceTypes deviceType, int32_t firmwareVersion)
+std::shared_ptr<DeviceType> Device::getType(LogicalDeviceType deviceType, int32_t firmwareVersion)
 {
 	try
 	{

@@ -37,7 +37,7 @@ namespace PhysicalDevices
 
 CRCRS485::CRCRS485()
 {
-	_supportedDeviceType = LogicalDevice::Type::Enum::HomeMaticWired;
+	_supportedDeviceFamily = DeviceFamily::HomeMaticWired;
 }
 
 void CRCRS485::init(std::string physicalDevice)

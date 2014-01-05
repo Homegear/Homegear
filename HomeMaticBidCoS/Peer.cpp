@@ -1126,13 +1126,13 @@ void Peer::unserialize_0_0_6(std::string& serializedObject, HomeMaticDevice* dev
 		_firmwareVersion = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
 		_remoteChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
 		_localChannel = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		_deviceType = (DeviceTypes)std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
+		_deviceType = GD::deviceTypes.get((DeviceID)std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
 		_countFromSysinfo = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
 		//This loads the corresponding xmlrpcDevice unnecessarily for virtual device peers, too. But so what?
 		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
 		if(!rpcDevice)
 		{
-			HelperFunctions::printError("Error: Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType) + " Firmware version: " + std::to_string(_firmwareVersion));
+			HelperFunctions::printError("Error: Device id not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.id()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return;
 		}
 		_messageCounter = std::stoll(serializedObject.substr(pos, 2), 0, 16); pos += 2;
@@ -1645,7 +1645,7 @@ void Peer::saveVariables()
 		saveVariable(0, _firmwareVersion);
 		saveVariable(1, _remoteChannel);
 		saveVariable(2, _localChannel);
-		saveVariable(3, (int32_t)_deviceType);
+		saveVariable(3, (int32_t)_deviceType.id());
 		saveVariable(4, _countFromSysinfo);
 		saveVariable(5, _messageCounter);
 		saveVariable(6, _pairingComplete);
@@ -1809,7 +1809,11 @@ void Peer::loadVariables(HomeMaticDevice* device)
 				_localChannel = row->second.at(3)->intValue;
 				break;
 			case 3:
-				_deviceType = (DeviceTypes)row->second.at(3)->intValue;
+				_deviceType = GD::deviceTypes.get((DeviceID)row->second.at(3)->intValue);
+				if(_deviceType.id() == DeviceID::UNKNOWN)
+				{
+					HelperFunctions::printError("Error loading peer 0x" + HelperFunctions::getHexString(_address) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+				}
 				break;
 			case 4:
 				_countFromSysinfo = row->second.at(3)->intValue;
@@ -1887,7 +1891,7 @@ bool Peer::load(HomeMaticDevice* device)
 		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
 		if(!rpcDevice)
 		{
-			HelperFunctions::printError("Error loading peer 0x" + HelperFunctions::getHexString(_address) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType) + " Firmware version: " + std::to_string(_firmwareVersion));
+			HelperFunctions::printError("Error loading peer 0x" + HelperFunctions::getHexString(_address) + ": Device id not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.id()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
 		std::string entry;
@@ -2614,10 +2618,10 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel)
 		std::string type;
 		std::shared_ptr<RPC::DeviceType> rpcDeviceType = rpcDevice->getType(_deviceType, _firmwareVersion);
 		if(rpcDeviceType) type = rpcDeviceType->id;
+		else if(_deviceType.id() == DeviceID::HMRCV50) type = _deviceType.name();
 		else
 		{
-			type = LogicalDeviceType::getString(_deviceType);
-			if(type.empty() && !rpcDevice->supportedTypes.empty()) type = rpcDevice->supportedTypes.at(0)->id;
+			if(!rpcDevice->supportedTypes.empty()) type = rpcDevice->supportedTypes.at(0)->id;
 		}
 
 		if(channel == -1) //Base device
@@ -3902,16 +3906,16 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 {
 	try
 	{
-		if(_deviceType == DeviceTypes::HMCCVD && valueKey == "VALVE_STATE" && _peers.find(1) != _peers.end() && _peers[1].size() > 0 && _peers[1].at(0)->hidden)
+		if(_deviceType.id() == DeviceID::HMCCVD && valueKey == "VALVE_STATE" && _peers.find(1) != _peers.end() && _peers[1].size() > 0 && _peers[1].at(0)->hidden)
 		{
 			if(!_peers[1].at(0)->device)
 			{
 				_peers[1].at(0)->device = GD::devices.getHomeMatic(_peers[1].at(0)->address);
-				if(_peers[1].at(0)->device->getDeviceType() != DeviceTypes::HMCCTC) return false;
+				if(_peers[1].at(0)->device->getDeviceType().id() != DeviceID::HMCCTC) return false;
 			}
 			if(_peers[1].at(0)->device)
 			{
-				if(_peers[1].at(0)->device->getDeviceType() != DeviceTypes::HMCCTC) return false;
+				if(_peers[1].at(0)->device->getDeviceType().id() != DeviceID::HMCCTC) return false;
 				HM_CC_TC* tc = (HM_CC_TC*)_peers[1].at(0)->device.get();
 				tc->setValveState(value->integerValue);
 				std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
@@ -3923,7 +3927,7 @@ bool Peer::setHomegearValue(uint32_t channel, std::string valueKey, std::shared_
 				return true;
 			}
 		}
-		else if(_deviceType == DeviceTypes::HMSECSD)
+		else if(_deviceType.id() == DeviceID::HMSECSD)
 		{
 			if(valueKey == "STATE")
 			{
@@ -4199,7 +4203,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		pendingBidCoSQueues->push(queue);
 		if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))
 		{
-			if(LogicalDeviceType::isDimmer(_deviceType) || LogicalDeviceType::isSwitch(_deviceType)) queue->retries = 12;
+			if(_deviceType.isDimmer() || _deviceType.isSwitch()) queue->retries = 12;
 			GD::devices.getHomeMaticCentral()->enqueuePendingQueues(_address);
 		}
 		else HelperFunctions::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");

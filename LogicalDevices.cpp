@@ -63,24 +63,29 @@ void LogicalDevices::convertDatabase()
 	try
 	{
 		DataColumnVector data;
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string("table"))));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string("homegearVariables"))));
-		DataTable rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
-		if(!rows.empty()) return;
-		data.at(1) = std::shared_ptr<DataColumn>(new DataColumn(std::string("peers")));
-		rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
-		if(rows.empty()) return;
-		//Create a backup
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
+		DataTable result = GD::db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
+		if(result.empty()) return; //Handled in initializeDatabase
+		std::string version = result.at(0).at(3)->textValue;
+		if(version == "0.3.0") return; //Up to date
+		if(version != "0.0.7")
+		{
+			HelperFunctions::printCritical("Unknown database version: " + version);
+			exit(1); //Don't know, what to do
+		}
+		HelperFunctions::printMessage("Converting database from version " + version + " to version 0.3.0...");
 		GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".old");
-		//Database is version 0.0.6
-		HelperFunctions::printMessage("Converting database (version 0.0.6)...");
-		loadDevicesFromDatabase_0_0_6();
-		GD::db.executeCommand("DROP TABLE IF EXISTS peers");
-		GD::db.executeCommand("DROP TABLE IF EXISTS devices");
-		initializeDatabase();
-		save(true, false);
-		HelperFunctions::printMessage("Database converted. Stopping Homegear.");
-		exit(0);
+
+		GD::db.executeCommand("ALTER TABLE events ADD COLUMN enabled INTEGER");
+		GD::db.executeCommand("UPDATE events SET enabled=1");
+
+		data.clear();
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(result.at(0).at(0)->intValue)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.3.0")));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+		GD::db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 	}
 	catch(const std::exception& ex)
     {
@@ -116,7 +121,7 @@ void LogicalDevices::initializeDatabase()
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, address TEXT, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, address TEXT, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, address)");
 
 		DataColumnVector data;
@@ -147,87 +152,6 @@ void LogicalDevices::initializeDatabase()
     }
 }
 
-void LogicalDevices::loadDevicesFromDatabase_0_0_6()
-{
-	try
-	{
-		DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
-		bool spyDeviceExists = false;
-		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
-		{
-			DeviceTypes deviceType = DeviceTypes::UNKNOWN;
-			std::string serializedObject;
-			uint8_t dutyCycleMessageCounter = 0;
-			for(std::map<uint32_t, std::shared_ptr<DataColumn>>::iterator col = row->second.begin(); col != row->second.end(); ++col)
-			{
-				if(col->second->index == 1)
-				{
-					deviceType = (DeviceTypes)col->second->intValue;
-				}
-				else if(col->second->index == 2)
-				{
-					serializedObject = col->second->textValue;
-				}
-				else if(col->second->index == 3)
-				{
-					dutyCycleMessageCounter = col->second->intValue;
-				}
-				else if(col->second->index == 4)
-				{
-					std::shared_ptr<HomeMaticDevice> device;
-					switch(deviceType)
-					{
-					case DeviceTypes::HMCCTC:
-						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_TC());
-						break;
-					case DeviceTypes::HMLCSW1FM:
-						device = std::shared_ptr<HomeMaticDevice>(new HM_LC_SWX_FM());
-						break;
-					case DeviceTypes::HMCCVD:
-						device = std::shared_ptr<HomeMaticDevice>(new HM_CC_VD());
-						break;
-					case DeviceTypes::HMCENTRAL:
-						_homeMaticCentral = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral());
-						device = _homeMaticCentral;
-						break;
-					case DeviceTypes::HMSD:
-						spyDeviceExists = true;
-						device = std::shared_ptr<HomeMaticDevice>(new HM_SD());
-						break;
-					default:
-						break;
-					}
-					if(device)
-					{
-						device->unserialize_0_0_6(serializedObject, dutyCycleMessageCounter, col->second->intValue);
-						device->loadPeers_0_0_6();
-						_devicesMutex.lock();
-						_devices.push_back(device);
-						_devicesMutex.unlock();
-					}
-				}
-			}
-		}
-		if(!_homeMaticCentral) createCentral();
-		if(!spyDeviceExists) createSpyDevice();
-	}
-	catch(const std::exception& ex)
-    {
-		_devicesMutex.unlock();
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_devicesMutex.unlock();
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_devicesMutex.unlock();
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 void LogicalDevices::loadDevicesFromDatabase()
 {
 	try
@@ -239,25 +163,25 @@ void LogicalDevices::loadDevicesFromDatabase()
 			uint32_t deviceID = row->second.at(0)->intValue;
 			int32_t address = row->second.at(1)->intValue;
 			std::string serialNumber = row->second.at(2)->textValue;
-			DeviceTypes deviceType = (DeviceTypes)row->second.at(3)->intValue;
+			DeviceID deviceTypeID = (DeviceID)row->second.at(3)->intValue;
 
 			std::shared_ptr<HomeMaticDevice> device;
-			switch(deviceType)
+			switch(deviceTypeID)
 			{
-			case DeviceTypes::HMCCTC:
+			case DeviceID::HMCCTC:
 				device = std::shared_ptr<HomeMaticDevice>(new HM_CC_TC(deviceID, serialNumber, address));
 				break;
-			case DeviceTypes::HMLCSW1FM:
+			case DeviceID::HMLCSW1FM:
 				device = std::shared_ptr<HomeMaticDevice>(new HM_LC_SWX_FM(deviceID, serialNumber, address));
 				break;
-			case DeviceTypes::HMCCVD:
+			case DeviceID::HMCCVD:
 				device = std::shared_ptr<HomeMaticDevice>(new HM_CC_VD(deviceID, serialNumber, address));
 				break;
-			case DeviceTypes::HMCENTRAL:
+			case DeviceID::HMCENTRAL:
 				_homeMaticCentral = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral(deviceID, serialNumber, address));
 				device = _homeMaticCentral;
 				break;
-			case DeviceTypes::HMSD:
+			case DeviceID::HMSD:
 				spyDeviceExists = true;
 				device = std::shared_ptr<HomeMaticDevice>(new HM_SD(deviceID, serialNumber, address));
 				break;
@@ -512,7 +436,7 @@ void LogicalDevices::add(LogicalDevice* device)
 		if(!device) return;
 		_devicesMutex.lock();
 		device->save(true);
-		if(device->getDeviceType() == DeviceTypes::HMCENTRAL)
+		if(device->getDeviceType().id() == DeviceID::HMCENTRAL)
 		{
 			_homeMaticCentral = std::shared_ptr<HomeMaticCentral>((HomeMaticCentral*)device);
 			_devices.push_back(_homeMaticCentral);
@@ -635,7 +559,7 @@ std::shared_ptr<HomeMaticDevice> LogicalDevices::getHomeMatic(int32_t address)
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			if((*i)->physicalDeviceType() == LogicalDevice::Type::HomeMaticBidCoS && (*i)->getAddress() == address)
+			if((*i)->deviceFamily() == DeviceFamily::HomeMaticBidCoS && (*i)->getAddress() == address)
 			{
 				std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(*i));
 				if(!device) continue;
@@ -726,7 +650,7 @@ std::shared_ptr<HomeMaticDevice> LogicalDevices::getHomeMatic(std::string serial
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			if((*i)->physicalDeviceType() == LogicalDevice::Type::HomeMaticBidCoS && (*i)->getSerialNumber() == serialNumber)
+			if((*i)->deviceFamily() == DeviceFamily::HomeMaticBidCoS && (*i)->getSerialNumber() == serialNumber)
 			{
 				std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(*i));
 				if(!device) continue;
@@ -782,7 +706,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 			std::vector<std::shared_ptr<LogicalDevice>> devices;
 			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 			{
-				stringStream << "Address: 0x" << std::hex << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (uint32_t)(*i)->getDeviceType() << std::endl << std::dec;
+				stringStream << "Address: 0x" << std::hex << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (uint32_t)(*i)->getDeviceType().type() << "\tDevice id: " << (uint32_t)(*i)->getDeviceType().id() << std::endl << std::dec;
 			}
 			_devicesMutex.unlock();
 			return stringStream.str();
@@ -790,7 +714,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 		else if(command.compare(0, 14, "devices create") == 0)
 		{
 			int32_t address;
-			int32_t deviceType;
+			int32_t deviceID;
 			std::string serialNumber;
 
 			std::stringstream stream(command);
@@ -814,7 +738,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 					serialNumber = element;
 					if(serialNumber.size() > 10) return "Serial number too long.\n";
 				}
-				else if(index == 4) deviceType = HelperFunctions::getNumber(element, true);
+				else if(index == 4) deviceID = HelperFunctions::getNumber(element, true);
 				index++;
 			}
 			if(index < 5)
@@ -824,26 +748,26 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  ADDRESS:\tAny unused 3 byte address in hexadecimal format. Example: 1A03FC" << std::endl;
 				stringStream << "  SERIALNUMBER:\tAny unused serial number with a maximum size of 10 characters. Don't use special characters. Example: VTC9179403" << std::endl;
-				stringStream << "  DEVICETYPE:\tThe type of the device to create. Example: FFFFFFFD" << std::endl << std::endl;
-				stringStream << "Currently supported virtual device types:" << std::endl;
+				stringStream << "  DEVICEID:\tThe id of the device to create. Example: FFFFFFFD" << std::endl << std::endl;
+				stringStream << "Currently supported virtual device id's:" << std::endl;
 				stringStream << "  FFFFFFFD:\tCentral device" << std::endl;
 				stringStream << "  FFFFFFFE:\tSpy device" << std::endl;
-				stringStream << "  FF000039:\t\tHM-CC-TC" << std::endl;
-				stringStream << "  FF00003A:\t\tHM-CC-VD" << std::endl;
+				stringStream << "  39:\t\tHM-CC-TC" << std::endl;
+				stringStream << "  3A:\t\tHM-CC-VD" << std::endl;
 				return stringStream.str();
 			}
 
-			switch(deviceType)
+			switch(deviceID)
 			{
-			case (uint32_t)DeviceTypes::HMCCTC:
+			case (uint32_t)DeviceID::HMCCTC:
 				add(new HM_CC_TC(0, serialNumber, address));
 				stringStream << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
-			case (uint32_t)DeviceTypes::HMCCVD:
+			case (uint32_t)DeviceID::HMCCVD:
 				add(new HM_CC_VD(0, serialNumber, address));
 				stringStream << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
-			case (uint32_t)DeviceTypes::HMCENTRAL:
+			case (uint32_t)DeviceID::HMCENTRAL:
 				if(getHomeMaticCentral())
 				{
 					stringStream << "Cannot create more than one HomeMatic BidCoS central device." << std::endl;
@@ -854,7 +778,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 					stringStream << "Created HMCENTRAL with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				}
 				break;
-			case (uint32_t)DeviceTypes::HMSD:
+			case (uint32_t)DeviceID::HMSD:
 				add(new HM_SD(0, serialNumber, address));
 				stringStream << "Created HM_SD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;

@@ -70,7 +70,6 @@ private:
 	std::thread _removeThread;
 
 	void initializeDatabase();
-	void loadDevicesFromDatabase_0_0_6();
 	void loadDevicesFromDatabase();
 	int32_t getUniqueAddress(uint8_t firstByte);
 	std::string getUniqueSerialNumber(std::string seedPrefix);

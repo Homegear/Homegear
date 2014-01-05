@@ -63,6 +63,7 @@ public:
 	uint32_t id = 0;
 	Type::Enum type = Type::Enum::triggered;
 	std::string name;
+	bool enabled = true;
 	std::string address;
 	std::string variable;
 	Trigger::Enum trigger = Trigger::Enum::none;
@@ -98,6 +99,8 @@ public:
 	std::shared_ptr<RPC::RPCVariable> add(std::shared_ptr<RPC::RPCVariable> eventDescription);
 	std::shared_ptr<RPC::RPCVariable> remove(std::string name);
 	std::shared_ptr<RPC::RPCVariable> list(int32_t type, std::string address, std::string variable);
+	std::shared_ptr<RPC::RPCVariable> enable(std::string name);
+	std::shared_ptr<RPC::RPCVariable> disable(std::string name);
 	void trigger(std::string& address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
 	void trigger(std::string& address, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value);
 protected:

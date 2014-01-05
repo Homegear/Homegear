@@ -70,7 +70,7 @@ protected:
 	std::string _lockfile;
 	std::mutex _sendMutex;
 	bool _stopped = false;
-	LogicalDevice::Type::Enum _supportedDeviceType = LogicalDevice::Type::Enum::none;
+	DeviceFamily _supportedDeviceFamily = DeviceFamily::none;
 
 	virtual void callCallback(std::shared_ptr<Packet> packet);
 };

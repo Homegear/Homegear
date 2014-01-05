@@ -50,3 +50,4 @@ RPC::ServerSettings GD::serverSettings;
 RPC::ClientSettings GD::clientSettings;
 EventHandler GD::eventHandler;
 FileDescriptorManager GD::fileDescriptorManager;
+DeviceTypes GD::deviceTypes;

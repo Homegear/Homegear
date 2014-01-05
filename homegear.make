@@ -173,6 +173,7 @@ OBJECTS := \
 	$(OBJDIR)/BinaryDecoder.o \
 	$(OBJDIR)/EventHandler.o \
 	$(OBJDIR)/LogicalDevices.o \
+	$(OBJDIR)/DeviceTypes.o \
 	$(OBJDIR)/HelperFunctions.o \
 	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/Database.o \
@@ -306,6 +307,9 @@ $(OBJDIR)/EventHandler.o: EventHandler.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/LogicalDevices.o: LogicalDevices.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/DeviceTypes.o: DeviceTypes.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HelperFunctions.o: HelperFunctions.cpp

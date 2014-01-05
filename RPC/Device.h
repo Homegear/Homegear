@@ -168,14 +168,15 @@ public:
 	std::vector<Parameter> parameters;
 	bool updatable = false;
 	int32_t priority = 0;
+	Device* device = nullptr;
 
 	DeviceType() {}
 	DeviceType(xml_node<>* typeNode);
 	virtual ~DeviceType() {}
 
-	bool matches(std::shared_ptr<BidCoSPacket> packet);
-	bool matches(std::string typeID);
-	bool matches(DeviceTypes deviceType, uint32_t firmwareVersion);
+	bool matches(DeviceFamily family, std::shared_ptr<BidCoSPacket> packet);
+	bool matches(DeviceFamily family, std::string typeID);
+	bool matches(LogicalDeviceType deviceType, uint32_t firmwareVersion);
 };
 
 typedef std::vector<std::pair<std::string, std::string>> DefaultValue;
@@ -311,6 +312,7 @@ public:
 
 	bool loaded() { return _loaded; }
 	bool hasBattery = false;
+	DeviceFamily family = DeviceFamily::HomeMaticBidCoS;
 	uint32_t version = 0;
 	uint32_t cyclicTimeout = 0;
 	std::shared_ptr<ParameterSet> parameterSet;
@@ -330,7 +332,7 @@ public:
 	Device();
 	Device(std::string xmlFilename);
 	virtual ~Device();
-	std::shared_ptr<DeviceType> getType(DeviceTypes deviceType, int32_t firmwareVersion);
+	std::shared_ptr<DeviceType> getType(LogicalDeviceType deviceType, int32_t firmwareVersion);
 	int32_t getCountFromSysinfo() { return _countFromSysinfo; }
 	int32_t getCountFromSysinfo(std::shared_ptr<BidCoSPacket> packet);
 	void setCountFromSysinfo(int32_t countFromSysinfo);

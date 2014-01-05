@@ -58,7 +58,6 @@ class HomeMaticDevice : public LogicalDevice
 		//In table devices
         virtual int32_t getAddress() { return _address; }
         virtual std::string getSerialNumber() { return _serialNumber; }
-        DeviceTypes getDeviceType() { return _deviceType; }
         //End
 
         //In table variables
@@ -69,7 +68,7 @@ class HomeMaticDevice : public LogicalDevice
         //End
 
         std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
-        virtual bool isCentral() { return _deviceType == DeviceTypes::HMCENTRAL; }
+        virtual bool isCentral();
         virtual void stopThreads();
         virtual void checkForDeadlock();
         virtual void reset();
@@ -77,7 +76,7 @@ class HomeMaticDevice : public LogicalDevice
         HomeMaticDevice();
         HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
         virtual ~HomeMaticDevice();
-        virtual LogicalDevice::Type::Enum physicalDeviceType() { return LogicalDevice::Type::Enum::HomeMaticBidCoS; }
+        virtual DeviceFamily deviceFamily() { return DeviceFamily::HomeMaticBidCoS; }
         virtual void dispose(bool wait = true);
         virtual bool packetReceived(std::shared_ptr<Packet> packet);
 
@@ -151,7 +150,6 @@ class HomeMaticDevice : public LogicalDevice
         //In tables devices
         int32_t _address;
         std::string _serialNumber;
-        DeviceTypes _deviceType;
         //End
 
         //In table variables
@@ -189,8 +187,8 @@ class HomeMaticDevice : public LogicalDevice
 
         bool _lowBattery = false;
 
-        virtual std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, DeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
-        virtual std::shared_ptr<Peer> createTeam(int32_t address, DeviceTypes deviceType, std::string serialNumber);
+        virtual std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
+        virtual std::shared_ptr<Peer> createTeam(int32_t address, LogicalDeviceType deviceType, std::string serialNumber);
         virtual void worker();
 
         virtual void init();

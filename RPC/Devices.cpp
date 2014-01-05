@@ -94,7 +94,7 @@ void Devices::load()
     }
 }
 
-std::shared_ptr<Device> Devices::find(DeviceTypes deviceType, uint32_t firmwareVersion, std::shared_ptr<BidCoSPacket> packet)
+std::shared_ptr<Device> Devices::find(LogicalDeviceType deviceType, uint32_t firmwareVersion, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -143,7 +143,7 @@ std::shared_ptr<Device> Devices::find(DeviceTypes deviceType, uint32_t firmwareV
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(DeviceTypes deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo)
+std::shared_ptr<Device> Devices::find(LogicalDeviceType deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo)
 {
 	try
 	{
@@ -187,7 +187,7 @@ std::shared_ptr<Device> Devices::find(DeviceTypes deviceType, uint32_t firmwareV
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(std::string typeID, std::shared_ptr<BidCoSPacket> packet)
+std::shared_ptr<Device> Devices::find(DeviceFamily family, std::string typeID, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -197,7 +197,7 @@ std::shared_ptr<Device> Devices::find(std::string typeID, std::shared_ptr<BidCoS
 		{
 			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
 			{
-				if((*j)->matches(typeID))
+				if((*j)->matches(family, typeID))
 				{
 					countFromSysinfo = (*i)->getCountFromSysinfo(packet);
 					if((*i)->getCountFromSysinfo() != countFromSysinfo)
@@ -232,7 +232,7 @@ std::shared_ptr<Device> Devices::find(std::string typeID, std::shared_ptr<BidCoS
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(std::shared_ptr<BidCoSPacket> packet)
+std::shared_ptr<Device> Devices::find(DeviceFamily family, std::shared_ptr<BidCoSPacket> packet)
 {
 	try
 	{
@@ -242,7 +242,7 @@ std::shared_ptr<Device> Devices::find(std::shared_ptr<BidCoSPacket> packet)
 		{
 			for(std::vector<std::shared_ptr<DeviceType>>::iterator j = (*i)->supportedTypes.begin(); j != (*i)->supportedTypes.end(); ++j)
 			{
-				if((*j)->matches(packet))
+				if((*j)->matches(family, packet))
 				{
 					countFromSysinfo = (*i)->getCountFromSysinfo(packet);
 					if((*i)->getCountFromSysinfo() != countFromSysinfo)

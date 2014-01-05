@@ -32,12 +32,9 @@
 
 class HomeMaticDevices;
 
-#include <vector>
-#include <map>
-#include <string>
-
 #include "Database.h"
 #include "PhysicalDevices/PhysicalDevice.h"
+#include "DeviceTypes.h"
 #include "LogicalDevices.h"
 #include "RPC/Server.h"
 #include "RPC/Client.h"
@@ -49,6 +46,10 @@ class HomeMaticDevices;
 #include "RPC/ClientSettings.h"
 #include "EventHandler.h"
 #include "FileDescriptorManager.h"
+
+#include <vector>
+#include <map>
+#include <string>
 
 class GD {
 public:
@@ -74,6 +75,7 @@ public:
 	static bool bigEndian;
 	static EventHandler eventHandler;
 	static FileDescriptorManager fileDescriptorManager;
+	static DeviceTypes deviceTypes;
 
 	virtual ~GD() { }
 private:

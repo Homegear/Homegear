@@ -77,7 +77,7 @@ class HM_CC_TC : public HomeMaticDevice
 
         const int32_t _dutyCycleTimeOffset = 3000;
         bool _stopDutyCycleThread = false;
-        std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, DeviceTypes deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
+        std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
         std::thread _dutyCycleThread;
         int32_t _dutyCycleCounter  = 0;
         bool _dutyCycleBroadcast = false;

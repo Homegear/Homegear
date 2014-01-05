@@ -52,7 +52,7 @@ void HM_SD::init()
 	{
 		HomeMaticDevice::init();
 
-		_deviceType = DeviceTypes::HMSD;
+		_deviceType = GD::deviceTypes.get(DeviceID::HMSD);
 	}
     catch(const std::exception& ex)
     {
