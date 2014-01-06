@@ -99,8 +99,9 @@ public:
 	std::shared_ptr<RPC::RPCVariable> add(std::shared_ptr<RPC::RPCVariable> eventDescription);
 	std::shared_ptr<RPC::RPCVariable> remove(std::string name);
 	std::shared_ptr<RPC::RPCVariable> list(int32_t type, std::string address, std::string variable);
-	std::shared_ptr<RPC::RPCVariable> enable(std::string name);
-	std::shared_ptr<RPC::RPCVariable> disable(std::string name);
+	std::shared_ptr<RPC::RPCVariable> enable(std::string name, bool enabled);
+	std::shared_ptr<RPC::RPCVariable> abortReset(std::string name);
+	std::shared_ptr<RPC::RPCVariable> trigger(std::string name);
 	void trigger(std::string& address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
 	void trigger(std::string& address, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value);
 protected:
@@ -128,5 +129,6 @@ protected:
 	bool eventExists(uint32_t id);
 	bool eventExists(std::string name);
 	void save(std::shared_ptr<Event>);
+	void postTriggerTasks(std::shared_ptr<Event>& event, std::shared_ptr<RPC::RPCVariable>& rpcResult, uint64_t currentTime);
 };
 #endif /* EVENTHANDLER_H_ */

@@ -463,7 +463,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::remove(std::string name)
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> EventHandler::disable(std::string name)
+std::shared_ptr<RPC::RPCVariable> EventHandler::enable(std::string name, bool enabled)
 {
 	try
 	{
@@ -496,9 +496,12 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::disable(std::string name)
 		}
 		_eventsMutex.unlock();
 
-		event->enabled = false;
-		removeEventToReset(event->id);
-		removeTimeToReset(event->id);
+		if(enabled) event->enabled = true;
+		else
+		{
+			event->enabled = false;
+			removeEventToReset(event->id);
+		}
 		save(event);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
@@ -519,7 +522,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::disable(std::string name)
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> EventHandler::enable(std::string name)
+std::shared_ptr<RPC::RPCVariable> EventHandler::abortReset(std::string name)
 {
 	try
 	{
@@ -552,7 +555,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::enable(std::string name)
 		}
 		_eventsMutex.unlock();
 
-		event->enabled = true;
+		removeEventToReset(event->id);
 		save(event);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
@@ -847,6 +850,65 @@ bool EventHandler::eventExists(std::string name)
     return false;
 }
 
+std::shared_ptr<RPC::RPCVariable> EventHandler::trigger(std::string name)
+{
+	try
+	{
+		_eventsMutex.lock();
+		std::shared_ptr<Event> event;
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+		{
+			if(i->second->name == name)
+			{
+				event = i->second;
+				break;
+			}
+		}
+		if(!event)
+		{
+			for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+			{
+				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					{
+						if((*k)->name == name)
+						{
+							event = *k;
+							break;
+						}
+					}
+				}
+			}
+		}
+		_eventsMutex.unlock();
+
+		uint64_t currentTime = HelperFunctions::getTime();
+		event->lastRaised = currentTime;
+		HelperFunctions::printInfo("Info: Event \"" + event->name + "\" raised for device \"" + event->address + "\" and variable \"" + event->variable + "\". Trigger: \"manual\"");
+		std::shared_ptr<RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod(event->eventMethod, event->eventMethodParameters);
+
+		postTriggerTasks(event, result, currentTime);
+
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventsMutex.unlock();
+    _databaseMutex.unlock();
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 void EventHandler::triggerThread(std::string address, std::string variable, std::shared_ptr<RPC::RPCVariable> value)
 {
 	_triggerThreadCount++;
@@ -993,79 +1055,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 					}
 				}
 			}
-
-			if(result)
-			{
-				if(result->errorStruct)
-				{
-					HelperFunctions::printError("Could not execute RPC method for event from address " + address + " and variable " + variable + ". Error struct:");
-					result->print();
-				}
-				else if((*i)->resetAfter > 0 || (*i)->initialTime > 0)
-				{
-					removeEventToReset((*i)->id);
-					uint64_t resetTime = currentTime + (*i)->resetAfter;
-					if((*i)->initialTime == 0) //Simple reset
-					{
-						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" for device \"" + address + "\" and variable \"" + variable + "\" will be reset in " + std::to_string((*i)->resetAfter / 1000) + " seconds.");
-
-						_eventsMutex.lock();
-						while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
-						_eventsToReset[resetTime] =  *i;
-						_eventsMutex.unlock();
-					}
-					else //Complex reset
-					{
-						removeTimeToReset((*i)->id);
-						HelperFunctions::printInfo("Info: INITIALTIME for event \"" + (*i)->name + "\" will be reset in " + std::to_string((*i)->resetAfter / 1000)+ " seconds.");
-						_eventsMutex.lock();
-						while(_timesToReset.find(resetTime) != _timesToReset.end()) resetTime++;
-						_timesToReset[resetTime] = *i;
-						_eventsMutex.unlock();
-						if((*i)->currentTime == 0) (*i)->currentTime = (*i)->initialTime;
-						if((*i)->factor <= 0)
-						{
-							HelperFunctions::printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from address " + address + " and variable " + variable + ".");
-							(*i)->factor = 1;
-						}
-						resetTime = currentTime + (*i)->currentTime;
-						_eventsMutex.lock();
-						while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
-						_eventsToReset[resetTime] =  *i;
-						_eventsMutex.unlock();
-						HelperFunctions::printInfo("Info: Event \"" + (*i)->name + "\" will be reset in " + std::to_string((*i)->currentTime / 1000) + " seconds.");
-						if((*i)->operation == Event::Operation::Enum::addition)
-						{
-							(*i)->currentTime += (*i)->factor;
-							if((*i)->currentTime > (*i)->limit) (*i)->currentTime = (*i)->limit;
-						}
-						else if((*i)->operation == Event::Operation::Enum::subtraction)
-						{
-							(*i)->currentTime -= (*i)->factor;
-							if((*i)->currentTime < (*i)->limit) (*i)->currentTime = (*i)->limit;
-						}
-						else if((*i)->operation == Event::Operation::Enum::multiplication)
-						{
-							(*i)->currentTime *= (*i)->factor;
-							if((*i)->currentTime > (*i)->limit) (*i)->currentTime = (*i)->limit;
-						}
-						else if((*i)->operation == Event::Operation::Enum::division)
-						{
-							(*i)->currentTime /= (*i)->factor;
-							if((*i)->currentTime < (*i)->limit) (*i)->currentTime = (*i)->limit;
-						}
-					}
-					_mainThreadMutex.lock();
-					if(_stopThread || !_mainThread.joinable())
-					{
-						if(_mainThread.joinable()) _mainThread.join();
-						_stopThread = false;
-						_mainThread = std::thread(&EventHandler::mainThread, this);
-					}
-					_mainThreadMutex.unlock();
-				}
-				save(*i);
-			}
+			postTriggerTasks(*i, result, currentTime);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1087,6 +1077,134 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _triggerThreadCount--;
+}
+
+void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_ptr<RPC::RPCVariable>& rpcResult, uint64_t currentTime)
+{
+	try
+	{
+		if(event && rpcResult)
+		{
+			if(rpcResult->errorStruct)
+			{
+				HelperFunctions::printError("Could not execute RPC method for event from address " + event->address + " and variable " + event->variable + ". Error struct:");
+				rpcResult->print();
+			}
+			else if(event->resetAfter > 0 || event->initialTime > 0)
+			{
+				try
+				{
+					removeEventToReset(event->id);
+					uint64_t resetTime = currentTime + event->resetAfter;
+					if(event->initialTime == 0) //Simple reset
+					{
+						HelperFunctions::printInfo("Info: Event \"" + event->name + "\" for device \"" + event->address + "\" and variable \"" + event->variable + "\" will be reset in " + std::to_string(event->resetAfter / 1000) + " seconds.");
+
+						_eventsMutex.lock();
+						while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
+						_eventsToReset[resetTime] =  event;
+						_eventsMutex.unlock();
+					}
+					else //Complex reset
+					{
+						removeTimeToReset(event->id);
+						HelperFunctions::printInfo("Info: INITIALTIME for event \"" + event->name + "\" will be reset in " + std::to_string(event->resetAfter / 1000)+ " seconds.");
+						_eventsMutex.lock();
+						while(_timesToReset.find(resetTime) != _timesToReset.end()) resetTime++;
+						_timesToReset[resetTime] = event;
+						_eventsMutex.unlock();
+						if(event->currentTime == 0) event->currentTime = event->initialTime;
+						if(event->factor <= 0)
+						{
+							HelperFunctions::printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from address " + event->address + " and variable " + event->variable + ".");
+							event->factor = 1;
+						}
+						resetTime = currentTime + event->currentTime;
+						_eventsMutex.lock();
+						while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
+						_eventsToReset[resetTime] =  event;
+						_eventsMutex.unlock();
+						HelperFunctions::printInfo("Info: Event \"" + event->name + "\" will be reset in " + std::to_string(event->currentTime / 1000) + " seconds.");
+						if(event->operation == Event::Operation::Enum::addition)
+						{
+							event->currentTime += event->factor;
+							if(event->currentTime > event->limit) event->currentTime = event->limit;
+						}
+						else if(event->operation == Event::Operation::Enum::subtraction)
+						{
+							event->currentTime -= event->factor;
+							if(event->currentTime < event->limit) event->currentTime = event->limit;
+						}
+						else if(event->operation == Event::Operation::Enum::multiplication)
+						{
+							event->currentTime *= event->factor;
+							if(event->currentTime > event->limit) event->currentTime = event->limit;
+						}
+						else if(event->operation == Event::Operation::Enum::division)
+						{
+							event->currentTime /= event->factor;
+							if(event->currentTime < event->limit) event->currentTime = event->limit;
+						}
+					}
+				}
+				catch(const std::exception& ex)
+				{
+					_eventsMutex.unlock();
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(Exception& ex)
+				{
+					_eventsMutex.unlock();
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					_eventsMutex.unlock();
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+
+				try
+				{
+					_mainThreadMutex.lock();
+					if(_stopThread || !_mainThread.joinable())
+					{
+						if(_mainThread.joinable()) _mainThread.join();
+						_stopThread = false;
+						_mainThread = std::thread(&EventHandler::mainThread, this);
+					}
+					_mainThreadMutex.unlock();
+				}
+				catch(const std::exception& ex)
+				{
+					_mainThreadMutex.unlock();
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(Exception& ex)
+				{
+					_mainThreadMutex.unlock();
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					_mainThreadMutex.unlock();
+					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+			}
+			save(event);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void EventHandler::load()

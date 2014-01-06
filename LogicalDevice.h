@@ -55,6 +55,8 @@ public:
 	virtual void save(bool saveDevice) {}
 	virtual void savePeers(bool full) {}
 protected:
+	int32_t _deviceID = 0;
+
 	LogicalDeviceType _deviceType;
 };
 

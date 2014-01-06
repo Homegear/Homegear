@@ -112,13 +112,13 @@ public:
 class Peer
 {
     public:
-		Peer(int32_t parentAddress, bool centralFeatures);
-		Peer(int32_t id, int32_t address, std::string serialNumber, int32_t parentAddress, bool centralFeatures);
+		Peer(uint32_t parentID, bool centralFeatures);
+		Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
 		virtual ~Peer();
 		void dispose();
 
 		//In table peers:
-		int32_t getParentAddress() { return _parentAddress; }
+		int32_t getParentID() { return _parentID; }
 		int32_t getAddress() { return _address; }
 		void setAddress(int32_t value) { _address = value; if(_peerID > 0) save(true, false, false); }
 		std::string getSerialNumber() { return _serialNumber; }
@@ -246,7 +246,7 @@ class Peer
         //std::map<std::string, uint32_t> _resendCounter;
 
         //In table peers:
-        int32_t _parentAddress = 0;
+        uint32_t _parentID = 0;
         int32_t _address = 0;
         std::string _serialNumber;
         //End

@@ -48,13 +48,13 @@ void Server::registerMethods()
 		_server->registerMethod("system.methodHelp", std::shared_ptr<RPCMethod>(new RPCSystemMethodHelp(_server)));
 		_server->registerMethod("system.methodSignature", std::shared_ptr<RPCMethod>(new RPCSystemMethodSignature(_server)));
 		_server->registerMethod("system.multicall", std::shared_ptr<RPCMethod>(new RPCSystemMulticall(_server)));
+		_server->registerMethod("abortEventReset", std::shared_ptr<RPCMethod>(new RPCTriggerEvent()));
 		_server->registerMethod("addDevice", std::shared_ptr<RPCMethod>(new RPCAddDevice()));
 		_server->registerMethod("addEvent", std::shared_ptr<RPCMethod>(new RPCAddEvent()));
 		_server->registerMethod("addLink", std::shared_ptr<RPCMethod>(new RPCAddLink()));
 		_server->registerMethod("clientServerInitialized", std::shared_ptr<RPCMethod>(new RPCClientServerInitialized()));
 		_server->registerMethod("deleteDevice", std::shared_ptr<RPCMethod>(new RPCDeleteDevice()));
 		_server->registerMethod("deleteMetadata", std::shared_ptr<RPCMethod>(new RPCDeleteMetadata()));
-		_server->registerMethod("disableEvent", std::shared_ptr<RPCMethod>(new RPCDisableEvent()));
 		_server->registerMethod("enableEvent", std::shared_ptr<RPCMethod>(new RPCEnableEvent()));
 		_server->registerMethod("getAllMetadata", std::shared_ptr<RPCMethod>(new RPCGetAllMetadata()));
 		_server->registerMethod("getDeviceDescription", std::shared_ptr<RPCMethod>(new RPCGetDeviceDescription()));
@@ -85,6 +85,7 @@ void Server::registerMethods()
 		_server->registerMethod("setMetadata", std::shared_ptr<RPCMethod>(new RPCSetMetadata()));
 		_server->registerMethod("setTeam", std::shared_ptr<RPCMethod>(new RPCSetTeam()));
 		_server->registerMethod("setValue", std::shared_ptr<RPCMethod>(new RPCSetValue()));
+		_server->registerMethod("triggerEvent", std::shared_ptr<RPCMethod>(new RPCTriggerEvent()));
 	}
 	catch(const std::exception& ex)
     {

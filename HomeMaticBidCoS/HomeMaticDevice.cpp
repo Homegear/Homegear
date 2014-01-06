@@ -35,8 +35,9 @@ HomeMaticDevice::HomeMaticDevice()
 {
 }
 
-HomeMaticDevice::HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address) : _deviceID(deviceID), _address(address), _serialNumber(serialNumber)
+HomeMaticDevice::HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address) : _address(address), _serialNumber(serialNumber)
 {
+	_deviceID = deviceID;
 }
 
 void HomeMaticDevice::init()
@@ -465,18 +466,20 @@ void HomeMaticDevice::load()
     }
 }
 
-void HomeMaticDevice::loadPeers()
+void HomeMaticDevice::loadPeers(bool version_0_0_7)
 {
 	try
 	{
+		//Check for GD::devices for non unique access
+		//Change peers identifier for device to id
 		_peersMutex.lock();
 		_databaseMutex.lock();
-		DataTable rows = GD::db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_address));
+		DataTable rows = version_0_0_7 ? GD::db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_address)) : GD::db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_deviceID));
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			int32_t peerID = row->second.at(0)->intValue;
 			int32_t address = row->second.at(2)->intValue;
-			std::shared_ptr<Peer> peer(new Peer(peerID, address, row->second.at(3)->textValue, _address, isCentral()));
+			std::shared_ptr<Peer> peer(new Peer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral()));
 			if(!peer->load(this)) continue;
 			if(!peer->rpcDevice) continue;
 			_peers[peer->getAddress()] = peer;
@@ -919,7 +922,10 @@ void HomeMaticDevice::savePeers(bool full)
 		_databaseMutex.lock();
 		for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			if(i->second->getParentAddress() != _address) continue;
+			//Necessary, because peers can be assigned to multiple virtual devices
+			if(i->second->getParentID() != _deviceID &&
+			   //Necessary for database conversion from database version 0.0.7
+			   i->second->getParentID() != _address) continue;
 			//We are always printing this, because the init script needs it
 			HelperFunctions::printMessage("(Shutdown) => Saving peer 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6));
 			i->second->save(full, full, full);
@@ -1183,14 +1189,14 @@ void HomeMaticDevice::handleWakeUp(int32_t messageCounter, std::shared_ptr<BidCo
 
 std::shared_ptr<Peer> HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
 {
-    return std::shared_ptr<Peer>(new Peer(_address, isCentral()));
+    return std::shared_ptr<Peer>(new Peer(_deviceID, isCentral()));
 }
 
 std::shared_ptr<Peer> HomeMaticDevice::createTeam(int32_t address, LogicalDeviceType deviceType, std::string serialNumber)
 {
 	try
 	{
-		std::shared_ptr<Peer> team(new Peer(_address, isCentral()));
+		std::shared_ptr<Peer> team(new Peer(_deviceID, isCentral()));
 		team->setAddress(address);
 		team->setDeviceType(deviceType);
 		team->setSerialNumber(serialNumber);
@@ -1421,7 +1427,7 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, std::shared_ptr<
 		if(_pairing)
 		{
 			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRINGCENTRAL, packet->senderAddress());
-			std::shared_ptr<Peer> peer(new Peer(_address, isCentral()));
+			std::shared_ptr<Peer> peer(new Peer(_deviceID, isCentral()));
 			peer->setAddress(packet->senderAddress());
 			peer->setDeviceType(GD::deviceTypes.get(DeviceID::HMRCV50));
 			peer->setMessageCounter(0); //Unknown at this point

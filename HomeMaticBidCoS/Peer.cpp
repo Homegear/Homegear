@@ -220,11 +220,11 @@ void Peer::dispose()
     }
 }
 
-Peer::Peer(int32_t parentAddress, bool centralFeatures)
+Peer::Peer(uint32_t parentID, bool centralFeatures)
 {
 	try
 	{
-		_parentAddress = parentAddress;
+		_parentID = parentID;
 		_centralFeatures = centralFeatures;
 		_lastPacketReceived = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		rpcDevice.reset();
@@ -249,7 +249,7 @@ Peer::Peer(int32_t parentAddress, bool centralFeatures)
     }
 }
 
-Peer::Peer(int32_t id, int32_t address, std::string serialNumber, int32_t parentAddress, bool centralFeatures) : Peer(parentAddress, centralFeatures)
+Peer::Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures) : Peer(parentID, centralFeatures)
 {
 	try
 	{
@@ -799,7 +799,7 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 			DataColumnVector data;
 			if(_peerID > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 			else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_parentAddress)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_parentID)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_address)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
 			int32_t result = GD::db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);

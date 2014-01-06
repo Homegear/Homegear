@@ -79,6 +79,9 @@ void LogicalDevices::convertDatabase()
 		GD::db.executeCommand("ALTER TABLE events ADD COLUMN enabled INTEGER");
 		GD::db.executeCommand("UPDATE events SET enabled=1");
 
+		loadDevicesFromDatabase(true);
+		save(true);
+
 		data.clear();
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(result.at(0).at(0)->intValue)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
@@ -86,6 +89,9 @@ void LogicalDevices::convertDatabase()
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.3.0")));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 		GD::db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+		HelperFunctions::printMessage("Exiting Homegear after database conversion...");
+		exit(0);
 	}
 	catch(const std::exception& ex)
     {
@@ -152,7 +158,7 @@ void LogicalDevices::initializeDatabase()
     }
 }
 
-void LogicalDevices::loadDevicesFromDatabase()
+void LogicalDevices::loadDevicesFromDatabase(bool version_0_0_7)
 {
 	try
 	{
@@ -191,7 +197,7 @@ void LogicalDevices::loadDevicesFromDatabase()
 			if(device)
 			{
 				device->load();
-				device->loadPeers();
+				device->loadPeers(version_0_0_7);
 				_devicesMutex.lock();
 				_devices.push_back(device);
 				_devicesMutex.unlock();
@@ -223,7 +229,7 @@ void LogicalDevices::load()
 	try
 	{
 		initializeDatabase();
-		loadDevicesFromDatabase();
+		loadDevicesFromDatabase(false);
 	}
 	catch(const std::exception& ex)
     {

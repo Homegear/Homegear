@@ -107,6 +107,16 @@ private:
 	std::shared_ptr<RPCServer> _server;
 };
 
+class RPCAbortEventReset : public RPCMethod
+{
+public:
+	RPCAbortEventReset()
+	{
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCAddDevice : public RPCMethod
 {
 public:
@@ -170,22 +180,12 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
-class RPCDisableEvent : public RPCMethod
-{
-public:
-	RPCDisableEvent()
-	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
-	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
-};
-
 class RPCEnableEvent : public RPCMethod
 {
 public:
 	RPCEnableEvent()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcBoolean});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
@@ -498,6 +498,16 @@ public:
 	{
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcVariant});
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
+class RPCTriggerEvent : public RPCMethod
+{
+public:
+	RPCTriggerEvent()
+	{
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };

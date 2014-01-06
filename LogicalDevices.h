@@ -70,7 +70,7 @@ private:
 	std::thread _removeThread;
 
 	void initializeDatabase();
-	void loadDevicesFromDatabase();
+	void loadDevicesFromDatabase(bool version_0_0_7);
 	int32_t getUniqueAddress(uint8_t firstByte);
 	std::string getUniqueSerialNumber(std::string seedPrefix);
 	void createCentral();

@@ -233,6 +233,30 @@ std::shared_ptr<RPCVariable> RPCSystemMulticall::invoke(std::shared_ptr<std::vec
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCAbortEventReset::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::eventHandler.abortReset(parameters->at(0)->stringValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCAddDevice::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
@@ -455,38 +479,14 @@ std::shared_ptr<RPCVariable> RPCDeleteMetadata::invoke(std::shared_ptr<std::vect
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPCVariable> RPCDisableEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
-{
-	try
-	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
-		if(error != ParameterError::Enum::noError) return getError(error);
-
-		return GD::eventHandler.disable(parameters->at(0)->stringValue);
-	}
-	catch(const std::exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
 std::shared_ptr<RPCVariable> RPCEnableEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcBoolean }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::eventHandler.enable(parameters->at(0)->stringValue);
+		return GD::eventHandler.enable(parameters->at(0)->stringValue, parameters->at(1)->booleanValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -1762,6 +1762,30 @@ std::shared_ptr<RPCVariable> RPCSetValue::invoke(std::shared_ptr<std::vector<std
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
+std::shared_ptr<RPCVariable> RPCTriggerEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::eventHandler.trigger(parameters->at(0)->stringValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 } /* namespace RPC */

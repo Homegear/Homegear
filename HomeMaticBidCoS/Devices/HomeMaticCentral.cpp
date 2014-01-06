@@ -312,7 +312,7 @@ std::shared_ptr<Peer> HomeMaticCentral::createPeer(int32_t address, int32_t firm
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(new Peer(_address, true));
+		std::shared_ptr<Peer> peer(new Peer(_deviceID, true));
 		peer->setAddress(address);
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);

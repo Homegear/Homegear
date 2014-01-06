@@ -86,7 +86,7 @@ class HomeMaticDevice : public LogicalDevice
         std::shared_ptr<Peer> getPeer(int32_t address);
         std::shared_ptr<Peer> getPeer(std::string serialNumber);
         virtual void deletePeersFromDatabase();
-        virtual void loadPeers();
+        virtual void loadPeers(bool version_0_0_7);
         virtual void savePeers(bool full);
         virtual void loadVariables();
         virtual void saveVariables();
@@ -157,7 +157,6 @@ class HomeMaticDevice : public LogicalDevice
         std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>> _config;
         //End
 
-        int32_t _deviceID = 0;
         std::map<uint32_t, uint32_t> _variableDatabaseIDs;
         bool _disposing = false;
         bool _disposed = false;

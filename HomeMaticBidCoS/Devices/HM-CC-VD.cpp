@@ -308,7 +308,7 @@ std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVers
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(new Peer(_address, false));
+		std::shared_ptr<Peer> peer(new Peer(_deviceID, false));
 		peer->setAddress(address);
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);
