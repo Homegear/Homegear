@@ -50,16 +50,14 @@ public:
 	std::string databasePath() { return _databasePath; }
 	bool databaseSynchronous() { return _databaseSynchronous; }
 	bool databaseMemoryJournal() { return _databaseMemoryJournal; }
-	std::string physicalDeviceType() { return _physicalDeviceType; }
-	std::string physicalDevice() { return _physicalDevice; }
 	std::string logfilePath() { return _logfilePath; }
 	bool prioritizeThreads() { return _prioritizeThreads; }
 	void setPrioritizeThreads(bool value) { _prioritizeThreads = value; }
 	uint32_t workerThreadWindow() { return _workerThreadWindow; }
-	uint32_t bidCoSResponseDelay() { return _bidCoSResponseDelay; }
 	uint32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
 	std::string clientSettingsPath() { return _clientSettingsPath; }
 	std::string serverSettingsPath() { return _serverSettingsPath; }
+	std::string physicalDeviceSettingsPath() { return _physicalDeviceSettingsPath; }
 	std::string scriptPath() { return _scriptPath; }
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
 private:
@@ -71,15 +69,13 @@ private:
 	std::string _databasePath;
 	bool _databaseSynchronous = false;
 	bool _databaseMemoryJournal = true;
-	std::string _physicalDeviceType;
-	std::string _physicalDevice;
 	std::string _logfilePath;
 	bool _prioritizeThreads = true;
 	uint32_t _workerThreadWindow = 3000;
-	uint32_t _bidCoSResponseDelay = 90;
 	uint32_t _rpcServerThreadPriority = 0;
 	std::string _clientSettingsPath;
 	std::string _serverSettingsPath;
+	std::string _physicalDeviceSettingsPath;
 	std::string _scriptPath;
 	std::map<std::string, bool> _tunnelClients;
 

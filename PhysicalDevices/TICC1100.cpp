@@ -34,12 +34,10 @@
 namespace PhysicalDevices
 {
 
-TICC1100::TICC1100()
+TICC1100::TICC1100(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
 {
 	try
 	{
-		_supportedDeviceFamily = DeviceFamily::HomeMaticBidCoS;
-
 		_transfer =  { (uint64_t)0, (uint64_t)0, (uint32_t)0, (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
 
 		_config = //Read from HM-CC-VD
@@ -87,7 +85,7 @@ TICC1100::TICC1100()
 			0x00, //28: RCCTRL0
 		};
 
-		openGPIO(23);
+		openGPIO(_settings->gpio1);
 	}
     catch(const std::exception& ex)
     {
@@ -227,18 +225,13 @@ void TICC1100::setupGPIO(int32_t gpio)
     }
 }
 
-void TICC1100::init(std::string physicalDevice)
-{
-	_physicalDevice = physicalDevice;
-}
-
 void TICC1100::openDevice()
 {
 	try
 	{
 		if(_fileDescriptor != -1) closeDevice();
 
-		_lockfile = "/var/lock" + _physicalDevice.substr(_physicalDevice.find_last_of('/')) + ".lock";
+		_lockfile = "/var/lock" + _settings->device.substr(_settings->device.find_last_of('/')) + ".lock";
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 		if(lockfileDescriptor == -1)
 		{
@@ -253,7 +246,7 @@ void TICC1100::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				HelperFunctions::printCritical("Rf device is in use: " + _physicalDevice);
+				HelperFunctions::printCritical("Rf device is in use: " + _settings->device);
 				return;
 			}
 			unlink(_lockfile.c_str());
@@ -267,12 +260,12 @@ void TICC1100::openDevice()
 		dprintf(lockfileDescriptor, "%10i", getpid());
 		close(lockfileDescriptor);
 
-		_fileDescriptor = open(_physicalDevice.c_str(), O_RDWR);
+		_fileDescriptor = open(_settings->device.c_str(), O_RDWR);
 		usleep(1000);
 
 		if(_fileDescriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open rf device: " + _physicalDevice);
+			HelperFunctions::printCritical("Couldn't open rf device: " + _settings->device);
 			return;
 		}
 
@@ -325,14 +318,14 @@ void TICC1100::setupDevice()
 		uint8_t bits = 8;
 		uint32_t speed = 4000000; //4MHz, see page 25 in datasheet
 
-		if(ioctl(_fileDescriptor, SPI_IOC_WR_MODE, &mode)) throw(Exception("Couldn't set spi mode on device " + _physicalDevice));
-		if(ioctl(_fileDescriptor, SPI_IOC_RD_MODE, &mode)) throw(Exception("Couldn't get spi mode off device " + _physicalDevice));
+		if(ioctl(_fileDescriptor, SPI_IOC_WR_MODE, &mode)) throw(Exception("Couldn't set spi mode on device " + _settings->device));
+		if(ioctl(_fileDescriptor, SPI_IOC_RD_MODE, &mode)) throw(Exception("Couldn't get spi mode off device " + _settings->device));
 
-		if(ioctl(_fileDescriptor, SPI_IOC_WR_BITS_PER_WORD, &bits)) throw(Exception("Couldn't set bits per word on device " + _physicalDevice));
-		if(ioctl(_fileDescriptor, SPI_IOC_RD_BITS_PER_WORD, &bits)) throw(Exception("Couldn't get bits per word off device " + _physicalDevice));
+		if(ioctl(_fileDescriptor, SPI_IOC_WR_BITS_PER_WORD, &bits)) throw(Exception("Couldn't set bits per word on device " + _settings->device));
+		if(ioctl(_fileDescriptor, SPI_IOC_RD_BITS_PER_WORD, &bits)) throw(Exception("Couldn't get bits per word off device " + _settings->device));
 
-		if(ioctl(_fileDescriptor, SPI_IOC_WR_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't set speed on device " + _physicalDevice));
-		if(ioctl(_fileDescriptor, SPI_IOC_RD_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't get speed off device " + _physicalDevice));
+		if(ioctl(_fileDescriptor, SPI_IOC_WR_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't set speed on device " + _settings->device));
+		if(ioctl(_fileDescriptor, SPI_IOC_RD_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't get speed off device " + _settings->device));
 	}
 	catch(const std::exception& ex)
     {
@@ -428,7 +421,7 @@ void TICC1100::readwrite(std::vector<uint8_t>& data)
 			}
 			std::cout << std::dec << std::endl;
 		}
-		if(!ioctl(_fileDescriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(Exception("Couldn't write to device " + _physicalDevice));
+		if(!ioctl(_fileDescriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(Exception("Couldn't write to device " + _settings->device));
 		if(GD::debugLevel >= 6)
 		{
 			std::cout << HelperFunctions::getTimeString() << " Received: " << std::hex << std::setfill('0');
@@ -747,7 +740,7 @@ void TICC1100::startListening()
 	try
 	{
 		stopListening();
-		if(_gpioDescriptor == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _physicalDevice));
+		if(_gpioDescriptor == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _settings->device));
 		openDevice();
 		if(_fileDescriptor == -1) return;
 		_stopped = false;
@@ -850,7 +843,7 @@ void TICC1100::mainThread()
 				HelperFunctions::printWarning("Warning: Error polling GPIO. Reopening...");
 				closeGPIO();
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				openGPIO(22);
+				openGPIO(_settings->gpio1);
 			}*/
 			if(pollResult > 0)
 			{
@@ -902,7 +895,7 @@ void TICC1100::mainThread()
 				HelperFunctions::printError("Error: Could not poll gpio: " + std::string(strerror(errno)) + ". Reopening...");
 				closeGPIO();
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				openGPIO(23);
+				openGPIO(_settings->gpio1);
 			}
 			//pollResult == 0 is timeout
 		}

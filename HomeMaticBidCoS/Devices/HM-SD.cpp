@@ -331,14 +331,14 @@ bool HM_SD::packetReceived(std::shared_ptr<Packet> packet)
 					payload.push_back(_messageCounter[1]);
 					std::shared_ptr<BidCoSPacket> packet1(new BidCoSPacket(bidCoSPacket->messageCounter(), 0xA4, 0x40, addressRemote, addressKeyMatic, payload));
 					packet1->setTimeSending(HelperFunctions::getTime());
-					GD::physicalDevice->sendPacket(packet1);
+					GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet1);
 				}
 				else if(bidCoSPacket->messageType() == 0x03 && bidCoSPacket->controlByte() == 0xA0)
 				{
 					std::vector<uint8_t> payload = *bidCoSPacket->payload();
 					std::shared_ptr<BidCoSPacket> packet3(new BidCoSPacket(bidCoSPacket->messageCounter(), 0xA0, 0x03, addressRemote, addressKeyMatic, payload));
 					packet3->setTimeSending(HelperFunctions::getTime());
-					GD::physicalDevice->sendPacket(packet3);
+					GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet3);
 				}
 			}
 			else if(bidCoSPacket->senderAddress() == addressKeyMatic)
@@ -348,18 +348,18 @@ bool HM_SD::packetReceived(std::shared_ptr<Packet> packet)
 					std::vector<uint8_t> payload = *bidCoSPacket->payload();
 					std::shared_ptr<BidCoSPacket> packet2(new BidCoSPacket(bidCoSPacket->messageCounter(), 0xA0, 0x02, addressCentral, addressMotionDetector, payload));
 					packet2->setTimeSending(HelperFunctions::getTime());
-					GD::physicalDevice->sendPacket(packet2);
+					GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet2);
 				}
 				else if(bidCoSPacket->messageType() == 0x02 && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 5)
 				{
 					std::vector<uint8_t> payload = *bidCoSPacket->payload();
 					std::shared_ptr<BidCoSPacket> packet4(new BidCoSPacket(bidCoSPacket->messageCounter(), 0x80, 0x02, addressCentral, addressMotionDetector, payload));
 					packet4->setTimeSending(HelperFunctions::getTime());
-					GD::physicalDevice->sendPacket(packet4);
+					GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet4);
 				}
 			}
 		}
-		if(printPacket) std::cout << HelperFunctions::getTimeString(bidCoSPacket->timeReceived()) << " Received: " + bidCoSPacket->hexString() << std::endl;
+		if(printPacket) std::cout << HelperFunctions::getTimeString(bidCoSPacket->timeReceived()) << " HomeMatic BidCoS packet Received: " + bidCoSPacket->hexString() << std::endl;
 		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
 		{
 			std::string packetHex = bidCoSPacket->hexString();
@@ -375,7 +375,7 @@ bool HM_SD::packetReceived(std::shared_ptr<Packet> packet)
 				packet->import(packetString, false);
 				std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
 				HelperFunctions::printMessage("Captured: " + packetHex + " Responding with: " + packet->hexString());
-				GD::physicalDevice->sendPacket(packet);
+				GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
 			}
 		}
 	}

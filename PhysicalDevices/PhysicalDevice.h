@@ -32,6 +32,7 @@
 
 #include "../Exception.h"
 #include "../LogicalDevice.h"
+#include "PhysicalDeviceSettings.h"
 
 class Packet;
 
@@ -46,13 +47,11 @@ class PhysicalDevice
 {
 public:
 	PhysicalDevice();
-
-	virtual void init(std::string physicalDevice) {}
+	PhysicalDevice(std::shared_ptr<PhysicalDeviceSettings> settings);
 
 	virtual ~PhysicalDevice();
 
-	static std::shared_ptr<PhysicalDevice> create(std::string deviceType);
-
+	static std::shared_ptr<PhysicalDevice> create(std::shared_ptr<PhysicalDeviceSettings> settings);
 
 	virtual void startListening() {}
 	virtual void stopListening() {}
@@ -60,17 +59,17 @@ public:
 	virtual void removeLogicalDevice(LogicalDevice*);
 	virtual void sendPacket(std::shared_ptr<Packet> packet) {}
 	virtual bool isOpen() { return false; }
+	virtual uint32_t responseDelay() { return _settings->responseDelay; }
 protected:
+	std::shared_ptr<PhysicalDeviceSettings> _settings;
 	std::mutex _logicalDevicesMutex;
     std::list<LogicalDevice*> _logicalDevices;
-    std::string _physicalDevice;
 	std::thread _listenThread;
 	std::thread _callbackThread;
 	bool _stopCallbackThread;
 	std::string _lockfile;
 	std::mutex _sendMutex;
 	bool _stopped = false;
-	DeviceFamily _supportedDeviceFamily = DeviceFamily::none;
 
 	virtual void callCallback(std::shared_ptr<Packet> packet);
 };

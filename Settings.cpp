@@ -45,15 +45,13 @@ void Settings::reset()
 	_databasePath = GD::executablePath + "db.sql";
 	_databaseSynchronous = false;
 	_databaseMemoryJournal = true;
-	_physicalDeviceType = "cul";
-	_physicalDevice = "/dev/ttyACM0";
 	_logfilePath = "/var/log/homegear/";
 	_prioritizeThreads = true;
 	_workerThreadWindow = 3000;
-	_bidCoSResponseDelay = 90;
 	_rpcServerThreadPriority = 0;
 	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
 	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
+	_physicalDeviceSettingsPath = "/etc/homegear/physicaldevices.conf";
 	_scriptPath = "/var/lib/homegear/scripts/";
 	_tunnelClients.clear();
 }
@@ -146,19 +144,6 @@ void Settings::load(std::string filename)
 					if(HelperFunctions::toLower(value) == "false") _databaseMemoryJournal = false;
 					HelperFunctions::printDebug("Debug: databaseMemoryJournal set to " + std::to_string(_databaseMemoryJournal));
 				}
-				else if(name == "rfdevicetype" || name == "physicaldevicetype")
-				{
-					HelperFunctions::toLower(value);
-					_physicalDeviceType = value;
-					if(_physicalDeviceType.empty()) _physicalDeviceType = "cul";
-					HelperFunctions::printDebug("Debug: rfDeviceType set to " + _physicalDeviceType);
-				}
-				else if(name == "rfdevice" || name == "physicaldevice")
-				{
-					_physicalDevice = value;
-					if(_physicalDevice.empty()) _physicalDevice = "/dev/ttyACM0";
-					HelperFunctions::printDebug("Debug: rfDevice set to " + _physicalDevice);
-				}
 				else if(name == "logfilepath")
 				{
 					_logfilePath = value;
@@ -176,12 +161,6 @@ void Settings::load(std::string filename)
 					_workerThreadWindow = HelperFunctions::getNumber(value);
 					if(_workerThreadWindow > 3600000) _workerThreadWindow = 3600000;
 					HelperFunctions::printDebug("Debug: workerThreadWindow set to " + std::to_string(_workerThreadWindow));
-				}
-				else if(name == "bidcosresponsedelay")
-				{
-					_bidCoSResponseDelay = HelperFunctions::getNumber(value);
-					if(_bidCoSResponseDelay > 10000) _bidCoSResponseDelay = 10000;
-					HelperFunctions::printDebug("Debug: bidCoSResponseDelay set to " + std::to_string(_bidCoSResponseDelay));
 				}
 				else if(name == "rpcserverthreadpriority")
 				{
@@ -201,6 +180,12 @@ void Settings::load(std::string filename)
 					_clientSettingsPath = value;
 					if(_clientSettingsPath.empty()) _clientSettingsPath = "/etc/homegear/rpcclients.conf";
 					HelperFunctions::printDebug("Debug: clientSettingsPath set to " + _clientSettingsPath);
+				}
+				else if(name == "physicaldevicesettingspath")
+				{
+					_physicalDeviceSettingsPath = value;
+					if(_physicalDeviceSettingsPath.empty()) _physicalDeviceSettingsPath = "/etc/homegear/physicaldevices.conf";
+					HelperFunctions::printDebug("Debug: physicalDeviceSettingsPath set to " + _physicalDeviceSettingsPath);
 				}
 				else if(name == "scriptpath")
 				{

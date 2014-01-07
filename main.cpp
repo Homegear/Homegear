@@ -100,8 +100,8 @@ void terminate(int32_t signalNumber)
 			stopRPCServers();
 			HelperFunctions::printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
-			HelperFunctions::printInfo( "(Shutdown) => Closing RF device");
-			GD::physicalDevice->stopListening();
+			HelperFunctions::printInfo( "(Shutdown) => Closing physical devices");
+			GD::physicalDevices.stopListening();
 			GD::devices.save(false);
 			HelperFunctions::printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
@@ -114,12 +114,15 @@ void terminate(int32_t signalNumber)
 		else if(signalNumber == SIGHUP)
 		{
 			stopRPCServers();
+			GD::physicalDevices.stopListening();
 			//Binding fails sometimes with "address is already in use" without waiting.
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			HelperFunctions::printMessage("Reloading settings...");
 			GD::settings.load(GD::configPath + "main.conf");
+			GD::physicalDevices.load(GD::settings.physicalDeviceSettingsPath());
 			GD::clientSettings.load(GD::settings.clientSettingsPath());
 			GD::serverSettings.load(GD::settings.serverSettingsPath());
+			GD::physicalDevices.startListening();
 			startRPCServers();
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon)
@@ -405,20 +408,22 @@ int main(int argc, char* argv[])
     	GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".bak");
     	if(!GD::db.isOpen()) exit(1);
 
-    	GD::physicalDevice = PhysicalDevices::PhysicalDevice::create(GD::settings.physicalDeviceType());
-    	if(!GD::physicalDevice)
-    	{
-    		HelperFunctions::printError("Could not create physical device of type " + GD::settings.physicalDeviceType());
-    		return 1;
-    	}
-        GD::physicalDevice->init(GD::settings.physicalDevice());
-        if(!GD::physicalDevice) return 1;
+    	GD::physicalDevices.load(GD::settings.physicalDeviceSettingsPath());
+        if(!GD::physicalDevices.count() == 0)
+        {
+        	HelperFunctions::printCritical("Critical: No physical device could be initialized... Exiting...");
+        	return 1;
+        }
         HelperFunctions::printInfo("Loading XML RPC devices...");
         GD::rpcDevices.load();
         GD::devices.convertDatabase();
-        HelperFunctions::printInfo("Start listening for BidCoS packets...");
-        GD::physicalDevice->startListening();
-        if(!GD::physicalDevice->isOpen()) return 1;
+        HelperFunctions::printInfo("Start listening for packets...");
+        GD::physicalDevices.startListening();
+        if(!GD::physicalDevices.isOpen())
+        {
+        	HelperFunctions::printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
+        	return 1;
+        }
         HelperFunctions::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
         if(_startAsDaemon)
@@ -459,7 +464,7 @@ int main(int argc, char* argv[])
 				{
 					std::vector<uint8_t> payload({2, 1, 1, 0, 0});
 					std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x2F, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
-					GD::physicalDevice->sendPacket(packet);
+					GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
 				}
 				else std::cout << GD::devices.handleCLICommand(input);
 			}

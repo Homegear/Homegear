@@ -53,8 +53,7 @@ namespace PhysicalDevices
 class CRCRS485  : public PhysicalDevice
 {
     public:
-        CRCRS485();
-        void init(std::string physicalDevice);
+        CRCRS485(std::shared_ptr<PhysicalDeviceSettings> settings);
         virtual ~CRCRS485();
         void startListening();
         void stopListening();

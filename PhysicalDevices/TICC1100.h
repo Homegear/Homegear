@@ -195,8 +195,7 @@ public:
 		};
 	};
 
-	TICC1100();
-	void init(std::string physicalDevice);
+	TICC1100(std::shared_ptr<PhysicalDeviceSettings> settings);
 	virtual ~TICC1100();
 
 	void startListening();

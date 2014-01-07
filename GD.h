@@ -33,7 +33,7 @@
 class HomeMaticDevices;
 
 #include "Database.h"
-#include "PhysicalDevices/PhysicalDevice.h"
+#include "PhysicalDevices/PhysicalDevices.h"
 #include "DeviceTypes.h"
 #include "LogicalDevices.h"
 #include "RPC/Server.h"
@@ -69,13 +69,14 @@ public:
 	static RPC::ServerSettings serverSettings;
 	static RPC::ClientSettings clientSettings;
 	static Database db;
-	static std::shared_ptr<PhysicalDevices::PhysicalDevice> physicalDevice;
+	static PhysicalDevices::PhysicalDevices physicalDevices;
 	static int32_t debugLevel;
 	static int32_t rpcLogLevel;
 	static bool bigEndian;
 	static EventHandler eventHandler;
 	static FileDescriptorManager fileDescriptorManager;
 	static DeviceTypes deviceTypes;
+
 
 	virtual ~GD() { }
 private:

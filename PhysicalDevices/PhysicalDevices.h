@@ -27,36 +27,41 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILY_H_
-#define DEVICEFAMILY_H_
+#ifndef PHYSICALDEVICES_H_
+#define PHYSICALDEVICES_H_
 
+#include "../Exception.h"
+#include "../DeviceFamily.h"
+#include "PhysicalDevice.h"
+#include "PhysicalDeviceSettings.h"
+
+#include <memory>
+#include <mutex>
 #include <iostream>
 #include <string>
+#include <map>
+#include <cstring>
+#include <vector>
 
-enum class DeviceFamily : uint32_t
+namespace PhysicalDevices
 {
-	none,
-	HomeMaticBidCoS,
-	HomeMaticWired
-};
-
-class DeviceFamilies
+class PhysicalDevices
 {
 public:
-	virtual ~DeviceFamilies() {}
+	PhysicalDevices();
+	virtual ~PhysicalDevices() {}
+	void load(std::string filename);
 
-	static std::string getName(DeviceFamily family)
-	{
-		switch(family)
-		{
-		case DeviceFamily::HomeMaticBidCoS:
-			return "HomeMatic BidCoS";
-		case DeviceFamily::HomeMaticWired:
-			return "HomeMatic Wired";
-		}
-	}
+	int32_t count() { return _physicalDevices.size(); }
+	std::shared_ptr<PhysicalDevice> get(DeviceFamily family) { if(_physicalDevices.find(family) != _physicalDevices.end()) return _physicalDevices[family]; else return std::shared_ptr<PhysicalDevice>(new PhysicalDevice()); }
+	void stopListening();
+	void startListening();
+	bool isOpen();
 private:
-	DeviceFamilies() {}
-};
+	std::mutex _physicalDevicesMutex;
+	std::map<DeviceFamily, std::shared_ptr<PhysicalDevice>> _physicalDevices;
 
-#endif
+	void reset();
+};
+}
+#endif /* PHYSICALDEVICES_H_ */

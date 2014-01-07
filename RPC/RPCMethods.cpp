@@ -1149,8 +1149,8 @@ std::shared_ptr<RPCVariable> RPCListBidcosInterfaces::invoke(std::shared_ptr<std
 		std::shared_ptr<RPCVariable> interface(new RPCVariable(RPCVariableType::rpcStruct));
 		array->arrayValue->push_back(interface);
 		interface->structValue->insert(RPCStructElement("ADDRESS", std::shared_ptr<RPCVariable>(new RPCVariable(central->getSerialNumber()))));
-		interface->structValue->insert(RPCStructElement("DESCRIPTION", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("Homegear default interface")))));
-		interface->structValue->insert(RPCStructElement("CONNECTED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevice->isOpen()))));
+		interface->structValue->insert(RPCStructElement("DESCRIPTION", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("Homegear default BidCoS interface")))));
+		interface->structValue->insert(RPCStructElement("CONNECTED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->isOpen()))));
 		interface->structValue->insert(RPCStructElement("DEFAULT", std::shared_ptr<RPCVariable>(new RPCVariable(true))));
 		return array;
 	}
@@ -1252,6 +1252,45 @@ std::shared_ptr<RPCVariable> RPCListEvents::invoke(std::shared_ptr<std::vector<s
 			if(parameters->size() == 2) variable = parameters->at(1)->stringValue;
 		}
 		return GD::eventHandler.list(type, address, variable);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPCVariable> RPCListInterfaces::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+
+		std::shared_ptr<HomeMaticCentral> central = GD::devices.getHomeMaticCentral();
+		if(!central) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcArray));
+		std::shared_ptr<RPCVariable> array(new RPCVariable(RPCVariableType::rpcArray));
+
+		std::shared_ptr<RPCVariable> interface(new RPCVariable(RPCVariableType::rpcStruct));
+		array->arrayValue->push_back(interface);
+		interface->structValue->insert(RPCStructElement("ADDRESS", std::shared_ptr<RPCVariable>(new RPCVariable(central->getSerialNumber()))));
+		interface->structValue->insert(RPCStructElement("DESCRIPTION", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("HomeMatic BidCoS interface")))));
+		interface->structValue->insert(RPCStructElement("CONNECTED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->isOpen()))));
+		interface->structValue->insert(RPCStructElement("DEFAULT", std::shared_ptr<RPCVariable>(new RPCVariable(true))));
+
+		interface.reset(new RPCVariable(RPCVariableType::rpcStruct));
+		interface->structValue->insert(RPCStructElement("ADDRESS", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("?")))));
+		interface->structValue->insert(RPCStructElement("DESCRIPTION", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("HomeMatic Wired interface")))));
+		interface->structValue->insert(RPCStructElement("CONNECTED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevices.get(DeviceFamily::HomeMaticWired)->isOpen()))));
+		interface->structValue->insert(RPCStructElement("DEFAULT", std::shared_ptr<RPCVariable>(new RPCVariable(true))));
+		return array;
 	}
 	catch(const std::exception& ex)
     {

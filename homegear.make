@@ -220,6 +220,7 @@ OBJECTS := \
 	$(OBJDIR)/PhysicalParameter.o \
 	$(OBJDIR)/CLIServer.o \
 	$(OBJDIR)/CLIClient.o \
+	$(OBJDIR)/PhysicalDevices.o \
 	$(OBJDIR)/CRC_RS485.o \
 	$(OBJDIR)/TICC1100.o \
 	$(OBJDIR)/Cul.o \
@@ -448,6 +449,9 @@ $(OBJDIR)/CLIServer.o: CLI/CLIServer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/CLIClient.o: CLI/CLIClient.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PhysicalDevices.o: PhysicalDevices/PhysicalDevices.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/CRC_RS485.o: PhysicalDevices/CRC_RS485.cpp

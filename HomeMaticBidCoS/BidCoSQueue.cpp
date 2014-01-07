@@ -279,7 +279,7 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 		int64_t timeSinceLastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastPop;
 		int32_t i = 0;
 		std::chrono::milliseconds sleepingTime;
-		uint32_t responseDelay = GD::settings.bidCoSResponseDelay();
+		uint32_t responseDelay = GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->responseDelay();
 		if(timeSinceLastPop < responseDelay)
 		{
 			sleepingTime = std::chrono::milliseconds((responseDelay - timeSinceLastPop) / 3);
@@ -888,7 +888,7 @@ void BidCoSQueue::sleepAndPushPendingQueue()
 {
 	try
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(GD::settings.bidCoSResponseDelay()));
+		std::this_thread::sleep_for(std::chrono::milliseconds(GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->responseDelay()));
 		pushPendingQueue();
 	}
 	catch(const std::exception& ex)

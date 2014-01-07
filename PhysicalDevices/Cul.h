@@ -53,8 +53,7 @@ namespace PhysicalDevices
 class Cul  : public PhysicalDevice
 {
     public:
-        Cul();
-        void init(std::string physicalDevice);
+        Cul(std::shared_ptr<PhysicalDeviceSettings> settings);
         virtual ~Cul();
         void startListening();
         void stopListening();

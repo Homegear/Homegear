@@ -27,36 +27,29 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILY_H_
-#define DEVICEFAMILY_H_
+#ifndef PHYSICALDEVICESETTINGS_H_
+#define PHYSICALDEVICESETTINGS_H_
+
+#include "../Exception.h"
+#include "../DeviceFamily.h"
 
 #include <iostream>
 #include <string>
 
-enum class DeviceFamily : uint32_t
+namespace PhysicalDevices
 {
-	none,
-	HomeMaticBidCoS,
-	HomeMaticWired
-};
-
-class DeviceFamilies
+class PhysicalDeviceSettings
 {
 public:
-	virtual ~DeviceFamilies() {}
-
-	static std::string getName(DeviceFamily family)
-	{
-		switch(family)
-		{
-		case DeviceFamily::HomeMaticBidCoS:
-			return "HomeMatic BidCoS";
-		case DeviceFamily::HomeMaticWired:
-			return "HomeMatic Wired";
-		}
-	}
-private:
-	DeviceFamilies() {}
+	PhysicalDeviceSettings() {}
+	virtual ~PhysicalDeviceSettings() {}
+	DeviceFamily family = DeviceFamily::none;
+	std::string device;
+	std::string type;
+	uint32_t responseDelay = 95;
+	uint32_t gpio1 = 0;
+	uint32_t gpio2 = 0;
+	uint32_t gpio3 = 0;
 };
-
-#endif
+}
+#endif /* PHYSICALDEVICESETTINGS_H_ */

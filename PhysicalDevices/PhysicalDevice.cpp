@@ -39,7 +39,13 @@ namespace PhysicalDevices
 
 PhysicalDevice::PhysicalDevice()
 {
+	_settings.reset(new PhysicalDeviceSettings());
+}
 
+PhysicalDevice::PhysicalDevice(std::shared_ptr<PhysicalDeviceSettings> settings)
+{
+	_settings = settings;
+	if(!_settings) _settings.reset(new PhysicalDeviceSettings());
 }
 
 PhysicalDevice::~PhysicalDevice()
@@ -47,25 +53,21 @@ PhysicalDevice::~PhysicalDevice()
 
 }
 
-std::shared_ptr<PhysicalDevice> PhysicalDevice::create(std::string deviceType)
+std::shared_ptr<PhysicalDevice> PhysicalDevice::create(std::shared_ptr<PhysicalDeviceSettings> settings)
 {
 	try
 	{
-		if(deviceType == "cul")
+		if(!settings) return std::shared_ptr<PhysicalDevice>();
+		if(settings->family == DeviceFamily::HomeMaticBidCoS)
 		{
-			return std::shared_ptr<PhysicalDevice>(new Cul());
+			if(settings->type == "cul") return std::shared_ptr<PhysicalDevice>(new Cul(settings));
+			else if(settings->type == "cc1100") return std::shared_ptr<PhysicalDevice>(new TICC1100(settings));
+			else HelperFunctions::printError("Error: Unsupported physical device type for family " + DeviceFamilies::getName(settings->family) + ": " + settings->type);
 		}
-		else if(deviceType == "cc1100")
+		else if(settings->family == DeviceFamily::HomeMaticWired)
 		{
-			return std::shared_ptr<PhysicalDevice>(new TICC1100());
-		}
-		else if(deviceType == "crc_rs485")
-		{
-			return std::shared_ptr<PhysicalDevice>(new CRCRS485());
-		}
-		else
-		{
-			HelperFunctions::printError("Error: Unsupported physical device type: " + deviceType);
+			if(settings->type == "rs485") return std::shared_ptr<PhysicalDevice>(new CRCRS485(settings));
+			else HelperFunctions::printError("Error: Unsupported physical device type for family " + DeviceFamilies::getName(settings->family) + ": " + settings->type);
 		}
 	}
     catch(const std::exception& ex)
@@ -136,7 +138,7 @@ void PhysicalDevice::callCallback(std::shared_ptr<Packet> packet)
 		//We need to copy all elements. In packetReceived so much can happen, that _homeMaticDevicesMutex might deadlock
 		for(std::list<LogicalDevice*>::const_iterator i = _logicalDevices.begin(); i != _logicalDevices.end(); ++i)
 		{
-			if((*i)->deviceFamily() == _supportedDeviceFamily) devices.push_back(*i);
+			if((*i)->deviceFamily() == _settings->family) devices.push_back(*i);
 		}
 		_logicalDevicesMutex.unlock();
 		for(std::vector<LogicalDevice*>::iterator i = devices.begin(); i != devices.end(); ++i)

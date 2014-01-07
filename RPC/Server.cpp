@@ -71,6 +71,7 @@ void Server::registerMethods()
 		_server->registerMethod("getValue", std::shared_ptr<RPCMethod>(new RPCGetValue()));
 		_server->registerMethod("init", std::shared_ptr<RPCMethod>(new RPCInit()));
 		_server->registerMethod("listBidcosInterfaces", std::shared_ptr<RPCMethod>(new RPCListBidcosInterfaces()));
+		_server->registerMethod("listInterfaces", std::shared_ptr<RPCMethod>(new RPCListInterfaces()));
 		_server->registerMethod("listClientServers", std::shared_ptr<RPCMethod>(new RPCListClientServers()));
 		_server->registerMethod("listDevices", std::shared_ptr<RPCMethod>(new RPCListDevices()));
 		_server->registerMethod("listEvents", std::shared_ptr<RPCMethod>(new RPCListEvents()));

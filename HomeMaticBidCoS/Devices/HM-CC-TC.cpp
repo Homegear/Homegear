@@ -662,7 +662,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 
 		int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
-		GD::physicalDevice->sendPacket(packet);
+		GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - timePoint;
 		HelperFunctions::printDebug("Debug: " + HelperFunctions::getHexString(_address) + " Sending took " + std::to_string(timePassed) + "ms.");
