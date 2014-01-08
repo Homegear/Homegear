@@ -52,8 +52,8 @@ public:
 	virtual ~PhysicalDevices() {}
 	void load(std::string filename);
 
-	int32_t count() { return _physicalDevices.size(); }
-	std::shared_ptr<PhysicalDevice> get(DeviceFamily family) { if(_physicalDevices.find(family) != _physicalDevices.end()) return _physicalDevices[family]; else return std::shared_ptr<PhysicalDevice>(new PhysicalDevice()); }
+	uint32_t count();
+	std::shared_ptr<PhysicalDevice> get(DeviceFamily family);
 	void stopListening();
 	void startListening();
 	bool isOpen();

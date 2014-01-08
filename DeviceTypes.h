@@ -40,6 +40,8 @@
 enum class DeviceID : uint32_t
 {
 	UNKNOWN = 		0xFFFFFFFF,
+
+	//HomeMatic BidCoS
 	HMSD = 			0xFFFFFFFE,
 	HMCENTRAL = 	0xFFFFFFFD,
 	HMRCV50 = 		0x0000,
@@ -122,6 +124,10 @@ enum class DeviceID : uint32_t
 	HMLCSW4BAPCB =	0x00AB,
 	HMESPMSW1PL =	0x00AC,
 	HMSECSC2 =		0x00B1,
+
+	//HomeMatic Wired
+	HMWIREDSD = 			0xFEFFFFFE,
+	HMWIREDCENTRAL = 		0xFEFFFFFD,
 };
 
 class LogicalDeviceType

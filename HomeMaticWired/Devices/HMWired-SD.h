@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,22 +27,26 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef HM_SD_H
-#define HM_SD_H
+#ifndef HMWIRED_SD_H
+#define HMWIRED_SD_H
 
-#include "../HomeMaticDevice.h"
+#include "../HMWiredDevice.h"
 #include "../Database.h"
 
-enum class FilterType {SenderAddress, DestinationAddress, DeviceType, MessageType};
+#include <list>
 
-class HM_SD_Filter
+namespace HMWired
+{
+enum class FilterType {SenderAddress, DestinationAddress};
+
+class HMWired_SD_Filter
 {
     public:
         FilterType filterType;
         int32_t filterValue;
 };
 
-class HM_SD_OverwriteResponse
+class HMWired_SD_OverwriteResponse
 {
     public:
         int32_t sendAfter;
@@ -50,36 +54,29 @@ class HM_SD_OverwriteResponse
         std::string response;
 };
 
-class HM_SD : public HomeMaticDevice
+class HMWired_SD : public HMWiredDevice
 {
     public:
-        HM_SD();
-        HM_SD(uint32_t deviceID, std::string serialNumber, int32_t address);
-        virtual ~HM_SD();
+        HMWired_SD();
+        HMWired_SD(uint32_t deviceID, std::string serialNumber, int32_t address);
+        virtual ~HMWired_SD();
         bool packetReceived(std::shared_ptr<Packet> packet);
         void addFilter(FilterType, int32_t);
         void removeFilter(FilterType, int32_t);
-        void addOverwriteResponse(std::string packetPartToCapture, std::string response, int32_t sendAfter);
-        void removeOverwriteResponse(std::string packetPartToCapture);
         std::string handleCLICommand(std::string command);
         void loadVariables();
         void saveVariables();
         void saveFilters();
-        void saveResponsesToOverwrite();
         void serializeFilters(std::vector<uint8_t>& encodedData);
         void unserializeFilters(std::shared_ptr<std::vector<char>> serializedData);
-        void serializeResponsesToOverwrite(std::vector<uint8_t>& encodedData);
-        void unserializeResponsesToOverwrite(std::shared_ptr<std::vector<char>> serializedData);
     protected:
     private:
         //In table variables
         bool _enabled = true;
-        std::list<HM_SD_Filter> _filters;
-        std::list<HM_SD_OverwriteResponse> _responsesToOverwrite;
+        std::list<HMWired_SD_Filter> _filters;
         //End
-        bool _hack = false;
 
         virtual void init();
 };
-
-#endif // HM_SD_H
+}
+#endif // HMWIRED_SD_H

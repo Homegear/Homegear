@@ -55,11 +55,6 @@ enum class BidCoSQueueType;
 class HomeMaticDevice : public LogicalDevice
 {
     public:
-		//In table devices
-        virtual int32_t getAddress() { return _address; }
-        virtual std::string getSerialNumber() { return _serialNumber; }
-        //End
-
         //In table variables
         int32_t getFirmwareVersion() { return _firmwareVersion; }
         void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
@@ -145,11 +140,6 @@ class HomeMaticDevice : public LogicalDevice
         virtual void sendDutyCycleResponse(int32_t destinationAddress);
         virtual void sendRequestConfig(int32_t messageCounter, int32_t controlByte, std::shared_ptr<BidCoSPacket> packet) {}
     protected:
-        //In tables devices
-        int32_t _address;
-        std::string _serialNumber;
-        //End
-
         //In table variables
         int32_t _firmwareVersion = 0;
         int32_t _centralAddress = 0;

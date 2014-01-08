@@ -89,6 +89,7 @@ void PhysicalDevices::load(std::string filename)
 						HelperFunctions::toLower(name);
 						if(name == "homematicbidcos") settings->family = DeviceFamily::HomeMaticBidCoS;
 						else if(name == "homematicwired") settings->family = DeviceFamily::HomeMaticWired;
+						HelperFunctions::printDebug("Debug: Reading config for physical device family " + DeviceFamilies::getName(settings->family));
 						break;
 					}
 					ptr++;
@@ -179,6 +180,55 @@ void PhysicalDevices::load(std::string filename)
     }
 }
 
+std::shared_ptr<PhysicalDevice> PhysicalDevices::get(DeviceFamily family)
+{
+	std::shared_ptr<PhysicalDevice> device;
+	try
+	{
+		_physicalDevicesMutex.lock();
+		if(_physicalDevices.find(family) != _physicalDevices.end()) device = _physicalDevices[family];
+		else device = std::shared_ptr<PhysicalDevice>(new PhysicalDevice());
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _physicalDevicesMutex.unlock();
+    return device;
+}
+
+uint32_t PhysicalDevices::count()
+{
+	uint32_t size = 0;
+	try
+	{
+		_physicalDevicesMutex.lock();
+		size = _physicalDevices.size();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _physicalDevicesMutex.unlock();
+    return size;
+}
+
 bool PhysicalDevices::isOpen()
 {
 	try
@@ -219,6 +269,7 @@ void PhysicalDevices::startListening()
 		_physicalDevicesMutex.lock();
 		for(std::map<DeviceFamily, std::shared_ptr<PhysicalDevice>>::iterator i = _physicalDevices.begin(); i != _physicalDevices.end(); ++i)
 		{
+
 			i->second->startListening();
 		}
 		_physicalDevicesMutex.unlock();

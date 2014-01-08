@@ -31,13 +31,12 @@
 #include "../GD.h"
 #include "../HelperFunctions.h"
 
-HomeMaticDevice::HomeMaticDevice()
+HomeMaticDevice::HomeMaticDevice() : LogicalDevice()
 {
 }
 
-HomeMaticDevice::HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address) : _address(address), _serialNumber(serialNumber)
+HomeMaticDevice::HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address)  : LogicalDevice(deviceID, serialNumber, address)
 {
-	_deviceID = deviceID;
 }
 
 void HomeMaticDevice::init()
@@ -448,7 +447,7 @@ void HomeMaticDevice::load()
 {
 	try
 	{
-		HelperFunctions::printDebug("Loading device 0x" + HelperFunctions::getHexString(_address, 6));
+		HelperFunctions::printDebug("Loading HomeMatic BidCoS device 0x" + HelperFunctions::getHexString(_address, 6));
 
 		loadVariables();
 	}

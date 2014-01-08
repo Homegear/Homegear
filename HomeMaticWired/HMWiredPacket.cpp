@@ -93,4 +93,24 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
     }
 }
 
+void HMWiredPacket::import(std::string packetHex)
+{
+	try
+	{
+
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 } /* namespace HMWired */

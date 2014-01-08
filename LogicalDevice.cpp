@@ -33,6 +33,10 @@ LogicalDevice::LogicalDevice()
 {
 }
 
+LogicalDevice::LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address) : _deviceID(deviceID), _address(address), _serialNumber(serialNumber)
+{
+}
+
 LogicalDevice::~LogicalDevice()
 {
 }

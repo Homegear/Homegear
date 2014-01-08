@@ -1,4 +1,4 @@
-- Add all devices to device types
+- homegear -p USERNAME to set necessary device permissions for user
 - RPC Server nur neu starten, wenn config-Dateien geändert
 - Batterie leer von Rauchmelder testen
 

@@ -33,6 +33,10 @@
 class LogicalDevice;
 class HomeMaticDevice;
 class HomeMaticCentral;
+namespace HMWired
+{
+	class HMWiredDevice;
+}
 
 #include <string>
 #include <iostream>
@@ -51,8 +55,10 @@ public:
 	void remove(int32_t address);
 	std::shared_ptr<LogicalDevice> get(int32_t address);
 	std::shared_ptr<HomeMaticDevice> getHomeMatic(int32_t address);
+	std::shared_ptr<HMWired::HMWiredDevice> getHMWired(int32_t address);
 	std::shared_ptr<LogicalDevice> get(std::string serialNumber);
 	std::shared_ptr<HomeMaticDevice> getHomeMatic(std::string serialNumber);
+	std::shared_ptr<HMWired::HMWiredDevice> getHMWired(std::string serialNumber);
 	std::shared_ptr<HomeMaticCentral> getHomeMaticCentral();
 	std::vector<std::shared_ptr<LogicalDevice>> getDevices();
 	void convertDatabase();
@@ -71,10 +77,12 @@ private:
 
 	void initializeDatabase();
 	void loadDevicesFromDatabase(bool version_0_0_7);
-	int32_t getUniqueAddress(uint8_t firstByte);
-	std::string getUniqueSerialNumber(std::string seedPrefix);
-	void createCentral();
-	void createSpyDevice();
+	int32_t getUniqueBidCoSAddress(uint8_t firstByte);
+	uint32_t getUniqueHMWiredAddress(uint32_t seed);
+	std::string getUniqueHomeMaticSerialNumber(std::string seedPrefix, uint32_t seedNumber);
+	void createBidCoSCentral();
+	void createBidCoSSpyDevice();
+	void createHMWiredSpyDevice();
 	void removeThread(int32_t address);
 };
 

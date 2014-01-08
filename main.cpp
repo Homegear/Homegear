@@ -409,7 +409,7 @@ int main(int argc, char* argv[])
     	if(!GD::db.isOpen()) exit(1);
 
     	GD::physicalDevices.load(GD::settings.physicalDeviceSettingsPath());
-        if(!GD::physicalDevices.count() == 0)
+        if(GD::physicalDevices.count() == 0)
         {
         	HelperFunctions::printCritical("Critical: No physical device could be initialized... Exiting...");
         	return 1;

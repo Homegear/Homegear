@@ -32,6 +32,7 @@
 #include "HomeMaticBidCoS/Devices/HM-CC-VD.h"
 #include "HomeMaticBidCoS/Devices/HM-CC-TC.h"
 #include "HomeMaticBidCoS/Devices/HM-SD.h"
+#include "HomeMaticWired/Devices/HMWired-SD.h"
 #include "HelperFunctions.h"
 
 LogicalDevices::LogicalDevices()
@@ -163,7 +164,8 @@ void LogicalDevices::loadDevicesFromDatabase(bool version_0_0_7)
 	try
 	{
 		DataTable rows = GD::db.executeCommand("SELECT * FROM devices");
-		bool spyDeviceExists = false;
+		bool bidCoSSpyDeviceExists = false;
+		bool hmWiredSpyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;
@@ -171,26 +173,29 @@ void LogicalDevices::loadDevicesFromDatabase(bool version_0_0_7)
 			std::string serialNumber = row->second.at(2)->textValue;
 			DeviceID deviceTypeID = (DeviceID)row->second.at(3)->intValue;
 
-			std::shared_ptr<HomeMaticDevice> device;
+			std::shared_ptr<LogicalDevice> device;
 			switch(deviceTypeID)
 			{
 			case DeviceID::HMCCTC:
-				device = std::shared_ptr<HomeMaticDevice>(new HM_CC_TC(deviceID, serialNumber, address));
+				device = std::shared_ptr<LogicalDevice>(new HM_CC_TC(deviceID, serialNumber, address));
 				break;
 			case DeviceID::HMLCSW1FM:
-				device = std::shared_ptr<HomeMaticDevice>(new HM_LC_SWX_FM(deviceID, serialNumber, address));
+				device = std::shared_ptr<LogicalDevice>(new HM_LC_SWX_FM(deviceID, serialNumber, address));
 				break;
 			case DeviceID::HMCCVD:
-				device = std::shared_ptr<HomeMaticDevice>(new HM_CC_VD(deviceID, serialNumber, address));
+				device = std::shared_ptr<LogicalDevice>(new HM_CC_VD(deviceID, serialNumber, address));
 				break;
 			case DeviceID::HMCENTRAL:
 				_homeMaticCentral = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral(deviceID, serialNumber, address));
 				device = _homeMaticCentral;
 				break;
 			case DeviceID::HMSD:
-				spyDeviceExists = true;
-				device = std::shared_ptr<HomeMaticDevice>(new HM_SD(deviceID, serialNumber, address));
+				bidCoSSpyDeviceExists = true;
+				device = std::shared_ptr<LogicalDevice>(new HM_SD(deviceID, serialNumber, address));
 				break;
+			case DeviceID::HMWIREDSD:
+				hmWiredSpyDeviceExists = true;
+				device = std::shared_ptr<LogicalDevice>(new HMWired::HMWired_SD(deviceID, serialNumber, address));
 			default:
 				break;
 			}
@@ -203,9 +208,10 @@ void LogicalDevices::loadDevicesFromDatabase(bool version_0_0_7)
 				_devicesMutex.unlock();
 			}
 		}
-		if(!_homeMaticCentral) createCentral();
-		if(!spyDeviceExists) createSpyDevice();
+		if(!_homeMaticCentral) createBidCoSCentral();
+		if(!bidCoSSpyDeviceExists) createBidCoSSpyDevice();
 		if(_homeMaticCentral) _homeMaticCentral->addPeersToVirtualDevices();
+		if(!hmWiredSpyDeviceExists) createHMWiredSpyDevice();
 	}
 	catch(const std::exception& ex)
     {
@@ -245,7 +251,7 @@ void LogicalDevices::load()
     }
 }
 
-void LogicalDevices::createSpyDevice()
+void LogicalDevices::createBidCoSSpyDevice()
 {
 	try
 	{
@@ -254,7 +260,7 @@ void LogicalDevices::createSpyDevice()
 		int32_t seed = 0xfe0000 + HelperFunctions::getRandomNumber(1, 500);
 
 		int32_t address = _homeMaticCentral->getUniqueAddress(seed);
-		std::string serialNumber(_homeMaticCentral->getUniqueSerialNumber("VSD", HelperFunctions::getRandomNumber(1, 9999999)));
+		std::string serialNumber(getUniqueHomeMaticSerialNumber("VSD", HelperFunctions::getRandomNumber(1, 9999999)));
 
 		add(new HM_SD(0, serialNumber, address));
 		HelperFunctions::printMessage("Created HM_SD with address 0x" + HelperFunctions::getHexString(address) + " and serial number " + serialNumber);
@@ -273,15 +279,42 @@ void LogicalDevices::createSpyDevice()
     }
 }
 
+void LogicalDevices::createHMWiredSpyDevice()
+{
+	try
+	{
+		uint32_t seed = 0xfe000000 + HelperFunctions::getRandomNumber(1, 65535);
 
-void LogicalDevices::createCentral()
+		//ToDo: Use HMWiredCentral to get unique address
+		int32_t address = getUniqueHMWiredAddress(seed);
+		std::string serialNumber(getUniqueHomeMaticSerialNumber("VSD", HelperFunctions::getRandomNumber(1, 9999999)));
+
+		add(new HMWired::HMWired_SD(0, serialNumber, address));
+		HelperFunctions::printMessage("Created HMWired_SD with address 0x" + HelperFunctions::getHexString(address) + " and serial number " + serialNumber);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+
+void LogicalDevices::createBidCoSCentral()
 {
 	try
 	{
 		if(_homeMaticCentral) return;
 
-		int32_t address = getUniqueAddress(0xfd);
-		std::string serialNumber(getUniqueSerialNumber("VCL"));
+		int32_t address = getUniqueBidCoSAddress(0xfd);
+		std::string serialNumber(getUniqueHomeMaticSerialNumber("VCL", HelperFunctions::getRandomNumber(1, 9999999)));
 
 		add(new HomeMaticCentral(0, serialNumber, address));
 		HelperFunctions::printMessage("Created HMCENTRAL with address 0x" + HelperFunctions::getHexString(address) + " and serial number " + serialNumber);
@@ -331,12 +364,12 @@ std::shared_ptr<HomeMaticCentral> LogicalDevices::getHomeMaticCentral()
     return std::shared_ptr<HomeMaticCentral>();
 }
 
-int32_t LogicalDevices::getUniqueAddress(uint8_t firstByte)
+int32_t LogicalDevices::getUniqueBidCoSAddress(uint8_t firstByte)
 {
 	int32_t prefix = firstByte << 16;
 	int32_t seed = HelperFunctions::getRandomNumber(1, 9999);
 	uint32_t i = 0;
-	while(get(prefix + seed) && i++ < 10000)
+	while(getHomeMatic(prefix + seed) && i++ < 10000)
 	{
 		seed += 13;
 		if(seed > 9999) seed -= 10000;
@@ -344,15 +377,27 @@ int32_t LogicalDevices::getUniqueAddress(uint8_t firstByte)
 	return prefix + seed;
 }
 
-std::string LogicalDevices::getUniqueSerialNumber(std::string seedPrefix)
+uint32_t LogicalDevices::getUniqueHMWiredAddress(uint32_t seed)
+{
+	uint32_t prefix = seed << 24;
+	seed = HelperFunctions::getRandomNumber(1, 999999);
+	uint32_t i = 0;
+	while(getHMWired(prefix + seed) && i++ < 10000)
+	{
+		seed += 131;
+		if(seed > 999999) seed -= 1000000;
+	}
+	return prefix + seed;
+}
+
+std::string LogicalDevices::getUniqueHomeMaticSerialNumber(std::string seedPrefix, uint32_t seedNumber)
 {
 	if(seedPrefix.size() != 3) throw Exception("seedPrefix must have a size of 3.");
 	uint32_t i = 0;
-	int32_t seedNumber = HelperFunctions::getRandomNumber(1, 9999999);
 	std::ostringstream stringstream;
 	stringstream << seedPrefix << std::setw(7) << std::setfill('0') << std::dec << seedNumber;
 	std::string temp2 = stringstream.str();
-	while(get(temp2) && i++ < 100000)
+	while((getHomeMatic(temp2) || getHMWired(temp2)) && i++ < 100000)
 	{
 		stringstream.str(std::string());
 		stringstream.clear();
@@ -415,7 +460,7 @@ void LogicalDevices::save(bool full, bool crash)
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			HelperFunctions::printMessage("(Shutdown) => Saving device 0x" + HelperFunctions::getHexString((*i)->getAddress(), 6));
+			HelperFunctions::printMessage("(Shutdown) => Saving " + DeviceFamilies::getName((*i)->deviceFamily()) + " device 0x" + HelperFunctions::getHexString((*i)->getAddress(), 6));
 			(*i)->save(full);
 			(*i)->savePeers(full);
 		}
@@ -590,6 +635,38 @@ std::shared_ptr<HomeMaticDevice> LogicalDevices::getHomeMatic(int32_t address)
 	return std::shared_ptr<HomeMaticDevice>();
 }
 
+std::shared_ptr<HMWired::HMWiredDevice> LogicalDevices::getHMWired(int32_t address)
+{
+	try
+	{
+		_devicesMutex.lock();
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		{
+			if((*i)->deviceFamily() == DeviceFamily::HomeMaticWired && (*i)->getAddress() == address)
+			{
+				std::shared_ptr<HMWired::HMWiredDevice> device(std::dynamic_pointer_cast<HMWired::HMWiredDevice>(*i));
+				if(!device) continue;
+				_devicesMutex.unlock();
+				return device;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _devicesMutex.unlock();
+	return std::shared_ptr<HMWired::HMWiredDevice>();
+}
+
 std::vector<std::shared_ptr<LogicalDevice>> LogicalDevices::getDevices()
 {
 	try
@@ -681,6 +758,38 @@ std::shared_ptr<HomeMaticDevice> LogicalDevices::getHomeMatic(std::string serial
 	return std::shared_ptr<HomeMaticDevice>();
 }
 
+
+std::shared_ptr<HMWired::HMWiredDevice> LogicalDevices::getHMWired(std::string serialNumber)
+{
+	try
+	{
+		_devicesMutex.lock();
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		{
+			if((*i)->deviceFamily() == DeviceFamily::HomeMaticWired && (*i)->getSerialNumber() == serialNumber)
+			{
+				std::shared_ptr<HMWired::HMWiredDevice> device(std::dynamic_pointer_cast<HMWired::HMWiredDevice>(*i));
+				if(!device) continue;
+				_devicesMutex.unlock();
+				return device;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _devicesMutex.unlock();
+	return std::shared_ptr<HMWired::HMWiredDevice>();
+}
 std::string LogicalDevices::handleCLICommand(std::string& command)
 {
 	try
@@ -737,7 +846,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 				{
 					if(element == "help") break;
 					address = HelperFunctions::getNumber(element, true);
-					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+					if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 				}
 				else if(index == 3)
 				{
@@ -811,7 +920,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 				{
 					if(element == "help") break;
 					address = HelperFunctions::getNumber(element, true);
-					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+					if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 				}
 				index++;
 			}
@@ -820,7 +929,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 				stringStream << "Description: This command removes a virtual device." << std::endl;
 				stringStream << "Usage: devices remove ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe 3 byte address of the device to delete in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  ADDRESS:\tThe address of the device to delete in hexadecimal format. Example: 1A03FC" << std::endl;
 				return stringStream.str();
 			}
 
@@ -856,7 +965,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 					else
 					{
 						address = HelperFunctions::getNumber(element, true);
-						if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+						if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 					}
 				}
 				index++;
@@ -866,7 +975,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 				stringStream << "Description: This command selects a virtual device." << std::endl;
 				stringStream << "Usage: devices select ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe 3 byte address of the device to select in hexadecimal format or \"central\" as a shortcut to select the central device. Example: 1A03FC" << std::endl;
+				stringStream << "  ADDRESS:\tThe address of the device to select in hexadecimal format or \"central\" as a shortcut to select the central device. Example: 1A03FC" << std::endl;
 				return stringStream.str();
 			}
 

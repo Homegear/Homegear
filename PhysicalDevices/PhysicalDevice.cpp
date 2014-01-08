@@ -44,8 +44,7 @@ PhysicalDevice::PhysicalDevice()
 
 PhysicalDevice::PhysicalDevice(std::shared_ptr<PhysicalDeviceSettings> settings)
 {
-	_settings = settings;
-	if(!_settings) _settings.reset(new PhysicalDeviceSettings());
+	if(settings) _settings = settings;
 }
 
 PhysicalDevice::~PhysicalDevice()

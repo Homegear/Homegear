@@ -196,6 +196,8 @@ OBJECTS := \
 	$(OBJDIR)/HM-SD.o \
 	$(OBJDIR)/HM-CC-VD.o \
 	$(OBJDIR)/HMWiredPacket.o \
+	$(OBJDIR)/HMWiredDevice.o \
+	$(OBJDIR)/HMWired-SD.o \
 	$(OBJDIR)/Client.o \
 	$(OBJDIR)/Device.o \
 	$(OBJDIR)/RPCVariable.o \
@@ -377,6 +379,12 @@ $(OBJDIR)/HM-CC-VD.o: HomeMaticBidCoS/Devices/HM-CC-VD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWiredPacket.o: HomeMaticWired/HMWiredPacket.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredDevice.o: HomeMaticWired/HMWiredDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWired-SD.o: HomeMaticWired/Devices/HMWired-SD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Client.o: RPC/Client.cpp

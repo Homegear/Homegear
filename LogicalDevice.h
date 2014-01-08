@@ -40,22 +40,27 @@ class LogicalDevice
 {
 public:
 	LogicalDevice();
+	LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
 	virtual ~LogicalDevice();
 
 	virtual bool packetReceived(std::shared_ptr<Packet> packet) { return false; }
 	virtual DeviceFamily deviceFamily() { return DeviceFamily::none; }
 
-	virtual int32_t getAddress() { return 0; }
-	virtual std::string getSerialNumber() { return ""; }
+	virtual int32_t getAddress() { return _address; }
+    virtual std::string getSerialNumber() { return _serialNumber; }
 	LogicalDeviceType getDeviceType() { return _deviceType; }
 	virtual std::string handleCLICommand(std::string command) { return ""; }
 	virtual bool peerSelected() { return false; }
 	virtual void dispose(bool wait = true) {}
 	virtual void deletePeersFromDatabase() {}
+	virtual void load() {}
+	virtual void loadPeers(bool version_0_0_7) {}
 	virtual void save(bool saveDevice) {}
 	virtual void savePeers(bool full) {}
 protected:
 	int32_t _deviceID = 0;
+	int32_t _address = 0;
+    std::string _serialNumber;
 
 	LogicalDeviceType _deviceType;
 };

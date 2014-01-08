@@ -42,6 +42,7 @@ class HMWiredPacket : public Packet
         HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived = 0);
         virtual ~HMWiredPacket();
         void import(std::vector<uint8_t>&);
+        void import(std::string packetHex);
     protected:
     private:
         std::vector<uint8_t> _checksum;
