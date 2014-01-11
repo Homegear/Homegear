@@ -28,8 +28,8 @@
  */
 
 #include "HM-SD.h"
-#include "../GD.h"
-#include "../HelperFunctions.h"
+#include "../../GD.h"
+#include "../../HelperFunctions.h"
 
 HM_SD::HM_SD() : HomeMaticDevice()
 {

@@ -231,6 +231,7 @@ std::string Cul::readFromDevice()
 {
 	try
 	{
+		if(_stopped) return "";
 		if(_fileDescriptor == -1)
 		{
 			HelperFunctions::printCritical("Couldn't read from CUL device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");

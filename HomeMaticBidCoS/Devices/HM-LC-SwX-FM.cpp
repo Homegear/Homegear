@@ -28,8 +28,8 @@
  */
 
 #include "HM-LC-SwX-FM.h"
-#include "../GD.h"
-#include "../HelperFunctions.h"
+#include "../../GD.h"
+#include "../../HelperFunctions.h"
 
 HM_LC_SWX_FM::HM_LC_SWX_FM() : HomeMaticDevice()
 {

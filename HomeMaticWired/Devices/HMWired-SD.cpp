@@ -28,8 +28,8 @@
  */
 
 #include "HMWired-SD.h"
-#include "../GD.h"
-#include "../HelperFunctions.h"
+#include "../../GD.h"
+#include "../../HelperFunctions.h"
 
 namespace HMWired
 {

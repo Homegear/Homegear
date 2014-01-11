@@ -31,7 +31,7 @@
 #define HM_CC_VD_H
 
 #include "../HomeMaticDevice.h"
-#include "../Database.h"
+#include "../../Database.h"
 
 class HM_CC_VD : public HomeMaticDevice
 {

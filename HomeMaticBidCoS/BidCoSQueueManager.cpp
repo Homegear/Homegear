@@ -171,10 +171,13 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 				}
 			}
 			_workerThreadMutex.unlock();
-			_queueMutex.lock();
 		}
-		else if(_queues.find(address) != _queues.end()) _queues.erase(_queues.find(address));
-		_queueMutex.unlock();
+		else if(_queues.find(address) != _queues.end())
+		{
+			_queues.erase(_queues.find(address));
+			_queueMutex.unlock();
+		}
+		else _queueMutex.unlock();
 
 		std::shared_ptr<BidCoSQueueData> queueData(new BidCoSQueueData());
 		queueData->queue->setQueueType(queueType);

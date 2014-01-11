@@ -32,8 +32,12 @@
 
 #include "../Packet.h"
 
+#include <map>
+
 namespace HMWired
 {
+enum class HMWiredPacketType {none = 0, FD = 0xFD, FE = 0xFE, F8 = 0xF8};
+
 class HMWiredPacket : public Packet
 {
     public:
@@ -43,9 +47,15 @@ class HMWiredPacket : public Packet
         virtual ~HMWiredPacket();
         void import(std::vector<uint8_t>&);
         void import(std::string packetHex);
+        uint16_t crc16(std::vector<uint8_t>& data);
     protected:
     private:
         std::vector<uint8_t> _checksum;
+        HMWiredPacketType _type = HMWiredPacketType::none;
+        std::map<uint16_t, uint8_t> _crcTable;
+
+        void init();
+        void initCRCTable();
 };
 
 } /* namespace HMWired */

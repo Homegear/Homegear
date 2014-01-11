@@ -345,7 +345,7 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 {
 	try
 	{
-		if(_fileDescriptor == -1 || _gpioDescriptor == -1) return;
+		if(_fileDescriptor == -1 || _gpioDescriptor == -1 || _stopped) return;
 		if(packet->payload()->size() > 54)
 		{
 			HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
@@ -365,6 +365,11 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 		encodedPacket[i] = decodedPacket[i] ^ decodedPacket[2];
 
 		_txMutex.lock();
+		if(_stopCallbackThread || _fileDescriptor == -1 || _gpioDescriptor == -1 || _stopped)
+		{
+			_txMutex.unlock();
+			return;
+		}
 		_sending = true;
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
 		sendCommandStrobe(CommandStrobes::Enum::SFTX);
@@ -824,7 +829,7 @@ void TICC1100::mainThread()
 		std::vector<char> readBuffer({'0'});
 		bool firstPacket = true;
 
-        while(!_stopCallbackThread && _gpioDescriptor > -1)
+        while(!_stopCallbackThread && _fileDescriptor > -1 && _gpioDescriptor > -1)
         {
         	if(_stopped)
         	{
@@ -898,7 +903,7 @@ void TICC1100::mainThread()
 				openGPIO(_settings->gpio1);
 			}
 			//pollResult == 0 is timeout
-		}
+        }
     }
     catch(const std::exception& ex)
     {
@@ -913,6 +918,30 @@ void TICC1100::mainThread()
     catch(...)
     {
     	_txMutex.unlock();
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    try
+    {
+		if(!_stopCallbackThread && (_fileDescriptor == -1 || _gpioDescriptor == -1))
+		{
+			HelperFunctions::printError("Connection to TI CC1101 closed inexpectedly... Trying to reconnect...");
+			_stopCallbackThread = true; //Set to true, so that sendPacket aborts
+			_txMutex.unlock(); //Make sure _txMutex is unlocked
+			std::thread thread(&TICC1100::startListening, this);
+			thread.detach();
+		}
+		else _txMutex.unlock(); //Make sure _txMutex is unlocked
+	}
+    catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }

@@ -38,7 +38,7 @@ class BidCoSQueue;
 enum class BidCoSQueueType;
 
 #include "../HomeMaticDevice.h"
-#include "../Database.h"
+#include "../../Database.h"
 
 class HM_LC_SWX_FM : public HomeMaticDevice
 {

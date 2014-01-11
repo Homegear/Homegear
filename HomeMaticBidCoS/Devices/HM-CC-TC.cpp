@@ -28,8 +28,8 @@
  */
 
 #include "HM-CC-TC.h"
-#include "../GD.h"
-#include "../HelperFunctions.h"
+#include "../../GD.h"
+#include "../../HelperFunctions.h"
 
 HM_CC_TC::HM_CC_TC() : HomeMaticDevice()
 {

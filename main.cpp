@@ -44,11 +44,7 @@
 #include <algorithm>
 
 #include "Version.h"
-//#include "Devices/HM-SD.h"
-//#include "Devices/HM-CC-VD.h"
-//#include "Devices/HM-CC-TC.h"
-//#include "Devices/HomeMaticCentral.h"
-//#include "HomeMaticDevice.h"
+#include "HomeMaticWired/HMWiredPacket.h"
 #include "Database.h"
 #include "GD.h"
 #include "HelperFunctions.h"
@@ -231,6 +227,23 @@ int main(int argc, char* argv[])
 {
     try
     {
+    	//HMWired::HMWiredPacket packet;
+    	//7518
+    	//std::vector<uint8_t> data = {0xFD, 0, 0, 0x8A, 0, 0xBB, 0x02};
+    	//packet.crc16(data);
+    	//std::vector<uint8_t> data2 = {0, 0, 0x8A, 0, 0xBB, 0x02};
+    	//packet.crc16(data2);
+    	/*std::vector<uint8_t> data3 = {0x71, 0x02};
+    	packet.crc16(data3);
+    	std::vector<uint8_t> data4 = {0xFE, 0x04, 0x01};
+    	packet.crc16(data4);
+    	std::vector<uint8_t> data5 = {0x04, 0x01};
+    	packet.crc16(data5);
+    	std::vector<uint8_t> data6 = {0x01};
+    	packet.crc16(data6);*/
+    	//std::vector<uint8_t> data7 = {0, 0x11, 0x02};
+    	//packet.crc16(data7);
+    	//exit(0);
     	for(int32_t i = 1; i < argc; i++)
     	{
     		std::string arg(argv[i]);

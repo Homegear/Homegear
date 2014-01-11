@@ -31,7 +31,7 @@
 #define HMWIRED_SD_H
 
 #include "../HMWiredDevice.h"
-#include "../Database.h"
+#include "../../Database.h"
 
 #include <list>
 

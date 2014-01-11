@@ -232,6 +232,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 {
 	try
 	{
+		if(_stopped) return std::vector<uint8_t>();
 		if(_fileDescriptor == -1)
 		{
 			HelperFunctions::printCritical("Couldn't read from CRC RS485 device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
@@ -281,12 +282,6 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			}
 			timeoutTime = 5000;
 			packet.push_back(localBuffer[0]);
-			if(packet.size() > 200)
-			{
-				HelperFunctions::printError("CRC RS485 was disconnected.");
-				closeDevice();
-				return std::vector<uint8_t>();
-			}
 		}
 		return packet;
 	}
@@ -379,13 +374,7 @@ void CRCRS485::stopListening()
 			_listenThread.join();
 		}
 		_stopCallbackThread = false;
-		if(_fileDescriptor != -1)
-		{
-			//Other X commands than 00 seem to slow down data processing
-			//writeToDevice("X00\r\n", false);
-			//writeToDevice("Ar\r\n", false);
-			closeDevice();
-		}
+		if(_fileDescriptor != -1) closeDevice();
 		_stopped = true;
 	}
 	catch(const std::exception& ex)
@@ -415,13 +404,11 @@ void CRCRS485::listen()
         		continue;
         	}
         	std::vector<uint8_t> rawPacket = readFromDevice();
-        	if(rawPacket.size() > 10) //11 is minimal packet length
-        	{
-				std::shared_ptr<HMWired::HMWiredPacket> packet(new HMWired::HMWiredPacket(rawPacket, HelperFunctions::getTime()));
-				std::thread t(&CRCRS485::callCallback, this, packet);
-				HelperFunctions::setThreadPriority(t.native_handle(), 45);
-				t.detach();
-        	}
+
+			std::shared_ptr<HMWired::HMWiredPacket> packet(new HMWired::HMWiredPacket(rawPacket, HelperFunctions::getTime()));
+			std::thread t(&CRCRS485::callCallback, this, packet);
+			HelperFunctions::setThreadPriority(t.native_handle(), 45);
+			t.detach();
         }
     }
     catch(const std::exception& ex)

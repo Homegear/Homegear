@@ -28,8 +28,8 @@
  */
 
 #include "HM-CC-VD.h"
-#include "../HelperFunctions.h"
-#include "../GD.h"
+#include "../../HelperFunctions.h"
+#include "../../GD.h"
 
 HM_CC_VD::HM_CC_VD(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
 {

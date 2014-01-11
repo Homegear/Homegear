@@ -28,9 +28,9 @@
  */
 
 #include "HomeMaticCentral.h"
-#include "../GD.h"
-#include "../HelperFunctions.h"
-#include "../Version.h"
+#include "../../GD.h"
+#include "../../HelperFunctions.h"
+#include "../../Version.h"
 
 HomeMaticCentral::HomeMaticCentral() : HomeMaticDevice()
 {

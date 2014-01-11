@@ -39,7 +39,7 @@ class Peer;
 #include <map>
 #include <mutex>
 
-#include "../RPC/RPCVariable.h"
+#include "RPC/RPCVariable.h"
 
 class ServiceMessages {
 public:

@@ -40,7 +40,7 @@ class BidCoSPacket;
 #include "HM-CC-TC.h"
 #include "HM-LC-SwX-FM.h"
 #include "../HomeMaticDevice.h"
-#include "../RPC/RPCVariable.h"
+#include "../../RPC/RPCVariable.h"
 
 class HomeMaticCentral : public HomeMaticDevice
 {
