@@ -431,6 +431,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::remove(std::string name)
 			}
 		}
 		_eventsMutex.unlock();
+		if(!event) return RPC::RPCVariable::createError(-5, "Event not found.");
 		if(event && event->type == Event::Type::triggered)
 		{
 			removeEventToReset(event->id);
@@ -496,6 +497,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::enable(std::string name, bool en
 		}
 		_eventsMutex.unlock();
 
+		if(!event) return RPC::RPCVariable::createError(-5, "Event not found.");
 		if(enabled) event->enabled = true;
 		else
 		{
@@ -883,6 +885,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::trigger(std::string name)
 		}
 		_eventsMutex.unlock();
 
+		if(!event) return RPC::RPCVariable::createError(-5, "Event not found.");
 		uint64_t currentTime = HelperFunctions::getTime();
 		event->lastRaised = currentTime;
 		HelperFunctions::printInfo("Info: Event \"" + event->name + "\" raised for device \"" + event->address + "\" and variable \"" + event->variable + "\". Trigger: \"manual\"");
