@@ -52,7 +52,7 @@ class HMWiredPacket : public Packet
     private:
         std::vector<uint8_t> _checksum;
         HMWiredPacketType _type = HMWiredPacketType::none;
-        std::map<uint16_t, uint8_t> _crcTable;
+        std::map<uint16_t, uint16_t> _crcTable;
 
         void init();
         void initCRCTable();
