@@ -79,49 +79,110 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 {
 	try
 	{
+		_type = HMWiredPacketType::none;
+        _checksum = 0;
+        _addressMask = 0;
+        _senderMessageCounter = 0;
+        _receiverMessageCounter = 0;
+        _synchronizationBit = false;
+
 		HelperFunctions::printMessage(HelperFunctions::getHexString(packet));
 		if(packet.empty()) return;
 		if(packet.at(0) == 0xFD)
 		{
-			if(packet.size() < 11)
+			if(packet.size() > 10)
 			{
-				HelperFunctions::printError("HomeMatic Wired packet of type 0xFD is smaller than 11 bytes: " + HelperFunctions::getHexString(packet));
-				return;
+				_length = packet[10]; //Frame length
+				if(_length > 64 || _length + 11 > packet.size())
+				{
+					HelperFunctions::printError("HomeMatic Wired packet has invalid length: " + HelperFunctions::getHexString(packet));
+					return;
+				}
+				_controlByte = packet[5];
+				_type = ((_controlByte & 1) == 1) ? HMWiredPacketType::ackMessage : HMWiredPacketType::iMessage;
+				if(_type == HMWiredPacketType::iMessage)
+				{
+					_senderMessageCounter = (_controlByte >> 1) & 3;
+					_synchronizationBit = (bool)(_controlByte & 0x80);
+				}
+				_receiverMessageCounter = (_controlByte >> 5) & 3;
+
+				if(_controlByte & 8) _senderAddress = (packet[6] << 24) + (packet[7] << 16) + (packet[8] << 8) + packet[9];
+				_destinationAddress = (packet[1] << 24) + (packet[2] << 16) + (packet[3] << 8) + packet[4];
+				if(_length >= 2)
+				{
+					_payload.clear();
+					_payload.insert(_payload.end(), packet.begin() + 11, packet.end() - 2);
+					_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
+					packet.erase(packet.begin() + (packet.size() - 2), packet.begin() + (packet.size() - 1));
+					if(crc16(packet) != _checksum)
+					{
+						HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
+						return;
+					}
+				}
 			}
-			if(packet[0] != 0xFD && packet[0] != 0xFE)
+			else if(packet.size() == 9)
 			{
-				HelperFunctions::printError("HomeMatic Wired packet has invalid start byte: " + HelperFunctions::getHexString(packet));
-				return;
+				_type = HMWiredPacketType::discovery;
+				_controlByte = packet[5];
+				if(!(_controlByte & 3))
+				{
+					HelperFunctions::printError("HomeMatic Wired packet has invalid length: " + HelperFunctions::getHexString(packet));
+					return;
+				}
+				_destinationAddress = (packet[1] << 24) + (packet[2] << 16) + (packet[3] << 8) + packet[4];
+				_addressMask = packet[5] >> 3;
+				_length = packet[6];
+				if(_length >= 2)
+				{
+					_payload.clear();
+					_payload.insert(_payload.end(), packet.begin() + 7, packet.end() - 2);
+					_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
+					packet.erase(packet.begin() + (packet.size() - 2), packet.begin() + (packet.size() - 1));
+					if(crc16(packet) != _checksum)
+					{
+						HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
+						return;
+					}
+				}
 			}
-			_length = packet[10]; //Frame length
-			if(_length > 64 || _length + 11 > packet.size())
+			else
 			{
 				HelperFunctions::printError("HomeMatic Wired packet has invalid length: " + HelperFunctions::getHexString(packet));
 				return;
 			}
-			_type = HMWiredPacketType::FD;
-			_controlByte = packet[5];
-			_senderAddress = (packet[6] << 24) + (packet[7] << 16) + (packet[8] << 8) + packet[9];
-			_destinationAddress = (packet[1] << 24) + (packet[2] << 16) + (packet[3] << 8) + packet[4];
+		}
+		else if(packet.at(0) == 0xFE && packet.size() > 3)
+		{
+			_type = HMWiredPacketType::system;
+			_destinationAddress = packet.at(1);
+			_controlByte = packet.at(2);
+			if((_controlByte & 0x1F) != 0x11) //ACK message
+			{
+				HelperFunctions::printError("HomeMatic Wired system packet of unknown type received: " + HelperFunctions::getHexString(packet));
+				return;
+			}
+			_receiverMessageCounter = (_controlByte >> 5) & 3;
+			_length = packet.at(3);
 			if(_length >= 2)
 			{
 				_payload.clear();
-				_payload.insert(_payload.end(), packet.begin() + 11, packet.end() - 2);
-				_checksum.clear();
-				_checksum.insert(_checksum.end(), packet.end() - 2, packet.end());
+				_payload.insert(_payload.end(), packet.begin() + 4, packet.end() - 2);
+				_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
+				packet.erase(packet.begin() + (packet.size() - 2), packet.begin() + (packet.size() - 1));
+				if(crc16(packet) != _checksum)
+				{
+					HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
+					return;
+				}
 			}
 		}
-		else if(packet.at(0) == 0xFE)
-		{
-			_type = HMWiredPacketType::FE;
-		}
-		else if(packet.at(0) == 0xF8)
-		{
-			_type = HMWiredPacketType::F8;
-		}
+		else if(packet.at(0) == 0xF8 && packet.size() == 1) _type = HMWiredPacketType::discoveryResponse;
 		else
 		{
 			HelperFunctions::printError("HomeMatic Wired packet of unknown type received: " + HelperFunctions::getHexString(packet));
+			return;
 		}
 	}
 	catch(const std::exception& ex)

@@ -244,6 +244,8 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 		std::vector<uint8_t> packet;
 		int32_t timeoutTime = 500000;
 		int32_t i;
+		bool escapeByte = false;
+		uint32_t length = 0;
 		std::vector<uint8_t> localBuffer(1);
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
@@ -280,8 +282,25 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 				if(errno == EAGAIN) continue;
 				HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
 			}
-			timeoutTime = 5000;
-			packet.push_back(localBuffer[0]);
+			timeoutTime = 7000; //Wait a maximum of 7ms for next byte. Empirical value.
+			if(escapeByte)
+			{
+				escapeByte = false;
+				packet.push_back(localBuffer[0] | 0x80);
+			}
+			else if(localBuffer[0] == 0xFC) escapeByte = true;
+			else packet.push_back(localBuffer[0]);
+			if(length == 0)
+			{
+				if(packet.at(0) == 0xFD && packet.size() > 6)
+				{
+					if(packet.at(5) & 3) length = packet.at(6) + 7;
+					else if(packet.size() > 10) length = packet.at(10) + 11;
+				}
+				else if(packet.at(0) == 0xFE && packet.size() > 3) length = packet.at(3);
+				else if(packet.at(0) == 0xF8) return packet;
+			}
+			else if(packet.size() == length) return packet;
 		}
 		return packet;
 	}
