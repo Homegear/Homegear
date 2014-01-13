@@ -237,6 +237,10 @@ DeviceTypes::DeviceTypes()
 	_types[DeviceID::HMESPMSW1PL] = LogicalDeviceType(DeviceID::HMESPMSW1PL, DeviceFamily::HomeMaticBidCoS, 0x00AC, "HM-ES-PMSw1-Pl");
 	_types[DeviceID::HMSECSC2] = LogicalDeviceType(DeviceID::HMSECSC2, DeviceFamily::HomeMaticBidCoS, 0x00B1, "HM-Sec-SC-2");
 
+	//HomeMatic Wired
+	_types[DeviceID::HMWIREDCENTRAL] = LogicalDeviceType(DeviceID::HMWIREDCENTRAL, DeviceFamily::HomeMaticWired, 0xFEFFFFFD, "HMWired-SD");
+	_types[DeviceID::HMWIREDSD] = LogicalDeviceType(DeviceID::HMWIREDSD, DeviceFamily::HomeMaticWired, 0xFEFFFFFE, "HMWired-Central");
+
 	for(std::map<DeviceID, LogicalDeviceType>::iterator i = _types.begin(); i != _types.end(); ++i)
 	{
 		_types2[i->second.family()][i->second.type()] = i->second;
