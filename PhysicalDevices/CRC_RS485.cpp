@@ -80,6 +80,7 @@ void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
 			openDevice();
 		}
 		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
+		_lastAction = HelperFunctions::getTime();
 		//if(packet->payload()->size() > 54)
 		//{
 		//	if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
@@ -242,6 +243,11 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			if(!isOpen()) return std::vector<uint8_t>();
 		}
 		std::vector<uint8_t> packet;
+		if(_firstByte && (HelperFunctions::getTime() - _lastAction) < 10)
+		{
+			packet.push_back(_firstByte);
+			_firstByte = 0;
+		}
 		int32_t timeoutTime = 500000;
 		int32_t i;
 		bool escapeByte = false;
@@ -251,7 +257,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(_fileDescriptor, &readFileDescriptor);
 
-		while((!_stopCallbackThread && localBuffer.at(0) != '\n'))
+		while(!_stopCallbackThread)
 		{
 			FD_ZERO(&readFileDescriptor);
 			FD_SET(_fileDescriptor, &readFileDescriptor);
@@ -264,7 +270,11 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			{
 				case 0: //Timeout
 					if(!packet.empty()) return packet;
-					if(!_stopCallbackThread) continue;
+					if(!_stopCallbackThread)
+					{
+						_firstByte = 0;
+						continue;
+					}
 					else return std::vector<uint8_t>();
 				case -1:
 					HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
@@ -282,7 +292,13 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 				if(errno == EAGAIN) continue;
 				HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
 			}
-			timeoutTime = 7000; //Wait a maximum of 7ms for next byte. Empirical value.
+			_lastAction = HelperFunctions::getTime();
+			if(!packet.empty() && (localBuffer[0] == 0xFD || localBuffer[0] == 0xFE))
+			{
+				_firstByte = localBuffer[0];
+				HelperFunctions::printWarning("Invalid byte received from CRC RS485 device (collision?): 0x" + HelperFunctions::getHexString(localBuffer[0], 2));
+				return packet;
+			}
 			if(escapeByte)
 			{
 				escapeByte = false;
@@ -294,13 +310,14 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			{
 				if(packet.at(0) == 0xFD && packet.size() > 6)
 				{
-					if(packet.at(5) & 3) length = packet.at(6) + 7;
-					else if(packet.size() > 10) length = packet.at(10) + 11;
+					if((packet.at(5) & 3) == 3 || (packet.at(5) & 8) == 0) length = packet.at(6) + 7; //Discovery packet or packet without sender address
+					else if(packet.size() > 10) length = packet.at(10) + 11; //Normal packet
 				}
 				else if(packet.at(0) == 0xFE && packet.size() > 3) length = packet.at(3);
 				else if(packet.at(0) == 0xF8) return packet;
 			}
 			else if(packet.size() == length) return packet;
+			timeoutTime = 7000;
 		}
 		return packet;
 	}
@@ -425,9 +442,12 @@ void CRCRS485::listen()
         	std::vector<uint8_t> rawPacket = readFromDevice();
 
 			std::shared_ptr<HMWired::HMWiredPacket> packet(new HMWired::HMWiredPacket(rawPacket, HelperFunctions::getTime()));
-			std::thread t(&CRCRS485::callCallback, this, packet);
-			HelperFunctions::setThreadPriority(t.native_handle(), 45);
-			t.detach();
+			if(packet->type() != HMWired::HMWiredPacketType::none)
+			{
+				std::thread t(&CRCRS485::callCallback, this, packet);
+				HelperFunctions::setThreadPriority(t.native_handle(), 45);
+				t.detach();
+			}
         }
     }
     catch(const std::exception& ex)

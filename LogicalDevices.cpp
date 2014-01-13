@@ -379,7 +379,7 @@ int32_t LogicalDevices::getUniqueBidCoSAddress(uint8_t firstByte)
 
 uint32_t LogicalDevices::getUniqueHMWiredAddress(uint32_t seed)
 {
-	uint32_t prefix = seed << 24;
+	uint32_t prefix = seed;
 	seed = HelperFunctions::getRandomNumber(1, 999999);
 	uint32_t i = 0;
 	while(getHMWired(prefix + seed) && i++ < 10000)

@@ -33,29 +33,14 @@
 
 namespace HMWired
 {
+std::map<uint16_t, uint16_t> CRC16::_crcTable;
 
-HMWiredPacket::HMWiredPacket()
+void CRC16::init()
 {
-	init();
+	if(_crcTable.empty()) initCRCTable();
 }
 
-HMWiredPacket::HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived)
-{
-	init();
-	_timeReceived = timeReceived;
-	import(packet);
-}
-
-HMWiredPacket::~HMWiredPacket()
-{
-}
-
-void HMWiredPacket::init()
-{
-	initCRCTable();
-}
-
-void HMWiredPacket::initCRCTable()
+void CRC16::initCRCTable()
 {
 	uint32_t bit, crc;
 
@@ -75,19 +60,62 @@ void HMWiredPacket::initCRCTable()
 	}
 }
 
+uint16_t CRC16::calculate(std::vector<uint8_t>& data)
+{
+	uint16_t crc = 0xf1e2;
+	for(int32_t i = 0; i < data.size(); i++)
+	{
+		crc = (crc << 8) ^ _crcTable[((crc >> 8) & 0xff) ^ data[i]];
+	}
+
+    return crc;
+}
+
+HMWiredPacket::HMWiredPacket()
+{
+	init();
+}
+
+HMWiredPacket::HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived)
+{
+	init();
+	_timeReceived = timeReceived;
+	import(packet);
+}
+
+HMWiredPacket::~HMWiredPacket()
+{
+}
+
+void HMWiredPacket::init()
+{
+	CRC16::init();
+}
+
+void HMWiredPacket::reset()
+{
+	_packet.clear();
+	_escapedPacket.clear();
+	_type = HMWiredPacketType::none;
+	_checksum = 0;
+	_addressMask = 0;
+	_senderMessageCounter = 0;
+	_receiverMessageCounter = 0;
+	_senderAddress = 0;
+	_destinationAddress = 0;
+	_payload.clear();
+	_synchronizationBit = false;
+}
+
+//Import expects non escaped packet with CRC16
 void HMWiredPacket::import(std::vector<uint8_t>& packet)
 {
 	try
 	{
-		_type = HMWiredPacketType::none;
-        _checksum = 0;
-        _addressMask = 0;
-        _senderMessageCounter = 0;
-        _receiverMessageCounter = 0;
-        _synchronizationBit = false;
+		reset();
 
-		HelperFunctions::printMessage(HelperFunctions::getHexString(packet));
 		if(packet.empty()) return;
+		_packet = packet;
 		if(packet.at(0) == 0xFD)
 		{
 			if(packet.size() > 10)
@@ -95,6 +123,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 				_length = packet[10]; //Frame length
 				if(_length > 64 || _length + 11 > packet.size())
 				{
+					reset();
 					HelperFunctions::printError("HomeMatic Wired packet has invalid length: " + HelperFunctions::getHexString(packet));
 					return;
 				}
@@ -114,9 +143,10 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 					_payload.clear();
 					_payload.insert(_payload.end(), packet.begin() + 11, packet.end() - 2);
 					_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
-					packet.erase(packet.begin() + (packet.size() - 2), packet.begin() + (packet.size() - 1));
-					if(crc16(packet) != _checksum)
+					packet.erase(packet.end() - 2, packet.end());
+					if(CRC16::calculate(packet) != _checksum)
 					{
+						reset();
 						HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
 						return;
 					}
@@ -128,20 +158,20 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 				_controlByte = packet[5];
 				if(!(_controlByte & 3))
 				{
+					reset();
 					HelperFunctions::printError("HomeMatic Wired packet has invalid length: " + HelperFunctions::getHexString(packet));
 					return;
 				}
 				_destinationAddress = (packet[1] << 24) + (packet[2] << 16) + (packet[3] << 8) + packet[4];
 				_addressMask = packet[5] >> 3;
 				_length = packet[6];
-				if(_length >= 2)
+				if(_length == 2)
 				{
-					_payload.clear();
-					_payload.insert(_payload.end(), packet.begin() + 7, packet.end() - 2);
 					_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
-					packet.erase(packet.begin() + (packet.size() - 2), packet.begin() + (packet.size() - 1));
-					if(crc16(packet) != _checksum)
+					packet.erase(packet.end() - 2, packet.end());
+					if(CRC16::calculate(packet) != _checksum)
 					{
+						reset();
 						HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
 						return;
 					}
@@ -149,6 +179,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 			}
 			else
 			{
+				reset();
 				HelperFunctions::printError("HomeMatic Wired packet has invalid length: " + HelperFunctions::getHexString(packet));
 				return;
 			}
@@ -160,19 +191,19 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 			_controlByte = packet.at(2);
 			if((_controlByte & 0x1F) != 0x11) //ACK message
 			{
-				HelperFunctions::printError("HomeMatic Wired system packet of unknown type received: " + HelperFunctions::getHexString(packet));
+				reset();
+				HelperFunctions::printError("HomeMatic Wired system packet has unknown type: " + HelperFunctions::getHexString(packet));
 				return;
 			}
 			_receiverMessageCounter = (_controlByte >> 5) & 3;
 			_length = packet.at(3);
-			if(_length >= 2)
+			if(_length == 2)
 			{
-				_payload.clear();
-				_payload.insert(_payload.end(), packet.begin() + 4, packet.end() - 2);
 				_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
-				packet.erase(packet.begin() + (packet.size() - 2), packet.begin() + (packet.size() - 1));
-				if(crc16(packet) != _checksum)
+				packet.erase(packet.end() - 2, packet.end());
+				if(CRC16::calculate(packet) != _checksum)
 				{
+					reset();
 					HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
 					return;
 				}
@@ -181,7 +212,8 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 		else if(packet.at(0) == 0xF8 && packet.size() == 1) _type = HMWiredPacketType::discoveryResponse;
 		else
 		{
-			HelperFunctions::printError("HomeMatic Wired packet of unknown type received: " + HelperFunctions::getHexString(packet));
+			reset();
+			HelperFunctions::printError("HomeMatic Wired packet has unknown type: " + HelperFunctions::getHexString(packet));
 			return;
 		}
 	}
@@ -203,7 +235,8 @@ void HMWiredPacket::import(std::string packetHex)
 {
 	try
 	{
-
+		std::vector<uint8_t> packet(HelperFunctions::getUBinary(packetHex));
+		import(packet);
 	}
 	catch(const std::exception& ex)
     {
@@ -219,15 +252,174 @@ void HMWiredPacket::import(std::string packetHex)
     }
 }
 
-uint16_t HMWiredPacket::crc16(std::vector<uint8_t>& data)
+void HMWiredPacket::escapePacket()
 {
-	uint16_t crc = 0xf1e2;
-	for(int32_t i = 0; i < data.size(); i++)
+	try
 	{
-		crc = (crc << 8) ^ _crcTable[((crc >> 8) & 0xff) ^ data[i]];
+		_escapedPacket.clear();
+		if(_packet.empty()) return;
+		_escapedPacket.push_back(_packet[0]);
+		for(uint32_t i = 1; i < _packet.size(); i++)
+		{
+			if(_packet[i] == 0xFC || _packet[i] == 0xFD || _packet[i] == 0xFE)
+			{
+				_escapedPacket.push_back(0xFC);
+				_escapedPacket.push_back(_packet[i] & 0x7F);
+			}
+			else _escapedPacket.push_back(_packet[i]);
+		}
 	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
 
-    return crc;
+void HMWiredPacket::generateControlByte()
+{
+	try
+	{
+		_controlByte = 0x10; //F bit is always set
+		if(_type == HMWiredPacketType::iMessage)
+		{
+			if(_synchronizationBit) _controlByte &= 0x80;
+			_controlByte |= ((_receiverMessageCounter & 3) << 5);
+			_controlByte |= 0x08; //Packet must contain sender address
+			_controlByte |= ((_senderMessageCounter & 3) << 1);
+		}
+		else if(_type == HMWiredPacketType::ackMessage)
+		{
+			_controlByte |= ((_receiverMessageCounter & 3) << 5);
+			_controlByte |= 0x08; //Packet must contain sender address
+			_controlByte |= 1;
+		}
+		else if(_type == HMWiredPacketType::discovery)
+		{
+			_controlByte |= 3;
+			_controlByte |= ((_addressMask & 0x1F) << 3);
+		}
+		else if(_type == HMWiredPacketType::system)
+		{
+			_controlByte |= ((_receiverMessageCounter & 3) << 5);
+			_controlByte |= 1;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+std::vector<uint8_t> HMWiredPacket::byteArray()
+{
+	try
+	{
+		if(!_escapedPacket.empty()) return _escapedPacket;
+		if(!_packet.empty())
+		{
+			escapePacket();
+			return _escapedPacket;
+		}
+
+		if(_type == HMWiredPacketType::none) return _escapedPacket;
+
+		if(_payload.size() > 128)
+		{
+			HelperFunctions::printError("Cannot create HomeMatic Wired packet with a payload size larger than 128 bytes.");
+			return _escapedPacket;
+		}
+
+		if(_controlByte == 0) generateControlByte();
+
+		if(_type == HMWiredPacketType::iMessage || _type == HMWiredPacketType::ackMessage)
+		{
+			_packet.push_back(0xFD);
+			_packet.push_back(_destinationAddress >> 24);
+			_packet.push_back((_destinationAddress >> 16) & 0xFF);
+			_packet.push_back((_destinationAddress >> 8) & 0xFF);
+			_packet.push_back(_destinationAddress & 0xFF);
+			_packet.push_back(_controlByte);
+			_packet.push_back(_destinationAddress >> 24);
+			_packet.push_back((_destinationAddress >> 16) & 0xFF);
+			_packet.push_back((_destinationAddress >> 8) & 0xFF);
+			_packet.push_back(_destinationAddress & 0xFF);
+			_packet.push_back(_payload.size() + 2);
+			_packet.insert(_packet.end(), _payload.begin(), _payload.end());
+		}
+		else if(_type == HMWiredPacketType::system)
+		{
+			_packet.push_back(0xFE);
+			_packet.push_back(_destinationAddress & 0xFF); //Only one byte, that's correct!
+			_packet.push_back(_controlByte);
+			_packet.push_back(2);
+		}
+		else if(_type == HMWiredPacketType::discovery)
+		{
+			_packet.push_back(0xFD);
+			_packet.push_back(_destinationAddress >> 24);
+			_packet.push_back((_destinationAddress >> 16) & 0xFF);
+			_packet.push_back((_destinationAddress >> 8) & 0xFF);
+			_packet.push_back(_destinationAddress & 0xFF);
+			_packet.push_back(_controlByte);
+			_packet.push_back(2); //Length
+		}
+		else if(_type == HMWiredPacketType::discoveryResponse)
+		{
+			_packet.push_back(0xF8); //No CRC
+		}
+
+		escapePacket();
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return _escapedPacket;
+}
+
+std::string HMWiredPacket::hexString()
+{
+	try
+	{
+		return HelperFunctions::getHexString(byteArray());
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
 }
 
 } /* namespace HMWired */

@@ -59,8 +59,11 @@ class CRCRS485  : public PhysicalDevice
         void stopListening();
         void sendPacket(std::shared_ptr<Packet> packet);
         bool isOpen() { return _fileDescriptor > -1; }
+        int64_t lastAction() { return _lastAction; }
     protected:
+        uint8_t _firstByte = 0;
         int32_t _fileDescriptor = -1;
+        int64_t _lastAction = 0;
 
         void openDevice();
         void closeDevice();

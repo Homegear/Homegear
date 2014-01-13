@@ -38,6 +38,19 @@ namespace HMWired
 {
 enum class HMWiredPacketType {none = 0, iMessage, ackMessage, system, discovery, discoveryResponse};
 
+class CRC16
+{
+public:
+	virtual ~CRC16() {}
+	static void init();
+	static uint16_t calculate(std::vector<uint8_t>& data);
+private:
+	static std::map<uint16_t, uint16_t> _crcTable;
+
+	CRC16() {};
+	static void initCRCTable();
+};
+
 class HMWiredPacket : public Packet
 {
     public:
@@ -52,12 +65,16 @@ class HMWiredPacket : public Packet
         uint8_t senderMessageCounter() { return _senderMessageCounter; }
         uint8_t receiverMessageCounter() { return _receiverMessageCounter; }
         bool synchronizationBit() { return _synchronizationBit; }
+        virtual std::string hexString();
+        virtual std::vector<uint8_t> byteArray();
 
         void import(std::vector<uint8_t>& packet);
         void import(std::string packetHex);
     protected:
     private:
         //Packet content
+        std::vector<uint8_t> _packet;
+        std::vector<uint8_t> _escapedPacket;
         HMWiredPacketType _type = HMWiredPacketType::none;
         uint16_t _checksum = 0;
         uint8_t _addressMask = 0;
@@ -66,11 +83,10 @@ class HMWiredPacket : public Packet
         bool _synchronizationBit = false;
         //End packet content
 
-        std::map<uint16_t, uint16_t> _crcTable;
-
         void init();
-        void initCRCTable();
-        uint16_t crc16(std::vector<uint8_t>& data);
+        void reset();
+        void escapePacket();
+        void generateControlByte();
 };
 
 } /* namespace HMWired */
