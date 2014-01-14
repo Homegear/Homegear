@@ -218,7 +218,7 @@ DeviceTypes::DeviceTypes()
 	_types[DeviceID::HMLCDIM1TCV644] = LogicalDeviceType(DeviceID::HMLCDIM1TCV644, DeviceFamily::HomeMaticBidCoS, 0x0072, "HM-LC-Dim1T-CV-644");
 	_types[DeviceID::HMLCDIM1TFM644] = LogicalDeviceType(DeviceID::HMLCDIM1TFM644, DeviceFamily::HomeMaticBidCoS, 0x0073, "HM-LC-Dim1T-FM-644");
 	_types[DeviceID::HMLCDIM2TSM644] = LogicalDeviceType(DeviceID::HMLCDIM2TSM644, DeviceFamily::HomeMaticBidCoS, 0x0074, "HM-LC-Dim2T-SM-644");
-	//_types[DeviceID::HMOUCFMPL] = LogicalDeviceType(DeviceID::HMOUCFMPL, DeviceFamily::HomeMaticBidCoS, 0x0075, "HM-OU-CFM-Pl");
+	_types[DeviceID::HMOUCFMPL] = LogicalDeviceType(DeviceID::HMOUCFMPL, DeviceFamily::HomeMaticBidCoS, 0x0075, "HM-OU-CFM-Pl");
 	_types[DeviceID::ZELSTGRMHS4] = LogicalDeviceType(DeviceID::ZELSTGRMHS4, DeviceFamily::HomeMaticBidCoS, 0x0080, "ZEL STG RM HS 4");
 	_types[DeviceID::HMSWI3FMROTO] = LogicalDeviceType(DeviceID::HMSWI3FMROTO, DeviceFamily::HomeMaticBidCoS, 0x0083, "ZEL STG RM FSS UP3");
 	_types[DeviceID::HMLCDIMSCHUECO] = LogicalDeviceType(DeviceID::HMLCDIMSCHUECO, DeviceFamily::HomeMaticBidCoS, 0x0089, "263 134");

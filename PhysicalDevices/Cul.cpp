@@ -72,12 +72,6 @@ void Cul::sendPacket(std::shared_ptr<Packet> packet)
 			HelperFunctions::printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		bool deviceWasClosed = false;
-		if(_fileDescriptor == -1)
-		{
-			deviceWasClosed = true;
-			openDevice();
-		}
 		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
 		if(packet->payload()->size() > 54)
 		{
@@ -86,8 +80,6 @@ void Cul::sendPacket(std::shared_ptr<Packet> packet)
 		}
 
 		writeToDevice("As" + packet->hexString() + "\r\n", true);
-
-		if(deviceWasClosed) closeDevice();
 	}
 	catch(const std::exception& ex)
     {

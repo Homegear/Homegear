@@ -887,7 +887,7 @@ void TICC1100::mainThread()
 							t.detach();
 						}
 					}
-					else HelperFunctions::printInfo("Info: Packet received, but CRC failed.");
+					else HelperFunctions::printInfo("Info: HomeMatic BidCoS packet received, but CRC failed.");
 
 					sendCommandStrobe(CommandStrobes::Enum::SFRX);
 					sendCommandStrobe(CommandStrobes::Enum::SRX);

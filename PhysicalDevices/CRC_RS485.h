@@ -68,7 +68,7 @@ class CRCRS485  : public PhysicalDevice
         void openDevice();
         void closeDevice();
         void setupDevice();
-        void writeToDevice(std::string, bool);
+        void writeToDevice(std::vector<uint8_t>& packet, bool printPacket);
         std::vector<uint8_t> readFromDevice();
         void listen();
     private:

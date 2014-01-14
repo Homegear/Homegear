@@ -73,23 +73,16 @@ void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
 			HelperFunctions::printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		bool deviceWasClosed = false;
-		if(_fileDescriptor == -1)
-		{
-			deviceWasClosed = true;
-			openDevice();
-		}
 		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
 		_lastAction = HelperFunctions::getTime();
-		//if(packet->payload()->size() > 54)
-		//{
-		//	if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
-		//	return;
-		//}
+		if(packet->payload()->size() > 128)
+		{
+			if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
+			return;
+		}
 
-		//writeToDevice("As" + packet->hexString() + "\r\n", true);
-
-		if(deviceWasClosed) closeDevice();
+		std::vector<uint8_t> data = packet->byteArray();
+		writeToDevice(data, true);
 	}
 	catch(const std::exception& ex)
     {
@@ -195,8 +188,8 @@ void CRCRS485::setupDevice()
 	{
 		if(_fileDescriptor == -1) return;
 		struct termios term;
-		term.c_cflag = B19200 | CS8 | CLOCAL | CREAD;
-		term.c_iflag = IGNPAR;
+		term.c_cflag = B19200 | CS8 | CREAD | PARENB;
+		term.c_iflag = 0;
 		term.c_oflag = 0;
 		term.c_lflag = 0;
 		term.c_cc[VMIN] = 1;
@@ -332,22 +325,22 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 	return std::vector<uint8_t>();
 }
 
-void CRCRS485::writeToDevice(std::string data, bool printSending)
+void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 {
     try
     {
-    	if(_stopped) return;
+    	if(_stopped || packet.empty()) return;
         if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
         int32_t bytesWritten = 0;
         int32_t i;
-        if(GD::debugLevel > 3 && printSending)
+        if(GD::debugLevel > 3 && printPacket)
         {
-            HelperFunctions::printInfo("Info: Sending: " + data.substr(2, data.size() - 4));
+            HelperFunctions::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
         }
         _sendMutex.lock();
-        while(bytesWritten < (signed)data.length())
+        while(bytesWritten < (signed)packet.size())
         {
-            i = write(_fileDescriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
+            i = write(_fileDescriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
             if(i == -1)
             {
                 if(errno == EAGAIN) continue;
@@ -355,24 +348,20 @@ void CRCRS485::writeToDevice(std::string data, bool printSending)
             }
             bytesWritten += i;
         }
-
-        _sendMutex.unlock();
     }
     catch(const std::exception& ex)
     {
-    	_sendMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_sendMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_sendMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _sendMutex.unlock();
 }
 
 void CRCRS485::startListening()

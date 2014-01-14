@@ -64,6 +64,12 @@ void LogicalDevices::convertDatabase()
 	try
 	{
 		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string("table"))));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string("homegearVariables"))));
+		DataTable rows = GD::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
+		//Cannot proceed, because table homegearVariables does not exist
+		if(rows.empty()) return;
+		data.clear();
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
 		DataTable result = GD::db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result.empty()) return; //Handled in initializeDatabase
@@ -87,6 +93,7 @@ void LogicalDevices::convertDatabase()
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(result.at(0).at(0)->intValue)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+		//Don't forget to set new version in initializeDatabase!!!
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.3.0")));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 		GD::db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
@@ -140,7 +147,7 @@ void LogicalDevices::initializeDatabase()
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.0.7")));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.3.0")));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			GD::db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 		}

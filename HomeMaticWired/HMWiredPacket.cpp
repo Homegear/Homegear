@@ -76,6 +76,13 @@ HMWiredPacket::HMWiredPacket()
 	init();
 }
 
+HMWiredPacket::HMWiredPacket(std::string packet, int64_t timeReceived)
+{
+	init();
+	_timeReceived = timeReceived;
+	import(packet);
+}
+
 HMWiredPacket::HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived)
 {
 	init();
@@ -118,10 +125,10 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 		_packet = packet;
 		if(packet.at(0) == 0xFD)
 		{
-			if(packet.size() > 10)
+			if(packet.size() > 9)
 			{
 				_length = packet[10]; //Frame length
-				if(_length > 64 || _length + 11 > packet.size())
+				if(packet.size() != _length + 11 && packet.size() != _length + 9)
 				{
 					reset();
 					HelperFunctions::printError("HomeMatic Wired packet has invalid length: " + HelperFunctions::getHexString(packet));
@@ -140,19 +147,27 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 				_destinationAddress = (packet[1] << 24) + (packet[2] << 16) + (packet[3] << 8) + packet[4];
 				if(_length >= 2)
 				{
-					_payload.clear();
-					_payload.insert(_payload.end(), packet.begin() + 11, packet.end() - 2);
-					_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
-					packet.erase(packet.end() - 2, packet.end());
-					if(CRC16::calculate(packet) != _checksum)
+					if(_packet.size() > 11)  _payload.insert(_payload.end(), packet.begin() + 11, packet.end() - 2);
+					if(packet.size() == _length + 11)
 					{
-						reset();
-						HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
-						return;
+						_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
+						packet.erase(packet.end() - 2, packet.end());
+						if(CRC16::calculate(packet) != _checksum)
+						{
+							reset();
+							HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
+							return;
+						}
+					}
+					else
+					{
+						_checksum = CRC16::calculate(packet);
+						_packet.push_back(_checksum >> 8);
+						_packet.push_back(_checksum & 0xFF);
 					}
 				}
 			}
-			else if(packet.size() == 9)
+			else if(packet.size() == 9 || packet.size() == 7)
 			{
 				_type = HMWiredPacketType::discovery;
 				_controlByte = packet[5];
@@ -167,13 +182,22 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 				_length = packet[6];
 				if(_length == 2)
 				{
-					_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
-					packet.erase(packet.end() - 2, packet.end());
-					if(CRC16::calculate(packet) != _checksum)
+					if(packet.size() == _length + 7)
 					{
-						reset();
-						HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
-						return;
+						_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
+						packet.erase(packet.end() - 2, packet.end());
+						if(CRC16::calculate(packet) != _checksum)
+						{
+							reset();
+							HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
+							return;
+						}
+					}
+					else
+					{
+						_checksum = CRC16::calculate(packet);
+						_packet.push_back(_checksum >> 8);
+						_packet.push_back(_checksum & 0xFF);
 					}
 				}
 			}
@@ -187,8 +211,8 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 		else if(packet.at(0) == 0xFE && packet.size() > 3)
 		{
 			_type = HMWiredPacketType::system;
-			_destinationAddress = packet.at(1);
-			_controlByte = packet.at(2);
+			_destinationAddress = packet[1];
+			_controlByte = packet[2];
 			if((_controlByte & 0x1F) != 0x11) //ACK message
 			{
 				reset();
@@ -196,16 +220,25 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 				return;
 			}
 			_receiverMessageCounter = (_controlByte >> 5) & 3;
-			_length = packet.at(3);
+			_length = packet[3];
 			if(_length == 2)
 			{
-				_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
-				packet.erase(packet.end() - 2, packet.end());
-				if(CRC16::calculate(packet) != _checksum)
+				if(packet.size() == _length + 4)
 				{
-					reset();
-					HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
-					return;
+					_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
+					packet.erase(packet.end() - 2, packet.end());
+					if(CRC16::calculate(packet) != _checksum)
+					{
+						reset();
+						HelperFunctions::printError("CRC for HomeMatic Wired packet failed: " + HelperFunctions::getHexString(packet) + HelperFunctions::getHexString(_checksum, 4));
+						return;
+					}
+				}
+				else
+				{
+					_checksum = CRC16::calculate(packet);
+					_packet.push_back(_checksum >> 8);
+					_packet.push_back(_checksum & 0xFF);
 				}
 			}
 		}

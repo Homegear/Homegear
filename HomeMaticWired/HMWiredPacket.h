@@ -56,6 +56,7 @@ class HMWiredPacket : public Packet
     public:
         //Properties
         HMWiredPacket();
+        HMWiredPacket(std::string packet, int64_t timeReceived = 0);
         HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived = 0);
         virtual ~HMWiredPacket();
 
