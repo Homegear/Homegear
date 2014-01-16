@@ -64,6 +64,8 @@ class CRCRS485  : public PhysicalDevice
         uint8_t _firstByte = 0;
         int32_t _fileDescriptor = -1;
         int64_t _lastAction = 0;
+        bool _sending = false;
+        std::vector<uint8_t> _receivedSentPacket;
 
         void openDevice();
         void closeDevice();

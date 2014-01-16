@@ -293,9 +293,9 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 			}
 		}
 		if(_stopResendThread) return;
-		if(_resendCounter < 2)
+		if(_resendCounter < 4)
 		{
-			//Sleep for 200 ms
+			//Sleep for 200 ms 5 times
 			i = 0;
 			if(burst)
 			{
@@ -309,7 +309,19 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 				i++;
 			}
 		}
-		else if(_resendCounter >= 2 && _resendCounter < 6)
+		else if(_resendCounter >= 4 && _resendCounter < 6)
+		{
+			longKeepAlive();
+			//Sleep for 500 ms
+			i = 0;
+			sleepingTime = std::chrono::milliseconds(50);
+			while(!_stopResendThread && i < 10)
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				i++;
+			}
+		}
+		else if(_resendCounter >= 6 && _resendCounter < 8)
 		{
 			longKeepAlive();
 			//Sleep for 1000 ms

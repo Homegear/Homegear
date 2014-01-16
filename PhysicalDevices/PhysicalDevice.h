@@ -39,6 +39,7 @@ class Packet;
 #include <list>
 #include <thread>
 #include <mutex>
+#include <map>
 
 namespace PhysicalDevices
 {
@@ -70,8 +71,12 @@ protected:
 	std::string _lockfile;
 	std::mutex _sendMutex;
 	bool _stopped = false;
+	std::map<uint32_t, int32_t> _gpioDescriptors;
 
 	virtual void callCallback(std::shared_ptr<Packet> packet);
+	virtual void openGPIO(uint32_t index, bool readOnly);
+	virtual void closeGPIO(uint32_t index);
+	virtual void setGPIO(uint32_t index, bool value);
 };
 
 }

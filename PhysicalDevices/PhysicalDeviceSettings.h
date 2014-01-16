@@ -35,6 +35,7 @@
 
 #include <iostream>
 #include <string>
+#include <map>
 
 namespace PhysicalDevices
 {
@@ -47,9 +48,7 @@ public:
 	std::string device;
 	std::string type;
 	uint32_t responseDelay = 95;
-	uint32_t gpio1 = 0;
-	uint32_t gpio2 = 0;
-	uint32_t gpio3 = 0;
+	std::map<uint32_t, std::string> gpio;
 };
 }
 #endif /* PHYSICALDEVICESETTINGS_H_ */

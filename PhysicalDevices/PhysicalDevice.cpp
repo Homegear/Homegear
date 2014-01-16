@@ -40,11 +40,17 @@ namespace PhysicalDevices
 PhysicalDevice::PhysicalDevice()
 {
 	_settings.reset(new PhysicalDeviceSettings());
+	_gpioDescriptors[1] = -1;
+	_gpioDescriptors[2] = -1;
+	_gpioDescriptors[3] = -1;
 }
 
 PhysicalDevice::PhysicalDevice(std::shared_ptr<PhysicalDeviceSettings> settings)
 {
 	if(settings) _settings = settings;
+	_gpioDescriptors[1] = -1;
+	_gpioDescriptors[2] = -1;
+	_gpioDescriptors[3] = -1;
 }
 
 PhysicalDevice::~PhysicalDevice()
@@ -161,6 +167,85 @@ void PhysicalDevice::callCallback(std::shared_ptr<Packet> packet)
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 
+}
+
+void PhysicalDevice::openGPIO(uint32_t index, bool readOnly)
+{
+	try
+	{
+		if(_settings->gpio.find(index) == _settings->gpio.end() || _settings->gpio.at(index).empty())
+		{
+			throw(Exception("Failed to open gpio with index \"" + std::to_string(index) + "\": Not configured in physical devices' configuration file."));
+		}
+		std::string path = _settings->gpio.at(index) + "value";
+		_gpioDescriptors[index] = open(path.c_str(), readOnly ? O_RDONLY : O_RDWR);
+		if (_gpioDescriptors[index] == -1) throw(Exception("Failed to open gpio value file \"" + path + "\": " + strerror(errno)));
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void PhysicalDevice::closeGPIO(uint32_t index)
+{
+	try
+	{
+		if(_gpioDescriptors.find(1) != _gpioDescriptors.end() && _gpioDescriptors.at(1) > -1)
+		{
+			close(_gpioDescriptors.at(1));
+			_gpioDescriptors.at(1) = -1;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void PhysicalDevice::setGPIO(uint32_t index, bool value)
+{
+	try
+	{
+		if(_gpioDescriptors.find(index) == _gpioDescriptors.end() || _gpioDescriptors.at(index) == -1)
+		{
+			HelperFunctions::printError("Failed to set gpio with index \"" + std::to_string(index) + "\": Device not open.");
+			return;
+		}
+		std::string temp(std::to_string((int32_t)value));
+		if(write(_gpioDescriptors[index], temp.c_str(), temp.size()) <= 0)
+		{
+			HelperFunctions::printError("Could not write GPIO with index " + std::to_string(index) + ".");
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 }

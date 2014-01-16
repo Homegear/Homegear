@@ -134,18 +134,21 @@ void PhysicalDevices::load(std::string filename)
 				}
 				else if(name == "gpio1")
 				{
-					settings->gpio1 = HelperFunctions::getNumber(value);
-					HelperFunctions::printDebug("Debug: GPIO1 of family " + DeviceFamilies::getName(settings->family) + " set to " + std::to_string(settings->gpio1));
+					settings->gpio[1] = value;
+					if(settings->gpio[1].back() != '/') settings->gpio[1].push_back('/');
+					HelperFunctions::printDebug("Debug: GPIO1 of family " + DeviceFamilies::getName(settings->family) + " set to " + settings->gpio[1]);
 				}
 				else if(name == "gpio2")
 				{
-					settings->gpio2 = HelperFunctions::getNumber(value);
-					HelperFunctions::printDebug("Debug: GPIO2 of family " + DeviceFamilies::getName(settings->family) + " set to " + std::to_string(settings->gpio2));
+					settings->gpio[2] = value;
+					if(settings->gpio[2].back() != '/') settings->gpio[2].push_back('/');
+					HelperFunctions::printDebug("Debug: GPIO2 of family " + DeviceFamilies::getName(settings->family) + " set to " + settings->gpio[2]);
 				}
 				else if(name == "gpio3")
 				{
-					settings->gpio3 = HelperFunctions::getNumber(value);
-					HelperFunctions::printDebug("Debug: GPIO3 of family " + DeviceFamilies::getName(settings->family) + " set to " + std::to_string(settings->gpio3));
+					settings->gpio[3] = value;
+					if(settings->gpio[3].back() != '/') settings->gpio[3].push_back('/');
+					HelperFunctions::printDebug("Debug: GPIO3 of family " + DeviceFamilies::getName(settings->family) + " set to " + settings->gpio[3]);
 				}
 				else
 				{

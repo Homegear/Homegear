@@ -244,6 +244,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 		int32_t timeoutTime = 500000;
 		int32_t i;
 		bool escapeByte = false;
+		bool receivingSentPacket = false;
 		uint32_t length = 0;
 		std::vector<uint8_t> localBuffer(1);
 		fd_set readFileDescriptor;
@@ -259,38 +260,41 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			timeout.tv_sec = 0;
 			timeout.tv_usec = timeoutTime;
 			i = select(_fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
-			switch(i)
+			if(i == 0) //Timeout
 			{
-				case 0: //Timeout
-					if(!packet.empty()) return packet;
+					if(!packet.empty()) break;
 					if(!_stopCallbackThread)
 					{
 						_firstByte = 0;
 						continue;
 					}
-					else return std::vector<uint8_t>();
-				case -1:
-					HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
-					return std::vector<uint8_t>();
-				case 1:
-					break;
-				default:
-					HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
-					return std::vector<uint8_t>();
+					else break;
 			}
-
+			else if(i == -1)
+			{
+					HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
+					break;
+			}
+			else if(i != 1)
+			{
+					HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
+					break;
+			}
+			if(!_sending) _sendMutex.try_lock(); //Don't change to "lock", because it is called for each received byte!
+			else receivingSentPacket = true;
 			i = read(_fileDescriptor, &localBuffer.at(0), 1);
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
 				HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
+				break;
 			}
 			_lastAction = HelperFunctions::getTime();
 			if(!packet.empty() && (localBuffer[0] == 0xFD || localBuffer[0] == 0xFE))
 			{
 				_firstByte = localBuffer[0];
 				HelperFunctions::printWarning("Invalid byte received from CRC RS485 device (collision?): 0x" + HelperFunctions::getHexString(localBuffer[0], 2));
-				return packet;
+				break;
 			}
 			if(escapeByte)
 			{
@@ -307,11 +311,19 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 					else if(packet.size() > 10) length = packet.at(10) + 11; //Normal packet
 				}
 				else if(packet.at(0) == 0xFE && packet.size() > 3) length = packet.at(3);
-				else if(packet.at(0) == 0xF8) return packet;
+				else if(packet.at(0) == 0xF8) break;
 			}
-			else if(packet.size() == length) return packet;
+			else if(packet.size() == length) break;
 			timeoutTime = 7000;
 		}
+		if(receivingSentPacket)
+		{
+			_receivedSentPacket = packet;
+			packet.clear();
+			_sendMutex.lock(); //Wait for sendPacket to finish
+			_sendMutex.unlock();
+		}
+		else _sendMutex.unlock();
 		return packet;
 	}
 	catch(const std::exception& ex)
@@ -322,6 +334,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _sendMutex.unlock();
 	return std::vector<uint8_t>();
 }
 
@@ -331,23 +344,38 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
     {
     	if(_stopped || packet.empty()) return;
         if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
-        int32_t bytesWritten = 0;
-        int32_t i;
-        if(GD::debugLevel > 3 && printPacket)
-        {
-            HelperFunctions::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
-        }
         _sendMutex.lock();
-        while(bytesWritten < (signed)packet.size())
+        _sending = true;
+        int32_t i;
+        int32_t j = 0;
+        for(; j < 5; j++)
         {
-            i = write(_fileDescriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
-            if(i == -1)
-            {
-                if(errno == EAGAIN) continue;
-                throw(Exception("Error writing to CRC RS485 device (3, " + std::to_string(errno) + "): " + _settings->device));
-            }
-            bytesWritten += i;
+        	int32_t bytesWritten = 0;
+			_receivedSentPacket.clear();
+			if(GD::debugLevel > 3 && printPacket)
+			{
+				HelperFunctions::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
+			}
+			while(bytesWritten < (signed)packet.size())
+			{
+				i = write(_fileDescriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
+				if(i == -1)
+				{
+					if(errno == EAGAIN) continue;
+					throw(Exception("Error writing to CRC RS485 device (3, " + std::to_string(errno) + "): " + _settings->device));
+				}
+				bytesWritten += i;
+			}
+			i = 0;
+			while(i < 100 && _receivedSentPacket.empty())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(3));
+				i++;
+			}
+			if(_receivedSentPacket == packet) break;
+			else HelperFunctions::printWarning("Error sending HomeMatic Wired packet: Collision");
         }
+        if(j == 5) HelperFunctions::printError("Error sending HomeMatic Wired packet: Giving up sending after 5 tries.");
     }
     catch(const std::exception& ex)
     {
@@ -361,6 +389,7 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _sending = false;
     _sendMutex.unlock();
 }
 
@@ -371,6 +400,12 @@ void CRCRS485::startListening()
 		stopListening();
 		openDevice();
 		if(_fileDescriptor == -1) return;
+		openGPIO(1, false);
+		setGPIO(1, false);
+		closeGPIO(1);
+		openGPIO(2, false);
+		setGPIO(2, true);
+		closeGPIO(2);
 		_stopped = false;
 		_listenThread = std::thread(&CRCRS485::listen, this);
 		HelperFunctions::setThreadPriority(_listenThread.native_handle(), 45);
@@ -401,6 +436,7 @@ void CRCRS485::stopListening()
 		_stopCallbackThread = false;
 		if(_fileDescriptor != -1) closeDevice();
 		_stopped = true;
+		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 	}
 	catch(const std::exception& ex)
     {
@@ -429,7 +465,7 @@ void CRCRS485::listen()
         		continue;
         	}
         	std::vector<uint8_t> rawPacket = readFromDevice();
-
+        	if(rawPacket.empty()) continue;
 			std::shared_ptr<HMWired::HMWiredPacket> packet(new HMWired::HMWiredPacket(rawPacket, HelperFunctions::getTime()));
 			if(packet->type() != HMWired::HMWiredPacketType::none)
 			{

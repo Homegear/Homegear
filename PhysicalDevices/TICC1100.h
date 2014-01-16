@@ -56,15 +56,6 @@ namespace PhysicalDevices
 class TICC1100 : public PhysicalDevice
 {
 public:
-	struct GPIOModes
-	{
-		enum Enum
-		{
-			INPUT,
-			OUTPUT
-		};
-	};
-
 	struct CommandStrobes
 	{
 		enum Enum
@@ -213,16 +204,11 @@ protected:
 	std::vector<uint8_t> _config;
 	std::vector<uint8_t> _patable;
 	int32_t _fileDescriptor = -1;
-	int32_t _gpioDescriptor = -1;
 	struct spi_ioc_transfer _transfer;
 	std::timed_mutex _txMutex;
 	bool _sending = false;
 
 	void setupDevice();
-	void setGPIOMode(int32_t gpio, GPIOModes::Enum mode);
-	void setupGPIO(int32_t gpio);
-	void openGPIO(int32_t gpio);
-	void closeGPIO();
 	void openDevice();
     void closeDevice();
     void endSending();

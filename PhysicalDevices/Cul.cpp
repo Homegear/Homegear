@@ -268,6 +268,7 @@ std::string Cul::readFromDevice()
 			{
 				if(errno == EAGAIN) continue;
 				HelperFunctions::printError("Error reading from CUL device: " + _settings->device);
+				return "";
 			}
 			packet.push_back(localBuffer[0]);
 			if(packet.size() > 200)

@@ -85,7 +85,7 @@ TICC1100::TICC1100(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalD
 			0x00, //28: RCCTRL0
 		};
 
-		openGPIO(_settings->gpio1);
+		openGPIO(1, true);
 	}
     catch(const std::exception& ex)
     {
@@ -108,7 +108,7 @@ TICC1100::~TICC1100()
 		_stopCallbackThread = true;
 		if(_listenThread.joinable()) _listenThread.join();
 		closeDevice();
-		closeGPIO();
+		closeGPIO(1);
 	}
     catch(const std::exception& ex)
     {
@@ -121,107 +121,6 @@ TICC1100::~TICC1100()
     catch(...)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void TICC1100::openGPIO(int32_t gpio)
-{
-	try
-	{
-		std::string path = "/sys/class/gpio/gpio" + std::to_string(gpio) + "/value";
-		_gpioDescriptor = open(path.c_str(), O_RDONLY);
-		if (_gpioDescriptor == -1) throw(Exception("Failed to open gpio " + std::to_string(gpio) + ": " + strerror(errno)));
-	}
-	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void TICC1100::closeGPIO()
-{
-	try
-	{
-		if(_gpioDescriptor > -1)
-		{
-			close(_gpioDescriptor);
-			_gpioDescriptor = -1;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void TICC1100::setGPIOMode(int32_t gpio, GPIOModes::Enum mode)
-{
-	try
-	{
-		std::string path = "/sys/class/gpio/gpio" + std::to_string(gpio) + "/direction";
-		int32_t fd = open(path.c_str(), O_WRONLY);
-		if (fd == -1) throw(Exception("Failed to set direction for gpio pin " + std::to_string(gpio)));
-		std::string direction((mode == GPIOModes::INPUT) ? "in" : "out");
-		if (write(fd, direction.c_str(), direction.size()) == -1) throw(Exception("Failed to write direction for gpio pin " + std::to_string(gpio)));
-		close(fd);
-	}
-	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void TICC1100::setupGPIO(int32_t gpio)
-{
-	try
-	{
-
-		int32_t fd = open("/sys/class/gpio/export", O_WRONLY);
-		if(fd == -1) throw(Exception("Couldn't export GPIO pin " + std::to_string(gpio)));
-		std::vector<char> buffer;
-		std::string temp(std::to_string(gpio));
-		buffer.insert(buffer.end(), temp.begin(), temp.end());
-		if(write(fd, &buffer[0], buffer.size()) <= 0)
-		{
-			HelperFunctions::printError("Could not export GPIO pin " + std::to_string(gpio) + ".");
-		}
-		close(fd);
-	}
-	catch(const std::exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -345,7 +244,7 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 {
 	try
 	{
-		if(_fileDescriptor == -1 || _gpioDescriptor == -1 || _stopped) return;
+		if(_fileDescriptor == -1 || _gpioDescriptors[1] == -1 || _stopped) return;
 		if(packet->payload()->size() > 54)
 		{
 			HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
@@ -365,7 +264,7 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 		encodedPacket[i] = decodedPacket[i] ^ decodedPacket[2];
 
 		_txMutex.lock();
-		if(_stopCallbackThread || _fileDescriptor == -1 || _gpioDescriptor == -1 || _stopped)
+		if(_stopCallbackThread || _fileDescriptor == -1 || _gpioDescriptors[1] == -1 || _stopped)
 		{
 			_txMutex.unlock();
 			return;
@@ -745,7 +644,7 @@ void TICC1100::startListening()
 	try
 	{
 		stopListening();
-		if(_gpioDescriptor == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _settings->device));
+		if(_gpioDescriptors[1] == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _settings->device));
 		openDevice();
 		if(_fileDescriptor == -1) return;
 		_stopped = false;
@@ -829,7 +728,7 @@ void TICC1100::mainThread()
 		std::vector<char> readBuffer({'0'});
 		bool firstPacket = true;
 
-        while(!_stopCallbackThread && _fileDescriptor > -1 && _gpioDescriptor > -1)
+        while(!_stopCallbackThread && _fileDescriptor > -1 && _gpioDescriptors[1] > -1)
         {
         	if(_stopped)
         	{
@@ -837,7 +736,7 @@ void TICC1100::mainThread()
         		continue;
         	}
         	pollfd pollstruct {
-				(int)_gpioDescriptor,
+				(int)_gpioDescriptors[1],
 				(short)(POLLPRI | POLLERR),
 				(short)0
 			};
@@ -852,8 +751,8 @@ void TICC1100::mainThread()
 			}*/
 			if(pollResult > 0)
 			{
-				if(lseek(_gpioDescriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::string(strerror(errno)));
-				bytesRead = read(_gpioDescriptor, &readBuffer[0], 1);
+				if(lseek(_gpioDescriptors[1], 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::string(strerror(errno)));
+				bytesRead = read(_gpioDescriptors[1], &readBuffer[0], 1);
 				if(!bytesRead) continue;
 				if(readBuffer.at(0) == 0x30)
 				{
@@ -898,9 +797,9 @@ void TICC1100::mainThread()
 			{
 				_txMutex.unlock();
 				HelperFunctions::printError("Error: Could not poll gpio: " + std::string(strerror(errno)) + ". Reopening...");
-				closeGPIO();
+				closeGPIO(1);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-				openGPIO(_settings->gpio1);
+				openGPIO(1, true);
 			}
 			//pollResult == 0 is timeout
         }
@@ -922,7 +821,7 @@ void TICC1100::mainThread()
     }
     try
     {
-		if(!_stopCallbackThread && (_fileDescriptor == -1 || _gpioDescriptor == -1))
+		if(!_stopCallbackThread && (_fileDescriptor == -1 || _gpioDescriptors[1] == -1))
 		{
 			HelperFunctions::printError("Connection to TI CC1101 closed inexpectedly... Trying to reconnect...");
 			_stopCallbackThread = true; //Set to true, so that sendPacket aborts
