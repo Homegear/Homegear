@@ -50,6 +50,7 @@
 #include "RPC/ServerSettings.h"
 
 bool _startAsDaemon = false;
+bool _startUpComplete = false;
 
 void startRPCServers()
 {
@@ -108,13 +109,18 @@ void terminate(int32_t signalNumber)
 		}
 		else if(signalNumber == SIGHUP)
 		{
+			if(!_startUpComplete)
+			{
+				HelperFunctions::printError("Error: Cannot reload. Startup is not completed.");
+				return;
+			}
+			_startUpComplete = false;
 			stopRPCServers();
 			GD::physicalDevices.stopListening();
 			//Binding fails sometimes with "address is already in use" without waiting.
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			HelperFunctions::printMessage("Reloading settings...");
 			GD::settings.load(GD::configPath + "main.conf");
-			GD::physicalDevices.load(GD::settings.physicalDeviceSettingsPath());
 			GD::clientSettings.load(GD::settings.clientSettingsPath());
 			GD::serverSettings.load(GD::settings.serverSettingsPath());
 			GD::physicalDevices.startListening();
@@ -131,6 +137,7 @@ void terminate(int32_t signalNumber)
 					HelperFunctions::printError("Error: Could not redirect errors to new log file.");
 				}
 			}
+			_startUpComplete = true;
 		}
 		else
 		{
@@ -182,7 +189,7 @@ void printHelp()
 	std::cout << "-c <path>\t\tSpecify path to config file" << std::endl;
 	std::cout << "-d\t\t\tRun as daemon" << std::endl;
 	std::cout << "-p <pid path>\t\tSpecify path to process id file" << std::endl;
-	std::cout << "-s <user> <group>\tExport GPIO and set necessary permissions for all defined physical devices" << std::endl;
+	std::cout << "-s <user> <group>\tSet GPIO settings and necessary permissions for all defined physical devices" << std::endl;
 	std::cout << "-r\t\t\tConnect to Homegear on this machine" << std::endl;
 	std::cout << "-v\t\t\tPrint program version" << std::endl;
 }
@@ -302,7 +309,7 @@ int main(int argc, char* argv[])
     		else if(arg == "-v")
     		{
     			std::cout <<  "Homegear version " << VERSION << std::endl;
-    			std::cout << "Copyright (C) 2013 Sathya Laufer" << std::endl;
+    			std::cout << "Copyright (C) 2013-2014 Sathya Laufer" << std::endl;
     			exit(0);
     		}
     		else
@@ -460,6 +467,7 @@ int main(int argc, char* argv[])
 
         HelperFunctions::printInfo("Loading events...");
         GD::eventHandler.load();
+        _startUpComplete = true;
         HelperFunctions::printInfo("Startup complete.");
 
         rl_bind_key('\t', rl_abort); //no autocompletion

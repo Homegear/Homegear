@@ -281,7 +281,6 @@ void PhysicalDevices::startListening()
 		_physicalDevicesMutex.lock();
 		for(std::map<DeviceFamily, std::shared_ptr<PhysicalDevice>>::iterator i = _physicalDevices.begin(); i != _physicalDevices.end(); ++i)
 		{
-
 			i->second->startListening();
 		}
 		_physicalDevicesMutex.unlock();
