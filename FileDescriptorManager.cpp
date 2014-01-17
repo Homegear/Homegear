@@ -34,7 +34,7 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescripto
 {
 	try
 	{
-		if(fileDescriptor < 0) return std::shared_ptr<FileDescriptor>();
+		if(fileDescriptor < 0) return std::shared_ptr<FileDescriptor>(new FileDescriptor());
 		_descriptorsMutex.lock();
 		if(_descriptors.find(fileDescriptor) != _descriptors.end())
 		{
@@ -61,7 +61,7 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescripto
 		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_descriptorsMutex.unlock();
-	return std::shared_ptr<FileDescriptor>();
+	return std::shared_ptr<FileDescriptor>(new FileDescriptor());
 }
 
 void FileDescriptorManager::remove(std::shared_ptr<FileDescriptor> descriptor)

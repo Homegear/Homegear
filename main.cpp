@@ -177,13 +177,14 @@ int32_t getHexInput()
 void printHelp()
 {
 	std::cout << "Usage: homegear [OPTIONS]" << std::endl << std::endl;
-	std::cout << "Option\t\tMeaning" << std::endl;
-	std::cout << "-h\t\tShow this help" << std::endl;
-	std::cout << "-c <path>\tSpecify path to config file" << std::endl;
-	std::cout << "-d\t\tRun as daemon" << std::endl;
-	std::cout << "-p <pid path>\tSpecify path to process id file" << std::endl;
-	std::cout << "-r\t\tConnect to Homegear on this machine" << std::endl;
-	std::cout << "-v\t\tPrint program version" << std::endl;
+	std::cout << "Option\t\t\tMeaning" << std::endl;
+	std::cout << "-h\t\t\tShow this help" << std::endl;
+	std::cout << "-c <path>\t\tSpecify path to config file" << std::endl;
+	std::cout << "-d\t\t\tRun as daemon" << std::endl;
+	std::cout << "-p <pid path>\t\tSpecify path to process id file" << std::endl;
+	std::cout << "-s <user> <group>\tExport GPIO and set necessary permissions for all defined physical devices" << std::endl;
+	std::cout << "-r\t\t\tConnect to Homegear on this machine" << std::endl;
+	std::cout << "-v\t\t\tPrint program version" << std::endl;
 }
 
 void startDaemon()
@@ -254,6 +255,34 @@ int main(int argc, char* argv[])
     			{
     				GD::pidfilePath = std::string(argv[i + 1]);
     				i++;
+    			}
+    			else
+    			{
+    				printHelp();
+    				exit(1);
+    			}
+    		}
+    		else if(arg == "-s")
+    		{
+    			if(i + 2 < argc)
+    			{
+    				if(getuid() != 0)
+    				{
+    					std::cout <<  "Please run Homegear as root to set the device permissions." << std::endl;
+    					exit(1);
+    				}
+    				GD::settings.load(GD::configPath + "main.conf");
+    				GD::physicalDevices.load(GD::settings.physicalDeviceSettingsPath());
+    				int32_t userID = HelperFunctions::userID(std::string(argv[i + 1]));
+    				int32_t groupID = HelperFunctions::groupID(std::string(argv[i + 2]));
+    				HelperFunctions::printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
+    				if(userID == -1 || groupID == -1)
+    				{
+    					HelperFunctions::printCritical("Could not setup physical devices. Username or group name is not valid.");
+    					exit(1);
+    				}
+    				GD::physicalDevices.setup(userID, groupID);
+    				exit(0);
     			}
     			else
     			{

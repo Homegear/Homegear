@@ -60,6 +60,7 @@ public:
 	std::string physicalDeviceSettingsPath() { return _physicalDeviceSettingsPath; }
 	std::string scriptPath() { return _scriptPath; }
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
+	std::string gpioPath() { return _gpioPath; }
 private:
 	std::string _certPath;
 	std::string _keyPath;
@@ -78,6 +79,7 @@ private:
 	std::string _physicalDeviceSettingsPath;
 	std::string _scriptPath;
 	std::map<std::string, bool> _tunnelClients;
+	std::string _gpioPath;
 
 	void reset();
 };

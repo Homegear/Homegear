@@ -128,7 +128,7 @@ void TICC1100::openDevice()
 {
 	try
 	{
-		if(_fileDescriptor != -1) closeDevice();
+		if(_fileDescriptor->descriptor != -1) closeDevice();
 
 		_lockfile = "/var/lock" + _settings->device.substr(_settings->device.find_last_of('/')) + ".lock";
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
@@ -159,10 +159,10 @@ void TICC1100::openDevice()
 		dprintf(lockfileDescriptor, "%10i", getpid());
 		close(lockfileDescriptor);
 
-		_fileDescriptor = open(_settings->device.c_str(), O_RDWR);
+		_fileDescriptor = GD::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR));
 		usleep(1000);
 
-		if(_fileDescriptor == -1)
+		if(_fileDescriptor->descriptor == -1)
 		{
 			HelperFunctions::printCritical("Couldn't open rf device: " + _settings->device);
 			return;
@@ -188,10 +188,32 @@ void TICC1100::closeDevice()
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
-		close(_fileDescriptor);
-		_fileDescriptor = -1;
+		GD::fileDescriptorManager.close(_fileDescriptor);
 		unlink(_lockfile.c_str());
+	}
+    catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void TICC1100::setup(int32_t userID, int32_t groupID)
+{
+	try
+	{
+		setDevicePermission(userID, groupID);
+		exportGPIO(1);
+		setGPIOPermission(1, userID, groupID, true);
+		setGPIODirection(1, GPIODirection::IN);
+		setGPIOEdge(1, GPIOEdge::BOTH);
 	}
     catch(const std::exception& ex)
     {
@@ -211,20 +233,20 @@ void TICC1100::setupDevice()
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor->descriptor == -1) return;
 
 		uint8_t mode = 0;
 		uint8_t bits = 8;
 		uint32_t speed = 4000000; //4MHz, see page 25 in datasheet
 
-		if(ioctl(_fileDescriptor, SPI_IOC_WR_MODE, &mode)) throw(Exception("Couldn't set spi mode on device " + _settings->device));
-		if(ioctl(_fileDescriptor, SPI_IOC_RD_MODE, &mode)) throw(Exception("Couldn't get spi mode off device " + _settings->device));
+		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_WR_MODE, &mode)) throw(Exception("Couldn't set spi mode on device " + _settings->device));
+		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_RD_MODE, &mode)) throw(Exception("Couldn't get spi mode off device " + _settings->device));
 
-		if(ioctl(_fileDescriptor, SPI_IOC_WR_BITS_PER_WORD, &bits)) throw(Exception("Couldn't set bits per word on device " + _settings->device));
-		if(ioctl(_fileDescriptor, SPI_IOC_RD_BITS_PER_WORD, &bits)) throw(Exception("Couldn't get bits per word off device " + _settings->device));
+		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_WR_BITS_PER_WORD, &bits)) throw(Exception("Couldn't set bits per word on device " + _settings->device));
+		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_RD_BITS_PER_WORD, &bits)) throw(Exception("Couldn't get bits per word off device " + _settings->device));
 
-		if(ioctl(_fileDescriptor, SPI_IOC_WR_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't set speed on device " + _settings->device));
-		if(ioctl(_fileDescriptor, SPI_IOC_RD_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't get speed off device " + _settings->device));
+		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_WR_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't set speed on device " + _settings->device));
+		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_RD_MAX_SPEED_HZ, &bits)) throw(Exception("Couldn't get speed off device " + _settings->device));
 	}
 	catch(const std::exception& ex)
     {
@@ -244,7 +266,7 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 {
 	try
 	{
-		if(_fileDescriptor == -1 || _gpioDescriptors[1] == -1 || _stopped) return;
+		if(_fileDescriptor->descriptor == -1 || _gpioDescriptors[1]->descriptor == -1 || _stopped) return;
 		if(packet->payload()->size() > 54)
 		{
 			HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
@@ -264,7 +286,7 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 		encodedPacket[i] = decodedPacket[i] ^ decodedPacket[2];
 
 		_txMutex.lock();
-		if(_stopCallbackThread || _fileDescriptor == -1 || _gpioDescriptors[1] == -1 || _stopped)
+		if(_stopCallbackThread || _fileDescriptor->descriptor == -1 || _gpioDescriptors[1]->descriptor == -1 || _stopped)
 		{
 			_txMutex.unlock();
 			return;
@@ -325,7 +347,7 @@ void TICC1100::readwrite(std::vector<uint8_t>& data)
 			}
 			std::cout << std::dec << std::endl;
 		}
-		if(!ioctl(_fileDescriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(Exception("Couldn't write to device " + _settings->device));
+		if(!ioctl(_fileDescriptor->descriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(Exception("Couldn't write to device " + _settings->device));
 		if(GD::debugLevel >= 6)
 		{
 			std::cout << HelperFunctions::getTimeString() << " Received: " << std::hex << std::setfill('0');
@@ -358,7 +380,7 @@ bool TICC1100::checkStatus(uint8_t statusByte, Status::Enum status)
 {
 	try
 	{
-		if(_fileDescriptor == -1) return false;
+		if(_fileDescriptor->descriptor == -1 || _gpioDescriptors[1]->descriptor == -1) return false;
 		if((statusByte & (StatusBitmasks::Enum::CHIP_RDYn | StatusBitmasks::Enum::STATE)) != status) return false;
 		return true;
 	}
@@ -381,7 +403,7 @@ uint8_t TICC1100::readRegister(Registers::Enum registerAddress)
 {
 	try
 	{
-		if(_fileDescriptor == -1) return 0;
+		if(_fileDescriptor->descriptor == -1) return 0;
 		std::vector<uint8_t> data({(uint8_t)(registerAddress | RegisterBitmasks::Enum::READ_SINGLE), 0x00});
 		for(uint32_t i = 0; i < 5; i++)
 		{
@@ -412,7 +434,7 @@ std::vector<uint8_t> TICC1100::readRegisters(Registers::Enum startAddress, uint8
 {
 	try
 	{
-		if(_fileDescriptor == -1) return std::vector<uint8_t>();
+		if(_fileDescriptor->descriptor == -1) return std::vector<uint8_t>();
 		std::vector<uint8_t> data({(uint8_t)(startAddress | RegisterBitmasks::Enum::READ_BURST)});
 		data.resize(count + 1, 0);
 		for(uint32_t i = 0; i < 5; i++)
@@ -445,7 +467,7 @@ uint8_t TICC1100::writeRegister(Registers::Enum registerAddress, uint8_t value, 
 {
 	try
 	{
-		if(_fileDescriptor == -1) return 0xFF;
+		if(_fileDescriptor->descriptor == -1) return 0xFF;
 		std::vector<uint8_t> data({(uint8_t)registerAddress, value});
 		readwrite(data);
 		if((data.at(0) & StatusBitmasks::Enum::CHIP_RDYn) || (data.at(1) & StatusBitmasks::Enum::CHIP_RDYn)) throw Exception("Error writing to register " + std::to_string(registerAddress) + ".");
@@ -478,7 +500,7 @@ void TICC1100::writeRegisters(Registers::Enum startAddress, std::vector<uint8_t>
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor->descriptor == -1) return;
 		std::vector<uint8_t> data({(uint8_t)(startAddress | RegisterBitmasks::Enum::WRITE_BURST) });
 		data.insert(data.end(), values.begin(), values.end());
 		readwrite(data);
@@ -502,7 +524,7 @@ uint8_t TICC1100::sendCommandStrobe(CommandStrobes::Enum commandStrobe)
 {
 	try
 	{
-		if(_fileDescriptor == -1) return 0xFF;
+		if(_fileDescriptor->descriptor == -1) return 0xFF;
 		std::vector<uint8_t> data({(uint8_t)commandStrobe});
 		for(uint32_t i = 0; i < 5; i++)
 		{
@@ -532,7 +554,7 @@ void TICC1100::enableRX(bool flushRXFIFO)
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor->descriptor == -1) return;
 		_txMutex.lock();
 		if(flushRXFIFO) sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
@@ -556,7 +578,7 @@ void TICC1100::initChip()
 {
 	try
 	{
-		if(_fileDescriptor == -1)
+		if(_fileDescriptor->descriptor == -1)
 		{
 			HelperFunctions::printError("Error: Could not initialize TI CC1100. The spi device's file descriptor is not valid.");
 			return;
@@ -597,7 +619,7 @@ void TICC1100::reset()
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor->descriptor == -1) return;
 		sendCommandStrobe(CommandStrobes::Enum::SRES);
 
 		usleep(70); //Measured on HM-CC-VD
@@ -620,7 +642,7 @@ bool TICC1100::crcOK()
 {
 	try
 	{
-		if(_fileDescriptor == -1) return false;
+		if(_fileDescriptor->descriptor == -1) return false;
 		std::vector<uint8_t> result = readRegisters(Registers::Enum::LQI, 1);
 		if((result.size() == 2) && (result.at(1) & 0x80)) return true;
 	}
@@ -644,9 +666,9 @@ void TICC1100::startListening()
 	try
 	{
 		stopListening();
-		if(_gpioDescriptors[1] == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _settings->device));
+		if(_gpioDescriptors[1]->descriptor == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _settings->device));
 		openDevice();
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor->descriptor == -1) return;
 		_stopped = false;
 
 		initChip();
@@ -679,7 +701,7 @@ void TICC1100::stopListening()
 			_listenThread.join();
 		}
 		_stopCallbackThread = false;
-		if(_fileDescriptor != -1) closeDevice();
+		if(_fileDescriptor->descriptor != -1) closeDevice();
 		_stopped = true;
 	}
 	catch(const std::exception& ex)
@@ -728,7 +750,7 @@ void TICC1100::mainThread()
 		std::vector<char> readBuffer({'0'});
 		bool firstPacket = true;
 
-        while(!_stopCallbackThread && _fileDescriptor > -1 && _gpioDescriptors[1] > -1)
+        while(!_stopCallbackThread && _fileDescriptor->descriptor > -1 && _gpioDescriptors[1]->descriptor > -1)
         {
         	if(_stopped)
         	{
@@ -736,7 +758,7 @@ void TICC1100::mainThread()
         		continue;
         	}
         	pollfd pollstruct {
-				(int)_gpioDescriptors[1],
+				(int)_gpioDescriptors[1]->descriptor,
 				(short)(POLLPRI | POLLERR),
 				(short)0
 			};
@@ -751,8 +773,8 @@ void TICC1100::mainThread()
 			}*/
 			if(pollResult > 0)
 			{
-				if(lseek(_gpioDescriptors[1], 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::string(strerror(errno)));
-				bytesRead = read(_gpioDescriptors[1], &readBuffer[0], 1);
+				if(lseek(_gpioDescriptors[1]->descriptor, 0, SEEK_SET) == -1) throw Exception("Could not poll gpio: " + std::string(strerror(errno)));
+				bytesRead = read(_gpioDescriptors[1]->descriptor, &readBuffer[0], 1);
 				if(!bytesRead) continue;
 				if(readBuffer.at(0) == 0x30)
 				{
@@ -821,7 +843,7 @@ void TICC1100::mainThread()
     }
     try
     {
-		if(!_stopCallbackThread && (_fileDescriptor == -1 || _gpioDescriptors[1] == -1))
+		if(!_stopCallbackThread && (_fileDescriptor->descriptor == -1 || _gpioDescriptors[1]->descriptor == -1))
 		{
 			HelperFunctions::printError("Connection to TI CC1101 closed inexpectedly... Trying to reconnect...");
 			_stopCallbackThread = true; //Set to true, so that sendPacket aborts

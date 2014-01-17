@@ -57,6 +57,7 @@ public:
 	void stopListening();
 	void startListening();
 	bool isOpen();
+	void setup(int32_t userID, int32_t groupID);
 private:
 	std::mutex _physicalDevicesMutex;
 	std::map<DeviceFamily, std::shared_ptr<PhysicalDevice>> _physicalDevices;

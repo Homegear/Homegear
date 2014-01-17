@@ -72,7 +72,7 @@ void Cul::sendPacket(std::shared_ptr<Packet> packet)
 			HelperFunctions::printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
+		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
 		if(packet->payload()->size() > 54)
 		{
 			if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
@@ -99,7 +99,7 @@ void Cul::openDevice()
 {
 	try
 	{
-		if(_fileDescriptor != -1) closeDevice();
+		if(_fileDescriptor->descriptor > -1) closeDevice();
 
 		_lockfile = "/var/lock" + _settings->device.substr(_settings->device.find_last_of('/')) + ".lock";
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
@@ -132,9 +132,8 @@ void Cul::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
-
-		if(_fileDescriptor == -1)
+		_fileDescriptor = GD::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
+		if(_fileDescriptor->descriptor == -1)
 		{
 			HelperFunctions::printCritical("Couldn't open CUL device: " + _settings->device);
 			return;
@@ -160,9 +159,7 @@ void Cul::closeDevice()
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
-		close(_fileDescriptor);
-		_fileDescriptor = -1;
+		GD::fileDescriptorManager.close(_fileDescriptor);
 		unlink(_lockfile.c_str());
 	}
     catch(const std::exception& ex)
@@ -183,7 +180,7 @@ void Cul::setupDevice()
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor->descriptor == -1) return;
 		struct termios term;
 		term.c_cflag = B9600 | CS8 | CLOCAL | CREAD;
 		term.c_iflag = IGNPAR;
@@ -193,13 +190,13 @@ void Cul::setupDevice()
 		term.c_cc[VTIME] = 0;
 		cfsetispeed(&term, B9600);
 		cfsetospeed(&term, B9600);
-		if(tcflush(_fileDescriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CUL device " + _settings->device));
-		if(tcsetattr(_fileDescriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CUL device settings: " + _settings->device));
+		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CUL device " + _settings->device));
+		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CUL device settings: " + _settings->device));
 
-		int flags = fcntl(_fileDescriptor, F_GETFL);
+		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))
 		{
-			if(fcntl(_fileDescriptor, F_SETFL, flags | O_NONBLOCK) == -1)
+			if(fcntl(_fileDescriptor->descriptor, F_SETFL, flags | O_NONBLOCK) == -1)
 			{
 				throw(Exception("Couldn't set CUL device to non blocking mode: " + _settings->device));
 			}
@@ -224,7 +221,7 @@ std::string Cul::readFromDevice()
 	try
 	{
 		if(_stopped) return "";
-		if(_fileDescriptor == -1)
+		if(_fileDescriptor->descriptor == -1)
 		{
 			HelperFunctions::printCritical("Couldn't read from CUL device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
 			closeDevice();
@@ -237,17 +234,17 @@ std::string Cul::readFromDevice()
 		char localBuffer[1];
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
-		FD_SET(_fileDescriptor, &readFileDescriptor);
+		FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 
 		while((!_stopCallbackThread && localBuffer[0] != '\n'))
 		{
 			FD_ZERO(&readFileDescriptor);
-			FD_SET(_fileDescriptor, &readFileDescriptor);
+			FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 			//Timeout needs to be set every time, so don't put it outside of the while loop
 			timeval timeout;
 			timeout.tv_sec = 0;
 			timeout.tv_usec = 500000;
-			i = select(_fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+			i = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			switch(i)
 			{
 				case 0: //Timeout
@@ -263,7 +260,7 @@ std::string Cul::readFromDevice()
 					return "";
 			}
 
-			i = read(_fileDescriptor, localBuffer, 1);
+			i = read(_fileDescriptor->descriptor, localBuffer, 1);
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
@@ -296,7 +293,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
     try
     {
     	if(_stopped) return;
-        if(_fileDescriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
+        if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
         int32_t bytesWritten = 0;
         int32_t i;
         //struct timeval timeout;
@@ -327,7 +324,7 @@ void Cul::writeToDevice(std::string data, bool printSending)
                     throw(Exception("Error writing to CUL device (2): " + _culDevice));
 
             }*/
-            i = write(_fileDescriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
+            i = write(_fileDescriptor->descriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
             if(i == -1)
             {
                 if(errno == EAGAIN) continue;
@@ -361,7 +358,7 @@ void Cul::startListening()
 	{
 		stopListening();
 		openDevice();
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor->descriptor == -1) return;
 		_stopped = false;
 		writeToDevice("Ax\r\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
@@ -396,7 +393,7 @@ void Cul::stopListening()
 			_listenThread.join();
 		}
 		_stopCallbackThread = false;
-		if(_fileDescriptor != -1)
+		if(_fileDescriptor->descriptor > -1)
 		{
 			//Other X commands than 00 seem to slow down data processing
 			writeToDevice("X00\r\n", false);
@@ -440,6 +437,26 @@ void Cul::listen()
 				t.detach();
         	}
         }
+    }
+    catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Cul::setup(int32_t userID, int32_t groupID)
+{
+    try
+    {
+    	setDevicePermission(userID, groupID);
     }
     catch(const std::exception& ex)
     {

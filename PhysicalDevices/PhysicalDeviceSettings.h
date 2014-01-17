@@ -39,6 +39,16 @@
 
 namespace PhysicalDevices
 {
+class GPIOSetting
+{
+public:
+	GPIOSetting() {}
+	virtual ~GPIOSetting() {}
+
+	int32_t number = -1;
+	std::string path;
+};
+
 class PhysicalDeviceSettings
 {
 public:
@@ -48,7 +58,7 @@ public:
 	std::string device;
 	std::string type;
 	uint32_t responseDelay = 95;
-	std::map<uint32_t, std::string> gpio;
+	std::map<uint32_t, GPIOSetting> gpio;
 };
 }
 #endif /* PHYSICALDEVICESETTINGS_H_ */

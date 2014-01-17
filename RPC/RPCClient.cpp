@@ -275,8 +275,6 @@ std::shared_ptr<FileDescriptor> RPCClient::getConnection(std::string& hostname, 
 	std::shared_ptr<FileDescriptor> descriptor;
 	try
 	{
-		int32_t fileDescriptor = -1;
-
 		//Retry for two minutes
 		for(uint32_t i = 0; i < 6; ++i)
 		{
@@ -316,16 +314,15 @@ std::shared_ptr<FileDescriptor> RPCClient::getConnection(std::string& hostname, 
 			}
 			ipAddress = std::string(&ipStringBuffer[0]);
 
-			fileDescriptor = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
-			if(fileDescriptor == -1)
+			descriptor = GD::fileDescriptorManager.add(socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol));
+			if(descriptor->descriptor == -1)
 			{
 				HelperFunctions::printError("Error: Could not create socket for XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno));
 				freeaddrinfo(serverInfo);
 				return descriptor;
 			}
-			descriptor = GD::fileDescriptorManager.add(fileDescriptor);
 			int32_t optValue = 1;
-			if(setsockopt(fileDescriptor, SOL_SOCKET, SO_KEEPALIVE, (void*)&optValue, sizeof(int32_t)) == -1)
+			if(setsockopt(descriptor->descriptor, SOL_SOCKET, SO_KEEPALIVE, (void*)&optValue, sizeof(int32_t)) == -1)
 			{
 				HelperFunctions::printError("Error: Could not set socket options for XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno));
 				freeaddrinfo(serverInfo);
@@ -333,9 +330,9 @@ std::shared_ptr<FileDescriptor> RPCClient::getConnection(std::string& hostname, 
 				return descriptor;
 			}
 
-			if(!(fcntl(fileDescriptor, F_GETFL) & O_NONBLOCK))
+			if(!(fcntl(descriptor->descriptor, F_GETFL) & O_NONBLOCK))
 			{
-				if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK) < 0)
+				if(fcntl(descriptor->descriptor, F_SETFL, fcntl(descriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
 				{
 					HelperFunctions::printError("Error: Could not set socket options for XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno));
 					freeaddrinfo(serverInfo);
@@ -345,7 +342,7 @@ std::shared_ptr<FileDescriptor> RPCClient::getConnection(std::string& hostname, 
 			}
 
 			int32_t connectResult;
-			if((connectResult = connect(fileDescriptor, serverInfo->ai_addr, serverInfo->ai_addrlen)) == -1 && errno != EINPROGRESS)
+			if((connectResult = connect(descriptor->descriptor, serverInfo->ai_addr, serverInfo->ai_addrlen)) == -1 && errno != EINPROGRESS)
 			{
 				if(i < 5)
 				{
@@ -366,7 +363,7 @@ std::shared_ptr<FileDescriptor> RPCClient::getConnection(std::string& hostname, 
 			}
 			freeaddrinfo(serverInfo);
 
-			if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) ^ O_NONBLOCK) < 0)
+			if(fcntl(descriptor->descriptor, F_SETFL, fcntl(descriptor->descriptor, F_GETFL) ^ O_NONBLOCK) < 0)
 			{
 				GD::fileDescriptorManager.shutdown(descriptor);
 				return descriptor;
@@ -380,7 +377,7 @@ std::shared_ptr<FileDescriptor> RPCClient::getConnection(std::string& hostname, 
 
 				pollfd pollstruct
 				{
-					(int)fileDescriptor,
+					(int)descriptor->descriptor,
 					(short)(POLLOUT | POLLERR),
 					(short)0
 				};
@@ -406,7 +403,7 @@ std::shared_ptr<FileDescriptor> RPCClient::getConnection(std::string& hostname, 
 				else if(pollResult > 0)
 				{
 					socklen_t resultLength = sizeof(connectResult);
-					if(getsockopt(fileDescriptor, SOL_SOCKET, SO_ERROR, &connectResult, &resultLength) < 0)
+					if(getsockopt(descriptor->descriptor, SOL_SOCKET, SO_ERROR, &connectResult, &resultLength) < 0)
 					{
 						HelperFunctions::printError("Error: Could not connect to XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno) + ".");
 						GD::fileDescriptorManager.shutdown(descriptor);

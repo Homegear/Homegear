@@ -927,7 +927,6 @@ void RPCServer::getFileDescriptor()
 		addrinfo hostInfo;
 		addrinfo *serverInfo = nullptr;
 
-		int32_t fileDescriptor = -1;
 		int32_t yes = 1;
 
 		memset(&hostInfo, 0, sizeof(hostInfo));
@@ -948,14 +947,14 @@ void RPCServer::getFileDescriptor()
 		int32_t error = 0;
 		for(struct addrinfo *info = serverInfo; info != 0; info = info->ai_next)
 		{
-			fileDescriptor = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
-			if(fileDescriptor == -1) continue;
-			if(!(fcntl(fileDescriptor, F_GETFL) & O_NONBLOCK))
+			_serverFileDescriptor = GD::fileDescriptorManager.add(socket(info->ai_family, info->ai_socktype, info->ai_protocol));
+			if(_serverFileDescriptor->descriptor == -1) continue;
+			if(!(fcntl(_serverFileDescriptor->descriptor, F_GETFL) & O_NONBLOCK))
 			{
-				if(fcntl(fileDescriptor, F_SETFL, fcntl(fileDescriptor, F_GETFL) | O_NONBLOCK) < 0) throw Exception("Error: Could not set socket options.");
+				if(fcntl(_serverFileDescriptor->descriptor, F_SETFL, fcntl(_serverFileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0) throw Exception("Error: Could not set socket options.");
 			}
-			if(setsockopt(fileDescriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw Exception("Error: Could not set socket options.");
-			if(bind(fileDescriptor, info->ai_addr, info->ai_addrlen) == -1)
+			if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int32_t)) == -1) throw Exception("Error: Could not set socket options.");
+			if(bind(_serverFileDescriptor->descriptor, info->ai_addr, info->ai_addrlen) == -1)
 			{
 				error = errno;
 				continue;
@@ -979,16 +978,16 @@ void RPCServer::getFileDescriptor()
 		freeaddrinfo(serverInfo);
 		if(!bound)
 		{
-			if(fileDescriptor > -1)	close(fileDescriptor);
+			GD::fileDescriptorManager.close(_serverFileDescriptor);
 			HelperFunctions::printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(error)));
 			return;
 		}
-		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1 || !bound)
+		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
+			GD::fileDescriptorManager.close(_serverFileDescriptor);
 			HelperFunctions::printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
 			return;
 		}
-		_serverFileDescriptor = GD::fileDescriptorManager.add(fileDescriptor);
     }
     catch(const std::exception& ex)
     {

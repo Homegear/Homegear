@@ -58,10 +58,8 @@ class Cul  : public PhysicalDevice
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<Packet> packet);
-        bool isOpen() { return _fileDescriptor > -1; }
+        virtual void setup(int32_t userID, int32_t groupID);
     protected:
-        int32_t _fileDescriptor = -1;
-
         void openDevice();
         void closeDevice();
         void setupDevice();

@@ -243,15 +243,17 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 			if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
 		}
 		else if(stat(GD::socketPath.c_str(), &sb) == 0) return;
-		int32_t fileDescriptor;
-		if((fileDescriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1) throw(Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+		_serverFileDescriptor = GD::fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0));
+		if(_serverFileDescriptor->descriptor == -1) throw(Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
 		sockaddr_un serverAddress;
 		serverAddress.sun_family = AF_UNIX;
 		strcpy(serverAddress.sun_path, GD::socketPath.c_str());
-		bool bound = (bind(fileDescriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + sizeof(serverAddress.sun_family)) != -1);
-		if(!bound && fileDescriptor > -1) close(fileDescriptor);
-		if(fileDescriptor == -1 || listen(fileDescriptor, _backlog) == -1 || !bound) throw Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
-		_serverFileDescriptor = GD::fileDescriptorManager.add(fileDescriptor);
+		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + sizeof(serverAddress.sun_family)) != -1);
+		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
+		{
+			GD::fileDescriptorManager.close(_serverFileDescriptor);
+			throw Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
+		}
 		chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
     }
     catch(const std::exception& ex)

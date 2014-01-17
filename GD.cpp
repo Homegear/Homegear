@@ -30,7 +30,7 @@
 #include "GD.h"
 
 PhysicalDevices::PhysicalDevices GD::physicalDevices;
-std::string GD::configPath = "";
+std::string GD::configPath = "/etc/homegear/";
 std::string GD::pidfilePath = "";
 std::string GD::runDir = "/var/run/homegear/";
 std::string GD::socketPath = GD::runDir + "homegear.sock";

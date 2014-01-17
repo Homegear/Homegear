@@ -73,7 +73,7 @@ void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
 			HelperFunctions::printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
+		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
 		_lastAction = HelperFunctions::getTime();
 		if(packet->payload()->size() > 128)
 		{
@@ -102,7 +102,7 @@ void CRCRS485::openDevice()
 {
 	try
 	{
-		if(_fileDescriptor != -1) closeDevice();
+		if(_fileDescriptor->descriptor != -1) closeDevice();
 
 		_lockfile = "/var/lock" + _settings->device.substr(_settings->device.find_last_of('/')) + ".lock";
 		int lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
@@ -135,9 +135,9 @@ void CRCRS485::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+		_fileDescriptor = GD::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
 
-		if(_fileDescriptor == -1)
+		if(_fileDescriptor->descriptor == -1)
 		{
 			HelperFunctions::printCritical("Couldn't open CRC RS485 device: " + _settings->device);
 			return;
@@ -163,10 +163,34 @@ void CRCRS485::closeDevice()
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
-		close(_fileDescriptor);
-		_fileDescriptor = -1;
+		GD::fileDescriptorManager.close(_fileDescriptor);
 		unlink(_lockfile.c_str());
+	}
+    catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void CRCRS485::setup(int32_t userID, int32_t groupID)
+{
+	try
+	{
+		setDevicePermission(userID, groupID);
+		exportGPIO(1);
+		setGPIOPermission(1, userID, groupID, false);
+		setGPIODirection(1, GPIODirection::OUT);
+		exportGPIO(2);
+		setGPIOPermission(2, userID, groupID, false);
+		setGPIODirection(2, GPIODirection::OUT);
 	}
     catch(const std::exception& ex)
     {
@@ -186,7 +210,7 @@ void CRCRS485::setupDevice()
 {
 	try
 	{
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor->descriptor == -1) return;
 		struct termios term;
 		term.c_cflag = B19200 | CS8 | CREAD | PARENB;
 		term.c_iflag = 0;
@@ -196,13 +220,13 @@ void CRCRS485::setupDevice()
 		term.c_cc[VTIME] = 0;
 		cfsetispeed(&term, B19200);
 		cfsetospeed(&term, B19200);
-		if(tcflush(_fileDescriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CRC RS485 device " + _settings->device));
-		if(tcsetattr(_fileDescriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CRC RS485 device settings: " + _settings->device));
+		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CRC RS485 device " + _settings->device));
+		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CRC RS485 device settings: " + _settings->device));
 
-		int flags = fcntl(_fileDescriptor, F_GETFL);
+		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))
 		{
-			if(fcntl(_fileDescriptor, F_SETFL, flags | O_NONBLOCK) == -1)
+			if(fcntl(_fileDescriptor->descriptor, F_SETFL, flags | O_NONBLOCK) == -1)
 			{
 				throw(Exception("Couldn't set CRC RS485 device to non blocking mode: " + _settings->device));
 			}
@@ -227,7 +251,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 	try
 	{
 		if(_stopped) return std::vector<uint8_t>();
-		if(_fileDescriptor == -1)
+		if(_fileDescriptor->descriptor == -1)
 		{
 			HelperFunctions::printCritical("Couldn't read from CRC RS485 device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
 			closeDevice();
@@ -249,17 +273,17 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 		std::vector<uint8_t> localBuffer(1);
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
-		FD_SET(_fileDescriptor, &readFileDescriptor);
+		FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 
 		while(!_stopCallbackThread)
 		{
 			FD_ZERO(&readFileDescriptor);
-			FD_SET(_fileDescriptor, &readFileDescriptor);
+			FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 			//Timeout needs to be set every time, so don't put it outside of the while loop
 			timeval timeout;
 			timeout.tv_sec = 0;
 			timeout.tv_usec = timeoutTime;
-			i = select(_fileDescriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+			i = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 			if(i == 0) //Timeout
 			{
 					if(!packet.empty()) break;
@@ -282,7 +306,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			}
 			if(!_sending) _sendMutex.try_lock(); //Don't change to "lock", because it is called for each received byte!
 			else receivingSentPacket = true;
-			i = read(_fileDescriptor, &localBuffer.at(0), 1);
+			i = read(_fileDescriptor->descriptor, &localBuffer.at(0), 1);
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
@@ -320,8 +344,6 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 		{
 			_receivedSentPacket = packet;
 			packet.clear();
-			_sendMutex.lock(); //Wait for sendPacket to finish
-			_sendMutex.unlock();
 		}
 		else _sendMutex.unlock();
 		return packet;
@@ -343,7 +365,7 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
     try
     {
     	if(_stopped || packet.empty()) return;
-        if(_fileDescriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
+        if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
         _sendMutex.lock();
         _sending = true;
         int32_t i;
@@ -358,7 +380,7 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 			}
 			while(bytesWritten < (signed)packet.size())
 			{
-				i = write(_fileDescriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
+				i = write(_fileDescriptor->descriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
 				if(i == -1)
 				{
 					if(errno == EAGAIN) continue;
@@ -399,7 +421,7 @@ void CRCRS485::startListening()
 	{
 		stopListening();
 		openDevice();
-		if(_fileDescriptor == -1) return;
+		if(_fileDescriptor->descriptor == -1) return;
 		openGPIO(1, false);
 		setGPIO(1, false);
 		closeGPIO(1);
@@ -434,7 +456,7 @@ void CRCRS485::stopListening()
 			_listenThread.join();
 		}
 		_stopCallbackThread = false;
-		if(_fileDescriptor != -1) closeDevice();
+		if(_fileDescriptor->descriptor != -1) closeDevice();
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 	}

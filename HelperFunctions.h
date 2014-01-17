@@ -46,6 +46,9 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <openssl/err.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
 
 class HelperFunctions {
 public:
@@ -203,6 +206,8 @@ public:
 	static void printMessage(std::string message, int32_t minDebugLevel = 0);
 	static std::string getSSLError(int32_t errorNumber);
 	static std::string getSSLCertVerificationError(int32_t errorNumber);
+	static int32_t userID(std::string username);
+	static int32_t groupID(std::string groupname);
 private:
 	//Non public constructor
 	HelperFunctions() {}

@@ -192,7 +192,7 @@ public:
 	void startListening();
 	void stopListening();
 	void sendPacket(std::shared_ptr<Packet> packet);
-	bool isOpen() { return _fileDescriptor > -1; }
+	virtual void setup(int32_t userID, int32_t groupID);
 protected:
 	//const int32_t BCM2708_PERI_BASE = 0x20000000;
 	//const int32_t GPIO_BASE = (BCM2708_PERI_BASE + 0x200000);
@@ -203,7 +203,6 @@ protected:
 	//volatile unsigned* _gpio = nullptr;
 	std::vector<uint8_t> _config;
 	std::vector<uint8_t> _patable;
-	int32_t _fileDescriptor = -1;
 	struct spi_ioc_transfer _transfer;
 	std::timed_mutex _txMutex;
 	bool _sending = false;

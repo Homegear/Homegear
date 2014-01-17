@@ -579,3 +579,37 @@ std::string HelperFunctions::getSSLCertVerificationError(int32_t errorNumber)
 	}
 	return "Unknown verification error. Error number: " + std::to_string(errorNumber);
 }
+
+int32_t HelperFunctions::userID(std::string username)
+{
+	struct passwd pwd;
+	struct passwd* pwdResult;
+	int32_t bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+	if(bufferSize < 0) bufferSize = 16384;
+	std::vector<char> buffer(bufferSize);
+	int32_t result = getpwnam_r(username.c_str(), &pwd, &buffer.at(0), buffer.size(), &pwdResult);
+	if(!pwdResult)
+	{
+		if(result == 0) HelperFunctions::printError("User name " + username + " not found.");
+		else HelperFunctions::printError("Error getting UID for user name " + username + ": " + std::string(strerror(result)));
+		return -1;
+	}
+	return pwd.pw_uid;
+}
+
+int32_t HelperFunctions::groupID(std::string groupname)
+{
+	struct group grp;
+	struct group* grpResult;
+	int32_t bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+	if(bufferSize < 0) bufferSize = 16384;
+	std::vector<char> buffer(bufferSize);
+	int32_t result = getgrnam_r(groupname.c_str(), &grp, &buffer.at(0), buffer.size(), &grpResult);
+	if(!grpResult)
+	{
+		if(result == 0) HelperFunctions::printError("User name " + groupname + " not found.");
+		else HelperFunctions::printError("Error getting GID for group name " + groupname + ": " + std::string(strerror(result)));
+		return -1;
+	}
+	return grp.gr_gid;
+}

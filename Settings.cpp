@@ -54,6 +54,7 @@ void Settings::reset()
 	_physicalDeviceSettingsPath = "/etc/homegear/physicaldevices.conf";
 	_scriptPath = "/var/lib/homegear/scripts/";
 	_tunnelClients.clear();
+	_gpioPath = "/sys/class/gpio/";
 }
 
 void Settings::load(std::string filename)
@@ -197,6 +198,13 @@ void Settings::load(std::string filename)
 				else if(name == "redirecttosshtunnel")
 				{
 					if(!value.empty()) _tunnelClients[HelperFunctions::toLower(value)] = true;
+				}
+				else if(name == "gpiopath")
+				{
+					_gpioPath = value;
+					if(_gpioPath.empty()) _gpioPath = "/sys/class/gpio/";
+					if(_gpioPath.back() != '/') _gpioPath.push_back('/');
+					HelperFunctions::printDebug("Debug: gpioPath set to " + _gpioPath);
 				}
 				else
 				{

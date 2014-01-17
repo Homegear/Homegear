@@ -13,6 +13,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 . /lib/lsb/init-functions
 
+CONFIGPATH=/etc/homegear
 DAEMON=/usr/bin/homegear
 PIDPATH=/var/run/homegear
 PIDFILE=$PIDPATH/homegear.pid
@@ -48,23 +49,11 @@ RUNASUSER=homegear
 RUNASGROUP=homegear
 
 case $1 in
-        start)
-        		if test -e /dev/spidev0.0; then
-        			chown root:$RUNASGROUP /dev/spidev0.0
-        			chmod 660 /dev/spidev0.0
-        		fi
-        		
+        start)       		
         		SPIPID=`ps -eo pid,cmd | grep "\[bcm2708_spi\.0\]" | sed 's/^ *//g' | cut -d ' ' -f 1`
         		if [ ! -z "$SPIPID" ]; then
         			chrt -f -p 99 $SPIPID
         		fi
-
-				if test -d /sys/class/gpio; then
-					if test ! -d /sys/class/gpio/gpio23; then echo 23 > /sys/class/gpio/export; fi
-					echo in > /sys/class/gpio/gpio23/direction
-					echo both > /sys/class/gpio/gpio23/edge
-					if test ! -d /sys/class/gpio/gpio23; then echo Could not export gpio23; fi
-				fi
 				
 				if test ! -d $PIDPATH; then 
 					mkdir -p $PIDPATH
@@ -83,6 +72,8 @@ case $1 in
 				fi
 				chown -R $RUNASUSER:$RUNASGROUP $LOGPATH
 				chmod -R 750 $LOGPATH
+				
+				$DAEMON -c $CONFIGPATH -s $RUNASUSER $RUNASGROUP
 				
                 log_daemon_msg "Starting Homegear" "homegear"
                 lock_homegear

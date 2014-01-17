@@ -33,6 +33,7 @@
 #include "../Exception.h"
 #include "../LogicalDevice.h"
 #include "PhysicalDeviceSettings.h"
+#include "../FileDescriptorManager.h"
 
 class Packet;
 
@@ -47,6 +48,25 @@ namespace PhysicalDevices
 class PhysicalDevice
 {
 public:
+	struct GPIODirection
+	{
+			enum Enum
+			{
+					IN,
+					OUT
+			};
+	};
+
+	struct GPIOEdge
+	{
+			enum Enum
+			{
+					RISING,
+					FALLING,
+					BOTH
+			};
+	};
+
 	PhysicalDevice();
 	PhysicalDevice(std::shared_ptr<PhysicalDeviceSettings> settings);
 
@@ -59,8 +79,9 @@ public:
 	virtual void addLogicalDevice(LogicalDevice*);
 	virtual void removeLogicalDevice(LogicalDevice*);
 	virtual void sendPacket(std::shared_ptr<Packet> packet) {}
-	virtual bool isOpen() { return false; }
+	virtual bool isOpen() { return _fileDescriptor && _fileDescriptor->descriptor > -1; }
 	virtual uint32_t responseDelay() { return _settings->responseDelay; }
+	virtual void setup(int32_t userID, int32_t groupID) {}
 protected:
 	std::shared_ptr<PhysicalDeviceSettings> _settings;
 	std::mutex _logicalDevicesMutex;
@@ -71,12 +92,19 @@ protected:
 	std::string _lockfile;
 	std::mutex _sendMutex;
 	bool _stopped = false;
-	std::map<uint32_t, int32_t> _gpioDescriptors;
+	std::shared_ptr<FileDescriptor> _fileDescriptor;
+	std::map<uint32_t, std::shared_ptr<FileDescriptor>> _gpioDescriptors;
 
 	virtual void callCallback(std::shared_ptr<Packet> packet);
+	virtual void setDevicePermission(int32_t userID, int32_t groupID);
 	virtual void openGPIO(uint32_t index, bool readOnly);
+	virtual void getGPIOPath(uint32_t index);
 	virtual void closeGPIO(uint32_t index);
 	virtual void setGPIO(uint32_t index, bool value);
+	virtual void setGPIOPermission(uint32_t index, int32_t userID, int32_t groupID, bool readOnly);
+	virtual void exportGPIO(uint32_t index);
+	virtual void setGPIODirection(uint32_t index, GPIODirection::Enum direction);
+	virtual void setGPIOEdge(uint32_t index, GPIOEdge::Enum edge);
 };
 
 }
