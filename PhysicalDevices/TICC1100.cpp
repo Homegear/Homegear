@@ -84,8 +84,6 @@ TICC1100::TICC1100(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalD
 			0x41, //27: RCCTRL1
 			0x00, //28: RCCTRL0
 		};
-
-		openGPIO(1, true);
 	}
     catch(const std::exception& ex)
     {
@@ -666,6 +664,7 @@ void TICC1100::startListening()
 	try
 	{
 		stopListening();
+		openGPIO(1, true);
 		if(_gpioDescriptors[1]->descriptor == -1) throw(Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _settings->device));
 		openDevice();
 		if(_fileDescriptor->descriptor == -1) return;
@@ -702,6 +701,7 @@ void TICC1100::stopListening()
 		}
 		_stopCallbackThread = false;
 		if(_fileDescriptor->descriptor != -1) closeDevice();
+		closeGPIO(1);
 		_stopped = true;
 	}
 	catch(const std::exception& ex)

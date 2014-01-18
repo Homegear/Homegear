@@ -270,7 +270,7 @@ void PhysicalDevice::getGPIOPath(uint32_t index)
 						std::string number2(subdirName.substr(4, number.length()));
 						if(number2 == number)
 						{
-							HelperFunctions::printDebug("Debug: GPIO path for device " + _settings->type + " set to \"" + dirName + "\".");
+							HelperFunctions::printDebug("Debug: GPIO path for GPIO with index " + std::to_string(index) + " and device " + _settings->type + " set to \"" + dirName + "\".");
 							if(dirName.back() != '/') dirName.push_back('/');
 							_settings->gpio[index].path = dirName;
 							return;
@@ -405,16 +405,25 @@ void PhysicalDevice::exportGPIO(uint32_t index)
 			HelperFunctions::printError("Error: Failed to export GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + ": GPIO not defined in physicel devices' settings.");
 			return;
 		}
-		std::string path(GD::settings.gpioPath() + "unexport");
-		std::shared_ptr<FileDescriptor> fileDescriptor = GD::fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
-		if (fileDescriptor->descriptor == -1) throw(Exception("Could not unexport GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + "\". Failed to write to unexport file: " + std::string(strerror(errno))));
+		if(_settings->gpio[index].path.empty()) getGPIOPath(index);
+		std::string path;
+		std::shared_ptr<FileDescriptor> fileDescriptor;
 		std::string temp(std::to_string(_settings->gpio[index].number));
-		if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) == -1)
+		if(!_settings->gpio[index].path.empty())
 		{
-			HelperFunctions::printError("Error: Could not unexport GPIO with index " + std::to_string(index) + " and number " + temp + " for device \"" + _settings->type + "\": " + std::string(strerror(errno)));
+			HelperFunctions::printDebug("Debug: Unexporting GPIO with index " + std::to_string(index) + " and number " + std::to_string(_settings->gpio[index].number) + " for device \"" + _settings->type + "\".");
+			path = GD::settings.gpioPath() + "unexport";
+			fileDescriptor = GD::fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
+			if (fileDescriptor->descriptor == -1) throw(Exception("Could not unexport GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + "\". Failed to write to unexport file: " + std::string(strerror(errno))));
+			if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) == -1)
+			{
+				HelperFunctions::printError("Error: Could not unexport GPIO with index " + std::to_string(index) + " and number " + temp + " for device \"" + _settings->type + "\": " + std::string(strerror(errno)));
+			}
+			GD::fileDescriptorManager.close(fileDescriptor);
+			_settings->gpio[index].path.clear();
 		}
-		GD::fileDescriptorManager.close(fileDescriptor);
 
+		HelperFunctions::printDebug("Debug: Exporting GPIO with index " + std::to_string(index) + " and number " + std::to_string(_settings->gpio[index].number) + " for device \"" + _settings->type + "\".");
 		path = GD::settings.gpioPath() + "export";
 		fileDescriptor = GD::fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
 		if (fileDescriptor->descriptor == -1) throw(Exception("Error: Could not export GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + "\". Failed to write to export file: " + std::string(strerror(errno))));
