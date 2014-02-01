@@ -3887,9 +3887,10 @@ std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string v
 		if(setRequest.empty()) return RPC::RPCVariable::createError(-6, "parameter is read only");
 		if(rpcDevice->framesByID.find(setRequest) == rpcDevice->framesByID.end()) return RPC::RPCVariable::createError(-6, "No frame was found for parameter " + valueKey);
 		std::shared_ptr<RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
-		parameter->data = rpcParameter->convertToPacket(value);
-		saveParameter(parameter->databaseID, parameter->data);
-		HelperFunctions::printDebug("Debug: " + valueKey + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(valuesCentral[channel][valueKey].data) + ".");
+		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
+		parameter->data = data;
+		saveParameter(parameter->databaseID, data);
+		if(GD::debugLevel > 4) HelperFunctions::printDebug("Debug: " + valueKey + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(data) + ".");
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
 		queue->noSending = true;

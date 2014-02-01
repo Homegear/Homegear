@@ -1284,12 +1284,16 @@ std::shared_ptr<RPCVariable> RPCListInterfaces::invoke(std::shared_ptr<std::vect
 		interface->structValue->insert(RPCStructElement("DESCRIPTION", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("HomeMatic BidCoS interface")))));
 		interface->structValue->insert(RPCStructElement("CONNECTED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->isOpen()))));
 		interface->structValue->insert(RPCStructElement("DEFAULT", std::shared_ptr<RPCVariable>(new RPCVariable(true))));
+		interface->structValue->insert(RPCStructElement("LASTPACKETSENT", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->lastPacketSent()))));
+		interface->structValue->insert(RPCStructElement("LASTPACKETRECEIVED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->lastPacketReceived()))));
 
 		interface.reset(new RPCVariable(RPCVariableType::rpcStruct));
 		interface->structValue->insert(RPCStructElement("ADDRESS", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("?")))));
 		interface->structValue->insert(RPCStructElement("DESCRIPTION", std::shared_ptr<RPCVariable>(new RPCVariable(std::string("HomeMatic Wired interface")))));
 		interface->structValue->insert(RPCStructElement("CONNECTED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevices.get(DeviceFamily::HomeMaticWired)->isOpen()))));
 		interface->structValue->insert(RPCStructElement("DEFAULT", std::shared_ptr<RPCVariable>(new RPCVariable(true))));
+		interface->structValue->insert(RPCStructElement("LASTPACKETSENT", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevices.get(DeviceFamily::HomeMaticWired)->lastPacketSent()))));
+		interface->structValue->insert(RPCStructElement("LASTPACKETRECEIVED", std::shared_ptr<RPCVariable>(new RPCVariable(GD::physicalDevices.get(DeviceFamily::HomeMaticWired)->lastPacketReceived()))));
 		return array;
 	}
 	catch(const std::exception& ex)

@@ -88,6 +88,7 @@ public:
 	std::mutex sendMutex;
 	SSL* ssl = nullptr;
 	Auth auth;
+	int32_t lastPacketSent = -1;
 };
 
 class RPCClient {

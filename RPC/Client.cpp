@@ -493,6 +493,7 @@ std::shared_ptr<RPCVariable> Client::listClientServers(std::string id)
 				serverInfo->structValue->insert(RPC::RPCStructElement("VERIFICATION_HOSTNAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->settings->hostname))));
 				serverInfo->structValue->insert(RPC::RPCStructElement("VERIFY_CERTIFICATE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->settings->verifyCertificate))));
 			}
+			serverInfo->structValue->insert(RPC::RPCStructElement("LASTPACKETSENT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->lastPacketSent))));
 
 			serverInfos->arrayValue->push_back(serverInfo);
 		}

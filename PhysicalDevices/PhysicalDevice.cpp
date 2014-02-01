@@ -152,6 +152,7 @@ void PhysicalDevice::callCallback(std::shared_ptr<Packet> packet)
 		{
 			(*i)->packetReceived(packet);
 		}
+		_lastPacketReceived = HelperFunctions::getTimeSeconds();
 	}
     catch(const std::exception& ex)
     {

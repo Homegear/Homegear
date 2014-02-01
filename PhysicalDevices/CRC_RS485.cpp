@@ -398,6 +398,7 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 			else HelperFunctions::printWarning("Error sending HomeMatic Wired packet: Collision");
         }
         if(j == 5) HelperFunctions::printError("Error sending HomeMatic Wired packet: Giving up sending after 5 tries.");
+        else _lastPacketSent = HelperFunctions::getTimeSeconds();
     }
     catch(const std::exception& ex)
     {

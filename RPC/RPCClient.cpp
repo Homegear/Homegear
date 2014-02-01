@@ -135,21 +135,16 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		std::shared_ptr<RPCVariable> returnValue;
 		if(server->binary) returnValue = _rpcDecoder.decodeResponse(result);
 		else returnValue = _xmlRpcDecoder.decodeResponse(result);
-		if(GD::debugLevel >= 5)
+
+		if(returnValue->errorStruct) HelperFunctions::printError("Error in RPC response from " + server->ipAddress + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
+		else
 		{
-			HelperFunctions::printDebug("Response was:");
-			returnValue->print();
-		}
-		if(returnValue->errorStruct)
-		{
-			if(returnValue->structValue->find("faultCode") != returnValue->structValue->end() && returnValue->structValue->find("faultString") != returnValue->structValue->end())
+			if(GD::debugLevel >= 5)
 			{
-				HelperFunctions::printError("Error reading response from XML RPC server " + server->address.first + " on port " + server->address.second + ". Fault code: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + ". Fault string: " + returnValue->structValue->at("faultString")->stringValue);
+				HelperFunctions::printDebug("Response was:");
+				returnValue->print();
 			}
-			else
-			{
-				HelperFunctions::printError("Error reading response from XML RPC server " + server->address.first + " on port " + server->address.second + ". Can't print fault struct. It is not well formed.");
-			}
+			server->lastPacketSent = HelperFunctions::getTimeSeconds();
 		}
 	}
 	catch(const std::exception& ex)
@@ -206,11 +201,17 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::shared_ptr<RemoteRPCServer> 
 		std::shared_ptr<RPCVariable> returnValue;
 		if(server->binary) returnValue = _rpcDecoder.decodeResponse(result);
 		else returnValue = _xmlRpcDecoder.decodeResponse(result);
-		if(GD::debugLevel >= 5)
+		if(returnValue->errorStruct) HelperFunctions::printError("Error in RPC response from " + server->ipAddress + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
+		else
 		{
-			HelperFunctions::printDebug("Response was:");
-			returnValue->print();
+			if(GD::debugLevel >= 5)
+			{
+				HelperFunctions::printDebug("Response was:");
+				returnValue->print();
+			}
+			server->lastPacketSent = HelperFunctions::getTimeSeconds();
 		}
+
 		server->sendMutex.unlock();
 		return returnValue;
 	}

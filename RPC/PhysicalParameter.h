@@ -64,10 +64,15 @@ public:
 	};
 	struct Interface
 	{
-		enum Enum { none, command, centralCommand, internal, config, configString, store };
+		enum Enum { none, command, centralCommand, internal, config, configString, store, eeprom };
+	};
+	struct Endian
+	{
+		enum Enum { none, little, big };
 	};
 	Type::Enum type = Type::Enum::none;
-	Interface::Enum interface = Interface::none;
+	Interface::Enum interface = Interface::Enum::none;
+	Endian::Enum endian = Endian::Enum::none;
 	uint32_t list = 9999;
 	double index = 0;
 	uint32_t startIndex = 0;

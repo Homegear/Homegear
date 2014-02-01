@@ -108,7 +108,12 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeResponse(std::shared_ptr<std::vec
 	uint32_t position = offset + 8;
 	std::shared_ptr<RPCVariable> response = decodeParameter(packet, position);
 	if(packet->empty()) return response; //response is Void when packet is empty.
-	if(packet->at(3) == 0xFF) response->errorStruct = true;
+	if(packet->at(3) == 0xFF)
+	{
+		response->errorStruct = true;
+		if(response->structValue->find("faultCode") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultCode", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(-1))));
+		if(response->structValue->find("faultString") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultString", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("undefined")))));
+	}
 	return response;
 }
 

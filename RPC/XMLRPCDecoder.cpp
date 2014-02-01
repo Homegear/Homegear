@@ -169,20 +169,35 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(xml_document<>* doc)
 			return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. First root node has to be \"methodResponse\"."));
 		}
 
+		bool errorStruct = false;
 		xml_node<>* subNode = node->first_node("params");
 		if(subNode == nullptr)
 		{
-			doc->clear();
-			return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Node \"params\" not found."));
+			subNode = node->first_node("fault");
+			if(subNode == nullptr)
+			{
+				doc->clear();
+				return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Node \"fault\" and \"params\" not found."));
+			}
+			errorStruct = true;
 		}
-
-		subNode = subNode->first_node("param");
-		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+		else
+		{
+			subNode = subNode->first_node("param");
+			if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+		}
 
 		subNode = subNode->first_node("value");
 		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
 
-		return decodeParameter(subNode);
+		std::shared_ptr<RPCVariable> response = decodeParameter(subNode);
+		if(errorStruct)
+		{
+			response->errorStruct = errorStruct;
+			if(response->structValue->find("faultCode") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultCode", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(-1))));
+			if(response->structValue->find("faultString") == response->structValue->end()) response->structValue->insert(RPC::RPCStructElement("faultString", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("undefined")))));
+		}
+		return response;
 	}
 	catch(const std::exception& ex)
     {

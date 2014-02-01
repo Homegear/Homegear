@@ -55,7 +55,14 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 				else if(attributeValue == "config") interface = Interface::Enum::config;
 				else if(attributeValue == "config_string") interface = Interface::Enum::configString;
 				else if(attributeValue == "store") interface = Interface::Enum::store;
+				else if(attributeValue == "eeprom") interface = Interface::Enum::eeprom;
 				else HelperFunctions::printWarning("Warning: Unknown interface for \"physical\": " + attributeValue);
+			}
+			else if(attributeName == "endian")
+			{
+				if(attributeValue == "little") endian = Endian::Enum::little;
+				else if(attributeValue == "big") endian = Endian::Enum::big;
+				else HelperFunctions::printWarning("Warning: Unknown endianess for \"physical\": " + attributeValue);
 			}
 			else if(attributeName == "value_id") valueID = attributeValue;
 			else if(attributeName == "no_init") { if(attributeValue == "true") noInit = true; }

@@ -726,6 +726,7 @@ void TICC1100::endSending()
 		sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
 		_sending = false;
+		_lastPacketSent = HelperFunctions::getTimeSeconds();
 	}
 	catch(const std::exception& ex)
     {
