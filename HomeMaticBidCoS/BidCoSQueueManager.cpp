@@ -273,6 +273,7 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)
 		_queueMutex.lock();
 		//Make a copy to make sure, the element exists
 		std::shared_ptr<BidCoSQueue> queue((_queues.find(address) != _queues.end()) ? _queues[address]->queue : std::shared_ptr<BidCoSQueue>());
+		if(queue) queue->keepAlive(); //Don't delete queue in the next second
 		_queueMutex.unlock();
 		return queue;
 	}
