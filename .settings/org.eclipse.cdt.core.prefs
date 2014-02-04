@@ -1,7 +1,7 @@
 eclipse.preferences.version=1
 environment/project/cdt.managedbuild.config.gnu.exe.debug.275614584/PATH/delimiter=\:
 environment/project/cdt.managedbuild.config.gnu.exe.debug.275614584/PATH/operation=replace
-environment/project/cdt.managedbuild.config.gnu.exe.debug.275614584/PATH/value=/usr/local/bin\:/usr/bin\:/bin\:/usr/local/games\:/usr/games\:/home/sathya/rpi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin
+environment/project/cdt.managedbuild.config.gnu.exe.debug.275614584/PATH/value=/usr/local/bin\:/usr/bin\:/bin\:/usr/local/games\:/usr/games
 environment/project/cdt.managedbuild.config.gnu.exe.debug.275614584/append=true
 environment/project/cdt.managedbuild.config.gnu.exe.debug.275614584/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.exe.release.636457886.850304687/PREMAKE_PARAMS/delimiter=\:
@@ -10,7 +10,7 @@ environment/project/cdt.managedbuild.config.gnu.exe.release.636457886.850304687/
 environment/project/cdt.managedbuild.config.gnu.exe.release.636457886.850304687/append=true
 environment/project/cdt.managedbuild.config.gnu.exe.release.636457886.850304687/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.exe.release.636457886/PATH/delimiter=\:
-environment/project/cdt.managedbuild.config.gnu.exe.release.636457886/PATH/operation=append
-environment/project/cdt.managedbuild.config.gnu.exe.release.636457886/PATH/value=$PATH\:$HOME/rpi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian/bin
+environment/project/cdt.managedbuild.config.gnu.exe.release.636457886/PATH/operation=replace
+environment/project/cdt.managedbuild.config.gnu.exe.release.636457886/PATH/value=/usr/local/bin\:/usr/bin\:/bin\:/usr/local/games\:/usr/games\:
 environment/project/cdt.managedbuild.config.gnu.exe.release.636457886/append=true
 environment/project/cdt.managedbuild.config.gnu.exe.release.636457886/appendContributed=true
