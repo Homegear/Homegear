@@ -203,6 +203,7 @@ void LogicalDevices::loadDevicesFromDatabase(bool version_0_0_7)
 			case DeviceID::HMWIREDSD:
 				hmWiredSpyDeviceExists = true;
 				device = std::shared_ptr<LogicalDevice>(new HMWired::HMWired_SD(deviceID, serialNumber, address));
+				break;
 			default:
 				break;
 			}

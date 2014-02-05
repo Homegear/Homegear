@@ -706,6 +706,7 @@ int32_t HM_CC_TC::getAdjustmentCommand(int32_t peerAddress)
     {
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return 0;
 }
 
 int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()

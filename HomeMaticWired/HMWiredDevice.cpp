@@ -71,6 +71,8 @@ void HMWiredDevice::init()
 
 		GD::physicalDevices.get(DeviceFamily::HomeMaticWired)->addLogicalDevice(this);
 
+		_messageCounter[0] = 0; //Broadcast message counter
+
 		_initialized = true;
 	}
 	catch(const std::exception& ex)
@@ -125,6 +127,9 @@ void HMWiredDevice::loadVariables()
 				break;
 			case 1:
 				_centralAddress = row->second.at(3)->intValue;
+				break;
+			case 2:
+				unserializeMessageCounters(row->second.at(5)->binaryValue);
 				break;
 			}
 		}
@@ -322,6 +327,7 @@ void HMWiredDevice::saveVariables()
 		if(_deviceID == 0) return;
 		saveVariable(0, _firmwareVersion);
 		saveVariable(1, _centralAddress);
+		saveMessageCounters(); //2
 	}
 	catch(const std::exception& ex)
     {
@@ -385,4 +391,81 @@ void HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool steal
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
+
+void HMWiredDevice::saveMessageCounters()
+{
+	try
+	{
+		std::vector<uint8_t> serializedData;
+		serializeMessageCounters(serializedData);
+		saveVariable(2, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredDevice::serializeMessageCounters(std::vector<uint8_t>& encodedData)
+{
+	try
+	{
+		BinaryEncoder encoder;
+		encoder.encodeInteger(encodedData, _messageCounter.size());
+		for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
+		{
+			encoder.encodeInteger(encodedData, i->first);
+			encoder.encodeByte(encodedData, i->second);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredDevice::unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData)
+{
+	try
+	{
+		BinaryDecoder decoder;
+		uint32_t position = 0;
+		uint32_t messageCounterSize = decoder.decodeInteger(serializedData, position);
+		for(uint32_t i = 0; i < messageCounterSize; i++)
+		{
+			int32_t index = decoder.decodeInteger(serializedData, position);
+			_messageCounter[index] = decoder.decodeByte(serializedData, position);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+
 }

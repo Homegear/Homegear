@@ -1821,6 +1821,7 @@ bool HomeMaticDevice::peerExists(int32_t address)
     	_peersMutex.unlock();
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return false;
 }
 
 void HomeMaticDevice::addPeer(std::shared_ptr<Peer> peer)

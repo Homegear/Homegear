@@ -32,6 +32,7 @@
 
 #include "../LogicalDevice.h"
 #include "HMWiredPacket.h"
+#include "HMWiredPeer.h"
 
 #include <string>
 #include <unordered_map>
@@ -53,24 +54,32 @@ class HMWiredDevice : public LogicalDevice
         virtual ~HMWiredDevice();
         virtual DeviceFamily deviceFamily() { return DeviceFamily::HomeMaticWired; }
 
-        virtual void load();
         virtual void loadVariables();
         virtual void saveVariables();
         virtual void saveVariable(uint32_t index, int64_t intValue);
         virtual void saveVariable(uint32_t index, std::string& stringValue);
         virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
+        virtual void saveMessageCounters();
+        virtual void load();
         virtual void save(bool saveDevice);
+        virtual void serializeMessageCounters(std::vector<uint8_t>& encodedData);
+        virtual void unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData);
 
         virtual void sendPacket(std::shared_ptr<HMWiredPacket> packet, bool stealthy = false);
     protected:
         //In table variables
         int32_t _firmwareVersion = 0;
         int32_t _centralAddress = 0;
+        std::unordered_map<int32_t, uint8_t> _messageCounter;
         //End
 
         bool _initialized = false;
         std::map<uint32_t, uint32_t> _variableDatabaseIDs;
 
+        std::shared_ptr<HMWiredPeer> _currentPeer;
+        std::unordered_map<int32_t, std::shared_ptr<HMWiredPeer>> _peers;
+        std::unordered_map<std::string, std::shared_ptr<HMWiredPeer>> _peersBySerial;
+        std::timed_mutex _peersMutex;
         std::mutex _databaseMutex;
 
         virtual void init();
