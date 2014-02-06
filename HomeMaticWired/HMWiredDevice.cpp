@@ -347,8 +347,8 @@ void HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool steal
 {
 	try
 	{
-		/*uint32_t responseDelay = GD::physicalDevices.get(DeviceFamily::HomeMaticWired)->responseDelay();
-		std::shared_ptr<BidCoSPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
+		uint32_t responseDelay = GD::physicalDevices.get(DeviceFamily::HomeMaticWired)->responseDelay();
+		std::shared_ptr<HMWiredPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
 		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet);
 		if(packetInfo)
 		{
@@ -375,7 +375,7 @@ void HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool steal
 			//Set time to now. This is necessary if two packets are sent after each other without a response in between
 			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		}
-		else HelperFunctions::printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);*/
+		else HelperFunctions::printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
 		GD::physicalDevices.get(DeviceFamily::HomeMaticWired)->sendPacket(packet);
 	}
 	catch(const std::exception& ex)
@@ -467,5 +467,57 @@ void HMWiredDevice::unserializeMessageCounters(std::shared_ptr<std::vector<char>
     }
 }
 
+void HMWiredDevice::lockBus()
+{
+	try
+	{
+		std::vector<uint8_t> payload = { 0x03, 0x7A };
+		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, false, _messageCounter[0]++, 0, 0, payload));
+		sendPacket(packet);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, false, _messageCounter[0]++, 0, 0, payload));
+		sendPacket(packet);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredDevice::unlockBus()
+{
+	try
+	{
+		std::vector<uint8_t> payload = { 0x03, 0x5A };
+		std::this_thread::sleep_for(std::chrono::milliseconds(30));
+		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, false, _messageCounter[0]++, 0, 0, payload));
+		sendPacket(packet);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, false, _messageCounter[0]++, 0, 0, payload));
+		sendPacket(packet);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
 
 }

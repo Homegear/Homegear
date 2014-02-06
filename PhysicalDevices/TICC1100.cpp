@@ -65,7 +65,7 @@ TICC1100::TICC1100(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalD
 			0xF8, //14: MDMCFG0
 			0x34, //15: DEVIATN
 			0x07, //16: MCSM2
-			0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
+			0x30, //17: MCSM1: IDLE when packet has been received, RX after sending
 			0x18, //18: MCSM0
 			0x16, //19: FOCCFG
 			0x6C, //1A: BSCFG
@@ -785,7 +785,7 @@ void TICC1100::mainThread()
 				if(_sending) endSending();
 				else
 				{
-					sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+					//sendCommandStrobe(CommandStrobes::Enum::SIDLE);
 					if(crcOK())
 					{
 						uint8_t firstByte = readRegister(Registers::Enum::FIFO);

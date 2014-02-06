@@ -200,6 +200,10 @@ void LogicalDevices::loadDevicesFromDatabase(bool version_0_0_7)
 				bidCoSSpyDeviceExists = true;
 				device = std::shared_ptr<LogicalDevice>(new HM_SD(deviceID, serialNumber, address));
 				break;
+			case DeviceID::HMWIREDCENTRAL:
+				_hmWiredCentral = std::shared_ptr<HMWired::HMWiredCentral>(new HMWired::HMWiredCentral(deviceID, serialNumber, address));
+				device = _hmWiredCentral;
+				break;
 			case DeviceID::HMWIREDSD:
 				hmWiredSpyDeviceExists = true;
 				device = std::shared_ptr<LogicalDevice>(new HMWired::HMWired_SD(deviceID, serialNumber, address));
@@ -216,10 +220,17 @@ void LogicalDevices::loadDevicesFromDatabase(bool version_0_0_7)
 				_devicesMutex.unlock();
 			}
 		}
-		if(!_homeMaticCentral) createBidCoSCentral();
-		if(!bidCoSSpyDeviceExists) createBidCoSSpyDevice();
-		if(_homeMaticCentral) _homeMaticCentral->addPeersToVirtualDevices();
-		if(!hmWiredSpyDeviceExists) createHMWiredSpyDevice();
+		if(GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->isOpen())
+		{
+			if(!_homeMaticCentral) createBidCoSCentral();
+			if(!bidCoSSpyDeviceExists) createBidCoSSpyDevice();
+			if(_homeMaticCentral) _homeMaticCentral->addPeersToVirtualDevices();
+		}
+		if(GD::physicalDevices.get(DeviceFamily::HomeMaticWired)->isOpen())
+		{
+			if(!_hmWiredCentral) createHMWiredCentral();
+			if(!hmWiredSpyDeviceExists) createHMWiredSpyDevice();
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -341,6 +352,31 @@ void LogicalDevices::createBidCoSCentral()
     }
 }
 
+void LogicalDevices::createHMWiredCentral()
+{
+	try
+	{
+		if(_hmWiredCentral) return;
+
+		std::string serialNumber(getUniqueHomeMaticSerialNumber("VCL", HelperFunctions::getRandomNumber(1, 9999999)));
+
+		add(new HMWired::HMWiredCentral(0, serialNumber, 1));
+		HelperFunctions::printMessage("Created HMWIREDCENTRAL with address 0x" + HelperFunctions::getHexString(1) + " and serial number " + serialNumber);
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 std::shared_ptr<HomeMaticCentral> LogicalDevices::getHomeMaticCentral()
 {
 	try
@@ -370,6 +406,37 @@ std::shared_ptr<HomeMaticCentral> LogicalDevices::getHomeMaticCentral()
     }
     _devicesMutex.unlock();
     return std::shared_ptr<HomeMaticCentral>();
+}
+
+std::shared_ptr<HMWired::HMWiredCentral> LogicalDevices::getHMWiredCentral()
+{
+	try
+	{
+		_devicesMutex.lock();
+		if(!_hmWiredCentral)
+		{
+			_devicesMutex.unlock();
+			return std::shared_ptr<HMWired::HMWiredCentral>();
+		}
+
+		std::shared_ptr<HMWired::HMWiredCentral> central(_hmWiredCentral);
+		_devicesMutex.unlock();
+		return central;
+	}
+	catch(const std::exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _devicesMutex.unlock();
+    return std::shared_ptr<HMWired::HMWiredCentral>();
 }
 
 int32_t LogicalDevices::getUniqueBidCoSAddress(uint8_t firstByte)

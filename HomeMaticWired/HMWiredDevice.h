@@ -33,6 +33,7 @@
 #include "../LogicalDevice.h"
 #include "HMWiredPacket.h"
 #include "HMWiredPeer.h"
+#include "HMWiredPacketManager.h"
 
 #include <string>
 #include <unordered_map>
@@ -81,8 +82,12 @@ class HMWiredDevice : public LogicalDevice
         std::unordered_map<std::string, std::shared_ptr<HMWiredPeer>> _peersBySerial;
         std::timed_mutex _peersMutex;
         std::mutex _databaseMutex;
+        HMWiredPacketManager _receivedPackets;
+        HMWiredPacketManager _sentPackets;
 
         virtual void init();
+        void lockBus();
+        void unlockBus();
     private:
 };
 }

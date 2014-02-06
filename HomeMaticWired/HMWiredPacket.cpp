@@ -90,6 +90,21 @@ HMWiredPacket::HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived)
 	import(packet);
 }
 
+HMWiredPacket::HMWiredPacket(HMWiredPacketType type, int32_t senderAddress, int32_t destinationAddress, bool synchronizationBit, uint8_t senderMessageCounter, uint8_t receiverMessageCounter, uint8_t addressMask, std::vector<uint8_t>& payload)
+{
+	init();
+	reset();
+	_type = type;
+	_senderAddress = senderAddress;
+	_destinationAddress = destinationAddress;
+	_synchronizationBit = synchronizationBit;
+	_senderMessageCounter = senderMessageCounter;
+	_receiverMessageCounter = receiverMessageCounter;
+	_addressMask = addressMask;
+	_payload = payload;
+	generateControlByte();
+}
+
 HMWiredPacket::~HMWiredPacket()
 {
 }

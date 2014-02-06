@@ -37,7 +37,6 @@
 class HMWiredPacket;
 
 #include "../HMWiredDevice.h"
-#include "../HMWiredPacketManager.h"
 #include "../../RPC/RPCVariable.h"
 
 namespace HMWired
@@ -50,11 +49,10 @@ public:
 	HMWiredCentral(uint32_t deviceID, std::string serialNumber, int32_t address);
 	virtual ~HMWiredCentral();
 	void init();
+	std::string handleCLICommand(std::string command);
 
 	std::shared_ptr<RPC::RPCVariable> searchDevices();
 protected:
-	HMWiredPacketManager _receivedPackets;
-	HMWiredPacketManager _sentPackets;
 };
 
 } /* namespace HMWired */

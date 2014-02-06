@@ -58,6 +58,7 @@ class HMWiredPacket : public Packet
         HMWiredPacket();
         HMWiredPacket(std::string packet, int64_t timeReceived = 0);
         HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived = 0);
+        HMWiredPacket(HMWiredPacketType type, int32_t senderAddress, int32_t destinationAddress, bool synchronizationBit, uint8_t senderMessageCounter, uint8_t receiverMessageCounter, uint8_t addressMask, std::vector<uint8_t>& payload);
         virtual ~HMWiredPacket();
 
         HMWiredPacketType type() { return _type; }

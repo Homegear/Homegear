@@ -45,6 +45,7 @@ namespace HMWired
 #include <mutex>
 
 #include "HomeMaticBidCoS/Devices/HomeMaticCentral.h"
+#include "HomeMaticWired/Devices/HMWiredCentral.h"
 
 class LogicalDevices
 {
@@ -60,6 +61,7 @@ public:
 	std::shared_ptr<HomeMaticDevice> getHomeMatic(std::string serialNumber);
 	std::shared_ptr<HMWired::HMWiredDevice> getHMWired(std::string serialNumber);
 	std::shared_ptr<HomeMaticCentral> getHomeMaticCentral();
+	std::shared_ptr<HMWired::HMWiredCentral> getHMWiredCentral();
 	std::vector<std::shared_ptr<LogicalDevice>> getDevices();
 	void convertDatabase();
 	void load();
@@ -73,6 +75,7 @@ private:
 	std::mutex _devicesMutex;
 	std::vector<std::shared_ptr<LogicalDevice>> _devices;
 	std::shared_ptr<HomeMaticCentral> _homeMaticCentral;
+	std::shared_ptr<HMWired::HMWiredCentral> _hmWiredCentral;
 	std::thread _removeThread;
 
 	void initializeDatabase();
@@ -82,6 +85,7 @@ private:
 	std::string getUniqueHomeMaticSerialNumber(std::string seedPrefix, uint32_t seedNumber);
 	void createBidCoSCentral();
 	void createBidCoSSpyDevice();
+	void createHMWiredCentral();
 	void createHMWiredSpyDevice();
 	void removeThread(int32_t address);
 };

@@ -30,7 +30,7 @@
 #ifndef HMWIREDPACKETMANAGER_H_
 #define HMWIREDPACKETMANAGER_H_
 
-class HMWiredPacket;
+#include "HMWiredPacket.h"
 
 #include <iostream>
 #include <string>
