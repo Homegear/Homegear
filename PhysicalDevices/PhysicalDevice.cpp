@@ -31,6 +31,7 @@
 #include "../GD.h"
 #include "../HelperFunctions.h"
 #include "Cul.h"
+#include "COC.h"
 #include "TICC1100.h"
 #include "CRC_RS485.h"
 
@@ -68,6 +69,7 @@ std::shared_ptr<PhysicalDevice> PhysicalDevice::create(std::shared_ptr<PhysicalD
 		if(settings->family == DeviceFamily::HomeMaticBidCoS)
 		{
 			if(settings->type == "cul") return std::shared_ptr<PhysicalDevice>(new Cul(settings));
+			else if(settings->type == "coc") return std::shared_ptr<PhysicalDevice>(new COC(settings));
 			else if(settings->type == "cc1100") return std::shared_ptr<PhysicalDevice>(new TICC1100(settings));
 			else HelperFunctions::printError("Error: Unsupported physical device type for family " + DeviceFamilies::getName(settings->family) + ": " + settings->type);
 		}

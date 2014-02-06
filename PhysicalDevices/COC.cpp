@@ -27,18 +27,18 @@
  * files in the program, then also delete it here.
  */
 
-#include "Cul.h"
+#include "COC.h"
 #include "../GD.h"
 #include "../HelperFunctions.h"
 
 namespace PhysicalDevices
 {
 
-Cul::Cul(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
+COC::COC(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
 {
 }
 
-Cul::~Cul()
+COC::~COC()
 {
 	try
 	{
@@ -63,7 +63,7 @@ Cul::~Cul()
     }
 }
 
-void Cul::sendPacket(std::shared_ptr<Packet> packet)
+void COC::sendPacket(std::shared_ptr<Packet> packet)
 {
 	try
 	{
@@ -72,7 +72,7 @@ void Cul::sendPacket(std::shared_ptr<Packet> packet)
 			HelperFunctions::printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
+		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
 		if(packet->payload()->size() > 54)
 		{
 			if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
@@ -95,7 +95,7 @@ void Cul::sendPacket(std::shared_ptr<Packet> packet)
     }
 }
 
-void Cul::openDevice()
+void COC::openDevice()
 {
 	try
 	{
@@ -116,7 +116,7 @@ void Cul::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				HelperFunctions::printCritical("CUL device is in use: " + _settings->device);
+				HelperFunctions::printCritical("COC device is in use: " + _settings->device);
 				return;
 			}
 			unlink(_lockfile.c_str());
@@ -135,7 +135,7 @@ void Cul::openDevice()
 		_fileDescriptor = GD::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
 		if(_fileDescriptor->descriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open CUL device: " + _settings->device);
+			HelperFunctions::printCritical("Couldn't open COC device: " + _settings->device);
 			return;
 		}
 
@@ -155,7 +155,7 @@ void Cul::openDevice()
     }
 }
 
-void Cul::closeDevice()
+void COC::closeDevice()
 {
 	try
 	{
@@ -176,29 +176,29 @@ void Cul::closeDevice()
     }
 }
 
-void Cul::setupDevice()
+void COC::setupDevice()
 {
 	try
 	{
 		if(_fileDescriptor->descriptor == -1) return;
 		struct termios term;
-		term.c_cflag = B9600 | CS8 | CREAD;
+		term.c_cflag = B38400 | CS8 | CREAD;
 		term.c_iflag = 0;
 		term.c_oflag = 0;
 		term.c_lflag = 0;
 		term.c_cc[VMIN] = 1;
 		term.c_cc[VTIME] = 0;
-		cfsetispeed(&term, B9600);
-		cfsetospeed(&term, B9600);
-		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush CUL device " + _settings->device));
-		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set CUL device settings: " + _settings->device));
+		cfsetispeed(&term, B38400);
+		cfsetospeed(&term, B38400);
+		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(Exception("Couldn't flush COC device " + _settings->device));
+		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(Exception("Couldn't set COC device settings: " + _settings->device));
 
 		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))
 		{
 			if(fcntl(_fileDescriptor->descriptor, F_SETFL, flags | O_NONBLOCK) == -1)
 			{
-				throw(Exception("Couldn't set CUL device to non blocking mode: " + _settings->device));
+				throw(Exception("Couldn't set COC device to non blocking mode: " + _settings->device));
 			}
 		}
 	}
@@ -216,14 +216,14 @@ void Cul::setupDevice()
     }
 }
 
-std::string Cul::readFromDevice()
+std::string COC::readFromDevice()
 {
 	try
 	{
 		if(_stopped) return "";
 		if(_fileDescriptor->descriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't read from CUL device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
+			HelperFunctions::printCritical("Couldn't read from COC device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
 			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
@@ -251,12 +251,12 @@ std::string Cul::readFromDevice()
 					if(!_stopCallbackThread) continue;
 					else return "";
 				case -1:
-					HelperFunctions::printError("Error reading from CUL device: " + _settings->device);
+					HelperFunctions::printError("Error reading from COC device: " + _settings->device);
 					return "";
 				case 1:
 					break;
 				default:
-					HelperFunctions::printError("Error reading from CUL device: " + _settings->device);
+					HelperFunctions::printError("Error reading from COC device: " + _settings->device);
 					return "";
 			}
 
@@ -264,13 +264,13 @@ std::string Cul::readFromDevice()
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				HelperFunctions::printError("Error reading from CUL device: " + _settings->device);
+				HelperFunctions::printError("Error reading from COC device: " + _settings->device);
 				return "";
 			}
 			packet.push_back(localBuffer[0]);
 			if(packet.size() > 200)
 			{
-				HelperFunctions::printError("CUL was disconnected.");
+				HelperFunctions::printError("COC was disconnected.");
 				closeDevice();
 				return "";
 			}
@@ -288,47 +288,26 @@ std::string Cul::readFromDevice()
 	return "";
 }
 
-void Cul::writeToDevice(std::string data, bool printSending)
+void COC::writeToDevice(std::string data, bool printSending)
 {
     try
     {
     	if(_stopped) return;
-        if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
+        if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
         int32_t bytesWritten = 0;
         int32_t i;
-        //struct timeval timeout;
-        //timeout.tv_sec = 0;
-        //timeout.tv_usec = 200000;
-        //fd_set writeFileDescriptor;
         if(GD::debugLevel > 3 && printSending)
         {
             HelperFunctions::printInfo("Info: Sending: " + data.substr(2, data.size() - 4));
         }
         _sendMutex.lock();
-        //FD_ZERO(&writeFileDescriptor);
-        //FD_SET(_fileDescriptor, &writeFileDescriptor);
         while(bytesWritten < (signed)data.length())
         {
-            /*i = select(_fileDescriptor + 1, NULL, &writeFileDescriptor, NULL, &timeout);
-            switch(i)
-            {
-                case 0:
-                    if(GD::debugLevel >= 3) HelperFunctions::printMessage( "Warning: Writing to CUL device timed out: " + _culDevice << std::endl;
-                    break;
-                case -1:
-                    throw(Exception("Error writing to CUL device (1): " + _culDevice));
-                    break;
-                case 1:
-                    break;
-                default:
-                    throw(Exception("Error writing to CUL device (2): " + _culDevice));
-
-            }*/
             i = write(_fileDescriptor->descriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
             if(i == -1)
             {
                 if(errno == EAGAIN) continue;
-                throw(Exception("Error writing to CUL device (3, " + std::to_string(errno) + "): " + _settings->device));
+                throw(Exception("Error writing to COC device (3, " + std::to_string(errno) + "): " + _settings->device));
             }
             bytesWritten += i;
         }
@@ -353,17 +332,26 @@ void Cul::writeToDevice(std::string data, bool printSending)
     }
 }
 
-void Cul::startListening()
+void COC::startListening()
 {
 	try
 	{
 		stopListening();
 		openDevice();
 		if(_fileDescriptor->descriptor == -1) return;
+		openGPIO(2, false);
+		setGPIO(2, true);
+		closeGPIO(2);
+		openGPIO(1, false);
+		setGPIO(1, false);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		setGPIO(1, true);
+		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+		closeGPIO(1);
 		_stopped = false;
 		writeToDevice("X21\nAr\n", false);
-		std::this_thread::sleep_for(std::chrono::milliseconds(400));
-		_listenThread = std::thread(&Cul::listen, this);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		_listenThread = std::thread(&COC::listen, this);
 		HelperFunctions::setThreadPriority(_listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
@@ -380,7 +368,7 @@ void Cul::startListening()
     }
 }
 
-void Cul::stopListening()
+void COC::stopListening()
 {
 	try
 	{
@@ -413,7 +401,7 @@ void Cul::stopListening()
     }
 }
 
-void Cul::listen()
+void COC::listen()
 {
     try
     {
@@ -426,10 +414,10 @@ void Cul::listen()
         		continue;
         	}
         	std::string packetHex = readFromDevice();
-        	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + CUL "A")
+        	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + COC "A")
         	{
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, HelperFunctions::getTime()));
-				std::thread t(&Cul::callCallback, this, packet);
+				std::thread t(&COC::callCallback, this, packet);
 				HelperFunctions::setThreadPriority(t.native_handle(), 45);
 				t.detach();
         	}
@@ -449,11 +437,17 @@ void Cul::listen()
     }
 }
 
-void Cul::setup(int32_t userID, int32_t groupID)
+void COC::setup(int32_t userID, int32_t groupID)
 {
     try
     {
     	setDevicePermission(userID, groupID);
+    	exportGPIO(1);
+		setGPIOPermission(1, userID, groupID, false);
+		setGPIODirection(1, GPIODirection::OUT);
+		exportGPIO(2);
+		setGPIOPermission(2, userID, groupID, false);
+		setGPIODirection(2, GPIODirection::OUT);
     }
     catch(const std::exception& ex)
     {

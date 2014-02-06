@@ -157,6 +157,7 @@ OBJECTS := \
 	$(OBJDIR)/PhysicalDevice.o \
 	$(OBJDIR)/PhysicalDevices.o \
 	$(OBJDIR)/TICC1100.o \
+	$(OBJDIR)/COC.o \
 	$(OBJDIR)/CRC_RS485.o \
 
 RESOURCES := \
@@ -409,6 +410,9 @@ $(OBJDIR)/PhysicalDevices.o: PhysicalDevices/PhysicalDevices.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/TICC1100.o: PhysicalDevices/TICC1100.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/COC.o: PhysicalDevices/COC.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/CRC_RS485.o: PhysicalDevices/CRC_RS485.cpp
