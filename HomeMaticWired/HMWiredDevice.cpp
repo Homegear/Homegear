@@ -467,15 +467,39 @@ void HMWiredDevice::unserializeMessageCounters(std::shared_ptr<std::vector<char>
     }
 }
 
+bool HMWiredDevice::packetReceived(std::shared_ptr<Packet> packet)
+{
+	try
+	{
+		if(_disposing) return false;
+		std::shared_ptr<HMWiredPacket> hmWiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
+		if(!hmWiredPacket) return false;
+		_receivedPackets.set(hmWiredPacket->senderAddress(), hmWiredPacket, hmWiredPacket->timeReceived());
+	}
+	catch(const std::exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 void HMWiredDevice::lockBus()
 {
 	try
 	{
-		std::vector<uint8_t> payload = { 0x03, 0x7A };
-		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, false, _messageCounter[0]++, 0, 0, payload));
+		std::vector<uint8_t> payload = { 0x7A };
+		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, true, _messageCounter[0]++, 0, 0, payload));
 		sendPacket(packet);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, false, _messageCounter[0]++, 0, 0, payload));
+		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, true, _messageCounter[0]++, 0, 0, payload));
 		sendPacket(packet);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
@@ -497,12 +521,12 @@ void HMWiredDevice::unlockBus()
 {
 	try
 	{
-		std::vector<uint8_t> payload = { 0x03, 0x5A };
+		std::vector<uint8_t> payload = { 0x5A };
 		std::this_thread::sleep_for(std::chrono::milliseconds(30));
-		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, false, _messageCounter[0]++, 0, 0, payload));
+		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, true, _messageCounter[0]++, 0, 0, payload));
 		sendPacket(packet);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, false, _messageCounter[0]++, 0, 0, payload));
+		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, true, _messageCounter[0]++, 0, 0, payload));
 		sendPacket(packet);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}

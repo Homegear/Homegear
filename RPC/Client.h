@@ -60,7 +60,7 @@ public:
 	void broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses);
 	void broadcastUpdateDevice(std::string address, Hint::Enum hint);
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
-	std::shared_ptr<RemoteRPCServer> addServer(std::pair<std::string, std::string> address, std::string id);
+	std::shared_ptr<RemoteRPCServer> addServer(std::pair<std::string, std::string> address, std::string path, std::string id);
 	void removeServer(std::pair<std::string, std::string> address);
 	std::shared_ptr<RemoteRPCServer> getServer(std::pair<std::string, std::string>);
 	std::shared_ptr<RPCVariable> listClientServers(std::string id);

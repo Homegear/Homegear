@@ -335,27 +335,30 @@ void HMWiredPacket::generateControlByte()
 {
 	try
 	{
-		_controlByte = 0x10; //F bit is always set
 		if(_type == HMWiredPacketType::iMessage)
 		{
-			if(_synchronizationBit) _controlByte &= 0x80;
+			_controlByte = 0x10; //F bit
+			if(_synchronizationBit) _controlByte |= 0x80;
 			_controlByte |= ((_receiverMessageCounter & 3) << 5);
 			_controlByte |= 0x08; //Packet must contain sender address
 			_controlByte |= ((_senderMessageCounter & 3) << 1);
 		}
 		else if(_type == HMWiredPacketType::ackMessage)
 		{
+			_controlByte = 0x10; //F bit
 			_controlByte |= ((_receiverMessageCounter & 3) << 5);
 			_controlByte |= 0x08; //Packet must contain sender address
 			_controlByte |= 1;
 		}
 		else if(_type == HMWiredPacketType::discovery)
 		{
+			_controlByte = 0;
 			_controlByte |= 3;
 			_controlByte |= ((_addressMask & 0x1F) << 3);
 		}
 		else if(_type == HMWiredPacketType::system)
 		{
+			_controlByte = 0x10; //F bit
 			_controlByte |= ((_receiverMessageCounter & 3) << 5);
 			_controlByte |= 1;
 		}
@@ -403,12 +406,15 @@ std::vector<uint8_t> HMWiredPacket::byteArray()
 			_packet.push_back((_destinationAddress >> 8) & 0xFF);
 			_packet.push_back(_destinationAddress & 0xFF);
 			_packet.push_back(_controlByte);
-			_packet.push_back(_destinationAddress >> 24);
-			_packet.push_back((_destinationAddress >> 16) & 0xFF);
-			_packet.push_back((_destinationAddress >> 8) & 0xFF);
-			_packet.push_back(_destinationAddress & 0xFF);
+			_packet.push_back(_senderAddress >> 24);
+			_packet.push_back((_senderAddress >> 16) & 0xFF);
+			_packet.push_back((_senderAddress >> 8) & 0xFF);
+			_packet.push_back(_senderAddress & 0xFF);
 			_packet.push_back(_payload.size() + 2);
 			_packet.insert(_packet.end(), _payload.begin(), _payload.end());
+			if(_checksum == 0) _checksum = CRC16::calculate(_packet);
+			_packet.push_back(_checksum >> 8);
+			_packet.push_back(_checksum & 0xFF);
 		}
 		else if(_type == HMWiredPacketType::system)
 		{
@@ -416,6 +422,9 @@ std::vector<uint8_t> HMWiredPacket::byteArray()
 			_packet.push_back(_destinationAddress & 0xFF); //Only one byte, that's correct!
 			_packet.push_back(_controlByte);
 			_packet.push_back(2);
+			if(_checksum == 0) _checksum = CRC16::calculate(_packet);
+			_packet.push_back(_checksum >> 8);
+			_packet.push_back(_checksum & 0xFF);
 		}
 		else if(_type == HMWiredPacketType::discovery)
 		{
@@ -426,6 +435,9 @@ std::vector<uint8_t> HMWiredPacket::byteArray()
 			_packet.push_back(_destinationAddress & 0xFF);
 			_packet.push_back(_controlByte);
 			_packet.push_back(2); //Length
+			if(_checksum == 0) _checksum = CRC16::calculate(_packet);
+			_packet.push_back(_checksum >> 8);
+			_packet.push_back(_checksum & 0xFF);
 		}
 		else if(_type == HMWiredPacketType::discoveryResponse)
 		{

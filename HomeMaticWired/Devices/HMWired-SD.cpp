@@ -227,7 +227,7 @@ bool HMWired_SD::packetReceived(std::shared_ptr<Packet> packet)
 			}
 		}
 		if(_filters.size() == 0) printPacket = true;
-		if(printPacket) std::cout << HelperFunctions::getTimeString(wiredPacket->timeReceived()) << " HomeMatic Wired packet Received: " + wiredPacket->hexString() << std::endl;
+		if(printPacket) std::cout << HelperFunctions::getTimeString(wiredPacket->timeReceived()) << " HomeMatic Wired packet received: " + wiredPacket->hexString() << std::endl;
 	}
     catch(const std::exception& ex)
     {

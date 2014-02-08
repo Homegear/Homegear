@@ -65,6 +65,7 @@ class CRCRS485  : public PhysicalDevice
         int64_t _lastAction = 0;
         bool _sending = false;
         std::vector<uint8_t> _receivedSentPacket;
+        std::timed_mutex _sendingMutex;
 
         void openDevice();
         void closeDevice();

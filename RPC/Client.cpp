@@ -136,6 +136,9 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 				std::pair<std::string, bool> method;
 				if((*i)->stringValue.empty()) continue;
 				method.first = (*i)->stringValue;
+				//openHAB prepends some methods with "CallbackHandler."
+				if(method.first.size() > 16 && method.first.substr(0, 16) == "CallbackHandler.") method.first = method.first.substr(16);
+				HelperFunctions::printDebug("Debug: Adding method " + method.first);
 				method.second = true;
 				server->knownMethods.insert(method);
 			}
@@ -369,7 +372,7 @@ void Client::reset()
     }
 }
 
-std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::string> address, std::string id)
+std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::string> address, std::string path, std::string id)
 {
 	try
 	{
@@ -377,6 +380,7 @@ std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::s
 		_serversMutex.lock();
 		std::shared_ptr<RemoteRPCServer> server(new RemoteRPCServer());
 		server->address = address;
+		server->path = path;
 		server->id = id;
 		_servers->push_back(server);
 		_serversMutex.unlock();
@@ -483,6 +487,7 @@ std::shared_ptr<RPCVariable> Client::listClientServers(std::string id)
 			serverInfo->structValue->insert(RPC::RPCStructElement("HOSTNAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->hostname))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("IPADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->ipAddress))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("PORT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->address.second))));
+			serverInfo->structValue->insert(RPC::RPCStructElement("PATH", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->path))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("SSL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->useSSL))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("BINARY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->binary))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("KEEP_ALIVE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->keepAlive))));

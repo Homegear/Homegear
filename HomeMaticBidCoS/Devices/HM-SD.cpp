@@ -359,7 +359,7 @@ bool HM_SD::packetReceived(std::shared_ptr<Packet> packet)
 				}
 			}
 		}
-		if(printPacket) std::cout << HelperFunctions::getTimeString(bidCoSPacket->timeReceived()) << " HomeMatic BidCoS packet Received: " + bidCoSPacket->hexString() << std::endl;
+		if(printPacket) std::cout << HelperFunctions::getTimeString(bidCoSPacket->timeReceived()) << " HomeMatic BidCoS packet received: " + bidCoSPacket->hexString() << std::endl;
 		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
 		{
 			std::string packetHex = bidCoSPacket->hexString();

@@ -497,7 +497,77 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 		lockBus();
 
 		int32_t addressMask = 0;
+		bool backwards = false;
+		int32_t address = 0;
+		int32_t address2 = 0;
+		int64_t time = 0;
+		std::shared_ptr<HMWired::HMWiredPacket> receivedPacket;
+		int32_t retries = 0;
+		while(true)
+		{
+			std::vector<uint8_t> payload;
+			std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::discovery, 0, address, false, 0, 0, addressMask, payload));
+			time = HelperFunctions::getTime();
+			sendPacket(packet);
 
+			int32_t i = 0;
+			for(i = 0; i < 13; i++)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(2));
+				receivedPacket = _receivedPackets.get(0);
+				if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->type() == HMWiredPacketType::discoveryResponse)
+				{
+					retries = 0;
+					if(addressMask < 31)
+					{
+						backwards = false;
+						addressMask++;
+					}
+					else
+					{
+						HelperFunctions::printMessage("Device found with address 0x" + HelperFunctions::getHexString(address, 8));
+						backwards = true;
+						address++;
+						address2 = address;
+						while(!(address2 & 1))
+						{
+							address2 >>= 1;
+							addressMask--;
+						}
+					}
+				}
+			}
+			if(i == 7)
+			{
+				if(retries < 2) retries++;
+				else
+				{
+					retries = 0;
+					if(addressMask < 31)
+					{
+						if(addressMask == 0) break;
+						if(backwards)
+						{
+							address++;
+							address2 = address;
+							while(!(address2 & 1))
+							{
+								address2 >>= 1;
+								addressMask--;
+							}
+						}
+						else address |= (1 << (31 - addressMask));
+					}
+					else
+					{
+						backwards = true;
+						addressMask--;
+						address++;
+					}
+				}
+			}
+			if(addressMask == 0 && (address & 0x80000000)) break;
+		}
 
 		unlockBus();
 		//Todo: Return number of new devices and call "newDevices"

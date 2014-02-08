@@ -54,6 +54,7 @@ class HMWiredDevice : public LogicalDevice
         HMWiredDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
         virtual ~HMWiredDevice();
         virtual DeviceFamily deviceFamily() { return DeviceFamily::HomeMaticWired; }
+        bool packetReceived(std::shared_ptr<Packet> packet);
 
         virtual void loadVariables();
         virtual void saveVariables();
@@ -74,8 +75,8 @@ class HMWiredDevice : public LogicalDevice
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         //End
 
-        bool _initialized = false;
         std::map<uint32_t, uint32_t> _variableDatabaseIDs;
+        bool _disposing = false;
 
         std::shared_ptr<HMWiredPeer> _currentPeer;
         std::unordered_map<int32_t, std::shared_ptr<HMWiredPeer>> _peers;
@@ -84,6 +85,7 @@ class HMWiredDevice : public LogicalDevice
         std::mutex _databaseMutex;
         HMWiredPacketManager _receivedPackets;
         HMWiredPacketManager _sentPackets;
+        bool _initialized = false;
 
         virtual void init();
         void lockBus();

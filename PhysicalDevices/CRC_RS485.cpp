@@ -260,9 +260,11 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			if(!isOpen()) return std::vector<uint8_t>();
 		}
 		std::vector<uint8_t> packet;
+		std::vector<uint8_t> escapedPacket;
 		if(_firstByte && (HelperFunctions::getTime() - _lastAction) < 10)
 		{
 			packet.push_back(_firstByte);
+			escapedPacket.push_back(_firstByte);
 			_firstByte = 0;
 		}
 		int32_t timeoutTime = 500000;
@@ -305,7 +307,11 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 					break;
 			}
 			if(!_sending) _sendMutex.try_lock(); //Don't change to "lock", because it is called for each received byte!
-			else receivingSentPacket = true;
+			else
+			{
+				receivingSentPacket = true;
+				_sendingMutex.try_lock();
+			}
 			i = read(_fileDescriptor->descriptor, &localBuffer.at(0), 1);
 			if(i == -1)
 			{
@@ -320,6 +326,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 				HelperFunctions::printWarning("Invalid byte received from CRC RS485 device (collision?): 0x" + HelperFunctions::getHexString(localBuffer[0], 2));
 				break;
 			}
+			if(receivingSentPacket) escapedPacket.push_back(localBuffer[0]);
 			if(escapeByte)
 			{
 				escapeByte = false;
@@ -342,8 +349,10 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 		}
 		if(receivingSentPacket)
 		{
-			_receivedSentPacket = packet;
+			_receivedSentPacket = escapedPacket;
 			packet.clear();
+			_sendingMutex.unlock();
+			while(_sending) std::this_thread::sleep_for(std::chrono::microseconds(500));
 		}
 		else _sendMutex.unlock();
 		return packet;
@@ -356,6 +365,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
     {
         HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _sendingMutex.unlock();
     _sendMutex.unlock();
 	return std::vector<uint8_t>();
 }
@@ -374,10 +384,7 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
         {
         	int32_t bytesWritten = 0;
 			_receivedSentPacket.clear();
-			if(GD::debugLevel > 3 && printPacket)
-			{
-				HelperFunctions::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
-			}
+			if(GD::debugLevel > 3 && printPacket) HelperFunctions::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
 			while(bytesWritten < (signed)packet.size())
 			{
 				i = write(_fileDescriptor->descriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
@@ -388,28 +395,28 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 				}
 				bytesWritten += i;
 			}
-			i = 0;
-			while(i < 100 && _receivedSentPacket.empty())
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(3));
-				i++;
-			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			_sendingMutex.try_lock_for(std::chrono::milliseconds(200));
 			if(_receivedSentPacket == packet) break;
-			else HelperFunctions::printWarning("Error sending HomeMatic Wired packet: Collision");
+			else HelperFunctions::printWarning("Error sending HomeMatic Wired packet: Collision (received packet was: " + HelperFunctions::getHexString(_receivedSentPacket) + ")");
+			_sendingMutex.unlock();
         }
         if(j == 5) HelperFunctions::printError("Error sending HomeMatic Wired packet: Giving up sending after 5 tries.");
         else _lastPacketSent = HelperFunctions::getTimeSeconds();
     }
     catch(const std::exception& ex)
     {
+    	_sendingMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
+    	_sendingMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
+    	_sendingMutex.unlock();
     	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _sending = false;

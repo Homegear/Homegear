@@ -1094,6 +1094,16 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 		if(server.first.empty() || server.second.empty()) return RPCVariable::createError(-32602, "Server address or port is empty.");
 		if(server.first.size() < 5) return RPCVariable::createError(-32602, "Server address too short.");
 		HelperFunctions::toLower(server.first);
+
+		std::string path = "/RPC2";
+		int32_t pos = server.second.find_first_of('/');
+		if(pos > 0)
+		{
+			path = server.second.substr(pos);
+			HelperFunctions::printDebug("Debug: Server path set to: " + path);
+			server.second = server.second.substr(0, pos);
+			HelperFunctions::printDebug("Debug: Server port set to: " + server.second);
+		}
 		server.second = std::to_string(HelperFunctions::getNumber(server.second));
 		if(server.second.empty() || server.second == "0") return RPCVariable::createError(-32602, "Port number is invalid.");
 
@@ -1109,7 +1119,7 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 		}
 		else
 		{
-			std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.addServer(server, parameters->at(1)->stringValue);
+			std::shared_ptr<RemoteRPCServer> eventServer = GD::rpcClient.addServer(server, path, parameters->at(1)->stringValue);
 			if(eventServer && server.first.compare(0, 5, "https") == 0) eventServer->useSSL = true;
 			if(parameters->size() > 2)
 			{

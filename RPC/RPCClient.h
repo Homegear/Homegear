@@ -68,7 +68,11 @@ namespace RPC
 class RemoteRPCServer
 {
 public:
-	RemoteRPCServer() { knownDevices.reset(new std::map<std::string, int32_t>()); fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor()); }
+	RemoteRPCServer()
+	{
+		knownDevices.reset(new std::map<std::string, int32_t>()); fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor());
+		path = "/RPC2";
+	}
 	virtual ~RemoteRPCServer() {}
 
 	std::shared_ptr<ClientSettings::Settings> settings;
@@ -80,6 +84,7 @@ public:
 	std::string hostname;
 	std::string ipAddress;
 	std::pair<std::string, std::string> address;
+	std::string path;
 	std::string id;
 	std::shared_ptr<std::map<std::string, int32_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
