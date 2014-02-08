@@ -7,11 +7,8 @@ case $1 in
 		result=`id -u homegear 2>/dev/null`
 		if [ "0$result" -eq "0" ]; then
 			adduser --system --no-create-home --shell /bin/false --group homegear >/dev/null 2>&1
-			usermod -a -G dialout homegear
-		fi
-		result=`getent group | grep "^gpio:"`
-		if [ $result ]; then
-			usermod -a -G gpio homegear
+			usermod -a -G dialout homegear 2>/dev/null
+			usermod -a -G gpio homegear 2>/dev/null
 		fi
 		
 		chmod 440 /etc/homegear/rpcclients.conf
