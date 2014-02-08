@@ -443,7 +443,7 @@ int main(int argc, char* argv[])
         if(GD::physicalDevices.count() == 0)
         {
         	HelperFunctions::printCritical("Critical: No physical device could be initialized... Exiting...");
-        	return 1;
+        	exit(1);
         }
         HelperFunctions::printInfo("Loading XML RPC devices...");
         GD::rpcDevices.load();
@@ -453,7 +453,7 @@ int main(int argc, char* argv[])
         if(!GD::physicalDevices.isOpen())
         {
         	HelperFunctions::printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
-        	return 1;
+        	exit(1);
         }
         HelperFunctions::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
