@@ -9,8 +9,8 @@ case $1 in
 			adduser --system --no-create-home --shell /bin/false --group homegear >/dev/null 2>&1
 			usermod -a -G dialout homegear
 		fi
-		result=`id -g gpio 2>/dev/null`
-		if [ "0$result" -ne "0" ]; then
+		result=`getent group | grep "^gpio:"`
+		if [ $result ]; then
 			usermod -a -G gpio homegear
 		fi
 		
