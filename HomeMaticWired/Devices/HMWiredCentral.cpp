@@ -503,12 +503,27 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 		int64_t time = 0;
 		std::shared_ptr<HMWired::HMWiredPacket> receivedPacket;
 		int32_t retries = 0;
+		std::pair<uint32_t, std::shared_ptr<HMWiredPacket>> packet;
 		while(true)
 		{
 			std::vector<uint8_t> payload;
-			std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::discovery, 0, address, false, 0, 0, addressMask, payload));
+			if(packet.second && packet.second->addressMask() == addressMask && packet.second->destinationAddress() == address)
+			{
+				if(packet.first < 3) packet.first++;
+				else
+				{
+					HelperFunctions::printError("Event: Prevented deadlock while searching for HomeMatic Wired devices.");
+					address++;
+					backwards = true;
+				}
+			}
+			else
+			{
+				packet.first = 0;
+				packet.second.reset(new HMWiredPacket(HMWiredPacketType::discovery, 0, address, false, 0, 0, addressMask, payload));
+			}
 			time = HelperFunctions::getTime();
-			sendPacket(packet);
+			sendPacket(packet.second);
 
 			int32_t i = 0;
 			for(i = 0; i < 2; i++)
