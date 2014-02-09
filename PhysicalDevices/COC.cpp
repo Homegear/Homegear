@@ -135,7 +135,7 @@ void COC::openDevice()
 		_fileDescriptor = GD::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
 		if(_fileDescriptor->descriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open COC device: " + _settings->device);
+			HelperFunctions::printCritical("Couldn't open COC device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 

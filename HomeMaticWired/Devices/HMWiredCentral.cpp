@@ -511,7 +511,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			sendPacket(packet);
 
 			int32_t i = 0;
-			for(i = 0; i < 13; i++)
+			for(i = 0; i < 2; i++)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(2));
 				receivedPacket = _receivedPackets.get(0);
@@ -529,44 +529,54 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 						backwards = true;
 						address++;
 						address2 = address;
+						int32_t shifts = 0;
 						while(!(address2 & 1))
 						{
 							address2 >>= 1;
 							addressMask--;
+							shifts++;
 						}
+						address = address2 << shifts;
 					}
+					break;
 				}
 			}
-			if(i == 7)
+			if(i == 2)
 			{
 				if(retries < 2) retries++;
 				else
 				{
+					if(addressMask == 0 && (address & 0x80000000)) break;
 					retries = 0;
-					if(addressMask < 31)
+					if(addressMask == 0) break;
+					if(backwards)
 					{
-						if(addressMask == 0) break;
-						if(backwards)
+						//Example:
+						//Input:
+						//0x8C      0x00      0d21
+						//10001100  00000000  10101
+						//Output:
+						//90        0x00      0d19
+						//10010000  00000000  10011
+						address2 = address;
+						int32_t shifts = 0;
+						while(!(address2 & 1))
 						{
-							address++;
-							address2 = address;
-							while(!(address2 & 1))
-							{
-								address2 >>= 1;
-								addressMask--;
-							}
+							address2 >>= 1;
+							shifts++;
 						}
-						else address |= (1 << (31 - addressMask));
+						address2++;
+						while(!(address2 & 1))
+						{
+							address2 >>= 1;
+							shifts++;
+							addressMask--;
+						}
+						address = address2 << shifts;
 					}
-					else
-					{
-						backwards = true;
-						addressMask--;
-						address++;
-					}
+					else address |= (1 << (31 - addressMask));
 				}
 			}
-			if(addressMask == 0 && (address & 0x80000000)) break;
 		}
 
 		unlockBus();

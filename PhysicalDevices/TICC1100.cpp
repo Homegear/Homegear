@@ -162,7 +162,7 @@ void TICC1100::openDevice()
 
 		if(_fileDescriptor->descriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open rf device: " + _settings->device);
+			HelperFunctions::printCritical("Couldn't open CRC rf device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 

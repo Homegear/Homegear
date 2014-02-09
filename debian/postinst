@@ -9,6 +9,7 @@ case $1 in
 			adduser --system --no-create-home --shell /bin/false --group homegear >/dev/null 2>&1
 			usermod -a -G dialout homegear 2>/dev/null
 			usermod -a -G gpio homegear 2>/dev/null
+			usermod -a -G spi homegear 2>/dev/null
 		fi
 		
 		chmod 440 /etc/homegear/rpcclients.conf

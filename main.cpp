@@ -433,7 +433,8 @@ int main(int argc, char* argv[])
 		if(HelperFunctions::getTime() < 1000000000000)
 		{
 			HelperFunctions::printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
-			exit(1);
+			terminate(SIGTERM);
+			return 1;
 		}
 
     	GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".bak");
@@ -443,7 +444,8 @@ int main(int argc, char* argv[])
         if(GD::physicalDevices.count() == 0)
         {
         	HelperFunctions::printCritical("Critical: No physical device could be initialized... Exiting...");
-        	exit(1);
+        	terminate(SIGTERM);
+        	return 1;
         }
         HelperFunctions::printInfo("Loading XML RPC devices...");
         GD::rpcDevices.load();
@@ -453,7 +455,8 @@ int main(int argc, char* argv[])
         if(!GD::physicalDevices.isOpen())
         {
         	HelperFunctions::printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
-        	exit(1);
+        	terminate(SIGTERM);
+        	return 1;
         }
         HelperFunctions::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!

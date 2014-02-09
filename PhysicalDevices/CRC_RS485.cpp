@@ -139,7 +139,7 @@ void CRCRS485::openDevice()
 
 		if(_fileDescriptor->descriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open CRC RS485 device: " + _settings->device);
+			HelperFunctions::printCritical("Couldn't open CRC RS485 device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 
