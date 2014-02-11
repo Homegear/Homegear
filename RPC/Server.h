@@ -34,7 +34,7 @@
 #include <string>
 
 #include "ServerSettings.h"
-#include "RPCVariable.h"
+#include "../Libraries/Types/RPCVariable.h"
 
 namespace RPC {
 

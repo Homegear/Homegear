@@ -48,7 +48,7 @@ class BidCoSMessages;
 
 #include "../delegate.hpp"
 #include "../RPC/Device.h"
-#include "../RPC/RPCVariable.h"
+#include "../Libraries/Types/RPCVariable.h"
 #include "../ServiceMessages.h"
 
 class VariableToReset

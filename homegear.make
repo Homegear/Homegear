@@ -28,7 +28,7 @@ ifndef RESCOMP
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = obj/Debug
+  OBJDIR     = obj/Debug/homegear
   TARGETDIR  = bin/Debug
   TARGET     = $(TARGETDIR)/homegear
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
@@ -36,7 +36,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -l pthread -l sqlite3 -l readline -l ssl
+  LDFLAGS   += -LLibraries -l pthread -l sqlite3 -l readline -l ssl -l types
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -50,7 +50,7 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = obj/Release
+  OBJDIR     = obj/Release/homegear
   TARGETDIR  = bin/Release
   TARGET     = $(TARGETDIR)/homegear
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
@@ -58,7 +58,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -l pthread -l sqlite3 -l readline -l ssl
+  LDFLAGS   += -LLibraries -s -l pthread -l sqlite3 -l readline -l ssl -l types
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -72,7 +72,7 @@ ifeq ($(config),release)
 endif
 
 ifeq ($(config),profiling)
-  OBJDIR     = obj/Profiling
+  OBJDIR     = obj/Profiling/homegear
   TARGETDIR  = bin/Profiling
   TARGET     = $(TARGETDIR)/homegear
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
@@ -80,7 +80,7 @@ ifeq ($(config),profiling)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -l pthread -l sqlite3 -l readline -l ssl -pg
+  LDFLAGS   += -LLibraries -l pthread -l sqlite3 -l readline -l ssl -l types -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -94,71 +94,70 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/ServiceMessages.o \
-	$(OBJDIR)/Settings.o \
 	$(OBJDIR)/LogicalDevice.o \
-	$(OBJDIR)/GD.o \
-	$(OBJDIR)/DeviceTypes.o \
-	$(OBJDIR)/BinaryDecoder.o \
-	$(OBJDIR)/BinaryEncoder.o \
-	$(OBJDIR)/FileDescriptorManager.o \
-	$(OBJDIR)/HelperFunctions.o \
-	$(OBJDIR)/LogicalDevices.o \
-	$(OBJDIR)/EventHandler.o \
-	$(OBJDIR)/Packet.o \
 	$(OBJDIR)/main.o \
+	$(OBJDIR)/GD.o \
+	$(OBJDIR)/FileDescriptorManager.o \
+	$(OBJDIR)/BinaryDecoder.o \
+	$(OBJDIR)/EventHandler.o \
+	$(OBJDIR)/LogicalDevices.o \
+	$(OBJDIR)/DeviceTypes.o \
+	$(OBJDIR)/HelperFunctions.o \
+	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/Database.o \
 	$(OBJDIR)/User.o \
-	$(OBJDIR)/PendingBidCoSQueues.o \
+	$(OBJDIR)/BinaryEncoder.o \
+	$(OBJDIR)/Settings.o \
+	$(OBJDIR)/Packet.o \
 	$(OBJDIR)/BidCoSMessage.o \
+	$(OBJDIR)/Peer.o \
 	$(OBJDIR)/BidCoSQueueManager.o \
 	$(OBJDIR)/BidCoSQueue.o \
-	$(OBJDIR)/HomeMaticDevice.o \
 	$(OBJDIR)/BidCoSPacketManager.o \
-	$(OBJDIR)/BidCoSPacket.o \
 	$(OBJDIR)/BidCoSMessages.o \
-	$(OBJDIR)/Peer.o \
-	$(OBJDIR)/HM-CC-VD.o \
+	$(OBJDIR)/HomeMaticDevice.o \
+	$(OBJDIR)/PendingBidCoSQueues.o \
+	$(OBJDIR)/BidCoSPacket.o \
 	$(OBJDIR)/HM-LC-SwX-FM.o \
+	$(OBJDIR)/HM-CC-TC.o \
 	$(OBJDIR)/HomeMaticCentral.o \
 	$(OBJDIR)/HM-SD.o \
-	$(OBJDIR)/HM-CC-TC.o \
-	$(OBJDIR)/HMWiredPacket.o \
-	$(OBJDIR)/HMWiredDevice.o \
+	$(OBJDIR)/HM-CC-VD.o \
 	$(OBJDIR)/HMWiredPeer.o \
 	$(OBJDIR)/HMWiredPacketManager.o \
+	$(OBJDIR)/HMWiredPacket.o \
+	$(OBJDIR)/HMWiredDevice.o \
 	$(OBJDIR)/HMWired-SD.o \
 	$(OBJDIR)/HMWiredCentral.o \
-	$(OBJDIR)/RPCMethod.o \
-	$(OBJDIR)/XMLRPCEncoder.o \
-	$(OBJDIR)/LogicalParameter.o \
-	$(OBJDIR)/RPCServer.o \
-	$(OBJDIR)/RPCHeader.o \
-	$(OBJDIR)/SocketOperations.o \
-	$(OBJDIR)/Base64.o \
-	$(OBJDIR)/PhysicalParameter.o \
-	$(OBJDIR)/RPCClient.o \
-	$(OBJDIR)/RPCEncoder.o \
-	$(OBJDIR)/RPCDecoder.o \
-	$(OBJDIR)/HTTP.o \
-	$(OBJDIR)/XMLRPCDecoder.o \
-	$(OBJDIR)/Auth.o \
-	$(OBJDIR)/ServerSettings.o \
-	$(OBJDIR)/RPCVariable.o \
-	$(OBJDIR)/RPCMethods.o \
-	$(OBJDIR)/ClientSettings.o \
 	$(OBJDIR)/Client.o \
-	$(OBJDIR)/Devices.o \
-	$(OBJDIR)/Server.o \
 	$(OBJDIR)/Device.o \
-	$(OBJDIR)/CLIClient.o \
+	$(OBJDIR)/RPCEncoder.o \
+	$(OBJDIR)/RPCHeader.o \
+	$(OBJDIR)/HTTP.o \
+	$(OBJDIR)/RPCMethods.o \
+	$(OBJDIR)/Server.o \
+	$(OBJDIR)/SocketOperations.o \
+	$(OBJDIR)/RPCDecoder.o \
+	$(OBJDIR)/XMLRPCDecoder.o \
+	$(OBJDIR)/ClientSettings.o \
+	$(OBJDIR)/RPCClient.o \
+	$(OBJDIR)/Auth.o \
+	$(OBJDIR)/Base64.o \
+	$(OBJDIR)/RPCServer.o \
+	$(OBJDIR)/XMLRPCEncoder.o \
+	$(OBJDIR)/RPCMethod.o \
+	$(OBJDIR)/ServerSettings.o \
+	$(OBJDIR)/Devices.o \
+	$(OBJDIR)/LogicalParameter.o \
+	$(OBJDIR)/PhysicalParameter.o \
 	$(OBJDIR)/CLIServer.o \
-	$(OBJDIR)/Cul.o \
-	$(OBJDIR)/PhysicalDevice.o \
+	$(OBJDIR)/CLIClient.o \
 	$(OBJDIR)/PhysicalDevices.o \
+	$(OBJDIR)/CRC_RS485.o \
 	$(OBJDIR)/TICC1100.o \
 	$(OBJDIR)/COC.o \
-	$(OBJDIR)/CRC_RS485.o \
+	$(OBJDIR)/Cul.o \
+	$(OBJDIR)/PhysicalDevice.o \
 
 RESOURCES := \
 
@@ -223,43 +222,34 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/ServiceMessages.o: ServiceMessages.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Settings.o: Settings.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/LogicalDevice.o: LogicalDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/main.o: main.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/GD.o: GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/DeviceTypes.o: DeviceTypes.cpp
+$(OBJDIR)/FileDescriptorManager.o: FileDescriptorManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BinaryDecoder.o: BinaryDecoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BinaryEncoder.o: BinaryEncoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/FileDescriptorManager.o: FileDescriptorManager.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HelperFunctions.o: HelperFunctions.cpp
+$(OBJDIR)/EventHandler.o: EventHandler.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/LogicalDevices.o: LogicalDevices.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/EventHandler.o: EventHandler.cpp
+$(OBJDIR)/DeviceTypes.o: DeviceTypes.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Packet.o: Packet.cpp
+$(OBJDIR)/HelperFunctions.o: HelperFunctions.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/main.o: main.cpp
+$(OBJDIR)/ServiceMessages.o: ServiceMessages.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Database.o: Database.cpp
@@ -268,10 +258,19 @@ $(OBJDIR)/Database.o: Database.cpp
 $(OBJDIR)/User.o: User.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PendingBidCoSQueues.o: HomeMaticBidCoS/PendingBidCoSQueues.cpp
+$(OBJDIR)/BinaryEncoder.o: BinaryEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Settings.o: Settings.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Packet.o: Packet.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BidCoSMessage.o: HomeMaticBidCoS/BidCoSMessage.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Peer.o: HomeMaticBidCoS/Peer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BidCoSQueueManager.o: HomeMaticBidCoS/BidCoSQueueManager.cpp
@@ -280,25 +279,25 @@ $(OBJDIR)/BidCoSQueueManager.o: HomeMaticBidCoS/BidCoSQueueManager.cpp
 $(OBJDIR)/BidCoSQueue.o: HomeMaticBidCoS/BidCoSQueue.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HomeMaticDevice.o: HomeMaticBidCoS/HomeMaticDevice.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BidCoSPacketManager.o: HomeMaticBidCoS/BidCoSPacketManager.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BidCoSPacket.o: HomeMaticBidCoS/BidCoSPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BidCoSMessages.o: HomeMaticBidCoS/BidCoSMessages.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Peer.o: HomeMaticBidCoS/Peer.cpp
+$(OBJDIR)/HomeMaticDevice.o: HomeMaticBidCoS/HomeMaticDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HM-CC-VD.o: HomeMaticBidCoS/Devices/HM-CC-VD.cpp
+$(OBJDIR)/PendingBidCoSQueues.o: HomeMaticBidCoS/PendingBidCoSQueues.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/BidCoSPacket.o: HomeMaticBidCoS/BidCoSPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HM-LC-SwX-FM.o: HomeMaticBidCoS/Devices/HM-LC-SwX-FM.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HM-CC-TC.o: HomeMaticBidCoS/Devices/HM-CC-TC.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HomeMaticCentral.o: HomeMaticBidCoS/Devices/HomeMaticCentral.cpp
@@ -307,13 +306,7 @@ $(OBJDIR)/HomeMaticCentral.o: HomeMaticBidCoS/Devices/HomeMaticCentral.cpp
 $(OBJDIR)/HM-SD.o: HomeMaticBidCoS/Devices/HM-SD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HM-CC-TC.o: HomeMaticBidCoS/Devices/HM-CC-TC.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HMWiredPacket.o: HomeMaticWired/HMWiredPacket.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HMWiredDevice.o: HomeMaticWired/HMWiredDevice.cpp
+$(OBJDIR)/HM-CC-VD.o: HomeMaticBidCoS/Devices/HM-CC-VD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWiredPeer.o: HomeMaticWired/HMWiredPeer.cpp
@@ -322,91 +315,91 @@ $(OBJDIR)/HMWiredPeer.o: HomeMaticWired/HMWiredPeer.cpp
 $(OBJDIR)/HMWiredPacketManager.o: HomeMaticWired/HMWiredPacketManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredPacket.o: HomeMaticWired/HMWiredPacket.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredDevice.o: HomeMaticWired/HMWiredDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWired-SD.o: HomeMaticWired/Devices/HMWired-SD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWiredCentral.o: HomeMaticWired/Devices/HMWiredCentral.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCMethod.o: RPC/RPCMethod.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/XMLRPCEncoder.o: RPC/XMLRPCEncoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/LogicalParameter.o: RPC/LogicalParameter.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCServer.o: RPC/RPCServer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCHeader.o: RPC/RPCHeader.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/SocketOperations.o: RPC/SocketOperations.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Base64.o: RPC/Base64.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhysicalParameter.o: RPC/PhysicalParameter.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCClient.o: RPC/RPCClient.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCEncoder.o: RPC/RPCEncoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCDecoder.o: RPC/RPCDecoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HTTP.o: RPC/HTTP.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/XMLRPCDecoder.o: RPC/XMLRPCDecoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Auth.o: RPC/Auth.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ServerSettings.o: RPC/ServerSettings.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCVariable.o: RPC/RPCVariable.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCMethods.o: RPC/RPCMethods.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ClientSettings.o: RPC/ClientSettings.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Client.o: RPC/Client.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Devices.o: RPC/Devices.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Server.o: RPC/Server.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Device.o: RPC/Device.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/CLIClient.o: CLI/CLIClient.cpp
+$(OBJDIR)/RPCEncoder.o: RPC/RPCEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCHeader.o: RPC/RPCHeader.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HTTP.o: RPC/HTTP.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCMethods.o: RPC/RPCMethods.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Server.o: RPC/Server.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SocketOperations.o: RPC/SocketOperations.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCDecoder.o: RPC/RPCDecoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/XMLRPCDecoder.o: RPC/XMLRPCDecoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/ClientSettings.o: RPC/ClientSettings.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCClient.o: RPC/RPCClient.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Auth.o: RPC/Auth.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Base64.o: RPC/Base64.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCServer.o: RPC/RPCServer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/XMLRPCEncoder.o: RPC/XMLRPCEncoder.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCMethod.o: RPC/RPCMethod.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/ServerSettings.o: RPC/ServerSettings.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Devices.o: RPC/Devices.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/LogicalParameter.o: RPC/LogicalParameter.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PhysicalParameter.o: RPC/PhysicalParameter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/CLIServer.o: CLI/CLIServer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Cul.o: PhysicalDevices/Cul.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhysicalDevice.o: PhysicalDevices/PhysicalDevice.cpp
+$(OBJDIR)/CLIClient.o: CLI/CLIClient.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhysicalDevices.o: PhysicalDevices/PhysicalDevices.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/CRC_RS485.o: PhysicalDevices/CRC_RS485.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/TICC1100.o: PhysicalDevices/TICC1100.cpp
@@ -415,7 +408,10 @@ $(OBJDIR)/TICC1100.o: PhysicalDevices/TICC1100.cpp
 $(OBJDIR)/COC.o: PhysicalDevices/COC.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/CRC_RS485.o: PhysicalDevices/CRC_RS485.cpp
+$(OBJDIR)/Cul.o: PhysicalDevices/Cul.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PhysicalDevice.o: PhysicalDevices/PhysicalDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

@@ -38,7 +38,7 @@
 
 #include "Exception.h"
 #include "Database.h"
-#include "RPC/RPCVariable.h"
+#include "Libraries/Types/RPCVariable.h"
 #include "RPC/RPCEncoder.h"
 #include "RPC/RPCDecoder.h"
 

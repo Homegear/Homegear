@@ -34,7 +34,7 @@
 #include <vector>
 
 #include "../Exception.h"
-#include "RPCVariable.h"
+#include "../Libraries/Types/RPCVariable.h"
 #include "rapidxml.hpp"
 
 using namespace rapidxml;

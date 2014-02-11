@@ -34,7 +34,7 @@
 #include <memory>
 
 #include "../Exception.h"
-#include "RPCVariable.h"
+#include "../Libraries/Types/RPCVariable.h"
 
 namespace RPC
 {

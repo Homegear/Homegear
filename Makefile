@@ -6,17 +6,22 @@ ifndef config
 endif
 export config
 
-PROJECTS := homegear
+PROJECTS := types homegear
 
 .PHONY: all clean help $(PROJECTS)
 
 all: $(PROJECTS)
+
+types: 
+	@echo "==== Building types ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f types.make
 
 homegear: 
 	@echo "==== Building homegear ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f homegear.make
 
 clean:
+	@${MAKE} --no-print-directory -C . -f types.make clean
 	@${MAKE} --no-print-directory -C . -f homegear.make clean
 
 help:
@@ -30,6 +35,7 @@ help:
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
+	@echo "   types"
 	@echo "   homegear"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

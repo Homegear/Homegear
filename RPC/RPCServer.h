@@ -61,7 +61,7 @@
 #include <openssl/err.h>
 
 #include "HTTP.h"
-#include "RPCVariable.h"
+#include "../Libraries/Types/RPCVariable.h"
 #include "RPCMethod.h"
 #include "RPCHeader.h"
 #include "RPCDecoder.h"

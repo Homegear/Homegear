@@ -36,16 +36,37 @@ solution "homegear"
  
    configuration { "linux", "gmake" }
       buildoptions { "-std=c++11" }
-      linkoptions { "-l pthread", "-l sqlite3", "-l readline", "-l ssl" }
+      libdirs { "./Libraries" }
       defines "FORTIFY_SOURCE=2"
 
    configuration { "rpi", "gmake" }
       buildoptions { "-std=c++11" }
-      linkoptions { "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l crypto" }
+      linkoptions { "-l crypto" }
       includedirs { "./ARM\ headers" }
-      libdirs { "./ARM\ libraries" }
+      libdirs { "./ARM\ libraries", "./Libraries" }
 
-   -- A project defines one build target
+   project "types"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Types/*.h", "./Libraries/Types/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./Libraries"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./Libraries"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./Libraries"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+   
    project "homegear"
       kind "ConsoleApp"
       language "C++"
@@ -57,6 +78,7 @@ solution "homegear"
       files { "./RPC/*.h", "./RPC/*.cpp" }
       files { "./CLI/*.h", "./CLI/*.cpp" }
       files { "./PhysicalDevices/*.h", "./PhysicalDevices/*.cpp" }
+      linkoptions { "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l types" }
  
       configuration "Debug"
          defines { "DEBUG" }

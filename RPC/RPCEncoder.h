@@ -35,7 +35,7 @@
 #include <list>
 
 #include "RPCHeader.h"
-#include "RPCVariable.h"
+#include "../Libraries/Types/RPCVariable.h"
 #include "../BinaryEncoder.h"
 
 namespace RPC

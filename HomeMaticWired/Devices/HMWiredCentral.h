@@ -37,7 +37,7 @@
 class HMWiredPacket;
 
 #include "../HMWiredDevice.h"
-#include "../../RPC/RPCVariable.h"
+#include "../../Libraries/Types/RPCVariable.h"
 
 namespace HMWired
 {

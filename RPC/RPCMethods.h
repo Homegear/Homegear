@@ -35,7 +35,7 @@
 #include <cstdlib>
 
 #include "RPCServer.h"
-#include "RPCVariable.h"
+#include "../Libraries/Types/RPCVariable.h"
 #include "RPCMethod.h"
 
 namespace RPC
