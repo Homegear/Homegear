@@ -30,6 +30,8 @@
 #ifndef RPCVARIABLE_H_
 #define RPCVARIABLE_H_
 
+#include "../HelperFunctions/HelperFunctions.h"
+
 #include <vector>
 #include <string>
 #include <memory>

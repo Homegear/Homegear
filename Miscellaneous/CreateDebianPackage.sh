@@ -4,12 +4,17 @@ then
 	echo "Please provide a revision number."
 	exit 0;
 fi
-wget https://github.com/hfedcba/Homegear/archive/master.zip
-unzip master.zip
-rm master.zip
-version=$(head -n 1 Homegear-master/Version.h | cut -d " " -f3 | tr -d '"')
+if test -z $2
+then
+  echo "Please specify branch."
+  exit 0;
+fi
+wget https://github.com/hfedcba/Homegear/archive/$2.zip
+unzip $2.zip
+rm $2.zip
+version=$(head -n 1 Homegear-$2/Version.h | cut -d " " -f3 | tr -d '"')
 sourcePath=homegear-$version
-mv Homegear-master $sourcePath
+mv Homegear-$2 $sourcePath
 rm -Rf $sourcePath/.* 1>/dev/null 2>&2
 rm -Rf $sourcePath/obj
 rm -Rf $sourcePath/bin

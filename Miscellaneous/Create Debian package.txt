@@ -1,17 +1,16 @@
-•	apt-get install binutils debhelper devscripts g++-4.7 sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev libssl-dev
-•	If g++-4.7 was not installed before do:
+-	apt-get install binutils debhelper devscripts g++-4.7 sqlite3 libsqlite3-dev libreadline6 libreadline6-dev libncurses-dev libssl-dev libparse-debcontrol-perl
+-	If g++-4.7 was not installed before do:
 	o	cd /usr/bin
 	o	rm g++
 	o	ln -s g++-4.7 g++
-•	Now use the script CreateDebianPackage.sh or do it manually:
-•	Make a copy of the Homegear directory to work with in the next steps
-•	Remove all unnecessary files and directories out of the homegear directory:
-	o	All files and directories starting with “.” (rm -Rf .*)
+-	Now use the script CreateDebianPackage.sh or do it manually:
+-	Make a copy of the Homegear directory to work with in the next steps
+-	Remove all unnecessary files and directories out of the homegear directory:
+	o	All files and directories starting with "." (rm -Rf .*)
 	o	Directories obj and bin
-	o	…
-•	In the following steps make sure all file and directory names are correct!
-•	Move homegear directory to homegear-X.X.X where X.X.X is the current version number
-•	Pack it: tar -zcpf homegear_X.X.X.orig.tar.gz homegear-X.X.X
-•	cd homegear-X.X.X
-•	Run debuild -us -uc
-•	The lintian warnings can be ignored
+-	In the following steps make sure all file and directory names are correct!
+-	Move homegear directory to homegear-X.X.X where X.X.X is the current version number
+-	Pack it: tar -zcpf homegear_X.X.X.orig.tar.gz homegear-X.X.X
+-	cd homegear-X.X.X
+-	Run debuild -us -uc
+-	The lintian warnings can be ignored

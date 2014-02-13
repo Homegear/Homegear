@@ -6,22 +6,102 @@ ifndef config
 endif
 export config
 
-PROJECTS := types homegear
+PROJECTS := output helperfunctions physicaldevices types logicaldevices threads database filedescriptormanager encoding user settings metadata rpc cli events gd systems homegear
 
 .PHONY: all clean help $(PROJECTS)
 
 all: $(PROJECTS)
 
+output: 
+	@echo "==== Building output ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f output.make
+
+helperfunctions: 
+	@echo "==== Building helperfunctions ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f helperfunctions.make
+
+physicaldevices: 
+	@echo "==== Building physicaldevices ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f physicaldevices.make
+
 types: 
 	@echo "==== Building types ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f types.make
+
+logicaldevices: 
+	@echo "==== Building logicaldevices ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f logicaldevices.make
+
+threads: 
+	@echo "==== Building threads ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f threads.make
+
+database: 
+	@echo "==== Building database ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f database.make
+
+filedescriptormanager: 
+	@echo "==== Building filedescriptormanager ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f filedescriptormanager.make
+
+encoding: 
+	@echo "==== Building encoding ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f encoding.make
+
+user: 
+	@echo "==== Building user ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f user.make
+
+settings: 
+	@echo "==== Building settings ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f settings.make
+
+metadata: 
+	@echo "==== Building metadata ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f metadata.make
+
+rpc: 
+	@echo "==== Building rpc ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f rpc.make
+
+cli: 
+	@echo "==== Building cli ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f cli.make
+
+events: 
+	@echo "==== Building events ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f events.make
+
+gd: 
+	@echo "==== Building gd ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f gd.make
+
+systems: 
+	@echo "==== Building systems ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f systems.make
 
 homegear: 
 	@echo "==== Building homegear ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f homegear.make
 
 clean:
+	@${MAKE} --no-print-directory -C . -f output.make clean
+	@${MAKE} --no-print-directory -C . -f helperfunctions.make clean
+	@${MAKE} --no-print-directory -C . -f physicaldevices.make clean
 	@${MAKE} --no-print-directory -C . -f types.make clean
+	@${MAKE} --no-print-directory -C . -f logicaldevices.make clean
+	@${MAKE} --no-print-directory -C . -f threads.make clean
+	@${MAKE} --no-print-directory -C . -f database.make clean
+	@${MAKE} --no-print-directory -C . -f filedescriptormanager.make clean
+	@${MAKE} --no-print-directory -C . -f encoding.make clean
+	@${MAKE} --no-print-directory -C . -f user.make clean
+	@${MAKE} --no-print-directory -C . -f settings.make clean
+	@${MAKE} --no-print-directory -C . -f metadata.make clean
+	@${MAKE} --no-print-directory -C . -f rpc.make clean
+	@${MAKE} --no-print-directory -C . -f cli.make clean
+	@${MAKE} --no-print-directory -C . -f events.make clean
+	@${MAKE} --no-print-directory -C . -f gd.make clean
+	@${MAKE} --no-print-directory -C . -f systems.make clean
 	@${MAKE} --no-print-directory -C . -f homegear.make clean
 
 help:
@@ -31,11 +111,30 @@ help:
 	@echo "   debug"
 	@echo "   release"
 	@echo "   profiling"
+	@echo "   debug_rpi"
+	@echo "   release_rpi"
+	@echo "   profiling_rpi"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
+	@echo "   output"
+	@echo "   helperfunctions"
+	@echo "   physicaldevices"
 	@echo "   types"
+	@echo "   logicaldevices"
+	@echo "   threads"
+	@echo "   database"
+	@echo "   filedescriptormanager"
+	@echo "   encoding"
+	@echo "   user"
+	@echo "   settings"
+	@echo "   metadata"
+	@echo "   rpc"
+	@echo "   cli"
+	@echo "   events"
+	@echo "   gd"
+	@echo "   systems"
 	@echo "   homegear"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

@@ -51,21 +51,21 @@ RPCVariable::RPCVariable(RPCVariableType variableType, std::vector<uint8_t> data
 		}
 		else if(variableType == RPCVariableType::rpcInteger)
 		{
-			//HelperFunctions::memcpyBigEndian(integerValue, data);
+			HelperFunctions::memcpyBigEndian(integerValue, data);
 		}
-		//else HelperFunctions::printError("Error: Could not create RPCVariable. Type cannot be converted automatically.");
+		else Output::printError("Error: Could not create RPCVariable. Type cannot be converted automatically.");
 	}
 	catch(const std::exception& ex)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    //catch(Exception& ex)
-    //{
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    //}
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
     catch(...)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -222,15 +222,15 @@ void RPCVariable::print()
 	}
 	catch(const std::exception& ex)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    //catch(Exception& ex)
-    //{
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    //}
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
     catch(...)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -277,15 +277,15 @@ void RPCVariable::print(std::shared_ptr<RPCVariable> variable, std::string inden
 	}
 	catch(const std::exception& ex)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    //catch(Exception& ex)
-    //{
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    //}
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
     catch(...)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -305,15 +305,15 @@ void RPCVariable::printArray(std::shared_ptr<std::vector<std::shared_ptr<RPCVari
 	}
 	catch(const std::exception& ex)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    //catch(Exception& ex)
-    //{
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    //}
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
     catch(...)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -335,15 +335,15 @@ void RPCVariable::printStruct(std::shared_ptr<std::map<std::string, std::shared_
 	}
 	catch(const std::exception& ex)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    //catch(Exception& ex)
-    //{
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    //}
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
     catch(...)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -353,13 +353,13 @@ std::shared_ptr<RPCVariable> RPCVariable::fromString(std::string value, RPCVaria
 	{
 		if(type == RPCVariableType::rpcBoolean)
 		{
-			//HelperFunctions::toLower(value);
+			HelperFunctions::toLower(value);
 			if(value == "1" || value == "true") return std::shared_ptr<RPCVariable>(new RPCVariable(true));
 			else return std::shared_ptr<RPCVariable>(new RPCVariable(false));
 		}
 		else if(type == RPCVariableType::rpcString) return std::shared_ptr<RPCVariable>(new RPCVariable(value));
-		//else if(type == RPCVariableType::rpcInteger) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getNumber(value)));
-		//else if(type == RPCVariableType::rpcFloat) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getDouble(value)));
+		else if(type == RPCVariableType::rpcInteger) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getNumber(value)));
+		else if(type == RPCVariableType::rpcFloat) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getDouble(value)));
 		else if(type == RPCVariableType::rpcBase64)
 		{
 			std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcBase64));
@@ -370,15 +370,15 @@ std::shared_ptr<RPCVariable> RPCVariable::fromString(std::string value, RPCVaria
 	}
 	catch(const std::exception& ex)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    //catch(Exception& ex)
-    //{
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    //}
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
     catch(...)
     {
-    	//HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RPCVariable>();
 }

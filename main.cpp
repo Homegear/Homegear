@@ -27,6 +27,13 @@
  * files in the program, then also delete it here.
  */
 
+#include "Version.h"
+#include "Database.h"
+#include "GD.h"
+#include "HelperFunctions.h"
+#include "RPC/ServerSettings.h"
+#include "Libraries/Systems/General/SystemInitializer.h"
+
 #include <readline/readline.h>
 #include <readline/history.h>
 //#include <ncurses.h>
@@ -42,12 +49,6 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
-
-#include "Version.h"
-#include "Database.h"
-#include "GD.h"
-#include "HelperFunctions.h"
-#include "RPC/ServerSettings.h"
 
 bool _startAsDaemon = false;
 bool _startUpComplete = false;
@@ -339,7 +340,7 @@ int main(int argc, char* argv[])
         //delscreen for all screens!!!
         return 0;*/
 
-    	GD::bigEndian = HelperFunctions::isBigEndian();
+    	HelperFunctions::init();
 
     	char path[1024];
     	if(!getcwd(path, 1024)) throw Exception("Could not get working directory.");
@@ -436,6 +437,8 @@ int main(int argc, char* argv[])
 			terminate(SIGTERM);
 			return 1;
 		}
+
+		SystemInitializer::initialize();
 
     	GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".bak");
     	if(!GD::db.isOpen()) exit(1);

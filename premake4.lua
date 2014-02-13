@@ -36,15 +36,80 @@ solution "homegear"
  
    configuration { "linux", "gmake" }
       buildoptions { "-std=c++11" }
-      libdirs { "./Libraries" }
       defines "FORTIFY_SOURCE=2"
 
    configuration { "rpi", "gmake" }
       buildoptions { "-std=c++11" }
       linkoptions { "-l crypto" }
       includedirs { "./ARM\ headers" }
-      libdirs { "./ARM\ libraries", "./Libraries" }
+      libdirs { "./ARM\ libraries" }
 
+   project "output"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Output/*.h", "./Libraries/Output/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+		 
+   project "helperfunctions"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/HelperFunctions/*.h", "./Libraries/HelperFunctions/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+	  
+   project "physicaldevices"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/PhysicalDevices/*.h", "./Libraries/PhysicalDevices/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+	  
    project "types"
       kind "StaticLib"
       language "C++"
@@ -53,17 +118,303 @@ solution "homegear"
       configuration "Debug"
          defines { "DEBUG" }
          flags { "Symbols" }
-         targetdir "./Libraries"
+         targetdir "./lib/Debug"
  
       configuration "Release"
          defines { "NDEBUG" }
          flags { "Optimize" }
-         targetdir "./Libraries"
+         targetdir "./lib/Release"
 
       configuration "Profiling"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
-         targetdir "./Libraries"
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+		 
+   project "logicaldevices"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/LogicalDevices/*.h", "./Libraries/LogicalDevices/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+		 
+   project "threads"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Threads/*.h", "./Libraries/Threads/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+		 
+   project "database"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Database/*.h", "./Libraries/Database/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+
+   project "filedescriptormanager"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/FileDescriptorManager/*.h", "./Libraries/FileDescriptorManager/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+
+   project "encoding"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Encoding/*.h", "./Libraries/Encoding/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+		 
+   project "user"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/User/*.h", "./Libraries/User/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+
+   project "settings"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Settings/*.h", "./Libraries/Settings/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+   
+   project "metadata"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Metadata/*.h", "./Libraries/Metadata/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+   
+   project "rpc"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/RPC/*.h", "./Libraries/RPC/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+		 
+   project "cli"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/CLI/*.h", "./Libraries/CLI/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+		 
+   project "events"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Events/*.h", "./Libraries/Events/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+		 
+   project "gd"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/GD/*.h", "./Libraries/GD/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+		 
+   project "systems"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Systems/General/*.h", "./Libraries/Systems/General/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
    
@@ -83,16 +434,19 @@ solution "homegear"
       configuration "Debug"
          defines { "DEBUG" }
          flags { "Symbols" }
+		 libdirs { "./lib/Debug" }
          targetdir "bin/Debug"
  
       configuration "Release"
          defines { "NDEBUG" }
          flags { "Optimize" }
+		 libdirs { "./lib/Release" }
          targetdir "bin/Release"
 
       configuration "Profiling"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
+		 libdirs { "./lib/Profiling" }
          targetdir "bin/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
