@@ -30,13 +30,12 @@
 #ifndef BIDCOSMESSAGES_H
 #define BIDCOSMESSAGES_H
 
-class BidCoSPacket;
+#include "../../HelperFunctions/HelperFunctions.h"
+#include "BidCoSMessage.h"
 
 #include <iostream>
 #include <memory>
 #include <vector>
-
-#include "BidCoSMessage.h"
 
 namespace BidCoS
 {
@@ -51,7 +50,6 @@ class BidCoSMessages
     protected:
     private:
         std::vector<std::shared_ptr<BidCoSMessage>> _messages;
-
 };
 }
 #endif // BIDCOSMESSAGES_H

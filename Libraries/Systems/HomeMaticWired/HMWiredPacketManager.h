@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 #define HMWIREDPACKETMANAGER_H_
 
 #include "HMWiredPacket.h"
+#include "../../HelperFunctions/HelperFunctions.h"
 
 #include <iostream>
 #include <string>

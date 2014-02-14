@@ -76,7 +76,7 @@ void PhysicalDevices::load(std::string filename)
 					if (input[ptr] == ']')
 					{
 						input[ptr] = '\0';
-						if(!settings->device.empty() && !settings->type.empty() && settings->family != DeviceFamilies::none)
+						if(!settings->device.empty() && !settings->type.empty() && settings->family != DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
 						{
 							std::shared_ptr<PhysicalDevice> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
 							_physicalDevicesMutex.lock();
@@ -164,7 +164,7 @@ void PhysicalDevices::load(std::string filename)
 				}
 			}
 		}
-		if(!settings->device.empty() && !settings->type.empty() && settings->family != DeviceFamilies::none)
+		if(!settings->device.empty() && !settings->type.empty() && settings->family != DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
 		{
 			std::shared_ptr<PhysicalDevice> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
 			_physicalDevicesMutex.lock();
@@ -363,7 +363,7 @@ std::shared_ptr<RPC::RPCVariable> PhysicalDevices::listInterfaces()
 			if(!device) continue;
 
 			interface->structValue->insert(RPC::RPCStructElement("DEVICEFAMILY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(HelperFunctions::getDeviceFamilyName(i->first)))));
-			interface->structValue->insert(RPC::RPCStructElement("PHYSICALADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(central->getAddress()))));
+			interface->structValue->insert(RPC::RPCStructElement("PHYSICALADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(central->physicalAddress()))));
 			interface->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(device->getType()))));
 			interface->structValue->insert(RPC::RPCStructElement("CONNECTED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(device->isOpen()))));
 			interface->structValue->insert(RPC::RPCStructElement("DEFAULT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true))));

@@ -30,6 +30,10 @@
 #ifndef PENDINGBIDCOSQUEUES_H_
 #define PENDINGBIDCOSQUEUES_H_
 
+#include "../../HelperFunctions/HelperFunctions.h"
+#include "BidCoSQueue.h"
+#include "BidCoSPeer.h"
+
 #include <string>
 #include <iostream>
 #include <memory>
@@ -38,8 +42,6 @@
 
 namespace BidCoS
 {
-class BidCoSQueue;
-class Peer;
 class HomeMaticDevice;
 
 class PendingBidCoSQueues {
@@ -47,8 +49,8 @@ public:
 	PendingBidCoSQueues();
 	virtual ~PendingBidCoSQueues() {}
 	void serialize(std::vector<uint8_t>& encodedData);
-	void unserialize(std::shared_ptr<std::vector<char>> serializedData, Peer* peer, HomeMaticDevice* device);
-	void unserialize_0_0_6(std::string serializedObject, Peer* peer, HomeMaticDevice* device);
+	void unserialize(std::shared_ptr<std::vector<char>> serializedData, BidCoSPeer* peer, HomeMaticDevice* device);
+	void unserialize_0_0_6(std::string serializedObject, BidCoSPeer* peer, HomeMaticDevice* device);
 
 	void push(std::shared_ptr<BidCoSQueue> queue);
 	void pop();

@@ -54,8 +54,6 @@ public:
 
 	static void init();
 
-	static void setThreadPriority(pthread_t thread, int32_t priority, int32_t policy = SCHED_FIFO);
-
 	static inline int64_t getTime()
 	{
 		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();

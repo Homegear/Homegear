@@ -88,12 +88,7 @@ void LogicalDevices::convertDatabase()
 			Output::printMessage("Converting database from version " + version + " to version 0.3.1...");
 			GD::db.init(GD::settings.databasePath(), GD::settings.databaseSynchronous(), GD::settings.databaseMemoryJournal(), GD::settings.databasePath() + ".old");
 
-			GD::db.executeCommand("ALTER TABLE devices ADD COLUMN deviceFamily INTEGER NOT NULL");
-			GD::db.executeCommand("UPDATE devices SET deviceFamily=0 WHERE deviceType=4294967293");
-			GD::db.executeCommand("UPDATE devices SET deviceFamily=0 WHERE deviceType=4294967294");
-			GD::db.executeCommand("UPDATE devices SET deviceFamily=0 WHERE deviceType=57");
-			GD::db.executeCommand("UPDATE devices SET deviceFamily=0 WHERE deviceType=58");
-			GD::db.executeCommand("UPDATE devices SET deviceFamily=0 WHERE deviceType=4");
+			GD::db.executeCommand("ALTER TABLE devices ADD COLUMN deviceFamily INTEGER DEFAULT 0 NOT NULL");
 			GD::db.executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190077");
 			GD::db.executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190078");
 
@@ -303,8 +298,10 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 		{
 			for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 			{
-				stringStream << "ID: 0x" << std::hex << (uint32_t)i->first << "\tName: " << HelperFunctions::getDeviceFamilyName(i->first) << std::endl << std::dec;
+				if(i->first == DeviceFamilies::none) continue;
+				stringStream << "ID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << "\tName: " << HelperFunctions::getDeviceFamilyName(i->first) << std::endl << std::dec;
 			}
+			return stringStream.str();
 		}
 		else if(command.compare(0, 15, "families select") == 0)
 		{
@@ -338,7 +335,8 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 				stringStream << "Supported families:" << std::endl;
 				for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 				{
-					stringStream << "  FAMILYID: 0x" << std::hex << (uint32_t)i->first << ":\t" << HelperFunctions::getDeviceFamilyName(i->first) << std::endl << std::dec;
+					if(i->first == DeviceFamilies::none) continue;
+					stringStream << "  FAMILYID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << ":\t" << HelperFunctions::getDeviceFamilyName(i->first) << std::endl << std::dec;
 				}
 				return stringStream.str();
 			}
@@ -347,7 +345,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 			if(!_currentFamily) stringStream << "Device family not found." << std::endl;
 			else
 			{
-				stringStream << "Device family " << HelperFunctions::getDeviceFamilyName(family) << " selected." << std::endl;
+				stringStream << "Device family \"" << HelperFunctions::getDeviceFamilyName(family) << "\" selected." << std::endl;
 				stringStream << "For information about the family's commands type: \"help\"" << std::endl;
 			}
 

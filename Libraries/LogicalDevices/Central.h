@@ -30,15 +30,16 @@
 #ifndef CENTRAL_H_
 #define CENTRAL_H_
 
-#include "LogicalDevice.h"
 #include "../Types/RPCVariable.h"
 #include "../RPC/Device.h"
 
-class Central : public LogicalDevice
+class Central
 {
 public:
-	Central();
+	Central(int32_t physicalAddress) { _physicalAddress = physicalAddress; }
 	virtual ~Central();
+
+	int32_t physicalAddress() { return _physicalAddress; }
 
 	virtual bool knowsDevice(std::string serialNumber) { return false; }
 	virtual bool knowsDevice(uint64_t id) { return false; }
@@ -67,6 +68,8 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on, int32_t duration = 60, bool debugOutput = true) { return std::shared_ptr<RPC::RPCVariable>(); }
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value) { return std::shared_ptr<RPC::RPCVariable>(); }
 protected:
+	int32_t _physicalAddress;
+private:
 };
 
 #endif /* CENTRAL_H_ */

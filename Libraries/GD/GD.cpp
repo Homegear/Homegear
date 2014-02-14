@@ -42,7 +42,7 @@ std::map<int32_t, RPC::Server> GD::rpcServers;
 RPC::Client GD::rpcClient;
 CLI::Server GD::cliServer;
 CLI::Client GD::cliClient;
-std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>> deviceFamilies;
+std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>> GD::deviceFamilies;
 RPC::Devices GD::rpcDevices;
 int32_t GD::debugLevel = 7;
 int32_t GD::rpcLogLevel = 1;

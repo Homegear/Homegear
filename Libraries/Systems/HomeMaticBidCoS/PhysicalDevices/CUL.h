@@ -30,6 +30,9 @@
 #ifndef CUL_H
 #define CUL_H
 
+#include "../../../HelperFunctions/HelperFunctions.h"
+#include "../../../PhysicalDevices/PhysicalDevice.h"
+
 #include <thread>
 #include <iostream>
 #include <fstream>
@@ -45,16 +48,14 @@
 #include <termios.h>
 #include <signal.h>
 
-#include "../../../PhysicalDevices/PhysicalDevice.h"
-
 namespace PhysicalDevices
 {
 
-class Cul  : public PhysicalDevice
+class CUL  : public PhysicalDevice
 {
     public:
-        Cul(std::shared_ptr<PhysicalDeviceSettings> settings);
-        virtual ~Cul();
+		CUL(std::shared_ptr<PhysicalDeviceSettings> settings);
+        virtual ~CUL();
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<Packet> packet);

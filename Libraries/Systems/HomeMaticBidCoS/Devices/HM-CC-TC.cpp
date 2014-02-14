@@ -28,9 +28,10 @@
  */
 
 #include "HM-CC-TC.h"
-#include "../../GD.h"
-#include "../../HelperFunctions.h"
+#include "../../../GD/GD.h"
 
+namespace BidCoS
+{
 HM_CC_TC::HM_CC_TC() : HomeMaticDevice()
 {
 	init();
@@ -48,7 +49,7 @@ void HM_CC_TC::init()
 	{
 		HomeMaticDevice::init();
 
-		_deviceType = GD::deviceTypes.get(DeviceID::HMCCTC);
+		_deviceType = (uint32_t)DeviceType::HMCCTC;
 		_firmwareVersion = 0x21;
 		_deviceClass = 0x58;
 		_channelMin = 0x00;
@@ -61,15 +62,15 @@ void HM_CC_TC::init()
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -89,20 +90,20 @@ int64_t HM_CC_TC::calculateLastDutyCycleEvent()
 			nextDutyCycleEvent = lastDutyCycleEvent + (calculateCycleLength(_messageCounter[1]) * 250000) + _dutyCycleTimeOffset;
 			_messageCounter[1]++;
 		}
-		HelperFunctions::printDebug("Debug: Setting last duty cycle event to: " + std::to_string(lastDutyCycleEvent));
+		Output::printDebug("Debug: Setting last duty cycle event to: " + std::to_string(lastDutyCycleEvent));
 		return lastDutyCycleEvent;
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
@@ -177,15 +178,15 @@ void HM_CC_TC::setUpConfig()
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -210,15 +211,15 @@ void HM_CC_TC::setUpBidCoSMessages()
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -230,15 +231,15 @@ HM_CC_TC::~HM_CC_TC()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -251,15 +252,15 @@ void HM_CC_TC::dispose()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -274,15 +275,15 @@ void HM_CC_TC::stopThreads()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -302,15 +303,15 @@ void HM_CC_TC::saveVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -353,15 +354,15 @@ void HM_CC_TC::loadVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 }
@@ -387,15 +388,15 @@ std::string HM_CC_TC::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -413,15 +414,15 @@ void HM_CC_TC::setValveState(int32_t valveState)
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -431,23 +432,23 @@ void HM_CC_TC::startDutyCycle(int64_t lastDutyCycleEvent)
 	{
 		if(_dutyCycleThread.joinable())
 		{
-			HelperFunctions::printCritical("Device 0x" + HelperFunctions::getHexString(_address, 6) + ": Duty cycle thread already started. Something went very wrong.");
+			Output::printCritical("Device 0x" + HelperFunctions::getHexString(_address, 6) + ": Duty cycle thread already started. Something went very wrong.");
 			return;
 		}
 		_dutyCycleThread = std::thread(&HM_CC_TC::dutyCycleThread, this, lastDutyCycleEvent);
-		HelperFunctions::setThreadPriority(_dutyCycleThread.native_handle(), 35);
+		Threads::setThreadPriority(_dutyCycleThread.native_handle(), 35);
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -462,7 +463,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 		uint32_t cycleLength = calculateCycleLength(_messageCounter[1] - 1); //The calculation has to use the last message counter
 		_dutyCycleCounter = (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastDutyCycleEvent) / 250000;
 		if(_dutyCycleCounter < 0) _dutyCycleCounter = 0;
-		if(_dutyCycleCounter > 0) HelperFunctions::printDebug("Debug: Skipping " + std::to_string(_dutyCycleCounter * 250) + " ms of duty cycle.");
+		if(_dutyCycleCounter > 0) Output::printDebug("Debug: Skipping " + std::to_string(_dutyCycleCounter * 250) + " ms of duty cycle.");
 		//_dutyCycleCounter = (_dutyCycleCounter % 8 > 3) ? _dutyCycleCounter + (8 - (_dutyCycleCounter % 8)) : _dutyCycleCounter - (_dutyCycleCounter % 8);
 		while(!_stopDutyCycleThread)
 		{
@@ -470,7 +471,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 			{
 				cycleTime = cycleLength * 250000;
 				nextDutyCycleEvent += cycleTime + _dutyCycleTimeOffset; //Add offset every cycle. This is very important! Without it, 20% of the packets are sent too early.
-				HelperFunctions::printDebug("Next duty cycle: " + std::to_string(nextDutyCycleEvent / 1000) + " (in " + std::to_string(cycleTime / 1000) + " ms) with message counter 0x" + HelperFunctions::getHexString(_messageCounter[1]));
+				Output::printDebug("Next duty cycle: " + std::to_string(nextDutyCycleEvent / 1000) + " (in " + std::to_string(cycleTime / 1000) + " ms) with message counter 0x" + HelperFunctions::getHexString(_messageCounter[1]));
 
 				std::chrono::milliseconds sleepingTime(250);
 				while(!_stopDutyCycleThread && _dutyCycleCounter < cycleLength - 80)
@@ -496,7 +497,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 				setDecalcification();
 
 				timePoint = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-				HelperFunctions::printDebug("Correcting time mismatch of " + std::to_string((nextDutyCycleEvent - 10000000 - timePoint) / 1000) + "ms.");
+				Output::printDebug("Correcting time mismatch of " + std::to_string((nextDutyCycleEvent - 10000000 - timePoint) / 1000) + "ms.");
 				std::this_thread::sleep_for(std::chrono::microseconds(nextDutyCycleEvent - timePoint - 5000000));
 				if(_stopDutyCycleThread) break;
 
@@ -506,7 +507,7 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 
 				if(_sendDutyCyclePacketThread.joinable()) _sendDutyCyclePacketThread.join();
 				_sendDutyCyclePacketThread = std::thread(&HM_CC_TC::sendDutyCyclePacket, this, _messageCounter[1], nextDutyCycleEvent);
-				HelperFunctions::setThreadPriority(_sendDutyCyclePacketThread.native_handle(), 99);
+				Threads::setThreadPriority(_sendDutyCyclePacketThread.native_handle(), 99);
 
 				_lastDutyCycleEvent = nextDutyCycleEvent;
 				cycleLength = calculateCycleLength(_messageCounter[1]);
@@ -518,29 +519,29 @@ void HM_CC_TC::dutyCycleThread(int64_t lastDutyCycleEvent)
 			}
 			catch(const std::exception& ex)
 			{
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -555,37 +556,37 @@ void HM_CC_TC::setDecalcification()
 			try
 			{
 				_peersMutex.lock();
-				for(std::unordered_map<int32_t, std::shared_ptr<Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+				for(std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
 				{
 					i->second->config[0xFFFF] = 4;
 				}
 			}
 			catch(const std::exception& ex)
 			{
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 			_peersMutex.unlock();
 		}
 	}
 	catch(const std::exception& ex)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -602,15 +603,15 @@ void HM_CC_TC::sendDutyCycleBroadcast()
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -621,10 +622,10 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 		if(sendingTime < 0) sendingTime = 2000000;
 		if(_stopDutyCycleThread) return;
 		int32_t address = getNextDutyCycleDeviceAddress();
-		HelperFunctions::printDebug("Debug: 0x" + HelperFunctions::getHexString(_address) + ": Next HM-CC-VD is 0x" + HelperFunctions::getHexString(_address));
+		Output::printDebug("Debug: 0x" + HelperFunctions::getHexString(_address) + ": Next HM-CC-VD is 0x" + HelperFunctions::getHexString(_address));
 		if(address < 1)
 		{
-			HelperFunctions::printDebug("Debug: Not sending duty cycle packet, because no valve drives are paired to me.");
+			Output::printDebug("Debug: Not sending duty cycle packet, because no valve drives are paired to me.");
 			return;
 		}
 		std::vector<uint8_t> payload;
@@ -662,22 +663,22 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 
 		int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
-		GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
+		GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - timePoint;
-		HelperFunctions::printDebug("Debug: " + HelperFunctions::getHexString(_address) + " Sending took " + std::to_string(timePassed) + "ms.");
+		Output::printDebug("Debug: " + HelperFunctions::getHexString(_address) + " Sending took " + std::to_string(timePassed) + "ms.");
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -685,7 +686,7 @@ int32_t HM_CC_TC::getAdjustmentCommand(int32_t peerAddress)
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeer(peerAddress));
+		std::shared_ptr<BidCoSPeer> peer(getPeer(peerAddress));
 		if(peer && peer->config[0xFFFF] == 4) return 4;
 		else if(_setPointTemperature == 0) return 2; //OFF
 		else if(_setPointTemperature == 60) return 3; //ON
@@ -696,15 +697,15 @@ int32_t HM_CC_TC::getAdjustmentCommand(int32_t peerAddress)
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
@@ -720,7 +721,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 			return -1;
 		}
 		int i = 0;
-		std::unordered_map<int32_t, std::shared_ptr<Peer>>::iterator j = (_currentDutyCycleDeviceAddress == -1) ? _peers.begin() : _peers.find(_currentDutyCycleDeviceAddress);
+		std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>>::iterator j = (_currentDutyCycleDeviceAddress == -1) ? _peers.begin() : _peers.find(_currentDutyCycleDeviceAddress);
 		if(j == _peers.end()) //_currentDutyCycleDeviceAddress does not exist anymore in peers
 		{
 			j = _peers.begin();
@@ -732,7 +733,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 			{
 				j = _peers.begin();
 			}
-			if(j->second && j->second->getDeviceType().id() == DeviceID::HMCCVD)
+			if(j->second && j->second->getDeviceType().type() == (uint32_t)DeviceType::HMCCVD)
 			{
 				_currentDutyCycleDeviceAddress = j->first;
 				_peersMutex.unlock();
@@ -742,15 +743,15 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_peersMutex.unlock();
 	return -1;
@@ -764,46 +765,46 @@ void HM_CC_TC::sendConfigParams(int32_t messageCounter, int32_t destinationAddre
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-std::shared_ptr<Peer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
+std::shared_ptr<BidCoSPeer> HM_CC_TC::createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(new Peer(_deviceID, false));
+		std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(_deviceID, false));
 		peer->setAddress(address);
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);
 		peer->setMessageCounter(0);
 		peer->setRemoteChannel(remoteChannel);
-		if(deviceType.id() == DeviceID::HMCCVD || deviceType.id() == DeviceID::UNKNOWN) peer->setLocalChannel(2); else peer->setLocalChannel(0);
+		if(deviceType.type() == (uint32_t)DeviceType::HMCCVD || deviceType.type() == (uint32_t)DeviceType::none) peer->setLocalChannel(2); else peer->setLocalChannel(0);
 		peer->setSerialNumber(serialNumber);
 		if(save) peer->save(true, true, false);
 		return peer;
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<Peer>();
+    return std::shared_ptr<BidCoSPeer>();
 }
 
 void HM_CC_TC::reset()
@@ -816,20 +817,20 @@ void HM_CC_TC::handleSetValveState(int32_t messageCounter, std::shared_ptr<BidCo
 	try
 	{
 		_newValveState = packet->payload()->at(0);
-		HelperFunctions::printDebug("Debug: " + HelperFunctions::getHexString(_address) + ": New valve state: " + std::to_string(_newValveState));
+		Output::printDebug("Debug: " + HelperFunctions::getHexString(_address) + ": New valve state: " + std::to_string(_newValveState));
 		sendOK(messageCounter, packet->senderAddress());
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -844,26 +845,26 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 		if(channel == 2 && _peers.size() < 20)
 		{
 			_peersMutex.lock();
-			_peers[address]->setDeviceType(GD::deviceTypes.get(DeviceID::HMCCVD));
+			_peers[address]->setDeviceType(LogicalDeviceType(DeviceFamilies::HomeMaticBidCoS, (uint32_t)DeviceType::HMCCVD));
 			_peersMutex.unlock();
 			getPeer(address)->save(true, true, false);
-			HelperFunctions::printMessage("0x" + HelperFunctions::getHexString(_address) + ": Added HM-CC-VD with address 0x" + HelperFunctions::getHexString(address));
+			Output::printMessage("0x" + HelperFunctions::getHexString(_address) + ": Added HM-CC-VD with address 0x" + HelperFunctions::getHexString(address));
 		}
 	}
 	catch(const std::exception& ex)
     {
 		_peersMutex.unlock();
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_peersMutex.unlock();
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_peersMutex.unlock();
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -886,15 +887,15 @@ void HM_CC_TC::handleSetPoint(int32_t messageCounter, std::shared_ptr<BidCoSPack
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -908,8 +909,8 @@ void HM_CC_TC::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidC
 			sendNOK(messageCounter, packet->senderAddress());
 			return;
 		}
-		LogicalDeviceType deviceType = GD::deviceTypes.get((DeviceID)((packet->payload()->at(1) << 8) + packet->payload()->at(2)));
-		std::shared_ptr<Peer> peer = createPeer(packet->senderAddress(), (int32_t)packet->payload()->at(0), deviceType, std::string(), (int32_t)packet->payload()->at(15), 0, packet);
+		LogicalDeviceType deviceType(DeviceFamilies::HomeMaticBidCoS, (packet->payload()->at(1) << 8) + packet->payload()->at(2));
+		std::shared_ptr<BidCoSPeer> peer = createPeer(packet->senderAddress(), (int32_t)packet->payload()->at(0), deviceType, std::string(), (int32_t)packet->payload()->at(15), 0, packet);
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
 		queue->peer = peer;
 		queue->push(_messages->find(DIRECTIONOUT, 0x00, std::vector<std::pair<uint32_t, int32_t>>()), packet);
@@ -919,15 +920,15 @@ void HM_CC_TC::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidC
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -938,28 +939,28 @@ void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, std::shared_ptr
 		HomeMaticDevice::handleConfigParamResponse(messageCounter, packet);
 
 		_currentList = packet->payload()->at(6);
-		std::shared_ptr<Peer> peer = getPeer(packet->senderAddress());
+		std::shared_ptr<BidCoSPeer> peer = getPeer(packet->senderAddress());
 		if(!peer) return;
 		for(int i = 7; i < (signed)packet->payload()->size() - 2; i+=2)
 		{
 			int32_t index = packet->payload()->at(i);
 			if(peer->config.find(index) == peer->config.end()) continue;
 			peer->config.at(index) = packet->payload()->at(i + 1);
-			HelperFunctions::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": Config of device 0x" + HelperFunctions::getHexString(packet->senderAddress()) + " at index " + std::to_string(packet->payload()->at(i)) + " set to 0x" + HelperFunctions::getHexString(packet->payload()->at(i + 1)));
+			Output::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": Config of device 0x" + HelperFunctions::getHexString(packet->senderAddress()) + " at index " + std::to_string(packet->payload()->at(i)) + " set to 0x" + HelperFunctions::getHexString(packet->payload()->at(i + 1)));
 		}
 		sendOK(messageCounter, packet->senderAddress());
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -981,15 +982,15 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, st
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -997,7 +998,7 @@ void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> p
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(getPeer(packet->senderAddress()));
+		std::shared_ptr<BidCoSPeer> peer(getPeer(packet->senderAddress()));
 		if(peer) peer->config[0xFFFF] = 0; //Decalcification done
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue) return;
@@ -1019,16 +1020,17 @@ void HM_CC_TC::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> p
 	catch(const std::exception& ex)
     {
 		_peersMutex.unlock();
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_peersMutex.unlock();
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_peersMutex.unlock();
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
 }

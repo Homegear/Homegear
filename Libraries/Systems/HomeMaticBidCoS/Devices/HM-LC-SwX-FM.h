@@ -34,12 +34,14 @@
 #include <memory>
 #include <vector>
 
-class BidCoSQueue;
-enum class BidCoSQueueType;
-
 #include "../../../HelperFunctions/HelperFunctions.h"
 #include "../HomeMaticDevice.h"
 #include "../../../Database/Database.h"
+
+namespace BidCoS
+{
+class BidCoSQueue;
+enum class BidCoSQueueType;
 
 class HM_LC_SWX_FM : public HomeMaticDevice
 {
@@ -70,5 +72,5 @@ class HM_LC_SWX_FM : public HomeMaticDevice
         void sendStateChangeResponse(std::shared_ptr<BidCoSPacket> receivedPacket, uint32_t channel);
     private:
 };
-
+}
 #endif // HM_LC_SWX_FM_H

@@ -30,15 +30,19 @@
 #ifndef BIDCOSQUEUEMANAGER_H_
 #define BIDCOSQUEUEMANAGER_H_
 
+#include "BidCoSQueue.h"
+#include "BidCoSPeer.h"
+
 #include <thread>
 #include <mutex>
 #include <memory>
 #include <unordered_map>
 
+class ServiceMessages;
+
 namespace BidCoS
 {
 class HomeMaticDevice;
-class BidCoSQueue;
 enum class BidCoSQueueType;
 
 class BidCoSQueueData

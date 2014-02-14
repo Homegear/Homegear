@@ -31,8 +31,11 @@
 #define HM_SD_H
 
 #include "../HomeMaticDevice.h"
-#include "../../Database.h"
+#include "../../../Database/Database.h"
+#include "../../../HelperFunctions/HelperFunctions.h"
 
+namespace BidCoS
+{
 enum class FilterType {SenderAddress, DestinationAddress, DeviceType, MessageType};
 
 class HM_SD_Filter
@@ -81,5 +84,5 @@ class HM_SD : public HomeMaticDevice
 
         virtual void init();
 };
-
+}
 #endif // HM_SD_H

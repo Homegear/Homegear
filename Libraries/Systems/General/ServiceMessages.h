@@ -30,7 +30,9 @@
 #ifndef SERVICEMESSAGES_H_
 #define SERVICEMESSAGES_H_
 
-class Peer;
+#include "Peer.h"
+#include "../../Types/RPCVariable.h"
+#include "../../HelperFunctions/HelperFunctions.h"
 
 #include <string>
 #include <iomanip>
@@ -38,8 +40,6 @@ class Peer;
 #include <chrono>
 #include <map>
 #include <mutex>
-
-#include "Libraries/Types/RPCVariable.h"
 
 class ServiceMessages {
 public:

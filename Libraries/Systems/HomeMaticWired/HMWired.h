@@ -53,7 +53,7 @@ public:
 	virtual std::string handleCLICommand(std::string& command);
 	virtual bool deviceSelected() { return (bool)_currentDevice; }
 private:
-	std::shared_ptr<HMWiredDevice> _currentDevice;
+	std::shared_ptr<LogicalDevice> _currentDevice;
 	std::shared_ptr<HMWiredCentral> _central;
 
 	void createCentral();

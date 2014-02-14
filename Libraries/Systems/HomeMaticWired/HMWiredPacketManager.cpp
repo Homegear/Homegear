@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,7 @@
  */
 
 #include "HMWiredPacketManager.h"
-#include "../GD.h"
-#include "../HelperFunctions.h"
+#include "../../GD/GD.h"
 
 namespace HMWired
 {
@@ -43,19 +42,19 @@ HMWiredPacketManager::HMWiredPacketManager()
 	try
 	{
 		_workerThread = std::thread(&HMWiredPacketManager::worker, this);
-		HelperFunctions::setThreadPriority(_workerThread.native_handle(), 19);
+		Threads::setThreadPriority(_workerThread.native_handle(), 19);
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -123,31 +122,31 @@ void HMWiredPacketManager::worker()
 			catch(const std::exception& ex)
 			{
 				_packetMutex.unlock();
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
 				_packetMutex.unlock();
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
 				_packetMutex.unlock();
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -169,15 +168,15 @@ void HMWiredPacketManager::set(int32_t address, std::shared_ptr<HMWiredPacket>& 
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _packetMutex.unlock();
 }
@@ -200,15 +199,15 @@ void HMWiredPacketManager::deletePacket(int32_t address, uint32_t id)
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _packetMutex.unlock();
 }
@@ -226,15 +225,15 @@ std::shared_ptr<HMWiredPacket> HMWiredPacketManager::get(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _packetMutex.unlock();
     return std::shared_ptr<HMWiredPacket>();
@@ -253,15 +252,15 @@ std::shared_ptr<HMWiredPacketInfo> HMWiredPacketManager::getInfo(int32_t address
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _packetMutex.unlock();
     return std::shared_ptr<HMWiredPacketInfo>();
@@ -277,15 +276,15 @@ void HMWiredPacketManager::keepAlive(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _packetMutex.unlock();
 }

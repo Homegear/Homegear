@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := output helperfunctions physicaldevices types logicaldevices threads database filedescriptormanager encoding user settings metadata rpc cli events gd systems homegear
+PROJECTS := output helperfunctions physicaldevices types logicaldevices threads database filedescriptormanager encoding user settings metadata rpc cli events gd bidcos hmwired homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -76,9 +76,13 @@ gd:
 	@echo "==== Building gd ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f gd.make
 
-systems: 
-	@echo "==== Building systems ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f systems.make
+bidcos: 
+	@echo "==== Building bidcos ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f bidcos.make
+
+hmwired: 
+	@echo "==== Building hmwired ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f hmwired.make
 
 homegear: 
 	@echo "==== Building homegear ($(config)) ===="
@@ -101,7 +105,8 @@ clean:
 	@${MAKE} --no-print-directory -C . -f cli.make clean
 	@${MAKE} --no-print-directory -C . -f events.make clean
 	@${MAKE} --no-print-directory -C . -f gd.make clean
-	@${MAKE} --no-print-directory -C . -f systems.make clean
+	@${MAKE} --no-print-directory -C . -f bidcos.make clean
+	@${MAKE} --no-print-directory -C . -f hmwired.make clean
 	@${MAKE} --no-print-directory -C . -f homegear.make clean
 
 help:
@@ -111,9 +116,6 @@ help:
 	@echo "   debug"
 	@echo "   release"
 	@echo "   profiling"
-	@echo "   debug_rpi"
-	@echo "   release_rpi"
-	@echo "   profiling_rpi"
 	@echo ""
 	@echo "TARGETS:"
 	@echo "   all (default)"
@@ -134,7 +136,8 @@ help:
 	@echo "   cli"
 	@echo "   events"
 	@echo "   gd"
-	@echo "   systems"
+	@echo "   bidcos"
+	@echo "   hmwired"
 	@echo "   homegear"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

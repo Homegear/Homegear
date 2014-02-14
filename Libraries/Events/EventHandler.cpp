@@ -583,7 +583,7 @@ void EventHandler::trigger(std::string& address, std::shared_ptr<std::vector<std
 	{
 		if(_disposing) return;
 		std::thread t(&EventHandler::triggerThreadMultipleVariables, this, address, variables, values);
-		HelperFunctions::setThreadPriority(t.native_handle(), 44);
+		Threads::setThreadPriority(t.native_handle(), 44);
 		t.detach();
 	}
 	catch(const std::exception& ex)
@@ -631,7 +631,7 @@ void EventHandler::trigger(std::string& address, std::string& variable, std::sha
 	{
 		if(_disposing) return;
 		std::thread t(&EventHandler::triggerThread, this, address, variable, value);
-		HelperFunctions::setThreadPriority(t.native_handle(), 44);
+		Threads::setThreadPriority(t.native_handle(), 44);
 		t.detach();
 	}
 	catch(const std::exception& ex)

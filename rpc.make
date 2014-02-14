@@ -28,9 +28,9 @@ ifndef RESCOMP
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = obj/Debug/RPC
+  OBJDIR     = obj/Debug/rpc
   TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/libRPC.a
+  TARGET     = $(TARGETDIR)/librpc.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
@@ -50,9 +50,9 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = obj/Release/RPC
+  OBJDIR     = obj/Release/rpc
   TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/libRPC.a
+  TARGET     = $(TARGETDIR)/librpc.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
@@ -72,9 +72,9 @@ ifeq ($(config),release)
 endif
 
 ifeq ($(config),profiling)
-  OBJDIR     = obj/Profiling/RPC
+  OBJDIR     = obj/Profiling/rpc
   TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/libRPC.a
+  TARGET     = $(TARGETDIR)/librpc.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
@@ -127,7 +127,7 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
 
 $(TARGET): $(GCH) $(OBJECTS) $(LDDEPS) $(RESOURCES)
-	@echo Linking RPC
+	@echo Linking rpc
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -148,7 +148,7 @@ else
 endif
 
 clean:
-	@echo Cleaning RPC
+	@echo Cleaning rpc
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)

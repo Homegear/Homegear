@@ -44,7 +44,7 @@ public:
 	static std::shared_ptr<RPC::RPCVariable> setMetadata(std::string objectID, std::string dataID, std::shared_ptr<RPC::RPCVariable> metadata);
 	static std::shared_ptr<RPC::RPCVariable> getMetadata(std::string objectID, std::string dataID);
 	static std::shared_ptr<RPC::RPCVariable> getAllMetadata(std::string objectID);
-	static std::shared_ptr<RPC::RPCVariable> deleteMetadata(std::string objectID, std::string dataID);
+	static std::shared_ptr<RPC::RPCVariable> deleteMetadata(std::string objectID, std::string dataID = "");
 private:
 	static RPC::RPCEncoder _rpcEncoder;
 	static RPC::RPCDecoder _rpcDecoder;

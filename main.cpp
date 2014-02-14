@@ -28,10 +28,10 @@
  */
 
 #include "Version.h"
-#include "Database.h"
-#include "GD.h"
-#include "HelperFunctions.h"
-#include "RPC/ServerSettings.h"
+#include "Libraries/Database/Database.h"
+#include "Libraries/GD/GD.h"
+#include "Libraries/HelperFunctions/HelperFunctions.h"
+#include "Libraries/RPC/ServerSettings.h"
 #include "Libraries/Systems/General/SystemInitializer.h"
 
 #include <readline/readline.h>
@@ -62,19 +62,19 @@ void startRPCServers()
 		if(settings->ssl) info += ", SSL enabled";
 		if(settings->authType != RPC::ServerSettings::Settings::AuthType::none) info += ", authentification enabled";
 		info += "...";
-		HelperFunctions::printInfo(info);
+		Output::printInfo(info);
 		GD::rpcServers[i].start(settings);
 	}
 	if(GD::rpcServers.size() == 0)
 	{
-		HelperFunctions::printCritical("Critical: No RPC servers are running. Terminating Homegear.");
+		Output::printCritical("Critical: No RPC servers are running. Terminating Homegear.");
 		exit(1);
 	}
 }
 
 void stopRPCServers()
 {
-	HelperFunctions::printInfo( "(Shutdown) => Stopping RPC servers");
+	Output::printInfo( "(Shutdown) => Stopping RPC servers");
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		i->second.stop();
@@ -88,19 +88,19 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
-			HelperFunctions::printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
+			Output::printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			if(_startAsDaemon)
 			{
-				HelperFunctions::printInfo("(Shutdown) => Stopping CLI server");
+				Output::printInfo("(Shutdown) => Stopping CLI server");
 				GD::cliServer.stop();
 			}
 			stopRPCServers();
-			HelperFunctions::printInfo( "(Shutdown) => Stopping RPC client");
+			Output::printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
-			HelperFunctions::printInfo( "(Shutdown) => Closing physical devices");
+			Output::printInfo( "(Shutdown) => Closing physical devices");
 			GD::physicalDevices.stopListening();
 			GD::devices.save(false);
-			HelperFunctions::printMessage("(Shutdown) => Shutdown complete.");
+			Output::printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{
 				fclose(stdout);
@@ -112,7 +112,7 @@ void terminate(int32_t signalNumber)
 		{
 			if(!_startUpComplete)
 			{
-				HelperFunctions::printError("Error: Cannot reload. Startup is not completed.");
+				Output::printError("Error: Cannot reload. Startup is not completed.");
 				return;
 			}
 			_startUpComplete = false;
@@ -120,7 +120,7 @@ void terminate(int32_t signalNumber)
 			GD::physicalDevices.stopListening();
 			//Binding fails sometimes with "address is already in use" without waiting.
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-			HelperFunctions::printMessage("Reloading settings...");
+			Output::printMessage("Reloading settings...");
 			GD::settings.load(GD::configPath + "main.conf");
 			GD::clientSettings.load(GD::settings.clientSettingsPath());
 			GD::serverSettings.load(GD::settings.serverSettingsPath());
@@ -131,20 +131,20 @@ void terminate(int32_t signalNumber)
 			{
 				if(!std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 				{
-					HelperFunctions::printError("Error: Could not redirect output to new log file.");
+					Output::printError("Error: Could not redirect output to new log file.");
 				}
 				if(!std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
 				{
-					HelperFunctions::printError("Error: Could not redirect errors to new log file.");
+					Output::printError("Error: Could not redirect errors to new log file.");
 				}
 			}
 			_startUpComplete = true;
 		}
 		else
 		{
-			HelperFunctions::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
-			HelperFunctions::printCritical("Critical: Trying to save data to " + GD::settings.databasePath() + ".crash");
-			GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".crash");
+			Output::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
+			Output::printCritical("Critical: Trying to save data to " + GD::settings.databasePath() + ".crash");
+			GD::db.init(GD::settings.databasePath(), GD::settings.databaseSynchronous(), GD::settings.databaseMemoryJournal(), GD::settings.databasePath() + ".crash");
 			if(GD::db.isOpen()) GD::devices.save(false, true);
 			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 			kill(getpid(), signalNumber); //Generate core dump
@@ -152,15 +152,15 @@ void terminate(int32_t signalNumber)
 	}
 	catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -211,7 +211,7 @@ void startDaemon()
 		//Set root directory as working directory (always available)
 		if((chdir(GD::settings.logfilePath().c_str())) < 0)
 		{
-			HelperFunctions::printError("Could not change working directory to " + GD::settings.logfilePath() + ".");
+			Output::printError("Could not change working directory to " + GD::settings.logfilePath() + ".");
 			exit(1);
 		}
 
@@ -219,15 +219,15 @@ void startDaemon()
 	}
 	catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -279,14 +279,15 @@ int main(int argc, char* argv[])
     					std::cout <<  "Please run Homegear as root to set the device permissions." << std::endl;
     					exit(1);
     				}
+    				SystemInitializer::initialize();
     				GD::settings.load(GD::configPath + "main.conf");
     				GD::physicalDevices.load(GD::settings.physicalDeviceSettingsPath());
     				int32_t userID = HelperFunctions::userID(std::string(argv[i + 1]));
     				int32_t groupID = HelperFunctions::groupID(std::string(argv[i + 2]));
-    				HelperFunctions::printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
+    				Output::printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
     				if(userID == -1 || groupID == -1)
     				{
-    					HelperFunctions::printCritical("Could not setup physical devices. Username or group name is not valid.");
+    					Output::printCritical("Could not setup physical devices. Username or group name is not valid.");
     					exit(1);
     				}
     				GD::physicalDevices.setup(userID, groupID);
@@ -322,7 +323,7 @@ int main(int argc, char* argv[])
 
         /*int row,col;
         WINDOW* mainWindow = initscr();
-        if(!mainWindow) HelperFunctions::printError("Bla" << std::endl;
+        if(!mainWindow) Output::printError("Bla" << std::endl;
 
         getmaxyx(stdscr, row, col);
         WINDOW* left = newwin(row, col / 2, 0, 0);
@@ -351,11 +352,11 @@ int main(int argc, char* argv[])
 		GD::executablePath = std::string(path);
 		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
 		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
-		HelperFunctions::printInfo("Loading settings from " + GD::configPath + "main.conf");
+		Output::printInfo("Loading settings from " + GD::configPath + "main.conf");
 		GD::settings.load(GD::configPath + "main.conf");
-		HelperFunctions::printInfo("Loading RPC server settings from " + GD::settings.serverSettingsPath());
+		Output::printInfo("Loading RPC server settings from " + GD::settings.serverSettingsPath());
 		GD::serverSettings.load(GD::settings.serverSettingsPath());
-		HelperFunctions::printInfo("Loading RPC client settings from " + GD::settings.clientSettingsPath());
+		Output::printInfo("Loading RPC client settings from " + GD::settings.clientSettingsPath());
 		GD::clientSettings.load(GD::settings.clientSettingsPath());
 
     	if(_startAsDaemon) startDaemon();
@@ -389,36 +390,36 @@ int main(int argc, char* argv[])
 				int32_t rc = flock(pidfile, LOCK_EX | LOCK_NB);
 				if(rc && errno == EWOULDBLOCK)
 				{
-					HelperFunctions::printError("Error: Homegear is already running - Can't lock PID file.");
+					Output::printError("Error: Homegear is already running - Can't lock PID file.");
 				}
 				std::string pid(std::to_string(getpid()));
 				int32_t bytesWritten = write(pidfile, pid.c_str(), pid.size());
-				if(bytesWritten <= 0) HelperFunctions::printError("Error writing to PID file: " + std::string(strerror(errno)));
+				if(bytesWritten <= 0) Output::printError("Error writing to PID file: " + std::string(strerror(errno)));
 				close(pidfile);
 			}
 		}
 		catch(const std::exception& ex)
 		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(Exception& ex)
 		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(...)
 		{
-			HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 
 		if(_startAsDaemon)
 		{
 			if(!std::freopen((GD::settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 			{
-				HelperFunctions::printError("Error: Could not redirect output to log file.");
+				Output::printError("Error: Could not redirect output to log file.");
 			}
 			if(!std::freopen((GD::settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
 			{
-				HelperFunctions::printError("Error: Could not redirect errors to log file.");
+				Output::printError("Error: Could not redirect errors to log file.");
 			}
 		}
 
@@ -426,55 +427,55 @@ int main(int argc, char* argv[])
 		{
 			if(HelperFunctions::getTime() < 1000000000000)
 			{
-				HelperFunctions::printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
+				Output::printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 			}
 			else break;
 		}
 		if(HelperFunctions::getTime() < 1000000000000)
 		{
-			HelperFunctions::printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
+			Output::printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
 			terminate(SIGTERM);
 			return 1;
 		}
 
 		SystemInitializer::initialize();
 
-    	GD::db.init(GD::settings.databasePath(), GD::settings.databasePath() + ".bak");
+    	GD::db.init(GD::settings.databasePath(), GD::settings.databaseSynchronous(), GD::settings.databaseMemoryJournal(), GD::settings.databasePath() + ".bak");
     	if(!GD::db.isOpen()) exit(1);
 
     	GD::physicalDevices.load(GD::settings.physicalDeviceSettingsPath());
         if(GD::physicalDevices.count() == 0)
         {
-        	HelperFunctions::printCritical("Critical: No physical device could be initialized... Exiting...");
+        	Output::printCritical("Critical: No physical device could be initialized... Exiting...");
         	terminate(SIGTERM);
         	return 1;
         }
-        HelperFunctions::printInfo("Loading XML RPC devices...");
+        Output::printInfo("Loading XML RPC devices...");
         GD::rpcDevices.load();
         GD::devices.convertDatabase();
-        HelperFunctions::printInfo("Start listening for packets...");
+        Output::printInfo("Start listening for packets...");
         GD::physicalDevices.startListening();
         if(!GD::physicalDevices.isOpen())
         {
-        	HelperFunctions::printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
+        	Output::printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
         	terminate(SIGTERM);
         	return 1;
         }
-        HelperFunctions::printInfo("Loading devices...");
+        Output::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
         if(_startAsDaemon)
         {
-        	HelperFunctions::printInfo("Starting CLI server...");
+        	Output::printInfo("Starting CLI server...");
         	GD::cliServer.start();
         }
 
         startRPCServers();
 
-        HelperFunctions::printInfo("Loading events...");
+        Output::printInfo("Loading events...");
         GD::eventHandler.load();
         _startUpComplete = true;
-        HelperFunctions::printInfo("Startup complete.");
+        Output::printInfo("Startup complete.");
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 
@@ -494,17 +495,17 @@ int main(int argc, char* argv[])
 
 				add_history(inputBuffer); //Sets inputBuffer to 0
 
-				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-				std::string packetHex("1ACAA0101D94A8FD00010301110B2A221828005800002422482A8A");
-				packet->import(packetHex, false);
-				if(input == "test") GD::devices.getHomeMaticCentral()->packetReceived(packet);
-				else if(input == "test2")
-				{
-					std::vector<uint8_t> payload({2, 1, 1, 0, 0});
-					std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x2F, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
-					GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
-				}
-				else std::cout << GD::devices.handleCLICommand(input);
+				//std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
+				//std::string packetHex("1ACAA0101D94A8FD00010301110B2A221828005800002422482A8A");
+				//packet->import(packetHex, false);
+				//if(input == "test") GD::devices.getHomeMaticCentral()->packetReceived(packet);
+				//else if(input == "test2")
+				//{
+					//std::vector<uint8_t> payload({2, 1, 1, 0, 0});
+					//std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x2F, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
+					//GD::physicalDevices.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
+				//}
+				std::cout << GD::devices.handleCLICommand(input);
 			}
         }
 
@@ -513,15 +514,15 @@ int main(int argc, char* argv[])
     }
     catch(const std::exception& ex)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	terminate(SIGTERM);
     return 1;

@@ -31,8 +31,11 @@
 #define HM_CC_VD_H
 
 #include "../HomeMaticDevice.h"
-#include "../../Database.h"
+#include "../../../Database/Database.h"
+#include "../../../HelperFunctions/HelperFunctions.h"
 
+namespace BidCoS
+{
 class HM_CC_VD : public HomeMaticDevice
 {
     public:
@@ -61,7 +64,7 @@ class HM_CC_VD : public HomeMaticDevice
         int32_t* _errorPosition = nullptr;
         int32_t* _offsetPosition = nullptr;
 
-        std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
+        std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
         void reset();
 
         void handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet);
@@ -69,5 +72,5 @@ class HM_CC_VD : public HomeMaticDevice
         void sendConfigParamsType2(int32_t messageCounter, int32_t destinationAddress);
 
 };
-
+}
 #endif // HM_CC_VD_H

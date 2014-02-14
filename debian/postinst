@@ -7,6 +7,7 @@ case $1 in
 		result=`id -u homegear 2>/dev/null`
 		if [ "0$result" -eq "0" ]; then
 			adduser --system --no-create-home --shell /bin/false --group homegear >/dev/null 2>&1
+			[ $? -ne 0 ] && exit 1
 			usermod -a -G dialout homegear 2>/dev/null
 			usermod -a -G gpio homegear 2>/dev/null
 			usermod -a -G spi homegear 2>/dev/null
@@ -30,6 +31,7 @@ case $1 in
 		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
 			if test ! -e /etc/homegear/Device\ types/rf_s.xml; then
 				/etc/homegear/GetDeviceFiles.sh
+				[ $? -ne 0 ] && exit 1
 			fi
 	
 			if test ! -e /etc/homegear/homegear.crt; then
@@ -44,8 +46,6 @@ case $1 in
 				chmod 400 /etc/homegear/dh2048.pem
 			fi
 		fi
-
-		chown root:homegear /dev/ttyACM0 >/dev/null 2>&1
 
 		insserv homegear
 		service homegear start

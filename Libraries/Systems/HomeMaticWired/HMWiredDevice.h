@@ -35,6 +35,7 @@
 #include "HMWiredPacket.h"
 #include "HMWiredPeer.h"
 #include "HMWiredPacketManager.h"
+#include "HMWiredDeviceTypes.h"
 
 #include <string>
 #include <unordered_map>
@@ -52,9 +53,9 @@ class HMWiredDevice : public LogicalDevice
 {
     public:
         HMWiredDevice();
-        HMWiredDevice(uint32_t deviceType, std::string serialNumber, int32_t address);
+        HMWiredDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
         virtual ~HMWiredDevice();
-        virtual DeviceFamily deviceFamily() { return DeviceFamilies::HomeMaticWired; }
+        virtual DeviceFamilies deviceFamily() { return DeviceFamilies::HomeMaticWired; }
         bool packetReceived(std::shared_ptr<Packet> packet);
 
         virtual bool peerSelected() { return (bool)_currentPeer; }

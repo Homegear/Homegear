@@ -28,23 +28,17 @@
  */
 
 #include "Threads.h"
-
-bool Threads::_prioritizeThreads = true;
+#include "../GD/GD.h"
 
 Threads::~Threads() {
 
-}
-
-void Threads::init(bool prioritizeThreads)
-{
-	_prioritizeThreads = prioritizeThreads;
 }
 
 void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t policy)
 {
 	try
 	{
-		if(!_prioritizeThreads) return;
+		if(!GD::settings.prioritizeThreads()) return;
 		if(policy != SCHED_FIFO && policy != SCHED_RR) priority = 0;
 		if((policy == SCHED_FIFO || policy == SCHED_RR) && (priority < 1 || priority > 99)) throw Exception("Invalid thread priority: " + std::to_string(priority));
 		sched_param schedParam;
@@ -60,7 +54,7 @@ void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t poli
 			else if(error == ESRCH) Output::printError("Could not set thread priority. Thread could not be found.");
 			else if(error == EINVAL) Output::printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
 			else Output::printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
-			_prioritizeThreads = false;
+			GD::settings.setPrioritizeThreads(false);
 		}
 		else Output::printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
 	}

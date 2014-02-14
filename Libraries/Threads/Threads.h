@@ -37,11 +37,8 @@ class Threads {
 public:
 	virtual ~Threads();
 
-	static void init(bool prioritizeThreads);
 	static void setThreadPriority(pthread_t thread, int32_t priority, int32_t policy = SCHED_FIFO);
 private:
-	static bool _prioritizeThreads;
-
 	//Non public constructor
 	Threads() {}
 };

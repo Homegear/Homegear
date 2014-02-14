@@ -29,11 +29,10 @@
 
 #include "DeviceTypes.h"
 
-LogicalDeviceType::LogicalDeviceType(DeviceFamilies family, uint32_t type, std::string name)
+LogicalDeviceType::LogicalDeviceType(DeviceFamilies family, uint32_t type)
 {
 	_family = family;
 	_type = type;
-	_name = name;
 }
 
 bool LogicalDeviceType::operator==(LogicalDeviceType& other)

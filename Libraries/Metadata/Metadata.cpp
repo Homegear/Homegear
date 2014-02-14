@@ -30,8 +30,8 @@
 #include "Metadata.h"
 #include "../GD/GD.h"
 
-RPC::RPCEncoder _rpcEncoder;
-RPC::RPCDecoder _rpcDecoder;
+RPC::RPCEncoder Metadata::_rpcEncoder;
+RPC::RPCDecoder Metadata::_rpcDecoder;
 
 std::shared_ptr<RPC::RPCVariable> Metadata::getAllMetadata(std::string objectID)
 {

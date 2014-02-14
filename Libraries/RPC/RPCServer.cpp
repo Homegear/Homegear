@@ -155,7 +155,7 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 			}
 		}
 		_mainThread = std::thread(&RPCServer::mainThread, this);
-		HelperFunctions::setThreadPriority(_mainThread.native_handle(), _threadPriority, _threadPolicy);
+		Threads::setThreadPriority(_mainThread.native_handle(), _threadPriority, _threadPolicy);
 	}
 	catch(const std::exception& ex)
     {
@@ -299,7 +299,7 @@ void RPCServer::mainThread()
 				client->socket = SocketOperations(client->fileDescriptor->descriptor, client->ssl);
 
 				client->readThread = std::thread(&RPCServer::readClient, this, client);
-				HelperFunctions::setThreadPriority(client->readThread.native_handle(), _threadPriority, _threadPolicy);
+				Threads::setThreadPriority(client->readThread.native_handle(), _threadPriority, _threadPolicy);
 				client->readThread.detach();
 			}
 			catch(const std::exception& ex)
@@ -719,7 +719,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				{
 					packetLength = 0;
 					std::thread t(&RPCServer::packetReceived, this, client, packet, packetType, true);
-					HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
+					Threads::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 					t.detach();
 				}
 			}
@@ -782,7 +782,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					{
 						packet->push_back('\0');
 						std::thread t(&RPCServer::packetReceived, this, client, packet, packetType, true);
-						HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
+						Threads::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 						t.detach();
 						packetLength = 0;
 					}
@@ -813,7 +813,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			if(http.isFinished())
 			{
 				std::thread t(&RPCServer::packetReceived, this, client, http.getContent(), packetType, http.getHeader()->connection == HTTP::Connection::Enum::keepAlive);
-				HelperFunctions::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
+				Threads::setThreadPriority(t.native_handle(), _threadPriority, _threadPolicy);
 				t.detach();
 				packetLength = 0;
 				http.reset();

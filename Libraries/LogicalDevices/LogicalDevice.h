@@ -40,7 +40,7 @@ class LogicalDevice
 {
 public:
 	LogicalDevice();
-	LogicalDevice(uint32_t deviceType, std::string serialNumber, int32_t address);
+	LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
 	virtual ~LogicalDevice();
 
 	virtual bool packetReceived(std::shared_ptr<Packet> packet) { return false; }

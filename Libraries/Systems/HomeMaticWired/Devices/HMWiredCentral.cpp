@@ -29,16 +29,16 @@
 
 #include "HMWiredCentral.h"
 #include "../../../GD/GD.h"
-#include "../../../Version.h"
+#include "../../../../Version.h"
 
 namespace HMWired {
 
-HMWiredCentral::HMWiredCentral()
+HMWiredCentral::HMWiredCentral() : HMWiredDevice(), Central(0)
 {
 	init();
 }
 
-HMWiredCentral::HMWiredCentral(uint32_t deviceID, std::string serialNumber, int32_t address) : HMWiredDevice(deviceID, serialNumber, address)
+HMWiredCentral::HMWiredCentral(uint32_t deviceID, std::string serialNumber, int32_t address) : HMWiredDevice(deviceID, serialNumber, address), Central(address)
 {
 	init();
 }
@@ -54,19 +54,19 @@ void HMWiredCentral::init()
 	{
 		HMWiredDevice::init();
 
-		_deviceType = GD::deviceTypes.get(DeviceID::HMWIREDCENTRAL);
+		_deviceType = (uint32_t)DeviceType::HMWIREDCENTRAL;
 	}
 	catch(const std::exception& ex)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -199,17 +199,17 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				catch(const std::exception& ex)
 				{
 					_peersMutex.unlock();
-					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
 				catch(Exception& ex)
 				{
 					_peersMutex.unlock();
-					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
 				catch(...)
 				{
 					_peersMutex.unlock();
-					HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				}
 
 				stringStream << "Added peer 0x" << std::hex << peerAddress << " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << " and firmware version 0x" << firmwareVersion << "." << std::dec << std::endl;
@@ -419,17 +419,17 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			catch(const std::exception& ex)
 			{
 				_peersMutex.unlock();
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
 				_peersMutex.unlock();
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
 				_peersMutex.unlock();
-				HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
 		else if(command.compare(0, 12, "peers select") == 0)
@@ -476,15 +476,15 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -511,7 +511,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 				if(packet.first < 3) packet.first++;
 				else
 				{
-					HelperFunctions::printError("Event: Prevented deadlock while searching for HomeMatic Wired devices.");
+					Output::printError("Event: Prevented deadlock while searching for HomeMatic Wired devices.");
 					address++;
 					backwards = true;
 				}
@@ -539,7 +539,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 					}
 					else
 					{
-						HelperFunctions::printMessage("Device found with address 0x" + HelperFunctions::getHexString(address, 8));
+						Output::printMessage("Device found with address 0x" + HelperFunctions::getHexString(address, 8));
 						backwards = true;
 						address++;
 						address2 = address;
@@ -599,15 +599,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 	}
 	catch(const std::exception& ex)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	unlockBus();
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");

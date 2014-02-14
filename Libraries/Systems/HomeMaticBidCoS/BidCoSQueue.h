@@ -30,15 +30,10 @@
 #ifndef BIDCOSQUEUE_H
 #define BIDCOSQUEUE_H
 
-class Peer;
-class BidCoSMessage;
-class BidCoSPacket;
-class HomeMaticDevice;
-class ServiceMessages;
-
 #include "../../../delegate.hpp"
 #include "../../HelperFunctions/HelperFunctions.h"
-#include "PendingBidCoSQueues.h"
+#include "../General/ServiceMessages.h"
+#include "BidCoSPacket.h"
 
 #include <iostream>
 #include <string>
@@ -49,6 +44,11 @@ class ServiceMessages;
 
 namespace BidCoS
 {
+class BidCoSPeer;
+class BidCoSMessage;
+class HomeMaticDevice;
+class PendingBidCoSQueues;
+
 enum class QueueEntryType { UNDEFINED, MESSAGE, PACKET };
 
 class CallbackFunctionParameter
@@ -119,7 +119,7 @@ class BidCoSQueue
         std::shared_ptr<int64_t> lastAction;
         bool noSending = false;
         HomeMaticDevice* device = nullptr;
-        std::shared_ptr<Peer> peer;
+        std::shared_ptr<BidCoSPeer> peer;
         std::shared_ptr<CallbackFunctionParameter> callbackParameter;
         delegate<void (std::shared_ptr<CallbackFunctionParameter>)> queueEmptyCallback;
         BidCoSQueueType getQueueType() { return _queueType; }
@@ -135,8 +135,8 @@ class BidCoSQueue
         BidCoSQueueEntry* front() { return &_queue.front(); }
         void pop();
         void popWait(uint32_t waitingTime);
-        bool isEmpty() { return _queue.empty() && (!_pendingQueues || _pendingQueues->empty()); }
-        bool pendingQueuesEmpty() { return (!_pendingQueues || _pendingQueues->empty()); }
+        bool isEmpty();
+        bool pendingQueuesEmpty();
         void clear();
         void send(std::shared_ptr<BidCoSPacket> packet, bool stealthy);
         void keepAlive();

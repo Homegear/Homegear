@@ -28,8 +28,8 @@
  */
 
 #include "COC.h"
-#include "../GD.h"
-#include "../HelperFunctions.h"
+#include "../../../GD/GD.h"
+#include "../BidCoSPacket.h"
 
 namespace PhysicalDevices
 {
@@ -51,15 +51,15 @@ COC::~COC()
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -69,13 +69,13 @@ void COC::sendPacket(std::shared_ptr<Packet> packet)
 	{
 		if(!packet)
 		{
-			HelperFunctions::printWarning("Warning: Packet was nullptr.");
+			Output::printWarning("Warning: Packet was nullptr.");
 			return;
 		}
 		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
 		if(packet->payload()->size() > 54)
 		{
-			if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet larger than 64 bytes. That is not supported.");
+			if(GD::debugLevel >= 2) Output::printError("Tried to send packet larger than 64 bytes. That is not supported.");
 			return;
 		}
 
@@ -83,15 +83,15 @@ void COC::sendPacket(std::shared_ptr<Packet> packet)
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -107,7 +107,7 @@ void COC::openDevice()
 		{
 			if(errno != EEXIST)
 			{
-				HelperFunctions::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				Output::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 
@@ -116,14 +116,14 @@ void COC::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				HelperFunctions::printCritical("COC device is in use: " + _settings->device);
+				Output::printCritical("COC device is in use: " + _settings->device);
 				return;
 			}
 			unlink(_lockfile.c_str());
 			lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 			if(lockfileDescriptor == -1)
 			{
-				HelperFunctions::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				Output::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 		}
@@ -135,7 +135,7 @@ void COC::openDevice()
 		_fileDescriptor = GD::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
 		if(_fileDescriptor->descriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open COC device \"" + _settings->device + "\": " + strerror(errno));
+			Output::printCritical("Couldn't open COC device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 
@@ -143,15 +143,15 @@ void COC::openDevice()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -164,15 +164,15 @@ void COC::closeDevice()
 	}
     catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -204,15 +204,15 @@ void COC::setupDevice()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -223,7 +223,7 @@ std::string COC::readFromDevice()
 		if(_stopped) return "";
 		if(_fileDescriptor->descriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't read from COC device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
+			Output::printCritical("Couldn't read from COC device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
 			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
@@ -251,12 +251,12 @@ std::string COC::readFromDevice()
 					if(!_stopCallbackThread) continue;
 					else return "";
 				case -1:
-					HelperFunctions::printError("Error reading from COC device: " + _settings->device);
+					Output::printError("Error reading from COC device: " + _settings->device);
 					return "";
 				case 1:
 					break;
 				default:
-					HelperFunctions::printError("Error reading from COC device: " + _settings->device);
+					Output::printError("Error reading from COC device: " + _settings->device);
 					return "";
 			}
 
@@ -264,13 +264,13 @@ std::string COC::readFromDevice()
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				HelperFunctions::printError("Error reading from COC device: " + _settings->device);
+				Output::printError("Error reading from COC device: " + _settings->device);
 				return "";
 			}
 			packet.push_back(localBuffer[0]);
 			if(packet.size() > 200)
 			{
-				HelperFunctions::printError("COC was disconnected.");
+				Output::printError("COC was disconnected.");
 				closeDevice();
 				return "";
 			}
@@ -279,11 +279,11 @@ std::string COC::readFromDevice()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return "";
 }
@@ -298,7 +298,7 @@ void COC::writeToDevice(std::string data, bool printSending)
         int32_t i;
         if(GD::debugLevel > 3 && printSending)
         {
-            HelperFunctions::printInfo("Info: Sending: " + data.substr(2, data.size() - 4));
+            Output::printInfo("Info: Sending: " + data.substr(2, data.size() - 4));
         }
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
@@ -318,17 +318,17 @@ void COC::writeToDevice(std::string data, bool printSending)
     catch(const std::exception& ex)
     {
     	_sendMutex.unlock();
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_sendMutex.unlock();
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_sendMutex.unlock();
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -352,19 +352,19 @@ void COC::startListening()
 		writeToDevice("X21\nAr\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		_listenThread = std::thread(&COC::listen, this);
-		HelperFunctions::setThreadPriority(_listenThread.native_handle(), 45);
+		Threads::setThreadPriority(_listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -389,15 +389,15 @@ void COC::stopListening()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -416,24 +416,24 @@ void COC::listen()
         	std::string packetHex = readFromDevice();
         	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + COC "A")
         	{
-				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, HelperFunctions::getTime()));
+				std::shared_ptr<BidCoS::BidCoSPacket> packet(new BidCoS::BidCoSPacket(packetHex, HelperFunctions::getTime()));
 				std::thread t(&COC::callCallback, this, packet);
-				HelperFunctions::setThreadPriority(t.native_handle(), 45);
+				Threads::setThreadPriority(t.native_handle(), 45);
 				t.detach();
         	}
         }
     }
     catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -451,15 +451,15 @@ void COC::setup(int32_t userID, int32_t groupID)
     }
     catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

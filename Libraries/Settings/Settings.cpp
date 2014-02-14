@@ -215,7 +215,6 @@ void Settings::load(std::string filename)
 		fclose(fin);
 
 		Output::setDebugLevel(_debugLevel);
-		Threads::init(_prioritizeThreads);
 	}
 	catch(const std::exception& ex)
     {

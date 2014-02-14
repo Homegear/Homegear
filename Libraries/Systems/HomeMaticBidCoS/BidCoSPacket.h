@@ -51,7 +51,7 @@ class BidCoSPacket : public Packet
         uint8_t messageCounter() { return _messageCounter; }
         void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
         uint8_t messageType() { return _messageType; }
-        uint8_t rssi() { return _rssi; }
+        uint8_t rssiDevice() { return _rssiDevice; }
         virtual std::string hexString();
         virtual std::vector<uint8_t> byteArray();
 
@@ -69,7 +69,7 @@ class BidCoSPacket : public Packet
     private:
         uint8_t _messageCounter = 0;
         uint8_t _messageType = 0;
-        uint8_t _rssi = 0;
+        uint8_t _rssiDevice = 0;
 
         uint8_t getByte(std::string);
         int32_t getInt(std::string);

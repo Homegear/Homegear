@@ -30,7 +30,7 @@
 #ifndef BIDCOSPACKETMANAGER_H_
 #define BIDCOSPACKETMANAGER_H_
 
-class BidCoSPacket;
+#include "../../HelperFunctions/HelperFunctions.h"
 
 #include <iostream>
 #include <string>
@@ -42,6 +42,7 @@ class BidCoSPacket;
 
 namespace BidCoS
 {
+class BidCoSPacket;
 
 class BidCoSPacketInfo
 {

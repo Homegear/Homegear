@@ -32,11 +32,11 @@ ifeq ($(config),debug)
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/libsystems.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
-  INCLUDES  += -IARM\ headers
+  INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -l crypto
+  LDFLAGS   += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -54,11 +54,11 @@ ifeq ($(config),release)
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/libsystems.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
-  INCLUDES  += -IARM\ headers
+  INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -s -l crypto
+  LDFLAGS   += -s
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -76,83 +76,11 @@ ifeq ($(config),profiling)
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/libsystems.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
-  INCLUDES  += -IARM\ headers
+  INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -l crypto -pg
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += 
-  LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),debug_rpi)
-  CC         = arm-linux-gnueabihf-gcc
-  CXX        = arm-linux-gnueabihf-g++
-  OBJDIR     = obj/rpi/Debug/systems
-  TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/libsystems.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
-  INCLUDES  += -IARM\ headers
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -l crypto
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += 
-  LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),release_rpi)
-  CC         = arm-linux-gnueabihf-gcc
-  CXX        = arm-linux-gnueabihf-g++
-  OBJDIR     = obj/rpi/Release/systems
-  TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/libsystems.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
-  INCLUDES  += -IARM\ headers
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -s -l crypto
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += 
-  LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),profiling_rpi)
-  CC         = arm-linux-gnueabihf-gcc
-  CXX        = arm-linux-gnueabihf-g++
-  OBJDIR     = obj/rpi/Profiling/systems
-  TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/libsystems.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
-  INCLUDES  += -IARM\ headers
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -l crypto -pg
+  LDFLAGS   += -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -166,9 +94,11 @@ ifeq ($(config),profiling_rpi)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/SystemInitializer.o \
 	$(OBJDIR)/DeviceTypes.o \
 	$(OBJDIR)/DeviceFamily.o \
+	$(OBJDIR)/Peer.o \
 
 RESOURCES := \
 
@@ -233,6 +163,9 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
+$(OBJDIR)/ServiceMessages.o: Libraries/Systems/General/ServiceMessages.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SystemInitializer.o: Libraries/Systems/General/SystemInitializer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -240,6 +173,9 @@ $(OBJDIR)/DeviceTypes.o: Libraries/Systems/General/DeviceTypes.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/DeviceFamily.o: Libraries/Systems/General/DeviceFamily.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Peer.o: Libraries/Systems/General/Peer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

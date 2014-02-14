@@ -28,7 +28,7 @@
  */
 
 #include "SystemInitializer.h"
-//Only in this cpp-File we include the family specific header files here to hide them from the rest of the program
+//Only in this cpp file we include the family specific header files to hide them from the rest of the program
 #include "../HomeMaticBidCoS/BidCoS.h"
 #include "../HomeMaticWired/HMWired.h"
 #include "../../GD/GD.h"

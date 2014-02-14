@@ -30,6 +30,9 @@
 #ifndef COC_H
 #define COC_H
 
+#include "../../../HelperFunctions/HelperFunctions.h"
+#include "../../../PhysicalDevices/PhysicalDevice.h"
+
 #include <thread>
 #include <iostream>
 #include <fstream>
@@ -44,8 +47,6 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <signal.h>
-
-#include "../../../PhysicalDevices/PhysicalDevice.h"
 
 namespace PhysicalDevices
 {

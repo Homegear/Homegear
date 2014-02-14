@@ -28,9 +28,9 @@ ifndef RESCOMP
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = obj/Debug/encoding
+  OBJDIR     = obj/Debug/bidcos
   TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/libencoding.a
+  TARGET     = $(TARGETDIR)/libbidcos.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
@@ -50,9 +50,9 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = obj/Release/encoding
+  OBJDIR     = obj/Release/bidcos
   TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/libencoding.a
+  TARGET     = $(TARGETDIR)/libbidcos.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
@@ -72,9 +72,9 @@ ifeq ($(config),release)
 endif
 
 ifeq ($(config),profiling)
-  OBJDIR     = obj/Profiling/encoding
+  OBJDIR     = obj/Profiling/bidcos
   TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/libencoding.a
+  TARGET     = $(TARGETDIR)/libbidcos.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
@@ -94,13 +94,24 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/XMLRPCEncoder.o \
-	$(OBJDIR)/RPCHeader.o \
-	$(OBJDIR)/RPCEncoder.o \
-	$(OBJDIR)/RPCDecoder.o \
-	$(OBJDIR)/BinaryDecoder.o \
-	$(OBJDIR)/XMLRPCDecoder.o \
-	$(OBJDIR)/BinaryEncoder.o \
+	$(OBJDIR)/PendingBidCoSQueues.o \
+	$(OBJDIR)/BidCoS.o \
+	$(OBJDIR)/BidCoSMessage.o \
+	$(OBJDIR)/BidCoSQueueManager.o \
+	$(OBJDIR)/BidCoSQueue.o \
+	$(OBJDIR)/HomeMaticDevice.o \
+	$(OBJDIR)/BidCoSPeer.o \
+	$(OBJDIR)/BidCoSPacketManager.o \
+	$(OBJDIR)/BidCoSPacket.o \
+	$(OBJDIR)/BidCoSMessages.o \
+	$(OBJDIR)/HM-CC-VD.o \
+	$(OBJDIR)/HM-LC-SwX-FM.o \
+	$(OBJDIR)/HomeMaticCentral.o \
+	$(OBJDIR)/HM-SD.o \
+	$(OBJDIR)/HM-CC-TC.o \
+	$(OBJDIR)/TICC1100.o \
+	$(OBJDIR)/COC.o \
+	$(OBJDIR)/CUL.o \
 
 RESOURCES := \
 
@@ -118,7 +129,7 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
 
 $(TARGET): $(GCH) $(OBJECTS) $(LDDEPS) $(RESOURCES)
-	@echo Linking encoding
+	@echo Linking bidcos
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -139,7 +150,7 @@ else
 endif
 
 clean:
-	@echo Cleaning encoding
+	@echo Cleaning bidcos
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)
@@ -165,25 +176,58 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/XMLRPCEncoder.o: Libraries/Encoding/XMLRPCEncoder.cpp
+$(OBJDIR)/PendingBidCoSQueues.o: Libraries/Systems/HomeMaticBidCoS/PendingBidCoSQueues.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCHeader.o: Libraries/Encoding/RPCHeader.cpp
+$(OBJDIR)/BidCoS.o: Libraries/Systems/HomeMaticBidCoS/BidCoS.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCEncoder.o: Libraries/Encoding/RPCEncoder.cpp
+$(OBJDIR)/BidCoSMessage.o: Libraries/Systems/HomeMaticBidCoS/BidCoSMessage.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCDecoder.o: Libraries/Encoding/RPCDecoder.cpp
+$(OBJDIR)/BidCoSQueueManager.o: Libraries/Systems/HomeMaticBidCoS/BidCoSQueueManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BinaryDecoder.o: Libraries/Encoding/BinaryDecoder.cpp
+$(OBJDIR)/BidCoSQueue.o: Libraries/Systems/HomeMaticBidCoS/BidCoSQueue.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/XMLRPCDecoder.o: Libraries/Encoding/XMLRPCDecoder.cpp
+$(OBJDIR)/HomeMaticDevice.o: Libraries/Systems/HomeMaticBidCoS/HomeMaticDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BinaryEncoder.o: Libraries/Encoding/BinaryEncoder.cpp
+$(OBJDIR)/BidCoSPeer.o: Libraries/Systems/HomeMaticBidCoS/BidCoSPeer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/BidCoSPacketManager.o: Libraries/Systems/HomeMaticBidCoS/BidCoSPacketManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/BidCoSPacket.o: Libraries/Systems/HomeMaticBidCoS/BidCoSPacket.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/BidCoSMessages.o: Libraries/Systems/HomeMaticBidCoS/BidCoSMessages.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HM-CC-VD.o: Libraries/Systems/HomeMaticBidCoS/Devices/HM-CC-VD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HM-LC-SwX-FM.o: Libraries/Systems/HomeMaticBidCoS/Devices/HM-LC-SwX-FM.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HomeMaticCentral.o: Libraries/Systems/HomeMaticBidCoS/Devices/HomeMaticCentral.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HM-SD.o: Libraries/Systems/HomeMaticBidCoS/Devices/HM-SD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HM-CC-TC.o: Libraries/Systems/HomeMaticBidCoS/Devices/HM-CC-TC.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/TICC1100.o: Libraries/Systems/HomeMaticBidCoS/PhysicalDevices/TICC1100.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/COC.o: Libraries/Systems/HomeMaticBidCoS/PhysicalDevices/COC.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/CUL.o: Libraries/Systems/HomeMaticBidCoS/PhysicalDevices/CUL.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

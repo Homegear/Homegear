@@ -40,12 +40,11 @@ class LogicalDeviceType
 {
 public:
 	LogicalDeviceType() {}
-	LogicalDeviceType(DeviceFamilies family, uint32_t type, std::string name);
+	LogicalDeviceType(DeviceFamilies family, uint32_t type);
 	virtual ~LogicalDeviceType() {}
 
 	DeviceFamilies family() { return _family; }
 	uint32_t type() { return _type; }
-	std::string name() { return _name; }
 
 	bool operator==(LogicalDeviceType& other);
 	bool operator!=(LogicalDeviceType& other);
@@ -53,7 +52,6 @@ public:
 	bool isSwitch();
 	bool isDimmer();
 private:
-	std::string _name;
 	DeviceFamilies _family = DeviceFamilies::none;
 	uint32_t _type = 0xFFFFFFFF;
 };

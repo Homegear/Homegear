@@ -31,10 +31,12 @@
 
 namespace HMWired {
 
-HMWiredPeer::HMWiredPeer()
+HMWiredPeer::HMWiredPeer(uint32_t parentID, bool centralFeatures) : Peer(parentID, centralFeatures)
 {
+}
 
-
+HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures) : Peer(id, address, serialNumber, parentID, centralFeatures)
+{
 }
 
 HMWiredPeer::~HMWiredPeer()

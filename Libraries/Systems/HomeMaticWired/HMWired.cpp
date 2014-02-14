@@ -31,6 +31,8 @@
 #include "PhysicalDevices/CRC_RS485.h"
 #include "HMWiredDeviceTypes.h"
 #include "Devices/HMWiredCentral.h"
+#include "Devices/HMWired-SD.h"
+#include "../../GD/GD.h"
 
 namespace HMWired
 {
@@ -172,7 +174,8 @@ void HMWired::load(bool version_0_0_7)
 {
 	try
 	{
-		DataTable rows = GD::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticBidCoS));
+		_devices.clear();
+		DataTable rows = GD::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticWired));
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
@@ -181,25 +184,25 @@ void HMWired::load(bool version_0_0_7)
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
 
-			std::shared_ptr<HMWiredDevice> device;
+			std::shared_ptr<LogicalDevice> device;
 			switch((DeviceType)deviceType)
 			{
 			case DeviceType::HMWIREDCENTRAL:
-				_central = std::shared_ptr<HMWiredCentral>(new HMWiredCentral(deviceType, serialNumber, address));
+				_central = std::shared_ptr<HMWiredCentral>(new HMWiredCentral(deviceID, serialNumber, address));
 				device = _central;
 				break;
 			case DeviceType::HMWIREDSD:
 				spyDeviceExists = true;
-				device = std::shared_ptr<LogicalDevice>(new HMWired_SD(deviceType, serialNumber, address));
+				device = std::shared_ptr<LogicalDevice>(new HMWired_SD(deviceID, serialNumber, address));
 				break;
 			default:
 				break;
 			}
-			device->load();
-			device->loadPeers(version_0_0_7);
 
 			if(device)
 			{
+				device->load();
+				device->loadPeers(version_0_0_7);
 				_devicesMutex.lock();
 				_devices.push_back(device);
 				_devicesMutex.unlock();
@@ -210,9 +213,6 @@ void HMWired::load(bool version_0_0_7)
 			if(!_central) createCentral();
 			if(!spyDeviceExists) createSpyDevice();
 		}
-
-		std::shared_ptr<LogicalDevice> device;
-
 	}
 	catch(const std::exception& ex)
 	{
@@ -295,11 +295,12 @@ std::string HMWired::handleCLICommand(std::string& command)
 			if(!_currentDevice) return "No device selected.\n";
 			return _currentDevice->handleCLICommand(command);
 		}
-		else if(command == "devices help")
+		else if(command == "devices help" || command == "help")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "devices list\t\tList all HomeMatic BidCoS devices" << std::endl;
+			stringStream << "unselect\t\tUnselect this device family" << std::endl;
+			stringStream << "devices list\t\tList all HomeMatic Wired devices" << std::endl;
 			stringStream << "devices create\t\tCreate a virtual HomeMatic Wired device" << std::endl;
 			stringStream << "devices remove\t\tRemove a virtual HomeMatic Wired device" << std::endl;
 			stringStream << "devices select\t\tSelect a virtual HomeMatic Wired device" << std::endl;
@@ -311,7 +312,7 @@ std::string HMWired::handleCLICommand(std::string& command)
 			std::vector<std::shared_ptr<LogicalDevice>> devices;
 			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 			{
-				stringStream << "Address: 0x" << std::hex << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (*i)->getDeviceType() << std::endl << std::dec;
+				stringStream << "Address: 0x" << std::hex << std::setw(8) << std::setfill('0') << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (*i)->getDeviceType() << std::endl << std::dec;
 			}
 			_devicesMutex.unlock();
 			return stringStream.str();
@@ -363,7 +364,7 @@ std::string HMWired::handleCLICommand(std::string& command)
 			switch(deviceType)
 			{
 			case (uint32_t)DeviceType::HMWIREDCENTRAL:
-				if(_central) stringStream << "Cannot create more than one HomeMatic BidCoS central device." << std::endl;
+				if(_central) stringStream << "Cannot create more than one HomeMatic Wired central device." << std::endl;
 				else
 				{
 					add(std::shared_ptr<LogicalDevice>(new HMWiredCentral(0, serialNumber, address)));

@@ -30,13 +30,16 @@
 #ifndef HMWIREDPEER_H_
 #define HMWIREDPEER_H_
 
+#include "../General/Peer.h"
+
 namespace HMWired
 {
 
-class HMWiredPeer
+class HMWiredPeer : public Peer
 {
 public:
-	HMWiredPeer();
+	HMWiredPeer(uint32_t parentID, bool centralFeatures);
+	HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
 	virtual ~HMWiredPeer();
 };
 

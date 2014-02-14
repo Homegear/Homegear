@@ -28,14 +28,15 @@
  */
 
 #include "HM-CC-VD.h"
-#include "../../HelperFunctions.h"
-#include "../../GD.h"
+#include "../../../GD/GD.h"
 
+namespace BidCoS
+{
 HM_CC_VD::HM_CC_VD(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
 {
 	try
 	{
-		_deviceType = GD::deviceTypes.get(DeviceID::HMCCVD);
+		_deviceType = (uint32_t)DeviceType::HMCCVD;
 		_firmwareVersion = 0x20;
 		_deviceClass = 0x58;
 		_channelMin = 0x01;
@@ -51,15 +52,15 @@ HM_CC_VD::HM_CC_VD(uint32_t deviceID, std::string serialNumber, int32_t address)
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -93,15 +94,15 @@ void HM_CC_VD::saveVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -134,15 +135,15 @@ void HM_CC_VD::loadVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 }
@@ -157,15 +158,15 @@ void HM_CC_VD::setUpBidCoSMessages()
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -179,11 +180,11 @@ void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<Bid
 	try
 	{
 		HomeMaticDevice::handleDutyCyclePacket(messageCounter, packet);
-		std::shared_ptr<Peer> peer = getPeer(packet->senderAddress());
-		if(!peer || peer->getDeviceType().id() != DeviceID::HMCCTC) return;
+		std::shared_ptr<BidCoSPeer> peer = getPeer(packet->senderAddress());
+		if(!peer || peer->getDeviceType().type() != (uint32_t)DeviceType::HMCCTC) return;
 		int32_t oldValveState = _valveState;
 		_valveState = (packet->payload()->at(1) * 100) / 256;
-		HelperFunctions::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": New valve state " + std::to_string(_valveState));
+		Output::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": New valve state " + std::to_string(_valveState));
 		if(packet->destinationAddress() != _address) return; //Unidirectional packet (more than three valve drives connected to one room thermostat) or packet to other valve drive
 		sendDutyCycleResponse(packet->senderAddress(), oldValveState, packet->payload()->at(0));
 		if(_justPairedToOrThroughCentral)
@@ -197,15 +198,15 @@ void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<Bid
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -213,7 +214,7 @@ void HM_CC_VD::sendDutyCycleResponse(int32_t destinationAddress, unsigned char o
 {
 	try
 	{
-		std::shared_ptr<Peer> peer = getPeer(destinationAddress);
+		std::shared_ptr<BidCoSPeer> peer = getPeer(destinationAddress);
 		if(!peer) return;
 		HomeMaticDevice::sendDutyCycleResponse(destinationAddress);
 
@@ -255,15 +256,15 @@ void HM_CC_VD::sendDutyCycleResponse(int32_t destinationAddress, unsigned char o
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -292,46 +293,46 @@ void HM_CC_VD::sendConfigParamsType2(int32_t messageCounter, int32_t destination
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-std::shared_ptr<Peer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
+std::shared_ptr<BidCoSPeer> HM_CC_VD::createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
 {
 	try
 	{
-		std::shared_ptr<Peer> peer(new Peer(_deviceID, false));
+		std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(_deviceID, false));
 		peer->setAddress(address);
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);
 		peer->setMessageCounter(0);
 		peer->setRemoteChannel(remoteChannel);
-		if(deviceType.id() == DeviceID::HMCCTC || deviceType.id() == DeviceID::UNKNOWN) peer->setLocalChannel(1); else peer->setLocalChannel(0);
+		if(deviceType.type() == (uint32_t)DeviceType::HMCCTC || deviceType.type() == (uint32_t)DeviceType::none) peer->setLocalChannel(1); else peer->setLocalChannel(0);
 		peer->setSerialNumber(serialNumber);
 		if(save) peer->save(true, true, false);
 		return peer;
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<Peer>();
+    return std::shared_ptr<BidCoSPeer>();
 }
 
 void HM_CC_VD::reset()
@@ -345,15 +346,15 @@ void HM_CC_VD::reset()
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -370,24 +371,24 @@ void HM_CC_VD::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 			_peersMutex.unlock();
 			return;
 		}
-		_peers[address]->setDeviceType(GD::deviceTypes.get(DeviceID::HMCCTC));
+		_peers[address]->setDeviceType(LogicalDeviceType(DeviceFamilies::HomeMaticBidCoS, (uint32_t)DeviceType::HMCCTC));
 		_peersMutex.unlock();
 		getPeer(address)->save(true, true, false);
 	}
 	catch(const std::exception& ex)
     {
 		_peersMutex.unlock();
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_peersMutex.unlock();
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_peersMutex.unlock();
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -407,4 +408,5 @@ void HM_CC_VD::setAdjustingRangeTooSmall(bool adjustingRangeTooSmall)
 {
     _adjustingRangeTooSmall = adjustingRangeTooSmall;
     sendDutyCycleResponse(0x1D8DDD, 0x00, 0x00);
+}
 }

@@ -32,11 +32,11 @@ ifeq ($(config),debug)
   TARGETDIR  = bin/Debug
   TARGET     = $(TARGETDIR)/homegear
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
-  INCLUDES  += -IARM\ headers
+  INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -Llib/Debug -l crypto -l pthread -l sqlite3 -l readline -l ssl -l types
+  LDFLAGS   += -Llib/Debug -l bidcos -l hmwired -l rpc -l pthread -l sqlite3 -l readline -l ssl -l output -l helperfunctions -l physicaldevices -l types -l logicaldevices -l threads -l database -l filedescriptormanager -l encoding -l user -l settings -l metadata -l cli -l events -l gd
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -54,11 +54,11 @@ ifeq ($(config),release)
   TARGETDIR  = bin/Release
   TARGET     = $(TARGETDIR)/homegear
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
-  INCLUDES  += -IARM\ headers
+  INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -Llib/Release -s -l crypto -l pthread -l sqlite3 -l readline -l ssl -l types
+  LDFLAGS   += -Llib/Release -s -l bidcos -l hmwired -l rpc -l pthread -l sqlite3 -l readline -l ssl -l output -l helperfunctions -l physicaldevices -l types -l logicaldevices -l threads -l database -l filedescriptormanager -l encoding -l user -l settings -l metadata -l cli -l events -l gd
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -76,83 +76,11 @@ ifeq ($(config),profiling)
   TARGETDIR  = bin/Profiling
   TARGET     = $(TARGETDIR)/homegear
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
-  INCLUDES  += -IARM\ headers
+  INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -Llib/Profiling -l crypto -l pthread -l sqlite3 -l readline -l ssl -l types -pg
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += 
-  LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),debug_rpi)
-  CC         = arm-linux-gnueabihf-gcc
-  CXX        = arm-linux-gnueabihf-g++
-  OBJDIR     = obj/rpi/Debug/homegear
-  TARGETDIR  = bin/Debug
-  TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
-  INCLUDES  += -IARM\ headers
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -Llib/Debug -l crypto -l pthread -l sqlite3 -l readline -l ssl -l types
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += 
-  LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),release_rpi)
-  CC         = arm-linux-gnueabihf-gcc
-  CXX        = arm-linux-gnueabihf-g++
-  OBJDIR     = obj/rpi/Release/homegear
-  TARGETDIR  = bin/Release
-  TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
-  INCLUDES  += -IARM\ headers
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -Llib/Release -s -l crypto -l pthread -l sqlite3 -l readline -l ssl -l types
-  RESFLAGS  += $(DEFINES) $(INCLUDES) 
-  LIBS      += 
-  LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
-  define PREBUILDCMDS
-  endef
-  define PRELINKCMDS
-  endef
-  define POSTBUILDCMDS
-  endef
-endif
-
-ifeq ($(config),profiling_rpi)
-  CC         = arm-linux-gnueabihf-gcc
-  CXX        = arm-linux-gnueabihf-g++
-  OBJDIR     = obj/rpi/Profiling/homegear
-  TARGETDIR  = bin/Profiling
-  TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
-  INCLUDES  += -IARM\ headers
-  CPPFLAGS  += -MMD -D_GLIBCXX_USE_NANOSLEEP -D_FORTIFY_SOURCE=2 -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
-  CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -LARM\ libraries -Llib/Profiling -l crypto -l pthread -l sqlite3 -l readline -l ssl -l types -pg
+  LDFLAGS   += -Llib/Profiling -l bidcos -l hmwired -l rpc -l pthread -l sqlite3 -l readline -l ssl -l output -l helperfunctions -l physicaldevices -l types -l logicaldevices -l threads -l database -l filedescriptormanager -l encoding -l user -l settings -l metadata -l cli -l events -l gd -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -166,8 +94,12 @@ ifeq ($(config),profiling_rpi)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/main.o \
+	$(OBJDIR)/ServiceMessages.o \
+	$(OBJDIR)/SystemInitializer.o \
+	$(OBJDIR)/DeviceTypes.o \
+	$(OBJDIR)/DeviceFamily.o \
+	$(OBJDIR)/Peer.o \
 
 RESOURCES := \
 
@@ -232,10 +164,22 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/ServiceMessages.o: ServiceMessages.cpp
+$(OBJDIR)/main.o: main.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/main.o: main.cpp
+$(OBJDIR)/ServiceMessages.o: Libraries/Systems/General/ServiceMessages.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SystemInitializer.o: Libraries/Systems/General/SystemInitializer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/DeviceTypes.o: Libraries/Systems/General/DeviceTypes.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/DeviceFamily.o: Libraries/Systems/General/DeviceFamily.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Peer.o: Libraries/Systems/General/Peer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

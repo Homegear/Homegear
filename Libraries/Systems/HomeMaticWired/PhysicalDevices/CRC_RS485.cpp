@@ -28,9 +28,8 @@
  */
 
 #include "CRC_RS485.h"
-#include "../GD.h"
-#include "../HelperFunctions.h"
-#include "../HomeMaticWired/HMWiredPacket.h"
+#include "../../../GD/GD.h"
+#include "../HMWiredPacket.h"
 
 namespace PhysicalDevices
 {
@@ -52,15 +51,15 @@ CRCRS485::~CRCRS485()
 	}
     catch(const std::exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -70,14 +69,14 @@ void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
 	{
 		if(!packet)
 		{
-			HelperFunctions::printWarning("Warning: Packet was nullptr.");
+			Output::printWarning("Warning: Packet was nullptr.");
 			return;
 		}
 		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
 		_lastAction = HelperFunctions::getTime();
 		if(packet->payload()->size() > 128)
 		{
-			if(GD::debugLevel >= 2) HelperFunctions::printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
+			if(GD::debugLevel >= 2) Output::printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
 			return;
 		}
 
@@ -86,15 +85,15 @@ void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -110,7 +109,7 @@ void CRCRS485::openDevice()
 		{
 			if(errno != EEXIST)
 			{
-				HelperFunctions::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				Output::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 
@@ -119,14 +118,14 @@ void CRCRS485::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				HelperFunctions::printCritical("CRC RS485 device is in use: " + _settings->device);
+				Output::printCritical("CRC RS485 device is in use: " + _settings->device);
 				return;
 			}
 			unlink(_lockfile.c_str());
 			lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 			if(lockfileDescriptor == -1)
 			{
-				HelperFunctions::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				Output::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 		}
@@ -139,7 +138,7 @@ void CRCRS485::openDevice()
 
 		if(_fileDescriptor->descriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't open CRC RS485 device \"" + _settings->device + "\": " + strerror(errno));
+			Output::printCritical("Couldn't open CRC RS485 device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 
@@ -147,15 +146,15 @@ void CRCRS485::openDevice()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -168,15 +167,15 @@ void CRCRS485::closeDevice()
 	}
     catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -194,15 +193,15 @@ void CRCRS485::setup(int32_t userID, int32_t groupID)
 	}
     catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -234,15 +233,15 @@ void CRCRS485::setupDevice()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -253,7 +252,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 		if(_stopped) return std::vector<uint8_t>();
 		if(_fileDescriptor->descriptor == -1)
 		{
-			HelperFunctions::printCritical("Couldn't read from CRC RS485 device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
+			Output::printCritical("Couldn't read from CRC RS485 device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
 			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
@@ -298,12 +297,12 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			}
 			else if(i == -1)
 			{
-					HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
+					Output::printError("Error reading from CRC RS485 device: " + _settings->device);
 					break;
 			}
 			else if(i != 1)
 			{
-					HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
+					Output::printError("Error reading from CRC RS485 device: " + _settings->device);
 					break;
 			}
 			if(!_sending) _sendMutex.try_lock(); //Don't change to "lock", because it is called for each received byte!
@@ -316,14 +315,14 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				HelperFunctions::printError("Error reading from CRC RS485 device: " + _settings->device);
+				Output::printError("Error reading from CRC RS485 device: " + _settings->device);
 				break;
 			}
 			_lastAction = HelperFunctions::getTime();
 			if(!packet.empty() && (localBuffer[0] == 0xFD || localBuffer[0] == 0xFE))
 			{
 				_firstByte = localBuffer[0];
-				HelperFunctions::printWarning("Invalid byte received from CRC RS485 device (collision?): 0x" + HelperFunctions::getHexString(localBuffer[0], 2));
+				Output::printWarning("Invalid byte received from CRC RS485 device (collision?): 0x" + HelperFunctions::getHexString(localBuffer[0], 2));
 				break;
 			}
 			if(receivingSentPacket) escapedPacket.push_back(localBuffer[0]);
@@ -359,11 +358,11 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _sendingMutex.unlock();
     _sendMutex.unlock();
@@ -384,7 +383,7 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
         {
         	int32_t bytesWritten = 0;
 			_receivedSentPacket.clear();
-			if(GD::debugLevel > 3 && printPacket) HelperFunctions::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
+			if(GD::debugLevel > 3 && printPacket) Output::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
 			while(bytesWritten < (signed)packet.size())
 			{
 				i = write(_fileDescriptor->descriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
@@ -398,26 +397,26 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			_sendingMutex.try_lock_for(std::chrono::milliseconds(200));
 			if(_receivedSentPacket == packet) break;
-			else HelperFunctions::printWarning("Error sending HomeMatic Wired packet: Collision (received packet was: " + HelperFunctions::getHexString(_receivedSentPacket) + ")");
+			else Output::printWarning("Error sending HomeMatic Wired packet: Collision (received packet was: " + HelperFunctions::getHexString(_receivedSentPacket) + ")");
 			_sendingMutex.unlock();
         }
-        if(j == 5) HelperFunctions::printError("Error sending HomeMatic Wired packet: Giving up sending after 5 tries.");
+        if(j == 5) Output::printError("Error sending HomeMatic Wired packet: Giving up sending after 5 tries.");
         else _lastPacketSent = HelperFunctions::getTimeSeconds();
     }
     catch(const std::exception& ex)
     {
     	_sendingMutex.unlock();
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_sendingMutex.unlock();
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_sendingMutex.unlock();
-    	HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _sending = false;
     _sendMutex.unlock();
@@ -438,19 +437,19 @@ void CRCRS485::startListening()
 		closeGPIO(2);
 		_stopped = false;
 		_listenThread = std::thread(&CRCRS485::listen, this);
-		HelperFunctions::setThreadPriority(_listenThread.native_handle(), 45);
+		Threads::setThreadPriority(_listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -470,15 +469,15 @@ void CRCRS485::stopListening()
 	}
 	catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -500,22 +499,22 @@ void CRCRS485::listen()
 			if(packet->type() != HMWired::HMWiredPacketType::none)
 			{
 				std::thread t(&CRCRS485::callCallback, this, packet);
-				HelperFunctions::setThreadPriority(t.native_handle(), 45);
+				Threads::setThreadPriority(t.native_handle(), 45);
 				t.detach();
 			}
         }
     }
     catch(const std::exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        HelperFunctions::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

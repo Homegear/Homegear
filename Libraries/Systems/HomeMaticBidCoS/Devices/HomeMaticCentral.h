@@ -35,6 +35,7 @@
 #include "HM-LC-SwX-FM.h"
 #include "../HomeMaticDevice.h"
 #include "../../../Types/RPCVariable.h"
+#include "../../../Metadata/Metadata.h"
 
 #include <memory>
 #include <mutex>
@@ -61,20 +62,20 @@ public:
 	void setUpBidCoSMessages();
 	void setUpConfig() {}
 	void deletePeer(int32_t address);
-	void addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel, uint32_t teamChannel, std::string teamSerialNumber);
-	void addPeerToTeam(std::shared_ptr<Peer> peer, int32_t channel, int32_t address, uint32_t teamChannel);
-	void removePeerFromTeam(std::shared_ptr<Peer> peer);
-	void resetTeam(std::shared_ptr<Peer> peer, uint32_t channel);
+	void addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t channel, uint32_t teamChannel, std::string teamSerialNumber);
+	void addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t channel, int32_t address, uint32_t teamChannel);
+	void removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer);
+	void resetTeam(std::shared_ptr<BidCoSPeer> peer, uint32_t channel);
 	std::string handleCLICommand(std::string command);
 	virtual void enqueuePackets(int32_t deviceAddress, std::shared_ptr<BidCoSQueue> packets, bool pushPendingBidCoSQueues = false);
 	virtual void enqueuePendingQueues(int32_t deviceAddress);
 	int32_t getUniqueAddress(int32_t seed);
 	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
 	void addPeersToVirtualDevices();
-	void addHomegearFeatures(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
-	void addHomegearFeaturesHMCCVD(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
-	void addHomegearFeaturesRemote(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
-	void addHomegearFeaturesMotionDetector(std::shared_ptr<Peer> peer, int32_t channel, bool pushPendingBidCoSQueues);
+	void addHomegearFeatures(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues);
+	void addHomegearFeaturesHMCCVD(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues);
+	void addHomegearFeaturesRemote(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues);
+	void addHomegearFeaturesMotionDetector(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues);
 
 	void handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
@@ -110,7 +111,7 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on, int32_t duration = 60, bool debugOutput = true);
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 protected:
-	std::shared_ptr<Peer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
+	std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
 	virtual void worker();
 private:
 	uint32_t _timeLeftInPairingMode = 0;

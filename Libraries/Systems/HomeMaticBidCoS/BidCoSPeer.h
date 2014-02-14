@@ -27,8 +27,17 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef PEER_H
-#define PEER_H
+#ifndef BIDCOSPEER_H
+#define BIDCOSPEER_H
+
+#include "../General/Peer.h"
+#include "BidCoSDeviceTypes.h"
+#include "../delegate.hpp"
+#include "../../RPC/Device.h"
+#include "../../Types/RPCVariable.h"
+#include "../General/ServiceMessages.h"
+#include "../../HelperFunctions/HelperFunctions.h"
+#include "BidCoSPacket.h"
 
 #include <iomanip>
 #include <string>
@@ -40,16 +49,12 @@
 #include <mutex>
 #include <list>
 
-#include "../delegate.hpp"
-#include "../../RPC/Device.h"
-#include "../../Types/RPCVariable.h"
-#include "../../../ServiceMessages.h"
-
 namespace BidCoS
 {
 class PendingBidCoSQueues;
 class CallbackFunctionParameter;
 class HomeMaticDevice;
+class HomeMaticCentral;
 class BidCoSQueue;
 class BidCoSMessages;
 
@@ -99,34 +104,13 @@ public:
 	std::vector<uint8_t> data;
 };
 
-class RPCConfigurationParameter
-{
-public:
-	RPCConfigurationParameter() {}
-	virtual ~RPCConfigurationParameter() {}
-
-	uint32_t databaseID = 0;
-	std::shared_ptr<RPC::Parameter> rpcParameter;
-	std::vector<uint8_t> data;
-	std::vector<uint8_t> partialData;
-};
-
-class Peer
+class BidCoSPeer : public Peer
 {
     public:
-		Peer(uint32_t parentID, bool centralFeatures);
-		Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
-		virtual ~Peer();
+		BidCoSPeer(uint32_t parentID, bool centralFeatures);
+		BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
+		virtual ~BidCoSPeer();
 		void dispose();
-
-		//In table peers:
-		int32_t getParentID() { return _parentID; }
-		int32_t getAddress() { return _address; }
-		uint64_t getID() { return _peerID; }
-		void setAddress(int32_t value) { _address = value; if(_peerID > 0) save(true, false, false); }
-		std::string getSerialNumber() { return _serialNumber; }
-		void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 20) return; _serialNumber = serialNumber; if(_peerID > 0) save(true, false, false); }
-		//End
 
 		//In table variables:
 		int32_t getFirmwareVersion() { return _firmwareVersion; }
@@ -136,7 +120,7 @@ class Peer
 		int32_t getLocalChannel() { return _localChannel; }
 		void setLocalChannel(int32_t value) { _localChannel = value; saveVariable(2, value); }
 		LogicalDeviceType getDeviceType() { return _deviceType; }
-		void setDeviceType(LogicalDeviceType value) { _deviceType = value; if(_deviceType.id() == DeviceID::UNKNOWN) { int64_t deviceID = (((int64_t)_deviceType.type()) << 32) + (int64_t)DeviceID::UNKNOWN; saveVariable(3, deviceID); } else saveVariable(3, (int32_t)value.id()); }
+		void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(3, (int32_t)_deviceType.type()); }
 		int32_t getCountFromSysinfo() { return _countFromSysinfo; }
 		void setCountFromSysinfo(int32_t value) { _countFromSysinfo = value; saveVariable(4, value); }
 		int32_t getMessageCounter() { return _messageCounter; }
@@ -160,10 +144,6 @@ class Peer
         void setCentralFeatures(bool value) { _centralFeatures = value; }
 
         std::unordered_map<int32_t, int32_t> config;
-        std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
-        std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> valuesCentral;
-        std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>> linksCentral;
-        std::shared_ptr<RPC::Device> rpcDevice;
 
         std::vector<std::pair<std::string, uint32_t>> teamChannels;
 
@@ -175,8 +155,8 @@ class Peer
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel, bool useConfigFunction);
         void applyConfigFunction(int32_t channel, int32_t address, int32_t remoteChannel);
-        bool load(HomeMaticDevice* device);
-        void save(bool savePeer, bool saveVariables, bool saveCentralConfig);
+        virtual bool load(LogicalDevice* device);
+        virtual void save(bool savePeer, bool saveVariables, bool saveCentralConfig);
         void serializePeers(std::vector<uint8_t>& encodedData);
         void unserializePeers(std::shared_ptr<std::vector<char>> serializedData);
         void serializeNonCentralConfig(std::vector<uint8_t>& encodedData);
@@ -196,13 +176,11 @@ class Peer
         void saveVariablesToReset();
         void saveServiceMessages();
         void savePendingQueues();
-        void saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress = 0, uint32_t remoteChannel = 0);
-        void saveParameter(uint32_t parameterID, std::vector<uint8_t>& value);
         void deleteFromDatabase();
         void deletePairedVirtualDevice(int32_t address);
         void deletePairedVirtualDevices();
         bool hasTeam() { return !_team.serialNumber.empty(); }
-        bool isTeam() { return _serialNumber.front() == '*'; }
+        virtual bool isTeam() { return _serialNumber.front() == '*'; }
         bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
         void addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer);
         std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address, int32_t remoteChannel = -1);
@@ -211,7 +189,9 @@ class Peer
         std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel = -1);
         void removePeer(int32_t channel, int32_t address, int32_t remoteChannel);
         void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
-        void setRSSI(uint8_t rssi);
+        void setRSSIDevice(uint8_t rssi);
+        virtual bool pendingQueuesEmpty();
+        virtual void enqueuePendingQueues();
 
         void handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, std::string& frameID, uint32_t channel);
         void getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector<FrameValues>& frameValue);
@@ -220,8 +200,6 @@ class Peer
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
         int32_t getChannelGroupedWith(int32_t channel);
         std::string printConfig();
-        void setLastPacketReceived();
-        uint32_t getLastPacketReceived() { return _lastPacketReceived; }
 
         std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
         std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);
@@ -237,22 +215,11 @@ class Peer
         std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
-        uint64_t _peerID = 0;
         std::map<uint32_t, uint32_t> _variableDatabaseIDs;
-        bool _disposing = false;
-        bool _centralFeatures = false;
-        uint32_t _lastPacketReceived = 0;
-        uint32_t _lastRSSI = 0;
-        std::mutex _databaseMutex;
+        uint32_t _lastRSSIDevice = 0;
         std::mutex _variablesToResetMutex;
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
-        //std::map<std::string, uint32_t> _resendCounter;
-
-        //In table peers:
-        uint32_t _parentID = 0;
-        int32_t _address = 0;
-        std::string _serialNumber;
-        //End
+        std::shared_ptr<HomeMaticCentral> _central;
 
         //In table variables:
         int32_t _firmwareVersion = 0;
@@ -266,6 +233,9 @@ class Peer
 		BasicPeer _team;
 		std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
 		//End
+
+		std::shared_ptr<HomeMaticCentral> getCentral();
+		std::shared_ptr<HomeMaticDevice> getDevice(int32_t address);
 };
 }
-#endif // PEER_H
+#endif // BIDCOSPEER_H

@@ -30,6 +30,7 @@
 #ifndef CRC_RS485_H
 #define CRC_RS485_H
 
+#include "../../../HelperFunctions/HelperFunctions.h"
 #include "../../../PhysicalDevices/PhysicalDevice.h"
 
 #include <thread>

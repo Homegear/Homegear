@@ -29,6 +29,8 @@
 
 #include "HelperFunctions.h"
 
+bool HelperFunctions::_isBigEndian;
+
 HelperFunctions::~HelperFunctions() {
 
 }
@@ -38,7 +40,7 @@ void HelperFunctions::init()
 	checkEndianness();
 }
 
-std::string Output::getTimeString(int64_t time)
+std::string HelperFunctions::getTimeString(int64_t time)
 {
 	const char timeFormat[] = "%x %X";
 	std::time_t t;
@@ -491,4 +493,5 @@ std::string HelperFunctions::getDeviceFamilyName(DeviceFamilies family)
 	case DeviceFamilies::HomeMaticWired:
 		return "HomeMatic Wired";
 	}
+	return "";
 }

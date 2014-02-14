@@ -28,9 +28,9 @@ ifndef RESCOMP
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = obj/Debug/types
+  OBJDIR     = obj/Debug/hmwired
   TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/libtypes.a
+  TARGET     = $(TARGETDIR)/libhmwired.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
@@ -50,9 +50,9 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = obj/Release/types
+  OBJDIR     = obj/Release/hmwired
   TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/libtypes.a
+  TARGET     = $(TARGETDIR)/libhmwired.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
@@ -72,9 +72,9 @@ ifeq ($(config),release)
 endif
 
 ifeq ($(config),profiling)
-  OBJDIR     = obj/Profiling/types
+  OBJDIR     = obj/Profiling/hmwired
   TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/libtypes.a
+  TARGET     = $(TARGETDIR)/libhmwired.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
@@ -94,8 +94,14 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/RPCVariable.o \
-	$(OBJDIR)/Packet.o \
+	$(OBJDIR)/HMWiredPacket.o \
+	$(OBJDIR)/HMWiredDevice.o \
+	$(OBJDIR)/HMWiredPeer.o \
+	$(OBJDIR)/HMWiredPacketManager.o \
+	$(OBJDIR)/HMWired.o \
+	$(OBJDIR)/HMWired-SD.o \
+	$(OBJDIR)/HMWiredCentral.o \
+	$(OBJDIR)/CRC_RS485.o \
 
 RESOURCES := \
 
@@ -113,7 +119,7 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
 
 $(TARGET): $(GCH) $(OBJECTS) $(LDDEPS) $(RESOURCES)
-	@echo Linking types
+	@echo Linking hmwired
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -134,7 +140,7 @@ else
 endif
 
 clean:
-	@echo Cleaning types
+	@echo Cleaning hmwired
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)
@@ -160,10 +166,28 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/RPCVariable.o: Libraries/Types/RPCVariable.cpp
+$(OBJDIR)/HMWiredPacket.o: Libraries/Systems/HomeMaticWired/HMWiredPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Packet.o: Libraries/Types/Packet.cpp
+$(OBJDIR)/HMWiredDevice.o: Libraries/Systems/HomeMaticWired/HMWiredDevice.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredPeer.o: Libraries/Systems/HomeMaticWired/HMWiredPeer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredPacketManager.o: Libraries/Systems/HomeMaticWired/HMWiredPacketManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWired.o: Libraries/Systems/HomeMaticWired/HMWired.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWired-SD.o: Libraries/Systems/HomeMaticWired/Devices/HMWired-SD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredCentral.o: Libraries/Systems/HomeMaticWired/Devices/HMWiredCentral.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/CRC_RS485.o: Libraries/Systems/HomeMaticWired/PhysicalDevices/CRC_RS485.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

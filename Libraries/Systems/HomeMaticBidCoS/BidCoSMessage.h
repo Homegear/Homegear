@@ -41,9 +41,6 @@
 
 namespace BidCoS
 {
-class BidCoSPacket;
-class BidCoSQueue;
-
 enum MessageAccess { NOACCESS = 0x00, ACCESSPAIREDTOSENDER = 0x01, ACCESSDESTISME = 0x02, ACCESSCENTRAL = 0x04, ACCESSUNPAIRING = 0x08, FULLACCESS = 0x80 };
 enum MessageDirection { DIRECTIONIN, DIRECTIONOUT };
 
