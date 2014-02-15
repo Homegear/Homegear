@@ -747,7 +747,7 @@ void HMWiredQueue::startResendThread(bool force)
 		else throw Exception("Packet or message pointer of HomeMatic Wired queue is empty.");
 
 		_queueMutex.unlock();
-		if((!(controlByte & 0x02) && (controlByte & 0x20)) || force) //Resend when no response?
+		if((controlByte & 1) || force) //Resend when no response?
 		{
 			stopResendThread();
 			_resendThread = std::thread(&HMWiredQueue::resend, this, _resendThreadId++);

@@ -32,6 +32,7 @@
 
 #include "../General/Peer.h"
 #include "../General/ServiceMessages.h"
+#include "HMWiredPacket.h"
 
 namespace HMWired
 {
@@ -66,6 +67,8 @@ public:
 	std::shared_ptr<PendingHMWiredQueues> pendingHMWiredQueues;
 
 	void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
+
+	void packetReceived(std::shared_ptr<HMWiredPacket> packet) {}
 };
 
 } /* namespace HMWired */

@@ -29,6 +29,7 @@
 
 #include "HMWiredDevice.h"
 #include "../../GD/GD.h"
+#include "HMWiredMessages.h"
 
 namespace HMWired
 {
@@ -72,6 +73,7 @@ void HMWiredDevice::init()
 
 		_messageCounter[0] = 0; //Broadcast message counter
 
+		setUpHMWiredMessages();
 		_initialized = true;
 	}
 	catch(const std::exception& ex)
@@ -705,6 +707,17 @@ bool HMWiredDevice::packetReceived(std::shared_ptr<Packet> packet)
 		std::shared_ptr<HMWiredPacket> hmWiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
 		if(!hmWiredPacket) return false;
 		_receivedPackets.set(hmWiredPacket->senderAddress(), hmWiredPacket, hmWiredPacket->timeReceived());
+		if(hmWiredPacket->type() == HMWiredPacketType::ackMessage) handleAck(hmWiredPacket);
+		else
+		{
+			std::shared_ptr<HMWiredMessage> message = _messages->find(DIRECTIONIN, hmWiredPacket);
+			if(message && message->checkAccess(hmWiredPacket, _hmWiredQueueManager.get(hmWiredPacket->senderAddress())))
+			{
+				if(GD::debugLevel > 4) Output::printDebug("Debug: Device " + HelperFunctions::getHexString(_address) + ": Access granted for packet " + hmWiredPacket->hexString(), 6);
+				message->invokeMessageHandlerIncoming(hmWiredPacket);
+				return true;
+			}
+		}
 	}
 	catch(const std::exception& ex)
     {

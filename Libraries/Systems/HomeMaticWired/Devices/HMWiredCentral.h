@@ -51,6 +51,8 @@ public:
 	HMWiredCentral(uint32_t deviceType, std::string serialNumber, int32_t address);
 	virtual ~HMWiredCentral();
 	void init();
+	bool packetReceived(std::shared_ptr<Packet> packet);
+	virtual void setUpHMWiredMessages();
 	std::string handleCLICommand(std::string command);
 
 	std::shared_ptr<RPC::RPCVariable> searchDevices();

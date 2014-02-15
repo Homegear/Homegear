@@ -34,7 +34,6 @@
 #include "../../HelperFunctions/HelperFunctions.h"
 #include "HMWiredQueue.h"
 #include "HMWiredPeer.h"
-#include "HMWiredMessage.h"
 #include "HMWiredQueueManager.h"
 #include "HMWiredPacketManager.h"
 #include "HMWiredDeviceTypes.h"
@@ -51,6 +50,7 @@
 
 namespace HMWired
 {
+class HMWiredMessage;
 class HMWiredMessages;
 
 class HMWiredDevice : public LogicalDevice
@@ -94,6 +94,8 @@ class HMWiredDevice : public LogicalDevice
         virtual bool isInPairingMode() { return _pairing; }
         virtual std::shared_ptr<HMWiredMessages> getMessages() { return _messages; }
         virtual void sendPacket(std::shared_ptr<HMWiredPacket> packet, bool stealthy = false);
+
+        virtual void handleAck(std::shared_ptr<HMWiredPacket> packet) {}
     protected:
         //In table variables
         int32_t _firmwareVersion = 0;
@@ -110,6 +112,7 @@ class HMWiredDevice : public LogicalDevice
         std::unordered_map<uint64_t, std::shared_ptr<HMWiredPeer>> _peersByID;
         std::timed_mutex _peersMutex;
         std::mutex _databaseMutex;
+        HMWiredQueueManager _hmWiredQueueManager;
         HMWiredPacketManager _receivedPackets;
         HMWiredPacketManager _sentPackets;
         bool _pairing = false;
@@ -117,6 +120,7 @@ class HMWiredDevice : public LogicalDevice
         bool _initialized = false;
 
         virtual void init();
+        virtual void setUpHMWiredMessages() {}
         void lockBus();
         void unlockBus();
     private:

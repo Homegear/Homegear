@@ -70,6 +70,65 @@ void HMWiredCentral::init()
 	}
 }
 
+void HMWiredCentral::setUpHMWiredMessages()
+{
+	try
+	{
+		//Don't call HMWiredDevice::setUpHMWiredMessages!
+		//_messages->add(std::shared_ptr<HMWiredMessage>(new HMWiredMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HMWiredDevice::handleAck)));
+
+	}
+    catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+bool HMWiredCentral::packetReceived(std::shared_ptr<Packet> packet)
+{
+	try
+	{
+		if(_disposing) return false;
+		std::shared_ptr<HMWiredPacket> hmWiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
+		if(!hmWiredPacket) return false;
+		bool handled = HMWiredDevice::packetReceived(hmWiredPacket);
+		std::shared_ptr<HMWiredPeer> peer(getPeer(hmWiredPacket->senderAddress()));
+		if(!peer) return false;
+		if(handled)
+		{
+			std::shared_ptr<HMWiredQueue> queue = _hmWiredQueueManager.get(hmWiredPacket->senderAddress());
+			if(queue && queue->getQueueType() != HMWiredQueueType::PEER)
+			{
+				peer->setLastPacketReceived();
+				peer->serviceMessages->endUnreach();
+				return true; //Packet is handled by queue. Don't check if queue is empty!
+			}
+		}
+		peer->packetReceived(hmWiredPacket);
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 std::string HMWiredCentral::handleCLICommand(std::string command)
 {
 	try

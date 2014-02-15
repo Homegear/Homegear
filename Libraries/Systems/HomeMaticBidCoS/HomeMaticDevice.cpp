@@ -1042,7 +1042,7 @@ bool HomeMaticDevice::packetReceived(std::shared_ptr<Packet> packet)
 		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, bidCoSPacket);
 		if(message && message->checkAccess(bidCoSPacket, _bidCoSQueueManager.get(bidCoSPacket->senderAddress())))
 		{
-			Output::printDebug("Debug: Device " + HelperFunctions::getHexString(_address) + ": Access granted for packet " + bidCoSPacket->hexString(), 6);
+			if(GD::debugLevel > 4) Output::printDebug("Debug: Device " + HelperFunctions::getHexString(_address) + ": Access granted for packet " + bidCoSPacket->hexString(), 6);
 			message->invokeMessageHandlerIncoming(bidCoSPacket);
 			return true;
 		}
