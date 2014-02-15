@@ -63,6 +63,7 @@ class HMWiredPacket : public Packet
         virtual ~HMWiredPacket();
 
         HMWiredPacketType type() { return _type; }
+        uint8_t messageType() { if(_payload.empty()) return 0; else return _payload.at(0); }
         uint16_t checksum() { return _checksum; }
         uint8_t addressMask() { return _addressMask; }
         uint8_t senderMessageCounter() { return _senderMessageCounter; }

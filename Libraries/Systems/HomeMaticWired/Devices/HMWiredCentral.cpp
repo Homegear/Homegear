@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -494,6 +494,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 	try
 	{
 		lockBus();
+		_pairing = true;
 
 		int32_t addressMask = 0;
 		bool backwards = false;
@@ -593,6 +594,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			}
 		}
 
+		_pairing = false;
 		unlockBus();
 		//Todo: Return number of new devices and call "newDevices"
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(5));
@@ -609,6 +611,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	_pairing = false;
 	unlockBus();
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }

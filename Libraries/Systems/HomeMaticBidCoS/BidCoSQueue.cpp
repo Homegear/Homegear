@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -391,6 +391,7 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 						return;
 					}
 					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message, packet);
+					Threads::setThreadPriority(_sendThread.native_handle(), 45);
 					_sendThreadMutex.unlock();
 				}
 				else
@@ -405,9 +406,9 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 						return;
 					}
 					_sendThread = std::thread(&BidCoSQueue::send, this, packet, stealthy);
+					Threads::setThreadPriority(_sendThread.native_handle(), 45);
 					_sendThreadMutex.unlock();
 				}
-				Threads::setThreadPriority(_sendThread.native_handle(), 45);
 			}
 			else _queueMutex.unlock(); //Has to be unlocked before startResendThread
 			if(_stopResendThread) return;
@@ -460,8 +461,8 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool
 				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
-				_sendThreadMutex.unlock();
 				Threads::setThreadPriority(_sendThread.native_handle(), 45);
+				_sendThreadMutex.unlock();
 				startResendThread(forceResend);
 			}
 		}
@@ -579,8 +580,8 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
-				_sendThreadMutex.unlock();
 				Threads::setThreadPriority(_sendThread.native_handle(), 45);
+				_sendThreadMutex.unlock();
 				startResendThread(forceResend);
 			}
 		}
@@ -630,8 +631,8 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
 				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
-				_sendThreadMutex.unlock();
 				Threads::setThreadPriority(_sendThread.native_handle(), 45);
+				_sendThreadMutex.unlock();
 				startResendThread(forceResend);
 			}
 		}
@@ -690,8 +691,8 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
 				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
 				_sendThread = std::thread(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
-				_sendThreadMutex.unlock();
 				Threads::setThreadPriority(_sendThread.native_handle(), 45);
+				_sendThreadMutex.unlock();
 				startResendThread(forceResend);
 			}
 		}
@@ -861,7 +862,7 @@ void BidCoSQueue::startResendThread(bool force)
 		{
 			controlByte = _queue.front().getPacket()->controlByte();
 		}
-		else throw Exception("Packet or message pointer is empty.");
+		else throw Exception("Packet or message pointer of BidCoS queue is empty.");
 
 		_queueMutex.unlock();
 		if((!(controlByte & 0x02) && (controlByte & 0x20)) || force) //Resend when no response?

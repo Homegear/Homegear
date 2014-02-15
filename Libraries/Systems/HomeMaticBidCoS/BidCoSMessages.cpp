@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,7 +83,7 @@ std::shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, std::shar
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return nullptr;
+	return std::shared_ptr<BidCoSMessage>();
 }
 
 std::shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, int32_t messageType, std::vector<std::pair<uint32_t, int32_t>> subtypes)

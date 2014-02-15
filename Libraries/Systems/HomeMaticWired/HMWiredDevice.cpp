@@ -88,6 +88,11 @@ void HMWiredDevice::init()
     }
 }
 
+bool HMWiredDevice::isCentral()
+{
+	return _deviceType == (uint32_t)DeviceType::HMWIREDCENTRAL;
+}
+
 void HMWiredDevice::load()
 {
 	try
@@ -108,6 +113,43 @@ void HMWiredDevice::load()
     {
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void HMWiredDevice::loadPeers(bool version_0_0_7)
+{
+	try
+	{
+		//Check for GD::devices for non unique access
+		//Change peers identifier for device to id
+		_peersMutex.lock();
+		_databaseMutex.lock();
+		DataTable rows = GD::db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_deviceID));
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			int32_t peerID = row->second.at(0)->intValue;
+			int32_t address = row->second.at(2)->intValue;
+			std::shared_ptr<HMWiredPeer> peer(new HMWiredPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral()));
+			if(!peer->load(this)) continue;
+			if(!peer->rpcDevice) continue;
+			_peers[peer->getAddress()] = peer;
+			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+			_peersByID[peerID] = peer;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+    _peersMutex.unlock();
 }
 
 void HMWiredDevice::loadVariables()
@@ -343,6 +385,139 @@ void HMWiredDevice::saveVariables()
     }
 }
 
+void HMWiredDevice::addPeer(std::shared_ptr<HMWiredPeer> peer)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peers.find(peer->getAddress()) == _peers.end()) _peers[peer->getAddress()] = peer;
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+}
+
+bool HMWiredDevice::peerExists(int32_t address)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peers.find(address) != _peers.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return false;
+}
+
+std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(int32_t address)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peers.find(address) != _peers.end())
+		{
+			std::shared_ptr<HMWiredPeer> peer(_peers.at(address));
+			_peersMutex.unlock();
+			return peer;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return std::shared_ptr<HMWiredPeer>();
+}
+
+std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(uint64_t id)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersByID.find(id) != _peersByID.end())
+		{
+			std::shared_ptr<HMWiredPeer> peer(_peersByID.at(id));
+			_peersMutex.unlock();
+			return peer;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return std::shared_ptr<HMWiredPeer>();
+}
+
+std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(std::string serialNumber)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
+		{
+			std::shared_ptr<HMWiredPeer> peer(_peersBySerial.at(serialNumber));
+			_peersMutex.unlock();
+			return peer;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return std::shared_ptr<HMWiredPeer>();
+}
+
 void HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool stealthy)
 {
 	try
@@ -375,7 +550,7 @@ void HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool steal
 			//Set time to now. This is necessary if two packets are sent after each other without a response in between
 			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		}
-		else Output::printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
+		else Output::printDebug("Debug: Sending HomeMatic Wired packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
 		GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->sendPacket(packet);
 	}
 	catch(const std::exception& ex)
@@ -465,6 +640,61 @@ void HMWiredDevice::unserializeMessageCounters(std::shared_ptr<std::vector<char>
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void HMWiredDevice::deletePeersFromDatabase()
+{
+	try
+	{
+		_databaseMutex.lock();
+		std::ostringstream command;
+		command << "DELETE FROM peers WHERE parent=" << std::dec << _deviceID;
+		GD::db.executeCommand(command.str());
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
+void HMWiredDevice::savePeers(bool full)
+{
+	try
+	{
+		_peersMutex.lock();
+		_databaseMutex.lock();
+		for(std::unordered_map<int32_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		{
+			//Necessary, because peers can be assigned to multiple virtual devices
+			if(i->second->getParentID() != _deviceID) continue;
+			//We are always printing this, because the init script needs it
+			Output::printMessage("(Shutdown) => Saving HomeMatic Wired peer 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6));
+			i->second->save(full, full, full);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+	_peersMutex.unlock();
 }
 
 bool HMWiredDevice::packetReceived(std::shared_ptr<Packet> packet)

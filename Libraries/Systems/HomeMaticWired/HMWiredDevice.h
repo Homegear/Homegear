@@ -32,8 +32,10 @@
 
 #include "../../LogicalDevices/LogicalDevice.h"
 #include "../../HelperFunctions/HelperFunctions.h"
-#include "HMWiredPacket.h"
+#include "HMWiredQueue.h"
 #include "HMWiredPeer.h"
+#include "HMWiredMessage.h"
+#include "HMWiredQueueManager.h"
 #include "HMWiredPacketManager.h"
 #include "HMWiredDeviceTypes.h"
 
@@ -49,17 +51,35 @@
 
 namespace HMWired
 {
+class HMWiredMessages;
+
 class HMWiredDevice : public LogicalDevice
 {
     public:
+		//In table variables
+		int32_t getFirmwareVersion() { return _firmwareVersion; }
+		void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
+		int32_t getCentralAddress() { return _centralAddress; }
+		void setCentralAddress(int32_t value) { _centralAddress = value; saveVariable(1, value); }
+		//End
+
+		virtual bool isCentral();
+
         HMWiredDevice();
         HMWiredDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
         virtual ~HMWiredDevice();
         virtual DeviceFamilies deviceFamily() { return DeviceFamilies::HomeMaticWired; }
         bool packetReceived(std::shared_ptr<Packet> packet);
 
+        virtual void addPeer(std::shared_ptr<HMWiredPeer> peer);
         virtual bool peerSelected() { return (bool)_currentPeer; }
-
+		bool peerExists(int32_t address);
+		std::shared_ptr<HMWiredPeer> getPeer(int32_t address);
+		std::shared_ptr<HMWiredPeer> getPeer(uint64_t id);
+		std::shared_ptr<HMWiredPeer> getPeer(std::string serialNumber);
+		virtual void deletePeersFromDatabase();
+		virtual void loadPeers(bool version_0_0_7);
+		virtual void savePeers(bool full);
         virtual void loadVariables();
         virtual void saveVariables();
         virtual void saveVariable(uint32_t index, int64_t intValue);
@@ -71,6 +91,8 @@ class HMWiredDevice : public LogicalDevice
         virtual void serializeMessageCounters(std::vector<uint8_t>& encodedData);
         virtual void unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData);
 
+        virtual bool isInPairingMode() { return _pairing; }
+        virtual std::shared_ptr<HMWiredMessages> getMessages() { return _messages; }
         virtual void sendPacket(std::shared_ptr<HMWiredPacket> packet, bool stealthy = false);
     protected:
         //In table variables
@@ -85,10 +107,13 @@ class HMWiredDevice : public LogicalDevice
         std::shared_ptr<HMWiredPeer> _currentPeer;
         std::unordered_map<int32_t, std::shared_ptr<HMWiredPeer>> _peers;
         std::unordered_map<std::string, std::shared_ptr<HMWiredPeer>> _peersBySerial;
+        std::unordered_map<uint64_t, std::shared_ptr<HMWiredPeer>> _peersByID;
         std::timed_mutex _peersMutex;
         std::mutex _databaseMutex;
         HMWiredPacketManager _receivedPackets;
         HMWiredPacketManager _sentPackets;
+        bool _pairing = false;
+        std::shared_ptr<HMWiredMessages> _messages;
         bool _initialized = false;
 
         virtual void init();

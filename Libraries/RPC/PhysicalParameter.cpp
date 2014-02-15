@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,7 +59,6 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			else if(attributeName == "endian")
 			{
 				if(attributeValue == "little") endian = Endian::Enum::little;
-				else if(attributeValue == "big") endian = Endian::Enum::big;
 				else Output::printWarning("Warning: Unknown endianess for \"physical\": " + attributeValue);
 			}
 			else if(attributeName == "value_id") valueID = attributeValue;

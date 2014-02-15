@@ -97,7 +97,12 @@ OBJECTS := \
 	$(OBJDIR)/HMWiredPacket.o \
 	$(OBJDIR)/HMWiredDevice.o \
 	$(OBJDIR)/HMWiredPeer.o \
+	$(OBJDIR)/HMWiredQueueManager.o \
+	$(OBJDIR)/HMWiredMessage.o \
+	$(OBJDIR)/HMWiredQueue.o \
 	$(OBJDIR)/HMWiredPacketManager.o \
+	$(OBJDIR)/HMWiredMessages.o \
+	$(OBJDIR)/PendingHMWiredQueues.o \
 	$(OBJDIR)/HMWired.o \
 	$(OBJDIR)/HMWired-SD.o \
 	$(OBJDIR)/HMWiredCentral.o \
@@ -175,7 +180,22 @@ $(OBJDIR)/HMWiredDevice.o: Libraries/Systems/HomeMaticWired/HMWiredDevice.cpp
 $(OBJDIR)/HMWiredPeer.o: Libraries/Systems/HomeMaticWired/HMWiredPeer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredQueueManager.o: Libraries/Systems/HomeMaticWired/HMWiredQueueManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredMessage.o: Libraries/Systems/HomeMaticWired/HMWiredMessage.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredQueue.o: Libraries/Systems/HomeMaticWired/HMWiredQueue.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWiredPacketManager.o: Libraries/Systems/HomeMaticWired/HMWiredPacketManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HMWiredMessages.o: Libraries/Systems/HomeMaticWired/HMWiredMessages.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PendingHMWiredQueues.o: Libraries/Systems/HomeMaticWired/PendingHMWiredQueues.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWired.o: Libraries/Systems/HomeMaticWired/HMWired.cpp

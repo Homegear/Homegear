@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,11 +28,18 @@
  */
 
 #include "HMWiredPeer.h"
+#include "PendingHMWiredQueues.h"
 
-namespace HMWired {
+namespace HMWired
+{
 
 HMWiredPeer::HMWiredPeer(uint32_t parentID, bool centralFeatures) : Peer(parentID, centralFeatures)
 {
+	if(centralFeatures)
+	{
+		serviceMessages.reset(new ServiceMessages(this));
+		pendingHMWiredQueues.reset(new PendingHMWiredQueues());
+	}
 }
 
 HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures) : Peer(id, address, serialNumber, parentID, centralFeatures)
@@ -42,6 +49,38 @@ HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, 
 HMWiredPeer::~HMWiredPeer()
 {
 
+}
+
+void HMWiredPeer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters)
+{
+	try
+	{
+		if(parameters->integers.size() != 3) return;
+		if(parameters->strings.size() != 1) return;
+		Output::printMessage("addVariableToResetCallback invoked for parameter " + parameters->strings.at(0) + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ".", 5);
+		Output::printInfo("Parameter " + parameters->strings.at(0) + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + " will be reset at " + HelperFunctions::getTimeString(parameters->integers.at(2)) + ".");
+		std::shared_ptr<VariableToReset> variable(new VariableToReset);
+		variable->channel = parameters->integers.at(0);
+		int32_t integerValue = parameters->integers.at(1);
+		HelperFunctions::memcpyBigEndian(variable->data, integerValue);
+		variable->resetTime = parameters->integers.at(2);
+		variable->key = parameters->strings.at(0);
+		_variablesToResetMutex.lock();
+		_variablesToReset.push_back(variable);
+		_variablesToResetMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 } /* namespace HMWired */

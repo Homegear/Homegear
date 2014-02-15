@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -945,7 +945,7 @@ void HomeMaticDevice::deletePeersFromDatabase()
 	{
 		_databaseMutex.lock();
 		std::ostringstream command;
-		command << "DELETE FROM peers WHERE parent=" << std::dec << _address;
+		command << "DELETE FROM peers WHERE parent=" << std::dec << _deviceID;
 		GD::db.executeCommand(command.str());
 	}
 	catch(const std::exception& ex)
@@ -976,7 +976,7 @@ void HomeMaticDevice::savePeers(bool full)
 			   //Necessary for database conversion from database version 0.0.7
 			   i->second->getParentID() != _address) continue;
 			//We are always printing this, because the init script needs it
-			Output::printMessage("(Shutdown) => Saving peer 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6));
+			Output::printMessage("(Shutdown) => Saving HomeMatic BidCoS peer 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6));
 			i->second->save(full, full, full);
 		}
 	}
@@ -1853,24 +1853,20 @@ bool HomeMaticDevice::peerExists(int32_t address)
 			_peersMutex.unlock();
 			return true;
 		}
-		_peersMutex.unlock();
-		return false;
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
     return false;
 }
 
@@ -1907,23 +1903,20 @@ std::shared_ptr<BidCoSPeer> HomeMaticDevice::getPeer(int32_t address)
 			_peersMutex.unlock();
 			return peer;
 		}
-		_peersMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
     return std::shared_ptr<BidCoSPeer>();
 }
 
@@ -1938,23 +1931,20 @@ std::shared_ptr<BidCoSPeer> HomeMaticDevice::getPeer(uint64_t id)
 			_peersMutex.unlock();
 			return peer;
 		}
-		_peersMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
     return std::shared_ptr<BidCoSPeer>();
 }
 
@@ -1969,23 +1959,20 @@ std::shared_ptr<BidCoSPeer> HomeMaticDevice::getPeer(std::string serialNumber)
 			_peersMutex.unlock();
 			return peer;
 		}
-		_peersMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
     return std::shared_ptr<BidCoSPeer>();
 }
 

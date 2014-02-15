@@ -1,4 +1,4 @@
-/* Copyright 2013 Sathya Laufer
+/* Copyright 2013-2014 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,9 +31,25 @@
 #define HMWIREDPEER_H_
 
 #include "../General/Peer.h"
+#include "../General/ServiceMessages.h"
 
 namespace HMWired
 {
+class PendingHMWiredQueues;
+class CallbackFunctionParameter;
+
+class VariableToReset
+{
+public:
+	uint32_t channel = 0;
+	std::string key;
+	std::vector<uint8_t> data;
+	int64_t resetTime = 0;
+	bool isDominoEvent = false;
+
+	VariableToReset() {}
+	virtual ~VariableToReset() {}
+};
 
 class HMWiredPeer : public Peer
 {
@@ -41,6 +57,15 @@ public:
 	HMWiredPeer(uint32_t parentID, bool centralFeatures);
 	HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
 	virtual ~HMWiredPeer();
+
+	std::mutex _variablesToResetMutex;
+	std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
+
+	std::shared_ptr<ServiceMessages> serviceMessages;
+
+	std::shared_ptr<PendingHMWiredQueues> pendingHMWiredQueues;
+
+	void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
 };
 
 } /* namespace HMWired */
