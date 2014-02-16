@@ -442,7 +442,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 			data->insert(data->begin(), header.begin(), header.end());
 			if(GD::debugLevel >= 5)
 			{
-				Output::printDebug("Response packet: " + HelperFunctions::getHexString(*data));
+				Output::printDebug("Response packet: " + std::string(&data->at(0), data->size()));
 			}
 			sendRPCResponseToClient(client, data, keepAlive);
 		}

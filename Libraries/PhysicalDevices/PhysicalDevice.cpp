@@ -112,11 +112,11 @@ void PhysicalDevice::callCallback(std::shared_ptr<Packet> packet)
 			if((*i)->deviceFamily() == _settings->family) devices.push_back(*i);
 		}
 		_logicalDevicesMutex.unlock();
+		_lastPacketReceived = HelperFunctions::getTime();
 		for(std::vector<LogicalDevice*>::iterator i = devices.begin(); i != devices.end(); ++i)
 		{
 			(*i)->packetReceived(packet);
 		}
-		_lastPacketReceived = HelperFunctions::getTimeSeconds();
 	}
     catch(const std::exception& ex)
     {

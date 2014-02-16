@@ -289,6 +289,7 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 			_txMutex.unlock();
 			return;
 		}
+		_lastPacketSent = HelperFunctions::getTime();
 		_sending = true;
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
 		sendCommandStrobe(CommandStrobes::Enum::SFTX);
@@ -726,7 +727,7 @@ void TICC1100::endSending()
 		sendCommandStrobe(CommandStrobes::Enum::SFRX);
 		sendCommandStrobe(CommandStrobes::Enum::SRX);
 		_sending = false;
-		_lastPacketSent = HelperFunctions::getTimeSeconds();
+		_lastPacketSent = HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
     {

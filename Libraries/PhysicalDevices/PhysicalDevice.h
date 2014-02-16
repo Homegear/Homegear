@@ -80,8 +80,8 @@ public:
 	virtual void sendPacket(std::shared_ptr<Packet> packet) {}
 	virtual bool isOpen() { return _fileDescriptor && _fileDescriptor->descriptor > -1; }
 	virtual uint32_t responseDelay() { return _settings->responseDelay; }
-	virtual int32_t lastPacketSent() { return _lastPacketSent; }
-	virtual int32_t lastPacketReceived() { return _lastPacketReceived; }
+	virtual int64_t lastPacketSent() { return _lastPacketSent; }
+	virtual int64_t lastPacketReceived() { return _lastPacketReceived; }
 	virtual void setup(int32_t userID, int32_t groupID) {}
 	virtual std::string getType() { return _settings->type; }
 protected:
@@ -96,8 +96,8 @@ protected:
 	bool _stopped = false;
 	std::shared_ptr<FileDescriptor> _fileDescriptor;
 	std::map<uint32_t, std::shared_ptr<FileDescriptor>> _gpioDescriptors;
-	int32_t _lastPacketSent = -1;
-	int32_t _lastPacketReceived = -1;
+	int64_t _lastPacketSent = -1;
+	int64_t _lastPacketReceived = -1;
 
 	virtual void callCallback(std::shared_ptr<Packet> packet);
 	virtual void setDevicePermission(int32_t userID, int32_t groupID);

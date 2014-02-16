@@ -56,7 +56,7 @@ public:
 	};
 	struct TransferEncoding
 	{
-		enum Enum { none, chunked, compress, deflate, gzip, identity };
+		enum Enum { none = 0, chunked = 1, compress = 2, deflate = 4, gzip = 8, identity = 16 };
 	};
 	struct Connection
 	{

@@ -36,7 +36,7 @@ Peer::Peer(uint32_t parentID, bool centralFeatures)
 	{
 		_parentID = parentID;
 		_centralFeatures = centralFeatures;
-		_lastPacketReceived = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		_lastPacketReceived = HelperFunctions::getTimeSeconds();
 		rpcDevice.reset();
 	}
 	catch(const std::exception& ex)
@@ -82,7 +82,7 @@ Peer::~Peer()
 
 void Peer::setLastPacketReceived()
 {
-	_lastPacketReceived = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	_lastPacketReceived = HelperFunctions::getTimeSeconds();
 }
 
 void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)

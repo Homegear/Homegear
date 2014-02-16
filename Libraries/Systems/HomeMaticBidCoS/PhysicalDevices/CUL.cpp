@@ -334,7 +334,7 @@ void CUL::writeToDevice(std::string data, bool printSending)
         }
 
         _sendMutex.unlock();
-        _lastPacketSent = HelperFunctions::getTimeSeconds();
+        _lastPacketSent = HelperFunctions::getTime();
     }
     catch(const std::exception& ex)
     {

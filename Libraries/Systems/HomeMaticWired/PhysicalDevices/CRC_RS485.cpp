@@ -376,6 +376,7 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
     	if(_stopped || packet.empty()) return;
         if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
         _sendMutex.lock();
+        _lastPacketSent = HelperFunctions::getTime(); //Sending takes some time, so we set _lastPacketSent two times
         _sending = true;
         int32_t i;
         int32_t j = 0;
@@ -401,7 +402,7 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 			_sendingMutex.unlock();
         }
         if(j == 5) Output::printError("Error sending HomeMatic Wired packet: Giving up sending after 5 tries.");
-        else _lastPacketSent = HelperFunctions::getTimeSeconds();
+        else _lastPacketSent = HelperFunctions::getTime();
     }
     catch(const std::exception& ex)
     {

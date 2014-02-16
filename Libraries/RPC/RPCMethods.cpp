@@ -1176,7 +1176,7 @@ std::shared_ptr<RPCVariable> RPCListDevices::invoke(std::shared_ptr<std::vector<
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			std::shared_ptr<RPC::RPCVariable> result = central->listDevices();
-			if(!result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
+			if(result && !result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 
 		return devices;

@@ -68,6 +68,7 @@ void HMWiredDevice::init()
 	try
 	{
 		if(_initialized) return; //Prevent running init two times
+		_messages = std::shared_ptr<HMWiredMessages>(new HMWiredMessages());
 
 		GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->addLogicalDevice(this);
 
@@ -520,40 +521,97 @@ std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(std::string serialNumber)
     return std::shared_ptr<HMWiredPeer>();
 }
 
-void HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool stealthy)
+std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool resend, bool stealthy)
 {
 	try
 	{
-		uint32_t responseDelay = GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->responseDelay();
-		std::shared_ptr<HMWiredPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
-		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet);
-		if(packetInfo)
+		//First check if communication is in progress
+		int64_t time = HelperFunctions::getTime();
+		std::shared_ptr<HMWiredPacketInfo> rxPacketInfo;
+		std::shared_ptr<HMWiredPacketInfo> txPacketInfo = _sentPackets.getInfo(packet->destinationAddress());
+		int64_t timeDifference = 0;
+		if(txPacketInfo) timeDifference = time - txPacketInfo->time;
+		std::shared_ptr<PhysicalDevices::PhysicalDevice> physicalDevice = GD::physicalDevices.get(DeviceFamilies::HomeMaticWired);
+		if((!txPacketInfo || timeDifference > 210) && packet->type() != HMWiredPacketType::discovery)
 		{
-			int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
+			rxPacketInfo = _receivedPackets.getInfo(packet->destinationAddress());
+			int64_t rxTimeDifference = 0;
+			if(rxPacketInfo) rxTimeDifference = time - rxPacketInfo->time;
+			if(!rxPacketInfo || rxTimeDifference > 50)
+			{
+				//Communication might be in progress. Wait a little
+				if(GD::debugLevel > 4 && (time - physicalDevice->lastPacketSent() < 210 || time - physicalDevice->lastPacketReceived() < 210)) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free...");
+				while(time - physicalDevice->lastPacketSent() < 210 || time - physicalDevice->lastPacketReceived() < 210)
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(50));
+					time = HelperFunctions::getTime();
+					if(time - physicalDevice->lastPacketSent() >= 210 && time - physicalDevice->lastPacketReceived() >= 210)
+					{
+						int32_t sleepingTime = HelperFunctions::getRandomNumber(0, 100);
+						if(GD::debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms...");
+						//Sleep random time
+						std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
+						time = HelperFunctions::getTime();
+					}
+				}
+				if(GD::debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is still free... sending...");
+			}
+		}
+		//RS485 bus should be free
+		_sendMutex.lock();
+		uint32_t responseDelay = physicalDevice->responseDelay();
+		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet);
+		if(txPacketInfo)
+		{
+			timeDifference = time - txPacketInfo->time;
 			if(timeDifference < responseDelay)
 			{
-				packetInfo->time += responseDelay - timeDifference; //Set to sending time
+				txPacketInfo->time += responseDelay - timeDifference; //Set to sending time
 				std::this_thread::sleep_for(std::chrono::milliseconds(responseDelay - timeDifference));
+				time = HelperFunctions::getTime();
 			}
 		}
 		if(stealthy) _sentPackets.keepAlive(packet->destinationAddress());
-		packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
-		if(packetInfo)
+		rxPacketInfo = _receivedPackets.getInfo(packet->destinationAddress());
+		if(rxPacketInfo)
 		{
-			int64_t time = HelperFunctions::getTime();
-			int64_t timeDifference = time - packetInfo->time;
+			int64_t timeDifference = time - rxPacketInfo->time;
 			if(timeDifference >= 0 && timeDifference < responseDelay)
 			{
 				int64_t sleepingTime = responseDelay - timeDifference;
 				if(sleepingTime > 1) sleepingTime -= 1;
 				packet->setTimeSending(time + sleepingTime + 1);
 				std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
+				time = HelperFunctions::getTime();
 			}
 			//Set time to now. This is necessary if two packets are sent after each other without a response in between
-			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+			rxPacketInfo->time = time;
 		}
-		else Output::printDebug("Debug: Sending HomeMatic Wired packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
-		GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->sendPacket(packet);
+		else if(GD::debugLevel > 4) Output::printDebug("Debug: Sending HomeMatic Wired packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
+
+		if(resend)
+		{
+			std::shared_ptr<HMWiredPacket> receivedPacket;
+			for(int32_t retries = 0; retries < 3; retries++)
+			{
+				int64_t time = HelperFunctions::getTime();
+				std::chrono::milliseconds sleepingTime(5);
+				if(retries > 0) _sentPackets.keepAlive(packet->destinationAddress());
+				physicalDevice->sendPacket(packet);
+				for(int32_t i = 0; i < 12; i++)
+				{
+					if(i == 5) sleepingTime = std::chrono::milliseconds(25);
+					std::this_thread::sleep_for(sleepingTime);
+					receivedPacket = _receivedPackets.get(packet->destinationAddress());
+					if(receivedPacket && receivedPacket->timeReceived() >= time)
+					{
+						_sendMutex.unlock();
+						return receivedPacket;
+					}
+				}
+			}
+		}
+		else physicalDevice->sendPacket(packet);
 	}
 	catch(const std::exception& ex)
     {
@@ -567,6 +625,8 @@ void HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool steal
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _sendMutex.unlock();
+    return std::shared_ptr<HMWiredPacket>();
 }
 
 void HMWiredDevice::saveMessageCounters()
@@ -740,10 +800,10 @@ void HMWiredDevice::lockBus()
 	{
 		std::vector<uint8_t> payload = { 0x7A };
 		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, true, _messageCounter[0]++, 0, 0, payload));
-		sendPacket(packet);
+		sendPacket(packet, false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, true, _messageCounter[0]++, 0, 0, payload));
-		sendPacket(packet);
+		sendPacket(packet, false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 	catch(const std::exception& ex)
@@ -767,10 +827,10 @@ void HMWiredDevice::unlockBus()
 		std::vector<uint8_t> payload = { 0x5A };
 		std::this_thread::sleep_for(std::chrono::milliseconds(30));
 		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, true, _messageCounter[0]++, 0, 0, payload));
-		sendPacket(packet);
+		sendPacket(packet, false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, 0xFFFFFFFF, true, _messageCounter[0]++, 0, 0, payload));
-		sendPacket(packet);
+		sendPacket(packet, false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 	catch(const std::exception& ex)
@@ -785,6 +845,28 @@ void HMWiredDevice::unlockBus()
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void HMWiredDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
+{
+	try
+	{
+		std::vector<uint8_t> payload;
+		std::shared_ptr<HMWiredPacket> ackPacket(new HMWiredPacket(HMWiredPacketType::ackMessage, _address, destinationAddress, false, 0, messageCounter, 0, payload));
+		sendPacket(ackPacket, false);
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 }

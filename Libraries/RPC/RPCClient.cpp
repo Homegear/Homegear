@@ -631,7 +631,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 		}
 
-		if(GD::debugLevel >= 5) Output::printDebug("Sending packet: " + HelperFunctions::getHexString(*data));
+		if(GD::debugLevel >= 5) Output::printDebug("Sending packet: " + std::string(&data->at(0), data->size()));
 		try
 		{
 			server->socket.proofwrite(data);
@@ -781,7 +781,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 		}
 		if(!server->keepAlive) closeConnection(server);
-		Output::printDebug("Debug: Received packet from server " + server->ipAddress + " on port " + server->address.second + ":\n" + HelperFunctions::getHexString(*http.getContent()));
+		Output::printDebug("Debug: Received packet from server " + server->ipAddress + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
 		_sendCounter--;
 		if(server->binary) return packet;
 		else if(http.isFinished()) return http.getContent();

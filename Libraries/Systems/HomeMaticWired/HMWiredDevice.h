@@ -93,9 +93,11 @@ class HMWiredDevice : public LogicalDevice
 
         virtual bool isInPairingMode() { return _pairing; }
         virtual std::shared_ptr<HMWiredMessages> getMessages() { return _messages; }
-        virtual void sendPacket(std::shared_ptr<HMWiredPacket> packet, bool stealthy = false);
+        virtual std::shared_ptr<HMWiredPacket> sendPacket(std::shared_ptr<HMWiredPacket> packet, bool resend, bool stealthy = false);
 
         virtual void handleAck(std::shared_ptr<HMWiredPacket> packet) {}
+
+        virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
     protected:
         //In table variables
         int32_t _firmwareVersion = 0;
@@ -115,6 +117,7 @@ class HMWiredDevice : public LogicalDevice
         HMWiredQueueManager _hmWiredQueueManager;
         HMWiredPacketManager _receivedPackets;
         HMWiredPacketManager _sentPackets;
+        std::mutex _sendMutex;
         bool _pairing = false;
         std::shared_ptr<HMWiredMessages> _messages;
         bool _initialized = false;

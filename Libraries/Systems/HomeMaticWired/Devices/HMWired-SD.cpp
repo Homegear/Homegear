@@ -525,7 +525,7 @@ std::string HMWired_SD::handleCLICommand(std::string command)
 			}
 
 			std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(packetHex));
-			sendPacket(packet);
+			sendPacket(packet, false);
 			stringStream << "Packet sent: " << packet->hexString() << std::endl;
 			return stringStream.str();
 		}

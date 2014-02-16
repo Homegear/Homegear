@@ -367,8 +367,8 @@ std::shared_ptr<RPC::RPCVariable> PhysicalDevices::listInterfaces()
 			interface->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(device->getType()))));
 			interface->structValue->insert(RPC::RPCStructElement("CONNECTED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(device->isOpen()))));
 			interface->structValue->insert(RPC::RPCStructElement("DEFAULT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true))));
-			interface->structValue->insert(RPC::RPCStructElement("LASTPACKETSENT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(device->lastPacketSent()))));
-			interface->structValue->insert(RPC::RPCStructElement("LASTPACKETRECEIVED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(device->lastPacketReceived()))));
+			interface->structValue->insert(RPC::RPCStructElement("LASTPACKETSENT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)(device->lastPacketSent() / 1000)))));
+			interface->structValue->insert(RPC::RPCStructElement("LASTPACKETRECEIVED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)(device->lastPacketReceived() / 1000)))));
 			array->arrayValue->push_back(interface);
 		}
 		return array;

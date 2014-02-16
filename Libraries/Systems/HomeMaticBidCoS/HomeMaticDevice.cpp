@@ -1094,7 +1094,7 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool stea
 			//Set time to now. This is necessary if two packets are sent after each other without a response in between
 			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		}
-		else Output::printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
+		else if(GD::debugLevel > 4) Output::printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
 		GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->sendPacket(packet);
 	}
 	catch(const std::exception& ex)

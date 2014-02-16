@@ -43,7 +43,7 @@ void HTTP::process(char* buffer, int32_t bufferLength)
 	uint32_t position = 0;
 	if(!_header.parsed) processHeader(&buffer, bufferLength);
 	_dataProcessed = true;
-	if(_header.transferEncoding == TransferEncoding::Enum::chunked) processChunkedContent(buffer, bufferLength); else processContent(buffer, bufferLength);
+	if(_header.transferEncoding & TransferEncoding::Enum::chunked) processChunkedContent(buffer, bufferLength); else processContent(buffer, bufferLength);
 }
 
 void HTTP::processHeader(char** buffer, int32_t& bufferLength)
@@ -85,7 +85,7 @@ void HTTP::processHeader(char** buffer, int32_t& bufferLength)
 		colonPos = strchr(*buffer, ':');
 		if(!colonPos || colonPos > newlinePos) continue;
 
-		if(colonPos < newlinePos - 2) processHeaderField(*buffer, colonPos - *buffer, colonPos + 2, newlinePos - colonPos - 2);
+		if(colonPos < newlinePos - 2) processHeaderField(*buffer, (uint32_t)(colonPos - *buffer), colonPos + 2, (uint32_t)(newlinePos - colonPos - 2));
 		*buffer = newlinePos + crlfOffset;
 	}
 	*buffer += crlfOffset;
@@ -106,20 +106,39 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		_header.contentType = std::string(value, valueSize);
 		HelperFunctions::toLower(_header.contentType);
 	}
-	else if(!strnaicmp(name, "transfer-encoding", nameSize))
+	else if(!strnaicmp(name, "transfer-encoding", nameSize) || !strnaicmp(name, "te", nameSize))
 	{
-		if(!strnaicmp(value, "chunked", valueSize)) _header.transferEncoding = TransferEncoding::Enum::chunked;
-		else if(!strnaicmp(value, "compress", valueSize)) _header.transferEncoding = TransferEncoding::Enum::compress;
-		else if(!strnaicmp(value, "deflate", valueSize)) _header.transferEncoding = TransferEncoding::Enum::deflate;
-		else if(!strnaicmp(value, "gzip", valueSize)) _header.transferEncoding = TransferEncoding::Enum::gzip;
-		else if(!strnaicmp(value, "identity", valueSize)) _header.transferEncoding = TransferEncoding::Enum::identity;
-		else throw HTTPException("Unknown value for HTTP header \"Transfer-Encoding\": " + std::string(value, valueSize));
+		std::string s(value, valueSize);
+		s = s.substr(0, s.find(';'));
+		int32_t pos = 0;
+		while ((pos = s.find(',')) != std::string::npos || !s.empty())
+		{
+		    std::string te = (pos == std::string::npos) ? s : s.substr(0, pos);
+		    HelperFunctions::trim(HelperFunctions::toLower(te));
+		    if(te == "chunked") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::chunked);
+			else if(te == "compress") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::compress);
+			else if(te == "deflate") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::deflate);
+			else if(te == "gzip") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::gzip);
+			else if(te == "identity") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::identity);
+			else throw HTTPException("Unknown value for HTTP header \"Transfer-Encoding\": " + std::string(value, valueSize));
+		    if(pos == std::string::npos) s.clear(); else s.erase(0, pos + 1);
+		}
 	}
 	else if(!strnaicmp(name, "connection", nameSize))
 	{
-		if(!strnaicmp(value, "keep-alive", valueSize)) _header.connection = Connection::Enum::keepAlive;
-		else if(!strnaicmp(value, "close", valueSize)) _header.connection = Connection::Enum::close;
-		else throw HTTPException("Unknown value for HTTP header \"Connection\": " + std::string(value, valueSize));
+		std::string s(value, valueSize);
+		s = s.substr(0, s.find(';'));
+		int32_t pos = 0;
+		while ((pos = s.find(',')) != std::string::npos || !s.empty())
+		{
+			std::string c = (pos == std::string::npos) ? s : s.substr(0, pos);
+			HelperFunctions::trim(HelperFunctions::toLower(c));
+			if(c == "keep-alive") _header.connection = Connection::Enum::keepAlive;
+			else if(c == "close") _header.connection = Connection::Enum::close;
+			else if(c == "te") {} //ignore
+			else throw HTTPException("Unknown value for HTTP header \"Connection\": " + std::string(value, valueSize));
+			if(pos == std::string::npos) s.clear(); else s.erase(0, pos + 1);
+		}
 	}
 	else if(!strnaicmp(name, "authorization", nameSize)) _header.authorization = std::string(value, valueSize);
 }

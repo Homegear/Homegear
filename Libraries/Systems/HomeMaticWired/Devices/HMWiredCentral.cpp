@@ -149,7 +149,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "unselect\t\tUnselect this device" << std::endl;
-			stringStream << "search\t\tSearches for new devices on the bus" << std::endl;
+			stringStream << "search\t\t\tSearches for new devices on the bus" << std::endl;
 			stringStream << "peers list\t\tList all peers" << std::endl;
 			stringStream << "peers add\t\tManually adds a peer (without pairing it! Only for testing)" << std::endl;
 			stringStream << "peers remove\t\tRemove a peer (without unpairing)" << std::endl;
@@ -555,6 +555,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 		lockBus();
 		_pairing = true;
 
+		std::vector<int32_t> newDevices;
 		int32_t addressMask = 0;
 		bool backwards = false;
 		int32_t address = 0;
@@ -582,7 +583,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 				packet.second.reset(new HMWiredPacket(HMWiredPacketType::discovery, 0, address, false, 0, 0, addressMask, payload));
 			}
 			time = HelperFunctions::getTime();
-			sendPacket(packet.second);
+			sendPacket(packet.second, false);
 
 			int32_t i = 0;
 			for(i = 0; i < 2; i++)
@@ -600,6 +601,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 					else
 					{
 						Output::printMessage("Device found with address 0x" + HelperFunctions::getHexString(address, 8));
+						newDevices.push_back(address);
 						backwards = true;
 						address++;
 						address2 = address;
@@ -655,8 +657,53 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 
 		_pairing = false;
 		unlockBus();
-		//Todo: Return number of new devices and call "newDevices"
-		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(5));
+
+		for(std::vector<int32_t>::iterator i = newDevices.begin(); i != newDevices.end(); ++i)
+		{
+			//Get device type:
+			std::vector<uint8_t> payload;
+			payload.push_back(0x68);
+			std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, *i, true, _messageCounter[*i]++, 0, addressMask, payload));
+			std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
+			if(!response || response->payload()->size() != 2)
+			{
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Device type request failed.");
+				continue;
+			}
+			sendOK(response->senderMessageCounter(), *i);
+			int32_t deviceType = (response->payload()->at(0) << 8) + response->payload()->at(1);
+
+			//Get firmware version:
+			payload.clear();
+			payload.push_back(0x76);
+			request.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, *i, true, _messageCounter[*i]++, 0, addressMask, payload));
+			response = sendPacket(request, true);
+			if(!response || response->payload()->size() != 2)
+			{
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Firmware version request failed.");
+				continue;
+			}
+			sendOK(response->senderMessageCounter(), *i);
+			int32_t firmwareVersion = (response->payload()->at(0) << 8) + response->payload()->at(1);
+
+			//Get serial number:
+			payload.clear();
+			payload.push_back(0x6E);
+			request.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, *i, true, _messageCounter[*i]++, 0, addressMask, payload));
+			response = sendPacket(request, true);
+			if(!response || response->payload()->empty())
+			{
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Serial number request failed.");
+				continue;
+			}
+			sendOK(response->senderMessageCounter(), *i);
+			std::string serialNumber(&response->payload()->at(0), &response->payload()->at(0) + response->payload()->size());
+
+
+		}
+
+		//Todo: call "newDevices"
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)newDevices.size()));
 	}
 	catch(const std::exception& ex)
 	{
