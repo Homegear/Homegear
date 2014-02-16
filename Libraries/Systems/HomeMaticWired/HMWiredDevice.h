@@ -97,6 +97,7 @@ class HMWiredDevice : public LogicalDevice
 
         virtual void handleAck(std::shared_ptr<HMWiredPacket> packet) {}
 
+        virtual std::shared_ptr<HMWiredPacket> getResponse(uint8_t command, int32_t destinationAddress);
         virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
     protected:
         //In table variables

@@ -57,6 +57,7 @@ public:
 
 	std::shared_ptr<RPC::RPCVariable> searchDevices();
 protected:
+	std::shared_ptr<HMWiredPeer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 };
 
 } /* namespace HMWired */

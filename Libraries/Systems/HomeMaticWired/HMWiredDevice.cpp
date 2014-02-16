@@ -847,6 +847,32 @@ void HMWiredDevice::unlockBus()
     }
 }
 
+std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(uint8_t command, int32_t destinationAddress)
+{
+	try
+	{
+		std::vector<uint8_t> payload;
+		payload.push_back(command);
+		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, destinationAddress, true, _messageCounter[destinationAddress]++, 0, 0, payload));
+		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
+		if(response) sendOK(response->senderMessageCounter(), destinationAddress);
+		return response;
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<HMWiredPacket>();
+}
+
 void HMWiredDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
 {
 	try

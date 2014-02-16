@@ -900,11 +900,13 @@ bool DeviceType::matches(LogicalDeviceType deviceType, uint32_t firmwareVersion)
 		bool match = true;
 		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
-			//This might not be the optimal way to get the xml rpc device, because it assumes the device type is unique
 			//When the device type is not at index 10 of the pairing packet, the device is not supported
 			//The "priority" attribute is ignored, for the standard devices "priority" seems not important
 			if(i->index == 10.0) { if(i->constValue != deviceType.type()) match = false; }
 			else if(i->index == 9.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
+			else if(i->index == 0) { if((deviceType.type() >> 8) != i->constValue) match = false; }
+			else if(i->index == 1.0) { if((deviceType.type() & 0xFF) != i->constValue) match = false; }
+			else if(i->index == 2.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
 			else match = false; //Unknown index
 		}
 		if(match) return true;
@@ -1485,8 +1487,9 @@ void Device::parseXML(xml_node<>* node)
 			if(attributeName == "version") version = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "family")
 			{
-				if(attributeValue == "HomeMaticBidCoS") family = DeviceFamilies::HomeMaticBidCoS;
-				else if(attributeValue == "HomeMaticWired") family = DeviceFamilies::HomeMaticWired;
+				HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
+				if(attributeValue == "homematicbidcos") family = DeviceFamilies::HomeMaticBidCoS;
+				else if(attributeValue == "homematicwired") family = DeviceFamilies::HomeMaticWired;
 			}
 			else if(attributeName == "rx_modes")
 			{

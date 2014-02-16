@@ -59,6 +59,13 @@ public:
 	HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
 	virtual ~HMWiredPeer();
 
+	//In table variables:
+	int32_t getFirmwareVersion() { return _firmwareVersion; }
+	void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
+	LogicalDeviceType getDeviceType() { return _deviceType; }
+	void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(3, (int32_t)_deviceType.type()); }
+	//End
+
 	std::mutex _variablesToResetMutex;
 	std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
 
@@ -66,9 +73,18 @@ public:
 
 	std::shared_ptr<PendingHMWiredQueues> pendingHMWiredQueues;
 
+	void saveVariable(uint32_t index, int32_t intValue) {}
+	void saveVariable(uint32_t index, int64_t intValue) {}
+	void saveVariable(uint32_t index, std::string& stringValue) {}
+	void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue) {}
 	void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
 
 	void packetReceived(std::shared_ptr<HMWiredPacket> packet) {}
+
+	//In table variables:
+	int32_t _firmwareVersion = 0;
+	LogicalDeviceType _deviceType;
+	//End
 };
 
 } /* namespace HMWired */

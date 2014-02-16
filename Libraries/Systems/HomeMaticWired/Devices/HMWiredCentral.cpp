@@ -548,6 +548,35 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
+std::shared_ptr<HMWiredPeer> HMWiredCentral::createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, bool save)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPeer> peer(new HMWiredPeer(_deviceID, true));
+		peer->setAddress(address);
+		peer->setFirmwareVersion(firmwareVersion);
+		peer->setDeviceType(deviceType);
+		peer->setSerialNumber(serialNumber);
+		peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, -1);
+		if(!peer->rpcDevice) return std::shared_ptr<HMWiredPeer>();
+		if(save) peer->save(true, true, false); //Save and create peerID
+		return peer;
+	}
+    catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<HMWiredPeer>();
+}
+
 std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 {
 	try
@@ -660,45 +689,41 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 
 		for(std::vector<int32_t>::iterator i = newDevices.begin(); i != newDevices.end(); ++i)
 		{
+			if(getPeer(*i)) continue;
+
 			//Get device type:
-			std::vector<uint8_t> payload;
-			payload.push_back(0x68);
-			std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, *i, true, _messageCounter[*i]++, 0, addressMask, payload));
-			std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
+			std::shared_ptr<HMWiredPacket> response = getResponse(0x68, *i);
 			if(!response || response->payload()->size() != 2)
 			{
 				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Device type request failed.");
 				continue;
 			}
-			sendOK(response->senderMessageCounter(), *i);
 			int32_t deviceType = (response->payload()->at(0) << 8) + response->payload()->at(1);
 
 			//Get firmware version:
-			payload.clear();
-			payload.push_back(0x76);
-			request.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, *i, true, _messageCounter[*i]++, 0, addressMask, payload));
-			response = sendPacket(request, true);
+			response = getResponse(0x76, *i);
 			if(!response || response->payload()->size() != 2)
 			{
 				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Firmware version request failed.");
 				continue;
 			}
-			sendOK(response->senderMessageCounter(), *i);
 			int32_t firmwareVersion = (response->payload()->at(0) << 8) + response->payload()->at(1);
 
 			//Get serial number:
-			payload.clear();
-			payload.push_back(0x6E);
-			request.reset(new HMWiredPacket(HMWiredPacketType::iMessage, _address, *i, true, _messageCounter[*i]++, 0, addressMask, payload));
-			response = sendPacket(request, true);
+			response = getResponse(0x6E, *i);
 			if(!response || response->payload()->empty())
 			{
 				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Serial number request failed.");
 				continue;
 			}
-			sendOK(response->senderMessageCounter(), *i);
 			std::string serialNumber(&response->payload()->at(0), &response->payload()->at(0) + response->payload()->size());
 
+			std::shared_ptr<HMWiredPeer> peer = createPeer(*i, firmwareVersion, LogicalDeviceType(DeviceFamilies::HomeMaticWired, deviceType), serialNumber, true);
+			if(!peer)
+			{
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". No matching XML file was found.");
+				continue;
+			}
 
 		}
 
