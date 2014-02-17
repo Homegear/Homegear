@@ -278,13 +278,11 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 		{
 			if(value.empty()) value.push_back(0);
 			int32_t intByteIndex = byteIndex;
-			if(size > 1)
+			if(size > 1.0)
 			{
 				Output::printError("Error: Can't set partial byte index > 1.");
 				return;
 			}
-			uint32_t bitSize = std::lround(size * 10);
-			if(bitSize > 8) bitSize = 8;
 			while((signed)_payload.size() - 1 < intByteIndex)
 			{
 				_payload.push_back(0);

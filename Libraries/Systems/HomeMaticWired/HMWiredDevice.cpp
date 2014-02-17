@@ -847,13 +847,33 @@ void HMWiredDevice::unlockBus()
     }
 }
 
-std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(uint8_t command, int32_t destinationAddress)
+std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(uint8_t command, int32_t destinationAddress, bool synchronizationBit)
 {
 	try
 	{
-		std::vector<uint8_t> payload;
-		payload.push_back(command);
-		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, destinationAddress, true, _messageCounter[destinationAddress]++, 0, 0, payload));
+		std::vector<uint8_t> payload({command});
+		return getResponse(payload, destinationAddress, synchronizationBit);
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<HMWiredPacket>();
+}
+
+std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::vector<uint8_t>& payload, int32_t destinationAddress, bool synchronizationBit)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, destinationAddress, synchronizationBit, _messageCounter[destinationAddress]++, 0, 0, payload));
 		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
 		if(response) sendOK(response->senderMessageCounter(), destinationAddress);
 		return response;
@@ -871,6 +891,72 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(uint8_t command, int32
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<HMWiredPacket>();
+}
+
+std::vector<uint8_t> HMWiredDevice::readEEPROM(int32_t deviceAddress, int32_t eepromAddress)
+{
+	try
+	{
+		std::vector<uint8_t> payload;
+		payload.push_back(0x52); //Command read EEPROM
+		payload.push_back(eepromAddress >> 8);
+		payload.push_back(eepromAddress & 0xFF);
+		payload.push_back(0x10); //Bytes to read
+		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, deviceAddress, false, _messageCounter[deviceAddress]++, 0, 0, payload));
+		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
+		if(response)
+		{
+			sendOK(response->senderMessageCounter(), deviceAddress);
+			return *response->payload();
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::vector<uint8_t>();
+}
+
+bool HMWiredDevice::writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, std::vector<uint8_t>& data)
+{
+	try
+	{
+		if(data.size() > 32)
+		{
+			Output::printError("Error: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_address) + ": Could not write data to EEPROM. Data size is larger than 32 bytes.");
+			return false;
+		}
+		std::vector<uint8_t> payload;
+		payload.push_back(0x57); //Command write EEPROM
+		payload.push_back(eepromAddress >> 8);
+		payload.push_back(eepromAddress & 0xFF);
+		payload.push_back(data.size()); //Bytes to write
+		payload.insert(payload.end(), data.begin(), data.end());
+		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, deviceAddress, false, _messageCounter[deviceAddress]++, 0, 0, payload));
+		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
+		if(response) return true;
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return false;
 }
 
 void HMWiredDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)

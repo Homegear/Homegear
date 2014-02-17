@@ -1513,6 +1513,10 @@ void Device::parseXML(xml_node<>* node)
 			{
 				deviceClass = attributeValue;
 			}
+			else if(attributeName == "eep_size")
+			{
+				eepSize = HelperFunctions::getNumber(attributeValue);
+			}
 			else if(attributeName == "ui_flags")
 			{
 				if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);

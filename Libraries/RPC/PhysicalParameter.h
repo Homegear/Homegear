@@ -56,6 +56,18 @@ public:
 	virtual ~PhysicalParameterEvent() {}
 };
 
+class PhysicalParameterAddress
+{
+public:
+	struct Operation
+	{
+		enum Enum { none, addition, substraction };
+	};
+	Operation::Enum operation;
+	double index = 0;
+	double step = 0;
+};
+
 class PhysicalParameter
 {
 public:
@@ -90,6 +102,7 @@ public:
 	std::vector<std::string> resetAfterSend;
 	bool isVolatile = false;
 	std::string id;
+	PhysicalParameterAddress address;
 
 	PhysicalParameter() {}
 	PhysicalParameter(xml_node<>* node);

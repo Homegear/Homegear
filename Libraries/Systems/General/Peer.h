@@ -51,9 +51,20 @@ public:
 	std::vector<uint8_t> partialData;
 };
 
+class ConfigDataBlock
+{
+public:
+	ConfigDataBlock() {}
+	virtual ~ConfigDataBlock() {}
+
+	uint32_t databaseID = 0;
+	std::vector<uint8_t> data;
+};
+
 class Peer
 {
 public:
+	std::unordered_map<uint32_t, ConfigDataBlock> binaryConfig;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> valuesCentral;
 	std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>> linksCentral;

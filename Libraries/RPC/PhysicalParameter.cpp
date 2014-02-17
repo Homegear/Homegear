@@ -140,6 +140,41 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 				else Output::printWarning("Warning: domino_event is only supported for physical type integer.");
 				eventFrames.push_back(event);
 			}
+			else if(nodeName == "address")
+			{
+				for(xml_attribute<>* addressAttr = physicalNode->first_attribute(); addressAttr; addressAttr = addressAttr->next_attribute())
+				{
+					std::string attributeName(addressAttr->name());
+					std::string attributeValue(addressAttr->value());
+					if(attributeName == "index")
+					{
+						if(attributeValue.substr(0, 1) == "+")
+						{
+							address.operation = PhysicalParameterAddress::Operation::addition;
+							attributeValue.erase(0, 1);
+						}
+						else if(attributeValue.substr(0, 1) == "-")
+						{
+							address.operation = PhysicalParameterAddress::Operation::substraction;
+							attributeValue.erase(0, 1);
+						}
+						std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, '.');
+						address.index = 0;
+						if(!splitValue.second.empty())
+						{
+							address.index += HelperFunctions::getNumber(splitValue.second);
+							address.index /= 10;
+						}
+						address.index += HelperFunctions::getNumber(splitValue.first);
+						index = address.index;
+					}
+					else if(attributeName == "step")
+					{
+						address.step = HelperFunctions::getDouble(attributeValue);
+					}
+					else Output::printWarning("Warning: Unknown attribute for \"address\": " + attributeName);
+				}
+			}
 			else if(nodeName == "reset_after_send")
 			{
 				attr = physicalNode->first_attribute("param");

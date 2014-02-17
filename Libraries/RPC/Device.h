@@ -314,6 +314,7 @@ public:
 	DeviceFamilies family = DeviceFamilies::HomeMaticBidCoS;
 	uint32_t version = 0;
 	uint32_t cyclicTimeout = 0;
+	int32_t eepSize = 1024;
 	std::shared_ptr<ParameterSet> parameterSet;
 	std::map<uint32_t, std::shared_ptr<DeviceChannel>> channels;
 	std::vector<std::shared_ptr<DeviceType>> supportedTypes;

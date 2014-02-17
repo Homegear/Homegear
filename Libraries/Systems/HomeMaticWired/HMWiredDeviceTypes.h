@@ -36,7 +36,8 @@ namespace HMWired
 {
 	enum class DeviceType : uint32_t
 	{
-		none = 0xFFFFFFFF,
+		none = 					0xFFFFFFFF,
+		HMRCV50 = 				0x0000,
 		HMWIREDSD = 			0xFEFFFFFE,
 		HMWIREDCENTRAL = 		0xFEFFFFFD
 	};

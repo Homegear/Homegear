@@ -97,7 +97,10 @@ class HMWiredDevice : public LogicalDevice
 
         virtual void handleAck(std::shared_ptr<HMWiredPacket> packet) {}
 
-        virtual std::shared_ptr<HMWiredPacket> getResponse(uint8_t command, int32_t destinationAddress);
+        virtual std::shared_ptr<HMWiredPacket> getResponse(uint8_t command, int32_t destinationAddress, bool synchronizationBit = false);
+        virtual std::shared_ptr<HMWiredPacket> getResponse(std::vector<uint8_t>& payload, int32_t destinationAddress, bool synchronizationBit = false);
+        virtual std::vector<uint8_t> readEEPROM(int32_t deviceAddress, int32_t eepromAddress);
+        virtual bool writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, std::vector<uint8_t>& data);
         virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
     protected:
         //In table variables

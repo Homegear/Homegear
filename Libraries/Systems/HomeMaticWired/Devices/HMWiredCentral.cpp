@@ -687,12 +687,13 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 		_pairing = false;
 		unlockBus();
 
+		std::vector<std::shared_ptr<HMWiredPeer>> newPeers;
 		for(std::vector<int32_t>::iterator i = newDevices.begin(); i != newDevices.end(); ++i)
 		{
 			if(getPeer(*i)) continue;
 
 			//Get device type:
-			std::shared_ptr<HMWiredPacket> response = getResponse(0x68, *i);
+			std::shared_ptr<HMWiredPacket> response = getResponse(0x68, *i, true);
 			if(!response || response->payload()->size() != 2)
 			{
 				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Device type request failed.");
@@ -725,10 +726,63 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 				continue;
 			}
 
+			peer->binaryConfig[0].data = readEEPROM(*i, 0);
+			if(peer->binaryConfig[0].data.size() != 0x10)
+			{
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Could not read master config from EEPROM.");
+				continue;
+			}
+
+			for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = peer->rpcDevice->parameterSet->parameters.begin(); j != peer->rpcDevice->parameterSet->parameters.end(); ++j)
+			{
+				if((*j)->logicalParameter->enforce)
+				{
+					std::vector<uint8_t> enforceValue = (*j)->convertToPacket((*j)->logicalParameter->getEnforceValue());
+					peer->setConfigParameter((*j)->physicalParameter->address.index, (*j)->physicalParameter->size, enforceValue);
+				}
+			}
+
+			writeEEPROM(*i, 0, peer->binaryConfig[0].data);
+
+			//Read all config
+			std::vector<uint8_t> command({0x45, 0, 0, 0x10, 0x40}); //Request used EEPROM blocks; start address 0x0000, block size 0x10, blocks 0x40
+			response = getResponse(command, *i);
+			if(!response || response->payload()->empty() || response->payload()->size() != 12 || response->payload()->at(0) != 0x65 || response->payload()->at(1) != 0 || response->payload()->at(2) != 0 || response->payload()->at(3) != 0x10)
+			{
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Could not determine EEPROM blocks to read.");
+				continue;
+			}
+
+			int32_t configIndex = 0;
+			for(int32_t j = 0; j < 8; j++)
+			{
+				for(int32_t k = 0; k < 8; k++)
+				{
+					if(response->payload()->at(j + 4) & (1 << k))
+					{
+						if(peer->binaryConfig.find(configIndex) == peer->binaryConfig.end())
+						{
+							peer->binaryConfig[configIndex].data = readEEPROM(peer->getAddress(), configIndex);
+							if(peer->binaryConfig[configIndex].data.size() != 0x10) Output::printError("Error: HomeMatic Wired Central: Error reading config from device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Size is not 16 bytes.");
+						}
+					}
+					configIndex += 0x10;
+				}
+			}
+			newPeers.push_back(peer);
 		}
 
-		//Todo: call "newDevices"
-		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)newDevices.size()));
+		if(newPeers.size() > 0)
+		{
+			std::shared_ptr<RPC::RPCVariable> deviceDescriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = newPeers.begin(); i != newPeers.end(); ++i)
+			{
+				std::shared_ptr<RPC::RPCVariable> description = (*i)->getDeviceDescription();
+				if(description && !description->arrayValue->empty()) deviceDescriptions->arrayValue->insert(deviceDescriptions->arrayValue->end(), description->arrayValue->begin(), description->arrayValue->end());
+			}
+			GD::rpcClient.broadcastNewDevices(deviceDescriptions);
+		}
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)newPeers.size()));
 	}
 	catch(const std::exception& ex)
 	{
