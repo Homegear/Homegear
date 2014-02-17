@@ -83,7 +83,11 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		}
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "event") { if(attributeValue == "true") isEvent = true; }
-		else if(attributeName == "type") type = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "type")
+		{
+			if(attributeValue.size() == 2 && attributeValue.at(0) == '#') type = (uint32_t)attributeValue.at(1);
+			else type = HelperFunctions::getNumber(attributeValue);
+		}
 		else if(attributeName == "subtype") subtype = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
 		else if(attributeName == "channel_field")

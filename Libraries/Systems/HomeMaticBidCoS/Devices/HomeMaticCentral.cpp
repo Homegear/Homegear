@@ -709,7 +709,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 						}
 					}
 
-					stringStream << "Address: 0x" << std::hex << i->second->getAddress() << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
+					stringStream << "Address: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 8) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
 					if(i->second->rpcDevice)
 					{
 						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
@@ -1183,6 +1183,7 @@ void HomeMaticCentral::deletePeer(int32_t address)
 		}
 		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+		if(_peersByID.find(peer->getID()) != _peersByID.end()) _peersByID.erase(peer->getID());
 		_peersMutex.unlock();
 		removePeerFromTeam(peer);
 		peer->deleteFromDatabase();
@@ -1190,7 +1191,7 @@ void HomeMaticCentral::deletePeer(int32_t address)
 		_peersMutex.lock();
 		_peers.erase(address);
 		_peersMutex.unlock();
-		Output::printMessage("Removed device 0x" + HelperFunctions::getHexString(address));
+		Output::printMessage("Removed HomeMatic BidCoS device 0x" + HelperFunctions::getHexString(address));
 	}
 	catch(const std::exception& ex)
     {

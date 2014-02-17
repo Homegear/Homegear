@@ -32,9 +32,7 @@
 
 #include "../../LogicalDevices/LogicalDevice.h"
 #include "../../HelperFunctions/HelperFunctions.h"
-#include "HMWiredQueue.h"
 #include "HMWiredPeer.h"
-#include "HMWiredQueueManager.h"
 #include "HMWiredPacketManager.h"
 #include "HMWiredDeviceTypes.h"
 
@@ -50,9 +48,6 @@
 
 namespace HMWired
 {
-class HMWiredMessage;
-class HMWiredMessages;
-
 class HMWiredDevice : public LogicalDevice
 {
     public:
@@ -92,10 +87,8 @@ class HMWiredDevice : public LogicalDevice
         virtual void unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData);
 
         virtual bool isInPairingMode() { return _pairing; }
-        virtual std::shared_ptr<HMWiredMessages> getMessages() { return _messages; }
         virtual std::shared_ptr<HMWiredPacket> sendPacket(std::shared_ptr<HMWiredPacket> packet, bool resend, bool stealthy = false);
-
-        virtual void handleAck(std::shared_ptr<HMWiredPacket> packet) {}
+        std::shared_ptr<HMWiredPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }
 
         virtual std::shared_ptr<HMWiredPacket> getResponse(uint8_t command, int32_t destinationAddress, bool synchronizationBit = false);
         virtual std::shared_ptr<HMWiredPacket> getResponse(std::vector<uint8_t>& payload, int32_t destinationAddress, bool synchronizationBit = false);
@@ -118,16 +111,13 @@ class HMWiredDevice : public LogicalDevice
         std::unordered_map<uint64_t, std::shared_ptr<HMWiredPeer>> _peersByID;
         std::timed_mutex _peersMutex;
         std::mutex _databaseMutex;
-        HMWiredQueueManager _hmWiredQueueManager;
         HMWiredPacketManager _receivedPackets;
         HMWiredPacketManager _sentPackets;
         std::mutex _sendMutex;
         bool _pairing = false;
-        std::shared_ptr<HMWiredMessages> _messages;
         bool _initialized = false;
 
         virtual void init();
-        virtual void setUpHMWiredMessages() {}
         void lockBus();
         void unlockBus();
     private:

@@ -34,11 +34,13 @@
 #include "../General/ServiceMessages.h"
 #include "HMWiredPacket.h"
 
+#include <list>
+
 namespace HMWired
 {
-class PendingHMWiredQueues;
 class CallbackFunctionParameter;
 class HMWiredCentral;
+class HMWiredDevice;
 
 class VariableToReset
 {
@@ -51,6 +53,39 @@ public:
 
 	VariableToReset() {}
 	virtual ~VariableToReset() {}
+};
+
+class FrameValue
+{
+public:
+	std::list<uint32_t> channels;
+	std::vector<uint8_t> value;
+};
+
+class FrameValues
+{
+public:
+	std::string frameID;
+	std::list<uint32_t> paramsetChannels;
+	RPC::ParameterSet::Type::Enum parameterSetType;
+	std::map<std::string, FrameValue> values;
+};
+
+class BasicPeer
+{
+public:
+	BasicPeer() {}
+	BasicPeer(int32_t addr, std::string serial, bool hid) { address = addr; serialNumber = serial; hidden = hid; }
+	virtual ~BasicPeer() {}
+
+	int32_t address = 0;
+	std::string serialNumber;
+	int32_t channel = 0;
+	bool hidden = false;
+	std::string linkName;
+	std::string linkDescription;
+	std::shared_ptr<HMWiredDevice> device;
+	std::vector<uint8_t> data;
 };
 
 class HMWiredPeer : public Peer
@@ -67,22 +102,22 @@ public:
 	void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(3, (int32_t)_deviceType.type()); }
 	//End
 
-	std::mutex _variablesToResetMutex;
-	std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
-
 	std::shared_ptr<ServiceMessages> serviceMessages;
 
-	std::shared_ptr<PendingHMWiredQueues> pendingHMWiredQueues;
-
+	void initializeCentralConfig();
 	void setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue);
-	void saveVariable(uint32_t index, int32_t intValue) {}
-	void saveVariable(uint32_t index, int64_t intValue) {}
-	void saveVariable(uint32_t index, std::string& stringValue) {}
-	void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue) {}
-	void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
+	virtual bool load(LogicalDevice* device);
+	void save(bool savePeer, bool variables, bool centralConfig);
+    void serializePeers(std::vector<uint8_t>& encodedData);
+    void unserializePeers(std::shared_ptr<std::vector<char>> serializedData);
+    void loadVariables(HMWiredDevice* device = nullptr);
+    void saveVariables();
+	void savePeers();
+	void saveServiceMessages();
 
 	virtual void reset();
-	void packetReceived(std::shared_ptr<HMWiredPacket> packet) {}
+	void getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std::vector<FrameValues>& frameValue);
+	void packetReceived(std::shared_ptr<HMWiredPacket> packet);
 
 	std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
 	std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);
@@ -93,6 +128,7 @@ protected:
 	//In table variables:
 	int32_t _firmwareVersion = 0;
 	LogicalDeviceType _deviceType;
+	std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
 	//End
 
 	std::shared_ptr<HMWiredCentral> getCentral();

@@ -54,11 +54,11 @@ void DeviceFamily::save(bool full)
 {
 	try
 	{
-		Output::printMessage("(Shutdown) => Saving HomeMatic BidCoS devices");
+		Output::printMessage("(Shutdown) => Saving devices");
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			Output::printMessage("(Shutdown) => Saving HomeMatic BidCoS device 0x" + HelperFunctions::getHexString((*i)->getAddress(), 6));
+			Output::printMessage("(Shutdown) => Saving " + HelperFunctions::getDeviceFamilyName((*i)->deviceFamily()) + " device 0x" + HelperFunctions::getHexString((*i)->getAddress(), 8));
 			(*i)->save(full);
 			(*i)->savePeers(full);
 		}

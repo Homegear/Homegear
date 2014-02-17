@@ -139,7 +139,6 @@ class BidCoSPeer : public Peer
 		//End
 
 		//Needed, so the peer gets not saved in central's worker thread while being deleted
-		bool deleting = false;
 		std::shared_ptr<ServiceMessages> serviceMessages;
         void setCentralFeatures(bool value) { _centralFeatures = value; }
 
@@ -163,20 +162,13 @@ class BidCoSPeer : public Peer
         void unserializeNonCentralConfig(std::shared_ptr<std::vector<char>> serializedData);
         void serializeVariablesToReset(std::vector<uint8_t>& encodedData);
         void unserializeVariablesToReset(std::shared_ptr<std::vector<char>> serializedData);
-        void loadConfig();
-        void saveConfig();
         void loadVariables(HomeMaticDevice* device = nullptr);
         void saveVariables();
-        void saveVariable(uint32_t index, int32_t intValue);
-        void saveVariable(uint32_t index, int64_t intValue);
-        void saveVariable(uint32_t index, std::string& stringValue);
-        void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
         void savePeers();
         void saveNonCentralConfig();
         void saveVariablesToReset();
         void saveServiceMessages();
         void savePendingQueues();
-        void deleteFromDatabase();
         void deletePairedVirtualDevice(int32_t address);
         void deletePairedVirtualDevices();
         bool hasTeam() { return !_team.serialNumber.empty(); }

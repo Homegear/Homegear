@@ -100,7 +100,6 @@ void PendingHMWiredQueues::unserialize(std::shared_ptr<std::vector<char>> serial
 				parameters->integers.push_back(decoder.decodeInteger(serializedData, position));
 				parameters->integers.push_back(decoder.decodeInteger(serializedData, position) * 1000);
 				queue->callbackParameter = parameters;
-				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<HMWiredPeer, &HMWiredPeer::addVariableToResetCallback>(peer);
 			}
 			_queues.push_back(queue);
 		}

@@ -64,6 +64,8 @@ public:
 class Peer
 {
 public:
+	bool deleting = false;
+
 	std::unordered_map<uint32_t, ConfigDataBlock> binaryConfig;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> valuesCentral;
@@ -91,10 +93,20 @@ public:
 	virtual void enqueuePendingQueues() {}
 
 	virtual bool load(LogicalDevice* device) { return false; }
-	virtual void save(bool savePeer, bool saveVariables, bool saveCentralConfig) {}
+	virtual void save(bool savePeer, bool saveVariables, bool saveCentralConfig);
+	void loadConfig();
+    void saveConfig();
 	virtual void saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress = 0, uint32_t remoteChannel = 0);
 	virtual void saveParameter(uint32_t parameterID, std::vector<uint8_t>& value);
+	virtual void saveVariables() {}
+	virtual void saveVariable(uint32_t index, int32_t intValue);
+    virtual void saveVariable(uint32_t index, int64_t intValue);
+    virtual void saveVariable(uint32_t index, std::string& stringValue);
+    virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
+    virtual void deleteFromDatabase();
 protected:
+    std::map<uint32_t, uint32_t> _variableDatabaseIDs;
+
 	//In table peers:
 	uint64_t _peerID = 0;
 	uint32_t _parentID = 0;

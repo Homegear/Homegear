@@ -52,12 +52,12 @@ public:
 	virtual ~HMWiredCentral();
 	void init();
 	bool packetReceived(std::shared_ptr<Packet> packet);
-	virtual void setUpHMWiredMessages();
 	std::string handleCLICommand(std::string command);
 
 	std::shared_ptr<RPC::RPCVariable> searchDevices();
 protected:
 	std::shared_ptr<HMWiredPeer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
+	void deletePeer(int32_t address);
 };
 
 } /* namespace HMWired */

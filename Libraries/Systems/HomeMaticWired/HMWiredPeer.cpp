@@ -28,7 +28,6 @@
  */
 
 #include "HMWiredPeer.h"
-#include "PendingHMWiredQueues.h"
 #include "Devices/HMWiredCentral.h"
 #include "../../GD/GD.h"
 
@@ -59,11 +58,7 @@ std::shared_ptr<HMWiredCentral> HMWiredPeer::getCentral()
 
 HMWiredPeer::HMWiredPeer(uint32_t parentID, bool centralFeatures) : Peer(parentID, centralFeatures)
 {
-	if(centralFeatures)
-	{
-		serviceMessages.reset(new ServiceMessages(this));
-		pendingHMWiredQueues.reset(new PendingHMWiredQueues());
-	}
+	if(centralFeatures) serviceMessages.reset(new ServiceMessages(this));
 }
 
 HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures) : Peer(id, address, serialNumber, parentID, centralFeatures)
@@ -73,6 +68,51 @@ HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, 
 HMWiredPeer::~HMWiredPeer()
 {
 
+}
+
+void HMWiredPeer::initializeCentralConfig()
+{
+	try
+	{
+		if(!rpcDevice)
+		{
+			Output::printWarning("Warning: Tried to initialize HomeMatic Wired peer's central config without xmlrpcDevice being set.");
+			return;
+		}
+		GD::db.executeCommand("SAVEPOINT hmWiredPeerConfig" + std::to_string(_address));
+		RPCConfigurationParameter parameter;
+		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+		{
+			if(i->second->parameterSets.find(RPC::ParameterSet::Type::values) != i->second->parameterSets.end() && i->second->parameterSets[RPC::ParameterSet::Type::values])
+			{
+				std::shared_ptr<RPC::ParameterSet> valueSet = i->second->parameterSets[RPC::ParameterSet::Type::values];
+				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = valueSet->parameters.begin(); j != valueSet->parameters.end(); ++j)
+				{
+					if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
+					{
+						parameter = RPCConfigurationParameter();
+						parameter.rpcParameter = *j;
+						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+						valuesCentral[i->first][(*j)->id] = parameter;
+						saveParameter(0, RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
+					}
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    GD::db.executeCommand("RELEASE hmWiredPeerConfig" + std::to_string(_address));
 }
 
 void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue)
@@ -180,6 +220,262 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 	}
 }
 
+void HMWiredPeer::loadVariables(HMWiredDevice* device)
+{
+	try
+	{
+		_databaseMutex.lock();
+		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
+		DataTable rows = GD::db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
+		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		{
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			switch(row->second.at(2)->intValue)
+			{
+			case 0:
+				_firmwareVersion = row->second.at(3)->intValue;
+				break;
+			case 3:
+				_deviceType = LogicalDeviceType(DeviceFamilies::HomeMaticWired, row->second.at(3)->intValue);
+				if(_deviceType.type() == (uint32_t)DeviceType::none)
+				{
+					Output::printError("Error loading HomeMatic Wired peer 0x" + HelperFunctions::getHexString(_address) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+				}
+				break;
+			case 12:
+				unserializePeers(row->second.at(5)->binaryValue);
+				break;
+			case 15:
+				if(_centralFeatures)
+				{
+					serviceMessages.reset(new ServiceMessages(this));
+					serviceMessages->unserialize(row->second.at(5)->binaryValue);
+				}
+				break;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_databaseMutex.unlock();
+}
+
+bool HMWiredPeer::load(LogicalDevice* device)
+{
+	try
+	{
+		Output::printDebug("Loading HomeMatic Wired peer 0x" + HelperFunctions::getHexString(_address, 8));
+
+		loadVariables((HMWiredDevice*)device);
+
+		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
+		if(!rpcDevice)
+		{
+			Output::printError("Error loading HomeMatic Wired peer 0x" + HelperFunctions::getHexString(_address) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
+			return false;
+		}
+		std::string entry;
+		uint32_t pos = 0;
+		uint32_t dataSize;
+		loadConfig();
+		initializeCentralConfig();
+		return true;
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
+void HMWiredPeer::save(bool savePeer, bool variables, bool centralConfig)
+{
+	try
+	{
+		Peer::save(savePeer, variables, centralConfig);
+		if(!variables) saveServiceMessages();
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredPeer::saveVariables()
+{
+	try
+	{
+		if(_peerID == 0) return;
+		saveVariable(0, _firmwareVersion);
+		saveVariable(3, (int32_t)_deviceType.type());
+		savePeers(); //12
+		saveServiceMessages(); //15
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredPeer::saveServiceMessages()
+{
+	try
+	{
+		if(!_centralFeatures || !serviceMessages) return;
+		std::vector<uint8_t> serializedData;
+		serviceMessages->serialize(serializedData);
+		saveVariable(15, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredPeer::savePeers()
+{
+	try
+	{
+		std::vector<uint8_t> serializedData;
+		serializePeers(serializedData);
+		saveVariable(12, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredPeer::serializePeers(std::vector<uint8_t>& encodedData)
+{
+	try
+	{
+		BinaryEncoder encoder;
+		encoder.encodeInteger(encodedData, _peers.size());
+		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+		{
+			encoder.encodeInteger(encodedData, i->first);
+			encoder.encodeInteger(encodedData, i->second.size());
+			for(std::vector<std::shared_ptr<BasicPeer>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+			{
+				if(!*j) continue;
+				encoder.encodeInteger(encodedData, (*j)->address);
+				encoder.encodeInteger(encodedData, (*j)->channel);
+				encoder.encodeString(encodedData, (*j)->serialNumber);
+				encoder.encodeBoolean(encodedData, (*j)->hidden);
+				encoder.encodeString(encodedData, (*j)->linkName);
+				encoder.encodeString(encodedData, (*j)->linkDescription);
+				encoder.encodeInteger(encodedData, (*j)->data.size());
+				encodedData.insert(encodedData.end(), (*j)->data.begin(), (*j)->data.end());
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredPeer::unserializePeers(std::shared_ptr<std::vector<char>> serializedData)
+{
+	try
+	{
+		BinaryDecoder decoder;
+		uint32_t position = 0;
+		uint32_t peersSize = decoder.decodeInteger(serializedData, position);
+		for(uint32_t i = 0; i < peersSize; i++)
+		{
+			uint32_t channel = decoder.decodeInteger(serializedData, position);
+			uint32_t peerCount = decoder.decodeInteger(serializedData, position);
+			for(uint32_t j = 0; j < peerCount; j++)
+			{
+				std::shared_ptr<BasicPeer> basicPeer(new BasicPeer());
+				basicPeer->address = decoder.decodeInteger(serializedData, position);
+				basicPeer->channel = decoder.decodeInteger(serializedData, position);
+				basicPeer->serialNumber = decoder.decodeString(serializedData, position);
+				basicPeer->hidden = decoder.decodeBoolean(serializedData, position);
+				_peers[channel].push_back(basicPeer);
+				basicPeer->linkName = decoder.decodeString(serializedData, position);
+				basicPeer->linkDescription = decoder.decodeString(serializedData, position);
+				uint32_t dataSize = decoder.decodeInteger(serializedData, position);
+				if(position + dataSize <= serializedData->size()) basicPeer->data.insert(basicPeer->data.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
+				position += dataSize;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HMWiredPeer::reset()
 {
 	try
@@ -213,35 +509,203 @@ void HMWiredPeer::reset()
 	}
 }
 
-void HMWiredPeer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters)
+void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std::vector<FrameValues>& frameValues)
 {
 	try
 	{
-		if(parameters->integers.size() != 3) return;
-		if(parameters->strings.size() != 1) return;
-		Output::printMessage("addVariableToResetCallback invoked for parameter " + parameters->strings.at(0) + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ".", 5);
-		Output::printInfo("Parameter " + parameters->strings.at(0) + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + " will be reset at " + HelperFunctions::getTimeString(parameters->integers.at(2)) + ".");
-		std::shared_ptr<VariableToReset> variable(new VariableToReset);
-		variable->channel = parameters->integers.at(0);
-		int32_t integerValue = parameters->integers.at(1);
-		HelperFunctions::memcpyBigEndian(variable->data, integerValue);
-		variable->resetTime = parameters->integers.at(2);
-		variable->key = parameters->strings.at(0);
-		_variablesToResetMutex.lock();
-		_variablesToReset.push_back(variable);
-		_variablesToResetMutex.unlock();
+		if(!rpcDevice) return;
+		//equal_range returns all elements with "0" or an unknown element as argument
+		if(packet->messageType() == 0 || rpcDevice->framesByMessageType.find(packet->messageType()) == rpcDevice->framesByMessageType.end()) return;
+		std::pair<std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator,std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByMessageType.equal_range((uint32_t)packet->messageType());
+		if(range.first == rpcDevice->framesByMessageType.end()) return;
+		std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator i = range.first;
+		do
+		{
+			FrameValues currentFrameValues;
+			std::shared_ptr<RPC::DeviceFrame> frame(i->second);
+			if(!frame) continue;
+			if(frame->direction == RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != _address) continue;
+			if(frame->direction == RPC::DeviceFrame::Direction::Enum::toDevice && packet->destinationAddress() != _address) continue;
+			if(packet->payload()->empty()) continue;
+			if(frame->subtype > -1 && frame->subtypeIndex >= 9 && (signed)packet->payload()->size() > (frame->subtypeIndex - 9) && packet->payload()->at(frame->subtypeIndex - 9) != (unsigned)frame->subtype) continue;
+			int32_t channelIndex = frame->channelField;
+			int32_t channel = -1;
+			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9);
+			if(channel > -1 && frame->channelFieldSize < 1.0) channel &= (0xFF >> (8 - std::lround(frame->channelFieldSize * 10) % 10));
+			if(frame->fixedChannel > -1) channel = frame->fixedChannel;
+			currentFrameValues.frameID = frame->id;
+
+			for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
+			{
+				std::vector<uint8_t> data;
+				if(j->size > 0 && j->index > 0)
+				{
+					if(((int32_t)j->index) - 9 >= (signed)packet->payload()->size()) continue;
+					data = packet->getPosition(j->index, j->size, -1);
+
+					if(j->constValue > -1)
+					{
+						int32_t intValue = 0;
+						HelperFunctions::memcpyBigEndian(intValue, data);
+						if(intValue != j->constValue) break; else continue;
+					}
+				}
+				else if(j->constValue > -1)
+				{
+					HelperFunctions::memcpyBigEndian(data, j->constValue);
+				}
+				else continue;
+				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
+				{
+					if((*k)->physicalParameter->valueID != j->param) continue;
+					currentFrameValues.parameterSetType = (*k)->parentParameterSet->type;
+					bool setValues = false;
+					if(currentFrameValues.paramsetChannels.empty()) //Fill paramsetChannels
+					{
+						int32_t startChannel = (channel < 0) ? 0 : channel;
+						int32_t endChannel;
+						//When fixedChannel is -2 (means '*') cycle through all channels
+						if(frame->fixedChannel == -2)
+						{
+							startChannel = 0;
+							endChannel = (rpcDevice->channels.end()--)->first;
+						}
+						else endChannel = startChannel;
+						for(uint32_t l = startChannel; l <= endChannel; l++)
+						{
+							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
+							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
+							if(!rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							currentFrameValues.paramsetChannels.push_back(l);
+							currentFrameValues.values[(*k)->id].channels.push_back(l);
+							setValues = true;
+						}
+					}
+					else //Use paramsetChannels
+					{
+						for(std::list<uint32_t>::const_iterator l = currentFrameValues.paramsetChannels.begin(); l != currentFrameValues.paramsetChannels.end(); ++l)
+						{
+							if(rpcDevice->channels.find(*l) == rpcDevice->channels.end()) continue;
+							if(rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(*l)->parameterSets.end()) continue;
+							if(!rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							currentFrameValues.values[(*k)->id].channels.push_back(*l);
+							setValues = true;
+						}
+					}
+					if(setValues) currentFrameValues.values[(*k)->id].value = data;
+				}
+			}
+			if(!currentFrameValues.values.empty()) frameValues.push_back(currentFrameValues);
+		} while(++i != range.second && i != rpcDevice->framesByMessageType.end());
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
+{
+	try
+	{
+		if(!packet) return;
+		if(!_centralFeatures || _disposing) return;
+		if(packet->senderAddress() != _address) return;
+		if(!rpcDevice) return;
+		setLastPacketReceived();
+		serviceMessages->endUnreach();
+		std::vector<FrameValues> frameValues;
+		getValuesFromPacket(packet, frameValues);
+		std::shared_ptr<HMWiredPacket> sentPacket;
+		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
+		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>>> rpcValues;
+		//Loop through all matching frames
+		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
+		{
+			std::shared_ptr<RPC::DeviceFrame> frame;
+			if(!a->frameID.empty()) frame = rpcDevice->framesByID.at(a->frameID);
+
+			std::vector<FrameValues> sentFrameValues;
+			bool pushPendingQueues = false;
+			if(packet->type() == HMWiredPacketType::ackMessage) //ACK packet: Check if all values were set correctly. If not set value again
+			{
+				sentPacket = getCentral()->getSentPacket(_address);
+				if(sentPacket && sentPacket->messageType() > 0 && !sentPacket->payload()->empty())
+				{
+					RPC::ParameterSet::Type::Enum sentParameterSetType;
+					getValuesFromPacket(sentPacket, sentFrameValues);
+				}
+			}
+
+			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
+			{
+				for(std::list<uint32_t>::const_iterator j = a->paramsetChannels.begin(); j != a->paramsetChannels.end(); ++j)
+				{
+					if(std::find(i->second.channels.begin(), i->second.channels.end(), *j) == i->second.channels.end()) continue;
+					if(!valueKeys[*j] || !rpcValues[*j])
+					{
+						valueKeys[*j].reset(new std::vector<std::string>());
+						rpcValues[*j].reset(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
+					}
+
+					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
+					parameter->data = i->second.value;
+					saveParameter(parameter->databaseID, parameter->data);
+					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic Wired device 0x" + HelperFunctions::getHexString(_address, 8) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+
+					 //Process service messages
+					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
+					{
+						if(parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
+						{
+							serviceMessages->set(i->first, i->second.value.at(0), *j);
+						}
+						else if(parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeBoolean)
+						{
+							serviceMessages->set(i->first, (bool)i->second.value.at(0));
+						}
+					}
+
+					valueKeys[*j]->push_back(i->first);
+					rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
+				}
+			}
+
+			if(!a->values.empty() && packet->type() == HMWiredPacketType::iMessage && packet->destinationAddress() == getCentral()->getAddress())
+			{
+				getCentral()->sendOK(packet->senderMessageCounter(), packet->senderAddress());
+			}
+		}
+		if(!rpcValues.empty())
+		{
+			for(std::map<uint32_t, std::shared_ptr<std::vector<std::string>>>::const_iterator j = valueKeys.begin(); j != valueKeys.end(); ++j)
+			{
+				if(j->second->empty()) continue;
+				std::string address(_serialNumber + ":" + std::to_string(j->first));
+				GD::eventHandler.trigger(address, j->second, rpcValues.at(j->first));
+				GD::rpcClient.broadcastEvent(address, j->second, rpcValues.at(j->first));
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

@@ -74,6 +74,8 @@ class HMWiredPacket : public Packet
 
         void import(std::vector<uint8_t>& packet);
         void import(std::string packetHex);
+        virtual std::vector<uint8_t> getPosition(double index, double size, int32_t mask);
+        virtual void setPosition(double index, double size, std::vector<uint8_t>& value);
     protected:
     private:
         //Packet content

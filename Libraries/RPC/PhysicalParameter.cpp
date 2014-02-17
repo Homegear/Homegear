@@ -112,6 +112,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			{
 				attr = physicalNode->first_attribute("request");
 				if(attr) getRequest = std::string(attr->value());
+				//ignore "response"
 			}
 			else if(nodeName == "event")
 			{

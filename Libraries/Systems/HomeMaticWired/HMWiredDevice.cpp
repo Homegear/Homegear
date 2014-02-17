@@ -29,7 +29,6 @@
 
 #include "HMWiredDevice.h"
 #include "../../GD/GD.h"
-#include "HMWiredMessages.h"
 
 namespace HMWired
 {
@@ -68,13 +67,11 @@ void HMWiredDevice::init()
 	try
 	{
 		if(_initialized) return; //Prevent running init two times
-		_messages = std::shared_ptr<HMWiredMessages>(new HMWiredMessages());
 
 		GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->addLogicalDevice(this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
 
-		setUpHMWiredMessages();
 		_initialized = true;
 	}
 	catch(const std::exception& ex)
@@ -100,7 +97,7 @@ void HMWiredDevice::load()
 {
 	try
 	{
-		Output::printDebug("Loading HomeMatic Wired device 0x" + HelperFunctions::getHexString(_address, 6));
+		Output::printDebug("Loading HomeMatic Wired device 0x" + HelperFunctions::getHexString(_address, 8));
 
 		loadVariables();
 	}
@@ -739,7 +736,7 @@ void HMWiredDevice::savePeers(bool full)
 			//Necessary, because peers can be assigned to multiple virtual devices
 			if(i->second->getParentID() != _deviceID) continue;
 			//We are always printing this, because the init script needs it
-			Output::printMessage("(Shutdown) => Saving HomeMatic Wired peer 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6));
+			Output::printMessage("(Shutdown) => Saving HomeMatic Wired peer 0x" + HelperFunctions::getHexString(i->first, 8));
 			i->second->save(full, full, full);
 		}
 	}
@@ -767,17 +764,6 @@ bool HMWiredDevice::packetReceived(std::shared_ptr<Packet> packet)
 		std::shared_ptr<HMWiredPacket> hmWiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
 		if(!hmWiredPacket) return false;
 		_receivedPackets.set(hmWiredPacket->senderAddress(), hmWiredPacket, hmWiredPacket->timeReceived());
-		if(hmWiredPacket->type() == HMWiredPacketType::ackMessage) handleAck(hmWiredPacket);
-		else
-		{
-			std::shared_ptr<HMWiredMessage> message = _messages->find(DIRECTIONIN, hmWiredPacket);
-			if(message && message->checkAccess(hmWiredPacket, _hmWiredQueueManager.get(hmWiredPacket->senderAddress())))
-			{
-				if(GD::debugLevel > 4) Output::printDebug("Debug: Device " + HelperFunctions::getHexString(_address) + ": Access granted for packet " + hmWiredPacket->hexString(), 6);
-				message->invokeMessageHandlerIncoming(hmWiredPacket);
-				return true;
-			}
-		}
 	}
 	catch(const std::exception& ex)
     {

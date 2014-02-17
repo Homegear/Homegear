@@ -88,10 +88,10 @@ void BidCoSPeer::initializeCentralConfig()
 	{
 		if(!rpcDevice)
 		{
-			Output::printWarning("Warning: Tried to initialize peer's central config without xmlrpcDevice being set.");
+			Output::printWarning("Warning: Tried to initialize HomeMatic BidCoS peer's central config without xmlrpcDevice being set.");
 			return;
 		}
-		GD::db.executeCommand("SAVEPOINT peerConfig" + std::to_string(_address));
+		GD::db.executeCommand("SAVEPOINT bidCoSPeerConfig" + std::to_string(_address));
 		RPCConfigurationParameter parameter;
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
@@ -139,14 +139,14 @@ void BidCoSPeer::initializeCentralConfig()
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::db.executeCommand("RELEASE peerConfig" + std::to_string(_address));
+    GD::db.executeCommand("RELEASE bidCoSPeerConfig" + std::to_string(_address));
 }
 
 void BidCoSPeer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, int32_t remoteChannel, bool useConfigFunction)
 {
 	try
 	{
-		GD::db.executeCommand("SAVEPOINT peerConfig" + std::to_string(_address));
+		GD::db.executeCommand("SAVEPOINT bidCoSPeerConfig" + std::to_string(_address));
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 		if(rpcDevice->channels[channel]->parameterSets.find(RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
 		std::shared_ptr<RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[RPC::ParameterSet::Type::link];
@@ -178,7 +178,7 @@ void BidCoSPeer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, in
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::db.executeCommand("RELEASE peerConfig" + std::to_string(_address));
+    GD::db.executeCommand("RELEASE bidCoSPeerConfig" + std::to_string(_address));
 }
 
 void BidCoSPeer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t remoteChannel)
@@ -785,80 +785,31 @@ void BidCoSPeer::removePeer(int32_t channel, int32_t address, int32_t remoteChan
     _databaseMutex.unlock();
 }
 
-void BidCoSPeer::deleteFromDatabase()
-{
-	try
-	{
-		_databaseMutex.lock();
-		DataColumnVector data;
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
-		GD::db.executeCommand("DELETE FROM metadata WHERE objectID=?", data);
-		data.clear();
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-		GD::db.executeCommand("DELETE FROM parameters WHERE peerID=?", data);
-		GD::db.executeCommand("DELETE FROM peerVariables WHERE peerID=?", data);
-		GD::db.executeCommand("DELETE FROM peers WHERE peerID=?", data);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
-}
-
 void BidCoSPeer::save(bool savePeer, bool variables, bool centralConfig)
 {
 	try
 	{
-		if(deleting || isTeam()) return;
-		GD::db.executeCommand("SAVEPOINT peer" + std::to_string(_address));
-		if(savePeer)
-		{
-			_databaseMutex.lock();
-			DataColumnVector data;
-			if(_peerID > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_parentID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_address)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
-			int32_t result = GD::db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);
-			if(_peerID == 0) _peerID = result;
-			_databaseMutex.unlock();
-		}
-		if(variables) saveVariables();
-		else
+		Peer::save(savePeer, variables, centralConfig);
+		if(!variables)
 		{
 			saveNonCentralConfig();
 			saveVariablesToReset();
 			saveServiceMessages();
 			savePendingQueues();
 		}
-		if(centralConfig) saveConfig();
 	}
 	catch(const std::exception& ex)
     {
-		_databaseMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_databaseMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_databaseMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::db.executeCommand("RELEASE peer" + std::to_string(_address));
 }
 
 void BidCoSPeer::deletePairedVirtualDevice(int32_t address)
@@ -1138,367 +1089,6 @@ void BidCoSPeer::unserializeVariablesToReset(std::shared_ptr<std::vector<char>> 
     }
 }
 
-void BidCoSPeer::saveConfig()
-{
-	try
-	{
-		if(_peerID == 0 || isTeam()) return;
-		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = configCentral.begin(); i != configCentral.end(); ++i)
-		{
-			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j)
-			{
-				if(!j->second.rpcParameter)
-				{
-					Output::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(i->first));
-					continue;
-				}
-				if(j->second.rpcParameter->id.size() == 0)
-				{
-					Output::printError("Error: Parameter has no id.");
-					continue;
-				}
-				std::string name = j->first;
-				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
-				else saveParameter(0, RPC::ParameterSet::Type::Enum::master, i->first, name, j->second.data);
-			}
-		}
-		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = valuesCentral.begin(); i != valuesCentral.end(); ++i)
-		{
-			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j)
-			{
-				if(!j->second.rpcParameter)
-				{
-					Output::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(i->first));
-					continue;
-				}
-				if(j->second.rpcParameter->id.size() == 0)
-				{
-					Output::printError("Error: Parameter has no id.");
-					continue;
-				}
-				std::string name = j->first;
-				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
-				else saveParameter(0, RPC::ParameterSet::Type::Enum::values, i->first, name, j->second.data);
-			}
-		}
-		for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>::iterator i = linksCentral.begin(); i != linksCentral.end(); ++i)
-		{
-			for(std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
-			{
-				for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
-				{
-					for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator l = k->second.begin(); l != k->second.end(); ++l)
-					{
-						if(!l->second.rpcParameter)
-						{
-							Output::printCritical("Critical: Parameter " + l->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(i->first));
-							continue;
-						}
-						if(l->second.rpcParameter->id.size() == 0)
-						{
-							Output::printError("Error: Parameter has no id.");
-							continue;
-						}
-						std::string name = l->first;
-						if(l->second.databaseID > 0) saveParameter(l->second.databaseID, l->second.data);
-						else saveParameter(0, RPC::ParameterSet::Type::Enum::link, i->first,name, l->second.data, j->first, k->first);
-					}
-				}
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void BidCoSPeer::loadConfig()
-{
-	try
-	{
-		_databaseMutex.lock();
-		DataColumnVector data;
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-		DataTable rows = GD::db.executeCommand("SELECT * FROM parameters WHERE peerID=?", data);
-		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
-		{
-			uint32_t databaseID = row->second.at(0)->intValue;
-			RPC::ParameterSet::Type::Enum parameterSetType = (RPC::ParameterSet::Type::Enum)row->second.at(2)->intValue;
-			uint32_t channel = row->second.at(3)->intValue;
-			int32_t remoteAddress = row->second.at(4)->intValue;
-			int32_t remoteChannel = row->second.at(5)->intValue;
-			std::string* parameterName = &row->second.at(6)->textValue;
-			if(parameterName->empty())
-			{
-				Output::printCritical("Critical: Added central config parameter without id. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(channel));
-				_databaseMutex.lock();
-				data.clear();
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string(""))));
-				GD::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
-				_databaseMutex.unlock();
-				continue;
-			}
-			RPCConfigurationParameter* parameter;
-			if(parameterSetType == RPC::ParameterSet::Type::Enum::master) parameter = &configCentral[channel][*parameterName];
-			else if(parameterSetType == RPC::ParameterSet::Type::Enum::values) parameter = &valuesCentral[channel][*parameterName];
-			else if(parameterSetType == RPC::ParameterSet::Type::Enum::link) parameter = &linksCentral[channel][remoteAddress][remoteChannel][*parameterName];
-			parameter->databaseID = databaseID;
-			parameter->data.insert(parameter->data.begin(), row->second.at(7)->binaryValue->begin(), row->second.at(7)->binaryValue->end());
-			if(!rpcDevice)
-			{
-				Output::printError("Critical: No xml rpc device found for peer 0x" + HelperFunctions::getHexString(_address) + ".");
-				continue;
-			}
-			parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(*parameterName);
-			if(!parameter->rpcParameter)
-			{
-				Output::printError("Error: Deleting parameter " + *parameterName + ", because no corresponding RPC parameter was found. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(channel));
-				DataColumnVector data;
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)parameterSetType)));
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(channel)));
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(*parameterName)));
-				if(parameterSetType == RPC::ParameterSet::Type::Enum::master)
-				{
-					configCentral[channel].erase(*parameterName);
-					GD::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
-				}
-				else if(parameterSetType == RPC::ParameterSet::Type::Enum::values)
-				{
-					valuesCentral[channel].erase(*parameterName);
-					GD::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
-				}
-				else if(parameterSetType == RPC::ParameterSet::Type::Enum::link)
-				{
-					linksCentral[channel][remoteAddress][remoteChannel].erase(*parameterName);
-					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteAddress)));
-					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteChannel)));
-					GD::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=? AND remotePeer=? AND remoteChannel=?", data);
-				}
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
-}
-
-void BidCoSPeer::saveVariable(uint32_t index, int32_t intValue)
-{
-	try
-	{
-		if(isTeam()) return;
-		_databaseMutex.lock();
-		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			GD::db.executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_peerID == 0)
-			{
-				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = GD::db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
-    _databaseMutex.unlock();
-}
-
-void BidCoSPeer::saveVariable(uint32_t index, int64_t intValue)
-{
-	try
-	{
-		if(isTeam()) return;
-		_databaseMutex.lock();
-		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			GD::db.executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_peerID == 0)
-			{
-				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = GD::db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
-    _databaseMutex.unlock();
-}
-
-void BidCoSPeer::saveVariable(uint32_t index, std::string& stringValue)
-{
-	try
-	{
-		if(isTeam()) return;
-		_databaseMutex.lock();
-		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			GD::db.executeWriteCommand("UPDATE peerVariables SET stringValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_peerID == 0)
-			{
-				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = GD::db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
-    _databaseMutex.unlock();
-}
-
-void BidCoSPeer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
-{
-	try
-	{
-		if(isTeam()) return;
-		_databaseMutex.lock();
-		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			GD::db.executeWriteCommand("UPDATE peerVariables SET binaryValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_peerID == 0)
-			{
-				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
-			int32_t result = GD::db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
-    _databaseMutex.unlock();
-}
-
 void BidCoSPeer::saveVariables()
 {
 	try
@@ -1709,7 +1299,7 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 					_deviceType = LogicalDeviceType(DeviceFamilies::HomeMaticBidCoS, row->second.at(3)->intValue);
 					if(_deviceType.type() == (uint32_t)DeviceType::none)
 					{
-						Output::printError("Error loading peer 0x" + HelperFunctions::getHexString(_address) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+						Output::printError("Error loading HomeMatic BidCoS peer 0x" + HelperFunctions::getHexString(_address) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
 					}
 				}
 				break;
@@ -1782,14 +1372,14 @@ bool BidCoSPeer::load(LogicalDevice* device)
 {
 	try
 	{
-		Output::printDebug("Loading peer 0x" + HelperFunctions::getHexString(_address, 6));
+		Output::printDebug("Loading HomeMatic BidCoS peer 0x" + HelperFunctions::getHexString(_address, 6));
 
 		loadVariables((HomeMaticDevice*)device);
 
 		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
 		if(!rpcDevice)
 		{
-			Output::printError("Error loading peer 0x" + HelperFunctions::getHexString(_address) + ": HomeMatic BidCoS device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
+			Output::printError("Error loading HomeMatic BidCoS peer 0x" + HelperFunctions::getHexString(_address) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
 		std::string entry;
@@ -1961,7 +1551,8 @@ void BidCoSPeer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::
 	try
 	{
 		if(!rpcDevice) return;
-		if(packet->messageType() == 0) return; //Don't handle pairing packets, because equal_range returns all elements with "0" as argument
+		//equal_range returns all elements with "0" or an unknown element as argument
+		if(packet->messageType() == 0 || rpcDevice->framesByMessageType.find(packet->messageType()) == rpcDevice->framesByMessageType.end()) return;
 		std::pair<std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator,std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByMessageType.equal_range((uint32_t)packet->messageType());
 		if(range.first == rpcDevice->framesByMessageType.end()) return;
 		std::multimap<uint32_t, std::shared_ptr<RPC::DeviceFrame>>::iterator i = range.first;
@@ -2234,10 +1825,10 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, parameter->data);
-					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic BidCoS device 0x" + HelperFunctions::getHexString(_address, 6) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
-					if((parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
+					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
 					{
 						if(parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
 						{

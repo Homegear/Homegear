@@ -70,49 +70,16 @@ void HMWiredCentral::init()
 	}
 }
 
-void HMWiredCentral::setUpHMWiredMessages()
-{
-	try
-	{
-		//Don't call HMWiredDevice::setUpHMWiredMessages!
-		//_messages->add(std::shared_ptr<HMWiredMessage>(new HMWiredMessage(0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &HMWiredDevice::handleAck)));
-
-	}
-    catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 bool HMWiredCentral::packetReceived(std::shared_ptr<Packet> packet)
 {
 	try
 	{
 		if(_disposing) return false;
+		HMWiredDevice::packetReceived(packet);
 		std::shared_ptr<HMWiredPacket> hmWiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
 		if(!hmWiredPacket) return false;
-		bool handled = HMWiredDevice::packetReceived(hmWiredPacket);
 		std::shared_ptr<HMWiredPeer> peer(getPeer(hmWiredPacket->senderAddress()));
-		if(!peer) return false;
-		if(handled)
-		{
-			std::shared_ptr<HMWiredQueue> queue = _hmWiredQueueManager.get(hmWiredPacket->senderAddress());
-			if(queue && queue->getQueueType() != HMWiredQueueType::PEER)
-			{
-				peer->setLastPacketReceived();
-				peer->serviceMessages->endUnreach();
-				return true; //Packet is handled by queue. Don't check if queue is empty!
-			}
-		}
-		peer->packetReceived(hmWiredPacket);
+		if(peer) peer->packetReceived(hmWiredPacket);
 	}
 	catch(const std::exception& ex)
     {
@@ -127,6 +94,55 @@ bool HMWiredCentral::packetReceived(std::shared_ptr<Packet> packet)
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
+}
+
+void HMWiredCentral::deletePeer(int32_t address)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPeer> peer(getPeer(address));
+		if(!peer) return;
+		peer->deleting = true;
+		std::shared_ptr<RPC::RPCVariable> deviceAddresses(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->getSerialNumber())));
+		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		{
+			deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
+		}
+		GD::rpcClient.broadcastDeleteDevices(deviceAddresses);
+		Metadata::deleteMetadata(peer->getSerialNumber());
+		if(peer->rpcDevice)
+		{
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+			{
+				Metadata::deleteMetadata(peer->getSerialNumber() + ':' + std::to_string(i->first));
+			}
+		}
+		_peersMutex.lock();
+		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+		if(_peersByID.find(peer->getID()) != _peersByID.end()) _peersByID.erase(peer->getID());
+		_peersMutex.unlock();
+		peer->deleteFromDatabase();
+		_peersMutex.lock();
+		_peers.erase(address);
+		_peersMutex.unlock();
+		Output::printMessage("Removed HomeMatic Wired device 0x" + HelperFunctions::getHexString(address, 8));
+	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_peersMutex.unlock();
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 std::string HMWiredCentral::handleCLICommand(std::string command)
@@ -152,8 +168,8 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			stringStream << "search\t\t\tSearches for new devices on the bus" << std::endl;
 			stringStream << "peers list\t\tList all peers" << std::endl;
 			stringStream << "peers add\t\tManually adds a peer (without pairing it! Only for testing)" << std::endl;
-			stringStream << "peers remove\t\tRemove a peer (without unpairing)" << std::endl;
 			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
+			stringStream << "peers reset\t\tReset and unpair a peer" << std::endl;
 			stringStream << "peers select\t\tSelect a peer" << std::endl;
 			return stringStream.str();
 		}
@@ -274,47 +290,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				stringStream << "Added peer 0x" << std::hex << peerAddress << " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << " and firmware version 0x" << firmwareVersion << "." << std::dec << std::endl;
 			}
 			return stringStream.str();
-		}
-		else if(command.compare(0, 12, "peers remove") == 0)
-		{
-			int32_t peerAddress;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 2)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 2)
-				{
-					if(element == "help") break;
-					peerAddress = HelperFunctions::getNumber(element, true);
-					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
-				}
-				index++;
-			}
-			if(index == 2)
-			{
-				stringStream << "Description: This command removes a peer without trying to unpair it first." << std::endl;
-				stringStream << "Usage: peers remove ADDRESS" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe 3 byte address of the peer to remove in hexadecimal format. Example: 1A03FC" << std::endl;
-				return stringStream.str();
-			}
-
-			if(!peerExists(peerAddress)) stringStream << "This device is not paired to this central." << std::endl;
-			else
-			{
-				if(_currentPeer && _currentPeer->getAddress() == peerAddress) _currentPeer.reset();
-				deletePeer(peerAddress);
-				stringStream << "Removed device 0x" << std::hex << peerAddress << "." << std::dec << std::endl;
-			}
-			return stringStream.str();
-		}
+		}*/
 		else if(command.compare(0, 12, "peers unpair") == 0)
 		{
 			int32_t peerAddress;
@@ -333,7 +309,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				{
 					if(element == "help") break;
 					peerAddress = HelperFunctions::getNumber(element, true);
-					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 				}
 				index++;
 			}
@@ -342,7 +318,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				stringStream << "Description: This command unpairs a peer." << std::endl;
 				stringStream << "Usage: peers unpair ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe 3 byte address of the peer to unpair in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  ADDRESS:\tThe 4 byte address of the peer to unpair in hexadecimal format. Example: 0A0B0C0D" << std::endl;
 				return stringStream.str();
 			}
 
@@ -350,21 +326,50 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			else
 			{
 				if(_currentPeer && _currentPeer->getAddress() == peerAddress) _currentPeer.reset();
-				stringStream << "Unpairing device 0x" << std::hex << peerAddress << std::dec << std::endl;
-				unpair(peerAddress, true);
+				stringStream << "Unpairing device 0x" << HelperFunctions::getHexString(peerAddress, 8) << std::endl;
+				deletePeer(peerAddress);
 			}
 			return stringStream.str();
 		}
-		else if(command == "enable aes")
+		else if(command.compare(0, 11, "peers reset") == 0)
 		{
-			std::string input;
-			stringStream << "Please enter the devices address: ";
-			int32_t address = getHexInput();
-			if(!peerExists(address)) stringStream << "This device is not paired to this central." << std::endl;
+			int32_t peerAddress;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					peerAddress = HelperFunctions::getNumber(element, true);
+					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command resets and unpairs a peer." << std::endl;
+				stringStream << "Usage: peers reset ADDRESS" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  ADDRESS:\tThe 4 byte address of the peer to unpair in hexadecimal format. Example: 0A0B0C0D" << std::endl;
+				return stringStream.str();
+			}
+
+			std::shared_ptr<HMWiredPeer> peer = getPeer(peerAddress);
+			if(!peer) stringStream << "This device is not paired to this central." << std::endl;
 			else
 			{
-				stringStream << "Enabling AES for device device 0x" << std::hex << address << std::dec << std::endl;
-				sendEnableAES(address, 1);
+				if(_currentPeer && _currentPeer->getAddress() == peerAddress) _currentPeer.reset();
+				stringStream << "Resetting device 0x" << HelperFunctions::getHexString(peerAddress, 8) << std::endl;
+				peer->reset();
+				deletePeer(peerAddress);
 			}
 			return stringStream.str();
 		}
@@ -406,13 +411,11 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					stringStream << "  FILTERVALUE:\tDepends on the filter type. If a number is required, it has to be in hexadecimal format." << std::endl << std::endl;
 					stringStream << "Filter types:" << std::endl;
 					stringStream << "  ADDRESS: Filter by address." << std::endl;
-					stringStream << "      FILTERVALUE: The 3 byte address of the peer to filter (e. g. 1DA44D)." << std::endl;
+					stringStream << "      FILTERVALUE: The 4 byte address of the peer to filter (e. g. 001DA44D)." << std::endl;
 					stringStream << "  SERIAL: Filter by serial number." << std::endl;
 					stringStream << "      FILTERVALUE: The serial number of the peer to filter (e. g. JEQ0554309)." << std::endl;
 					stringStream << "  TYPE: Filter by device type." << std::endl;
 					stringStream << "      FILTERVALUE: The 2 byte device type in hexadecimal format." << std::endl;
-					stringStream << "  CONFIGPENDING: List peers with pending config." << std::endl;
-					stringStream << "      FILTERVALUE: empty" << std::endl;
 					stringStream << "  UNREACH: List all unreachable peers." << std::endl;
 					stringStream << "      FILTERVALUE: empty" << std::endl;
 					return stringStream.str();
@@ -424,7 +427,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					return stringStream.str();
 				}
 				_peersMutex.lock();
-				for(std::unordered_map<std::string, std::shared_ptr<Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+				for(std::unordered_map<std::string, std::shared_ptr<HMWiredPeer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 				{
 					if(filterType == "address")
 					{
@@ -440,13 +443,6 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 						int32_t deviceType = HelperFunctions::getNumber(filterValue, true);
 						if((int32_t)i->second->getDeviceType().type() != deviceType) continue;
 					}
-					else if(filterType == "configpending")
-					{
-						if(i->second->serviceMessages)
-						{
-							if(!i->second->serviceMessages->getConfigPending()) continue;
-						}
-					}
 					else if(filterType == "unreach")
 					{
 						if(i->second->serviceMessages)
@@ -455,7 +451,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 						}
 					}
 
-					stringStream << "Address: 0x" << std::hex << i->second->getAddress() << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
+					stringStream << "Address: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 8) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
 					if(i->second->rpcDevice)
 					{
 						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
@@ -466,9 +462,8 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					}
 					if(i->second->serviceMessages)
 					{
-						std::string configPending(i->second->serviceMessages->getConfigPending() ? "Yes" : "No");
 						std::string unreachable(i->second->serviceMessages->getUnreach() ? "Yes" : "No");
-						stringStream << "\tConfig pending: " << configPending << "\tUnreachable: " << unreachable;
+						stringStream << "\tUnreachable: " << unreachable;
 					}
 					stringStream << std::endl << std::dec;
 				}
@@ -509,7 +504,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				{
 					if(element == "help") break;
 					address = HelperFunctions::getNumber(element, true);
-					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 				}
 				index++;
 			}
@@ -518,7 +513,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				stringStream << "Description: This command selects a peer." << std::endl;
 				stringStream << "Usage: peers select ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe 3 byte address of the peer to select in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  ADDRESS:\tThe 4 byte address of the peer to select in hexadecimal format. Example: 0A0B0C0D" << std::endl;
 				return stringStream.str();
 			}
 
@@ -526,11 +521,11 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			if(!_currentPeer) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				stringStream << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->getDeviceType().type() << " selected." << std::dec << std::endl;
+				stringStream << "Peer with address 0x" << std::hex << HelperFunctions::getHexString(address, 8) << " and device type 0x" << (int32_t)_currentPeer->getDeviceType().type() << " selected." << std::dec << std::endl;
 				stringStream << "For information about the peer's commands type: \"help\"" << std::endl;
 			}
 			return stringStream.str();
-		}*/
+		}
 		else return "Unknown command.\n";
 	}
 	catch(const std::exception& ex)
@@ -725,6 +720,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". No matching XML file was found.");
 				continue;
 			}
+			peer->initializeCentralConfig();
 
 			peer->binaryConfig[0].data = readEEPROM(*i, 0);
 			if(peer->binaryConfig[0].data.size() != 0x10)
@@ -770,6 +766,27 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 				}
 			}
 			newPeers.push_back(peer);
+			_peersMutex.lock();
+			try
+			{
+				_peers[*i] = peer;
+				if(!serialNumber.empty()) _peersBySerial[serialNumber] = peer;
+				_peersByID[peer->getID()] = peer;
+			}
+			catch(const std::exception& ex)
+			{
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(Exception& ex)
+			{
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_peersMutex.unlock();
+			peer->save(false, false, true);
 		}
 
 		if(newPeers.size() > 0)
@@ -777,8 +794,12 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			std::shared_ptr<RPC::RPCVariable> deviceDescriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 			for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = newPeers.begin(); i != newPeers.end(); ++i)
 			{
-				std::shared_ptr<RPC::RPCVariable> description = (*i)->getDeviceDescription();
-				if(description && !description->arrayValue->empty()) deviceDescriptions->arrayValue->insert(deviceDescriptions->arrayValue->end(), description->arrayValue->begin(), description->arrayValue->end());
+				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
+				if(!descriptions) continue;
+				for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
+				{
+					deviceDescriptions->arrayValue->push_back(*j);
+				}
 			}
 			GD::rpcClient.broadcastNewDevices(deviceDescriptions);
 		}
