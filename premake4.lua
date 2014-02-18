@@ -443,13 +443,37 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
+		 
+   project "insteon"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Systems/Insteon/*.h", "./Libraries/Systems/Insteon/*.cpp" }
+	  files { "./Libraries/Systems/Insteon/Devices/*.h", "./Libraries/Systems/Insteon/Devices/*.cpp" }
+	  files { "./Libraries/Systems/Insteon/PhysicalDevices/*.h", "./Libraries/Systems/Insteon/PhysicalDevices/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
    
    project "homegear"
       kind "ConsoleApp"
       language "C++"
       files { "*.h", "*.cpp" }
 	  files { "./Libraries/Systems/General/*.h", "./Libraries/Systems/General/*.cpp" }
-      linkoptions { "-l bidcos", "-l hmwired", "-l rpc", "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l output", "-l helperfunctions", "-l physicaldevices", "-l types", "-l logicaldevices", "-l threads", "-l database", "-l filedescriptormanager", "-l encoding", "-l user", "-l settings", "-l metadata", "-l cli", "-l events", "-l gd" }
+      linkoptions { "-l bidcos", "-l hmwired", "-l insteon", "-l rpc", "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l output", "-l helperfunctions", "-l physicaldevices", "-l types", "-l logicaldevices", "-l threads", "-l database", "-l filedescriptormanager", "-l encoding", "-l user", "-l settings", "-l metadata", "-l cli", "-l events", "-l gd" }
  
       configuration "Debug"
          defines { "DEBUG" }

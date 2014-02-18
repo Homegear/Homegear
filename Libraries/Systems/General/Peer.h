@@ -64,7 +64,7 @@ public:
 class Peer
 {
 public:
-	bool deleting = false;
+	bool deleting = false; //Needed, so the peer gets not saved in central's worker thread while being deleted
 
 	std::unordered_map<uint32_t, ConfigDataBlock> binaryConfig;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> configCentral;
@@ -86,6 +86,7 @@ public:
 	void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 20) return; _serialNumber = serialNumber; if(_peerID > 0) save(true, false, false); }
 	//End
 
+	RPC::Device::RXModes::Enum getRXModes();
 	virtual bool isTeam() { return false; }
 	void setLastPacketReceived();
 	uint32_t getLastPacketReceived() { return _lastPacketReceived; }
@@ -113,6 +114,7 @@ protected:
 	int32_t _address = 0;
 	std::string _serialNumber;
 	//End
+	RPC::Device::RXModes::Enum _rxModes = RPC::Device::RXModes::Enum::none;
 
 	bool _disposing = false;
 	bool _centralFeatures = false;

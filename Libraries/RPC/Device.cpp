@@ -92,6 +92,15 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
 		else if(attributeName == "channel_field")
 		{
+			if(channelField == -1) //Might already be set by receiver_channel_field. We don't need both
+			{
+				std::pair<std::string, std::string> splitString = HelperFunctions::split(attributeValue, ':');
+				channelField = HelperFunctions::getNumber(splitString.first);
+				if(!splitString.second.empty()) channelFieldSize = HelperFunctions::getDouble(splitString.second);
+			}
+		}
+		else if(attributeName == "receiver_channel_field")
+		{
 			std::pair<std::string, std::string> splitString = HelperFunctions::split(attributeValue, ':');
 			channelField = HelperFunctions::getNumber(splitString.first);
 			if(!splitString.second.empty()) channelFieldSize = HelperFunctions::getDouble(splitString.second);
@@ -1284,6 +1293,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		std::string attributeName(attr->name());
 		std::string attributeValue(attr->value());
 		if(attributeName == "index") index = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "physical_index_offset") physicalIndexOffset = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "ui_flags")
 		{
 			if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
@@ -1684,6 +1694,7 @@ void Device::parseXML(xml_node<>* node)
 					{
 						std::shared_ptr<DeviceFrame> frame = framesByID[(*k)->frame];
 						frame->associatedValues.push_back(*j);
+						frame->channelIndexOffset = i->second->physicalIndexOffset;
 						//For float variables the frame is the only location to find out if it is signed
 						for(std::vector<Parameter>::iterator l = frame->parameters.begin(); l != frame->parameters.end(); l++)
 						{

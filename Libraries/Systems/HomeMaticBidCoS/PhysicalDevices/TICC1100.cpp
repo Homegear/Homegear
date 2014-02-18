@@ -271,8 +271,9 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 			return;
 		}
 		bool burst = packet->controlByte() & 0x10;
-
-		std::vector<uint8_t> decodedPacket = packet->byteArray();
+		std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoS::BidCoSPacket>(packet));
+		if(!bidCoSPacket) return;
+		std::vector<uint8_t> decodedPacket = bidCoSPacket->byteArray();
 		std::vector<uint8_t> encodedPacket(decodedPacket.size());
 		encodedPacket[0] = decodedPacket[0];
 		encodedPacket[1] = (~decodedPacket[1]) ^ 0x89;

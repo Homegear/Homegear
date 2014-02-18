@@ -296,7 +296,7 @@ void RPCServer::mainThread()
 						continue;
 					}
 				}
-				client->socket = SocketOperations(client->fileDescriptor->descriptor, client->ssl);
+				client->socket = SocketOperations(client->fileDescriptor, client->ssl);
 
 				client->readThread = std::thread(&RPCServer::readClient, this, client);
 				Threads::setThreadPriority(client->readThread.native_handle(), _threadPriority, _threadPolicy);

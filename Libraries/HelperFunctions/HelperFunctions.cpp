@@ -492,6 +492,8 @@ std::string HelperFunctions::getDeviceFamilyName(DeviceFamilies family)
 		return "HomeMatic BidCoS";
 	case DeviceFamilies::HomeMaticWired:
 		return "HomeMatic Wired";
+	case DeviceFamilies::Insteon:
+		return "Insteon";
 	}
 	return "";
 }

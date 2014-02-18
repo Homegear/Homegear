@@ -27,41 +27,40 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef PHYSICALDEVICESETTINGS_H_
-#define PHYSICALDEVICESETTINGS_H_
+#ifndef INSTEONPACKET_H_
+#define INSTEONPACKET_H_
 
-#include "../Systems/General/DeviceFamilies.h"
+#include "../../Types/Packet.h"
+#include "../../HelperFunctions/HelperFunctions.h"
 
-#include <iostream>
-#include <string>
 #include <map>
 
-namespace PhysicalDevices
+namespace Insteon
 {
-class GPIOSetting
-{
-public:
-	GPIOSetting() {}
-	virtual ~GPIOSetting() {}
 
-	int32_t number = -1;
-	std::string path;
+class InsteonPacket : public Packet
+{
+    public:
+        //Properties
+        InsteonPacket();
+        InsteonPacket(std::string packet, int64_t timeReceived = 0);
+        InsteonPacket(std::vector<char>& packet, uint32_t packetSize, int64_t timeReceived = 0);
+        virtual ~InsteonPacket();
+
+        virtual std::string hexString();
+        virtual std::vector<char> byteArray();
+
+        void import(std::vector<char>& packet, uint32_t packetSize);
+        void import(std::string packetHex);
+    protected:
+    private:
+        //Packet content
+        std::vector<char> _packet;
+        //End packet content
+
+        void init();
+        void reset();
 };
 
-class PhysicalDeviceSettings
-{
-public:
-	PhysicalDeviceSettings() {}
-	virtual ~PhysicalDeviceSettings() {}
-	DeviceFamilies family = DeviceFamilies::none;
-	std::string device;
-	std::string type;
-	uint32_t responseDelay = 95;
-	std::map<uint32_t, GPIOSetting> gpio;
-	std::string hostname;
-	std::string port;
-	bool ssl = false;
-	bool verifyCertificate = true;
-};
 }
-#endif /* PHYSICALDEVICESETTINGS_H_ */
+#endif /* TCPPACKET_H_ */

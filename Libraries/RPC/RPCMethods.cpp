@@ -737,13 +737,22 @@ std::shared_ptr<RPCVariable> RPCGetLinks::invoke(std::shared_ptr<std::vector<std
 			if(parameters->size() == 2) flags = parameters->at(1)->integerValue;
 		}
 
+		std::shared_ptr<RPC::RPCVariable> links(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central && central->knowsDevice(serialNumber)) return central->getLinks(serialNumber, channel, flags);
+			if(!central) continue;
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			if(serialNumber.empty())
+			{
+				std::shared_ptr<RPC::RPCVariable> result = central->getLinks(serialNumber, channel, flags);
+				if(result && !result->arrayValue->empty()) links->arrayValue->insert(links->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
+			}
+			else if(central->knowsDevice(serialNumber)) return central->getLinks(serialNumber, channel, flags);
 		}
 
-		return RPC::RPCVariable::createError(-2, "Device not found.");
+		if(serialNumber.empty()) return links;
+		else return RPC::RPCVariable::createError(-2, "Device not found.");
 	}
 	catch(const std::exception& ex)
     {
@@ -1516,6 +1525,36 @@ std::shared_ptr<RPCVariable> RPCRunScript::invoke(std::shared_ptr<std::vector<st
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCSearchDevices::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+
+		std::shared_ptr<RPC::RPCVariable> result(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<Central> central = i->second->getCentral();
+			if(central) result->integerValue += central->searchDevices()->integerValue;
+		}
+
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
@@ -1526,7 +1565,7 @@ std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vect
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central) return central->setInstallMode(parameters->at(0)->booleanValue);
+			if(central) central->setInstallMode(parameters->at(0)->booleanValue);
 		}
 
 		return RPC::RPCVariable::createError(-2, "Device not found.");

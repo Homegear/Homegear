@@ -857,11 +857,14 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(uint8_t command, int32
 
 std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::vector<uint8_t>& payload, int32_t destinationAddress, bool synchronizationBit)
 {
+	std::shared_ptr<HMWiredPeer> peer = getPeer(destinationAddress);
 	try
 	{
+		if(peer) peer->ignorePackets = true;
 		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, destinationAddress, synchronizationBit, _messageCounter[destinationAddress]++, 0, 0, payload));
 		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
 		if(response) sendOK(response->senderMessageCounter(), destinationAddress);
+		if(peer) peer->ignorePackets = false;
 		return response;
 	}
 	catch(const std::exception& ex)
@@ -876,13 +879,16 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::vector<uint8_t>& 
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	if(peer) peer->ignorePackets = false;
 	return std::shared_ptr<HMWiredPacket>();
 }
 
 std::vector<uint8_t> HMWiredDevice::readEEPROM(int32_t deviceAddress, int32_t eepromAddress)
 {
+	std::shared_ptr<HMWiredPeer> peer = getPeer(deviceAddress);
 	try
 	{
+		if(peer) peer->ignorePackets = true;
 		std::vector<uint8_t> payload;
 		payload.push_back(0x52); //Command read EEPROM
 		payload.push_back(eepromAddress >> 8);
@@ -893,6 +899,7 @@ std::vector<uint8_t> HMWiredDevice::readEEPROM(int32_t deviceAddress, int32_t ee
 		if(response)
 		{
 			sendOK(response->senderMessageCounter(), deviceAddress);
+			if(peer) peer->ignorePackets = false;
 			return *response->payload();
 		}
 	}
@@ -908,11 +915,13 @@ std::vector<uint8_t> HMWiredDevice::readEEPROM(int32_t deviceAddress, int32_t ee
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	if(peer) peer->ignorePackets = false;
 	return std::vector<uint8_t>();
 }
 
 bool HMWiredDevice::writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, std::vector<uint8_t>& data)
 {
+	std::shared_ptr<HMWiredPeer> peer = getPeer(deviceAddress);
 	try
 	{
 		if(data.size() > 32)
@@ -920,6 +929,7 @@ bool HMWiredDevice::writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, st
 			Output::printError("Error: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_address) + ": Could not write data to EEPROM. Data size is larger than 32 bytes.");
 			return false;
 		}
+		if(peer) peer->ignorePackets = true;
 		std::vector<uint8_t> payload;
 		payload.push_back(0x57); //Command write EEPROM
 		payload.push_back(eepromAddress >> 8);
@@ -928,7 +938,11 @@ bool HMWiredDevice::writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, st
 		payload.insert(payload.end(), data.begin(), data.end());
 		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, deviceAddress, false, _messageCounter[deviceAddress]++, 0, 0, payload));
 		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
-		if(response) return true;
+		if(response)
+		{
+			if(peer) peer->ignorePackets = false;
+			return true;
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -942,6 +956,7 @@ bool HMWiredDevice::writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, st
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	if(peer) peer->ignorePackets = false;
 	return false;
 }
 

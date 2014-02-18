@@ -240,6 +240,7 @@ public:
 		enum Enum { none = 0, sender = 1, receiver = 2 };
 	};
 	Device* parentDevice = nullptr;
+	int32_t physicalIndexOffset = 0;
 	std::string type;
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	Direction::Enum direction = Direction::Enum::none;
@@ -288,6 +289,7 @@ public:
 	int32_t subtypeIndex = -1;
 	int32_t channelField = -1;
 	double channelFieldSize = 1.0;
+	int32_t channelIndexOffset = 0;
 	int32_t fixedChannel = -1;
 	std::vector<Parameter> parameters;
 	std::vector<std::shared_ptr<Parameter>> associatedValues;

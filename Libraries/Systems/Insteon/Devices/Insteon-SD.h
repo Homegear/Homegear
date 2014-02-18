@@ -27,17 +27,33 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#ifndef INSTEON_SD_H
+#define INSTEON_SD_H
 
-#include <stdint.h>
+#include "../InsteonDevice.h"
+#include "../../../HelperFunctions/HelperFunctions.h"
 
-enum class DeviceFamilies : uint32_t
+#include <list>
+
+namespace Insteon
 {
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	Insteon = 0x02
-};
+class Insteon_SD : public InsteonDevice
+{
+    public:
+        Insteon_SD();
+        Insteon_SD(uint32_t deviceType, std::string serialNumber, int32_t address);
+        virtual ~Insteon_SD();
+        bool packetReceived(std::shared_ptr<Packet> packet);
+        std::string handleCLICommand(std::string command);
+        void loadVariables();
+        void saveVariables();
+    protected:
+    private:
+        //In table variables
+        bool _enabled = true;
+        //End
 
-#endif /* DEVICEFAMILIES_H_ */
+        virtual void init();
+};
+}
+#endif // INSTEON_SD_H

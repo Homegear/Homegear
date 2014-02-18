@@ -4,6 +4,7 @@
 - Service message when no RF device is reachable for a certain (settable) amount of time
 - RPC Server nur neu starten, wenn config-Dateien geändert
 - Batterie leer von Rauchmelder testen
+- Support for parameter BurstRX
 
 When devices are available:
 - Test blind_test

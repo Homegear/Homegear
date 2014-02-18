@@ -138,7 +138,6 @@ class BidCoSPeer : public Peer
 		std::vector<uint8_t>& getTeamData() { return _team.data; }
 		//End
 
-		//Needed, so the peer gets not saved in central's worker thread while being deleted
 		std::shared_ptr<ServiceMessages> serviceMessages;
         void setCentralFeatures(bool value) { _centralFeatures = value; }
 

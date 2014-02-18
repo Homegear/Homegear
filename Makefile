@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := output helperfunctions physicaldevices types logicaldevices threads database filedescriptormanager encoding user settings metadata rpc cli events gd bidcos hmwired homegear
+PROJECTS := output helperfunctions physicaldevices types logicaldevices threads database filedescriptormanager encoding user settings metadata rpc cli events gd bidcos hmwired insteon homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -84,6 +84,10 @@ hmwired:
 	@echo "==== Building hmwired ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f hmwired.make
 
+insteon: 
+	@echo "==== Building insteon ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f insteon.make
+
 homegear: 
 	@echo "==== Building homegear ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f homegear.make
@@ -107,6 +111,7 @@ clean:
 	@${MAKE} --no-print-directory -C . -f gd.make clean
 	@${MAKE} --no-print-directory -C . -f bidcos.make clean
 	@${MAKE} --no-print-directory -C . -f hmwired.make clean
+	@${MAKE} --no-print-directory -C . -f insteon.make clean
 	@${MAKE} --no-print-directory -C . -f homegear.make clean
 
 help:
@@ -138,6 +143,7 @@ help:
 	@echo "   gd"
 	@echo "   bidcos"
 	@echo "   hmwired"
+	@echo "   insteon"
 	@echo "   homegear"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

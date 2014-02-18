@@ -31,6 +31,7 @@
 #define SOCKETOPERATIONS_H_
 
 #include "../HelperFunctions/HelperFunctions.h"
+#include "../FileDescriptorManager/FileDescriptorManager.h"
 
 #include <thread>
 #include <iostream>
@@ -54,6 +55,8 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <poll.h>
+#include <signal.h>
 
 #include <openssl/rsa.h>
 #include <openssl/crypto.h>
@@ -88,26 +91,61 @@ public:
 	SocketClosedException(std::string message) : SocketOperationException(message) {}
 };
 
+class SocketInvalidParametersException : public SocketOperationException
+{
+public:
+	SocketInvalidParametersException(std::string message) : SocketOperationException(message) {}
+};
+
 class SocketDataLimitException : public SocketOperationException
 {
 public:
 	SocketDataLimitException(std::string message) : SocketOperationException(message) {}
 };
 
+class SocketSSLException : public SocketOperationException
+{
+public:
+	SocketSSLException(std::string message) : SocketOperationException(message) {}
+};
+
 class SocketOperations
 {
 public:
-	SocketOperations() {}
-	SocketOperations(int32_t fileDescriptor, SSL* ssl = nullptr);
-	virtual ~SocketOperations() {}
+	SocketOperations();
+	SocketOperations(std::shared_ptr<FileDescriptor> fileDescriptor, SSL* ssl);
+	SocketOperations(std::string hostname, std::string port);
+	SocketOperations(std::string hostname, std::string port, bool useSSL, bool verifyCertificate);
+	virtual ~SocketOperations();
 
-	int32_t getFiledescriptor() { return _fileDescriptor; }
+	void setAutoConnect(bool autoConnect) { _autoConnect = autoConnect; }
+	void setHostname(std::string hostname) { close(); _hostname = hostname; }
+	void setPort(std::string port) { close(); _port = port; }
+	void setUseSSL(bool useSSL) { close(); _useSSL = useSSL; if(_useSSL) initSSL(); }
+	void setVerifyCertificate(bool verifyCertificate) { close(); _verifyCertificate = verifyCertificate; }
+
 	bool connected();
 	int32_t proofread(char* buffer, int32_t bufferSize);
 	int32_t proofwrite(std::shared_ptr<std::vector<char>> data);
+	int32_t proofwrite(std::vector<char>& data);
+	void open();
+	void close();
 protected:
-	int32_t _fileDescriptor = -1;
+	bool _autoConnect = true;
+	std::string _hostname;
+	std::string _port;
+	bool _verifyCertificate = true;
+
+	std::shared_ptr<FileDescriptor> _fileDescriptor;
+	bool _useSSL = false;
 	SSL* _ssl = nullptr;
+	SSL_CTX* _sslCTX = nullptr;
+
+	void getFileDescriptor();
+	void getConnection();
+	void getSSL();
+	void initSSL();
+	void autoConnect();
 };
 
 } /* namespace RPC */

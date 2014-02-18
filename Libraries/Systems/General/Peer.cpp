@@ -80,6 +80,40 @@ Peer::~Peer()
 
 }
 
+RPC::Device::RXModes::Enum Peer::getRXModes()
+{
+	try
+	{
+		if(rpcDevice)
+		{
+			_rxModes = rpcDevice->rxModes;
+			if(configCentral.find(0) != configCentral.end() && configCentral.at(0).find("BURST_RX") != configCentral.at(0).end())
+			{
+				RPCConfigurationParameter* parameter = &configCentral.at(0).at("BURST_RX");
+				if(!parameter->rpcParameter) return _rxModes;
+				if(parameter->rpcParameter->convertFromPacket(parameter->data)->booleanValue)
+				{
+					_rxModes = (RPC::Device::RXModes::Enum)(_rxModes | RPC::Device::RXModes::Enum::burst);
+				}
+			}
+		}
+		return _rxModes;
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return _rxModes;
+}
+
 void Peer::setLastPacketReceived()
 {
 	_lastPacketReceived = HelperFunctions::getTimeSeconds();

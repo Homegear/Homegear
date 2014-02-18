@@ -31,6 +31,7 @@
 //Only in this cpp file we include the family specific header files to hide them from the rest of the program
 #include "../HomeMaticBidCoS/BidCoS.h"
 #include "../HomeMaticWired/HMWired.h"
+#include "../Insteon/Insteon.h"
 #include "../../GD/GD.h"
 
 void SystemInitializer::initialize()
@@ -40,6 +41,7 @@ void SystemInitializer::initialize()
 		GD::deviceFamilies[DeviceFamilies::none] = std::shared_ptr<DeviceFamily>(new DeviceFamily());
 		GD::deviceFamilies[DeviceFamilies::HomeMaticBidCoS] = std::shared_ptr<DeviceFamily>(new BidCoS::BidCoS());
 		GD::deviceFamilies[DeviceFamilies::HomeMaticWired] = std::shared_ptr<DeviceFamily>(new HMWired::HMWired());
+		GD::deviceFamilies[DeviceFamilies::Insteon] = std::shared_ptr<DeviceFamily>(new Insteon::Insteon());
 	}
 	catch(const std::exception& ex)
 	{

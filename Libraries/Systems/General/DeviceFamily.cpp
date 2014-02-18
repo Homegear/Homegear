@@ -30,6 +30,10 @@
 #include "DeviceFamily.h"
 #include "../../GD/GD.h"
 
+DeviceFamily::DeviceFamily()
+{
+}
+
 DeviceFamily::~DeviceFamily()
 {
 	try
@@ -48,6 +52,12 @@ DeviceFamily::~DeviceFamily()
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+bool DeviceFamily::available()
+{
+	if(_available == -1) _available = (int32_t)GD::physicalDevices.get(_family)->isOpen();
+	return (bool)_available;
 }
 
 void DeviceFamily::save(bool full)

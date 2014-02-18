@@ -27,69 +27,35 @@
  * files in the program, then also delete it here.
  */
 
-#include "BidCoS.h"
+#include "Insteon.h"
+#include "PhysicalDevices/Insteon_Hub_X10.h"
+#include "InsteonDeviceTypes.h"
+//#include "Devices/InsteonCentral.h"
+#include "Devices/Insteon-SD.h"
 #include "../../GD/GD.h"
-#include "PhysicalDevices/COC.h"
-#include "PhysicalDevices/CUL.h"
-#include "PhysicalDevices/TICC1100.h"
-#include "Devices/HomeMaticCentral.h"
-#include "BidCoSDeviceTypes.h"
-#include "Devices/HM-CC-TC.h"
-#include "Devices/HM-CC-VD.h"
-#include "Devices/HM-SD.h"
 
-namespace BidCoS
+namespace Insteon
 {
-BidCoS::BidCoS()
+
+Insteon::Insteon()
 {
-	_family = DeviceFamilies::HomeMaticBidCoS;
+	_family = DeviceFamilies::Insteon;
 }
 
-BidCoS::~BidCoS()
+Insteon::~Insteon()
 {
 
 }
 
-std::shared_ptr<Central> BidCoS::getCentral() { return _central; }
+std::shared_ptr<Central> Insteon::getCentral() { return std::shared_ptr<Central>(); /*return _central;*/ }
 
-std::shared_ptr<RPC::RPCVariable> BidCoS::listBidcosInterfaces()
-{
-	try
-	{
-		if(!_central) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-		std::shared_ptr<RPC::RPCVariable> interface(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-		array->arrayValue->push_back(interface);
-		interface->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_central->getSerialNumber()))));
-		interface->structValue->insert(RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("Homegear default BidCoS interface")))));
-		interface->structValue->insert(RPC::RPCStructElement("CONNECTED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->isOpen()))));
-		interface->structValue->insert(RPC::RPCStructElement("DEFAULT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true))));
-		return array;
-	}
-	catch(const std::exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<PhysicalDevices::PhysicalDevice> BidCoS::createPhysicalDevice(std::shared_ptr<PhysicalDevices::PhysicalDeviceSettings> settings)
+std::shared_ptr<PhysicalDevices::PhysicalDevice> Insteon::createPhysicalDevice(std::shared_ptr<PhysicalDevices::PhysicalDeviceSettings> settings)
 {
 	try
 	{
 		if(!settings) return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
-		if(settings->type == "cul") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::CUL(settings));
-		else if(settings->type == "coc") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::COC(settings));
-		else if(settings->type == "cc1100") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::TICC1100(settings));
-		else Output::printError("Error: Unsupported physical device type for family HomeMatic BidCoS: " + settings->type);
+		if(settings->type == "insteonhubx10") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::InsteonHubX10(settings));
+		else Output::printError("Error: Unsupported physical device type for family Insteon: " + settings->type);
 	}
 	catch(const std::exception& ex)
 	{
@@ -106,20 +72,20 @@ std::shared_ptr<PhysicalDevices::PhysicalDevice> BidCoS::createPhysicalDevice(st
 	return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
 }
 
-int32_t BidCoS::getUniqueAddress(uint8_t firstByte)
+uint32_t Insteon::getUniqueAddress(uint32_t seed)
 {
-	int32_t prefix = firstByte << 16;
-	int32_t seed = HelperFunctions::getRandomNumber(1, 9999);
+	uint32_t prefix = seed;
+	seed = HelperFunctions::getRandomNumber(1, 999999);
 	uint32_t i = 0;
 	while(getDevice(prefix + seed) && i++ < 10000)
 	{
-		seed += 13;
-		if(seed > 9999) seed -= 10000;
+		seed += 131;
+		if(seed > 999999) seed -= 1000000;
 	}
 	return prefix + seed;
 }
 
-std::string BidCoS::getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber)
+std::string Insteon::getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber)
 {
 	if(seedPrefix.size() != 3) throw Exception("seedPrefix must have a size of 3.");
 	uint32_t i = 0;
@@ -139,62 +105,7 @@ std::string BidCoS::getUniqueSerialNumber(std::string seedPrefix, uint32_t seedN
 	return temp2;
 }
 
-void BidCoS::createCentral()
-{
-	try
-	{
-		if(_central) return;
-
-		int32_t address = getUniqueAddress(0xfd);
-		std::string serialNumber(getUniqueSerialNumber("VBC", HelperFunctions::getRandomNumber(1, 9999999)));
-
-		_central.reset(new HomeMaticCentral(0, serialNumber, address));
-		add(_central);
-		Output::printMessage("Created HomeMatic BidCoS central with address 0x" + HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void BidCoS::createSpyDevice()
-{
-	try
-	{
-		if(!_central) return;
-
-		int32_t seed = 0xfe0000 + HelperFunctions::getRandomNumber(1, 500);
-
-		int32_t address = _central->getUniqueAddress(seed);
-		std::string serialNumber(getUniqueSerialNumber("VBS", HelperFunctions::getRandomNumber(1, 9999999)));
-
-		add(std::shared_ptr<LogicalDevice>(new HM_SD(0, serialNumber, address)));
-		Output::printMessage("Created HomeMatic BidCoS spy device with address 0x" + HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(int32_t address)
+std::shared_ptr<InsteonDevice> Insteon::getDevice(uint32_t address)
 {
 	try
 	{
@@ -203,7 +114,7 @@ std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(int32_t address)
 		{
 			if((*i)->getAddress() == address)
 			{
-				std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(*i));
+				std::shared_ptr<InsteonDevice> device(std::dynamic_pointer_cast<InsteonDevice>(*i));
 				if(!device) continue;
 				_devicesMutex.unlock();
 				return device;
@@ -223,10 +134,10 @@ std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(int32_t address)
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
-	return std::shared_ptr<HomeMaticDevice>();
+	return std::shared_ptr<InsteonDevice>();
 }
 
-std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(std::string serialNumber)
+std::shared_ptr<InsteonDevice> Insteon::getDevice(std::string serialNumber)
 {
 	try
 	{
@@ -235,7 +146,7 @@ std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(std::string serialNumber)
 		{
 			if((*i)->getSerialNumber() == serialNumber)
 			{
-				std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(*i));
+				std::shared_ptr<InsteonDevice> device(std::dynamic_pointer_cast<InsteonDevice>(*i));
 				if(!device) continue;
 				_devicesMutex.unlock();
 				return device;
@@ -255,15 +166,15 @@ std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(std::string serialNumber)
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
-	return std::shared_ptr<HomeMaticDevice>();
+	return std::shared_ptr<InsteonDevice>();
 }
 
-void BidCoS::load(bool version_0_0_7)
+void Insteon::load(bool version_0_0_7)
 {
 	try
 	{
 		_devices.clear();
-		DataTable rows = GD::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticBidCoS));
+		DataTable rows = GD::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticWired));
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
@@ -275,22 +186,13 @@ void BidCoS::load(bool version_0_0_7)
 			std::shared_ptr<LogicalDevice> device;
 			switch((DeviceType)deviceType)
 			{
-			case DeviceType::HMCCTC:
-				device = std::shared_ptr<LogicalDevice>(new HM_CC_TC(deviceID, serialNumber, address));
-				break;
-			case DeviceType::HMLCSW1FM:
-				device = std::shared_ptr<LogicalDevice>(new HM_LC_SWX_FM(deviceID, serialNumber, address));
-				break;
-			case DeviceType::HMCCVD:
-				device = std::shared_ptr<LogicalDevice>(new HM_CC_VD(deviceID, serialNumber, address));
-				break;
-			case DeviceType::HMCENTRAL:
-				_central = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral(deviceID, serialNumber, address));
+			/*case DeviceType::HMWIREDCENTRAL:
+				_central = std::shared_ptr<InsteonDevice>(new InsteonDevice(deviceID, serialNumber, address));
 				device = _central;
-				break;
-			case DeviceType::HMSD:
+				break;*/
+			case DeviceType::INSTEONSD:
 				spyDeviceExists = true;
-				device = std::shared_ptr<LogicalDevice>(new HM_SD(deviceID, serialNumber, address));
+				device = std::shared_ptr<LogicalDevice>(new Insteon_SD(deviceID, serialNumber, address));
 				break;
 			default:
 				break;
@@ -305,11 +207,10 @@ void BidCoS::load(bool version_0_0_7)
 				_devicesMutex.unlock();
 			}
 		}
-		if(GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->isOpen())
+		if(GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->isOpen())
 		{
-			if(!_central) createCentral();
+			//if(!_central) createCentral();
 			if(!spyDeviceExists) createSpyDevice();
-			if(_central) _central->addPeersToVirtualDevices();
 		}
 	}
 	catch(const std::exception& ex)
@@ -326,7 +227,60 @@ void BidCoS::load(bool version_0_0_7)
 	}
 }
 
-std::string BidCoS::handleCLICommand(std::string& command)
+void Insteon::createSpyDevice()
+{
+	try
+	{
+		uint32_t seed = 0xfe000000 + HelperFunctions::getRandomNumber(1, 65535);
+
+		//ToDo: Use HMWiredCentral to get unique address
+		int32_t address = getUniqueAddress(seed);
+		std::string serialNumber(getUniqueSerialNumber("VIS", HelperFunctions::getRandomNumber(1, 9999999)));
+
+		add(std::shared_ptr<LogicalDevice>(new Insteon_SD(0, serialNumber, address)));
+		Output::printMessage("Created HomeMatic Wired spy device with address 0x" + HelperFunctions::getHexString(address, 8) + " and serial number " + serialNumber);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Insteon::createCentral()
+{
+	try
+	{
+		/*if(_central) return;
+
+		std::string serialNumber(getUniqueSerialNumber("VWC", HelperFunctions::getRandomNumber(1, 9999999)));
+
+		_central.reset(new HMWiredCentral(0, serialNumber, 1));
+		add(_central);
+		Output::printMessage("Created HomeMatic Wired central with address 0x" + HelperFunctions::getHexString(1, 8) + " and serial number " + serialNumber);*/
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+std::string Insteon::handleCLICommand(std::string& command)
 {
 	try
 	{
@@ -346,10 +300,10 @@ std::string BidCoS::handleCLICommand(std::string& command)
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "unselect\t\tUnselect this device family" << std::endl;
-			stringStream << "devices list\t\tList all HomeMatic BidCoS devices" << std::endl;
-			stringStream << "devices create\t\tCreate a virtual HomeMatic BidCoS device" << std::endl;
-			stringStream << "devices remove\t\tRemove a virtual HomeMatic BidCoS device" << std::endl;
-			stringStream << "devices select\t\tSelect a virtual HomeMatic BidCoS device" << std::endl;
+			stringStream << "devices list\t\tList all HomeMatic Wired devices" << std::endl;
+			stringStream << "devices create\t\tCreate a virtual HomeMatic Wired device" << std::endl;
+			stringStream << "devices remove\t\tRemove a virtual HomeMatic Wired device" << std::endl;
+			stringStream << "devices select\t\tSelect a virtual HomeMatic Wired device" << std::endl;
 			return stringStream.str();
 		}
 		else if(command == "devices list")
@@ -358,7 +312,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 			std::vector<std::shared_ptr<LogicalDevice>> devices;
 			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 			{
-				stringStream << "Address: 0x" << std::hex << std::setw(6) << std::setfill('0') << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (*i)->getDeviceType() << std::endl << std::dec;
+				stringStream << "Address: 0x" << std::hex << std::setw(8) << std::setfill('0') << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (*i)->getDeviceType() << std::endl << std::dec;
 			}
 			_devicesMutex.unlock();
 			return stringStream.str();
@@ -398,38 +352,28 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				stringStream << "Description: This command creates a new virtual device." << std::endl;
 				stringStream << "Usage: devices create ADDRESS SERIALNUMBER DEVICETYPE" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tAny unused 3 byte address in hexadecimal format. Example: 1A03FC" << std::endl;
-				stringStream << "  SERIALNUMBER:\tAny unused serial number with a maximum size of 10 characters. Don't use special characters. Example: VTC9179403" << std::endl;
-				stringStream << "  DEVICETYPE:\tThe type of the device to create. Example: FFFFFFFD" << std::endl << std::endl;
-				stringStream << "Currently supported HomeMatic BidCoS virtual device id's:" << std::endl;
-				stringStream << "  FFFFFFFD:\tCentral device" << std::endl;
-				stringStream << "  FFFFFFFE:\tSpy device" << std::endl;
-				stringStream << "  39:\t\tHM-CC-TC" << std::endl;
-				stringStream << "  3A:\t\tHM-CC-VD" << std::endl;
+				stringStream << "  ADDRESS:\tAny unused 4 byte address in hexadecimal format. Example: 101A03FC" << std::endl;
+				stringStream << "  SERIALNUMBER:\tAny unused serial number with a maximum size of 10 characters. Don't use special characters. Example: VSW9179403" << std::endl;
+				stringStream << "  DEVICETYPE:\tThe type of the device to create. Example: FEFFFFFD" << std::endl << std::endl;
+				stringStream << "Currently supported HomeMatic Wired virtual device id's:" << std::endl;
+				stringStream << "  FEFFFFFD:\tCentral device" << std::endl;
+				stringStream << "  FEFFFFFE:\tSpy device" << std::endl;
 				return stringStream.str();
 			}
 
 			switch(deviceType)
 			{
-			case (uint32_t)DeviceType::HMCCTC:
-				add(std::shared_ptr<LogicalDevice>(new HM_CC_TC(0, serialNumber, address)));
-				stringStream << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
-				break;
-			case (uint32_t)DeviceType::HMCCVD:
-				add(std::shared_ptr<LogicalDevice>(new HM_CC_VD(0, serialNumber, address)));
-				stringStream << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
-				break;
-			case (uint32_t)DeviceType::HMCENTRAL:
-				if(_central) stringStream << "Cannot create more than one HomeMatic BidCoS central device." << std::endl;
+			/*case (uint32_t)DeviceType::HMWIREDCENTRAL:
+				if(_central) stringStream << "Cannot create more than one HomeMatic Wired central device." << std::endl;
 				else
 				{
-					add(std::shared_ptr<LogicalDevice>(new HomeMaticCentral(0, serialNumber, address)));
-					stringStream << "Created HomeMatic BidCoS Central with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+					add(std::shared_ptr<LogicalDevice>(new HMWiredCentral(0, serialNumber, address)));
+					stringStream << "Created HomeMatic Wired Central with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				}
-				break;
-			case (uint32_t)DeviceType::HMSD:
-				add(std::shared_ptr<LogicalDevice>(new HM_SD(0, serialNumber, address)));
-				stringStream << "Created HomeMatic BidCoS Spy Device with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+				break;*/
+			case (uint32_t)DeviceType::INSTEONSD:
+				add(std::shared_ptr<LogicalDevice>(new Insteon_SD(0, serialNumber, address)));
+				stringStream << "Created HomeMatic Wired Spy Device with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			default:
 				return "Unknown device type.\n";
@@ -463,14 +407,14 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				stringStream << "Description: This command removes a virtual device." << std::endl;
 				stringStream << "Usage: devices remove ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe address of the device to delete in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  ADDRESS:\tThe address of the device to delete in hexadecimal format. Example: 101A03FC" << std::endl;
 				return stringStream.str();
 			}
 
 			if(_currentDevice && _currentDevice->getAddress() == address) _currentDevice.reset();
 			if(get(address))
 			{
-				if(_central && address == _central->getAddress()) _central.reset();
+				//if(_central && address == _central->getAddress()) _central.reset();
 				remove(address);
 				stringStream << "Removing device." << std::endl;
 			}
@@ -499,7 +443,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 					else
 					{
 						address = HelperFunctions::getNumber(element, true);
-						if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
+						if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format. A value of \"0\" is not allowed.\n";
 					}
 				}
 				index++;
@@ -509,11 +453,11 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				stringStream << "Description: This command selects a virtual device." << std::endl;
 				stringStream << "Usage: devices select ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe address of the device to select in hexadecimal format or \"central\" as a shortcut to select the central device. Example: 1A03FC" << std::endl;
+				stringStream << "  ADDRESS:\tThe address of the device to select in hexadecimal format or \"central\" as a shortcut to select the central device. Example: 101A03FC" << std::endl;
 				return stringStream.str();
 			}
 
-			_currentDevice = central ? _central : get(address);
+			_currentDevice = get(address); // = central ? _central : get(address);
 			if(!_currentDevice) stringStream << "Device not found." << std::endl;
 			else
 			{

@@ -27,17 +27,18 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#ifndef INSTEONDEVICETYPES_H_
+#define INSTEONDEVICETYPES_H_
 
 #include <stdint.h>
 
-enum class DeviceFamilies : uint32_t
+namespace Insteon
 {
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	Insteon = 0x02
-};
-
-#endif /* DEVICEFAMILIES_H_ */
+	enum class DeviceType : uint32_t
+	{
+		none = 					0xFFFFFFFF,
+		INSTEONSD = 			0xFFFFFFFE,
+		INSTEONCENTRAL = 		0xFFFFFFFD
+	};
+}
+#endif /* INSTEONDEVICETYPES_H_ */

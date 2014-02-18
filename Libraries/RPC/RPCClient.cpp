@@ -37,20 +37,7 @@ RPCClient::RPCClient()
 {
 	try
 	{
-		SSLeay_add_ssl_algorithms();
-		SSL_load_error_strings();
-		_sslCTX = SSL_CTX_new(SSLv23_client_method());
-		SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
-		if(!_sslCTX)
-		{
-			Output::printError("Could not initialize SSL support for RPC client." + std::string(ERR_reason_error_string(ERR_get_error())));
-			_sslCTX = nullptr;
-			return;
-		}
-		if(!SSL_CTX_load_verify_locations(_sslCTX, NULL, "/etc/ssl/certs"))
-		{
-			Output::printError("Could not load root certificates from /etc/ssl/certs." + std::string(ERR_reason_error_string(ERR_get_error())));
-		}
+		signal(SIGPIPE, SIG_IGN);
 	}
 	catch(const std::exception& ex)
     {
@@ -70,11 +57,7 @@ RPCClient::~RPCClient()
 {
 	try
 	{
-		if(_sslCTX)
-		{
-			SSL_CTX_free(_sslCTX);
-			_sslCTX = nullptr;
-		}
+
 	}
 	catch(const std::exception& ex)
     {
@@ -135,7 +118,7 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		if(server->binary) returnValue = _rpcDecoder.decodeResponse(result);
 		else returnValue = _xmlRpcDecoder.decodeResponse(result);
 
-		if(returnValue->errorStruct) Output::printError("Error in RPC response from " + server->ipAddress + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
+		if(returnValue->errorStruct) Output::printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
 		else
 		{
 			if(GD::debugLevel >= 5)
@@ -200,7 +183,7 @@ std::shared_ptr<RPCVariable> RPCClient::invoke(std::shared_ptr<RemoteRPCServer> 
 		std::shared_ptr<RPCVariable> returnValue;
 		if(server->binary) returnValue = _rpcDecoder.decodeResponse(result);
 		else returnValue = _xmlRpcDecoder.decodeResponse(result);
-		if(returnValue->errorStruct) Output::printError("Error in RPC response from " + server->ipAddress + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
+		if(returnValue->errorStruct) Output::printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
 		else
 		{
 			if(GD::debugLevel >= 5)
@@ -253,6 +236,8 @@ std::string RPCClient::getIPAddress(std::string address)
 			Output::printError("Error: Server's address is empty.");
 			return "";
 		}
+
+		if(GD::settings.tunnelClients().find(address) != GD::settings.tunnelClients().end()) return "localhost";
 		return address;
 	}
     catch(const std::exception& ex)
@@ -270,281 +255,6 @@ std::string RPCClient::getIPAddress(std::string address)
     return "";
 }
 
-std::shared_ptr<FileDescriptor> RPCClient::getConnection(std::string& hostname, const std::string& port, std::string& ipAddress)
-{
-	std::shared_ptr<FileDescriptor> descriptor;
-	try
-	{
-		//Retry for two minutes
-		for(uint32_t i = 0; i < 6; ++i)
-		{
-			struct addrinfo *serverInfo = nullptr;
-			struct addrinfo hostInfo;
-			memset(&hostInfo, 0, sizeof hostInfo);
-
-			hostInfo.ai_family = AF_UNSPEC;
-			hostInfo.ai_socktype = SOCK_STREAM;
-
-			if(getaddrinfo(hostname.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0)
-			{
-				freeaddrinfo(serverInfo);
-				Output::printError("Error: Could not get address information: " + std::string(strerror(errno)));
-				return descriptor;
-			}
-
-			if(GD::settings.tunnelClients().find(hostname) != GD::settings.tunnelClients().end())
-			{
-				if(serverInfo->ai_family == AF_INET6) hostname = "::1";
-				else hostname = "127.0.0.1";
-				if(getaddrinfo(hostname.c_str(), port.c_str(), &hostInfo, &serverInfo) != 0)
-				{
-					freeaddrinfo(serverInfo);
-					Output::printError("Error: Could not get address information: " + std::string(strerror(errno)));
-					return descriptor;
-				}
-			}
-
-			char ipStringBuffer[INET6_ADDRSTRLEN];
-			if (serverInfo->ai_family == AF_INET) {
-				struct sockaddr_in *s = (struct sockaddr_in *)serverInfo->ai_addr;
-				inet_ntop(AF_INET, &s->sin_addr, ipStringBuffer, sizeof(ipStringBuffer));
-			} else { // AF_INET6
-				struct sockaddr_in6 *s = (struct sockaddr_in6 *)serverInfo->ai_addr;
-				inet_ntop(AF_INET6, &s->sin6_addr, ipStringBuffer, sizeof(ipStringBuffer));
-			}
-			ipAddress = std::string(&ipStringBuffer[0]);
-
-			descriptor = GD::fileDescriptorManager.add(socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol));
-			if(descriptor->descriptor == -1)
-			{
-				Output::printError("Error: Could not create socket for XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno));
-				freeaddrinfo(serverInfo);
-				return descriptor;
-			}
-			int32_t optValue = 1;
-			if(setsockopt(descriptor->descriptor, SOL_SOCKET, SO_KEEPALIVE, (void*)&optValue, sizeof(int32_t)) == -1)
-			{
-				Output::printError("Error: Could not set socket options for XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno));
-				freeaddrinfo(serverInfo);
-				GD::fileDescriptorManager.shutdown(descriptor);
-				return descriptor;
-			}
-
-			if(!(fcntl(descriptor->descriptor, F_GETFL) & O_NONBLOCK))
-			{
-				if(fcntl(descriptor->descriptor, F_SETFL, fcntl(descriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
-				{
-					Output::printError("Error: Could not set socket options for XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno));
-					freeaddrinfo(serverInfo);
-					GD::fileDescriptorManager.shutdown(descriptor);
-					return descriptor;
-				}
-			}
-
-			int32_t connectResult;
-			if((connectResult = connect(descriptor->descriptor, serverInfo->ai_addr, serverInfo->ai_addrlen)) == -1 && errno != EINPROGRESS)
-			{
-				if(i < 5)
-				{
-					Output::printError("Warning: Could not connect to XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno) + ". Retrying in 3 seconds...");
-					freeaddrinfo(serverInfo);
-					GD::fileDescriptorManager.shutdown(descriptor);
-					std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-					continue;
-				}
-				else
-				{
-					Output::printError("Error: Could not connect to XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno) + ". Removing server. Server has to send init again.");
-					freeaddrinfo(serverInfo);
-					GD::fileDescriptorManager.shutdown(descriptor);
-					descriptor->descriptor = -2;
-					return descriptor;
-				}
-			}
-			freeaddrinfo(serverInfo);
-
-			if(fcntl(descriptor->descriptor, F_SETFL, fcntl(descriptor->descriptor, F_GETFL) ^ O_NONBLOCK) < 0)
-			{
-				GD::fileDescriptorManager.shutdown(descriptor);
-				return descriptor;
-			}
-
-			if(connectResult != 0) //We have to wait for the connection
-			{
-				timeval timeout;
-				timeout.tv_sec = 5;
-				timeout.tv_usec = 0;
-
-				pollfd pollstruct
-				{
-					(int)descriptor->descriptor,
-					(short)(POLLOUT | POLLERR),
-					(short)0
-				};
-
-				int32_t pollResult = poll(&pollstruct, 1, 5000);
-				if(pollResult < 0 || (pollstruct.revents & POLLERR))
-				{
-					if(i < 5)
-					{
-						Output::printWarning("Warning: Could not connect to XML RPC server " + ipAddress + " on port " + port + ". Poll failed with error code: " + std::to_string(pollResult) + ". Retrying in 3 seconds...");
-						GD::fileDescriptorManager.shutdown(descriptor);
-						std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-						continue;
-					}
-					else
-					{
-						Output::printError("Error: Could not connect to XML RPC server " + ipAddress + " on port " + port + ". Poll failed with error code: " + std::to_string(pollResult) + ". Giving up and removing server. Server has to send init again.");
-						GD::fileDescriptorManager.shutdown(descriptor);
-						descriptor->descriptor = -2;
-						return descriptor;
-					}
-				}
-				else if(pollResult > 0)
-				{
-					socklen_t resultLength = sizeof(connectResult);
-					if(getsockopt(descriptor->descriptor, SOL_SOCKET, SO_ERROR, &connectResult, &resultLength) < 0)
-					{
-						Output::printError("Error: Could not connect to XML RPC server " + ipAddress + " on port " + port + ": " + strerror(errno) + ".");
-						GD::fileDescriptorManager.shutdown(descriptor);
-						return descriptor;
-					}
-					break;
-				}
-				else if(pollResult == 0)
-				{
-					if(i < 5)
-					{
-						Output::printError("Warning: Connecting to XML RPC server " + ipAddress + " on port " + port + " timed out. Retrying...");
-						GD::fileDescriptorManager.shutdown(descriptor);
-						continue;
-					}
-					else
-					{
-						Output::printError("Error: Connecting to XML RPC server " + ipAddress + " on port " + port + " timed out. Giving up and removing server. Server has to send init again.");
-						GD::fileDescriptorManager.shutdown(descriptor);
-						descriptor->descriptor = -2;
-						return descriptor;
-					}
-				}
-			}
-		}
-	}
-    catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return descriptor;
-}
-
-SSL* RPCClient::getSSL(int32_t fileDescriptor, bool verifyCertificate)
-{
-	try
-	{
-		SSL* ssl;
-		if(!_sslCTX)
-		{
-			Output::printError("RPC Client: Could not connect to server using SSL. SSL is not initialized. Look for previous error messages.");
-			return nullptr;
-		}
-		ssl = SSL_new(_sslCTX);
-		SSL_set_fd(ssl, fileDescriptor);
-		int32_t result = SSL_connect(ssl);
-		if(!ssl || result < 1)
-		{
-			Output::printError("RPC Client: Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(ssl, result)));
-			SSL_free(ssl);
-			return nullptr;
-		}
-
-		X509* serverCert = SSL_get_peer_certificate(ssl);
-		if(!serverCert)
-		{
-			Output::printError("RPC Client: Could not get server certificate.");
-			SSL_free(ssl);
-			return nullptr;
-		}
-
-		//When no certificate was received, verify returns X509_V_OK!
-		if((result = SSL_get_verify_result(ssl)) != X509_V_OK && (result != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT || verifyCertificate))
-		{
-			Output::printError("RPC Client: Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
-			SSL_free(ssl);
-			return nullptr;
-		}
-		return ssl;
-	}
-    catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return nullptr;
-}
-
-void RPCClient::getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool& timedout)
-{
-	try
-	{
-		GD::fileDescriptorManager.shutdown(server->fileDescriptor);
-
-		server->fileDescriptor = getConnection(server->hostname, server->address.second, server->ipAddress);
-		if(!server->fileDescriptor) return;
-		if(server->fileDescriptor->descriptor < 0)
-		{
-			if(server->fileDescriptor->descriptor == -2)
-			{
-				timedout = true;
-				GD::rpcClient.removeServer(server->address);
-			}
-			return;
-		}
-
-		if(server->useSSL)
-		{
-			bool verifyCertificate = (!server->settings || server->settings->verifyCertificate) ? true : false;
-			server->ssl = getSSL(server->fileDescriptor->descriptor, verifyCertificate);
-			if(!server->ssl) GD::fileDescriptorManager.shutdown(server->fileDescriptor);
-		}
-		server->socket = SocketOperations(server->fileDescriptor->descriptor, server->ssl);
-	}
-    catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void RPCClient::closeConnection(std::shared_ptr<RemoteRPCServer>& server)
-{
-	if(!server) return;
-	if(server->ssl) SSL_free(server->ssl);
-	server->ssl = nullptr;
-	GD::fileDescriptorManager.close(server->fileDescriptor);
-}
-
 std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>> data, bool insertHeader, bool& timedout)
 {
 	try
@@ -554,7 +264,6 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			Output::printError("RPC Client: Could not send packet. Pointer to server or data is nullptr.");
 			return std::shared_ptr<std::vector<char>>();
 		}
-		signal(SIGPIPE, SIG_IGN);
 
 		if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
 		if(server->hostname.empty()) return std::shared_ptr<std::vector<char>>();
@@ -576,26 +285,32 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			return std::shared_ptr<std::vector<char>>();
 		}
 
-		if(server->fileDescriptor->descriptor < 0) getFileDescriptor(server, timedout);
-		else if(!server->socket.connected())
+		try
 		{
-			Output::printDebug("RPC Client: Existing connection (" + std::to_string(server->fileDescriptor->descriptor) + ") has been closed. Reconnecting...");
-			closeConnection(server);
-			getFileDescriptor(server, timedout);
+			if(!server->socket.connected())
+			{
+				server->socket.setHostname(server->hostname);
+				server->socket.setPort(server->address.second);
+				server->socket.setUseSSL(server->useSSL);
+				if(server->settings) server->socket.setVerifyCertificate(server->settings->verifyCertificate);
+				server->socket.open();
+			}
 		}
-		else Output::printDebug("RPC Client: Using existing connection: " + std::to_string(server->fileDescriptor->descriptor));
-		if(server->fileDescriptor->descriptor < 0)
+		catch(SocketOperationException& ex)
 		{
+			Output::printError(ex.what() + " Removing server. Server has to send \"init\" again.");
+			GD::rpcClient.removeServer(server->address);
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
+
 
 		if(server->settings && server->settings->authType != ClientSettings::Settings::AuthType::none && !server->auth.initialized())
 		{
 			if(server->settings->userName.empty() || server->settings->password.empty())
 			{
-				Output::printError("Error: No user name or password specified in config file for XML RPC server " + server->ipAddress + " on port " + server->address.second + ". Closing connection.");
-				closeConnection(server);
+				Output::printError("Error: No user name or password specified in config file for XML RPC server " + server->hostname + " on port " + server->address.second + ". Closing connection.");
+				server->socket.close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
@@ -639,15 +354,14 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		catch(SocketDataLimitException& ex)
 		{
 			Output::printWarning("Warning: " + ex.what());
-			closeConnection(server);
+			server->socket.close();
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
 		catch(SocketOperationException& ex)
 		{
-			Output::printError("Error: Could not send data to XML RPC server " + server->ipAddress + " on port " + server->address.second + ": " + ex.what() + ". Giving up.");
-			server->ssl = nullptr; //After SSL_write failed, the pointer does not seem to be valid anymore. Calling SSL_free causes segfault.
-			closeConnection(server);
+			Output::printError("Error: Could not send data to XML RPC server " + server->hostname + " on port " + server->address.second + ": " + ex.what() + ". Giving up.");
+			server->socket.close();
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
@@ -672,23 +386,23 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 			catch(SocketTimeOutException& ex)
 			{
-				Output::printInfo("Info: Reading from XML RPC server timed out. Server: " + server->ipAddress + " Port: " + server->address.second);
+				Output::printInfo("Info: Reading from XML RPC server timed out. Server: " + server->hostname + " Port: " + server->address.second);
 				timedout = true;
-				if(!server->keepAlive) closeConnection(server);
+				if(!server->keepAlive) server->socket.close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
 			catch(SocketClosedException& ex)
 			{
 				Output::printWarning("Warning: " + ex.what());
-				if(!server->keepAlive) closeConnection(server);
+				if(!server->keepAlive) server->socket.close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
 			catch(SocketOperationException& ex)
 			{
 				Output::printError(ex.what());
-				if(!server->keepAlive) closeConnection(server);
+				if(!server->keepAlive) server->socket.close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
@@ -697,8 +411,8 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			buffer[receivedBytes] = '\0';
 			if(!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
 			{
-				Output::printError("Error: Authentication failed. Server " + server->ipAddress + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
-				if(!server->keepAlive) closeConnection(server);
+				Output::printError("Error: Authentication failed. Server " + server->hostname + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
+				if(!server->keepAlive) server->socket.close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
@@ -709,15 +423,15 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				{
 					if(!(buffer[3] & 1) && buffer[3] != 0xFF)
 					{
-						Output::printError("Error: RPC client received binary request as response from server " + server->ipAddress + " on port " + server->address.second);
-						if(!server->keepAlive) closeConnection(server);
+						Output::printError("Error: RPC client received binary request as response from server " + server->hostname + " on port " + server->address.second);
+						if(!server->keepAlive) server->socket.close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
 					if(receivedBytes < 8)
 					{
-						Output::printError("Error: RPC client received binary packet smaller than 8 bytes from server " + server->ipAddress + " on port " + server->address.second);
-						if(!server->keepAlive) closeConnection(server);
+						Output::printError("Error: RPC client received binary packet smaller than 8 bytes from server " + server->hostname + " on port " + server->address.second);
+						if(!server->keepAlive) server->socket.close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
@@ -725,15 +439,15 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 					Output::printDebug("RPC client receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
 					if(dataSize == 0)
 					{
-						Output::printError("Error: RPC client received binary packet without data from server " + server->ipAddress + " on port " + server->address.second);
-						if(!server->keepAlive) closeConnection(server);
+						Output::printError("Error: RPC client received binary packet without data from server " + server->hostname + " on port " + server->address.second);
+						if(!server->keepAlive) server->socket.close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
 					if(dataSize > 104857600)
 					{
 						Output::printError("Error: RPC client received packet with data larger than 100 MiB received.");
-						if(!server->keepAlive) closeConnection(server);
+						if(!server->keepAlive) server->socket.close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
@@ -745,7 +459,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 					if(packetLength + receivedBytes > dataSize)
 					{
 						Output::printError("Error: RPC client received response packet larger than the expected data size.");
-						if(!server->keepAlive) closeConnection(server);
+						if(!server->keepAlive) server->socket.close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
@@ -767,21 +481,21 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				catch(HTTPException& ex)
 				{
 					Output::printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
-					if(!server->keepAlive) closeConnection(server);
+					if(!server->keepAlive) server->socket.close();
 					_sendCounter--;
 					return std::shared_ptr<std::vector<char>>();
 				}
 				if(http.getContentSize() > 104857600 || http.getHeader()->contentLength > 104857600)
 				{
 					Output::printError("Error: Packet with data larger than 100 MiB received.");
-					if(!server->keepAlive) closeConnection(server);
+					if(!server->keepAlive) server->socket.close();
 					_sendCounter--;
 					return std::shared_ptr<std::vector<char>>();
 				}
 			}
 		}
-		if(!server->keepAlive) closeConnection(server);
-		Output::printDebug("Debug: Received packet from server " + server->ipAddress + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
+		if(!server->keepAlive) server->socket.close();
+		Output::printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
 		_sendCounter--;
 		if(server->binary) return packet;
 		else if(http.isFinished()) return http.getContent();
@@ -800,7 +514,6 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     GD::fileDescriptorManager.shutdown(server->fileDescriptor);
-    if(server && server->ssl) SSL_free(server->ssl);
     _sendCounter--;
     return std::shared_ptr<std::vector<char>>();
 }

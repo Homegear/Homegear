@@ -515,7 +515,7 @@ void ServiceMessages::setUnreach(bool value)
 		}
 		if(value != _unreach)
 		{
-			if(value == true && _unreachResendCounter < 3 && _peer->rpcDevice && ((_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (_peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) && !_peer->pendingQueuesEmpty())
+			if(value == true && _unreachResendCounter < 3 && _peer->rpcDevice && ((_peer->getRXModes() & RPC::Device::RXModes::Enum::always) || (_peer->getRXModes() & RPC::Device::RXModes::Enum::burst)) && !_peer->pendingQueuesEmpty())
 			{
 				_peer->enqueuePendingQueues();
 				_unreachResendCounter++;

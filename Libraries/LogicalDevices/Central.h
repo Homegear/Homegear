@@ -65,6 +65,7 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> listTeams() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel, bool force = false, bool burst = true) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> putParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> paramset) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
+	virtual std::shared_ptr<RPC::RPCVariable> searchDevices() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on, int32_t duration = 60, bool debugOutput = true) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 protected:

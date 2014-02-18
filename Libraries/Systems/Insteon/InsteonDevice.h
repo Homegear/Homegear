@@ -27,17 +27,53 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#ifndef INSTEONDEVICE_H
+#define INSTEONDEVICE_H
 
-#include <stdint.h>
+#include "../../LogicalDevices/LogicalDevice.h"
+#include "../../HelperFunctions/HelperFunctions.h"
+#include "InsteonDeviceTypes.h"
+#include "InsteonPacket.h"
 
-enum class DeviceFamilies : uint32_t
+#include <string>
+#include <unordered_map>
+#include <map>
+#include <mutex>
+#include <vector>
+#include <queue>
+#include <thread>
+#include <chrono>
+#include "pthread.h"
+
+namespace Insteon
 {
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	Insteon = 0x02
-};
+class InsteonDevice : public LogicalDevice
+{
+    public:
+		virtual bool isCentral();
 
-#endif /* DEVICEFAMILIES_H_ */
+        InsteonDevice();
+        InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
+        virtual ~InsteonDevice();
+        virtual DeviceFamilies deviceFamily() { return DeviceFamilies::Insteon; }
+        bool packetReceived(std::shared_ptr<Packet> packet);
+
+        virtual void loadVariables();
+        virtual void saveVariables();
+        virtual void saveVariable(uint32_t index, int64_t intValue);
+        virtual void saveVariable(uint32_t index, std::string& stringValue);
+        virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
+
+        virtual void sendPacket(std::shared_ptr<InsteonPacket> packet);
+    protected:
+        std::map<uint32_t, uint32_t> _variableDatabaseIDs;
+        bool _disposing = false;
+
+        std::mutex _databaseMutex;
+        bool _initialized = false;
+
+        virtual void init();
+    private:
+};
+}
+#endif // HMWIREDDEVICE_H

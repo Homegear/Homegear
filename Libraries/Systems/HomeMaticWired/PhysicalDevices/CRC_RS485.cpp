@@ -80,7 +80,9 @@ void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
 			return;
 		}
 
-		std::vector<uint8_t> data = packet->byteArray();
+		std::shared_ptr<HMWired::HMWiredPacket> hmWiredPacket(std::dynamic_pointer_cast<HMWired::HMWiredPacket>(packet));
+		if(!hmWiredPacket) return;
+		std::vector<uint8_t> data = hmWiredPacket->byteArray();
 		writeToDevice(data, true);
 	}
 	catch(const std::exception& ex)

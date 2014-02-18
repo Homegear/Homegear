@@ -76,7 +76,7 @@ void PhysicalDevices::load(std::string filename)
 					if (input[ptr] == ']')
 					{
 						input[ptr] = '\0';
-						if(!settings->device.empty() && !settings->type.empty() && settings->family != DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
+						if((!settings->device.empty() || (!settings->hostname.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
 						{
 							std::shared_ptr<PhysicalDevice> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
 							_physicalDevicesMutex.lock();
@@ -88,6 +88,7 @@ void PhysicalDevices::load(std::string filename)
 						HelperFunctions::toLower(name);
 						if(name == "homematicbidcos") settings->family = DeviceFamilies::HomeMaticBidCoS;
 						else if(name == "homematicwired") settings->family = DeviceFamilies::HomeMaticWired;
+						else if(name == "insteon") settings->family = DeviceFamilies::Insteon;
 						Output::printDebug("Debug: Reading config for physical device family " + HelperFunctions::getDeviceFamilyName(settings->family));
 						break;
 					}
@@ -158,13 +159,35 @@ void PhysicalDevices::load(std::string filename)
 						Output::printDebug("Debug: GPIO3 of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + std::to_string(settings->gpio[3].number));
 					}
 				}
+				else if(name == "hostname")
+				{
+					settings->hostname = value;
+					Output::printDebug("Debug: Hostname of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + settings->hostname);
+				}
+				else if(name == "port")
+				{
+					settings->port = value;
+					Output::printDebug("Debug: Port of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + settings->port);
+				}
+				else if(name == "ssl")
+				{
+					HelperFunctions::toLower(value);
+					if(value == "true") settings->ssl = true;
+					Output::printDebug("Debug: SSL of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + std::to_string(settings->ssl));
+				}
+				else if(name == "verifycertificate")
+				{
+					HelperFunctions::toLower(value);
+					if(value == "false") settings->verifyCertificate = false;
+					Output::printDebug("Debug: VerifyCertificate of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + std::to_string(settings->verifyCertificate));
+				}
 				else
 				{
 					Output::printWarning("Warning: Unknown physical device setting: " + std::string(input));
 				}
 			}
 		}
-		if(!settings->device.empty() && !settings->type.empty() && settings->family != DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
+		if((!settings->device.empty() || (!settings->hostname.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
 		{
 			std::shared_ptr<PhysicalDevice> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
 			_physicalDevicesMutex.lock();

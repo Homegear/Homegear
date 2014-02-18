@@ -490,7 +490,6 @@ std::shared_ptr<RPCVariable> Client::listClientServers(std::string id)
 			std::shared_ptr<RPCVariable> serverInfo(new RPCVariable(RPCVariableType::rpcStruct));
 			serverInfo->structValue->insert(RPC::RPCStructElement("INTERFACE_ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->id))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("HOSTNAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->hostname))));
-			serverInfo->structValue->insert(RPC::RPCStructElement("IPADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->ipAddress))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("PORT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->address.second))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("PATH", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->path))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("SSL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->useSSL))));

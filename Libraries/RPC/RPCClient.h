@@ -82,7 +82,6 @@ public:
 	bool keepAlive = false;
 	bool binary = false;
 	std::string hostname;
-	std::string ipAddress;
 	std::pair<std::string, std::string> address;
 	std::string path;
 	std::string id;
@@ -91,7 +90,6 @@ public:
 	SocketOperations socket;
 	std::shared_ptr<FileDescriptor> fileDescriptor;
 	std::mutex sendMutex;
-	SSL* ssl = nullptr;
 	Auth auth;
 	int32_t lastPacketSent = -1;
 };
@@ -111,14 +109,9 @@ protected:
 	XMLRPCDecoder _xmlRpcDecoder;
 	XMLRPCEncoder _xmlRpcEncoder;
 	int32_t _sendCounter = 0;
-	SSL_CTX* _sslCTX = nullptr;
 
 	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>> data, bool insertHeader, bool& timedout);
 	std::string getIPAddress(std::string address);
-	std::shared_ptr<FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
-	SSL* getSSL(int32_t fileDescriptor, bool verifyCertificate);
-	void getFileDescriptor(std::shared_ptr<RemoteRPCServer>& server, bool& timedout);
-	void closeConnection(std::shared_ptr<RemoteRPCServer>& server);
 };
 
 } /* namespace RPC */

@@ -45,9 +45,10 @@
 class DeviceFamily
 {
 public:
-	DeviceFamily() {}
+	DeviceFamily();
 	virtual ~DeviceFamily();
 
+	bool available();
 	virtual std::shared_ptr<RPC::RPCVariable> listBidcosInterfaces() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid)); }
 	virtual std::shared_ptr<PhysicalDevices::PhysicalDevice> createPhysicalDevice(std::shared_ptr<PhysicalDevices::PhysicalDeviceSettings> settings) { return std::shared_ptr<PhysicalDevices::PhysicalDevice>(); }
 	virtual void load(bool version_0_0_7) {}
@@ -62,6 +63,8 @@ public:
 	virtual std::string handleCLICommand(std::string& command) { return ""; }
 	virtual bool deviceSelected() { return false; }
 protected:
+	DeviceFamilies _family = DeviceFamilies::none;
+	int32_t _available = -1;
 	std::mutex _devicesMutex;
 	std::thread _removeThread;
 	std::vector<std::shared_ptr<LogicalDevice>> _devices;

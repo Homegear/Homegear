@@ -39,8 +39,7 @@ namespace HMWired
 
 HMWired::HMWired()
 {
-
-
+	_family = DeviceFamilies::HomeMaticWired;
 }
 
 HMWired::~HMWired()
@@ -239,7 +238,7 @@ void HMWired::createSpyDevice()
 		std::string serialNumber(getUniqueSerialNumber("VWS", HelperFunctions::getRandomNumber(1, 9999999)));
 
 		add(std::shared_ptr<LogicalDevice>(new HMWired_SD(0, serialNumber, address)));
-		Output::printMessage("Created HMWired_SD with address 0x" + HelperFunctions::getHexString(address) + " and serial number " + serialNumber);
+		Output::printMessage("Created HomeMatic Wired spy device with address 0x" + HelperFunctions::getHexString(address, 8) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {
@@ -263,8 +262,9 @@ void HMWired::createCentral()
 
 		std::string serialNumber(getUniqueSerialNumber("VWC", HelperFunctions::getRandomNumber(1, 9999999)));
 
-		add(std::shared_ptr<LogicalDevice>(new HMWiredCentral(0, serialNumber, 1)));
-		Output::printMessage("Created HMWIREDCENTRAL with address 0x" + HelperFunctions::getHexString(1) + " and serial number " + serialNumber);
+		_central.reset(new HMWiredCentral(0, serialNumber, 1));
+		add(_central);
+		Output::printMessage("Created HomeMatic Wired central with address 0x" + HelperFunctions::getHexString(1, 8) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {

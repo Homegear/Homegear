@@ -709,7 +709,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 						}
 					}
 
-					stringStream << "Address: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 8) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
+					stringStream << "Address: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 6) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
 					if(i->second->rpcDevice)
 					{
 						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
@@ -1221,7 +1221,7 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
 		pendingQueue->noSending = true;
 
 		uint8_t configByte = 0xA0;
-		if(peer->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+		if(peer->getRXModes() & RPC::Device::RXModes::burst) configByte |= 0x10;
 
 		std::vector<uint8_t> payload;
 
@@ -1267,7 +1267,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 		pendingQueue->noSending = true;
 
 		uint8_t configByte = 0xA0;
-		if(peer->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+		if(peer->getRXModes() & RPC::Device::RXModes::burst) configByte |= 0x10;
 		std::vector<uint8_t> payload;
 
 		//CONFIG_START
@@ -2416,7 +2416,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		std::vector<uint8_t> payload;
 
 		uint8_t configByte = 0xA0;
-		if(sender->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+		if(sender->getRXModes() & RPC::Device::RXModes::burst) configByte |= 0x10;
 		std::shared_ptr<BasicPeer> hiddenPeer(sender->getHiddenPeer(senderChannelIndex));
 		if(hiddenPeer)
 		{
@@ -2487,9 +2487,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 
 		GD::rpcClient.broadcastUpdateDevice(senderSerialNumber + ":" + std::to_string(senderChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
 
-		while(_bidCoSQueueManager.get(sender->getAddress()))
+		int32_t waitIndex = 0;
+		while(_bidCoSQueueManager.get(sender->getAddress()) && waitIndex < 20)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
 		}
 
 		queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, receiver->getAddress());
@@ -2497,7 +2499,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 		pendingQueue->noSending = true;
 
 		configByte = 0xA0;
-		if(receiver->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+		if(receiver->getRXModes() & RPC::Device::RXModes::burst) configByte |= 0x10;
 
 		hiddenPeer = receiver->getHiddenPeer(receiverChannelIndex);
 		if(hiddenPeer)
@@ -2569,9 +2571,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 
 		GD::rpcClient.broadcastUpdateDevice(receiverSerialNumber + ":" + std::to_string(receiverChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
 
-		while(_bidCoSQueueManager.get(receiver->getAddress()))
+		waitIndex = 0;
+		while(_bidCoSQueueManager.get(receiver->getAddress()) && waitIndex < 20)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
 		}
 
 		//Check, if channel is part of a group and if that's the case add link for the grouped channel
@@ -2625,7 +2629,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		pendingQueue->noSending = true;
 
 		uint8_t configByte = 0xA0;
-		if(sender->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+		if(sender->getRXModes() & RPC::Device::RXModes::burst) configByte |= 0x10;
 
 		std::vector<uint8_t> payload;
 		payload.push_back(senderChannelIndex);
@@ -2648,9 +2652,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 
 		GD::rpcClient.broadcastUpdateDevice(senderSerialNumber + ":" + std::to_string(senderChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
 
-		while(_bidCoSQueueManager.get(sender->getAddress()))
+		int32_t waitIndex = 0;
+		while(_bidCoSQueueManager.get(sender->getAddress()) && waitIndex < 20)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
 		}
 
 		queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::CONFIG, receiver->getAddress());
@@ -2658,7 +2664,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		pendingQueue->noSending = true;
 
 		configByte = 0xA0;
-		if(receiver->rpcDevice->rxModes & RPC::Device::RXModes::burst) configByte |= 0x10;
+		if(receiver->getRXModes() & RPC::Device::RXModes::burst) configByte |= 0x10;
 
 		payload.clear();
 		payload.push_back(receiverChannelIndex);
@@ -2681,9 +2687,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 
 		GD::rpcClient.broadcastUpdateDevice(receiverSerialNumber + ":" + std::to_string(receiverChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
 
-		while(_bidCoSQueueManager.get(receiver->getAddress()))
+		waitIndex = 0;
+		while(_bidCoSQueueManager.get(receiver->getAddress()) && waitIndex < 20)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
 		}
 
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -2730,10 +2738,12 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
 		if(force) deletePeer(address);
 		else
 		{
+			int32_t waitIndex = 0;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			while(_bidCoSQueueManager.get(address) && peerExists(address))
+			while(_bidCoSQueueManager.get(address) && peerExists(address) && waitIndex < 20)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				waitIndex++;
 			}
 		}
 
@@ -2915,7 +2925,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		peer->serviceMessages->setConfigPending(true);
 
 		uint8_t configByte = 0xA0;
-		if(burst && (peer->rpcDevice->rxModes & RPC::Device::RXModes::burst)) configByte |= 0x10;
+		if(burst && (peer->getRXModes() & RPC::Device::RXModes::burst)) configByte |= 0x10;
 
 		std::vector<uint8_t> payload;
 		if(oldTeamAddress != 0 && oldTeamAddress != peer->getTeamRemoteAddress())
@@ -2948,7 +2958,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		queue->push(getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 
 		peer->pendingBidCoSQueues->push(queue);
-		if((peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (peer->rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) enqueuePendingQueues(peer->getAddress());
+		if((peer->getRXModes() & RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & RPC::Device::RXModes::Enum::burst)) enqueuePendingQueues(peer->getAddress());
 		else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 		GD::rpcClient.broadcastUpdateDevice(serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
@@ -3262,9 +3272,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string seri
 		{
 			std::shared_ptr<RPC::RPCVariable> result = peer->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
 			if(result->errorStruct) return result;
-			while(_bidCoSQueueManager.get(peer->getAddress()))
+			int32_t waitIndex = 0;
+			while(_bidCoSQueueManager.get(peer->getAddress()) && waitIndex < 20)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				waitIndex++;
 			}
 			return result;
 		}

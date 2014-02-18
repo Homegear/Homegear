@@ -27,17 +27,54 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#ifndef TCPSOCKETDEVICE_H
+#define TCPSOCKETDEVICE_H
 
-#include <stdint.h>
+#include "../../../HelperFunctions/HelperFunctions.h"
+#include "../../../PhysicalDevices/PhysicalDevice.h"
+#include "../../../RPC/SocketOperations.h"
 
-enum class DeviceFamilies : uint32_t
+#include <thread>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <list>
+#include <mutex>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <signal.h>
+
+namespace PhysicalDevices
 {
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	Insteon = 0x02
+
+class InsteonHubX10  : public PhysicalDevice
+{
+    public:
+        InsteonHubX10(std::shared_ptr<PhysicalDeviceSettings> settings);
+        virtual ~InsteonHubX10();
+        void startListening();
+        void stopListening();
+        void sendPacket(std::shared_ptr<Packet> packet);
+        int64_t lastAction() { return _lastAction; }
+        virtual bool isOpen() { return _socket.connected(); }
+    protected:
+        int64_t _lastAction = 0;
+        std::string _hostname;
+        std::string _port;
+        RPC::SocketOperations _socket;
+        std::mutex _sendMutex;
+
+        void send(std::vector<char>& packet, bool printPacket);
+        void listen();
+        void getFileDescriptor(bool& timedout);
+        std::shared_ptr<FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
+    private:
 };
 
-#endif /* DEVICEFAMILIES_H_ */
+}
+#endif // TCPSOCKETDEVICE_H

@@ -298,7 +298,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 		{
 			for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 			{
-				if(i->first == DeviceFamilies::none) continue;
+				if(i->first == DeviceFamilies::none || !i->second->available()) continue;
 				stringStream << "ID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << "\tName: " << HelperFunctions::getDeviceFamilyName(i->first) << std::endl << std::dec;
 			}
 			return stringStream.str();
@@ -335,9 +335,14 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 				stringStream << "Supported families:" << std::endl;
 				for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 				{
-					if(i->first == DeviceFamilies::none) continue;
+					if(i->first == DeviceFamilies::none || !i->second->available()) continue;
 					stringStream << "  FAMILYID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << ":\t" << HelperFunctions::getDeviceFamilyName(i->first) << std::endl << std::dec;
 				}
+				return stringStream.str();
+			}
+			if(GD::deviceFamilies.find(family) == GD::deviceFamilies.end())
+			{
+				stringStream << "Device family not found." << std::endl;
 				return stringStream.str();
 			}
 

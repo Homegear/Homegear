@@ -220,6 +220,133 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 	}
 }
 
+void HMWiredPeer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
+{
+	try
+	{
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		{
+			if((*i)->address == peer->address && (*i)->channel == peer->channel)
+			{
+				_peers[channel].erase(i);
+				break;
+			}
+		}
+		_peers[channel].push_back(peer);
+		savePeers();
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+std::shared_ptr<BasicPeer> HMWiredPeer::getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel)
+{
+	try
+	{
+		if(_peers.find(channel) == _peers.end()) return std::shared_ptr<BasicPeer>();
+
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		{
+			if((*i)->serialNumber.empty())
+			{
+				std::shared_ptr<HMWiredCentral> central = getCentral();
+				if(central)
+				{
+					std::shared_ptr<HMWiredPeer> peer(central->getPeer((*i)->address));
+					if(peer) (*i)->serialNumber = peer->getSerialNumber();
+				}
+			}
+			if((*i)->serialNumber == serialNumber && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return std::shared_ptr<BasicPeer>();
+}
+
+std::shared_ptr<BasicPeer> HMWiredPeer::getPeer(int32_t channel, int32_t address, int32_t remoteChannel)
+{
+	try
+	{
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		{
+			if((*i)->address == address && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return std::shared_ptr<BasicPeer>();
+}
+
+void HMWiredPeer::removePeer(int32_t channel, int32_t address, int32_t remoteChannel)
+{
+	try
+	{
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		{
+			if((*i)->address == address && (*i)->channel == remoteChannel)
+			{
+				_peers[channel].erase(i);
+				_databaseMutex.lock();
+				DataColumnVector data;
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)RPC::ParameterSet::Type::Enum::link)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(channel)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(address)));
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteChannel)));
+				GD::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND remotePeer=? AND remoteChannel=?", data);
+				_databaseMutex.unlock();
+				savePeers();
+				return;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
 void HMWiredPeer::loadVariables(HMWiredDevice* device)
 {
 	try
@@ -530,7 +657,7 @@ void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std
 			if(frame->subtype > -1 && frame->subtypeIndex >= 9 && (signed)packet->payload()->size() > (frame->subtypeIndex - 9) && packet->payload()->at(frame->subtypeIndex - 9) != (unsigned)frame->subtype) continue;
 			int32_t channelIndex = frame->channelField;
 			int32_t channel = -1;
-			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9);
+			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9) - frame->channelIndexOffset;
 			if(channel > -1 && frame->channelFieldSize < 1.0) channel &= (0xFF >> (8 - std::lround(frame->channelFieldSize * 10) % 10));
 			if(frame->fixedChannel > -1) channel = frame->fixedChannel;
 			currentFrameValues.frameID = frame->id;
@@ -616,7 +743,7 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 {
 	try
 	{
-		if(!packet) return;
+		if(ignorePackets || !packet) return;
 		if(!_centralFeatures || _disposing) return;
 		if(packet->senderAddress() != _address) return;
 		if(!rpcDevice) return;
@@ -678,11 +805,10 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 					rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
 				}
 			}
-
-			if(!a->values.empty() && packet->type() == HMWiredPacketType::iMessage && packet->destinationAddress() == getCentral()->getAddress())
-			{
-				getCentral()->sendOK(packet->senderMessageCounter(), packet->senderAddress());
-			}
+		}
+		if(packet->type() == HMWiredPacketType::iMessage && packet->destinationAddress() == getCentral()->getAddress())
+		{
+			getCentral()->sendOK(packet->senderMessageCounter(), packet->senderAddress());
 		}
 		if(!rpcValues.empty())
 		{
@@ -887,6 +1013,475 @@ std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> HMWiredPeer::get
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>>();
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
+{
+	try
+	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(channel < 0) channel = 0;
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel");
+		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set");
+
+		std::shared_ptr<BasicPeer> remotePeer;
+		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
+
+		std::shared_ptr<RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
+		std::shared_ptr<RPC::RPCVariable> descriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+		std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+		std::shared_ptr<RPC::RPCVariable> element;
+		uint32_t index = 0;
+		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
+		{
+			if((*i)->id.empty()) continue;
+			if(!((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::internal)) continue;
+			if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeBoolean)
+			{
+				RPC::LogicalParameterBoolean* parameter = (RPC::LogicalParameterBoolean*)(*i)->logicalParameter.get();
+
+				if(!(*i)->control.empty())
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+					element->stringValue = (*i)->control;
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
+				}
+
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+					element->booleanValue = parameter->defaultValue;
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
+				}
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->uiFlags;
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = (*i)->id;
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+				element->booleanValue = parameter->max;
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+				element->booleanValue = parameter->min;
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->operations;
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = index;
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = "BOOL";
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = parameter->unit;
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
+			}
+			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeString)
+			{
+				RPC::LogicalParameterString* parameter = (RPC::LogicalParameterString*)(*i)->logicalParameter.get();
+
+				if(!(*i)->control.empty())
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+					element->stringValue = (*i)->control;
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
+				}
+
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+					element->stringValue = parameter->defaultValue;
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
+				}
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->uiFlags;
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = (*i)->id;
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = parameter->max;
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = parameter->min;
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->operations;
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = index;
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = "STRING";
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = parameter->unit;
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
+			}
+			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeAction)
+			{
+				RPC::LogicalParameterAction* parameter = (RPC::LogicalParameterAction*)(*i)->logicalParameter.get();
+
+				if(!(*i)->control.empty())
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+					element->stringValue = (*i)->control;
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
+				}
+
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+					element->booleanValue = parameter->defaultValue;
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
+				}
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->uiFlags;
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = (*i)->id;
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+				element->booleanValue = parameter->max;
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcBoolean));
+				element->booleanValue = parameter->min;
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->operations;
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = index;
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = "ACTION";
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = parameter->unit;
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
+			}
+			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeInteger)
+			{
+				RPC::LogicalParameterInteger* parameter = (RPC::LogicalParameterInteger*)(*i)->logicalParameter.get();
+
+				if(!(*i)->control.empty())
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+					element->stringValue = (*i)->control;
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
+				}
+
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+					element->integerValue = parameter->defaultValue;
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
+				}
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->uiFlags;
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = (*i)->id;
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = parameter->max;
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = parameter->min;
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->operations;
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
+
+				if(!parameter->specialValues.empty())
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+					for(std::unordered_map<std::string, int32_t>::iterator j = parameter->specialValues.begin(); j != parameter->specialValues.end(); ++j)
+					{
+						std::shared_ptr<RPC::RPCVariable> specialElement(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						specialElement->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first))));
+						specialElement->structValue->insert(RPC::RPCStructElement("VALUE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second))));
+						element->arrayValue->push_back(specialElement);
+					}
+					description->structValue->insert(RPC::RPCStructElement("SPECIAL", element));
+				}
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = index;
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = "INTEGER";
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = parameter->unit;
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
+			}
+			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeEnum)
+			{
+				RPC::LogicalParameterEnum* parameter = (RPC::LogicalParameterEnum*)(*i)->logicalParameter.get();
+
+				if(!(*i)->control.empty())
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+					element->stringValue = (*i)->control;
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
+				}
+
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+					element->integerValue = parameter->defaultValue;
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
+				}
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->uiFlags;
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = (*i)->id;
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = parameter->max;
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = parameter->min;
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->operations;
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = index;
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = "ENUM";
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = parameter->unit;
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+				for(std::vector<RPC::ParameterOption>::iterator j = parameter->options.begin(); j != parameter->options.end(); ++j)
+				{
+					element->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->id)));
+				}
+				description->structValue->insert(RPC::RPCStructElement("VALUE_LIST", element));
+			}
+			else if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeFloat)
+			{
+				RPC::LogicalParameterFloat* parameter = (RPC::LogicalParameterFloat*)(*i)->logicalParameter.get();
+
+				if(!(*i)->control.empty())
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+					element->stringValue = (*i)->control;
+					description->structValue->insert(RPC::RPCStructElement("CONTROL", element));
+				}
+
+				if(parameter->defaultValueExists)
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcFloat));
+					element->floatValue = parameter->defaultValue;
+					description->structValue->insert(RPC::RPCStructElement("DEFAULT", element));
+				}
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->uiFlags;
+				description->structValue->insert(RPC::RPCStructElement("FLAGS", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = (*i)->id;
+				description->structValue->insert(RPC::RPCStructElement("ID", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcFloat));
+				element->floatValue = parameter->max;
+				description->structValue->insert(RPC::RPCStructElement("MAX", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcFloat));
+				element->floatValue = parameter->min;
+				description->structValue->insert(RPC::RPCStructElement("MIN", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = (*i)->operations;
+				description->structValue->insert(RPC::RPCStructElement("OPERATIONS", element));
+
+				if(!parameter->specialValues.empty())
+				{
+					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+					for(std::unordered_map<std::string, double>::iterator j = parameter->specialValues.begin(); j != parameter->specialValues.end(); ++j)
+					{
+						std::shared_ptr<RPC::RPCVariable> specialElement(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						specialElement->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first))));
+						specialElement->structValue->insert(RPC::RPCStructElement("VALUE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->second))));
+						element->arrayValue->push_back(specialElement);
+					}
+					description->structValue->insert(RPC::RPCStructElement("SPECIAL", element));
+				}
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcInteger));
+				element->integerValue = index;
+				description->structValue->insert(RPC::RPCStructElement("TAB_ORDER", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = "FLOAT";
+				description->structValue->insert(RPC::RPCStructElement("TYPE", element));
+
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcString));
+				element->stringValue = parameter->unit;
+				description->structValue->insert(RPC::RPCStructElement("UNIT", element));
+			}
+
+			index++;
+			descriptions->structValue->insert(RPC::RPCStructElement((*i)->id, description));
+			description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+		}
+		return descriptions;
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
+{
+	try
+	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+		std::shared_ptr<BasicPeer> remotePeer;
+		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty())
+		{
+			remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
+			if(!remotePeer) return RPC::RPCVariable::createError(-2, "Unknown remote peer.");
+		}
+
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcDevice->channels[channel]->parameterSets[type]->id));
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
+{
+	try
+	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(channel < 0) channel = 0;
+		if(remoteChannel < 0) remoteChannel = 0;
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(type == RPC::ParameterSet::Type::none) type = RPC::ParameterSet::Type::link;
+		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+		std::shared_ptr<RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
+		std::shared_ptr<RPC::RPCVariable> variables(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+
+		std::shared_ptr<BasicPeer> remotePeer;
+		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
+
+		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
+		{
+			if((*i)->id.empty()) continue;
+			if(!((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::internal)) continue;
+			std::shared_ptr<RPC::RPCVariable> element;
+			if(type == RPC::ParameterSet::Type::Enum::values)
+			{
+				if(valuesCentral.find(channel) == valuesCentral.end()) continue;
+				if(valuesCentral[channel].find((*i)->id) == valuesCentral[channel].end()) continue;
+				element = valuesCentral[channel][(*i)->id].rpcParameter->convertFromPacket(valuesCentral[channel][(*i)->id].data);
+			}
+			else if(type == RPC::ParameterSet::Type::Enum::master)
+			{
+				//if(configCentral.find(channel) == configCentral.end()) continue;
+				//if(configCentral[channel].find((*i)->id) == configCentral[channel].end()) continue;
+				//element = configCentral[channel][(*i)->id].rpcParameter->convertFromPacket(configCentral[channel][(*i)->id].data);
+			}
+			else if(remotePeer)
+			{
+				//if(linksCentral.find(channel) == linksCentral.end()) continue;
+				//if(linksCentral[channel][remotePeer->address][remotePeer->channel].find((*i)->id) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;
+				//if(remotePeer->channel != remoteChannel) continue;
+				//element = linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->id].rpcParameter->convertFromPacket(linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->id].data);
+			}
+
+			if(!element) continue;
+			if(element->type == RPC::RPCVariableType::rpcVoid) continue;
+			variables->structValue->insert(RPC::RPCStructElement((*i)->id, element));
+		}
+		return variables;
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 } /* namespace HMWired */

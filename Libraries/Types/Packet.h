@@ -45,7 +45,7 @@ public:
 	virtual int32_t destinationAddress() { return _destinationAddress; }
 	virtual std::vector<uint8_t>* payload() { return &_payload; }
 	virtual std::string hexString() { return ""; }
-	virtual std::vector<uint8_t> byteArray() { return std::vector<uint8_t>(); }
+	//virtual std::vector<uint8_t> byteArray() { return std::vector<uint8_t>(); }
 	virtual int64_t timeReceived() { return _timeReceived; }
 	virtual int64_t timeSending() { return _timeSending; }
 	virtual void setTimeSending(int64_t time) { _timeSending = time; }

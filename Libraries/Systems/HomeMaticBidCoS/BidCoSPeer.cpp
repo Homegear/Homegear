@@ -1903,34 +1903,34 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					handleDominoEvent(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first), a->frameID, *j);
 				}
 			}
-
-			if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == _address && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional
+		}
+		if((getRXModes() & RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == _address && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional
+		{
+			if(packet->controlByte() & 32) //Bidirectional?
 			{
-				if(packet->controlByte() & 32) //Bidirectional?
-				{
-					std::vector<uint8_t> payload;
-					payload.push_back(0x00);
-					std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x81, 0x02, getCentral()->getAddress(), _address, payload));
-					getCentral()->sendPacket(ok);
-					getCentral()->enqueuePendingQueues(_address);
-				}
-				else
-				{
-					std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
-					queue->noSending = true;
-					std::vector<uint8_t> payload;
-					std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(packet->messageCounter(), 0xA1, 0x12, getCentral()->getAddress(), _address, payload));
-					queue->push(configPacket);
-					queue->push(getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-
-					getCentral()->enqueuePackets(_address, queue, true);
-				}
+				std::vector<uint8_t> payload;
+				payload.push_back(0x00);
+				std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(packet->messageCounter(), 0x81, 0x02, getCentral()->getAddress(), _address, payload));
+				getCentral()->sendPacket(ok);
+				getCentral()->enqueuePendingQueues(_address);
 			}
-			else if(!a->values.empty() && (packet->controlByte() & 32) && packet->destinationAddress() == getCentral()->getAddress())
+			else
 			{
-				getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
+				std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
+				queue->noSending = true;
+				std::vector<uint8_t> payload;
+				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(packet->messageCounter(), 0xA1, 0x12, getCentral()->getAddress(), _address, payload));
+				queue->push(configPacket);
+				queue->push(getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+
+				getCentral()->enqueuePackets(_address, queue, true);
 			}
 		}
+		else if((packet->controlByte() & 0x20) && packet->destinationAddress() == getCentral()->getAddress())
+		{
+			getCentral()->sendOK(packet->messageCounter(), packet->senderAddress());
+		}
+
 		//if(!rpcValues.empty() && !resendPacket)
 		if(!rpcValues.empty())
 		{
@@ -1942,24 +1942,6 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				GD::rpcClient.broadcastEvent(address, j->second, rpcValues.at(j->first));
 			}
 		}
-		/*if(resendPacket && sentPacket)
-		{
-			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
-			queue->noSending = true;
-			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-			*packet = *sentPacket;
-			packet->setMessageCounter(_messageCounter);
-			setMessageCounter(_messageCounter + 1);
-			Output::printInfo("Info: Resending values for device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ", because they were not set correctly.");
-			queue->push(sentPacket);
-			queue->push(GD::devices.getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-			if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) GD::devices.getCentral()->enqueuePackets(_address, queue, true);
-			else
-			{
-				pendingBidCoSQueues->push(queue);
-				Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-			}
-		}*/
 	}
 	catch(const std::exception& ex)
     {
@@ -2291,7 +2273,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, RPC::
 				payload.push_back(i->first);
 				uint8_t controlByte = 0xA0;
 				//Only send first packet as burst packet
-				if(firstPacket && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) controlByte |= 0x10;
+				if(firstPacket && (getRXModes() & RPC::Device::RXModes::Enum::burst)) controlByte |= 0x10;
 				firstPacket = false;
 				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter, controlByte, 0x01, central->getAddress(), _address, payload));
 				queue->push(configPacket);
@@ -2343,7 +2325,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, RPC::
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) getCentral()->enqueuePendingQueues(_address);
+			if(!onlyPushing && ((getRXModes() & RPC::Device::RXModes::Enum::always) || (getRXModes() & RPC::Device::RXModes::Enum::burst))) getCentral()->enqueuePendingQueues(_address);
 			else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		}
@@ -2422,7 +2404,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, RPC::
 				payload.push_back(i->first);
 				uint8_t controlByte = 0xA0;
 				//Only send first packet as burst packet
-				if(firstPacket && (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst)) controlByte |= 0x10;
+				if(firstPacket && (getRXModes() & RPC::Device::RXModes::Enum::burst)) controlByte |= 0x10;
 				firstPacket = false;
 				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter, controlByte, 0x01, central->getAddress(), _address, payload));
 				queue->push(configPacket);
@@ -2474,7 +2456,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, RPC::
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(!onlyPushing && ((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))) getCentral()->enqueuePendingQueues(_address);
+			if(!onlyPushing && ((getRXModes() & RPC::Device::RXModes::Enum::always) || (getRXModes() & RPC::Device::RXModes::Enum::burst))) getCentral()->enqueuePendingQueues(_address);
 			else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		}
@@ -2535,9 +2517,8 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getParamset(int32_t channel, RPC::
 				if(remotePeer->channel != remoteChannel) continue;
 				element = linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->id].rpcParameter->convertFromPacket(linksCentral[channel][remotePeer->address][remotePeer->channel][(*i)->id].data);
 			}
-			else element = RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 
-			if(!element || element->errorStruct) continue;
+			if(!element) continue;
 			if(element->type == RPC::RPCVariableType::rpcVoid) continue;
 			variables->structValue->insert(RPC::RPCStructElement((*i)->id, element));
 		}
@@ -3475,7 +3456,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 			payload.at(frame->channelField - 9) = (uint8_t)channel;
 		}
 		uint8_t controlByte = 0xA0;
-		if(rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst) controlByte |= 0x10;
+		if(getRXModes() & RPC::Device::RXModes::Enum::burst) controlByte |= 0x10;
 		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter, controlByte, (uint8_t)frame->type, getCentral()->getAddress(), _address, payload));
 		for(std::vector<RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 		{
@@ -3571,7 +3552,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 		queue->push(packet);
 		queue->push(getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		pendingBidCoSQueues->push(queue);
-		if((rpcDevice->rxModes & RPC::Device::RXModes::Enum::always) || (rpcDevice->rxModes & RPC::Device::RXModes::Enum::burst))
+		if((getRXModes() & RPC::Device::RXModes::Enum::always) || (getRXModes() & RPC::Device::RXModes::Enum::burst))
 		{
 			if(_deviceType.isDimmer() || _deviceType.isSwitch()) queue->retries = 12;
 			getCentral()->enqueuePendingQueues(_address);
