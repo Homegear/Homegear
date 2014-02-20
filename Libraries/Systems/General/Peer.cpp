@@ -192,7 +192,7 @@ void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
 	{
 		if(parameterID == 0)
 		{
-			if(!isTeam()) Output::printError("Peer 0x" + HelperFunctions::getHexString(_address, 6) + ": Tried to save parameter without parameterID");
+			if(!isTeam()) Output::printError("Peer " + std::to_string(_peerID) + ": Tried to save parameter without parameterID");
 			return;
 		}
 		_databaseMutex.lock();
@@ -473,7 +473,7 @@ void Peer::saveConfig()
 			{
 				if(!j->second.rpcParameter)
 				{
-					Output::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(i->first));
+					Output::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(i->first));
 					continue;
 				}
 				if(j->second.rpcParameter->id.size() == 0)
@@ -492,7 +492,7 @@ void Peer::saveConfig()
 			{
 				if(!j->second.rpcParameter)
 				{
-					Output::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(i->first));
+					Output::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(i->first));
 					continue;
 				}
 				if(j->second.rpcParameter->id.size() == 0)
@@ -515,7 +515,7 @@ void Peer::saveConfig()
 					{
 						if(!l->second.rpcParameter)
 						{
-							Output::printCritical("Critical: Parameter " + l->first + " has no corresponding RPC parameter. Writing dummy data. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(i->first));
+							Output::printCritical("Critical: Parameter " + l->first + " has no corresponding RPC parameter. Writing dummy data. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(i->first));
 							continue;
 						}
 						if(l->second.rpcParameter->id.size() == 0)
@@ -573,7 +573,7 @@ void Peer::loadConfig()
 				std::string* parameterName = &row->second.at(6)->textValue;
 				if(parameterName->empty())
 				{
-					Output::printCritical("Critical: Added central config parameter without id. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(channel));
+					Output::printCritical("Critical: Added central config parameter without id. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(channel));
 					_databaseMutex.lock();
 					data.clear();
 					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
@@ -591,13 +591,13 @@ void Peer::loadConfig()
 				parameter->data.insert(parameter->data.begin(), row->second.at(7)->binaryValue->begin(), row->second.at(7)->binaryValue->end());
 				if(!rpcDevice)
 				{
-					Output::printError("Critical: No xml rpc device found for peer 0x" + HelperFunctions::getHexString(_address) + ".");
+					Output::printError("Critical: No xml rpc device found for peer " + std::to_string(_peerID) + ".");
 					continue;
 				}
 				parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(*parameterName);
 				if(!parameter->rpcParameter)
 				{
-					Output::printError("Error: Deleting parameter " + *parameterName + ", because no corresponding RPC parameter was found. Device: 0x" + HelperFunctions::getHexString(_address) + " Channel: " + std::to_string(channel));
+					Output::printError("Error: Deleting parameter " + *parameterName + ", because no corresponding RPC parameter was found. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(channel));
 					DataColumnVector data;
 					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 					data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)parameterSetType)));

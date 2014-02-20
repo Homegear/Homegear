@@ -483,17 +483,3 @@ int32_t HelperFunctions::groupID(std::string groupname)
 	}
 	return grp.gr_gid;
 }
-
-std::string HelperFunctions::getDeviceFamilyName(DeviceFamilies family)
-{
-	switch(family)
-	{
-	case DeviceFamilies::HomeMaticBidCoS:
-		return "HomeMatic BidCoS";
-	case DeviceFamilies::HomeMaticWired:
-		return "HomeMatic Wired";
-	case DeviceFamilies::Insteon:
-		return "Insteon";
-	}
-	return "";
-}

@@ -525,13 +525,13 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				}
 
-				stringStream << "Added peer 0x" << std::hex << peerAddress << " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << " and firmware version 0x" << firmwareVersion << "." << std::dec << std::endl;
+				stringStream << "Added peer " + std::to_string(peer->getID()) + " with address 0x" << std::hex << peerAddress << " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << " and firmware version 0x" << firmwareVersion << "." << std::dec << std::endl;
 			}
 			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "peers remove") == 0)
 		{
-			int32_t peerAddress;
+			uint64_t peerID;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -546,32 +546,32 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					peerAddress = HelperFunctions::getNumber(element, true);
-					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+					peerID = HelperFunctions::getNumber(element, true);
+					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
 			}
 			if(index == 2)
 			{
 				stringStream << "Description: This command removes a peer without trying to unpair it first." << std::endl;
-				stringStream << "Usage: peers remove ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: peers remove PEERID" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe 3 byte address of the peer to remove in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  PEERID:\tThe id of the peer to remove. Example: 513" << std::endl;
 				return stringStream.str();
 			}
 
-			if(!peerExists(peerAddress)) stringStream << "This device is not paired to this central." << std::endl;
+			if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				if(_currentPeer && _currentPeer->getAddress() == peerAddress) _currentPeer.reset();
-				deletePeer(peerAddress);
-				stringStream << "Removed device 0x" << std::hex << peerAddress << "." << std::dec << std::endl;
+				if(_currentPeer && _currentPeer->getID() == peerID) _currentPeer.reset();
+				deletePeer(peerID);
+				stringStream << "Removed peer " << std::to_string(peerID) << "." << std::endl;
 			}
 			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "peers unpair") == 0)
 		{
-			int32_t peerAddress;
+			uint64_t peerID;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -586,26 +586,26 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					peerAddress = HelperFunctions::getNumber(element, true);
-					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+					peerID = HelperFunctions::getNumber(element, true);
+					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
 			}
 			if(index == 2)
 			{
 				stringStream << "Description: This command unpairs a peer." << std::endl;
-				stringStream << "Usage: peers unpair ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: peers unpair PEERID" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe 3 byte address of the peer to unpair in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  PEERID:\tThe id of the peer to unpair. Example: 513" << std::endl;
 				return stringStream.str();
 			}
 
-			if(!peerExists(peerAddress)) stringStream << "This device is not paired to this central." << std::endl;
+			if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				if(_currentPeer && _currentPeer->getAddress() == peerAddress) _currentPeer.reset();
-				stringStream << "Unpairing device 0x" << std::hex << peerAddress << std::dec << std::endl;
-				unpair(peerAddress, true);
+				if(_currentPeer && _currentPeer->getID() == peerID) _currentPeer.reset();
+				stringStream << "Unpairing peer " << peerID << std::endl;
+				unpair(peerID, true);
 			}
 			return stringStream.str();
 		}
@@ -659,6 +659,8 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					stringStream << "  FILTERTYPE:\tSee filter types below." << std::endl;
 					stringStream << "  FILTERVALUE:\tDepends on the filter type. If a number is required, it has to be in hexadecimal format." << std::endl << std::endl;
 					stringStream << "Filter types:" << std::endl;
+					stringStream << "  PEERID: Filter by id." << std::endl;
+					stringStream << "      FILTERVALUE: The id of the peer to filter (e. g. 513)." << std::endl;
 					stringStream << "  ADDRESS: Filter by address." << std::endl;
 					stringStream << "      FILTERVALUE: The 3 byte address of the peer to filter (e. g. 1DA44D)." << std::endl;
 					stringStream << "  SERIAL: Filter by serial number." << std::endl;
@@ -680,7 +682,12 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				_peersMutex.lock();
 				for(std::unordered_map<std::string, std::shared_ptr<BidCoSPeer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
 				{
-					if(filterType == "address")
+					if(filterType == "id")
+					{
+						uint64_t id = HelperFunctions::getNumber(filterValue, true);
+						if(i->second->getID() != id) continue;
+					}
+					else if(filterType == "address")
 					{
 						int32_t address = HelperFunctions::getNumber(filterValue, true);
 						if(i->second->getAddress() != address) continue;
@@ -709,7 +716,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 						}
 					}
 
-					stringStream << "Address: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 6) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
+					stringStream << std::setw(6) << std::setfill(' ') << "ID: " << i->second->getID() << "\tAddress: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 6) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
 					if(i->second->rpcDevice)
 					{
 						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
@@ -747,7 +754,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 		}
 		else if(command.compare(0, 12, "peers select") == 0)
 		{
-			int32_t address;
+			uint64_t peerID;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -762,25 +769,25 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					address = HelperFunctions::getNumber(element, true);
-					if(address == 0 || address != (address & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
+					peerID = HelperFunctions::getNumber(element, true);
+					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
 			}
 			if(index == 2)
 			{
 				stringStream << "Description: This command selects a peer." << std::endl;
-				stringStream << "Usage: peers select ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: peers select PEERID" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe 3 byte address of the peer to select in hexadecimal format. Example: 1A03FC" << std::endl;
+				stringStream << "  PEERID:\tThe id of the peer to select. Example: 513" << std::endl;
 				return stringStream.str();
 			}
 
-			_currentPeer = getPeer(address);
+			_currentPeer = getPeer(peerID);
 			if(!_currentPeer) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				stringStream << "Peer with address 0x" << std::hex << address << " and device type 0x" << (int32_t)_currentPeer->getDeviceType().type() << " selected." << std::dec << std::endl;
+				stringStream << "Peer with id " << peerID << " and device type 0x" << (int32_t)_currentPeer->getDeviceType().type() << " selected." << std::dec << std::endl;
 				stringStream << "For information about the peer's commands type: \"help\"" << std::endl;
 			}
 			return stringStream.str();
@@ -1159,11 +1166,11 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<BidCoSPeer> peer, int
     }
 }
 
-void HomeMaticCentral::deletePeer(int32_t address)
+void HomeMaticCentral::deletePeer(uint64_t id)
 {
 	try
 	{
-		std::shared_ptr<BidCoSPeer> peer(getPeer(address));
+		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
 		if(!peer) return;
 		peer->deleting = true;
 		std::shared_ptr<RPC::RPCVariable> deviceAddresses(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
@@ -1183,15 +1190,13 @@ void HomeMaticCentral::deletePeer(int32_t address)
 		}
 		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
-		if(_peersByID.find(peer->getID()) != _peersByID.end()) _peersByID.erase(peer->getID());
+		if(_peersByID.find(id) != _peersByID.end()) _peersByID.erase(id);
+		if(_peers.find(peer->getAddress()) != _peers.end()) _peers.erase(peer->getAddress());
 		_peersMutex.unlock();
 		removePeerFromTeam(peer);
 		peer->deleteFromDatabase();
 		peer->deletePairedVirtualDevices();
-		_peersMutex.lock();
-		_peers.erase(address);
-		_peersMutex.unlock();
-		Output::printMessage("Removed HomeMatic BidCoS device 0x" + HelperFunctions::getHexString(address));
+		Output::printMessage("Removed HomeMatic BidCoS peer " + std::to_string(peer->getID()));
 	}
 	catch(const std::exception& ex)
     {
@@ -1210,13 +1215,13 @@ void HomeMaticCentral::deletePeer(int32_t address)
     }
 }
 
-void HomeMaticCentral::reset(int32_t address, bool defer)
+void HomeMaticCentral::reset(uint64_t id, bool defer)
 {
 	try
 	{
-		std::shared_ptr<BidCoSPeer> peer(getPeer(address));
+		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
 		if(!peer) return;
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, address);
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, peer->getAddress());
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
 
@@ -1228,7 +1233,7 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
 		//CONFIG_START
 		payload.push_back(0x04);
 		payload.push_back(0x00);
-		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x11, _address, address, payload));
+		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x11, _address, peer->getAddress(), payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		_messageCounter[0]++;
@@ -1256,13 +1261,13 @@ void HomeMaticCentral::reset(int32_t address, bool defer)
     }
 }
 
-void HomeMaticCentral::unpair(int32_t address, bool defer)
+void HomeMaticCentral::unpair(uint64_t id, bool defer)
 {
 	try
 	{
-		std::shared_ptr<BidCoSPeer> peer(getPeer(address));
+		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
 		if(!peer) return;
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, address);
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::UNPAIRING, peer->getAddress());
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
 
@@ -1278,7 +1283,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 		payload.push_back(0);
 		payload.push_back(0);
 		payload.push_back(0);
-		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x01, _address, address, payload));
+		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], configByte, 0x01, _address, peer->getAddress(), payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -1295,7 +1300,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 		payload.push_back(0);
 		payload.push_back(0x0C);
 		payload.push_back(0);
-		configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+		configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->getAddress(), payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -1304,7 +1309,7 @@ void HomeMaticCentral::unpair(int32_t address, bool defer)
 		//END_CONFIG
 		payload.push_back(0);
 		payload.push_back(0x06);
-		configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
+		configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->getAddress(), payload));
 		pendingQueue->push(configPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		payload.clear();
@@ -2235,7 +2240,8 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 		{
 			if((sentPacket && sentPacket->messageType() == 0x01 && sentPacket->payload()->at(0) == 0x00 && sentPacket->payload()->at(1) == 0x06) || (sentPacket && sentPacket->messageType() == 0x11 && sentPacket->payload()->at(0) == 0x04 && sentPacket->payload()->at(1) == 0x00))
 			{
-				deletePeer(packet->senderAddress());
+				std::shared_ptr<BidCoSPeer> peer = getPeer(packet->senderAddress());
+				if(peer) deletePeer(peer->getID());
 			}
 		}
 		queue->pop(); //Messages are not popped by default.
@@ -2719,35 +2725,35 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
 		if(serialNumber[0] == '*') return RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
 		std::shared_ptr<BidCoSPeer> peer = getPeer(serialNumber);
 		if(!peer) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
-		int32_t address = peer->getAddress();
+		uint64_t id = peer->getID();
 
 		bool defer = flags & 0x04;
 		bool force = flags & 0x02;
 		//Reset
 		if(flags & 0x01)
 		{
-			std::thread t(&HomeMaticCentral::reset, this, address, defer);
+			std::thread t(&HomeMaticCentral::reset, this, id, defer);
 			t.detach();
 		}
 		else
 		{
-			std::thread t(&HomeMaticCentral::unpair, this, address, defer);
+			std::thread t(&HomeMaticCentral::unpair, this, id, defer);
 			t.detach();
 		}
 		//Force delete
-		if(force) deletePeer(address);
+		if(force) deletePeer(peer->getID());
 		else
 		{
 			int32_t waitIndex = 0;
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-			while(_bidCoSQueueManager.get(address) && peerExists(address) && waitIndex < 20)
+			while(_bidCoSQueueManager.get(peer->getAddress()) && peerExists(id) && waitIndex < 20)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				waitIndex++;
 			}
 		}
 
-		if(!defer && !force && peerExists(address)) return RPC::RPCVariable::createError(-1, "No answer from device.");
+		if(!defer && !force && peerExists(id)) return RPC::RPCVariable::createError(-1, "No answer from device.");
 
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}

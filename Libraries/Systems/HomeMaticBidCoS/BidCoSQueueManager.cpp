@@ -228,7 +228,7 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 		bool setUnreach = false;
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
 		{
-			Output::printDebug("Debug: Deleting queue " + std::to_string(id) + " for 0x" + HelperFunctions::getHexString(address));
+			Output::printDebug("Debug: Deleting queue " + std::to_string(id) + " for BidCoS peer with address 0x" + HelperFunctions::getHexString(address));
 			queue = _queues.at(address);
 			_queues.erase(address);
 			if(!queue->queue->isEmpty() && queue->queue->getQueueType() != BidCoSQueueType::PAIRING)

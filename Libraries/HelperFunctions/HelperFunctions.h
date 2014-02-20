@@ -168,7 +168,6 @@ public:
 	static int32_t userID(std::string username);
 	static int32_t groupID(std::string groupname);
 
-	static std::string getDeviceFamilyName(DeviceFamilies family);
 private:
 	static bool _isBigEndian;
 

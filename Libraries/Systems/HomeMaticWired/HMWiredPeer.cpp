@@ -129,7 +129,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 			intByteIndex -= configBlockIndex;
 			if(size > 1.0)
 			{
-				Output::printError("Error: HomeMatic Wired Peer 0x" + HelperFunctions::getHexString(_address, 8) + ": Can't set partial byte index > 1.");
+				Output::printError("Error: HomeMatic Wired peer " + std::to_string(_peerID) + ": Can't set partial byte index > 1.");
 				return;
 			}
 			uint32_t bitSize = std::lround(size * 10);
@@ -367,7 +367,7 @@ void HMWiredPeer::loadVariables(HMWiredDevice* device)
 				_deviceType = LogicalDeviceType(DeviceFamilies::HomeMaticWired, row->second.at(3)->intValue);
 				if(_deviceType.type() == (uint32_t)DeviceType::none)
 				{
-					Output::printError("Error loading HomeMatic Wired peer 0x" + HelperFunctions::getHexString(_address) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+					Output::printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
 				}
 				break;
 			case 12:
@@ -402,14 +402,12 @@ bool HMWiredPeer::load(LogicalDevice* device)
 {
 	try
 	{
-		Output::printDebug("Loading HomeMatic Wired peer 0x" + HelperFunctions::getHexString(_address, 8));
-
 		loadVariables((HMWiredDevice*)device);
 
 		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
 		if(!rpcDevice)
 		{
-			Output::printError("Error loading HomeMatic Wired peer 0x" + HelperFunctions::getHexString(_address) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
+			Output::printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
 		std::string entry;
@@ -615,7 +613,7 @@ void HMWiredPeer::reset()
 		{
 			if(!central->writeEEPROM(_address, i, data))
 			{
-				Output::printError("Error: Error resetting HomeMatic Wired peer 0x" + HelperFunctions::getHexString(_address, 8) + ". Could not write EEPROM.");
+				Output::printError("Error: Error resetting HomeMatic Wired peer " + std::to_string(_peerID) + ". Could not write EEPROM.");
 				return;
 			}
 		}
@@ -786,7 +784,7 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, parameter->data);
-					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic Wired device 0x" + HelperFunctions::getHexString(_address, 8) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic Wired peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
 					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())

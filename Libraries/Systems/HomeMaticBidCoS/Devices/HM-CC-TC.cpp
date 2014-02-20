@@ -432,7 +432,7 @@ void HM_CC_TC::startDutyCycle(int64_t lastDutyCycleEvent)
 	{
 		if(_dutyCycleThread.joinable())
 		{
-			Output::printCritical("Device 0x" + HelperFunctions::getHexString(_address, 6) + ": Duty cycle thread already started. Something went very wrong.");
+			Output::printCritical("HomeMatic BidCoS device " + std::to_string(_deviceID) + ": Duty cycle thread already started. Something went very wrong.");
 			return;
 		}
 		_dutyCycleThread = std::thread(&HM_CC_TC::dutyCycleThread, this, lastDutyCycleEvent);
@@ -622,7 +622,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 		if(sendingTime < 0) sendingTime = 2000000;
 		if(_stopDutyCycleThread) return;
 		int32_t address = getNextDutyCycleDeviceAddress();
-		Output::printDebug("Debug: 0x" + HelperFunctions::getHexString(_address) + ": Next HM-CC-VD is 0x" + HelperFunctions::getHexString(_address));
+		Output::printDebug("Debug: HomeMatic BidCoS device " + std::to_string(_deviceID) + ": Next HM-CC-VD is 0x" + HelperFunctions::getHexString(_address));
 		if(address < 1)
 		{
 			Output::printDebug("Debug: Not sending duty cycle packet, because no valve drives are paired to me.");
@@ -666,7 +666,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 		GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - timePoint;
-		Output::printDebug("Debug: " + HelperFunctions::getHexString(_address) + " Sending took " + std::to_string(timePassed) + "ms.");
+		Output::printDebug("Debug: HomeMatic BidCoS device " + std::to_string(_deviceID) + ": Sending took " + std::to_string(timePassed) + "ms.");
 	}
     catch(const std::exception& ex)
     {
@@ -817,7 +817,7 @@ void HM_CC_TC::handleSetValveState(int32_t messageCounter, std::shared_ptr<BidCo
 	try
 	{
 		_newValveState = packet->payload()->at(0);
-		Output::printDebug("Debug: " + HelperFunctions::getHexString(_address) + ": New valve state: " + std::to_string(_newValveState));
+		Output::printDebug("Debug: HomeMatic BidCoS device " + std::to_string(_deviceID) + ": New valve state: " + std::to_string(_newValveState));
 		sendOK(messageCounter, packet->senderAddress());
 	}
     catch(const std::exception& ex)
@@ -847,8 +847,9 @@ void HM_CC_TC::handleConfigPeerAdd(int32_t messageCounter, std::shared_ptr<BidCo
 			_peersMutex.lock();
 			_peers[address]->setDeviceType(LogicalDeviceType(DeviceFamilies::HomeMaticBidCoS, (uint32_t)DeviceType::HMCCVD));
 			_peersMutex.unlock();
-			getPeer(address)->save(true, true, false);
-			Output::printMessage("0x" + HelperFunctions::getHexString(_address) + ": Added HM-CC-VD with address 0x" + HelperFunctions::getHexString(address));
+			std::shared_ptr<BidCoSPeer> peer = getPeer(address);
+			peer->save(true, true, false);
+			Output::printMessage("HomeMatic BidCoS device " + std::to_string(_deviceID) + ": Added HM-CC-VD " + std::to_string(peer->getID()));
 		}
 	}
 	catch(const std::exception& ex)
@@ -946,7 +947,7 @@ void HM_CC_TC::handleConfigParamResponse(int32_t messageCounter, std::shared_ptr
 			int32_t index = packet->payload()->at(i);
 			if(peer->config.find(index) == peer->config.end()) continue;
 			peer->config.at(index) = packet->payload()->at(i + 1);
-			Output::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": Config of device 0x" + HelperFunctions::getHexString(packet->senderAddress()) + " at index " + std::to_string(packet->payload()->at(i)) + " set to 0x" + HelperFunctions::getHexString(packet->payload()->at(i + 1)));
+			Output::printInfo("Info: HomeMatic BidCoS device " + std::to_string(_deviceID) + ": Config of device with address 0x" + HelperFunctions::getHexString(packet->senderAddress()) + " at index " + std::to_string(packet->payload()->at(i)) + " set to 0x" + HelperFunctions::getHexString(packet->payload()->at(i + 1)));
 		}
 		sendOK(messageCounter, packet->senderAddress());
 	}

@@ -204,7 +204,7 @@ void BidCoSPeer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32
 		}
 		if(function.empty()) return;
 		if(linkSet->defaultValues.find(function) == linkSet->defaultValues.end()) return;
-		Output::printInfo("Info: Device 0x" + HelperFunctions::getHexString(_address) + ": Applying channel function " + function + ".");
+		Output::printInfo("Info: Peer " + std::to_string(_peerID) + ": Applying channel function " + function + ".");
 		for(RPC::DefaultValue::iterator j = linkSet->defaultValues.at(function).begin(); j != linkSet->defaultValues.at(function).end(); ++j)
 		{
 			RPCConfigurationParameter* parameter = &linksCentral[channel][peerAddress][remoteChannel][j->first];
@@ -332,7 +332,7 @@ void BidCoSPeer::worker()
 					saveParameter(parameter->databaseID, parameter->data);
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
 					std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data) });
-					Output::printInfo("Info: Domino event: " + (*i)->key + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
+					Output::printInfo("Info: Domino event: " + (*i)->key + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
 					GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
 				}
 				else
@@ -1251,7 +1251,7 @@ void BidCoSPeer::enqueuePendingQueues()
 		std::shared_ptr<HomeMaticCentral> central = getCentral();
 		if(central)
 		{
-			Output::printInfo("Info: Queue is not finished (device: 0x" + HelperFunctions::getHexString(_address) + "). Retrying...");
+			Output::printInfo("Info: Queue is not finished (peer: " + std::to_string(_peerID) + "). Retrying...");
 			central->enqueuePendingQueues(_address);
 		}
 	}
@@ -1299,7 +1299,7 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 					_deviceType = LogicalDeviceType(DeviceFamilies::HomeMaticBidCoS, row->second.at(3)->intValue);
 					if(_deviceType.type() == (uint32_t)DeviceType::none)
 					{
-						Output::printError("Error loading HomeMatic BidCoS peer 0x" + HelperFunctions::getHexString(_address) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+						Output::printError("Error loading HomeMatic BidCoS peer " + std::to_string(_peerID) + ": Device type unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
 					}
 				}
 				break;
@@ -1372,14 +1372,12 @@ bool BidCoSPeer::load(LogicalDevice* device)
 {
 	try
 	{
-		Output::printDebug("Loading HomeMatic BidCoS peer 0x" + HelperFunctions::getHexString(_address, 6));
-
 		loadVariables((HomeMaticDevice*)device);
 
 		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
 		if(!rpcDevice)
 		{
-			Output::printError("Error loading HomeMatic BidCoS peer 0x" + HelperFunctions::getHexString(_address) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
+			Output::printError("Error loading HomeMatic BidCoS peer " + std::to_string(_peerID) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
 		std::string entry;
@@ -1665,7 +1663,7 @@ void BidCoSPeer::handleDominoEvent(std::shared_ptr<RPC::Parameter> parameter, st
 				{
 					if((*k)->channel == channel && (*k)->key == parameter->id)
 					{
-						Output::printDebug("Debug: Deleting element " + parameter->id + " from _variablesToReset. Device: 0x" + HelperFunctions::getHexString(_address) + " Serial number: " + _serialNumber + " Frame: " + frameID);
+						Output::printDebug("Debug: Deleting element " + parameter->id + " from _variablesToReset. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frameID);
 						_variablesToReset.erase(k);
 						break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
 					}
@@ -1740,19 +1738,19 @@ bool BidCoSPeer::hasLowbatBit(std::shared_ptr<RPC::DeviceFrame> frame)
 {
 	try
 	{
-		bool hasLowbatBit = true;
 		//Three things to check to see if position 9.7 is used: channelField, subtypeIndex and parameter indices
-		if(frame->channelField == 9 && frame->channelFieldSize >= 0.8) hasLowbatBit = false;
-		else if(frame->subtypeIndex == 9) hasLowbatBit = false;
+		if(frame->channelField == 9 && frame->channelFieldSize >= 0.8) return false;
+		else if(frame->subtypeIndex == 9) return false;
 		for(std::vector<RPC::Parameter>::iterator j = frame->parameters.begin(); j != frame->parameters.end(); ++j)
 		{
 			if(j->index >= 9 && j->index < 10)
 			{
 				//fmod is needed for sizes > 1 (e. g. for frame WEATHER_EVENT)
-				if((j->index + std::fmod(j->size, 1)) >= 9.8) hasLowbatBit = false;
+				//9.8 is not working, result is 9.7999999
+				if((j->index + std::fmod(j->size, 1)) >= 9.79) return false;
 			}
 		}
-		return hasLowbatBit;
+		return true;
 	}
 	catch(const std::exception& ex)
     {
@@ -1825,7 +1823,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, parameter->data);
-					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic BidCoS device 0x" + HelperFunctions::getHexString(_address, 6) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic BidCoS peer" + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
 					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
@@ -1840,29 +1838,8 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 						}
 					}
 
-					/*if(!sentFrameValues.empty())
-					{
-						for(std::vector<FrameValues>::iterator b = sentFrameValues.begin(); b != sentFrameValues.end(); ++b)
-						{
-							if(b->values.find(i->first) != b->values.end())
-							{
-								if(b->values.at(i->first).value != i->second.value && _resendCounter[i->first] < 10)
-								{
-									_resendCounter[i->first]++;
-									resendPacket = true;
-								}
-							}
-						}
-					}*/
-
-					//The check here is only to save some ressources
-					//If resendPacket is not set for the first parameter, parameters are added
-					//to valueKeys and rpcValues, so we need to check again before broadcasting
-					//if(!resendPacket)
-					//{
-						valueKeys[*j]->push_back(i->first);
-						rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
-					//}
+					valueKeys[*j]->push_back(i->first);
+					rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
 				}
 			}
 
@@ -2246,7 +2223,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, RPC::
 				//if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
 				saveParameter(parameter->databaseID, parameter->data);
-				Output::printInfo("Info: Parameter " + i->first + " of device 0x" + HelperFunctions::getHexString(_address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
+				Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
@@ -2377,7 +2354,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, RPC::
 				if(parameter->data == value && !putUnchanged) continue;
 				parameter->data = value;
 				saveParameter(parameter->databaseID, parameter->data);
-				Output::printInfo("Info: Parameter " + i->first + " of device 0x" + HelperFunctions::getHexString(_address) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
+				Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
@@ -3273,7 +3250,7 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 				parameter->data = rpcParameter->convertToPacket(value);
 				saveParameter(parameter->databaseID, parameter->data);
-				Output::printInfo("Info: Setting valve state of HM-CC-VD with address 0x" + HelperFunctions::getHexString(_address) + " to " + std::to_string(value->integerValue / 2) + "%.");
+				Output::printInfo("Info: Setting valve state of HM-CC-VD with id " + std::to_string(_peerID) + " to " + std::to_string(value->integerValue / 2) + "%.");
 				return true;
 			}
 		}
@@ -3356,8 +3333,8 @@ void BidCoSPeer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionPara
 	{
 		if(parameters->integers.size() != 3) return;
 		if(parameters->strings.size() != 1) return;
-		Output::printMessage("addVariableToResetCallback invoked for parameter " + parameters->strings.at(0) + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ".", 5);
-		Output::printInfo("Parameter " + parameters->strings.at(0) + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + " will be reset at " + HelperFunctions::getTimeString(parameters->integers.at(2)) + ".");
+		Output::printMessage("addVariableToResetCallback invoked for parameter " + parameters->strings.at(0) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ".", 5);
+		Output::printInfo("Parameter " + parameters->strings.at(0) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " will be reset at " + HelperFunctions::getTimeString(parameters->integers.at(2)) + ".");
 		std::shared_ptr<VariableToReset> variable(new VariableToReset);
 		variable->channel = parameters->integers.at(0);
 		int32_t integerValue = parameters->integers.at(1);
@@ -3439,7 +3416,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
 		parameter->data = data;
 		saveParameter(parameter->databaseID, data);
-		if(GD::debugLevel > 4) Output::printDebug("Debug: " + valueKey + " of device 0x" + HelperFunctions::getHexString(_address) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(data) + ".");
+		if(GD::debugLevel > 4) Output::printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(data) + ".");
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::PEER));
 		queue->noSending = true;
@@ -3496,13 +3473,13 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 						break;
 					}
 				}
-				if(!paramFound) Output::printError("Error constructing packet. param \"" + i->param + "\" not found. Device: 0x" + HelperFunctions::getHexString(_address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+				if(!paramFound) Output::printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 			}
 			if(i->additionalParameter == "ON_TIME" && additionalParameter)
 			{
 				if((rpcParameter->physicalParameter->valueID != "STATE" && rpcParameter->physicalParameter->valueID != "LEVEL") || (rpcParameter->physicalParameter->valueID == "STATE" && rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeBoolean) || (rpcParameter->physicalParameter->valueID == "LEVEL" && rpcParameter->logicalParameter->type != RPC::LogicalParameter::Type::Enum::typeFloat))
 				{
-					Output::printError("Error: Can't set \"ON_TIME\" for " + rpcParameter->physicalParameter->valueID + ". Currently \"ON_TIME\" is only supported for \"STATE\" of type \"boolean\" or \"LEVEL\" of type \"float\". Device: 0x" + HelperFunctions::getHexString(_address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+					Output::printError("Error: Can't set \"ON_TIME\" for " + rpcParameter->physicalParameter->valueID + ". Currently \"ON_TIME\" is only supported for \"STATE\" of type \"boolean\" or \"LEVEL\" of type \"float\". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					continue;
 				}
 				if(!_variablesToReset.empty())
@@ -3512,7 +3489,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 					{
 						if((*i)->channel == channel && (*i)->key == rpcParameter->physicalParameter->valueID)
 						{
-							Output::printMessage("Debug: Deleting element from _variablesToReset. Device: 0x" + HelperFunctions::getHexString(_address) + " Serial number: " + _serialNumber + " Frame: " + frame->id, 5);
+							Output::printMessage("Debug: Deleting element from _variablesToReset. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id, 5);
 							_variablesToReset.erase(i);
 							break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
 						}
@@ -3542,7 +3519,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 					RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
 					tempParam->data = defaultValue;
 					saveParameter(tempParam->databaseID, tempParam->data);
-					Output::printInfo( "Info: Parameter \"" + *j + "\" was reset to " + HelperFunctions::getHexString(defaultValue) + ". Device: 0x" + HelperFunctions::getHexString(_address) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+					Output::printInfo( "Info: Parameter \"" + *j + "\" was reset to " + HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					valueKeys->push_back(*j);
 					values->push_back(logicalDefaultValue);
 				}

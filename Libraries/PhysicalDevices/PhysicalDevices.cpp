@@ -89,7 +89,7 @@ void PhysicalDevices::load(std::string filename)
 						if(name == "homematicbidcos") settings->family = DeviceFamilies::HomeMaticBidCoS;
 						else if(name == "homematicwired") settings->family = DeviceFamilies::HomeMaticWired;
 						else if(name == "insteon") settings->family = DeviceFamilies::Insteon;
-						Output::printDebug("Debug: Reading config for physical device family " + HelperFunctions::getDeviceFamilyName(settings->family));
+						Output::printDebug("Debug: Reading config for physical device family " + GD::deviceFamilies.at(settings->family)->getName());
 						break;
 					}
 					ptr++;
@@ -119,18 +119,18 @@ void PhysicalDevices::load(std::string filename)
 				{
 					HelperFunctions::toLower(value);
 					settings->type = value;
-					Output::printDebug("Debug: deviceType of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + settings->type);
+					Output::printDebug("Debug: deviceType of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->type);
 				}
 				else if(name == "device")
 				{
 					settings->device = value;
-					Output::printDebug("Debug: device of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + settings->device);
+					Output::printDebug("Debug: device of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->device);
 				}
 				else if(name == "responsedelay")
 				{
 					settings->responseDelay = HelperFunctions::getNumber(value);
 					if(settings->responseDelay > 10000) settings->responseDelay = 10000;
-					Output::printDebug("Debug: responseDelay of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + std::to_string(settings->responseDelay));
+					Output::printDebug("Debug: responseDelay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->responseDelay));
 				}
 				else if(name == "gpio1")
 				{
@@ -138,7 +138,7 @@ void PhysicalDevices::load(std::string filename)
 					if(number > 0)
 					{
 						settings->gpio[1].number = number;
-						Output::printDebug("Debug: GPIO1 of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + std::to_string(settings->gpio[1].number));
+						Output::printDebug("Debug: GPIO1 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[1].number));
 					}
 				}
 				else if(name == "gpio2")
@@ -147,7 +147,7 @@ void PhysicalDevices::load(std::string filename)
 					if(number > 0)
 					{
 						settings->gpio[2].number = number;
-						Output::printDebug("Debug: GPIO2 of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + std::to_string(settings->gpio[2].number));
+						Output::printDebug("Debug: GPIO2 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[2].number));
 					}
 				}
 				else if(name == "gpio3")
@@ -156,30 +156,30 @@ void PhysicalDevices::load(std::string filename)
 					if(number > 0)
 					{
 						settings->gpio[3].number = number;
-						Output::printDebug("Debug: GPIO3 of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + std::to_string(settings->gpio[3].number));
+						Output::printDebug("Debug: GPIO3 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[3].number));
 					}
 				}
 				else if(name == "hostname")
 				{
 					settings->hostname = value;
-					Output::printDebug("Debug: Hostname of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + settings->hostname);
+					Output::printDebug("Debug: Hostname of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->hostname);
 				}
 				else if(name == "port")
 				{
 					settings->port = value;
-					Output::printDebug("Debug: Port of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + settings->port);
+					Output::printDebug("Debug: Port of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->port);
 				}
 				else if(name == "ssl")
 				{
 					HelperFunctions::toLower(value);
 					if(value == "true") settings->ssl = true;
-					Output::printDebug("Debug: SSL of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + std::to_string(settings->ssl));
+					Output::printDebug("Debug: SSL of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->ssl));
 				}
 				else if(name == "verifycertificate")
 				{
 					HelperFunctions::toLower(value);
 					if(value == "false") settings->verifyCertificate = false;
-					Output::printDebug("Debug: VerifyCertificate of family " + HelperFunctions::getDeviceFamilyName(settings->family) + " set to " + std::to_string(settings->verifyCertificate));
+					Output::printDebug("Debug: VerifyCertificate of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->verifyCertificate));
 				}
 				else
 				{
@@ -385,7 +385,7 @@ std::shared_ptr<RPC::RPCVariable> PhysicalDevices::listInterfaces()
 			std::shared_ptr<PhysicalDevice> device = get(i->first);
 			if(!device) continue;
 
-			interface->structValue->insert(RPC::RPCStructElement("DEVICEFAMILY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(HelperFunctions::getDeviceFamilyName(i->first)))));
+			interface->structValue->insert(RPC::RPCStructElement("DEVICEFAMILY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->second->getName()))));
 			interface->structValue->insert(RPC::RPCStructElement("PHYSICALADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(central->physicalAddress()))));
 			interface->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(device->getType()))));
 			interface->structValue->insert(RPC::RPCStructElement("CONNECTED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(device->isOpen()))));

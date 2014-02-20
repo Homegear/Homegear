@@ -47,6 +47,7 @@ public:
 	virtual DeviceFamilies deviceFamily() { return DeviceFamilies::none; }
 
 	virtual int32_t getAddress() { return _address; }
+	virtual int32_t getID() { return _deviceID; }
     virtual std::string getSerialNumber() { return _serialNumber; }
     virtual uint32_t getDeviceType() { return _deviceType; }
 	virtual std::string handleCLICommand(std::string command) { return ""; }

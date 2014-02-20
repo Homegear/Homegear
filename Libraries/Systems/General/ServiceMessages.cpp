@@ -177,10 +177,11 @@ bool ServiceMessages::set(std::string id, bool value)
 	try
 	{
 		if(_disposing) return false;
+		if(id == "LOWBAT_REPORTING") id = "LOWBAT"; //HM-TC-IT-WM-W-EU
 		if(id == "UNREACH" && value != _unreach) _unreach = value;
 		else if(id == "STICKY_UNREACH" && value != _stickyUnreach) _stickyUnreach = value;
 		else if(id == "CONFIG_PENDING" && value != _configPending) _configPending = value;
-		else if(id == "LOWBAT" && value != _lowbat) _lowbat = value;
+		else if((id == "LOWBAT") && value != _lowbat) _lowbat = value;
 		else if(!value) //false == 0, a little dirty, but it works
 		{
 			_errorMutex.lock();

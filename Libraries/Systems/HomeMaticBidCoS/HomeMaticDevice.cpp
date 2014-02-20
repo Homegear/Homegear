@@ -193,7 +193,7 @@ void HomeMaticDevice::dispose(bool wait)
 	{
 		if(_disposing) return;
 		_disposing = true;
-		Output::printDebug("Removing device 0x" + HelperFunctions::getHexString(_address) + " from CUL event queue...");
+		Output::printDebug("Removing device " + std::to_string(_deviceID) + " from CUL event queue...");
 		GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->removeLogicalDevice(this);
 		int64_t startTime = HelperFunctions::getTime();
 		stopThreads();
@@ -235,7 +235,7 @@ void HomeMaticDevice::stopThreads()
 		_stopWorkerThread = true;
 		if(_workerThread.joinable())
 		{
-			Output::printDebug("Debug: Waiting for worker thread of device 0x" + HelperFunctions::getHexString(_address) + "...");
+			Output::printDebug("Debug: Waiting for worker thread of device " + std::to_string(_deviceID) + "...");
 			_workerThread.join();
 		}
 	}
@@ -496,8 +496,6 @@ void HomeMaticDevice::load()
 {
 	try
 	{
-		Output::printDebug("Loading HomeMatic BidCoS device 0x" + HelperFunctions::getHexString(_address, 6));
-
 		loadVariables();
 	}
     catch(const std::exception& ex)
@@ -526,6 +524,7 @@ void HomeMaticDevice::loadPeers(bool version_0_0_7)
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			int32_t peerID = row->second.at(0)->intValue;
+			Output::printMessage("Loading HomeMatic BidCoS peer " + std::to_string(peerID));
 			int32_t address = row->second.at(2)->intValue;
 			std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral()));
 			if(!peer->load(this)) continue;
@@ -976,7 +975,7 @@ void HomeMaticDevice::savePeers(bool full)
 			   //Necessary for database conversion from database version 0.0.7
 			   i->second->getParentID() != _address) continue;
 			//We are always printing this, because the init script needs it
-			Output::printMessage("(Shutdown) => Saving HomeMatic BidCoS peer 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6));
+			Output::printMessage("(Shutdown) => Saving HomeMatic BidCoS peer " + std::to_string(i->second->getID()));
 			i->second->save(full, full, full);
 		}
 	}
@@ -1042,7 +1041,7 @@ bool HomeMaticDevice::packetReceived(std::shared_ptr<Packet> packet)
 		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, bidCoSPacket);
 		if(message && message->checkAccess(bidCoSPacket, _bidCoSQueueManager.get(bidCoSPacket->senderAddress())))
 		{
-			if(GD::debugLevel > 4) Output::printDebug("Debug: Device " + HelperFunctions::getHexString(_address) + ": Access granted for packet " + bidCoSPacket->hexString(), 6);
+			if(GD::debugLevel > 4) Output::printDebug("Debug: Device " + std::to_string(_deviceID) + ": Access granted for packet " + bidCoSPacket->hexString(), 6);
 			message->invokeMessageHandlerIncoming(bidCoSPacket);
 			return true;
 		}
@@ -1278,15 +1277,17 @@ void HomeMaticDevice::handleConfigPeerDelete(int32_t messageCounter, std::shared
 	try
 	{
 		int32_t address = (packet->payload()->at(2) << 16) + (packet->payload()->at(3) << 8) + (packet->payload()->at(4));
-		if(!peerExists(address)) return;
-		Output::printMessage("0x" + HelperFunctions::getHexString(_address) + ": Unpaired from peer 0x" + HelperFunctions::getHexString(address));
+		std::shared_ptr<BidCoSPeer> peer = getPeer(address);
+		if(!peer) return;
+
+		Output::printMessage("HomeMatic BidCoS Device " + std::to_string(_deviceID) + ": Unpaired from peer " + std::to_string(peer->getID()));
 		sendOK(messageCounter, packet->senderAddress());
 		_peersMutex.lock();
 		try
 		{
-			if(_peers[address]->getDeviceType().type() != (uint32_t)DeviceType::HMRCV50)
+			if(peer->getDeviceType().type() != (uint32_t)DeviceType::HMRCV50)
 			{
-				_peers[address]->deleteFromDatabase();
+				peer->deleteFromDatabase();
 				_peers.erase(address); //Unpair. Unpairing of HMRCV50 is done through CONFIG_WRITE_INDEX
 			}
 		}
@@ -1520,7 +1521,7 @@ void HomeMaticDevice::handleConfigWriteIndex(int32_t messageCounter, std::shared
 			int32_t index = (int32_t)packet->payload()->at(i);
 			if(_config.find(channel) == _config.end() || _config.at(channel).find(_currentList) == _config.at(channel).end() || _config.at(channel).at(_currentList).find(index) == _config.at(channel).at(_currentList).end()) continue;
 			_config[channel][_currentList][(int32_t)packet->payload()->at(i)] = packet->payload()->at(i + 1);
-			Output::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": Config at index " + std::to_string(packet->payload()->at(i)) + " set to " + std::to_string(packet->payload()->at(i + 1)));
+			Output::printInfo("Info: HomeMatic BidCoS device " + std::to_string(_deviceID) + ": Config at index " + std::to_string(packet->payload()->at(i)) + " set to " + std::to_string(packet->payload()->at(i + 1)));
 		}
 		sendOK(messageCounter, packet->senderAddress());
 	}

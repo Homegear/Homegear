@@ -52,6 +52,7 @@ public:
 	virtual std::shared_ptr<Central> getCentral();
 	virtual std::string handleCLICommand(std::string& command);
 	virtual bool deviceSelected() { return (bool)_currentDevice; }
+	virtual std::string getName() { return "HomeMatic Wired"; }
 private:
 	std::shared_ptr<LogicalDevice> _currentDevice;
 	std::shared_ptr<HMWiredCentral> _central;

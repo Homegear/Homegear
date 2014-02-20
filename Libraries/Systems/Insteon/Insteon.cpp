@@ -75,12 +75,12 @@ std::shared_ptr<PhysicalDevices::PhysicalDevice> Insteon::createPhysicalDevice(s
 uint32_t Insteon::getUniqueAddress(uint32_t seed)
 {
 	uint32_t prefix = seed;
-	seed = HelperFunctions::getRandomNumber(1, 999999);
+	seed = HelperFunctions::getRandomNumber(0, 65535);
 	uint32_t i = 0;
 	while(getDevice(prefix + seed) && i++ < 10000)
 	{
 		seed += 131;
-		if(seed > 999999) seed -= 1000000;
+		if(seed > 65535) seed -= 40000;
 	}
 	return prefix + seed;
 }
@@ -179,6 +179,7 @@ void Insteon::load(bool version_0_0_7)
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;
+			Output::printMessage("Loading Insteon device " + std::to_string(deviceID));
 			int32_t address = row->second.at(1)->intValue;
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
@@ -231,14 +232,14 @@ void Insteon::createSpyDevice()
 {
 	try
 	{
-		uint32_t seed = 0xfe000000 + HelperFunctions::getRandomNumber(1, 65535);
+		uint32_t seed = 0xfe0000 + HelperFunctions::getRandomNumber(1, 65535);
 
 		//ToDo: Use HMWiredCentral to get unique address
 		int32_t address = getUniqueAddress(seed);
 		std::string serialNumber(getUniqueSerialNumber("VIS", HelperFunctions::getRandomNumber(1, 9999999)));
 
 		add(std::shared_ptr<LogicalDevice>(new Insteon_SD(0, serialNumber, address)));
-		Output::printMessage("Created HomeMatic Wired spy device with address 0x" + HelperFunctions::getHexString(address, 8) + " and serial number " + serialNumber);
+		Output::printMessage("Created Insteon spy device with address 0x" + HelperFunctions::getHexString(address, 8) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {
@@ -312,7 +313,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 			std::vector<std::shared_ptr<LogicalDevice>> devices;
 			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 			{
-				stringStream << "Address: 0x" << std::hex << std::setw(8) << std::setfill('0') << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (*i)->getDeviceType() << std::endl << std::dec;
+				stringStream << "ID: " << std::setw(6) << std::setfill(' ') << (*i)->getID() << "\tAddress: 0x" << std::hex << std::setw(8) << std::setfill('0') << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (*i)->getDeviceType() << std::endl << std::dec;
 			}
 			_devicesMutex.unlock();
 			return stringStream.str();
@@ -382,7 +383,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 		}
 		else if(command.compare(0, 14, "devices remove") == 0)
 		{
-			int32_t address;
+			uint64_t id;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -397,25 +398,25 @@ std::string Insteon::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					address = HelperFunctions::getNumber(element, true);
-					if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
+					id = HelperFunctions::getNumber(element, true);
+					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
 			}
 			if(index == 2)
 			{
 				stringStream << "Description: This command removes a virtual device." << std::endl;
-				stringStream << "Usage: devices remove ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: devices remove DEVICEID" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe address of the device to delete in hexadecimal format. Example: 101A03FC" << std::endl;
+				stringStream << "  DEVICEID:\tThe id of the device to delete. Example: 131" << std::endl;
 				return stringStream.str();
 			}
 
-			if(_currentDevice && _currentDevice->getAddress() == address) _currentDevice.reset();
-			if(get(address))
+			if(_currentDevice && _currentDevice->getID() == id) _currentDevice.reset();
+			if(get(id))
 			{
 				//if(_central && address == _central->getAddress()) _central.reset();
-				remove(address);
+				remove(id);
 				stringStream << "Removing device." << std::endl;
 			}
 			else stringStream << "Device not found." << std::endl;
@@ -423,7 +424,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 		}
 		else if(command.compare(0, 14, "devices select") == 0)
 		{
-			int32_t address = 0;
+			uint64_t id = 0;
 
 			std::stringstream stream(command);
 			std::string element;
@@ -442,8 +443,8 @@ std::string Insteon::handleCLICommand(std::string& command)
 					if(element == "central") central = true;
 					else
 					{
-						address = HelperFunctions::getNumber(element, true);
-						if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format. A value of \"0\" is not allowed.\n";
+						id = HelperFunctions::getNumber(element, true);
+						if(id == 0) return "Invalid id.\n";
 					}
 				}
 				index++;
@@ -451,13 +452,13 @@ std::string Insteon::handleCLICommand(std::string& command)
 			if(index == 2)
 			{
 				stringStream << "Description: This command selects a virtual device." << std::endl;
-				stringStream << "Usage: devices select ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: devices select DEVICEID" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tThe address of the device to select in hexadecimal format or \"central\" as a shortcut to select the central device. Example: 101A03FC" << std::endl;
+				stringStream << "  DEVICEID:\tThe id of the device to select or \"central\" as a shortcut to select the central device. Example: 131" << std::endl;
 				return stringStream.str();
 			}
 
-			_currentDevice = get(address); // = central ? _central : get(address);
+			_currentDevice = get(id); // = central ? _central : get(address);
 			if(!_currentDevice) stringStream << "Device not found." << std::endl;
 			else
 			{

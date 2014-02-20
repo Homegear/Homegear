@@ -184,7 +184,7 @@ void HM_CC_VD::handleDutyCyclePacket(int32_t messageCounter, std::shared_ptr<Bid
 		if(!peer || peer->getDeviceType().type() != (uint32_t)DeviceType::HMCCTC) return;
 		int32_t oldValveState = _valveState;
 		_valveState = (packet->payload()->at(1) * 100) / 256;
-		Output::printInfo("Info: 0x" + HelperFunctions::getHexString(_address) + ": New valve state " + std::to_string(_valveState));
+		Output::printInfo("Info: HomeMatic BidCoS device " + std::to_string(_deviceID) + ": New valve state " + std::to_string(_valveState));
 		if(packet->destinationAddress() != _address) return; //Unidirectional packet (more than three valve drives connected to one room thermostat) or packet to other valve drive
 		sendDutyCycleResponse(packet->senderAddress(), oldValveState, packet->payload()->at(0));
 		if(_justPairedToOrThroughCentral)

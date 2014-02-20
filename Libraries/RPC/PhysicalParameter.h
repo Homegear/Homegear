@@ -93,6 +93,7 @@ public:
 	bool sizeDefined = false;
 	double size = 1.0;
 	int32_t mask = -1;
+	int32_t readSize = -1;
 	std::string valueID;
 	bool noInit = false;
 	std::string getRequest;

@@ -101,6 +101,7 @@ public:
 	std::string stringValue;
 	int32_t on = 200;
 	int32_t off = 0;
+	bool invert = false;
 
 	ParameterConversion() {}
 	ParameterConversion(xml_node<>* node);
@@ -192,6 +193,12 @@ public:
 	std::map<std::string, DefaultValue> defaultValues;
 	std::map<uint32_t, uint32_t> lists;
 	std::string subsetReference;
+	int32_t addressStart = -1;
+	int32_t addressStep = -1;
+	int32_t count = -1;
+	int32_t channelOffset;
+	int32_t peerAddressOffset;
+	int32_t peerChannelOffset;
 
 	ParameterSet() {}
 	ParameterSet(xml_node<>* parameterSetNode);
@@ -262,6 +269,8 @@ public:
 	std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>> parameterSets;
 	std::shared_ptr<LinkRole> linkRoles;
 	std::vector<std::shared_ptr<EnforceLink>> enforceLinks;
+	std::shared_ptr<Parameter> specialParameter;
+	std::shared_ptr<DeviceChannel> subconfig;
 
 	DeviceChannel() {}
 	DeviceChannel(xml_node<>* node, uint32_t& index);

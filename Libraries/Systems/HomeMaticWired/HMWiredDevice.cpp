@@ -97,8 +97,6 @@ void HMWiredDevice::load()
 {
 	try
 	{
-		Output::printDebug("Loading HomeMatic Wired device 0x" + HelperFunctions::getHexString(_address, 8));
-
 		loadVariables();
 	}
     catch(const std::exception& ex)
@@ -127,6 +125,7 @@ void HMWiredDevice::loadPeers(bool version_0_0_7)
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			int32_t peerID = row->second.at(0)->intValue;
+			Output::printMessage("Loading HomeMatic Wired peer " + std::to_string(peerID));
 			int32_t address = row->second.at(2)->intValue;
 			std::shared_ptr<HMWiredPeer> peer(new HMWiredPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral()));
 			if(!peer->load(this)) continue;
@@ -413,6 +412,33 @@ bool HMWiredDevice::peerExists(int32_t address)
 	{
 		_peersMutex.lock();
 		if(_peers.find(address) != _peers.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return false;
+}
+
+bool HMWiredDevice::peerExists(uint64_t id)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersByID.find(id) != _peersByID.end())
 		{
 			_peersMutex.unlock();
 			return true;
@@ -736,7 +762,7 @@ void HMWiredDevice::savePeers(bool full)
 			//Necessary, because peers can be assigned to multiple virtual devices
 			if(i->second->getParentID() != _deviceID) continue;
 			//We are always printing this, because the init script needs it
-			Output::printMessage("(Shutdown) => Saving HomeMatic Wired peer 0x" + HelperFunctions::getHexString(i->first, 8));
+			Output::printMessage("(Shutdown) => Saving HomeMatic Wired peer " + std::to_string(i->second->getID()));
 			i->second->save(full, full, full);
 		}
 	}
@@ -926,7 +952,7 @@ bool HMWiredDevice::writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, st
 	{
 		if(data.size() > 32)
 		{
-			Output::printError("Error: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_address) + ": Could not write data to EEPROM. Data size is larger than 32 bytes.");
+			Output::printError("Error: HomeMatic Wired Device " + std::to_string(_deviceID) + ": Could not write data to EEPROM. Data size is larger than 32 bytes.");
 			return false;
 		}
 		if(peer) peer->ignorePackets = true;

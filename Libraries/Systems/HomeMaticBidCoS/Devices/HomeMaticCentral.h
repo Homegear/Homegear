@@ -57,11 +57,11 @@ public:
 	bool packetReceived(std::shared_ptr<Packet> packet);
 	void enablePairingMode() { _pairing = true; }
 	void disablePairingMode() { _pairing = false; }
-	void unpair(int32_t address, bool defer);
-	void reset(int32_t address, bool defer);
+	void unpair(uint64_t id, bool defer);
+	void reset(uint64_t id, bool defer);
 	void setUpBidCoSMessages();
 	void setUpConfig() {}
-	void deletePeer(int32_t address);
+	void deletePeer(uint64_t id);
 	void addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t channel, uint32_t teamChannel, std::string teamSerialNumber);
 	void addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t channel, int32_t address, uint32_t teamChannel);
 	void removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer);

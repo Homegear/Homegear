@@ -54,22 +54,23 @@ public:
 	virtual void load(bool version_0_0_7) {}
 	virtual void save(bool full);
 	virtual void add(std::shared_ptr<LogicalDevice> device);
-	virtual void remove(int32_t address);
+	virtual void remove(uint64_t id);
 	virtual void dispose();
 	virtual std::shared_ptr<LogicalDevice> get(int32_t address);
+	virtual std::shared_ptr<LogicalDevice> get(uint64_t id);
 	virtual std::shared_ptr<LogicalDevice> get(std::string serialNumber);
 	virtual std::vector<std::shared_ptr<LogicalDevice>> getDevices();
 	virtual std::shared_ptr<Central> getCentral() { return std::shared_ptr<Central>(); }
+	virtual std::string getName() { return ""; }
 	virtual std::string handleCLICommand(std::string& command) { return ""; }
 	virtual bool deviceSelected() { return false; }
 protected:
 	DeviceFamilies _family = DeviceFamilies::none;
-	int32_t _available = -1;
 	std::mutex _devicesMutex;
 	std::thread _removeThread;
 	std::vector<std::shared_ptr<LogicalDevice>> _devices;
 
-	void removeThread(int32_t address);
+	void removeThread(uint64_t id);
 };
 
 #endif

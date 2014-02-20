@@ -142,7 +142,8 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		{
 			value->type = RPCVariableType::rpcBoolean;
 			if(value->integerValue == valueFalse) value->booleanValue = false;
-			if(value->integerValue == valueTrue || value->integerValue > threshold) value->booleanValue = true;;
+			if(value->integerValue == valueTrue || value->integerValue > threshold) value->booleanValue = true;
+			if(invert) value->booleanValue = !value->booleanValue;
 		}
 		else if(type == Type::Enum::floatConfigTime)
 		{
@@ -252,6 +253,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::booleanInteger)
 		{
+			if(invert) value->booleanValue = !value->booleanValue;
 			if(valueTrue == 0 && valueFalse == 0) value->integerValue = (int32_t)value->booleanValue;
 			else if(value->booleanValue) value->integerValue = valueTrue;
 			else value->integerValue = valueFalse;
@@ -377,8 +379,10 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 		else if(attributeName == "exponent_start") exponentStart = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "exponent_size") exponentSize = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "sim_counter") {}
+		else if(attributeName == "counter_size") {}
 		else if(attributeName == "on") on = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "off") off = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "invert") { if(attributeValue == "true") invert = true; }
 		else Output::printWarning("Warning: Unknown attribute for \"conversion\": " + attributeName);
 	}
 	for(xml_node<>* conversionNode = node->first_node(); conversionNode; conversionNode = conversionNode->next_sibling())
@@ -1128,6 +1132,12 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			type = typeFromString(attributeValue);
 			if(type == Type::Enum::none) Output::printWarning("Warning: Unknown parameter set type: " + attributeValue);
 		}
+		else if(attributeName == "address_start") addressStart = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "address_step") addressStep = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "count") count = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "channel_offset") channelOffset = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "peer_address_offset") peerAddressOffset = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "peer_channel_offset") peerChannelOffset = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "link") {} //Ignored
 		else Output::printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
 	}
@@ -1373,6 +1383,12 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 			{
 				enforceLinks.push_back(std::shared_ptr<EnforceLink>(new EnforceLink(enforceLinkNode)));
 			}
+		}
+		else if(nodeName == "special_parameter") specialParameter.reset(new Parameter(channelNode, true));
+		else if(nodeName == "subconfig")
+		{
+			uint32_t index = 0;
+			subconfig.reset(new DeviceChannel(channelNode, index));
 		}
 		else Output::printWarning("Warning: Unknown node name for \"device\": " + nodeName);
 	}

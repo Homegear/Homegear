@@ -87,11 +87,13 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 				size += HelperFunctions::getNumber(splitValue.first);
 				sizeDefined = true;
 			}
+			else if(attributeName == "read_size") readSize = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "counter") counter = attributeValue;
 			else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
 			else if(attributeName == "id") { id = attributeValue; }
 			else if(attributeName == "save_on_change") {} //not necessary, all values are saved on change
 			else if(attributeName == "mask") mask = HelperFunctions::getNumber(attributeValue);
+			else if(attributeName == "read_size") {} //not necessary, because size can be determined through index
 			else Output::printWarning("Warning: Unknown attribute for \"physical\": " + attributeName);
 		}
 		if(mask != -1 && fmod(index, 1) != 0) Output::printWarning("Warning: mask combined with unaligned index not supported.");

@@ -56,8 +56,7 @@ DeviceFamily::~DeviceFamily()
 
 bool DeviceFamily::available()
 {
-	if(_available == -1) _available = (int32_t)GD::physicalDevices.get(_family)->isOpen();
-	return (bool)_available;
+	return GD::physicalDevices.get(_family)->isOpen();
 }
 
 void DeviceFamily::save(bool full)
@@ -68,7 +67,7 @@ void DeviceFamily::save(bool full)
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			Output::printMessage("(Shutdown) => Saving " + HelperFunctions::getDeviceFamilyName((*i)->deviceFamily()) + " device 0x" + HelperFunctions::getHexString((*i)->getAddress(), 8));
+			Output::printMessage("(Shutdown) => Saving " + GD::deviceFamilies.at((*i)->deviceFamily())->getName() + " device " + std::to_string((*i)->getID()));
 			(*i)->save(full);
 			(*i)->savePeers(full);
 		}
@@ -171,6 +170,36 @@ std::shared_ptr<LogicalDevice> DeviceFamily::get(int32_t address)
 	return std::shared_ptr<LogicalDevice>();
 }
 
+std::shared_ptr<LogicalDevice> DeviceFamily::get(uint64_t id)
+{
+	try
+	{
+		_devicesMutex.lock();
+		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		{
+			if((*i)->getID() == id)
+			{
+				_devicesMutex.unlock();
+				return (*i);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _devicesMutex.unlock();
+	return std::shared_ptr<LogicalDevice>();
+}
+
 std::shared_ptr<LogicalDevice> DeviceFamily::get(std::string serialNumber)
 {
 	try
@@ -201,12 +230,12 @@ std::shared_ptr<LogicalDevice> DeviceFamily::get(std::string serialNumber)
 	return std::shared_ptr<LogicalDevice>();
 }
 
-void DeviceFamily::remove(int32_t address)
+void DeviceFamily::remove(uint64_t id)
 {
 	try
 	{
 		if(_removeThread.joinable()) _removeThread.join();
-		_removeThread = std::thread(&DeviceFamily::removeThread, this, address);
+		_removeThread = std::thread(&DeviceFamily::removeThread, this, id);
 	}
 	catch(const std::exception& ex)
     {
@@ -222,14 +251,14 @@ void DeviceFamily::remove(int32_t address)
     }
 }
 
-void DeviceFamily::removeThread(int32_t address)
+void DeviceFamily::removeThread(uint64_t id)
 {
 	try
 	{
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			if((*i)->getAddress() == address)
+			if((*i)->getID() == id)
 			{
 				Output::printDebug("Removing device pointer from device array...");
 				std::shared_ptr<LogicalDevice> device = *i;
@@ -241,8 +270,8 @@ void DeviceFamily::removeThread(int32_t address)
 				device->deletePeersFromDatabase();
 				Output::printDebug("Deleting database entry...");
 				DataColumnVector data;
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(address)));
-				GD::db.executeCommand("DELETE FROM devices WHERE address=?", data);
+				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(id)));
+				GD::db.executeCommand("DELETE FROM devices WHERE deviceID=?", data);
 				return;
 			}
 		}
@@ -270,7 +299,7 @@ void DeviceFamily::dispose()
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			Output::printDebug("Debug: Disposing device 0x" + HelperFunctions::getHexString((*i)->getAddress()));
+			Output::printDebug("Debug: Disposing device " + std::to_string((*i)->getID()));
 			devices.push_back(*i);
 		}
 		_devicesMutex.unlock();
