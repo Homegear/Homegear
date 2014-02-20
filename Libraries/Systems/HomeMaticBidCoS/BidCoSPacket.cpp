@@ -376,6 +376,7 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 		}
 		index -= 9;
 		double byteIndex = std::floor(index);
+		int32_t intByteIndex = byteIndex;
 		if(byteIndex >= _payload.size())
 		{
 			result.push_back(0);
@@ -391,7 +392,7 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 			}
 			//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
 			uint32_t bitSize = std::lround(size * 10);
-			result.push_back((_payload.at(byteIndex) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			result.push_back((_payload.at(intByteIndex) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
 		}
 		else
 		{
@@ -399,15 +400,15 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 			uint32_t bitSize = std::lround(size * 10) % 10;
 			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
-			uint8_t currentByte = _payload.at(index) & _bitmask[bitSize];
+			uint8_t currentByte = _payload.at(intByteIndex) & _bitmask[bitSize];
 			if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - 1) * 8));
 			result.push_back(currentByte);
 			for(uint32_t i = 1; i < bytes; i++)
 			{
-				if((index + i) >= _payload.size()) result.push_back(0);
+				if((intByteIndex + i) >= _payload.size()) result.push_back(0);
 				else
 				{
-					currentByte = _payload.at(index + i);
+					currentByte = _payload.at(intByteIndex + i);
 					if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - i - 1) * 8));
 					result.push_back(currentByte);
 				}

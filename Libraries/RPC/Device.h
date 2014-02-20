@@ -102,6 +102,8 @@ public:
 	int32_t on = 200;
 	int32_t off = 0;
 	bool invert = false;
+	bool fromDevice = true;
+	bool toDevice = true;
 
 	ParameterConversion() {}
 	ParameterConversion(xml_node<>* node);

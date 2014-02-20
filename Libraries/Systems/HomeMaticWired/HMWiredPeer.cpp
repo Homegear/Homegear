@@ -119,6 +119,11 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 {
 	try
 	{
+		if(size < 0 || index < 0)
+		{
+			Output::printError("Error: Can't set configuration parameter. Index or size is negative.");
+			return;
+		}
 		if(size > 0.8 && size < 1.0) size = 1.0;
 		double byteIndex = std::floor(index);
 		if(byteIndex != index || size <= 1.0) //0.8 == 8 Bits
@@ -133,7 +138,13 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 				return;
 			}
 			uint32_t bitSize = std::lround(size * 10);
+			if(binaryConfig.find(configBlockIndex) == binaryConfig.end()) binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
 			std::vector<uint8_t>* configBlock = &binaryConfig[configBlockIndex].data;
+			if(configBlock->size() != 0x10)
+			{
+				Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+				return;
+			}
 			if(bitSize > 8) bitSize = 8;
 			while(configBlock->size() - 1 < intByteIndex) configBlock->push_back(0xFF);
 			if(bitSize == 8)
@@ -168,8 +179,13 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 					{
 						intByteIndex = -i;
 						configBlockIndex += 0x10;
+						if(binaryConfig.find(configBlockIndex) == binaryConfig.end()) binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
 						configBlock = &binaryConfig[configBlockIndex].data;
-						while(configBlock->size() < 10) configBlock->push_back(0xFF);
+						if(configBlock->size() != 0x10)
+						{
+							Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+							return;
+						}
 					}
 					configBlock->at(intByteIndex + i) = binaryValue.at(i);
 				}
@@ -186,8 +202,13 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 						{
 							intByteIndex = -i;
 							configBlockIndex += 0x10;
+							if(binaryConfig.find(configBlockIndex) == binaryConfig.end()) binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
 							configBlock = &binaryConfig[configBlockIndex].data;
-							while(configBlock->size() < 10) configBlock->push_back(0xFF);
+							if(configBlock->size() != 0x10)
+							{
+								Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+								return;
+							}
 						}
 						configBlock->at(intByteIndex + i) = 0;
 					}
@@ -218,6 +239,113 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, int32_t mask)
+{
+	try
+	{
+		std::vector<uint8_t> result;
+		if(!rpcDevice)
+		{
+			result.push_back(0);
+			return result;
+		}
+		if(size < 0 || index < 0)
+		{
+			Output::printError("Error: Can't get configuration parameter. Index or size is negative.");
+			result.push_back(0);
+			return result;
+		}
+		int32_t bits = std::lround(index * 10) % 10;
+		if(bits >= 8) //e. g. 15.9 => 16.1
+		{
+			bits -= 8;
+			index += 0.2;
+		}
+		double byteIndex = std::floor(index);
+		int32_t intByteIndex = byteIndex;
+		int32_t configBlockIndex = (intByteIndex / 0x10) * 0x10;
+		if(configBlockIndex >= rpcDevice->eepSize)
+		{
+			Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+			result.push_back(0);
+			return result;
+		}
+		intByteIndex = intByteIndex - configBlockIndex;
+		if(binaryConfig.find(configBlockIndex) == binaryConfig.end()) binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
+		std::vector<uint8_t>* configBlock = &binaryConfig[configBlockIndex].data;
+		if(configBlock->size() != 0x10)
+		{
+			Output::printError("Error: Can't get configuration parameter. Can't read EEPROM.");
+			result.push_back(0);
+			return result;
+		}
+		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
+		{
+			if(size > 1)
+			{
+				Output::printError("Error: Can't get configuration parameter. Partial byte index > 1 requested.");
+				result.push_back(0);
+				return result;
+			}
+			//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
+			uint32_t bitSize = std::lround(size * 10);
+			result.push_back((configBlock->at(intByteIndex) >> bits) & _bitmask[bitSize]);
+		}
+		else
+		{
+			uint32_t bytes = (uint32_t)std::ceil(size);
+			uint32_t bitSize = std::lround(size * 10) % 10;
+			if(bitSize > 8) bitSize = 8;
+			if(bytes == 0) bytes = 1; //size is 0 - assume 1
+			uint8_t currentByte = configBlock->at(intByteIndex) & _bitmask[bitSize];
+			if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - 1) * 8));
+			result.push_back(currentByte);
+			for(uint32_t i = 1; i < bytes; i++)
+			{
+				if((intByteIndex + i) >= 0x10)
+				{
+					configBlockIndex += 0x10;
+					if(configBlockIndex >= rpcDevice->eepSize)
+					{
+						Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+						result.clear();
+						result.push_back(0);
+						return result;
+					}
+					if(binaryConfig.find(configBlockIndex) == binaryConfig.end()) binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
+					configBlock = &binaryConfig[configBlockIndex].data;
+					if(configBlock->size() != 0x10)
+					{
+						Output::printError("Error: Can't get configuration parameter. Can't read EEPROM.");
+						result.clear();
+						result.push_back(0);
+						return result;
+					}
+					intByteIndex = -i;
+				}
+				currentByte = configBlock->at(intByteIndex + i);
+				if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - i - 1) * 8));
+				result.push_back(currentByte);
+			}
+		}
+		if(result.empty()) result.push_back(0);
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::vector<uint8_t>();
 }
 
 void HMWiredPeer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)

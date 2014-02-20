@@ -136,7 +136,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 		{
-			if(integerValueMapDevice.find(value->integerValue) != integerValueMapDevice.end()) value->integerValue = integerValueMapDevice[value->integerValue];
+			if(fromDevice && integerValueMapDevice.find(value->integerValue) != integerValueMapDevice.end()) value->integerValue = integerValueMapDevice[value->integerValue];
 		}
 		else if(type == Type::Enum::booleanInteger)
 		{
@@ -249,7 +249,7 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 		{
 			//Value is not changed, when not in map. That is the desired behavior.
-			if(integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end()) value->integerValue = integerValueMapParameter[value->integerValue];
+			if(toDevice && integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end()) value->integerValue = integerValueMapParameter[value->integerValue];
 		}
 		else if(type == Type::Enum::booleanInteger)
 		{
@@ -390,19 +390,20 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 		std::string nodeName(conversionNode->name());
 		if(nodeName == "value_map" && (type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger))
 		{
-			xml_attribute<>* attr1;
-			xml_attribute<>* attr2;
-			attr1 = conversionNode->first_attribute("device_value");
-			attr2 = conversionNode->first_attribute("parameter_value");
-			if(attr1 != nullptr && attr2 != nullptr)
+			int32_t deviceValue = 0;
+			int32_t parameterValue = 0;
+			for(xml_attribute<>* valueMapAttr = conversionNode->first_attribute(); valueMapAttr; valueMapAttr = valueMapAttr->next_attribute())
 			{
-				std::string attribute1(attr1->value());
-				std::string attribute2(attr2->value());
-				int32_t deviceValue = HelperFunctions::getNumber(attribute1);
-				int32_t parameterValue = HelperFunctions::getNumber(attribute2);
-				integerValueMapDevice[deviceValue] = parameterValue;
-				integerValueMapParameter[parameterValue] = deviceValue;
+				std::string valueMapAttributeName(valueMapAttr->name());
+				std::string valueMapAttributeValue(valueMapAttr->value());
+				if(valueMapAttributeName == "device_value") deviceValue = HelperFunctions::getNumber(valueMapAttributeValue);
+				else if(valueMapAttributeName == "parameter_value") parameterValue = HelperFunctions::getNumber(valueMapAttributeValue);
+				else if(valueMapAttributeName == "from_device") { if(valueMapAttributeValue == "false") fromDevice = false; }
+				else if(valueMapAttributeName == "to_device") { if(valueMapAttributeValue == "false") toDevice = false; }
+				else Output::printWarning("Warning: Unknown attribute for \"value_map\": " + valueMapAttributeName);
 			}
+			integerValueMapDevice[deviceValue] = parameterValue;
+			integerValueMapParameter[parameterValue] = deviceValue;
 		}
 		else Output::printWarning( "Warning: Unknown subnode for \"conversion\": " + nodeName);
 	}

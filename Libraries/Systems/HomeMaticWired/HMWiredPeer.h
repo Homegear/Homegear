@@ -107,6 +107,7 @@ public:
 
 	void initializeCentralConfig();
 	void setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue);
+	std::vector<uint8_t> getConfigParameter(double index, double size, int32_t mask = -1);
 	virtual bool load(LogicalDevice* device);
 	void save(bool savePeer, bool variables, bool centralConfig);
     void serializePeers(std::vector<uint8_t>& encodedData);
