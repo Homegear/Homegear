@@ -193,7 +193,7 @@ void HomeMaticDevice::dispose(bool wait)
 	{
 		if(_disposing) return;
 		_disposing = true;
-		Output::printDebug("Removing device " + std::to_string(_deviceID) + " from CUL event queue...");
+		Output::printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
 		GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->removeLogicalDevice(this);
 		int64_t startTime = HelperFunctions::getTime();
 		stopThreads();

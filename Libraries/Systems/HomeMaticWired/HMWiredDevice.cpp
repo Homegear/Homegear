@@ -45,7 +45,9 @@ HMWiredDevice::~HMWiredDevice()
 {
 	try
 	{
-
+		dispose();
+		//dispose might have been called by another thread, so wait until dispose is finished
+		while(!_disposed) std::this_thread::sleep_for(std::chrono::milliseconds(50)); //Wait for received packets, without this, program sometimes SIGABRTs
 	}
     catch(const std::exception& ex)
     {
@@ -60,6 +62,36 @@ HMWiredDevice::~HMWiredDevice()
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 
+}
+
+void HMWiredDevice::dispose(bool wait)
+{
+	try
+	{
+		if(_disposing) return;
+		_disposing = true;
+		Output::printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
+		GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->removeLogicalDevice(this);
+		int64_t startTime = HelperFunctions::getTime();
+		//stopThreads();
+		int64_t timeDifference = HelperFunctions::getTime() - startTime;
+		//Packets might still arrive, after removing this device from the rfDevice, so sleep a little bit
+		//This is not necessary if the rfDevice doesn't listen anymore
+		if(wait && timeDifference >= 0 && timeDifference < 2000) std::this_thread::sleep_for(std::chrono::milliseconds(2000 - timeDifference));
+	}
+    catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_disposed = true;
 }
 
 void HMWiredDevice::init()
@@ -859,6 +891,35 @@ void HMWiredDevice::unlockBus()
     }
 }
 
+uint8_t HMWiredDevice::getMessageCounter(int32_t destinationAddress)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPeer> peer = getPeer(destinationAddress);
+		uint8_t messageCounter = 0;
+		if(peer)
+		{
+			messageCounter = peer->getMessageCounter();
+			peer->setMessageCounter(messageCounter + 1);
+		}
+		else messageCounter = _messageCounter[destinationAddress]++;
+		return messageCounter;
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return 0;
+}
+
 std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(uint8_t command, int32_t destinationAddress, bool synchronizationBit)
 {
 	try
@@ -886,10 +947,39 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::vector<uint8_t>& 
 	std::shared_ptr<HMWiredPeer> peer = getPeer(destinationAddress);
 	try
 	{
+		uint8_t messageCounter = 0;
 		if(peer) peer->ignorePackets = true;
-		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, destinationAddress, synchronizationBit, _messageCounter[destinationAddress]++, 0, 0, payload));
+		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, destinationAddress, synchronizationBit, getMessageCounter(destinationAddress), 0, 0, payload));
 		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
-		if(response) sendOK(response->senderMessageCounter(), destinationAddress);
+		if(response && response->type() != HMWiredPacketType::ackMessage) sendOK(response->senderMessageCounter(), destinationAddress);
+		if(peer) peer->ignorePackets = false;
+		return response;
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	if(peer) peer->ignorePackets = false;
+	return std::shared_ptr<HMWiredPacket>();
+}
+
+std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::shared_ptr<HMWiredPacket> packet)
+{
+	std::shared_ptr<HMWiredPeer> peer = getPeer(packet->destinationAddress());
+	try
+	{
+		if(peer) peer->ignorePackets = true;
+		std::shared_ptr<HMWiredPacket> request(packet);
+		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
+		if(response && response->type() != HMWiredPacketType::ackMessage) sendOK(response->senderMessageCounter(), packet->destinationAddress());
 		if(peer) peer->ignorePackets = false;
 		return response;
 	}
@@ -920,7 +1010,7 @@ std::vector<uint8_t> HMWiredDevice::readEEPROM(int32_t deviceAddress, int32_t ee
 		payload.push_back(eepromAddress >> 8);
 		payload.push_back(eepromAddress & 0xFF);
 		payload.push_back(0x10); //Bytes to read
-		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, deviceAddress, false, _messageCounter[deviceAddress]++, 0, 0, payload));
+		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, deviceAddress, false, getMessageCounter(deviceAddress), 0, 0, payload));
 		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
 		if(response)
 		{
@@ -962,7 +1052,7 @@ bool HMWiredDevice::writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, st
 		payload.push_back(eepromAddress & 0xFF);
 		payload.push_back(data.size()); //Bytes to write
 		payload.insert(payload.end(), data.begin(), data.end());
-		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, deviceAddress, false, _messageCounter[deviceAddress]++, 0, 0, payload));
+		std::shared_ptr<HMWiredPacket> request(new HMWiredPacket(HMWiredPacketType::iMessage, _address, deviceAddress, false, getMessageCounter(deviceAddress), 0, 0, payload));
 		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
 		if(response)
 		{

@@ -64,6 +64,7 @@ class HMWiredDevice : public LogicalDevice
         HMWiredDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
         virtual ~HMWiredDevice();
         virtual DeviceFamilies deviceFamily() { return DeviceFamilies::HomeMaticWired; }
+        virtual void dispose(bool wait = true);
         bool packetReceived(std::shared_ptr<Packet> packet);
 
         virtual void addPeer(std::shared_ptr<HMWiredPeer> peer);
@@ -86,6 +87,7 @@ class HMWiredDevice : public LogicalDevice
         virtual void save(bool saveDevice);
         virtual void serializeMessageCounters(std::vector<uint8_t>& encodedData);
         virtual void unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData);
+        virtual uint8_t getMessageCounter(int32_t destinationAddress);
 
         virtual bool isInPairingMode() { return _pairing; }
         virtual std::shared_ptr<HMWiredPacket> sendPacket(std::shared_ptr<HMWiredPacket> packet, bool resend, bool stealthy = false);
@@ -93,6 +95,7 @@ class HMWiredDevice : public LogicalDevice
 
         virtual std::shared_ptr<HMWiredPacket> getResponse(uint8_t command, int32_t destinationAddress, bool synchronizationBit = false);
         virtual std::shared_ptr<HMWiredPacket> getResponse(std::vector<uint8_t>& payload, int32_t destinationAddress, bool synchronizationBit = false);
+        virtual std::shared_ptr<HMWiredPacket> getResponse(std::shared_ptr<HMWiredPacket> packet);
         virtual std::vector<uint8_t> readEEPROM(int32_t deviceAddress, int32_t eepromAddress);
         virtual bool writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, std::vector<uint8_t>& data);
         virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
@@ -105,6 +108,7 @@ class HMWiredDevice : public LogicalDevice
 
         std::map<uint32_t, uint32_t> _variableDatabaseIDs;
         bool _disposing = false;
+        bool _disposed = false;
 
         std::shared_ptr<HMWiredPeer> _currentPeer;
         std::unordered_map<int32_t, std::shared_ptr<HMWiredPeer>> _peers;

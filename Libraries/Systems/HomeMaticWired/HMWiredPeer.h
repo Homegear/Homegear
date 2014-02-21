@@ -98,6 +98,8 @@ public:
 	//In table variables:
 	int32_t getFirmwareVersion() { return _firmwareVersion; }
 	void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
+	int32_t getMessageCounter() { return _messageCounter; }
+	void setMessageCounter(int32_t value) { _messageCounter = value; saveVariable(5, value); }
 	LogicalDeviceType getDeviceType() { return _deviceType; }
 	void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(3, (int32_t)_deviceType.type()); }
 	//End
@@ -108,7 +110,11 @@ public:
 	std::string handleCLICommand(std::string command);
 	void initializeCentralConfig();
 	void setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue);
+	void setConfigParameter(int32_t channelIndex, double index, double step, double size, std::vector<uint8_t>& binaryValue);
+	void setConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size, std::vector<uint8_t>& binaryValue);
 	std::vector<uint8_t> getConfigParameter(double index, double size, int32_t mask = -1);
+	std::vector<uint8_t> getConfigParameter(int32_t channelIndex, double index, double step, double size);
+	std::vector<uint8_t> getConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size);
 	virtual bool load(LogicalDevice* device);
 	void save(bool savePeer, bool variables, bool centralConfig);
     void serializePeers(std::vector<uint8_t>& encodedData);
@@ -137,9 +143,9 @@ public:
 	std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
 	std::shared_ptr<RPC::RPCVariable> getParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
 	//std::shared_ptr<RPC::RPCVariable> getServiceMessages();
-	//std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
+	std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
 	//std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
-	//std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
+	std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 protected:
 	std::shared_ptr<HMWiredCentral> _central;
 	uint32_t _bitmask[9] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF};
@@ -147,6 +153,7 @@ protected:
 	//In table variables:
 	int32_t _firmwareVersion = 0;
 	LogicalDeviceType _deviceType;
+	uint8_t _messageCounter = 0;
 	std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
 	//End
 

@@ -2274,7 +2274,7 @@ bool HomeMaticCentral::knowsDevice(std::string serialNumber)
 {
 	try
 	{
-		return (bool)getPeer(serialNumber);
+		return (bool)getPeer(serialNumber) || (_serialNumber == serialNumber);
 	}
 	catch(const std::exception& ex)
 	{

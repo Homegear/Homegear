@@ -141,8 +141,12 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		else if(type == Type::Enum::booleanInteger)
 		{
 			value->type = RPCVariableType::rpcBoolean;
-			if(value->integerValue == valueFalse) value->booleanValue = false;
-			if(value->integerValue == valueTrue || value->integerValue > threshold) value->booleanValue = true;
+			if(valueTrue == 0 && valueFalse == 0) value->booleanValue = (bool)value->integerValue;
+			else
+			{
+				if(value->integerValue == valueFalse) value->booleanValue = false;
+				if(value->integerValue == valueTrue || value->integerValue > threshold) value->booleanValue = true;
+			}
 			if(invert) value->booleanValue = !value->booleanValue;
 		}
 		else if(type == Type::Enum::floatConfigTime)
@@ -819,6 +823,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 				else if(element == "transform") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::transform);
 				else if(element == "service") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::service);
 				else if(element == "sticky") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::sticky);
+				else if(element == "invisible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::invisible);
 				else Output::printWarning("Warning: Unknown ui flag for \"parameter\": " + attributeValue);
 			}
 		}
@@ -1381,6 +1386,17 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(channelNode));
 			if(parameterSets.find(parameterSet->type) == parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
 			else Output::printError("Error: Tried to add same parameter set type twice.");
+			//Set physical settings of special_parameter
+			if(specialParameter && parameterSet->type == ParameterSet::Type::master)
+			{
+				std::shared_ptr<Parameter> parameter = parameterSet->getParameter(specialParameter->id);
+				if(parameter)
+				{
+					std::string valueID = parameter->physicalParameter->valueID;
+					parameter->physicalParameter = specialParameter->physicalParameter;
+					parameter->physicalParameter->valueID = valueID;
+				}
+			}
 		}
 		else if(nodeName == "link_roles")
 		{
@@ -1399,6 +1415,17 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 		{
 			uint32_t index = 0;
 			subconfig.reset(new DeviceChannel(channelNode, index));
+			//Set physical settings of special_parameter
+			if(specialParameter && subconfig->parameterSets.find(ParameterSet::Type::Enum::master) != subconfig->parameterSets.end())
+			{
+				std::shared_ptr<Parameter> parameter = subconfig->parameterSets.at(ParameterSet::Type::Enum::master)->getParameter(specialParameter->id);
+				if(parameter)
+				{
+					std::string valueID = parameter->physicalParameter->valueID;
+					parameter->physicalParameter = specialParameter->physicalParameter;
+					parameter->physicalParameter->valueID = valueID;
+				}
+			}
 		}
 		else Output::printWarning("Warning: Unknown node name for \"device\": " + nodeName);
 	}
@@ -1419,7 +1446,7 @@ Device::Device(std::string xmlFilename) : Device()
 
 		std::shared_ptr<Parameter> parameter(new Parameter());
 		parameter->id = "PAIRED_TO_CENTRAL";
-		parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
+		parameter->uiFlags = Parameter::UIFlags::Enum::invisible;
 		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
 		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeBoolean;
@@ -1430,7 +1457,7 @@ Device::Device(std::string xmlFilename) : Device()
 
 		parameter.reset(new Parameter());
 		parameter->id = "CENTRAL_ADDRESS_BYTE_1";
-		parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
+		parameter->uiFlags = Parameter::UIFlags::Enum::invisible;
 		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
 		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
@@ -1441,7 +1468,7 @@ Device::Device(std::string xmlFilename) : Device()
 
 		parameter.reset(new Parameter());
 		parameter->id = "CENTRAL_ADDRESS_BYTE_2";
-		parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
+		parameter->uiFlags = Parameter::UIFlags::Enum::invisible;
 		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
 		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
@@ -1452,7 +1479,7 @@ Device::Device(std::string xmlFilename) : Device()
 
 		parameter.reset(new Parameter());
 		parameter->id = "CENTRAL_ADDRESS_BYTE_3";
-		parameter->uiFlags = Parameter::UIFlags::Enum::hidden;
+		parameter->uiFlags = Parameter::UIFlags::Enum::invisible;
 		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
 		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
