@@ -109,12 +109,14 @@ public:
 
 	std::string handleCLICommand(std::string command);
 	void initializeCentralConfig();
-	void setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue);
-	void setConfigParameter(int32_t channelIndex, double index, double step, double size, std::vector<uint8_t>& binaryValue);
-	void setConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size, std::vector<uint8_t>& binaryValue);
+	std::vector<int32_t> setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue);
+	std::vector<int32_t> setConfigParameter(int32_t channelIndex, double index, double step, double size, std::vector<uint8_t>& binaryValue);
+	std::vector<int32_t> setConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size, std::vector<uint8_t>& binaryValue);
+	std::vector<int32_t> setConfigParameter(int32_t channel, std::shared_ptr<RPC::ParameterSet> parameterSet, std::shared_ptr<RPC::Parameter> parameter, std::vector<uint8_t>& binaryValue);
 	std::vector<uint8_t> getConfigParameter(double index, double size, int32_t mask = -1);
 	std::vector<uint8_t> getConfigParameter(int32_t channelIndex, double index, double step, double size);
 	std::vector<uint8_t> getConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size);
+	std::vector<uint8_t> getConfigParameter(int32_t channel, std::shared_ptr<RPC::ParameterSet> parameterSet, std::shared_ptr<RPC::Parameter> parameter);
 	virtual bool load(LogicalDevice* device);
 	void save(bool savePeer, bool variables, bool centralConfig);
     void serializePeers(std::vector<uint8_t>& encodedData);
@@ -129,7 +131,9 @@ public:
 	std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel = -1);
 	void removePeer(int32_t channel, int32_t address, int32_t remoteChannel);
 
+	virtual std::shared_ptr<HMWiredPacket> getResponse(std::shared_ptr<HMWiredPacket> packet);
 	virtual void reset();
+	std::shared_ptr<RPC::ParameterSet> getParameterSet(int32_t channel, RPC::ParameterSet::Type::Enum type);
 	void getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std::vector<FrameValues>& frameValue);
 	void packetReceived(std::shared_ptr<HMWiredPacket> packet);
 
@@ -142,9 +146,9 @@ public:
 	std::shared_ptr<RPC::RPCVariable> getParamsetDescription(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
 	std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
 	std::shared_ptr<RPC::RPCVariable> getParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
-	//std::shared_ptr<RPC::RPCVariable> getServiceMessages();
+	std::shared_ptr<RPC::RPCVariable> getServiceMessages();
 	std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
-	//std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
+	std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
 	std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 protected:
 	std::shared_ptr<HMWiredCentral> _central;

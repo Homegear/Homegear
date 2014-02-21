@@ -1992,6 +1992,8 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int32_t chann
 
 			description->structValue->insert(RPC::RPCStructElement("ROAMING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(0))));
 
+			description->structValue->insert(RPC::RPCStructElement("RX_MODE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)rpcDevice->rxModes))));
+
 			if(!type.empty()) description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(type))));
 
 			description->structValue->insert(RPC::RPCStructElement("VERSION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcDevice->version))));

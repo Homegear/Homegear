@@ -665,6 +665,8 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 					}
 				}
 			}
+			std::shared_ptr<HMWiredPeer> peer = getPeer(packet->destinationAddress());
+			if(peer) peer->serviceMessages->setUnreach(true);
 		}
 		else physicalDevice->sendPacket(packet);
 	}

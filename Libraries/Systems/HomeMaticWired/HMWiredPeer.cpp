@@ -91,7 +91,6 @@ void HMWiredPeer::initializeCentralConfig()
 					if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
 					{
 						parameter = RPCConfigurationParameter();
-						parameter.rpcParameter = *j;
 						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 						valuesCentral[i->first][(*j)->id] = parameter;
 						saveParameter(0, RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
@@ -499,14 +498,15 @@ std::string HMWiredPeer::handleCLICommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
-void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue)
+std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue)
 {
+	std::vector<int32_t> changedBlocks;
 	try
 	{
 		if(size < 0 || index < 0)
 		{
 			Output::printError("Error: Can't set configuration parameter. Index or size is negative.");
-			return;
+			return changedBlocks;
 		}
 		if(size > 0.8 && size < 1.0) size = 1.0;
 		double byteIndex = std::floor(index);
@@ -515,11 +515,12 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 			if(binaryValue.empty()) binaryValue.push_back(0);
 			int32_t intByteIndex = byteIndex;
 			int32_t configBlockIndex = (intByteIndex / 0x10) * 0x10;
+			changedBlocks.push_back(configBlockIndex);
 			intByteIndex -= configBlockIndex;
 			if(size > 1.0)
 			{
 				Output::printError("Error: HomeMatic Wired peer " + std::to_string(_peerID) + ": Can't set partial byte index > 1.");
-				return;
+				return changedBlocks;
 			}
 			uint32_t bitSize = std::lround(size * 10);
 			if(bitSize > 8) bitSize = 8;
@@ -533,7 +534,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 			if(configBlock->data.size() != 0x10)
 			{
 				Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
-				return;
+				return changedBlocks;
 			}
 			if(bitSize == 8) configBlock->data.at(intByteIndex) = 0;
 			else configBlock->data.at(intByteIndex) &= (~(_bitmask[bitSize] << indexBits));
@@ -546,6 +547,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 				{
 					saveParameter(configBlock->databaseID, configBlock->data);
 					configBlockIndex += 0x10;
+					changedBlocks.push_back(configBlockIndex);
 					if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
 					{
 						binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
@@ -555,7 +557,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 					if(configBlock->data.size() != 0x10)
 					{
 						Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
-						return;
+						return changedBlocks;
 					}
 					intByteIndex = 0;
 				}
@@ -568,6 +570,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 		{
 			int32_t intByteIndex = byteIndex;
 			int32_t configBlockIndex = (intByteIndex / 0x10) * 0x10;
+			changedBlocks.push_back(configBlockIndex);
 			intByteIndex -= configBlockIndex;
 			uint32_t bytes = (uint32_t)std::ceil(size);
 			if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
@@ -576,7 +579,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 				saveParameter(0, configBlockIndex, binaryConfig[configBlockIndex].data);
 			}
 			ConfigDataBlock* configBlock = &binaryConfig[configBlockIndex];
-			if(binaryValue.empty()) return;
+			if(binaryValue.empty()) return changedBlocks;
 			uint32_t bitSize = std::lround(size * 10) % 10;
 			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
@@ -591,6 +594,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 						intByteIndex = -i;
 						saveParameter(configBlock->databaseID, configBlock->data);
 						configBlockIndex += 0x10;
+						changedBlocks.push_back(configBlockIndex);
 						if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
 						{
 							binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
@@ -600,7 +604,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 						if(configBlock->data.size() != 0x10)
 						{
 							Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
-							return;
+							return changedBlocks;
 						}
 					}
 					configBlock->data.at(intByteIndex + i) = binaryValue.at(i);
@@ -619,6 +623,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 							intByteIndex = -i;
 							saveParameter(configBlock->databaseID, configBlock->data);
 							configBlockIndex += 0x10;
+							changedBlocks.push_back(configBlockIndex);
 							if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
 							{
 								binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
@@ -628,7 +633,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 							if(configBlock->data.size() != 0x10)
 							{
 								Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
-								return;
+								return changedBlocks;
 							}
 						}
 						configBlock->data.at(intByteIndex + i) = 0;
@@ -641,6 +646,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 						intByteIndex = -(missingBytes + i);
 						saveParameter(configBlock->databaseID, configBlock->data);
 						configBlockIndex += 0x10;
+						changedBlocks.push_back(configBlockIndex);
 						if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
 						{
 							binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
@@ -650,7 +656,7 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 						if(configBlock->data.size() != 0x10)
 						{
 							Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
-							return;
+							return changedBlocks;
 						}
 					}
 					configBlock->data.at(intByteIndex + missingBytes + i) = binaryValue.at(i);
@@ -671,9 +677,10 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	return changedBlocks;
 }
 
-void HMWiredPeer::setConfigParameter(int32_t channelIndex, double index, double step, double size, std::vector<uint8_t>& binaryValue)
+std::vector<int32_t> HMWiredPeer::setConfigParameter(int32_t channelIndex, double index, double step, double size, std::vector<uint8_t>& binaryValue)
 {
 	try
 	{
@@ -705,9 +712,10 @@ void HMWiredPeer::setConfigParameter(int32_t channelIndex, double index, double 
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return std::vector<int32_t>();
 }
 
-void HMWiredPeer::setConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size, std::vector<uint8_t>& binaryValue)
+std::vector<int32_t> HMWiredPeer::setConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size, std::vector<uint8_t>& binaryValue)
 {
 	try
 	{
@@ -726,6 +734,48 @@ void HMWiredPeer::setConfigParameter(int32_t channelIndex, int32_t addressStart,
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return std::vector<int32_t>();
+}
+
+std::vector<int32_t> HMWiredPeer::setConfigParameter(int32_t channel, std::shared_ptr<RPC::ParameterSet> parameterSet, std::shared_ptr<RPC::Parameter> parameter, std::vector<uint8_t>& binaryValue)
+{
+	try
+	{
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return std::vector<int32_t>();
+		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
+		if(parameter->physicalParameter->address.operation == RPC::PhysicalParameterAddress::Operation::none)
+		{
+			return setConfigParameter(channel - rpcChannel->startIndex, parameter->physicalParameter->address.index, parameter->physicalParameter->address.step, parameter->physicalParameter->size, binaryValue);
+		}
+		else
+		{
+			if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1)
+			{
+				Output::printError("Error: Can't get parameter set. address_start or address_step is not set.");
+				return std::vector<int32_t>();
+			}
+			int32_t channelIndex = channel - rpcChannel->startIndex;
+			if(parameterSet->count > 0 && channelIndex >= parameterSet->count)
+			{
+				Output::printError("Error: Can't get parameter set. Out of bounds.");
+				return std::vector<int32_t>();
+			}
+			return setConfigParameter(channelIndex, parameterSet->addressStart, parameterSet->addressStep, parameter->physicalParameter->address.index, parameter->physicalParameter->size, binaryValue);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<int32_t>();
 }
 
 std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, int32_t mask)
@@ -900,6 +950,49 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(int32_t channelIndex, int32
 	{
 		double index = addressStart + (channelIndex * addressStep) + indexOffset;
 		return getConfigParameter(index, size);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<uint8_t>();
+}
+
+std::vector<uint8_t> HMWiredPeer::getConfigParameter(int32_t channel, std::shared_ptr<RPC::ParameterSet> parameterSet, std::shared_ptr<RPC::Parameter> parameter)
+{
+	try
+	{
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return std::vector<uint8_t>();
+		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
+		std::vector<uint8_t> value;
+		if(parameter->physicalParameter->address.operation == RPC::PhysicalParameterAddress::Operation::none)
+		{
+			value = getConfigParameter(channel - rpcChannel->startIndex, parameter->physicalParameter->address.index, parameter->physicalParameter->address.step, parameter->physicalParameter->size);
+		}
+		else
+		{
+			if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1)
+			{
+				Output::printError("Error: Can't get parameter set. address_start or address_step is not set.");
+				return std::vector<uint8_t>();
+			}
+			int32_t channelIndex = channel - rpcChannel->startIndex;
+			if(parameterSet->count > 0 && channelIndex >= parameterSet->count)
+			{
+				Output::printError("Error: Can't get parameter set. Out of bounds.");
+				return std::vector<uint8_t>();
+			}
+			value = getConfigParameter(channelIndex, parameterSet->addressStart, parameterSet->addressStep, parameter->physicalParameter->address.index, parameter->physicalParameter->size);
+		}
+		return value;
 	}
 	catch(const std::exception& ex)
     {
@@ -1399,8 +1492,9 @@ void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std
 						for(uint32_t l = startChannel; l <= endChannel; l++)
 						{
 							if(rpcDevice->channels.find(l) == rpcDevice->channels.end()) continue;
-							if(rpcDevice->channels.at(l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(l)->parameterSets.end()) continue;
-							if(!rpcDevice->channels.at(l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(l, currentFrameValues.parameterSetType);
+							if(!parameterSet) continue;
+							if(!parameterSet->getParameter((*k)->id)) continue;
 							currentFrameValues.paramsetChannels.push_back(l);
 							currentFrameValues.values[(*k)->id].channels.push_back(l);
 							setValues = true;
@@ -1411,8 +1505,9 @@ void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std
 						for(std::list<uint32_t>::const_iterator l = currentFrameValues.paramsetChannels.begin(); l != currentFrameValues.paramsetChannels.end(); ++l)
 						{
 							if(rpcDevice->channels.find(*l) == rpcDevice->channels.end()) continue;
-							if(rpcDevice->channels.at(*l)->parameterSets.find(currentFrameValues.parameterSetType) == rpcDevice->channels.at(*l)->parameterSets.end()) continue;
-							if(!rpcDevice->channels.at(*l)->parameterSets.at(currentFrameValues.parameterSetType)->getParameter((*k)->id)) continue;
+							std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(*l, currentFrameValues.parameterSetType);
+							if(!parameterSet) continue;
+							if(!parameterSet->getParameter((*k)->id)) continue;
 							currentFrameValues.values[(*k)->id].channels.push_back(*l);
 							setValues = true;
 						}
@@ -1437,11 +1532,81 @@ void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std
     }
 }
 
+std::shared_ptr<HMWiredPacket> HMWiredPeer::getResponse(std::shared_ptr<HMWiredPacket> packet)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPacket> request(packet);
+		std::shared_ptr<HMWiredPacket> response = getCentral()->sendPacket(request, true);
+		//Don't send ok here! It's sent in packetReceived if necessary.
+		return response;
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<HMWiredPacket>();
+}
+
+std::shared_ptr<RPC::ParameterSet> HMWiredPeer::getParameterSet(int32_t channel, RPC::ParameterSet::Type::Enum type)
+{
+	try
+	{
+		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
+		std::shared_ptr<RPC::ParameterSet> parameterSet;
+		if(rpcChannel->specialParameter && rpcChannel->subconfig)
+		{
+			std::vector<uint8_t> value = getConfigParameter(channel - rpcChannel->startIndex, rpcChannel->specialParameter->physicalParameter->address.index, rpcChannel->specialParameter->physicalParameter->address.step, rpcChannel->specialParameter->physicalParameter->size);
+			Output::printDebug("Debug: Special parameter is " + std::to_string(value.at(0)));
+			if(value.at(0))
+			{
+				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end())
+				{
+					Output::printWarning("Parameter set of type " + std::to_string(type) + " not found in subconfig for channel " + std::to_string(channel));
+					return std::shared_ptr<RPC::ParameterSet>();
+				}
+				parameterSet = rpcChannel->subconfig->parameterSets[type];
+			} else parameterSet = rpcChannel->parameterSets[type];
+		}
+		else
+		{
+			if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end())
+			{
+				Output::printWarning("Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
+				return std::shared_ptr<RPC::ParameterSet>();
+			}
+			parameterSet = rpcChannel->parameterSets[type];
+		}
+		return parameterSet;
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<RPC::ParameterSet>();
+}
+
 void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 {
 	try
 	{
-		if(ignorePackets || !packet) return;
+		if(ignorePackets || !packet || packet->type() != HMWiredPacketType::iMessage) return;
 		if(!_centralFeatures || _disposing) return;
 		if(packet->senderAddress() != _address) return;
 		if(!rpcDevice) return;
@@ -1480,27 +1645,43 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 						valueKeys[*j].reset(new std::vector<std::string>());
 						rpcValues[*j].reset(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 					}
-
 					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
+					if(rpcDevice->channels.find(*j) == rpcDevice->channels.end())
+					{
+						Output::printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Channel not found.");
+						continue;
+					}
+					std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(*j, a->parameterSetType);
+					if(!parameterSet)
+					{
+						Output::printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
+						continue;
+					}
+					std::shared_ptr<RPC::Parameter> currentParameter = parameterSet->getParameter(i->first);
+					if(!currentParameter)
+					{
+						Output::printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
+						continue;
+					}
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, parameter->data);
 					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic Wired peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
-					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
+					if((currentParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
 					{
-						if(parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
+						if(currentParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeEnum)
 						{
 							serviceMessages->set(i->first, i->second.value.at(0), *j);
 						}
-						else if(parameter->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeBoolean)
+						else if(currentParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeBoolean)
 						{
 							serviceMessages->set(i->first, (bool)i->second.value.at(0));
 						}
 					}
 
 					valueKeys[*j]->push_back(i->first);
-					rpcValues[*j]->push_back(rpcDevice->channels.at(*j)->parameterSets.at(a->parameterSetType)->getParameter(i->first)->convertFromPacket(i->second.value, true));
+					rpcValues[*j]->push_back(currentParameter->convertFromPacket(i->second.value, true));
 				}
 			}
 		}
@@ -1585,8 +1766,6 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t chan
 
 			description->structValue->insert(RPC::RPCStructElement("PARENT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("")))));
 
-			description->structValue->insert(RPC::RPCStructElement("RF_ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::to_string(_address)))));
-
 			if(!type.empty()) description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(type))));
 
 			description->structValue->insert(RPC::RPCStructElement("VERSION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(rpcDevice->version))));
@@ -1599,13 +1778,6 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t chan
 
 			description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)_peerID))));
 			description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
-
-			int32_t aesActive = 0;
-			if(configCentral.find(channel) != configCentral.end() && configCentral.at(channel).find("AES_ACTIVE") != configCentral.at(channel).end() && !configCentral.at(channel).at("AES_ACTIVE").data.empty() && configCentral.at(channel).at("AES_ACTIVE").data.at(0) != 0)
-			{
-				aesActive = 1;
-			}
-			description->structValue->insert(RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(aesActive))));
 
 			int32_t direction = 0;
 			std::ostringstream linkSourceRoles;
@@ -2116,18 +2288,8 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, RPC:
 		if(type == RPC::ParameterSet::Type::none) type = RPC::ParameterSet::Type::link;
 		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<RPC::ParameterSet> parameterSet;
-		if(rpcChannel->specialParameter && rpcChannel->subconfig)
-		{
-			std::vector<uint8_t> value = getConfigParameter(channel - rpcChannel->startIndex, rpcChannel->specialParameter->physicalParameter->address.index, rpcChannel->specialParameter->physicalParameter->address.step, rpcChannel->specialParameter->physicalParameter->size);
-			Output::printDebug("Debug: Special parameter is " + std::to_string(value.at(0)));
-			if(value.at(0))
-			{
-				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set");
-				parameterSet = rpcChannel->subconfig->parameterSets[type];
-			} else parameterSet = rpcChannel->parameterSets[type];
-		}
-		else parameterSet = rpcChannel->parameterSets[type];
+		std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, type);
+		if(!parameterSet) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<RPC::RPCVariable> variables(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
 		std::shared_ptr<BasicPeer> remotePeer;
@@ -2150,27 +2312,9 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, RPC:
 			}
 			else if(type == RPC::ParameterSet::Type::Enum::master)
 			{
-				if((*i)->physicalParameter->address.operation == RPC::PhysicalParameterAddress::Operation::none)
-				{
-					std::vector<uint8_t> value = getConfigParameter(channel - rpcChannel->startIndex, (*i)->physicalParameter->address.index, (*i)->physicalParameter->address.step, (*i)->physicalParameter->size);
-					element = (*i)->convertFromPacket(value);
-				}
-				else
-				{
-					if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1)
-					{
-						Output::printError("Error: Can't get parameter set. address_start or address_step is not set.");
-						return RPC::RPCVariable::createError(-32500, "Can't get parameter set. address_start or address_step is not set.");
-					}
-					int32_t channelIndex = channel - rpcChannel->startIndex;
-					if(parameterSet->count > 0 && channelIndex >= parameterSet->count)
-					{
-						Output::printError("Error: Can't get parameter set. Out of bounds.");
-						return RPC::RPCVariable::createError(-32500, "Can't get parameter set. Out of bounds.");
-					}
-					std::vector<uint8_t> value = getConfigParameter(channelIndex, parameterSet->addressStart, parameterSet->addressStep, (*i)->physicalParameter->address.index, (*i)->physicalParameter->size);
-					element = (*i)->convertFromPacket(value);
-				}
+				std::vector<uint8_t> value = getConfigParameter(channel, parameterSet, *i);
+				if(value.empty()) return RPC::RPCVariable::createError(-32500, "Could not read config parameter. See log for more details.");
+				element = (*i)->convertFromPacket(value);
 			}
 			else if(remotePeer)
 			{
@@ -2232,14 +2376,28 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetId(uint32_t channel, R
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getServiceMessages()
+{
+	if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+	if(!serviceMessages) return RPC::RPCVariable::createError(-32500, "Service messages are not initialized.");
+	return serviceMessages->get();
+}
+
 std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getValue(uint32_t channel, std::string valueKey)
 {
 	try
 	{
 		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(!rpcDevice) return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 		if(valuesCentral.find(channel) == valuesCentral.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
-		return valuesCentral[channel][valueKey].rpcParameter->convertFromPacket(valuesCentral[channel][valueKey].data);
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
+		std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, RPC::ParameterSet::Type::Enum::values);
+		if(!parameterSet) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+		std::shared_ptr<RPC::Parameter> parameter = parameterSet->getParameter(valueKey);
+		if(!parameter) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
+		return parameter->convertFromPacket(valuesCentral[channel][valueKey].data);
 	}
 	catch(const std::exception& ex)
     {
@@ -2256,6 +2414,197 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getValue(uint32_t channel, std::s
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged, bool onlyPushing)
+{
+	try
+	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
+		if(channel < 0) channel = 0;
+		if(remoteChannel < 0) remoteChannel = 0;
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(type == RPC::ParameterSet::Type::none) type = RPC::ParameterSet::Type::link;
+		std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, type);
+		if(!parameterSet) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+		if(variables->structValue->empty()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+
+		if(type == RPC::ParameterSet::Type::Enum::master)
+		{
+			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> changedParameters;
+			//allParameters is necessary to temporarily store all values. It is used to set changedParameters.
+			//This is necessary when there are multiple variables per index and not all of them are changed.
+			std::map<int32_t, bool> changedBlocks;
+			for(RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
+			{
+				if(i->first.empty() || !i->second) continue;
+				std::shared_ptr<RPC::Parameter> currentParameter = parameterSet->getParameter(i->first);
+				if(!currentParameter) continue;
+				std::vector<uint8_t> value = currentParameter->convertToPacket(i->second);
+				std::vector<int32_t> result = setConfigParameter(channel, parameterSet, currentParameter, value);
+				Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + HelperFunctions::getHexString(value) + ".");
+				//Only send to device when parameter is of type config
+				if(currentParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::eeprom) continue;
+				for(std::vector<int32_t>::iterator i = result.begin(); i != result.end(); ++i) changedBlocks[*i] = true;
+			}
+
+			if(changedBlocks.empty()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+
+			std::shared_ptr<HMWiredCentral> central = getCentral();
+			for(std::map<int32_t, bool>::iterator i = changedBlocks.begin(); i != changedBlocks.end(); ++i)
+			{
+				central->writeEEPROM(_address, i->first, binaryConfig[i->first].data);
+			}
+
+			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
+		}
+		else if(type == RPC::ParameterSet::Type::Enum::values)
+		{
+			for(RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
+			{
+				if(i->first.empty() || !i->second) continue;
+				setValue(channel, i->first, i->second);
+			}
+		}
+		else if(type == RPC::ParameterSet::Type::Enum::link)
+		{
+			/*std::shared_ptr<BasicPeer> remotePeer;
+			if(!remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
+			if(!remotePeer) return RPC::RPCVariable::createError(-3, "Not paired to this peer.");
+			if(linksCentral[channel].find(remotePeer->address) == linksCentral[channel].end()) RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+			if(linksCentral[channel][_address].find(remotePeer->channel) == linksCentral[channel][_address].end()) RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+
+			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> changedParameters;
+			//allParameters is necessary to temporarily store all values. It is used to set changedParameters.
+			//This is necessary when there are multiple variables per index and not all of them are changed.
+			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> allParameters;
+			for(RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
+			{
+				if(i->first.empty() || !i->second) continue;
+				std::vector<uint8_t> value;
+				if(linksCentral[channel][remotePeer->address][remotePeer->channel].find(i->first) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;
+				RPCConfigurationParameter* parameter = &linksCentral[channel][remotePeer->address][remotePeer->channel][i->first];
+				if(!parameter->rpcParameter) continue;
+				value = parameter->rpcParameter->convertToPacket(i->second);
+				std::vector<uint8_t> shiftedValue = value;
+				parameter->rpcParameter->adjustBitPosition(shiftedValue);
+				int32_t intIndex = (int32_t)parameter->rpcParameter->physicalParameter->index;
+				int32_t list = parameter->rpcParameter->physicalParameter->list;
+				if(list == 9999) list = 0;
+				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = shiftedValue;
+				else
+				{
+					uint32_t index = 0;
+					for(std::vector<uint8_t>::iterator j = shiftedValue.begin(); j != shiftedValue.end(); ++j)
+					{
+						if(index >= allParameters[list][intIndex].size()) allParameters[list][intIndex].push_back(0);
+						allParameters[list][intIndex].at(index) |= *j;
+						index++;
+					}
+				}
+				//Continue when value is unchanged except parameter is of the same index as a changed one.
+				if(parameter->data == value && !putUnchanged) continue;
+				parameter->data = value;
+				saveParameter(parameter->databaseID, parameter->data);
+				Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
+				//Only send to device when parameter is of type config
+				if(parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::configString) continue;
+				changedParameters[list][intIndex] = allParameters[list][intIndex];
+			}
+
+			if(changedParameters.empty() || changedParameters.begin()->second.empty()) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+
+			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
+			queue->noSending = true;
+			if(serviceMessages) serviceMessages->setConfigPending(true);
+			std::vector<uint8_t> payload;
+			std::shared_ptr<HomeMaticCentral> central = getCentral();
+			bool firstPacket = true;
+
+			for(std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>>::iterator i = changedParameters.begin(); i != changedParameters.end(); ++i)
+			{
+				//CONFIG_START
+				payload.push_back(channel);
+				payload.push_back(0x05);
+				payload.push_back(remotePeer->address >> 16);
+				payload.push_back((remotePeer->address >> 8) & 0xFF);
+				payload.push_back(remotePeer->address & 0xFF);
+				payload.push_back(remotePeer->channel);
+				payload.push_back(i->first);
+				uint8_t controlByte = 0xA0;
+				//Only send first packet as burst packet
+				if(firstPacket && (getRXModes() & RPC::Device::RXModes::Enum::burst)) controlByte |= 0x10;
+				firstPacket = false;
+				std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter, controlByte, 0x01, central->getAddress(), _address, payload));
+				queue->push(configPacket);
+				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+				payload.clear();
+				setMessageCounter(_messageCounter + 1);
+
+				//CONFIG_WRITE_INDEX
+				payload.push_back(channel);
+				payload.push_back(0x08);
+				for(std::map<int32_t, std::vector<uint8_t>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					int32_t index = j->first;
+					for(std::vector<uint8_t>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					{
+						payload.push_back(index);
+						payload.push_back(*k);
+						index++;
+						if(payload.size() == 16)
+						{
+							configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x01, central->getAddress(), _address, payload));
+							queue->push(configPacket);
+							queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+							payload.clear();
+							setMessageCounter(_messageCounter + 1);
+							payload.push_back(channel);
+							payload.push_back(0x08);
+						}
+					}
+				}
+				if(payload.size() > 2)
+				{
+					configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x01, central->getAddress(), _address, payload));
+					queue->push(configPacket);
+					queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+					payload.clear();
+					setMessageCounter(_messageCounter + 1);
+				}
+				else payload.clear();
+
+				//END_CONFIG
+				payload.push_back(channel);
+				payload.push_back(0x06);
+				configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x01, central->getAddress(), _address, payload));
+				queue->push(configPacket);
+				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+				payload.clear();
+				setMessageCounter(_messageCounter + 1);
+			}
+
+			pendingBidCoSQueues->push(queue);
+			if(!onlyPushing && ((getRXModes() & RPC::Device::RXModes::Enum::always) || (getRXModes() & RPC::Device::RXModes::Enum::burst))) getCentral()->enqueuePendingQueues(_address);
+			else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);*/
+		}
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value)
 {
 	try
@@ -2266,7 +2615,10 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 		if(channel == 0 && serviceMessages->set(valueKey, value->booleanValue)) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		if(valuesCentral.find(channel) == valuesCentral.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
-		std::shared_ptr<RPC::Parameter> rpcParameter = valuesCentral[channel][valueKey].rpcParameter;
+
+		std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, RPC::ParameterSet::Type::Enum::values);
+		if(!parameterSet) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
+		std::shared_ptr<RPC::Parameter> rpcParameter = parameterSet->getParameter(valueKey);
 		if(!rpcParameter) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
 		RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {valueKey});
@@ -2286,20 +2638,22 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 			if(toggleKey.empty()) return RPC::RPCVariable::createError(-6, "No toggle parameter specified (parameter attribute value is empty).");
 			if(valuesCentral[channel].find(toggleKey) == valuesCentral[channel].end()) return RPC::RPCVariable::createError(-5, "Toggle parameter not found.");
 			RPCConfigurationParameter* toggleParam = &valuesCentral[channel][toggleKey];
+			std::shared_ptr<RPC::Parameter> toggleRPCParam = parameterSet->getParameter(toggleKey);
+			if(!toggleRPCParam) return RPC::RPCVariable::createError(-5, "Toggle parameter not found.");
 			std::shared_ptr<RPC::RPCVariable> toggleValue;
-			if(toggleParam->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeBoolean)
+			if(toggleRPCParam->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeBoolean)
 			{
-				toggleValue = toggleParam->rpcParameter->convertFromPacket(toggleParam->data);
+				toggleValue = toggleRPCParam->convertFromPacket(toggleParam->data);
 				toggleValue->booleanValue = !toggleValue->booleanValue;
 			}
-			else if(toggleParam->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeInteger ||
-					toggleParam->rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeFloat)
+			else if(toggleRPCParam->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeInteger ||
+					toggleRPCParam->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeFloat)
 			{
 				int32_t currentToggleValue = (int32_t)toggleParam->data.at(0);
 				std::vector<uint8_t> temp({0});
-				if(currentToggleValue != toggleParam->rpcParameter->conversion.at(0)->on) temp.at(0) = toggleParam->rpcParameter->conversion.at(0)->on;
-				else temp.at(0) = toggleParam->rpcParameter->conversion.at(0)->off;
-				toggleValue = toggleParam->rpcParameter->convertFromPacket(temp);
+				if(currentToggleValue != toggleRPCParam->conversion.at(0)->on) temp.at(0) = toggleRPCParam->conversion.at(0)->on;
+				else temp.at(0) = toggleRPCParam->conversion.at(0)->off;
+				toggleValue = toggleRPCParam->convertFromPacket(temp);
 			}
 			else return RPC::RPCVariable::createError(-6, "Toggle parameter has to be of type boolean, float or integer.");
 			return setValue(channel, toggleKey, toggleValue);
@@ -2325,8 +2679,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 			payload.at(frame->channelField - 9) = (uint8_t)channel + rpcDevice->channels.at(channel)->physicalIndexOffset;
 		}
 
-		std::shared_ptr<HMWiredCentral> central = getCentral();
-		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, central->getAddress(), _address, false, _messageCounter, 0, 0, payload));
+		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, getCentral()->getAddress(), _address, false, _messageCounter, 0, 0, payload));
 		for(std::vector<RPC::Parameter>::iterator i = frame->parameters.begin(); i != frame->parameters.end(); ++i)
 		{
 			if(i->constValue > -1)
@@ -2355,12 +2708,12 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 			else
 			{
 				bool paramFound = false;
-				for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
+				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator j = parameterSet->parameters.begin(); j != parameterSet->parameters.end(); ++j)
 				{
 					//Only compare id. Till now looking for value_id was not necessary.
-					if(i->param == j->second.rpcParameter->physicalParameter->id)
+					if(i->param == (*j)->physicalParameter->id)
 					{
-						packet->setPosition(i->index, i->size, j->second.data);
+						packet->setPosition(i->index, i->size, valuesCentral[channel][(*j)->id].data);
 						paramFound = true;
 						break;
 					}
@@ -2373,8 +2726,10 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 			for(std::vector<std::string>::iterator j = rpcParameter->physicalParameter->resetAfterSend.begin(); j != rpcParameter->physicalParameter->resetAfterSend.end(); ++j)
 			{
 				if(valuesCentral.at(channel).find(*j) == valuesCentral.at(channel).end()) continue;
-				std::shared_ptr<RPC::RPCVariable> logicalDefaultValue = valuesCentral.at(channel).at(*j).rpcParameter->logicalParameter->getDefaultValue();
-				std::vector<uint8_t> defaultValue = valuesCentral.at(channel).at(*j).rpcParameter->convertToPacket(logicalDefaultValue);
+				std::shared_ptr<RPC::Parameter> currentParameter = parameterSet->getParameter(*j);
+				if(!currentParameter) continue;
+				std::shared_ptr<RPC::RPCVariable> logicalDefaultValue = currentParameter->logicalParameter->getDefaultValue();
+				std::vector<uint8_t> defaultValue = currentParameter->convertToPacket(logicalDefaultValue);
 				if(defaultValue != valuesCentral.at(channel).at(*j).data)
 				{
 					RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
@@ -2388,8 +2743,8 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 		}
 		setMessageCounter(_messageCounter + 1);
 
-		std::shared_ptr<HMWiredPacket> response = central->getResponse(packet);
-		if(!response || response->type() != HMWiredPacketType::ackMessage)
+		std::shared_ptr<HMWiredPacket> response = getResponse(packet);
+		if(!response)
 		{
 			Output::printWarning("Error: Error sending packet to peer " + std::to_string(_peerID) + ". Peer did not respond.");
 			return RPC::RPCVariable::createError(-32500, "Error sending packet to peer. Peer did not respond.");

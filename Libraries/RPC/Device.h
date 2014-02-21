@@ -320,7 +320,7 @@ public:
 	};
 	struct RXModes
 	{
-		enum Enum { none = 0, config = 1, wakeUp = 2, burst = 4, always = 8, lazyConfig = 16 };
+		enum Enum { none = 0, always = 1, burst = 2, config = 4, wakeUp = 8, lazyConfig = 16 };
 	};
 
 	bool loaded() { return _loaded; }
