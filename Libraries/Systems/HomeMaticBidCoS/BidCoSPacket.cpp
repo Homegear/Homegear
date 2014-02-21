@@ -392,6 +392,7 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 			}
 			//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
 			uint32_t bitSize = std::lround(size * 10);
+			if(bitSize > 8) bitSize = 8;
 			result.push_back((_payload.at(intByteIndex) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
 		}
 		else

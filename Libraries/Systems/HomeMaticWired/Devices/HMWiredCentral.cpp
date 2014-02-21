@@ -148,7 +148,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 	try
 	{
 		std::ostringstream stringStream;
-		/*if(_currentPeer)
+		if(_currentPeer)
 		{
 			if(command == "unselect")
 			{
@@ -157,7 +157,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			}
 			if(!_currentPeer) return "No peer selected.\n";
 			return _currentPeer->handleCLICommand(command);
-		}*/
+		}
 		if(command == "help")
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
@@ -575,6 +575,79 @@ std::shared_ptr<HMWiredPeer> HMWiredCentral::createPeer(int32_t address, int32_t
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<HMWiredPeer>();
+}
+
+bool HMWiredCentral::knowsDevice(std::string serialNumber)
+{
+	try
+	{
+		return (bool)getPeer(serialNumber);
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return false;
+}
+
+bool HMWiredCentral::knowsDevice(uint64_t id)
+{
+	try
+	{
+		return (bool)getPeer(id);
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return false;
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamsetDescription(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
+{
+	try
+	{
+		if(serialNumber == _serialNumber && (channel == 0 || channel == -1) && type == RPC::ParameterSet::Type::Enum::master)
+		{
+			std::shared_ptr<RPC::RPCVariable> descriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+			return descriptions;
+		}
+		else
+		{
+			std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
+			if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
+			return RPC::RPCVariable::createError(-2, "Unknown device.");
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()

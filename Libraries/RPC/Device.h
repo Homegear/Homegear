@@ -254,6 +254,7 @@ public:
 	UIFlags::Enum uiFlags = UIFlags::Enum::visible;
 	Direction::Enum direction = Direction::Enum::none;
 	std::string channelClass;
+	uint32_t startIndex = 0;
 	uint32_t count = 1;
 	bool hasTeam = false;
 	bool aesDefault = false;

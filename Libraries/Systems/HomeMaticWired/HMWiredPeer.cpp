@@ -115,6 +115,352 @@ void HMWiredPeer::initializeCentralConfig()
     GD::db.executeCommand("RELEASE hmWiredPeerConfig" + std::to_string(_address));
 }
 
+std::string HMWiredPeer::handleCLICommand(std::string command)
+{
+	try
+	{
+		std::ostringstream stringStream;
+
+		if(command == "help")
+		{
+			stringStream << "List of commands:" << std::endl << std::endl;
+			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "unselect\t\tUnselect this peer" << std::endl;
+			stringStream << "channel count\t\tPrint the number of channels of this peer" << std::endl;
+			stringStream << "eeprom print\t\tPrints the known areas of the eeprom" << std::endl;
+			stringStream << "peers list\t\tLists all peers paired to this peer" << std::endl;
+			return stringStream.str();
+		}
+		if(command.compare(0, 13, "channel count") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command prints this peer's number of channels." << std::endl;
+						stringStream << "Usage: channel count" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			stringStream << "Peer has " << rpcDevice->channels.size() << " channels." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "eeprom print") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command prints the known areas of this peer's eeprom." << std::endl;
+						stringStream << "Usage: eeprom print" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			stringStream << "Address\tData" << std::endl;
+			for(std::unordered_map<uint32_t, ConfigDataBlock>::iterator i = binaryConfig.begin(); i != binaryConfig.end(); ++i)
+			{
+				stringStream << "0x" << std::hex << std::setfill('0') << std::setw(4) << i->first << "\t" << HelperFunctions::getHexString(i->second.data) << std::dec << std::endl;
+			}
+			return stringStream.str();
+		}
+		else if(command.compare(0, 10, "peers list") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command lists all peers paired to this peer." << std::endl;
+						stringStream << "Usage: peers list" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			if(_peers.empty())
+			{
+				stringStream << "No peers are paired to this peer." << std::endl;
+				return stringStream.str();
+			}
+			for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+			{
+				for(std::vector<std::shared_ptr<BasicPeer>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				{
+					stringStream << "Channel: " << i->first << "\tAddress: 0x" << std::hex << (*j)->address << "\tRemote channel: " << std::dec << (*j)->channel << "\tSerial number: " << (*j)->serialNumber << std::endl << std::dec;
+				}
+			}
+			return stringStream.str();
+		}
+		else if(command.compare(0, 11, "test config") == 0)
+		{
+			int32_t address1 = 0x350;
+			int32_t address2 = 0x360;
+			int32_t address3 = 0x370;
+			if(binaryConfig.find(address1) == binaryConfig.end()) binaryConfig[address1].data = getCentral()->readEEPROM(_address, address1);
+			if(binaryConfig.find(address2) == binaryConfig.end()) binaryConfig[address2].data = getCentral()->readEEPROM(_address, address2);
+			if(binaryConfig.find(address3) == binaryConfig.end()) binaryConfig[address3].data = getCentral()->readEEPROM(_address, address3);
+			std::vector<uint8_t> oldConfig1 = binaryConfig.at(address1).data;
+			std::vector<uint8_t> oldConfig2 = binaryConfig.at(address2).data;
+			std::vector<uint8_t> oldConfig3 = binaryConfig.at(address3).data;
+
+			//Test 1: Set two bytes within one config data block
+			stringStream << "EEPROM before test 1:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "Executing \"setConfigParameter(0x355.0, 2.0, data)\" with data 0xABCD:" << std::endl;
+			std::vector<uint8_t> data({0xAB, 0xCD});
+			setConfigParameter(853.0, 2.0, data);
+			data = getConfigParameter(853.0, 2.0);
+			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "EEPROM after test 1:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << std::endl << "============================================" << std::endl << std::endl;
+			//End Test 1
+
+			//Test 2: Set four bytes spanning over two data blocks
+			stringStream << "EEPROM before test 2:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "Executing \"setConfigParameter(0x35E.0, 4.0, data)\" with data 0xABCDEFAC:" << std::endl;
+			data = std::vector<uint8_t>({0xAB, 0xCD, 0xEF, 0xAC});
+			setConfigParameter(862.0, 4.0, data);
+			data = getConfigParameter(862.0, 4.0);
+			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "EEPROM after test 2:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << std::endl << "============================================" << std::endl << std::endl;
+			//End Test 2
+
+			//Test 3: Set 20 bytes spanning over three data blocks
+			stringStream << "EEPROM before test 3:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "Executing \"setConfigParameter(0x35F.0, 20.0, data)\" with data 0xABCDEFAC112233445566778899AABBCCDDEE1223:" << std::endl;
+			data = std::vector<uint8_t>({0xAB, 0xCD, 0xEF, 0xAC, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0x12, 0x23});
+			setConfigParameter(863.0, 20.0, data);
+			data = getConfigParameter(863.0, 20.0);
+			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "EEPROM after test 3:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl << "============================================" << std::endl << std::endl;
+			//End Test 3
+
+			binaryConfig.at(address1).data = oldConfig1;
+			binaryConfig.at(address2).data = oldConfig2;
+			binaryConfig.at(address3).data = oldConfig3;
+
+			//Test 4: Size 1.4
+			stringStream << "EEPROM before test 4:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "Executing \"setConfigParameter(0x352.0, 1.4, data)\" with data 0x0B5E:" << std::endl;
+			data = std::vector<uint8_t>({0x0B, 0x5E});
+			setConfigParameter(850.0, 1.4, data);
+			data = getConfigParameter(850.0, 1.4);
+			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "EEPROM after test 4:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << std::endl << "============================================" << std::endl << std::endl;
+			//End Test 4
+
+			//Test 5: Size 0.6
+			stringStream << "EEPROM before test 5:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "Executing \"setConfigParameter(0x375.0, 0.6, data)\" with data 0x15:" << std::endl;
+			data = std::vector<uint8_t>({0x15});
+			setConfigParameter(885.0, 0.6, data);
+			data = getConfigParameter(885.0, 0.6);
+			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "EEPROM after test 5:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl << "============================================" << std::endl << std::endl;
+			//End Test 5
+
+			//Test 6: Size 0.6, index offset 0.2
+			stringStream << "EEPROM before test 6:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "Executing \"setConfigParameter(0x377.2, 0.6, data)\" with data 0x15:" << std::endl;
+			data = std::vector<uint8_t>({0x15});
+			setConfigParameter(887.2, 0.6, data);
+			data = getConfigParameter(887.2, 0.6);
+			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "EEPROM after test 6:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl << "============================================" << std::endl << std::endl;
+			//End Test 6
+
+			//Test 7: Size 0.3, index offset 0.6
+			stringStream << "EEPROM before test 7:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "Executing \"setConfigParameter(0x379.6, 0.3, data)\" with data 0x02:" << std::endl;
+			data = std::vector<uint8_t>({0x02});
+			setConfigParameter(889.6, 0.3, data);
+			data = getConfigParameter(889.6, 0.3);
+			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "EEPROM after test 7:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl << "============================================" << std::endl << std::endl;
+			//End Test 7
+
+			//Set 0x36F to 0xFF for test
+			data = std::vector<uint8_t>({0xFF});
+			setConfigParameter(879.0, 1.0, data);
+
+			//Test 8: Size 0.3, index offset 0.6 spanning over two data blocks
+			stringStream << "EEPROM before test 8:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "Executing \"setConfigParameter(0x36F.6, 0.3, data)\" with data 0x02:" << std::endl;
+			data = std::vector<uint8_t>({0x02});
+			setConfigParameter(879.6, 0.3, data);
+			data = getConfigParameter(879.6, 0.3);
+			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "EEPROM after test 8:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl << "============================================" << std::endl << std::endl;
+			//End Test 8
+
+			//Set 0x36F and 0x370 to 0xFF for test
+			data = std::vector<uint8_t>({0xFF});
+			setConfigParameter(879.0, 1.0, data);
+			setConfigParameter(880.0, 1.0, data);
+
+			//Test 9: Size 0.5, index offset 0.6 spanning over two data blocks
+			stringStream << "EEPROM before test 9:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "Executing \"setConfigParameter(0x36F.6, 0.5, data)\" with data 0x0A:" << std::endl;
+			data = std::vector<uint8_t>({0x0A});
+			setConfigParameter(879.6, 0.5, data);
+			data = getConfigParameter(879.6, 0.5);
+			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << std::endl;
+
+			stringStream << "EEPROM after test 9:" << std::endl;
+			stringStream << "    Address\tData" << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << std::endl << "============================================" << std::endl << std::endl;
+			//End Test 9
+
+			binaryConfig.at(address1).data = oldConfig1;
+			binaryConfig.at(address2).data = oldConfig2;
+			binaryConfig.at(address3).data = oldConfig3;
+			return stringStream.str();
+		}
+		else return "Unknown command.\n";
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "Error executing command. See log file for more details.\n";
+}
+
 void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue)
 {
 	try
@@ -138,24 +484,47 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 				return;
 			}
 			uint32_t bitSize = std::lround(size * 10);
-			if(binaryConfig.find(configBlockIndex) == binaryConfig.end()) binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
-			std::vector<uint8_t>* configBlock = &binaryConfig[configBlockIndex].data;
-			if(configBlock->size() != 0x10)
+			if(bitSize > 8) bitSize = 8;
+			uint32_t indexBits = std::lround(index * 10) % 10;
+			if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
+			{
+				binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
+				saveParameter(0, configBlockIndex, binaryConfig[configBlockIndex].data);
+			}
+			ConfigDataBlock* configBlock = &binaryConfig[configBlockIndex];
+			if(configBlock->data.size() != 0x10)
 			{
 				Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 				return;
 			}
-			if(bitSize > 8) bitSize = 8;
-			while(configBlock->size() - 1 < intByteIndex) configBlock->push_back(0xFF);
-			if(bitSize == 8)
+			if(bitSize == 8) configBlock->data.at(intByteIndex) = 0;
+			else configBlock->data.at(intByteIndex) &= (~(_bitmask[bitSize] << indexBits));
+			configBlock->data.at(intByteIndex) |= (binaryValue.at(binaryValue.size() - 1) << indexBits);
+			if(indexBits + bitSize > 8) //Spread over two bytes
 			{
-				configBlock->at(intByteIndex) = 0;
+				bitSize = (indexBits + bitSize) - 8;
+				intByteIndex++;
+				if(intByteIndex >= 0x10)
+				{
+					saveParameter(configBlock->databaseID, configBlock->data);
+					configBlockIndex += 0x10;
+					if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
+					{
+						binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
+						saveParameter(0, configBlockIndex, binaryConfig[configBlockIndex].data);
+					}
+					configBlock = &binaryConfig[configBlockIndex];
+					if(configBlock->data.size() != 0x10)
+					{
+						Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+						return;
+					}
+					intByteIndex = 0;
+				}
+				configBlock->data.at(intByteIndex) &= (~_bitmask[bitSize]);
+				configBlock->data.at(intByteIndex) |= (binaryValue.at(binaryValue.size() - 1));
 			}
-			else
-			{
-				configBlock->at(intByteIndex) &= (~_bitmask[bitSize]);
-			}
-			configBlock->at(intByteIndex) |= (binaryValue.at(binaryValue.size() - 1) << (std::lround(index * 10) % 10));
+			saveParameter(configBlock->databaseID, configBlock->data);
 		}
 		else
 		{
@@ -163,31 +532,40 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 			int32_t configBlockIndex = (intByteIndex / 0x10) * 0x10;
 			intByteIndex -= configBlockIndex;
 			uint32_t bytes = (uint32_t)std::ceil(size);
-			std::vector<uint8_t>* configBlock = &binaryConfig[configBlockIndex].data;
-			while(configBlock->size() < intByteIndex + bytes && configBlock->size() < 10) configBlock->push_back(0xFF);
+			if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
+			{
+				binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
+				saveParameter(0, configBlockIndex, binaryConfig[configBlockIndex].data);
+			}
+			ConfigDataBlock* configBlock = &binaryConfig[configBlockIndex];
 			if(binaryValue.empty()) return;
 			uint32_t bitSize = std::lround(size * 10) % 10;
 			if(bitSize > 8) bitSize = 8;
 			if(bytes == 0) bytes = 1; //size is 0 - assume 1
 			if(bytes <= binaryValue.size())
 			{
-				configBlock->at(intByteIndex) &= (~_bitmask[bitSize]);
-				configBlock->at(intByteIndex) |= (binaryValue.at(0) & _bitmask[bitSize]);
+				configBlock->data.at(intByteIndex) &= (~_bitmask[bitSize]);
+				configBlock->data.at(intByteIndex) |= (binaryValue.at(0) & _bitmask[bitSize]);
 				for(uint32_t i = 1; i < bytes; i++)
 				{
-					if(intByteIndex + i > 9)
+					if(intByteIndex + i >= 0x10)
 					{
 						intByteIndex = -i;
+						saveParameter(configBlock->databaseID, configBlock->data);
 						configBlockIndex += 0x10;
-						if(binaryConfig.find(configBlockIndex) == binaryConfig.end()) binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
-						configBlock = &binaryConfig[configBlockIndex].data;
-						if(configBlock->size() != 0x10)
+						if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
+						{
+							binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
+							saveParameter(0, configBlockIndex, binaryConfig[configBlockIndex].data);
+						}
+						configBlock = &binaryConfig[configBlockIndex];
+						if(configBlock->data.size() != 0x10)
 						{
 							Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 							return;
 						}
 					}
-					configBlock->at(intByteIndex + i) = binaryValue.at(i);
+					configBlock->data.at(intByteIndex + i) = binaryValue.at(i);
 				}
 			}
 			else
@@ -195,36 +573,52 @@ void HMWiredPeer::setConfigParameter(double index, double size, std::vector<uint
 				uint32_t missingBytes = bytes - binaryValue.size();
 				for(uint32_t i = 0; i < missingBytes; i++)
 				{
-					configBlock->at(intByteIndex) &= (~_bitmask[bitSize]);
+					configBlock->data.at(intByteIndex) &= (~_bitmask[bitSize]);
 					for(uint32_t i = 1; i < bytes; i++)
 					{
-						if(intByteIndex + i > 9)
+						if(intByteIndex + i >= 0x10)
 						{
 							intByteIndex = -i;
+							saveParameter(configBlock->databaseID, configBlock->data);
 							configBlockIndex += 0x10;
-							if(binaryConfig.find(configBlockIndex) == binaryConfig.end()) binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
-							configBlock = &binaryConfig[configBlockIndex].data;
-							if(configBlock->size() != 0x10)
+							if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
+							{
+								binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
+								saveParameter(0, configBlockIndex, binaryConfig[configBlockIndex].data);
+							}
+							configBlock = &binaryConfig[configBlockIndex];
+							if(configBlock->data.size() != 0x10)
 							{
 								Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 								return;
 							}
 						}
-						configBlock->at(intByteIndex + i) = 0;
+						configBlock->data.at(intByteIndex + i) = 0;
 					}
 				}
 				for(uint32_t i = 0; i < binaryValue.size(); i++)
 				{
-					if(intByteIndex + missingBytes + i > 9)
+					if(intByteIndex + missingBytes + i >= 0x10)
 					{
 						intByteIndex = -(missingBytes + i);
+						saveParameter(configBlock->databaseID, configBlock->data);
 						configBlockIndex += 0x10;
-						configBlock = &binaryConfig[configBlockIndex].data;
-						while(configBlock->size() < 10) configBlock->push_back(0xFF);
+						if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
+						{
+							binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
+							saveParameter(0, configBlockIndex, binaryConfig[configBlockIndex].data);
+						}
+						configBlock = &binaryConfig[configBlockIndex];
+						if(configBlock->data.size() != 0x10)
+						{
+							Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+							return;
+						}
 					}
-					configBlock->at(intByteIndex + missingBytes + i) = binaryValue.at(i);
+					configBlock->data.at(intByteIndex + missingBytes + i) = binaryValue.at(i);
 				}
 			}
+			saveParameter(configBlock->databaseID, configBlock->data);
 		}
 	}
 	catch(const std::exception& ex)
@@ -257,12 +651,6 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 			result.push_back(0);
 			return result;
 		}
-		int32_t bits = std::lround(index * 10) % 10;
-		if(bits >= 8) //e. g. 15.9 => 16.1
-		{
-			bits -= 8;
-			index += 0.2;
-		}
 		double byteIndex = std::floor(index);
 		int32_t intByteIndex = byteIndex;
 		int32_t configBlockIndex = (intByteIndex / 0x10) * 0x10;
@@ -291,7 +679,37 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 			}
 			//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
 			uint32_t bitSize = std::lround(size * 10);
-			result.push_back((configBlock->at(intByteIndex) >> bits) & _bitmask[bitSize]);
+			if(bitSize > 8) bitSize = 8;
+			uint32_t indexBits = std::lround(index * 10) % 10;
+			if(indexBits + bitSize > 8) //Split over two bytes
+			{
+				result.push_back(configBlock->at(intByteIndex) >> indexBits);
+				intByteIndex++;
+				if(intByteIndex >= 0x10)
+				{
+					configBlockIndex += 0x10;
+					if(configBlockIndex >= rpcDevice->eepSize)
+					{
+						Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+						result.clear();
+						result.push_back(0);
+						return result;
+					}
+					if(binaryConfig.find(configBlockIndex) == binaryConfig.end()) binaryConfig[configBlockIndex].data = getCentral()->readEEPROM(_address, configBlockIndex);
+					configBlock = &binaryConfig[configBlockIndex].data;
+					if(configBlock->size() != 0x10)
+					{
+						Output::printError("Error: Can't get configuration parameter. Can't read EEPROM.");
+						result.clear();
+						result.push_back(0);
+						return result;
+					}
+					intByteIndex = 0;
+				}
+				uint32_t missingBits = (indexBits + bitSize) - 8;
+				result.at(0) |= (((configBlock->at(intByteIndex) & _bitmask[missingBits])) << (bitSize - missingBits));
+			}
+			else result.push_back((configBlock->at(intByteIndex) >> indexBits) & _bitmask[bitSize]);
 		}
 		else
 		{
@@ -1148,12 +1566,45 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t ch
 		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel");
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set");
+		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
+		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set");
 
 		std::shared_ptr<BasicPeer> remotePeer;
 		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
 
-		std::shared_ptr<RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
+		std::shared_ptr<RPC::ParameterSet> parameterSet;
+		if(rpcChannel->specialParameter && rpcChannel->subconfig)
+		{
+			double size = rpcChannel->specialParameter->physicalParameter->size;
+			if(size != 0.1)
+			{
+				Output::printError("Special paramater with size larger than 1 bit is not supported.");
+				return RPC::RPCVariable::createError(-32500, "Special paramater with size larger than 1 bit is not supported.");
+			}
+			double index = rpcChannel->specialParameter->physicalParameter->address.index;
+			int32_t bitStep = std::lround(rpcChannel->specialParameter->physicalParameter->address.step * 10);
+			int32_t bitSteps = bitStep * (channel - rpcChannel->startIndex);
+			while(bitSteps >= 8)
+			{
+				index += 1.0;
+				bitSteps -= 8;
+			}
+			int32_t indexBits = std::lround(index * 10) % 10;
+			if(indexBits + bitSteps >= 8)
+			{
+				index += 1.0;
+				bitSteps = (indexBits + bitSteps) - 8;
+			}
+			index += ((double)bitSteps) / 10.0;
+			std::vector<uint8_t> value = getConfigParameter(index, size);
+			Output::printDebug("Debug: Special parameter at index " + std::to_string(index) + " is " + std::to_string(value.at(0)));
+			if(value.at(0))
+			{
+				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set");
+				parameterSet = rpcChannel->subconfig->parameterSets[type];
+			} else parameterSet = rpcChannel->parameterSets[type];
+		}
+		else parameterSet = rpcChannel->parameterSets[type];
 		std::shared_ptr<RPC::RPCVariable> descriptions(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		std::shared_ptr<RPC::RPCVariable> element;
@@ -1161,7 +1612,11 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t ch
 		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
 		{
 			if((*i)->id.empty()) continue;
-			if(!((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::internal)) continue;
+			if(!((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::internal)  && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::transform))
+			{
+				Output::printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
+				continue;
+			}
 			if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeBoolean)
 			{
 				RPC::LogicalParameterBoolean* parameter = (RPC::LogicalParameterBoolean*)(*i)->logicalParameter.get();

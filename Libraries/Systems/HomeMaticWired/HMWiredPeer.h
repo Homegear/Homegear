@@ -105,6 +105,7 @@ public:
 	bool ignorePackets = false;
 	std::shared_ptr<ServiceMessages> serviceMessages;
 
+	std::string handleCLICommand(std::string command);
 	void initializeCentralConfig();
 	void setConfigParameter(double index, double size, std::vector<uint8_t>& binaryValue);
 	std::vector<uint8_t> getConfigParameter(double index, double size, int32_t mask = -1);
@@ -141,7 +142,7 @@ public:
 	//std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 protected:
 	std::shared_ptr<HMWiredCentral> _central;
-	uint32_t _bitmask[8] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
+	uint32_t _bitmask[9] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF};
 
 	//In table variables:
 	int32_t _firmwareVersion = 0;

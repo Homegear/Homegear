@@ -57,7 +57,7 @@ protected:
     uint32_t _senderAddress = 0;
     uint32_t _destinationAddress = 0;
     std::vector<uint8_t> _payload;
-    uint32_t _bitmask[8] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
+    uint32_t _bitmask[9] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF};
 	int64_t _timeReceived = 0;
     int64_t _timeSending = 0;
 

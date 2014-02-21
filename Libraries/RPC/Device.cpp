@@ -249,7 +249,10 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		else if(type == Type::Enum::integerIntegerMap || type == Type::Enum::optionInteger)
 		{
 			//Value is not changed, when not in map. That is the desired behavior.
-			if(toDevice && integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end()) value->integerValue = integerValueMapParameter[value->integerValue];
+			if(toDevice && integerValueMapParameter.find(value->integerValue) != integerValueMapParameter.end())
+			{
+				value->integerValue = integerValueMapParameter[value->integerValue];
+			}
 		}
 		else if(type == Type::Enum::booleanInteger)
 		{
@@ -400,6 +403,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node)
 				else if(valueMapAttributeName == "parameter_value") parameterValue = HelperFunctions::getNumber(valueMapAttributeValue);
 				else if(valueMapAttributeName == "from_device") { if(valueMapAttributeValue == "false") fromDevice = false; }
 				else if(valueMapAttributeName == "to_device") { if(valueMapAttributeValue == "false") toDevice = false; }
+				else if(valueMapAttributeName == "mask") {} //ignore, not needed
 				else Output::printWarning("Warning: Unknown attribute for \"value_map\": " + valueMapAttributeName);
 			}
 			integerValueMapDevice[deviceValue] = parameterValue;
@@ -815,6 +819,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 				else if(element == "transform") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::transform);
 				else if(element == "service") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::service);
 				else if(element == "sticky") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::sticky);
+				else Output::printWarning("Warning: Unknown ui flag for \"parameter\": " + attributeValue);
 			}
 		}
 		else Output::printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
@@ -1303,7 +1308,11 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index)
 	{
 		std::string attributeName(attr->name());
 		std::string attributeValue(attr->value());
-		if(attributeName == "index") index = HelperFunctions::getNumber(attributeValue);
+		if(attributeName == "index")
+		{
+			startIndex = HelperFunctions::getNumber(attributeValue);
+			index = startIndex;
+		}
 		else if(attributeName == "physical_index_offset") physicalIndexOffset = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "ui_flags")
 		{

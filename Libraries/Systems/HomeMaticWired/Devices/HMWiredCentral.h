@@ -54,7 +54,11 @@ public:
 	bool packetReceived(std::shared_ptr<Packet> packet);
 	std::string handleCLICommand(std::string command);
 
-	std::shared_ptr<RPC::RPCVariable> searchDevices();
+	virtual bool knowsDevice(std::string serialNumber);
+	virtual bool knowsDevice(uint64_t id);
+
+	virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> searchDevices();
 protected:
 	std::shared_ptr<HMWiredPeer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);

@@ -218,6 +218,46 @@ void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
     _databaseMutex.unlock();
 }
 
+void Peer::saveParameter(uint32_t parameterID, uint32_t address, std::vector<uint8_t>& value)
+{
+	try
+	{
+		if(parameterID > 0)
+		{
+			saveParameter(parameterID, value);
+			return;
+		}
+		if(_peerID == 0 || isTeam()) return;
+		//Creates a new entry for parameter in database
+		_databaseMutex.lock();
+		DataColumnVector data;
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(address)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string(""))));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
+		uint32_t result = GD::db.executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+
+		binaryConfig[address].databaseID = result;
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _databaseMutex.unlock();
+}
+
 void Peer::saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress, uint32_t remoteChannel)
 {
 	try
@@ -244,6 +284,7 @@ void Peer::saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum par
 		if(parameterSetType == RPC::ParameterSet::Type::Enum::master) configCentral[channel][parameterName].databaseID = result;
 		else if(parameterSetType == RPC::ParameterSet::Type::Enum::values) valuesCentral[channel][parameterName].databaseID = result;
 		else if(parameterSetType == RPC::ParameterSet::Type::Enum::link) linksCentral[channel][remoteAddress][remoteChannel][parameterName].databaseID = result;
+		else if(parameterSetType == RPC::ParameterSet::Type::Enum::none) binaryConfig[channel].databaseID = result;
 	}
 	catch(const std::exception& ex)
     {

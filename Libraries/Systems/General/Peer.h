@@ -98,6 +98,7 @@ public:
 	void loadConfig();
     void saveConfig();
 	virtual void saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string& parameterName, std::vector<uint8_t>& value, int32_t remoteAddress = 0, uint32_t remoteChannel = 0);
+	virtual void saveParameter(uint32_t parameterID, uint32_t address, std::vector<uint8_t>& value);
 	virtual void saveParameter(uint32_t parameterID, std::vector<uint8_t>& value);
 	virtual void saveVariables() {}
 	virtual void saveVariable(uint32_t index, int32_t intValue);

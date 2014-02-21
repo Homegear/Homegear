@@ -170,6 +170,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 						}
 						address.index += HelperFunctions::getNumber(splitValue.first);
 						index = address.index;
+						if(std::lround(index * 10) % 10 >= 8) index += 0.2; //e. g. 15.9 => 16.1
 					}
 					else if(attributeName == "step")
 					{
