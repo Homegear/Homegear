@@ -2774,10 +2774,10 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::deleteDevice(std::string ser
 
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices()
 {
-	return listDevices(std::shared_ptr<std::map<std::string, int32_t>>());
+	return listDevices(std::shared_ptr<std::map<std::uint64_t, int32_t>>());
 }
 
-std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<std::map<std::string, int32_t>> knownDevices)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
 {
 	try
 	{
@@ -2786,7 +2786,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 		std::vector<std::shared_ptr<BidCoSPeer>> peers;
 		//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
 		_peersMutex.lock();
-		for(std::unordered_map<std::string, std::shared_ptr<BidCoSPeer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+		for(std::unordered_map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 		{
 			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
 			peers.push_back(i->second);
@@ -2794,7 +2794,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 		_peersMutex.unlock();
 
 		//Get this central's device description
-		if(!knownDevices || knownDevices->find(_serialNumber) == knownDevices->end())
+		if(!knownDevices || knownDevices->find(_deviceID) == knownDevices->end())
 		{
 			std::shared_ptr<RPC::RPCVariable> centralDescription = getDeviceDescriptionCentral();
 			if(centralDescription) array->arrayValue->push_back(centralDescription);
@@ -3434,11 +3434,57 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getValue(std::string serialN
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getValue(uint64_t id, uint32_t channel, std::string valueKey)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
+		if(peer) return peer->getValue(channel, valueKey);
+		return RPC::RPCVariable::createError(-2, "Unknown device.");
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value)
 {
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
+		if(peer) return peer->setValue(channel, valueKey, value);
+		return RPC::RPCVariable::createError(-2, "Unknown device.");
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setValue(uint64_t id, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
 		if(peer) return peer->setValue(channel, valueKey, value);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}

@@ -50,11 +50,22 @@ RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::
 	return RPCMethod::ParameterError::Enum::noError;
 }
 
+RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<std::vector<RPCVariableType>> types)
+{
+	for(std::vector<std::vector<RPCVariableType>>::iterator i = types.begin(); i != types.end(); ++i)
+	{
+		RPCMethod::ParameterError::Enum result = checkParameters(parameters, *i);
+		if(result == RPCMethod::ParameterError::Enum::noError) return result;
+		if(result != RPCMethod::ParameterError::Enum::wrongCount) return result; //Priority of type error is higher than wrong count
+	}
+	return RPCMethod::ParameterError::Enum::wrongCount;
+}
+
 std::shared_ptr<RPCVariable> RPCMethod::getError(RPCMethod::ParameterError::Enum error)
 {
-	if(error == ParameterError::Enum::wrongCount) return RPCVariable::createError(-1, "wrong parameter count");
-	else if(error == ParameterError::Enum::wrongType) return RPCVariable::createError(-1, "type error");
-	return RPCVariable::createError(-1, "unknown error");
+	if(error == ParameterError::Enum::wrongCount) return RPCVariable::createError(-1, "Wrong parameter count.");
+	else if(error == ParameterError::Enum::wrongType) return RPCVariable::createError(-1, "Type error.");
+	return RPCVariable::createError(-1, "Unknown parameter error.");
 }
 
 void RPCMethod::setHelp(std::string help)

@@ -1565,7 +1565,6 @@ std::shared_ptr<RPC::ParameterSet> HMWiredPeer::getParameterSet(int32_t channel,
 		if(rpcChannel->specialParameter && rpcChannel->subconfig)
 		{
 			std::vector<uint8_t> value = getConfigParameter(channel - rpcChannel->startIndex, rpcChannel->specialParameter->physicalParameter->address.index, rpcChannel->specialParameter->physicalParameter->address.step, rpcChannel->specialParameter->physicalParameter->size);
-			Output::printDebug("Debug: Special parameter is " + std::to_string(value.at(0)));
 			if(value.at(0))
 			{
 				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end())
@@ -1664,7 +1663,7 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 						continue;
 					}
 					parameter->data = i->second.value;
-					saveParameter(parameter->databaseID, parameter->data);
+					saveParameter(parameter->databaseID, a->parameterSetType, *j, i->first, parameter->data);
 					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic Wired peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
@@ -2626,7 +2625,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 		if(rpcParameter->physicalParameter->interface == RPC::PhysicalParameter::Interface::Enum::store)
 		{
 			parameter->data = rpcParameter->convertToPacket(value);
-			saveParameter(parameter->databaseID, parameter->data);
+			saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, channel, valueKey, parameter->data);
 			GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		}
@@ -2664,7 +2663,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 		std::shared_ptr<RPC::DeviceFrame> frame = rpcDevice->framesByID[setRequest];
 		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
 		parameter->data = data;
-		saveParameter(parameter->databaseID, data);
+		saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, channel, valueKey, data);
 		if(GD::debugLevel > 4) Output::printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(data) + ".");
 
 		std::vector<uint8_t> payload({ (uint8_t)frame->type });
@@ -2734,7 +2733,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 				{
 					RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
 					tempParam->data = defaultValue;
-					saveParameter(tempParam->databaseID, tempParam->data);
+					saveParameter(tempParam->databaseID, RPC::ParameterSet::Type::Enum::values, channel, *j, tempParam->data);
 					Output::printInfo( "Info: Parameter \"" + *j + "\" was reset to " + HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					valueKeys->push_back(*j);
 					values->push_back(logicalDefaultValue);

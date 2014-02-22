@@ -179,18 +179,36 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		{
 			if((*i)->type == RPCVariableType::rpcStruct)
 			{
-				std::pair<std::string, int32_t> device;
+				std::pair<uint64_t, int32_t> device;
+				std::string serialNumber;
 				for(RPCStruct::iterator j = (*i)->structValue->begin(); j != (*i)->structValue->end(); ++j)
 				{
 					if(!j->second) continue;
-					if(j->first == "ADDRESS")
+					if(j->first == "ID")
 					{
-						device.first = j->second->stringValue;
-						if(device.first.empty()) break;
+						device.first = j->second->integerValue;
+						if(device.first == 0) break;
+					}
+					else if(j->first == "ADDRESS")
+					{
+						serialNumber = j->second->stringValue;
 					}
 					else if(j->first == "VERSION")
 					{
 						device.second = j->second->integerValue;
+					}
+				}
+				if(device.first == 0) //Client doesn't support ID's
+				{
+					if(serialNumber.empty()) break;
+					for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+					{
+						std::shared_ptr<Central> central = i->second->getCentral();
+						if(central)
+						{
+							device.first = central->getPeerIDFromSerial(serialNumber);
+							if(device.first > 0) break;
+						}
 					}
 				}
 				server->knownDevices->insert(device);

@@ -50,6 +50,7 @@ public:
 	virtual ~RPCMethod() {}
 
 	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<RPCVariableType> types);
+	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<std::vector<RPCVariableType>> types);
 	virtual std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 	std::shared_ptr<RPCVariable> getError(ParameterError::Enum error);
 	std::shared_ptr<RPCVariable> getSignature() { return _signatures; }

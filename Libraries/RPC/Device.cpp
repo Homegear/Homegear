@@ -869,6 +869,11 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		LogicalParameterFloat* parameter = (LogicalParameterFloat*)logicalParameter.get();
 		if(parameter->min < 0 && parameter->min != std::numeric_limits<double>::min()) isSigned = true;
 	}
+	else if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
+	{
+		LogicalParameterInteger* parameter = (LogicalParameterInteger*)logicalParameter.get();
+		if(parameter->min < 0 && parameter->min != std::numeric_limits<int32_t>::min()) isSigned = true;
+	}
 }
 
 void Parameter::adjustBitPosition(std::vector<uint8_t>& data)

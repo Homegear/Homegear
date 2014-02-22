@@ -539,7 +539,9 @@ void HomeMaticDevice::loadPeers(bool version_0_0_7)
 					std::shared_ptr<BidCoSPeer> team = createTeam(peer->getTeamRemoteAddress(), peer->getDeviceType(), peer->getTeamRemoteSerialNumber());
 					team->rpcDevice = peer->rpcDevice->team;
 					team->initializeCentralConfig();
+					team->setID(peer->getID() | (1 << 31));
 					_peersBySerial[team->getSerialNumber()] = team;
+					_peersByID[team->getID()] = team;
 				}
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 				{

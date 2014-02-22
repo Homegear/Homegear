@@ -70,7 +70,7 @@ class RemoteRPCServer
 public:
 	RemoteRPCServer()
 	{
-		knownDevices.reset(new std::map<std::string, int32_t>()); fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor());
+		knownDevices.reset(new std::map<uint64_t, int32_t>()); fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor());
 		path = "/RPC2";
 	}
 	virtual ~RemoteRPCServer() {}
@@ -85,7 +85,7 @@ public:
 	std::pair<std::string, std::string> address;
 	std::string path;
 	std::string id;
-	std::shared_ptr<std::map<std::string, int32_t>> knownDevices;
+	std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
 	SocketOperations socket;
 	std::shared_ptr<FileDescriptor> fileDescriptor;
