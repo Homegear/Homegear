@@ -58,8 +58,7 @@ public:
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);
 
-	//virtual std::shared_ptr<RPC::RPCVariable> addDevice(std::string serialNumber);
-	//virtual std::shared_ptr<RPC::RPCVariable> addLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
+	virtual std::shared_ptr<RPC::RPCVariable> addLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
 	//virtual std::shared_ptr<RPC::RPCVariable> removeLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
 	//virtual std::shared_ptr<RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);
 	virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescriptionCentral();

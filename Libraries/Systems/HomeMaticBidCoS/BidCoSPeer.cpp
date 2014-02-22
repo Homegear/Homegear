@@ -333,7 +333,7 @@ void BidCoSPeer::worker()
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
 					std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data) });
 					Output::printInfo("Info: Domino event: " + (*i)->key + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
-					GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
+					GD::rpcClient.broadcastEvent(_peerID, (*i)->channel, _serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
 				}
 				else
 				{
@@ -726,6 +726,8 @@ std::shared_ptr<BasicPeer> BidCoSPeer::getPeer(int32_t channel, int32_t address,
 {
 	try
 	{
+		if(_peers.find(channel) == _peers.end()) return std::shared_ptr<BasicPeer>();
+
 		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 		{
 			if((*i)->address == address && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
@@ -1717,7 +1719,7 @@ void BidCoSPeer::setRSSIDevice(uint8_t rssi)
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 			rpcValues->push_back(parameter->rpcParameter->convertFromPacket(parameter->data));
 
-			GD::rpcClient.broadcastEvent(_serialNumber + ":0", valueKeys, rpcValues);
+			GD::rpcClient.broadcastEvent(_peerID, 0, _serialNumber + ":0", valueKeys, rpcValues);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1916,7 +1918,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 				if(j->second->empty()) continue;
 				std::string address(_serialNumber + ":" + std::to_string(j->first));
 				GD::eventHandler.trigger(address, j->second, rpcValues.at(j->first));
-				GD::rpcClient.broadcastEvent(address, j->second, rpcValues.at(j->first));
+				GD::rpcClient.broadcastEvent(_peerID, j->first, address, j->second, rpcValues.at(j->first));
 			}
 		}
 	}
@@ -2306,7 +2308,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, RPC::
 			pendingBidCoSQueues->push(queue);
 			if(!onlyPushing && ((getRXModes() & RPC::Device::RXModes::Enum::always) || (getRXModes() & RPC::Device::RXModes::Enum::burst))) getCentral()->enqueuePendingQueues(_address);
 			else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
+			GD::rpcClient.broadcastUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		}
 		else if(type == RPC::ParameterSet::Type::Enum::values)
 		{
@@ -2437,7 +2439,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, RPC::
 			pendingBidCoSQueues->push(queue);
 			if(!onlyPushing && ((getRXModes() & RPC::Device::RXModes::Enum::always) || (getRXModes() & RPC::Device::RXModes::Enum::burst))) getCentral()->enqueuePendingQueues(_address);
 			else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-			GD::rpcClient.broadcastUpdateDevice(_serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
+			GD::rpcClient.broadcastUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		}
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
@@ -3381,7 +3383,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 		{
 			parameter->data = rpcParameter->convertToPacket(value);
 			saveParameter(parameter->databaseID, parameter->data);
-			GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			GD::rpcClient.broadcastEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		}
 		else if(rpcParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::command) return RPC::RPCVariable::createError(-6, "Parameter is not settable.");
@@ -3539,7 +3541,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 		}
 		else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 
-		GD::rpcClient.broadcastEvent(_serialNumber + ":" + std::to_string(channel), valueKeys, values);
+		GD::rpcClient.broadcastEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}

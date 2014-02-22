@@ -81,6 +81,7 @@ public:
 	bool useSSL = false;
 	bool keepAlive = false;
 	bool binary = false;
+	bool useID = false;
 	std::string hostname;
 	std::pair<std::string, std::string> address;
 	std::string path;

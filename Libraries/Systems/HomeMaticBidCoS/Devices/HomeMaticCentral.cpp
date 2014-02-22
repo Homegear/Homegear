@@ -212,7 +212,7 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<Packet> packet)
 				peer->serviceMessages->set("CENTRAL_ADDRESS_SPOOFED", 1, 0);
 				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> { "CENTRAL_ADDRESS_SPOOFED" });
 				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values(new std::vector<std::shared_ptr<RPC::RPCVariable>> { std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)1)) });
-				GD::rpcClient.broadcastEvent(peer->getSerialNumber() + ":0", valueKeys, values);
+				GD::rpcClient.broadcastEvent(peer->getID(), 0, peer->getSerialNumber() + ":0", valueKeys, values);
 				return true;
 			}
 			return false;
@@ -1181,11 +1181,13 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 		}
 		GD::rpcClient.broadcastDeleteDevices(deviceAddresses);
 		Metadata::deleteMetadata(peer->getSerialNumber());
+		Metadata::deleteMetadata(std::to_string(id));
 		if(peer->rpcDevice)
 		{
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 			{
 				Metadata::deleteMetadata(peer->getSerialNumber() + ':' + std::to_string(i->first));
+				Metadata::deleteMetadata(std::to_string(id) + ':' + std::to_string(i->first));
 			}
 		}
 		_peersMutex.lock();
@@ -2491,7 +2493,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 
 		queue->push(sender->pendingBidCoSQueues);
 
-		GD::rpcClient.broadcastUpdateDevice(senderSerialNumber + ":" + std::to_string(senderChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
+		GD::rpcClient.broadcastUpdateDevice(sender->getID(), senderChannelIndex, senderSerialNumber + ":" + std::to_string(senderChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
 
 		int32_t waitIndex = 0;
 		while(_bidCoSQueueManager.get(sender->getAddress()) && waitIndex < 20)
@@ -2575,7 +2577,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(std::string senderSe
 
 		queue->push(receiver->pendingBidCoSQueues);
 
-		GD::rpcClient.broadcastUpdateDevice(receiverSerialNumber + ":" + std::to_string(receiverChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
+		GD::rpcClient.broadcastUpdateDevice(receiver->getID(), receiverChannelIndex, receiverSerialNumber + ":" + std::to_string(receiverChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
 
 		waitIndex = 0;
 		while(_bidCoSQueueManager.get(receiver->getAddress()) && waitIndex < 20)
@@ -2656,7 +2658,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 
 		addHomegearFeatures(sender, senderChannelIndex, false);
 
-		GD::rpcClient.broadcastUpdateDevice(senderSerialNumber + ":" + std::to_string(senderChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
+		GD::rpcClient.broadcastUpdateDevice(sender->getID(), senderChannelIndex, senderSerialNumber + ":" + std::to_string(senderChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
 
 		int32_t waitIndex = 0;
 		while(_bidCoSQueueManager.get(sender->getAddress()) && waitIndex < 20)
@@ -2691,7 +2693,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 
 		addHomegearFeatures(receiver, receiverChannelIndex, false);
 
-		GD::rpcClient.broadcastUpdateDevice(receiverSerialNumber + ":" + std::to_string(receiverChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
+		GD::rpcClient.broadcastUpdateDevice(receiver->getID(), receiverChannelIndex, receiverSerialNumber + ":" + std::to_string(receiverChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
 
 		waitIndex = 0;
 		while(_bidCoSQueueManager.get(receiver->getAddress()) && waitIndex < 20)
@@ -2966,7 +2968,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		peer->pendingBidCoSQueues->push(queue);
 		if((peer->getRXModes() & RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & RPC::Device::RXModes::Enum::burst)) enqueuePendingQueues(peer->getAddress());
 		else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-		GD::rpcClient.broadcastUpdateDevice(serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
+		GD::rpcClient.broadcastUpdateDevice(peer->getID(), channel, serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)

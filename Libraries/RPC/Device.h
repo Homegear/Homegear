@@ -86,7 +86,7 @@ public:
 	std::unordered_map<int32_t, int32_t> integerValueMapDevice;
 	std::unordered_map<int32_t, int32_t> integerValueMapParameter;
 	double factor = 0;
-	double factor2 = 0;
+	std::vector<double> factors;
 	int32_t div = 0;
 	int32_t mul = 0;
 	int32_t threshold = 0;
@@ -159,6 +159,7 @@ public:
 	std::shared_ptr<RPC::RPCVariable> convertFromPacket(const std::vector<uint8_t>& data, bool isEvent = false);
 	std::vector<uint8_t> convertToPacket(std::shared_ptr<RPC::RPCVariable> value);
 	std::vector<uint8_t> convertToPacket(std::string value);
+	std::vector<uint8_t> reverseData(const std::vector<uint8_t>& data);
 	void adjustBitPosition(std::vector<uint8_t>& data);
 };
 

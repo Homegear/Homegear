@@ -54,12 +54,12 @@ public:
 	virtual ~Client();
 
 	void initServerMethods(std::pair<std::string, std::string> address);
-	void broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values);
+	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values);
 	void systemListMethods(std::pair<std::string, std::string> address);
 	void listDevices(std::pair<std::string, std::string> address);
 	void broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions);
 	void broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses);
-	void broadcastUpdateDevice(std::string address, Hint::Enum hint);
+	void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
 	std::shared_ptr<RemoteRPCServer> addServer(std::pair<std::string, std::string> address, std::string path, std::string id);
 	void removeServer(std::pair<std::string, std::string> address);

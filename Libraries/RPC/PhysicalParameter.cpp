@@ -59,6 +59,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 			else if(attributeName == "endian")
 			{
 				if(attributeValue == "little") endian = Endian::Enum::little;
+				else if(attributeValue == "big") endian = Endian::Enum::big; //default
 				else Output::printWarning("Warning: Unknown endianess for \"physical\": " + attributeValue);
 			}
 			else if(attributeName == "value_id") valueID = attributeValue;
@@ -169,8 +170,8 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node)
 							address.index /= 10;
 						}
 						address.index += HelperFunctions::getNumber(splitValue.first);
+						if(std::lround(address.index * 10) % 10 >= 8) address.index += 0.2; //e. g. 15.9 => 16.1
 						index = address.index;
-						if(std::lround(index * 10) % 10 >= 8) index += 0.2; //e. g. 15.9 => 16.1
 					}
 					else if(attributeName == "step")
 					{

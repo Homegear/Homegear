@@ -1120,6 +1120,7 @@ std::shared_ptr<RPCVariable> RPCInit::invoke(std::shared_ptr<std::vector<std::sh
 			{
 				if(parameters->at(2)->integerValue & 1) eventServer->keepAlive = true;
 				if(parameters->at(2)->integerValue & 2) eventServer->binary = true;
+				if(parameters->at(2)->integerValue & 4) eventServer->useID = true;
 			}
 			if(_initServerThread.joinable()) _initServerThread.join();
 			_initServerThread = std::thread(&RPC::Client::initServerMethods, &GD::rpcClient, server);

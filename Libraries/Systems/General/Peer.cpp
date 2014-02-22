@@ -512,38 +512,26 @@ void Peer::saveConfig()
 		{
 			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				if(!j->second.rpcParameter)
-				{
-					Output::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(i->first));
-					continue;
-				}
-				if(j->second.rpcParameter->id.size() == 0)
+				if(j->first.empty())
 				{
 					Output::printError("Error: Parameter has no id.");
 					continue;
 				}
-				std::string name = j->first;
 				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
-				else saveParameter(0, RPC::ParameterSet::Type::Enum::master, i->first, name, j->second.data);
+				else saveParameter(0, RPC::ParameterSet::Type::Enum::master, i->first, j->first, j->second.data);
 			}
 		}
 		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = valuesCentral.begin(); i != valuesCentral.end(); ++i)
 		{
 			for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
-				if(!j->second.rpcParameter)
-				{
-					Output::printCritical("Critical: Parameter " + j->first + " has no corresponding RPC parameter. Writing dummy data. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(i->first));
-					continue;
-				}
-				if(j->second.rpcParameter->id.size() == 0)
+				if(j->first.empty())
 				{
 					Output::printError("Error: Parameter has no id.");
 					continue;
 				}
-				std::string name = j->first;
 				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
-				else saveParameter(0, RPC::ParameterSet::Type::Enum::values, i->first, name, j->second.data);
+				else saveParameter(0, RPC::ParameterSet::Type::Enum::values, i->first, j->first, j->second.data);
 			}
 		}
 		for(std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>>::iterator i = linksCentral.begin(); i != linksCentral.end(); ++i)
@@ -554,19 +542,13 @@ void Peer::saveConfig()
 				{
 					for(std::unordered_map<std::string, RPCConfigurationParameter>::iterator l = k->second.begin(); l != k->second.end(); ++l)
 					{
-						if(!l->second.rpcParameter)
-						{
-							Output::printCritical("Critical: Parameter " + l->first + " has no corresponding RPC parameter. Writing dummy data. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(i->first));
-							continue;
-						}
-						if(l->second.rpcParameter->id.size() == 0)
+						if(l->first.empty())
 						{
 							Output::printError("Error: Parameter has no id.");
 							continue;
 						}
-						std::string name = l->first;
 						if(l->second.databaseID > 0) saveParameter(l->second.databaseID, l->second.data);
-						else saveParameter(0, RPC::ParameterSet::Type::Enum::link, i->first,name, l->second.data, j->first, k->first);
+						else saveParameter(0, RPC::ParameterSet::Type::Enum::link, i->first, l->first, l->second.data, j->first, k->first);
 					}
 				}
 			}

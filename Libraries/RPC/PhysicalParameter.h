@@ -81,11 +81,11 @@ public:
 	};
 	struct Endian
 	{
-		enum Enum { none, little, big };
+		enum Enum { little, big };
 	};
 	Type::Enum type = Type::Enum::none;
 	Interface::Enum interface = Interface::Enum::none;
-	Endian::Enum endian = Endian::Enum::none;
+	Endian::Enum endian = Endian::Enum::big;
 	uint32_t list = 9999;
 	double index = 0;
 	uint32_t startIndex = 0;

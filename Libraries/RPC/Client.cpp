@@ -65,7 +65,7 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
     }
 }
 
-void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values)
+void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values)
 {
 	try
 	{
@@ -86,7 +86,12 @@ void Client::broadcastEvent(std::string deviceAddress, std::shared_ptr<std::vect
 				std::shared_ptr<RPCVariable> params(new RPCVariable(RPCVariableType::rpcArray));
 				method->structValue->insert(RPCStructElement("params", params));
 				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
-				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(deviceAddress)));
+				if((*server)->useID)
+				{
+					params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)id)));
+					params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(channel)));
+				}
+				else params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(deviceAddress)));
 				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(valueKeys->at(i))));
 				params->arrayValue->push_back(values->at(i));
 			}
@@ -338,7 +343,7 @@ void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses
     }
 }
 
-void Client::broadcastUpdateDevice(std::string address, Hint::Enum hint)
+void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint)
 {
 	try
 	{
@@ -349,7 +354,12 @@ void Client::broadcastUpdateDevice(std::string address, Hint::Enum hint)
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("updateDevice") == (*server)->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
-			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(address)));
+			if((*server)->useID)
+			{
+				parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)id)));
+				parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(channel)));
+			}
+			else parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(address)));
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)hint)));
 			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "updateDevice", parameters);
 			t.detach();
@@ -513,6 +523,7 @@ std::shared_ptr<RPCVariable> Client::listClientServers(std::string id)
 			serverInfo->structValue->insert(RPC::RPCStructElement("SSL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->useSSL))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("BINARY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->binary))));
 			serverInfo->structValue->insert(RPC::RPCStructElement("KEEP_ALIVE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->keepAlive))));
+			serverInfo->structValue->insert(RPC::RPCStructElement("USEID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->useID))));
 			if((*i)->settings)
 			{
 				serverInfo->structValue->insert(RPC::RPCStructElement("FORCESSL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->settings->forceSSL))));
