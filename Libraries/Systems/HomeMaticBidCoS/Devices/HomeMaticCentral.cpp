@@ -2808,13 +2808,6 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 		}
 		_peersMutex.unlock();
 
-		//Get this central's device description
-		if(!knownDevices || knownDevices->find(_deviceID) == knownDevices->end())
-		{
-			std::shared_ptr<RPC::RPCVariable> centralDescription = getDeviceDescriptionCentral();
-			if(centralDescription) array->arrayValue->push_back(centralDescription);
-		}
-
 		for(std::vector<std::shared_ptr<BidCoSPeer>>::iterator i = peers.begin(); i != peers.end(); ++i)
 		{
 			//listDevices really needs a lot of resources, so wait a little bit after each device
@@ -2999,7 +2992,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescriptionCentral()
+/*std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescriptionCentral()
 {
 	try
 	{
@@ -3048,13 +3041,12 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescriptionCentral(
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
+}*/
 
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescription(std::string serialNumber, int32_t channel)
 {
 	try
 	{
-		if(serialNumber == _serialNumber) return getDeviceDescriptionCentral();
 		std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
 		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 
@@ -3396,6 +3388,35 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(std::
 			if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
 			return RPC::RPCVariable::createError(-2, "Unknown device.");
 		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(uint64_t id, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
+		std::string remoteSerialNumber;
+		if(remoteID > 0)
+		{
+			std::shared_ptr<BidCoSPeer> remotePeer(getPeer(remoteID));
+			if(remotePeer) remoteSerialNumber = remotePeer->getSerialNumber();
+		}
+		if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
+		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
     {

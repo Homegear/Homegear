@@ -1926,7 +1926,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			{
 				if(j->second->empty()) continue;
 				std::string address(_serialNumber + ":" + std::to_string(j->first));
-				GD::eventHandler.trigger(address, j->second, rpcValues.at(j->first));
+				GD::eventHandler.trigger(_peerID, j->first, j->second, rpcValues.at(j->first));
 				GD::rpcClient.broadcastEvent(_peerID, j->first, address, j->second, rpcValues.at(j->first));
 			}
 		}

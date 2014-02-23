@@ -63,7 +63,8 @@ public:
 	Type::Enum type = Type::Enum::triggered;
 	std::string name;
 	bool enabled = true;
-	std::string address;
+	uint64_t peerID = 0;
+	int32_t peerChannel = -1;
 	std::string variable;
 	Trigger::Enum trigger = Trigger::Enum::none;
 	std::shared_ptr<RPC::RPCVariable> triggerValue;
@@ -97,18 +98,18 @@ public:
 	void load();
 	std::shared_ptr<RPC::RPCVariable> add(std::shared_ptr<RPC::RPCVariable> eventDescription);
 	std::shared_ptr<RPC::RPCVariable> remove(std::string name);
-	std::shared_ptr<RPC::RPCVariable> list(int32_t type, std::string address, std::string variable);
+	std::shared_ptr<RPC::RPCVariable> list(int32_t type, uint64_t peerID, int32_t peerChannel, std::string variable);
 	std::shared_ptr<RPC::RPCVariable> enable(std::string name, bool enabled);
 	std::shared_ptr<RPC::RPCVariable> abortReset(std::string name);
 	std::shared_ptr<RPC::RPCVariable> trigger(std::string name);
-	void trigger(std::string& address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
-	void trigger(std::string& address, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value);
+	void trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	void trigger(uint64_t peerID, int32_t channel, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value);
 protected:
 	bool _disposing = false;
 	int32_t _triggerThreadCount = 0;
 	std::mutex _eventsMutex;
 	std::map<uint64_t, std::shared_ptr<Event>> _timedEvents;
-	std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>> _triggeredEvents;
+	std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>> _triggeredEvents;
 	std::map<uint64_t, std::shared_ptr<Event>> _eventsToReset;
 	std::map<uint64_t, std::shared_ptr<Event>> _timesToReset;
 	bool _stopThread = false;
@@ -118,8 +119,8 @@ protected:
 	RPC::RPCEncoder _rpcEncoder;
 	RPC::RPCDecoder _rpcDecoder;
 
-	void triggerThreadMultipleVariables(std::string address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
-	void triggerThread(std::string address, std::string variable, std::shared_ptr<RPC::RPCVariable> value);
+	void triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	void triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<RPC::RPCVariable> value);
 	void mainThread();
 	uint64_t getNextExecution(uint64_t startTime, uint64_t recurEvery);
 	void removeEventToReset(uint32_t id);

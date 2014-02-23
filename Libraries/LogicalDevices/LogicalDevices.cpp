@@ -91,6 +91,7 @@ void LogicalDevices::convertDatabase()
 			GD::db.executeCommand("ALTER TABLE devices ADD COLUMN deviceFamily INTEGER DEFAULT 0 NOT NULL");
 			GD::db.executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190077");
 			GD::db.executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190078");
+			GD::db.executeCommand("DROP TABLE events");
 
 			loadDevicesFromDatabase(true);
 			save(true);
@@ -142,8 +143,8 @@ void LogicalDevices::initializeDatabase()
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
 		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL)");
 		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
-		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, address TEXT, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
-		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, address)");
+		GD::db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
+		GD::db.executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, peerID, peerChannel)");
 
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));

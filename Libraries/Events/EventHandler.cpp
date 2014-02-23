@@ -175,9 +175,10 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 
 		if(event->type == Event::Type::Enum::triggered)
 		{
-			if(eventDescription->structValue->find("ADDRESS") == eventDescription->structValue->end() || eventDescription->structValue->at("ADDRESS")->stringValue.empty()) return RPC::RPCVariable::createError(-5, "No device address specified.");
-			event->address = eventDescription->structValue->at("ADDRESS")->stringValue;
-			if(event->address.size() > 100) return RPC::RPCVariable::createError(-5, "Address string is too long.");
+			if(eventDescription->structValue->find("PEERID") == eventDescription->structValue->end() || eventDescription->structValue->at("PEERID")->integerValue == 0) return RPC::RPCVariable::createError(-5, "No peer id specified.");
+			event->peerID = eventDescription->structValue->at("PEERID")->integerValue;
+			if(eventDescription->structValue->find("PEERCHANNEL") != eventDescription->structValue->end()) event->peerChannel = eventDescription->structValue->at("PEERCHANNEL")->integerValue;
+
 			if(eventDescription->structValue->find("VARIABLE") == eventDescription->structValue->end() || eventDescription->structValue->at("VARIABLE")->stringValue.empty()) return RPC::RPCVariable::createError(-5, "No variable specified.");
 			event->variable = eventDescription->structValue->at("VARIABLE")->stringValue;
 			if(event->variable.size() > 100) return RPC::RPCVariable::createError(-5, "Variable string is too long.");
@@ -187,10 +188,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 				event->triggerValue = eventDescription->structValue->at("TRIGGERVALUE");
 			if((int32_t)event->trigger >= (int32_t)Event::Trigger::value && (!event->triggerValue || event->triggerValue->type == RPC::RPCVariableType::rpcVoid)) return RPC::RPCVariable::createError(-5, "No trigger value specified.");
 
-			if(eventDescription->structValue->find("ENABLED") != eventDescription->structValue->end())
-			{
-				event->enabled = eventDescription->structValue->at("ENABLED")->booleanValue;
-			}
+			if(eventDescription->structValue->find("ENABLED") != eventDescription->structValue->end()) event->enabled = eventDescription->structValue->at("ENABLED")->booleanValue;
 
 			if(eventDescription->structValue->find("RESETAFTER") != eventDescription->structValue->end())
 			{
@@ -229,7 +227,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 				}
 			}
 			_eventsMutex.lock();
-			_triggeredEvents[event->address][event->variable].push_back(event);
+			_triggeredEvents[event->peerID][event->peerChannel][event->variable].push_back(event);
 			_eventsMutex.unlock();
 		}
 		else
@@ -279,7 +277,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string address, std::string variable)
+std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, uint64_t peerID, int32_t peerChannel, std::string variable)
 {
 	try
 	{
@@ -295,21 +293,24 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string a
 		}
 		if(type <= 0)
 		{
-			for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+			for(std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator iChannels = _triggeredEvents.begin(); iChannels != _triggeredEvents.end(); ++iChannels)
 			{
-				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				for(std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator iVariables = iChannels->second.begin(); iVariables != iChannels->second.end(); ++iVariables)
 				{
-					for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator iEvents = iVariables->second.begin(); iEvents != iVariables->second.end(); ++iEvents)
 					{
-						if(address.empty() && variable.empty()) events.push_back(*k);
-						else if(!address.empty())
+						for(std::vector<std::shared_ptr<Event>>::iterator iEvent = iEvents->second.begin(); iEvent != iEvents->second.end(); ++iEvent)
 						{
-							if((*k)->address == address)
+							if(peerID == 0 && variable.empty()) events.push_back(*iEvent);
+							else if(peerID > 0)
 							{
-								if(variable.empty() || (*k)->variable == variable) events.push_back(*k);
+								if((*iEvent)->peerID == peerID && (*iEvent)->peerChannel == peerChannel)
+								{
+									if(variable.empty() || (*iEvent)->variable == variable) events.push_back(*iEvent);
+								}
 							}
+							else if(!variable.empty() && (*iEvent)->variable == variable) events.push_back(*iEvent);
 						}
-						else if(!variable.empty() && (*k)->variable == variable) events.push_back(*k);
 					}
 				}
 			}
@@ -343,7 +344,8 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, std::string a
 				event->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->type))));
 				event->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->name))));
 				event->structValue->insert(RPC::RPCStructElement("ENABLED", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->enabled))));
-				event->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->address))));
+				event->structValue->insert(RPC::RPCStructElement("PEERID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)(*i)->peerID))));
+				if((*i)->peerChannel > -1) event->structValue->insert(RPC::RPCStructElement("PEERCHANNEL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->peerChannel))));
 				event->structValue->insert(RPC::RPCStructElement("VARIABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->variable))));
 				event->structValue->insert(RPC::RPCStructElement("TRIGGER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->trigger))));
 				if((*i)->triggerValue) event->structValue->insert(RPC::RPCStructElement("TRIGGERVALUE", (*i)->triggerValue));
@@ -410,21 +412,23 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::remove(std::string name)
 		}
 		if(!event)
 		{
-			for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+			for(std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator peerID = _triggeredEvents.begin(); peerID != _triggeredEvents.end(); ++peerID)
 			{
-				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				for(std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator channel = peerID->second.begin(); channel != peerID->second.end(); ++channel)
 				{
-					for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator variable = channel->second.begin(); variable != channel->second.end(); ++variable)
 					{
-						if((*k)->name == name)
+						for(std::vector<std::shared_ptr<Event>>::iterator currentEvent = variable->second.begin(); currentEvent != variable->second.end(); ++currentEvent)
 						{
-							event = *k;
-							std::string address = i->first;
-							std::string variable = j->first;
-							_triggeredEvents[address][variable].erase(k);
-							if(_triggeredEvents[address][variable].empty()) _triggeredEvents[i->first].erase(variable);
-							if(_triggeredEvents[address].empty()) _triggeredEvents.erase(address);
-							break;
+							if((*currentEvent)->name == name)
+							{
+								event = *currentEvent;
+								_triggeredEvents[peerID->first][channel->first][variable->first].erase(currentEvent);
+								if(_triggeredEvents[peerID->first][channel->first][variable->first].empty()) _triggeredEvents[peerID->first][channel->first].erase(variable->first);
+								if(_triggeredEvents[peerID->first][channel->first].empty()) _triggeredEvents[peerID->first].erase(channel->first);
+								if(_triggeredEvents[peerID->first].empty()) _triggeredEvents.erase(peerID->first);
+								break;
+							}
 						}
 					}
 				}
@@ -480,16 +484,19 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::enable(std::string name, bool en
 		}
 		if(!event)
 		{
-			for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+			for(std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator iChannels = _triggeredEvents.begin(); iChannels != _triggeredEvents.end(); ++iChannels)
 			{
-				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				for(std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator iVariables = iChannels->second.begin(); iVariables != iChannels->second.end(); ++iVariables)
 				{
-					for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator iEvents = iVariables->second.begin(); iEvents != iVariables->second.end(); ++iEvents)
 					{
-						if((*k)->name == name)
+						for(std::vector<std::shared_ptr<Event>>::iterator iEvent = iEvents->second.begin(); iEvent != iEvents->second.end(); ++iEvent)
 						{
-							event = *k;
-							break;
+							if((*iEvent)->name == name)
+							{
+								event = *iEvent;
+								break;
+							}
 						}
 					}
 				}
@@ -540,16 +547,19 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::abortReset(std::string name)
 		}
 		if(!event)
 		{
-			for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+			for(std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator iChannels = _triggeredEvents.begin(); iChannels != _triggeredEvents.end(); ++iChannels)
 			{
-				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				for(std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator iVariables = iChannels->second.begin(); iVariables != iChannels->second.end(); ++iVariables)
 				{
-					for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator iEvents = iVariables->second.begin(); iEvents != iVariables->second.end(); ++iEvents)
 					{
-						if((*k)->name == name)
+						for(std::vector<std::shared_ptr<Event>>::iterator iEvent = iEvents->second.begin(); iEvent != iEvents->second.end(); ++iEvent)
 						{
-							event = *k;
-							break;
+							if((*iEvent)->name == name)
+							{
+								event = *iEvent;
+								break;
+							}
 						}
 					}
 				}
@@ -578,12 +588,12 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::abortReset(std::string name)
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-void EventHandler::trigger(std::string& address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	try
 	{
 		if(_disposing) return;
-		std::thread t(&EventHandler::triggerThreadMultipleVariables, this, address, variables, values);
+		std::thread t(&EventHandler::triggerThreadMultipleVariables, this, peerID, channel, variables, values);
 		Threads::setThreadPriority(t.native_handle(), 44);
 		t.detach();
 	}
@@ -626,12 +636,12 @@ uint64_t EventHandler::getNextExecution(uint64_t startTime, uint64_t recurEvery)
     return -1;
 }
 
-void EventHandler::trigger(std::string& address, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value)
+void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value)
 {
 	try
 	{
 		if(_disposing) return;
-		std::thread t(&EventHandler::triggerThread, this, address, variable, value);
+		std::thread t(&EventHandler::triggerThread, this, peerID, channel, variable, value);
 		Threads::setThreadPriority(t.native_handle(), 44);
 		t.detach();
 	}
@@ -649,14 +659,14 @@ void EventHandler::trigger(std::string& address, std::string& variable, std::sha
     }
 }
 
-void EventHandler::triggerThreadMultipleVariables(std::string address, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void EventHandler::triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	_triggerThreadCount++;
 	try
 	{
 		for(uint32_t i = 0; i < variables->size(); i++)
 		{
-			triggerThread(address, variables->at(i), values->at(i));
+			triggerThread(peerID, channel, variables->at(i), values->at(i));
 		}
 	}
 	catch(const std::exception& ex)
@@ -777,16 +787,19 @@ bool EventHandler::eventExists(uint32_t id)
 				return true;
 			}
 		}
-		for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+		for(std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator peerID = _triggeredEvents.begin(); peerID != _triggeredEvents.end(); ++peerID)
 		{
-			for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+			for(std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator channel = peerID->second.begin(); channel != peerID->second.end(); ++channel)
 			{
-				for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator variable = channel->second.begin(); variable != channel->second.end(); ++variable)
 				{
-					if((*k)->id == id)
+					for(std::vector<std::shared_ptr<Event>>::iterator event = variable->second.begin(); event != variable->second.end(); ++event)
 					{
-						_eventsMutex.unlock();
-						return true;
+						if((*event)->id == id)
+						{
+							_eventsMutex.unlock();
+							return true;
+						}
 					}
 				}
 			}
@@ -821,16 +834,19 @@ bool EventHandler::eventExists(std::string name)
 				return true;
 			}
 		}
-		for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+		for(std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator peerID = _triggeredEvents.begin(); peerID != _triggeredEvents.end(); ++peerID)
 		{
-			for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+			for(std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator channel = peerID->second.begin(); channel != peerID->second.end(); ++channel)
 			{
-				for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator variable = channel->second.begin(); variable != channel->second.end(); ++variable)
 				{
-					if((*k)->name == name)
+					for(std::vector<std::shared_ptr<Event>>::iterator event = variable->second.begin(); event != variable->second.end(); ++event)
 					{
-						_eventsMutex.unlock();
-						return true;
+						if((*event)->name == name)
+						{
+							_eventsMutex.unlock();
+							return true;
+						}
 					}
 				}
 			}
@@ -868,16 +884,19 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::trigger(std::string name)
 		}
 		if(!event)
 		{
-			for(std::map<std::string, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator i = _triggeredEvents.begin(); i != _triggeredEvents.end(); ++i)
+			for(std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator peerID = _triggeredEvents.begin(); peerID != _triggeredEvents.end(); ++peerID)
 			{
-				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+				for(std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator channel = peerID->second.begin(); channel != peerID->second.end(); ++channel)
 				{
-					for(std::vector<std::shared_ptr<Event>>::iterator k = j->second.begin(); k != j->second.end(); ++k)
+					for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator variable = channel->second.begin(); variable != channel->second.end(); ++variable)
 					{
-						if((*k)->name == name)
+						for(std::vector<std::shared_ptr<Event>>::iterator currentEvent = variable->second.begin(); currentEvent != variable->second.end(); ++currentEvent)
 						{
-							event = *k;
-							break;
+							if((*currentEvent)->name == name)
+							{
+								event = *currentEvent;
+								break;
+							}
 						}
 					}
 				}
@@ -888,7 +907,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::trigger(std::string name)
 		if(!event) return RPC::RPCVariable::createError(-5, "Event not found.");
 		uint64_t currentTime = HelperFunctions::getTime();
 		event->lastRaised = currentTime;
-		Output::printInfo("Info: Event \"" + event->name + "\" raised for device \"" + event->address + "\" and variable \"" + event->variable + "\". Trigger: \"manual\"");
+		Output::printInfo("Info: Event \"" + event->name + "\" raised for peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable \"" + event->variable + "\". Trigger: \"manual\"");
 		std::shared_ptr<RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod(event->eventMethod, event->eventMethodParameters);
 
 		postTriggerTasks(event, result, currentTime);
@@ -912,20 +931,36 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::trigger(std::string name)
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-void EventHandler::triggerThread(std::string address, std::string variable, std::shared_ptr<RPC::RPCVariable> value)
+void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<RPC::RPCVariable> value)
 {
 	_triggerThreadCount++;
 	try
 	{
-		if(_triggeredEvents.find(address) == _triggeredEvents.end() || _triggeredEvents.at(address).find(variable) == _triggeredEvents.at(address).end() || !value)
+		_eventsMutex.lock();
+		if(!value || _triggeredEvents.find(peerID) == _triggeredEvents.end())
 		{
 			_triggerThreadCount--;
+			_eventsMutex.unlock();
 			return;
 		}
+		std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>* channels = &_triggeredEvents.at(peerID);
+		if(channels->find(channel) == channels->end())
+		{
+			_triggerThreadCount--;
+			_eventsMutex.unlock();
+			return;
+		}
+		std::map<std::string, std::vector<std::shared_ptr<Event>>>* variables = &channels->at(channel);
+		if(variables->find(variable) == variables->end())
+		{
+			_triggerThreadCount--;
+			_eventsMutex.unlock();
+			return;
+		}
+		std::vector<std::shared_ptr<Event>>* events = &variables->at(variable);
 		std::vector<std::shared_ptr<Event>> triggeredEvents;
 		uint64_t currentTime = HelperFunctions::getTime();
-		_eventsMutex.lock();
-		for(std::vector<std::shared_ptr<Event>>::iterator i = _triggeredEvents.at(address).at(variable).begin(); i !=  _triggeredEvents.at(address).at(variable).end(); ++i)
+		for(std::vector<std::shared_ptr<Event>>::iterator i = events->begin(); i !=  events->end(); ++i)
 		{
 			//Don't raise the same event multiple times
 			if(!(*i)->enabled || ((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 5000)) continue;
@@ -941,7 +976,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				//Comparison with previous value
 				if((*i)->trigger == Event::Trigger::updated)
 				{
-					Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"updated\"");
+					Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"updated\"");
 					(*i)->lastRaised = currentTime;
 					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 				}
@@ -949,7 +984,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) == *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"unchanged\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"unchanged\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -958,7 +993,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) != *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"changed\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"changed\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -967,7 +1002,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) > *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"greater\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greater\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -976,7 +1011,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) < *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"less\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"less\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -985,7 +1020,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) >= *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"greaterOrUnchanged\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterOrUnchanged\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -994,7 +1029,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*((*i)->lastValue) <= *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"lessOrUnchanged\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessOrUnchanged\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1007,7 +1042,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value == *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"value\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"value\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1016,7 +1051,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value != *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"notValue\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"notValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1025,7 +1060,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value > *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"greaterThanValue\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterThanValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1034,7 +1069,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value < *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"lessThanValue\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessThanValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1043,7 +1078,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value >= *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"greaterOrEqualValue\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterOrEqualValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1052,7 +1087,7 @@ void EventHandler::triggerThread(std::string address, std::string variable, std:
 				{
 					if(*value <= *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for device \"" + address + "\" and variable \"" + variable + "\". Trigger: \"lessOrEqualValue\"");
+						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessOrEqualValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1093,7 +1128,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 		}
 		if(rpcResult && rpcResult->errorStruct)
 		{
-			Output::printError("Error: Could not execute RPC method for event from address " + event->address + " and variable " + event->variable + ". Error struct:");
+			Output::printError("Error: Could not execute RPC method for event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ". Error struct:");
 			rpcResult->print();
 		}
 		if(event->resetAfter > 0 || event->initialTime > 0)
@@ -1104,7 +1139,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 				uint64_t resetTime = currentTime + event->resetAfter;
 				if(event->initialTime == 0) //Simple reset
 				{
-					Output::printInfo("Info: Event \"" + event->name + "\" for device \"" + event->address + "\" and variable \"" + event->variable + "\" will be reset in " + std::to_string(event->resetAfter / 1000) + " seconds.");
+					Output::printInfo("Info: Event \"" + event->name + "\" for peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable \"" + event->variable + "\" will be reset in " + std::to_string(event->resetAfter / 1000) + " seconds.");
 
 					_eventsMutex.lock();
 					while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
@@ -1122,7 +1157,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 					if(event->currentTime == 0) event->currentTime = event->initialTime;
 					if(event->factor <= 0)
 					{
-						Output::printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from address " + event->address + " and variable " + event->variable + ".");
+						Output::printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ".");
 						event->factor = 1;
 					}
 					resetTime = currentTime + event->currentTime;
@@ -1225,27 +1260,28 @@ void EventHandler::load()
 			event->id = row->second.at(0)->intValue;
 			event->name = row->second.at(1)->textValue;
 			event->type = (Event::Type::Enum)row->second.at(2)->intValue;
-			event->address = row->second.at(3)->textValue;
-			event->variable = row->second.at(4)->textValue;
-			event->trigger = (Event::Trigger::Enum)row->second.at(5)->intValue;
-			event->triggerValue = _rpcDecoder.decodeResponse(row->second.at(6)->binaryValue);
-			event->eventMethod = row->second.at(7)->textValue;
-			event->eventMethodParameters = _rpcDecoder.decodeResponse(row->second.at(8)->binaryValue);
-			event->resetAfter = row->second.at(9)->intValue;
-			event->initialTime = row->second.at(10)->intValue;
-			event->operation = (Event::Operation::Enum)row->second.at(11)->intValue;
-			event->factor = row->second.at(12)->floatValue;
-			event->limit = row->second.at(13)->intValue;
-			event->resetMethod = row->second.at(14)->textValue;
-			event->resetMethodParameters = _rpcDecoder.decodeResponse(row->second.at(15)->binaryValue);
-			event->eventTime = row->second.at(16)->intValue;
-			event->endTime = row->second.at(17)->intValue;
-			event->recurEvery = row->second.at(18)->intValue;
-			event->lastValue = _rpcDecoder.decodeResponse(row->second.at(19)->binaryValue);
-			event->lastRaised = row->second.at(20)->intValue;
-			event->lastReset = row->second.at(21)->intValue;
-			event->currentTime = row->second.at(22)->intValue;
-			event->enabled = row->second.at(23)->intValue;
+			event->peerID = row->second.at(3)->intValue;
+			event->peerChannel = row->second.at(4)->intValue;
+			event->variable = row->second.at(5)->textValue;
+			event->trigger = (Event::Trigger::Enum)row->second.at(6)->intValue;
+			event->triggerValue = _rpcDecoder.decodeResponse(row->second.at(7)->binaryValue);
+			event->eventMethod = row->second.at(8)->textValue;
+			event->eventMethodParameters = _rpcDecoder.decodeResponse(row->second.at(9)->binaryValue);
+			event->resetAfter = row->second.at(10)->intValue;
+			event->initialTime = row->second.at(11)->intValue;
+			event->operation = (Event::Operation::Enum)row->second.at(12)->intValue;
+			event->factor = row->second.at(13)->floatValue;
+			event->limit = row->second.at(14)->intValue;
+			event->resetMethod = row->second.at(15)->textValue;
+			event->resetMethodParameters = _rpcDecoder.decodeResponse(row->second.at(16)->binaryValue);
+			event->eventTime = row->second.at(17)->intValue;
+			event->endTime = row->second.at(18)->intValue;
+			event->recurEvery = row->second.at(19)->intValue;
+			event->lastValue = _rpcDecoder.decodeResponse(row->second.at(20)->binaryValue);
+			event->lastRaised = row->second.at(21)->intValue;
+			event->lastReset = row->second.at(22)->intValue;
+			event->currentTime = row->second.at(23)->intValue;
+			event->enabled = row->second.at(24)->intValue;
 			_eventsMutex.lock();
 			if(event->eventTime > 0)
 			{
@@ -1253,7 +1289,7 @@ void EventHandler::load()
 			}
 			else
 			{
-				_triggeredEvents[event->address][event->variable].push_back(event);
+				_triggeredEvents[event->peerID][event->peerChannel][event->variable].push_back(event);
 				if(event->resetAfter > 0 && event->lastReset <= event->lastRaised)
 				{
 					if(event->initialTime > 0)
@@ -1314,7 +1350,8 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->name)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)event->type)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->address)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->peerID)));
+		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->peerChannel)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->variable)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)event->trigger)));
 		std::shared_ptr<std::vector<char>> value = _rpcEncoder.encodeResponse(event->triggerValue);
@@ -1339,7 +1376,7 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->lastReset)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->currentTime)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->enabled)));
-		uint32_t result = GD::db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
+		uint32_t result = GD::db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
 		if(event->id == 0) event->id = result;
 	}
 	catch(const std::exception& ex)

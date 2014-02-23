@@ -665,7 +665,6 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescription(std::stri
 {
 	try
 	{
-		if(serialNumber == _serialNumber) return getDeviceDescriptionCentral();
 		std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
 		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 
@@ -710,7 +709,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescription(uint64_t 
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescriptionCentral()
+/*std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescriptionCentral()
 {
 	try
 	{
@@ -759,7 +758,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescriptionCentral()
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
+}*/
 
 std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel)
 {
@@ -927,9 +926,38 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamsetDescription(std::st
 		else
 		{
 			std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
-			if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
+			uint64_t remoteID = 0;
+			if(!remoteSerialNumber.empty())
+			{
+				std::shared_ptr<HMWiredPeer> remotePeer(getPeer(remoteSerialNumber));
+				if(remotePeer) remoteID = remotePeer->getID();
+			}
+			if(peer) return peer->getParamsetDescription(channel, type, remoteID, remoteChannel);
 			return RPC::RPCVariable::createError(-2, "Unknown device.");
 		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamsetDescription(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPeer> peer(getPeer(peerID));
+		if(peer) return peer->getParamsetDescription(channel, type, remoteID, remoteChannel);
+		return RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)
     {
@@ -959,7 +987,13 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamsetId(std::string seri
 		else
 		{
 			std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
-			if(peer) return peer->getParamsetId(channel, type, remoteSerialNumber, remoteChannel);
+			uint64_t remoteID = 0;
+			if(!remoteSerialNumber.empty())
+			{
+				std::shared_ptr<HMWiredPeer> remotePeer(getPeer(remoteSerialNumber));
+				if(remotePeer) remoteID = remotePeer->getID();
+			}
+			if(peer) return peer->getParamsetId(channel, type, remoteID, remoteChannel);
 			return RPC::RPCVariable::createError(-2, "Unknown device.");
 		}
 	}
@@ -1084,13 +1118,6 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::listDevices(std::shared_ptr<st
 			peers.push_back(i->second);
 		}
 		_peersMutex.unlock();
-
-		//Get this central's device description
-		if(!knownDevices || knownDevices->find(_deviceID) == knownDevices->end())
-		{
-			std::shared_ptr<RPC::RPCVariable> centralDescription = getDeviceDescriptionCentral();
-			if(centralDescription) array->arrayValue->push_back(centralDescription);
-		}
 
 		for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = peers.begin(); i != peers.end(); ++i)
 		{

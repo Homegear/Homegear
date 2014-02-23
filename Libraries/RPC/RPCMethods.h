@@ -372,8 +372,8 @@ public:
 	RPCListEvents()
 	{
 		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcInteger}));
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString}));
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString, RPCVariableType::rpcString}));
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcInteger, RPCVariableType::rpcInteger}));
+		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString}));
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };

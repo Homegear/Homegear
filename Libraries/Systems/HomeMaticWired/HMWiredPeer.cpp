@@ -1848,7 +1848,7 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 			{
 				if(j->second->empty()) continue;
 				std::string address(_serialNumber + ":" + std::to_string(j->first));
-				GD::eventHandler.trigger(address, j->second, rpcValues.at(j->first));
+				GD::eventHandler.trigger(_peerID, j->first, j->second, rpcValues.at(j->first));
 				GD::rpcClient.broadcastEvent(_peerID, j->first, address, j->second, rpcValues.at(j->first));
 			}
 		}
@@ -2049,7 +2049,7 @@ std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> HMWiredPeer::get
     return std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>>();
 }
 
-std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -2060,7 +2060,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t ch
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set");
 
 		std::shared_ptr<BasicPeer> remotePeer;
-		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
+		if(type == RPC::ParameterSet::Type::link && remoteID > 0) remotePeer = getPeer(channel, remoteID, remoteChannel);
 
 		std::shared_ptr<RPC::ParameterSet> parameterSet;
 		if(rpcChannel->specialParameter && rpcChannel->subconfig)
@@ -2080,7 +2080,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t ch
 		uint32_t index = 0;
 		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
 		{
-			if((*i)->id.empty()) continue;
+			if((*i)->id.empty() || (*i)->hidden) continue;
 			if(!((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::internal)  && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::transform))
 			{
 				Output::printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
@@ -2705,7 +2705,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, RPC:
 
 		for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
 		{
-			if((*i)->id.empty()) continue;
+			if((*i)->id.empty() || (*i)->hidden) continue;
 			if(!((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::internal) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::transform))
 			{
 				Output::printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
@@ -2758,7 +2758,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, RPC:
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
@@ -2766,9 +2766,9 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetId(uint32_t channel, R
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<BasicPeer> remotePeer;
-		if(type == RPC::ParameterSet::Type::link && !remoteSerialNumber.empty())
+		if(type == RPC::ParameterSet::Type::link && remoteID > 0)
 		{
-			remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
+			remotePeer = getPeer(channel, remoteID, remoteChannel);
 			if(!remotePeer) return RPC::RPCVariable::createError(-2, "Unknown remote peer.");
 		}
 
