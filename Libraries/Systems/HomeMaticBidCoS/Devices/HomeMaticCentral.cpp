@@ -2274,9 +2274,15 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 
 bool HomeMaticCentral::knowsDevice(std::string serialNumber)
 {
+	if(serialNumber == _serialNumber) return true;
+	_peersMutex.lock();
 	try
 	{
-		return (bool)getPeer(serialNumber) || (_serialNumber == serialNumber);
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -2290,14 +2296,20 @@ bool HomeMaticCentral::knowsDevice(std::string serialNumber)
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	_peersMutex.unlock();
 	return false;
 }
 
 bool HomeMaticCentral::knowsDevice(uint64_t id)
 {
+	_peersMutex.lock();
 	try
 	{
-		return (bool)getPeer(id);
+		if(_peersByID.find(id) != _peersByID.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -2311,6 +2323,7 @@ bool HomeMaticCentral::knowsDevice(uint64_t id)
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	_peersMutex.unlock();
 	return false;
 }
 
@@ -3538,7 +3551,7 @@ void HomeMaticCentral::pairingModeTimer(int32_t duration, bool debugOutput)
     }
 }
 
-std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool on, int32_t duration, bool debugOutput)
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setInstallMode(bool on, uint32_t duration, bool debugOutput)
 {
 	try
 	{

@@ -506,7 +506,7 @@ void Peer::saveConfig()
 		{
 			std::string emptyString;
 			if(i->second.databaseID > 0) saveParameter(i->second.databaseID, i->second.data);
-			else saveParameter(0, RPC::ParameterSet::Type::Enum::none, i->first, emptyString, i->second.data);
+			else saveParameter(0, i->first, i->second.data);
 		}
 		for(std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>::iterator i = configCentral.begin(); i != configCentral.end(); ++i)
 		{

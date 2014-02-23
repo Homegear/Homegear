@@ -2527,8 +2527,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLinkInfo(int32_t senderChannel,
 		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(_peers.find(senderChannel) == _peers.end()) return RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
 		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverSerialNumber, receiverChannel);
-		if(!remotePeer) return RPC::RPCVariable::createError(-2, "No peer found for sender channel and receiver serial number.");
-		if(remotePeer->channel != receiverChannel)  RPC::RPCVariable::createError(-2, "No peer found for receiver channel.");
+		if(!remotePeer) return RPC::RPCVariable::createError(-2, "Peer not found.");
 		std::shared_ptr<RPC::RPCVariable> response(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		response->structValue->insert(RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(remotePeer->linkDescription))));
 		response->structValue->insert(RPC::RPCStructElement("NAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(remotePeer->linkName))));
@@ -2554,9 +2553,8 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setLinkInfo(int32_t senderChannel,
 	try
 	{
 		if(_peers.find(senderChannel) == _peers.end()) return RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
-		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverSerialNumber);
-		if(!remotePeer) return RPC::RPCVariable::createError(-2, "No peer found for sender channel and receiver serial number.");
-		if(remotePeer->channel != receiverChannel)  RPC::RPCVariable::createError(-2, "No peer found for receiver channel.");
+		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverSerialNumber, receiverChannel);
+		if(!remotePeer) return RPC::RPCVariable::createError(-2, "Peer not found.");
 		remotePeer->linkDescription = description;
 		remotePeer->linkName = name;
 		savePeers();

@@ -162,9 +162,7 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 				uint32_t bits = std::lround(std::floor(valueSize)) * 8;
 				bits += std::lround(valueSize * 10) % 10;
 				double factor = factors.at(value->integerValue >> bits);
-				uint32_t mask = 0;
-				for(int32_t i = 0; i < bits; i++) mask |= 1 << i;
-				value->floatValue = (value->integerValue & mask) * factor;
+				value->floatValue = (value->integerValue & (0xFFFFFFFF >> (32 - bits))) * factor;
 			}
 			else
 			{

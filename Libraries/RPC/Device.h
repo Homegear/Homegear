@@ -199,9 +199,9 @@ public:
 	int32_t addressStart = -1;
 	int32_t addressStep = -1;
 	int32_t count = -1;
-	int32_t channelOffset;
-	int32_t peerAddressOffset;
-	int32_t peerChannelOffset;
+	int32_t channelOffset = -1;
+	int32_t peerAddressOffset = -1;
+	int32_t peerChannelOffset = -1;
 
 	ParameterSet() {}
 	ParameterSet(xml_node<>* parameterSetNode);

@@ -1592,13 +1592,19 @@ std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vect
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcBoolean }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
+			std::vector<RPCVariableType>({ RPCVariableType::rpcBoolean }),
+			std::vector<RPCVariableType>({ RPCVariableType::rpcBoolean, RPCVariableType::rpcInteger })
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
+		uint32_t time = (parameters->size() > 1) ? parameters->at(1)->integerValue : 60;
+		if(time < 5) time = 60;
+		if(time > 3600) time = 3600;
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central) central->setInstallMode(parameters->at(0)->booleanValue);
+			if(central) central->setInstallMode(parameters->at(0)->booleanValue, time);
 		}
 
 		return RPC::RPCVariable::createError(-2, "Device not found.");

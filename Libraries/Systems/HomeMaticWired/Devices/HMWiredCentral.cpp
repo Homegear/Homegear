@@ -204,93 +204,6 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			else stringStream << "Search completed successfully." << std::endl;
 			return stringStream.str();
 		}
-		/*else if(command.compare(0, 9, "peers add") == 0)
-		{
-			uint32_t deviceType;
-			int32_t peerAddress = 0;
-			std::string serialNumber;
-			int32_t firmwareVersion = 0;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 2)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 2)
-				{
-					if(element == "help") break;
-					int32_t temp = HelperFunctions::getNumber(element, true);
-					if(temp == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
-					deviceType = temp;
-				}
-				else if(index == 3)
-				{
-					peerAddress = HelperFunctions::getNumber(element, true);
-					if(peerAddress == 0 || peerAddress != (peerAddress & 0xFFFFFF)) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 3 bytes. A value of \"0\" is not allowed.\n";
-				}
-				else if(index == 4)
-				{
-					if(element.length() != 10) return "Invalid serial number. Please provide a serial number with a length of 10 characters.\n";
-					serialNumber = element;
-				}
-				else if(index == 5)
-				{
-					firmwareVersion = HelperFunctions::getNumber(element, true);
-					if(firmwareVersion == 0) return "Invalid firmware version. The firmware version has to be passed in hexadecimal format.\n";
-				}
-				index++;
-			}
-			if(index < 6)
-			{
-				stringStream << "Description: This command manually adds a peer without pairing. Please only use this command for testing." << std::endl;
-				stringStream << "Usage: peers add DEVICETYPE ADDRESS SERIALNUMBER FIRMWAREVERSION" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  DEVICETYPE:\t\tThe 2 byte device type of the peer to add in hexadecimal format. Example: 0039" << std::endl;
-				stringStream << "  ADDRESS:\t\tThe 3 byte address of the peer to add in hexadecimal format. Example: 1A03FC" << std::endl;
-				stringStream << "  SERIALNUMBER:\t\tThe 10 character long serial number of the peer to add. Example: JEQ0123456" << std::endl;
-				stringStream << "  FIRMWAREVERSION:\tThe 1 byte firmware version of the peer to add in hexadecimal format. Example: 1F" << std::endl;
-				return stringStream.str();
-			}
-			if(peerExists(peerAddress)) stringStream << "This peer is already paired to this central." << std::endl;
-			else
-			{
-				std::shared_ptr<Peer> peer = createPeer(peerAddress, firmwareVersion, GD::deviceTypes.get(DeviceFamily::HomeMaticBidCoS, deviceType), serialNumber, 0, 0, std::shared_ptr<BidCoSPacket>(), false);
-				if(!peer || !peer->rpcDevice) return "Device type not supported.\n";
-
-				try
-				{
-					_peersMutex.lock();
-					_peers[peer->getAddress()] = peer;
-					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-					_peersMutex.unlock();
-					peer->save(true, true, false);
-					peer->initializeCentralConfig();
-				}
-				catch(const std::exception& ex)
-				{
-					_peersMutex.unlock();
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(Exception& ex)
-				{
-					_peersMutex.unlock();
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					_peersMutex.unlock();
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				}
-
-				stringStream << "Added peer 0x" << std::hex << peerAddress << " of type 0x" << (int32_t)deviceType << " with serial number " << serialNumber << " and firmware version 0x" << firmwareVersion << "." << std::dec << std::endl;
-			}
-			return stringStream.str();
-		}*/
 		else if(command.compare(0, 12, "peers unpair") == 0)
 		{
 			uint64_t peerID;
@@ -581,9 +494,15 @@ std::shared_ptr<HMWiredPeer> HMWiredCentral::createPeer(int32_t address, int32_t
 
 bool HMWiredCentral::knowsDevice(std::string serialNumber)
 {
+	if(serialNumber == _serialNumber) return true;
+	_peersMutex.lock();
 	try
 	{
-		return (bool)getPeer(serialNumber) || (_serialNumber == serialNumber);
+		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -597,14 +516,20 @@ bool HMWiredCentral::knowsDevice(std::string serialNumber)
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	_peersMutex.unlock();
 	return false;
 }
 
 bool HMWiredCentral::knowsDevice(uint64_t id)
 {
+	_peersMutex.lock();
 	try
 	{
-		return (bool)getPeer(id);
+		if(_peersByID.find(id) != _peersByID.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -618,6 +543,7 @@ bool HMWiredCentral::knowsDevice(uint64_t id)
 	{
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	_peersMutex.unlock();
 	return false;
 }
 
@@ -662,7 +588,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::addLink(std::string senderSeri
 		senderPeer->serialNumber = sender->getSerialNumber();
 		senderPeer->linkDescription = description;
 		senderPeer->linkName = name;
-		senderPeer->configEEPROMAddress = receiver->getFreeReceiverEEPROMAddress(receiverChannelIndex);
+		senderPeer->configEEPROMAddress = receiver->getFreeEEPROMAddress(receiverChannelIndex, false);
 		if(senderPeer->configEEPROMAddress == -1) return RPC::RPCVariable::createError(-32500, "Can't get free eeprom address to store config.");
 
 		std::shared_ptr<BasicPeer> receiverPeer(new BasicPeer());
@@ -673,7 +599,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::addLink(std::string senderSeri
 		receiverPeer->serialNumber = receiver->getSerialNumber();
 		receiverPeer->linkDescription = description;
 		receiverPeer->linkName = name;
-		receiverPeer->configEEPROMAddress = sender->getFreeSenderEEPROMAddress(senderChannelIndex);
+		receiverPeer->configEEPROMAddress = sender->getFreeEEPROMAddress(senderChannelIndex, true);
 		if(receiverPeer->configEEPROMAddress == -1) return RPC::RPCVariable::createError(-32500, "Can't get free eeprom address to store config.");
 
 		sender->addPeer(senderChannelIndex, receiverPeer);
@@ -699,6 +625,40 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::addLink(std::string senderSeri
 		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::deleteDevice(std::string serialNumber, int32_t flags)
+{
+	try
+	{
+		if(serialNumber.empty()) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		std::shared_ptr<HMWiredPeer> peer = getPeer(serialNumber);
+		if(!peer) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+		uint64_t id = peer->getID();
+
+		bool defer = flags & 0x04;
+		bool force = flags & 0x02;
+		//Reset
+		if(flags & 0x01) peer->reset();
+		deletePeer(id);
+
+		if(knowsDevice(id)) return RPC::RPCVariable::createError(-1, "Error deleting peer. See log for more details.");
+
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescription(std::string serialNumber, int32_t channel)
@@ -753,6 +713,123 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescriptionCentral()
 		description->structValue->insert(RPC::RPCStructElement("VERSION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)10))));
 
 		return description;
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel)
+{
+	try
+	{
+		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		std::shared_ptr<HMWiredPeer> sender(getPeer(senderSerialNumber));
+		std::shared_ptr<HMWiredPeer> receiver(getPeer(receiverSerialNumber));
+		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		return sender->getLinkInfo(senderChannel, receiver->getID(), receiverChannel);
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinkPeers(std::string serialNumber, int32_t channel)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		return peer->getLinkPeers(channel);
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinks(std::string serialNumber, int32_t channel, int32_t flags)
+{
+	try
+	{
+		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<RPC::RPCVariable> element(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		if(serialNumber.empty())
+		{
+			try
+			{
+				std::vector<std::shared_ptr<HMWiredPeer>> peers;
+				//Copy all peers first, because getLinks takes very long and we don't want to lock _peersMutex too long
+				_peersMutex.lock();
+				for(std::unordered_map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+				{
+					peers.push_back(i->second);
+				}
+				_peersMutex.unlock();
+
+				for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+				{
+					//listDevices really needs a lot of ressources, so wait a little bit after each device
+					std::this_thread::sleep_for(std::chrono::milliseconds(3));
+					element = (*i)->getLink(channel, flags, true);
+					array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
+				}
+			}
+			catch(const std::exception& ex)
+			{
+				_peersMutex.unlock();
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(Exception& ex)
+			{
+				_peersMutex.unlock();
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_peersMutex.unlock();
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+		}
+		else
+		{
+			std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
+			if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+			element = peer->getLink(channel, flags, false);
+			array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
+		}
+		return array;
 	}
 	catch(const std::exception& ex)
     {
@@ -1034,6 +1111,45 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::putParamset(std::string serial
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::removeLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex)
+{
+	try
+	{
+		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		std::shared_ptr<HMWiredPeer> sender = getPeer(senderSerialNumber);
+		std::shared_ptr<HMWiredPeer> receiver = getPeer(receiverSerialNumber);
+		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(senderChannelIndex < 0) senderChannelIndex = 0;
+		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
+		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Sender channel not found.");
+		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Receiver channel not found.");
+		if(!sender->getPeer(senderChannelIndex, receiver->getID()) && !receiver->getPeer(receiverChannelIndex, sender->getID())) return RPC::RPCVariable::createError(-6, "Devices are not paired to each other.");
+
+		sender->removePeer(senderChannelIndex, receiver->getID(), receiverChannelIndex);
+		receiver->removePeer(receiverChannelIndex, sender->getID(), senderChannelIndex);
+
+		GD::rpcClient.broadcastUpdateDevice(sender->getID(), senderChannelIndex, senderSerialNumber + ":" + std::to_string(senderChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
+		GD::rpcClient.broadcastUpdateDevice(receiver->getID(), receiverChannelIndex, receiverSerialNumber + ":" + std::to_string(receiverChannelIndex), RPC::Client::Hint::Enum::updateHintLinks);
+
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 {
 	try
@@ -1185,6 +1301,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			peer->initializeCentralConfig();
 
 			peer->binaryConfig[0].data = readEEPROM(*i, 0);
+			peer->saveParameter(peer->binaryConfig[0].databaseID, 0, peer->binaryConfig[0].data);
 			if(peer->binaryConfig[0].data.size() != 0x10)
 			{
 				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Could not read master config from EEPROM.");
@@ -1221,6 +1338,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 						if(peer->binaryConfig.find(configIndex) == peer->binaryConfig.end())
 						{
 							peer->binaryConfig[configIndex].data = readEEPROM(peer->getAddress(), configIndex);
+							peer->saveParameter(peer->binaryConfig[configIndex].databaseID, configIndex, peer->binaryConfig[configIndex].data);
 							if(peer->binaryConfig[configIndex].data.size() != 0x10) Output::printError("Error: HomeMatic Wired Central: Error reading config from device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Size is not 16 bytes.");
 						}
 					}
@@ -1250,7 +1368,6 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 			_peersMutex.unlock();
-			peer->save(false, false, true);
 		}
 
 		if(newPeers.size() > 0)
@@ -1283,6 +1400,37 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 	}
 	_pairing = false;
 	unlockBus();
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::setLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description)
+{
+	try
+	{
+		if(senderSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		std::shared_ptr<HMWiredPeer> sender(getPeer(senderSerialNumber));
+		std::shared_ptr<HMWiredPeer> receiver(getPeer(receiverSerialNumber));
+		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		std::shared_ptr<RPC::RPCVariable> result1 = sender->setLinkInfo(senderChannel, receiver->getID(), receiverChannel, name, description);
+		std::shared_ptr<RPC::RPCVariable> result2 = receiver->setLinkInfo(receiverChannel, sender->getID(), senderChannel, name, description);
+		if(result1->errorStruct) return result1;
+		if(result2->errorStruct) return result2;
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 

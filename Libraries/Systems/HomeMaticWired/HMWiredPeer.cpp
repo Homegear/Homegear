@@ -92,8 +92,8 @@ void HMWiredPeer::initializeCentralConfig()
 					{
 						parameter = RPCConfigurationParameter();
 						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-						valuesCentral[i->first][(*j)->id] = parameter;
 						saveParameter(0, RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
+						valuesCentral[i->first][(*j)->id] = parameter;
 					}
 				}
 			}
@@ -154,7 +154,7 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPee
 		for(std::vector<int32_t>::iterator i = configBlocks.begin(); i != configBlocks.end(); ++i)
 		{
 			std::vector<uint8_t> configBlock = binaryConfig.at(*i).data;
-			getCentral()->writeEEPROM(_address, *i, configBlock);
+			if(!getCentral()->writeEEPROM(_address, *i, configBlock)) Output::printError("Error: Could not write config to device's eeprom.");
 		}
 
 		if(!peer->isSender) return; //Nothing more to do
@@ -612,7 +612,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 				intByteIndex++;
 				if(intByteIndex >= 0x10)
 				{
-					saveParameter(configBlock->databaseID, configBlock->data);
+					saveParameter(configBlock->databaseID, configBlockIndex, configBlock->data);
 					configBlockIndex += 0x10;
 					changedBlocks.push_back(configBlockIndex);
 					if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
@@ -631,7 +631,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 				configBlock->data.at(intByteIndex) &= (~_bitmask[missingBits]);
 				configBlock->data.at(intByteIndex) |= (binaryValue.at(binaryValue.size() - 1) >> (bitSize - missingBits));
 			}
-			saveParameter(configBlock->databaseID, configBlock->data);
+			saveParameter(configBlock->databaseID, configBlockIndex, configBlock->data);
 		}
 		else
 		{
@@ -659,7 +659,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 					if(intByteIndex + i >= 0x10)
 					{
 						intByteIndex = -i;
-						saveParameter(configBlock->databaseID, configBlock->data);
+						saveParameter(configBlock->databaseID, configBlockIndex, configBlock->data);
 						configBlockIndex += 0x10;
 						changedBlocks.push_back(configBlockIndex);
 						if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
@@ -688,7 +688,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 						if(intByteIndex + i >= 0x10)
 						{
 							intByteIndex = -i;
-							saveParameter(configBlock->databaseID, configBlock->data);
+							saveParameter(configBlock->databaseID, configBlockIndex, configBlock->data);
 							configBlockIndex += 0x10;
 							changedBlocks.push_back(configBlockIndex);
 							if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
@@ -711,7 +711,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 					if(intByteIndex + missingBytes + i >= 0x10)
 					{
 						intByteIndex = -(missingBytes + i);
-						saveParameter(configBlock->databaseID, configBlock->data);
+						saveParameter(configBlock->databaseID, configBlockIndex, configBlock->data);
 						configBlockIndex += 0x10;
 						changedBlocks.push_back(configBlockIndex);
 						if(binaryConfig.find(configBlockIndex) == binaryConfig.end())
@@ -729,7 +729,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 					configBlock->data.at(intByteIndex + missingBytes + i) = binaryValue.at(i);
 				}
 			}
-			saveParameter(configBlock->databaseID, configBlock->data);
+			saveParameter(configBlock->databaseID, configBlockIndex, configBlock->data);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1193,24 +1193,28 @@ std::shared_ptr<BasicPeer> HMWiredPeer::getPeer(int32_t channel, uint64_t id, in
 	return std::shared_ptr<BasicPeer>();
 }
 
-void HMWiredPeer::removePeer(int32_t channel, int32_t address, int32_t remoteChannel)
+void HMWiredPeer::removePeer(int32_t channel, uint64_t id, int32_t remoteChannel)
 {
 	try
 	{
+		if(_peers.find(channel) == _peers.end()) return;
+
 		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
 		{
-			if((*i)->address == address && (*i)->channel == remoteChannel)
+			if((*i)->id == id && (*i)->channel == remoteChannel)
 			{
+				std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, RPC::ParameterSet::Type::Enum::link);
+				if(parameterSet && (*i)->configEEPROMAddress != -1 && parameterSet->addressStart > -1 && parameterSet->addressStep > 0)
+				{
+					std::vector<uint8_t> data(parameterSet->addressStep, 0xFF);
+					Output::printDebug("Debug: Erasing " + std::to_string(data.size()) + " bytes in eeprom at address " + HelperFunctions::getHexString((*i)->configEEPROMAddress, 4));
+					std::vector<int32_t> configBlocks = setConfigParameter((*i)->configEEPROMAddress, parameterSet->addressStep, data);
+					for(std::vector<int32_t>::iterator j = configBlocks.begin(); j != configBlocks.end(); ++j)
+					{
+						if(!getCentral()->writeEEPROM(_address, *j, binaryConfig[*j].data)) Output::printError("Error: Could not write config to device's eeprom.");
+					}
+				}
 				_peers[channel].erase(i);
-				_databaseMutex.lock();
-				DataColumnVector data;
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)RPC::ParameterSet::Type::Enum::link)));
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(channel)));
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(address)));
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteChannel)));
-				GD::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND remotePeer=? AND remoteChannel=?", data);
-				_databaseMutex.unlock();
 				savePeers();
 				return;
 			}
@@ -1231,67 +1235,31 @@ void HMWiredPeer::removePeer(int32_t channel, int32_t address, int32_t remoteCha
     _databaseMutex.unlock();
 }
 
-int32_t HMWiredPeer::getFreeSenderEEPROMAddress(int32_t channel)
+int32_t HMWiredPeer::getFreeEEPROMAddress(int32_t channel, bool isSender)
 {
 	try
 	{
 		if(!rpcDevice) return -1;
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return -1;
 		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
-		if(!rpcChannel->linkRoles || rpcChannel->linkRoles->sourceNames.empty()) return -1;
+		if(!rpcChannel->linkRoles)
+		{
+			if(!isSender && rpcChannel->linkRoles->targetNames.empty()) return -1;
+			if(isSender && rpcChannel->linkRoles->sourceNames.empty()) return -1;
+		}
 		std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, RPC::ParameterSet::Type::link);
-		if(!parameterSet) return -1;
+		if(!parameterSet || parameterSet->addressStart < 0 || parameterSet->addressStep <= 0 || parameterSet->peerAddressOffset < 0) return -1;
+		int32_t max = parameterSet->addressStart + (parameterSet->count * parameterSet->addressStep);
 		int32_t currentAddress = parameterSet->addressStart;
-		for(int32_t j = rpcChannel->startIndex; j < rpcChannel->startIndex + rpcChannel->count; j++)
+		while(currentAddress < max)
 		{
-			if(_peers.find(j) == _peers.end()) continue;
-			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[j].begin(); i != _peers[j].end(); ++i)
-			{
-				if((*i)->configEEPROMAddress >= currentAddress) currentAddress = (*i)->configEEPROMAddress + parameterSet->addressStep;
-			}
+			std::vector<uint8_t> result = getConfigParameter(currentAddress + parameterSet->peerAddressOffset, 4.0);
+			if(result.size() != 4) continue;
+			//Endianness doesn't matter
+			if(*((int32_t*)&result.at(0)) == -1) return currentAddress;
+			currentAddress += parameterSet->addressStep;
 		}
-		if(currentAddress >= parameterSet->addressStart + (parameterSet->count * parameterSet->addressStep))
-		{
-			Output::printError("Error: There are no free EEPROM addresses to store links.");
-			return -1;
-		}
-		return currentAddress;
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return -1;
-}
-
-int32_t HMWiredPeer::getFreeReceiverEEPROMAddress(int32_t channel)
-{
-	try
-	{
-		if(!rpcDevice) return -1;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return -1;
-		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels[channel];
-		if(!rpcChannel->linkRoles || rpcChannel->linkRoles->targetNames.empty()) return -1;
-		std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, RPC::ParameterSet::Type::link);
-		if(!parameterSet) return -1;
-		int32_t currentAddress = parameterSet->addressStart;
-		for(int32_t j = rpcChannel->startIndex; j < rpcChannel->startIndex + rpcChannel->count; j++)
-		{
-			if(_peers.find(j) == _peers.end()) continue;
-			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[j].begin(); i != _peers[j].end(); ++i)
-			{
-				if((*i)->configEEPROMAddress >= currentAddress) currentAddress = (*i)->configEEPROMAddress + parameterSet->addressStep;
-			}
-		}
-		if(currentAddress >= parameterSet->addressStart + (parameterSet->count * parameterSet->addressStep))
+		if(currentAddress >= max)
 		{
 			Output::printError("Error: There are no free EEPROM addresses to store links.");
 			return -1;
@@ -2461,6 +2429,253 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t ch
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLink(int32_t channel, int32_t flags, bool avoidDuplicates)
+{
+	try
+	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
+		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<RPC::RPCVariable> element;
+		if(channel > -1) //Get link of single channel
+		{
+			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+			//Return if no peers are paired to the channel
+			if(_peers.find(channel) == _peers.end() || _peers.at(channel).empty()) return array;
+			bool isSender = false;
+			//Return if there are no link roles defined
+			std::shared_ptr<RPC::LinkRole> linkRoles = rpcDevice->channels.at(channel)->linkRoles;
+			if(!linkRoles) return array;
+			if(!linkRoles->sourceNames.empty()) isSender = true;
+			else if(linkRoles->targetNames.empty()) return array;
+			std::shared_ptr<HMWiredCentral> central = getCentral();
+			if(!central) return array; //central actually should always be set at this point
+			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
+			{
+				if((*i)->hidden) continue;
+				std::shared_ptr<HMWiredPeer> remotePeer(central->getPeer((*i)->address));
+				bool peerKnowsMe = false;
+				if(remotePeer && remotePeer->getPeer((*i)->channel, _address, channel)) peerKnowsMe = true;
+
+				//Don't continue if peer is sender and exists in central's peer array to avoid generation of duplicate results when requesting all links (only generate results when we are sender)
+				if(!isSender && peerKnowsMe && avoidDuplicates) return array;
+				//If we are receiver this point is only reached, when the sender is not paired to this central
+
+				uint64_t peerID = (*i)->id;
+				std::string peerSerialNumber = (*i)->serialNumber;
+				int32_t brokenFlags = 0;
+				if(peerID == 0 || peerSerialNumber.empty())
+				{
+					if(peerKnowsMe ||
+					  (*i)->address == _address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
+					{
+						(*i)->id = remotePeer->getID();
+						(*i)->serialNumber = remotePeer->getSerialNumber();
+						peerID = (*i)->id;
+					}
+					else
+					{
+						//Peer not paired to central
+						std::ostringstream stringstream;
+						stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << (*i)->address;
+						peerSerialNumber = stringstream.str();
+						if(isSender) brokenFlags = 2; //LINK_FLAG_RECEIVER_BROKEN
+						else brokenFlags = 1; //LINK_FLAG_SENDER_BROKEN
+					}
+				}
+				//Relevent for switches
+				if(peerID == _peerID && rpcDevice->channels.find((*i)->channel) == rpcDevice->channels.end())
+				{
+					if(isSender) brokenFlags = 2 | 4; //LINK_FLAG_RECEIVER_BROKEN | PEER_IS_ME
+					else brokenFlags = 1 | 4; //LINK_FLAG_SENDER_BROKEN | PEER_IS_ME
+				}
+				if(brokenFlags == 0 && remotePeer && remotePeer->serviceMessages->getUnreach()) brokenFlags = 2;
+				if(serviceMessages->getUnreach()) brokenFlags |= 1;
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+				element->structValue->insert(RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->linkDescription))));
+				element->structValue->insert(RPC::RPCStructElement("FLAGS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(brokenFlags))));
+				element->structValue->insert(RPC::RPCStructElement("NAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->linkName))));
+				if(isSender)
+				{
+					element->structValue->insert(RPC::RPCStructElement("RECEIVER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerialNumber + ":" + std::to_string((*i)->channel)))));
+					if(flags & 4)
+					{
+						std::shared_ptr<RPC::RPCVariable> paramset;
+						if(!(brokenFlags & 2) && remotePeer) paramset = remotePeer->getParamset((*i)->channel, RPC::ParameterSet::Type::Enum::link, _peerID, channel);
+						else paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(paramset->errorStruct) paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(RPC::RPCStructElement("RECEIVER_PARAMSET", paramset));
+					}
+					if(flags & 16)
+					{
+						std::shared_ptr<RPC::RPCVariable> description;
+						if(!(brokenFlags & 2) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel);
+						else description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(description->errorStruct) description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(RPC::RPCStructElement("RECEIVER_DESCRIPTION", description));
+					}
+					element->structValue->insert(RPC::RPCStructElement("SENDER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
+					if(flags & 2)
+					{
+						std::shared_ptr<RPC::RPCVariable> paramset;
+						if(!(brokenFlags & 1)) paramset = getParamset(channel, RPC::ParameterSet::Type::Enum::link, peerID, (*i)->channel);
+						else paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(paramset->errorStruct) paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(RPC::RPCStructElement("SENDER_PARAMSET", paramset));
+					}
+					if(flags & 8)
+					{
+						std::shared_ptr<RPC::RPCVariable> description;
+						if(!(brokenFlags & 1)) description = getDeviceDescription(channel);
+						else description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(description->errorStruct) description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(RPC::RPCStructElement("SENDER_DESCRIPTION", description));
+					}
+				}
+				else //When sender is broken
+				{
+					element->structValue->insert(RPC::RPCStructElement("RECEIVER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
+					if(flags & 4)
+					{
+						std::shared_ptr<RPC::RPCVariable> paramset;
+						//Sender is broken, so just insert empty paramset
+						paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(RPC::RPCStructElement("RECEIVER_PARAMSET", paramset));
+					}
+					element->structValue->insert(RPC::RPCStructElement("SENDER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerialNumber + ":" + std::to_string((*i)->channel)))));
+					if(flags & 2)
+					{
+						std::shared_ptr<RPC::RPCVariable> paramset;
+						//Sender is broken, so just insert empty paramset
+						paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(RPC::RPCStructElement("SENDER_PARAMSET", paramset));
+					}
+				}
+				array->arrayValue->push_back(element);
+			}
+		}
+		else
+		{
+			flags &= 7; //Remove flag 8 and 16. Both are not processed, when getting links for all devices.
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			{
+				element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+				element = getLink(i->first, flags, avoidDuplicates);
+				array->arrayValue->insert(array->arrayValue->end(), element->arrayValue->begin(), element->arrayValue->end());
+			}
+		}
+		return array;
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel)
+{
+	try
+	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(_peers.find(senderChannel) == _peers.end()) return RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
+		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverID, receiverChannel);
+		if(!remotePeer) return RPC::RPCVariable::createError(-2, "Peer not found.");
+		std::shared_ptr<RPC::RPCVariable> response(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+		response->structValue->insert(RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(remotePeer->linkDescription))));
+		response->structValue->insert(RPC::RPCStructElement("NAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(remotePeer->linkName))));
+		return response;
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLinkPeers(int32_t channel)
+{
+	try
+	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		if(channel > -1)
+		{
+			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
+			//Return if no peers are paired to the channel
+			if(_peers.find(channel) == _peers.end() || _peers.at(channel).empty()) return array;
+			//Return if there are no link roles defined
+			std::shared_ptr<RPC::LinkRole> linkRoles = rpcDevice->channels.at(channel)->linkRoles;
+			if(!linkRoles) return array;
+			std::shared_ptr<HMWiredCentral> central = getCentral();
+			if(!central) return array; //central actually should always be set at this point
+			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
+			{
+				if((*i)->hidden) continue;
+				std::shared_ptr<HMWiredPeer> peer(central->getPeer((*i)->address));
+				bool peerKnowsMe = false;
+				if(peer && peer->getPeer(channel, _peerID)) peerKnowsMe = true;
+
+				std::string peerSerial = (*i)->serialNumber;
+				if((*i)->serialNumber.empty())
+				{
+					if(peerKnowsMe)
+					{
+						(*i)->serialNumber = peer->getSerialNumber();
+						peerSerial = (*i)->serialNumber;
+					}
+					else
+					{
+						//Peer not paired to central
+						std::ostringstream stringstream;
+						stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << (*i)->address;
+						peerSerial = stringstream.str();
+					}
+				}
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel))));
+			}
+		}
+		else
+		{
+			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			{
+				std::shared_ptr<RPC::RPCVariable> linkPeers = getLinkPeers(i->first);
+				array->arrayValue->insert(array->arrayValue->end(), linkPeers->arrayValue->begin(), linkPeers->arrayValue->end());
+			}
+		}
+		return array;
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
@@ -2666,7 +2881,11 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, RPC:
 		std::shared_ptr<HMWiredCentral> central = getCentral();
 		for(std::map<int32_t, bool>::iterator i = changedBlocks.begin(); i != changedBlocks.end(); ++i)
 		{
-			central->writeEEPROM(_address, i->first, binaryConfig[i->first].data);
+			if(!central->writeEEPROM(_address, i->first, binaryConfig[i->first].data))
+			{
+				Output::printError("Error: Could not write config to device's eeprom.");
+				return RPC::RPCVariable::createError(-32500, "Could not write config to device's eeprom.");
+			}
 		}
 		GD::rpcClient.broadcastUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 
@@ -2685,6 +2904,33 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, RPC:
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description)
+{
+	try
+	{
+		if(_peers.find(senderChannel) == _peers.end()) return RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
+		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverID, receiverChannel);
+		if(!remotePeer) return RPC::RPCVariable::createError(-2, "Peer not found.");
+		remotePeer->linkDescription = description;
+		remotePeer->linkName = name;
+		savePeers();
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value)
