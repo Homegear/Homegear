@@ -1242,9 +1242,13 @@ int32_t HMWiredPeer::getFreeSenderEEPROMAddress(int32_t channel)
 		std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, RPC::ParameterSet::Type::link);
 		if(!parameterSet) return -1;
 		int32_t currentAddress = parameterSet->addressStart;
-		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		for(int32_t j = rpcChannel->startIndex; j < rpcChannel->startIndex + rpcChannel->count; j++)
 		{
-			if((*i)->configEEPROMAddress >= currentAddress) currentAddress = (*i)->configEEPROMAddress + parameterSet->addressStep;
+			if(_peers.find(j) == _peers.end()) continue;
+			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[j].begin(); i != _peers[j].end(); ++i)
+			{
+				if((*i)->configEEPROMAddress >= currentAddress) currentAddress = (*i)->configEEPROMAddress + parameterSet->addressStep;
+			}
 		}
 		if(currentAddress >= parameterSet->addressStart + (parameterSet->count * parameterSet->addressStep))
 		{
@@ -1279,9 +1283,13 @@ int32_t HMWiredPeer::getFreeReceiverEEPROMAddress(int32_t channel)
 		std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, RPC::ParameterSet::Type::link);
 		if(!parameterSet) return -1;
 		int32_t currentAddress = parameterSet->addressStart;
-		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		for(int32_t j = rpcChannel->startIndex; j < rpcChannel->startIndex + rpcChannel->count; j++)
 		{
-			if((*i)->configEEPROMAddress >= currentAddress) currentAddress = (*i)->configEEPROMAddress + parameterSet->addressStep;
+			if(_peers.find(j) == _peers.end()) continue;
+			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[j].begin(); i != _peers[j].end(); ++i)
+			{
+				if((*i)->configEEPROMAddress >= currentAddress) currentAddress = (*i)->configEEPROMAddress + parameterSet->addressStep;
+			}
 		}
 		if(currentAddress >= parameterSet->addressStart + (parameterSet->count * parameterSet->addressStep))
 		{
