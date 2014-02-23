@@ -1607,7 +1607,7 @@ std::shared_ptr<RPCVariable> RPCSetInstallMode::invoke(std::shared_ptr<std::vect
 			if(central) central->setInstallMode(parameters->at(0)->booleanValue, time);
 		}
 
-		return RPC::RPCVariable::createError(-2, "Device not found.");
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {

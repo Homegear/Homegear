@@ -692,6 +692,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescriptionCentral()
 	{
 		std::shared_ptr<RPC::RPCVariable> description(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 
+		description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_deviceID))));
 		description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber))));
 
 		std::shared_ptr<RPC::RPCVariable> variable = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
@@ -702,13 +703,20 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescriptionCentral()
 		int32_t uiFlags = (int32_t)RPC::Device::UIFlags::dontdelete | (int32_t)RPC::Device::UIFlags::visible;
 		description->structValue->insert(RPC::RPCStructElement("FLAGS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(uiFlags))));
 
+		description->structValue->insert(RPC::RPCStructElement("INTERFACE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber))));
+
 		variable = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		description->structValue->insert(RPC::RPCStructElement("PARAMSETS", variable));
 		variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("MASTER")))); //Always MASTER
 
 		description->structValue->insert(RPC::RPCStructElement("PARENT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("")))));
 
-		description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("Homegear Central")))));
+		description->structValue->insert(RPC::RPCStructElement("PHYSICAL_ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::to_string(_address)))));
+		description->structValue->insert(RPC::RPCStructElement("RF_ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::to_string(_address)))));
+
+		description->structValue->insert(RPC::RPCStructElement("ROAMING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(0))));
+
+		description->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("Homegear HomeMatic Wired Central")))));
 
 		description->structValue->insert(RPC::RPCStructElement("VERSION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)10))));
 
@@ -858,9 +866,13 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamset(std::string serial
 		else
 		{
 			std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
-			std::shared_ptr<HMWiredPeer> remotePeer(getPeer(remoteSerialNumber));
-			if(!remotePeer) return RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
-			if(peer) return peer->getParamset(channel, type, remotePeer->getID(), remoteChannel);
+			uint64_t remoteID = 0;
+			if(!remoteSerialNumber.empty())
+			{
+				std::shared_ptr<HMWiredPeer> remotePeer(getPeer(remoteSerialNumber));
+				if(remotePeer) remoteID = remotePeer->getID();
+			}
+			if(peer) return peer->getParamset(channel, type, remoteID, remoteChannel);
 			return RPC::RPCVariable::createError(-2, "Unknown device.");
 		}
 	}
