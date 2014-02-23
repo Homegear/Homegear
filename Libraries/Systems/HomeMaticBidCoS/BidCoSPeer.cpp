@@ -985,6 +985,7 @@ void BidCoSPeer::unserializeNonCentralConfig(std::shared_ptr<std::vector<char>> 
 {
 	try
 	{
+		config.clear();
 		BinaryDecoder decoder;
 		uint32_t position = 0;
 		uint32_t configSize = decoder.decodeInteger(serializedData, position);
@@ -1044,6 +1045,9 @@ void BidCoSPeer::unserializeVariablesToReset(std::shared_ptr<std::vector<char>> 
 {
 	try
 	{
+		_variablesToResetMutex.lock();
+		_variablesToReset.clear();
+		_variablesToResetMutex.unlock();
 		BinaryDecoder decoder;
 		uint32_t position = 0;
 		uint32_t variablesToResetSize = decoder.decodeInteger(serializedData, position);
@@ -1353,6 +1357,11 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 				}
 				break;
 			}
+		}
+		if(_centralFeatures)
+		{
+			if(!serviceMessages) serviceMessages.reset(new ServiceMessages(this));
+			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 		}
 	}
 	catch(const std::exception& ex)

@@ -307,7 +307,7 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
+		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
@@ -320,7 +320,7 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
 		{
 			if(_peerID == 0)
 			{
-				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
@@ -346,7 +346,7 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 
@@ -356,7 +356,7 @@ void Peer::saveVariable(uint32_t index, int64_t intValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
+		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
@@ -369,7 +369,7 @@ void Peer::saveVariable(uint32_t index, int64_t intValue)
 		{
 			if(_peerID == 0)
 			{
-				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
@@ -395,7 +395,7 @@ void Peer::saveVariable(uint32_t index, int64_t intValue)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 
@@ -405,7 +405,7 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
+		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
@@ -418,7 +418,7 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
 		{
 			if(_peerID == 0)
 			{
-				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
@@ -444,7 +444,7 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 
@@ -454,7 +454,7 @@ void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(_address));
+		GD::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
@@ -467,7 +467,7 @@ void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
 		{
 			if(_peerID == 0)
 			{
-				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+				GD::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
@@ -493,7 +493,7 @@ void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(_address));
+    GD::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 

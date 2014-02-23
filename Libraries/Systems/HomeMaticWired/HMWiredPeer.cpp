@@ -1319,6 +1319,7 @@ void HMWiredPeer::loadVariables(HMWiredDevice* device)
 				break;
 			}
 		}
+		if(_centralFeatures && !serviceMessages) serviceMessages.reset(new ServiceMessages(this));
 	}
 	catch(const std::exception& ex)
     {

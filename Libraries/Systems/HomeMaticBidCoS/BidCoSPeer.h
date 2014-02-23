@@ -206,7 +206,6 @@ class BidCoSPeer : public Peer
         std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
     private:
-        std::map<uint32_t, uint32_t> _variableDatabaseIDs;
         uint32_t _lastRSSIDevice = 0;
         std::mutex _variablesToResetMutex;
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
