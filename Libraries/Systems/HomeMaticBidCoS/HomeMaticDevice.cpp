@@ -261,6 +261,100 @@ bool HomeMaticDevice::isCentral()
 	return _deviceType == (uint32_t)DeviceType::HMCENTRAL;
 }
 
+bool HomeMaticDevice::isSwitch(LogicalDeviceType type)
+{
+	switch((DeviceType)type.type())
+	{
+	case DeviceType::HMLCSW1PL:
+		return true;
+	case DeviceType::HMLCSW1PL2:
+		return true;
+	case DeviceType::HMLCSW1SM:
+		return true;
+	case DeviceType::HMLCSW2SM:
+		return true;
+	case DeviceType::HMLCSW4SM:
+		return true;
+	case DeviceType::HMLCSW4PCB:
+		return true;
+	case DeviceType::HMLCSW4WM:
+		return true;
+	case DeviceType::HMLCSW1FM:
+		return true;
+	case DeviceType::HMLCSWSCHUECO:
+		return true;
+	case DeviceType::HMLCSWSCHUECO2:
+		return true;
+	case DeviceType::HMLCSW2FM:
+		return true;
+	case DeviceType::HMLCSW1PBFM:
+		return true;
+	case DeviceType::HMLCSW2PBFM:
+		return true;
+	case DeviceType::HMLCSW4DR:
+		return true;
+	case DeviceType::HMLCSW2DR:
+		return true;
+	case DeviceType::HMLCSW1PBUFM:
+		return true;
+	case DeviceType::HMLCSW4BAPCB:
+		return true;
+	case DeviceType::HMLCSW1BAPCB:
+		return true;
+	case DeviceType::HMLCSW1PLOM54:
+		return true;
+	case DeviceType::HMLCSW1SMATMEGA168:
+		return true;
+	case DeviceType::HMLCSW4SMATMEGA168:
+		return true;
+	default:
+		return false;
+	}
+	return false;
+}
+
+bool HomeMaticDevice::isDimmer(LogicalDeviceType type)
+{
+	switch((DeviceType)type.type())
+	{
+	case DeviceType::HMLCDIM1TPL:
+		return true;
+	case DeviceType::HMLCDIM1TPL2:
+		return true;
+	case DeviceType::HMLCDIM1TCV:
+		return true;
+	case DeviceType::HMLCDIMSCHUECO:
+		return true;
+	case DeviceType::HMLCDIMSCHUECO2:
+		return true;
+	case DeviceType::HMLCDIM2TSM:
+		return true;
+	case DeviceType::HMLCDIM1TFM:
+		return true;
+	case DeviceType::HMLCDIM1LPL644:
+		return true;
+	case DeviceType::HMLCDIM1LCV644:
+		return true;
+	case DeviceType::HMLCDIM1PWMCV:
+		return true;
+	case DeviceType::HMLCDIM1TPL644:
+		return true;
+	case DeviceType::HMLCDIM1TCV644:
+		return true;
+	case DeviceType::HMLCDIM1TFM644:
+		return true;
+	case DeviceType::HMLCDIM1TPBUFM:
+		return true;
+	case DeviceType::HMLCDIM2LSM644:
+		return true;
+	case DeviceType::HMLCDIM2TSM644:
+		return true;
+	default:
+		return false;
+	}
+	return false;
+}
+
 std::shared_ptr<HomeMaticCentral> HomeMaticDevice::getCentral()
 {
 	try

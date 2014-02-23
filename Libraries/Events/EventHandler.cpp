@@ -88,6 +88,7 @@ void EventHandler::mainThread()
 							break;
 						}
 					}
+					while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
 					_timedEvents[nextExecution] = event;
 					_eventsMutex.unlock();
 				}
@@ -1085,115 +1086,117 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 {
 	try
 	{
-		if(event && rpcResult)
+		if(!event)
 		{
-			if(rpcResult->errorStruct)
-			{
-				Output::printError("Could not execute RPC method for event from address " + event->address + " and variable " + event->variable + ". Error struct:");
-				rpcResult->print();
-			}
-			else if(event->resetAfter > 0 || event->initialTime > 0)
-			{
-				try
-				{
-					removeEventToReset(event->id);
-					uint64_t resetTime = currentTime + event->resetAfter;
-					if(event->initialTime == 0) //Simple reset
-					{
-						Output::printInfo("Info: Event \"" + event->name + "\" for device \"" + event->address + "\" and variable \"" + event->variable + "\" will be reset in " + std::to_string(event->resetAfter / 1000) + " seconds.");
-
-						_eventsMutex.lock();
-						while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
-						_eventsToReset[resetTime] =  event;
-						_eventsMutex.unlock();
-					}
-					else //Complex reset
-					{
-						removeTimeToReset(event->id);
-						Output::printInfo("Info: INITIALTIME for event \"" + event->name + "\" will be reset in " + std::to_string(event->resetAfter / 1000)+ " seconds.");
-						_eventsMutex.lock();
-						while(_timesToReset.find(resetTime) != _timesToReset.end()) resetTime++;
-						_timesToReset[resetTime] = event;
-						_eventsMutex.unlock();
-						if(event->currentTime == 0) event->currentTime = event->initialTime;
-						if(event->factor <= 0)
-						{
-							Output::printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from address " + event->address + " and variable " + event->variable + ".");
-							event->factor = 1;
-						}
-						resetTime = currentTime + event->currentTime;
-						_eventsMutex.lock();
-						while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
-						_eventsToReset[resetTime] =  event;
-						_eventsMutex.unlock();
-						Output::printInfo("Info: Event \"" + event->name + "\" will be reset in " + std::to_string(event->currentTime / 1000) + " seconds.");
-						if(event->operation == Event::Operation::Enum::addition)
-						{
-							event->currentTime += event->factor;
-							if(event->currentTime > event->limit) event->currentTime = event->limit;
-						}
-						else if(event->operation == Event::Operation::Enum::subtraction)
-						{
-							event->currentTime -= event->factor;
-							if(event->currentTime < event->limit) event->currentTime = event->limit;
-						}
-						else if(event->operation == Event::Operation::Enum::multiplication)
-						{
-							event->currentTime *= event->factor;
-							if(event->currentTime > event->limit) event->currentTime = event->limit;
-						}
-						else if(event->operation == Event::Operation::Enum::division)
-						{
-							event->currentTime /= event->factor;
-							if(event->currentTime < event->limit) event->currentTime = event->limit;
-						}
-					}
-				}
-				catch(const std::exception& ex)
-				{
-					_eventsMutex.unlock();
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(Exception& ex)
-				{
-					_eventsMutex.unlock();
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					_eventsMutex.unlock();
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				}
-
-				try
-				{
-					_mainThreadMutex.lock();
-					if(_stopThread || !_mainThread.joinable())
-					{
-						if(_mainThread.joinable()) _mainThread.join();
-						_stopThread = false;
-						_mainThread = std::thread(&EventHandler::mainThread, this);
-					}
-					_mainThreadMutex.unlock();
-				}
-				catch(const std::exception& ex)
-				{
-					_mainThreadMutex.unlock();
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(Exception& ex)
-				{
-					_mainThreadMutex.unlock();
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					_mainThreadMutex.unlock();
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				}
-			}
-			save(event);
+			Output::printError("Error: Could not execute post trigger tasks. event was nullptr.");
+			return;
 		}
+		if(rpcResult && rpcResult->errorStruct)
+		{
+			Output::printError("Error: Could not execute RPC method for event from address " + event->address + " and variable " + event->variable + ". Error struct:");
+			rpcResult->print();
+		}
+		if(event->resetAfter > 0 || event->initialTime > 0)
+		{
+			try
+			{
+				removeEventToReset(event->id);
+				uint64_t resetTime = currentTime + event->resetAfter;
+				if(event->initialTime == 0) //Simple reset
+				{
+					Output::printInfo("Info: Event \"" + event->name + "\" for device \"" + event->address + "\" and variable \"" + event->variable + "\" will be reset in " + std::to_string(event->resetAfter / 1000) + " seconds.");
+
+					_eventsMutex.lock();
+					while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
+					_eventsToReset[resetTime] =  event;
+					_eventsMutex.unlock();
+				}
+				else //Complex reset
+				{
+					removeTimeToReset(event->id);
+					Output::printInfo("Info: INITIALTIME for event \"" + event->name + "\" will be reset in " + std::to_string(event->resetAfter / 1000)+ " seconds.");
+					_eventsMutex.lock();
+					while(_timesToReset.find(resetTime) != _timesToReset.end()) resetTime++;
+					_timesToReset[resetTime] = event;
+					_eventsMutex.unlock();
+					if(event->currentTime == 0) event->currentTime = event->initialTime;
+					if(event->factor <= 0)
+					{
+						Output::printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from address " + event->address + " and variable " + event->variable + ".");
+						event->factor = 1;
+					}
+					resetTime = currentTime + event->currentTime;
+					_eventsMutex.lock();
+					while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
+					_eventsToReset[resetTime] =  event;
+					_eventsMutex.unlock();
+					Output::printInfo("Info: Event \"" + event->name + "\" will be reset in " + std::to_string(event->currentTime / 1000) + " seconds.");
+					if(event->operation == Event::Operation::Enum::addition)
+					{
+						event->currentTime += event->factor;
+						if(event->currentTime > event->limit) event->currentTime = event->limit;
+					}
+					else if(event->operation == Event::Operation::Enum::subtraction)
+					{
+						event->currentTime -= event->factor;
+						if(event->currentTime < event->limit) event->currentTime = event->limit;
+					}
+					else if(event->operation == Event::Operation::Enum::multiplication)
+					{
+						event->currentTime *= event->factor;
+						if(event->currentTime > event->limit) event->currentTime = event->limit;
+					}
+					else if(event->operation == Event::Operation::Enum::division)
+					{
+						event->currentTime /= event->factor;
+						if(event->currentTime < event->limit) event->currentTime = event->limit;
+					}
+				}
+			}
+			catch(const std::exception& ex)
+			{
+				_eventsMutex.unlock();
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(Exception& ex)
+			{
+				_eventsMutex.unlock();
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_eventsMutex.unlock();
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+
+			try
+			{
+				_mainThreadMutex.lock();
+				if(_stopThread || !_mainThread.joinable())
+				{
+					if(_mainThread.joinable()) _mainThread.join();
+					_stopThread = false;
+					_mainThread = std::thread(&EventHandler::mainThread, this);
+				}
+				_mainThreadMutex.unlock();
+			}
+			catch(const std::exception& ex)
+			{
+				_mainThreadMutex.unlock();
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(Exception& ex)
+			{
+				_mainThreadMutex.unlock();
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_mainThreadMutex.unlock();
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+		}
+		save(event);
 	}
 	catch(const std::exception& ex)
     {

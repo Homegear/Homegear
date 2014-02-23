@@ -68,6 +68,8 @@ class HomeMaticDevice : public LogicalDevice
 
         std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
         virtual bool isCentral();
+        static bool isDimmer(LogicalDeviceType type);
+        static bool isSwitch(LogicalDeviceType type);
         virtual void stopThreads();
         virtual void checkForDeadlock();
         virtual void reset();

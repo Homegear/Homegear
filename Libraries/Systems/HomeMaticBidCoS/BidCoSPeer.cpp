@@ -1825,7 +1825,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, parameter->data);
-					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic BidCoS peer" + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic BidCoS peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
 					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
@@ -3535,7 +3535,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 		pendingBidCoSQueues->push(queue);
 		if((getRXModes() & RPC::Device::RXModes::Enum::always) || (getRXModes() & RPC::Device::RXModes::Enum::burst))
 		{
-			if(_deviceType.isDimmer() || _deviceType.isSwitch()) queue->retries = 12;
+			if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
 			getCentral()->enqueuePendingQueues(_address);
 		}
 		else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");

@@ -3075,6 +3075,30 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescription(std::st
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getDeviceDescription(uint64_t id, int32_t channel)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+
+		return peer->getDeviceDescription(channel);
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getInstallMode()
 {
 	try

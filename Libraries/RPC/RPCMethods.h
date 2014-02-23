@@ -209,6 +209,7 @@ public:
 	RPCGetDeviceDescription()
 	{
 		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
@@ -283,6 +284,8 @@ public:
 	RPCGetParamsetDescription()
 	{
 		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };

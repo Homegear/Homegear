@@ -62,6 +62,7 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);
 	virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescriptionCentral();
 	virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel);
+	virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(uint64_t id, int32_t channel);
 	virtual std::shared_ptr<RPC::RPCVariable> getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
 	virtual std::shared_ptr<RPC::RPCVariable> getLinkPeers(std::string serialNumber, int32_t channel);
 	virtual std::shared_ptr<RPC::RPCVariable> getLinks(std::string serialNumber, int32_t channel, int32_t flags);

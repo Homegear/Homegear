@@ -48,9 +48,6 @@ public:
 
 	bool operator==(LogicalDeviceType& other);
 	bool operator!=(LogicalDeviceType& other);
-
-	bool isSwitch();
-	bool isDimmer();
 private:
 	DeviceFamilies _family = DeviceFamilies::none;
 	uint32_t _type = 0xFFFFFFFF;

@@ -541,5 +541,4 @@ std::string BidCoS::handleCLICommand(std::string& command)
     }
     return "Error executing command. See log file for more details.\n";
 }
-
 } /* namespace HMWired */

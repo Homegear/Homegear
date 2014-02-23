@@ -530,18 +530,33 @@ std::shared_ptr<RPCVariable> RPCGetDeviceDescription::invoke(std::shared_ptr<std
 
 		int32_t channel = -1;
 		std::string serialNumber;
-		int32_t pos = parameters->at(0)->stringValue.find(':');
-		if(pos > -1)
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == RPCVariableType::rpcString)
 		{
-			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1)
+			{
+				serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+			}
+			else serialNumber = parameters->at(0)->stringValue;
 		}
-		else serialNumber = parameters->at(0)->stringValue;
 
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central && central->knowsDevice(serialNumber)) return central->getDeviceDescription(serialNumber, channel);
+			if(central)
+			{
+				if(useSerialNumber)
+				{
+					if(central->knowsDevice(serialNumber)) return central->getDeviceDescription(serialNumber, channel);
+				}
+				else
+				{
+					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getDeviceDescription(parameters->at(0)->integerValue, parameters->at(1)->integerValue);
+				}
+			}
 		}
 
 		return RPC::RPCVariable::createError(-2, "Device not found.");
@@ -803,7 +818,11 @@ std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<s
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
+			std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }),
+			std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString }),
+			std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger })
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		int32_t channel = -1;
