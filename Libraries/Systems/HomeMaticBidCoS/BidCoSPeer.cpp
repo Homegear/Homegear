@@ -2592,7 +2592,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setLinkInfo(int32_t senderChannel,
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLinkPeers(int32_t channel)
+std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLinkPeers(int32_t channel, bool returnID)
 {
 	try
 	{
@@ -2612,6 +2612,7 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLinkPeers(int32_t channel)
 			{
 				if((*i)->hidden) continue;
 				std::shared_ptr<BidCoSPeer> peer(central->getPeer((*i)->address));
+				if(returnID && !peer) continue;
 				bool peerKnowsMe = false;
 				if(peer && peer->getPeer(channel, _address)) peerKnowsMe = true;
 
@@ -2623,11 +2624,6 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLinkPeers(int32_t channel)
 						(*i)->serialNumber = peer->getSerialNumber();
 						peerSerial = (*i)->serialNumber;
 					}
-					/*else if((*i)->address == address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
-					{
-						(*i)->serialNumber = _serialNumber;
-						peerSerial = (*i)->serialNumber;
-					}*/
 					else
 					{
 						//Peer not paired to central
@@ -2636,14 +2632,21 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLinkPeers(int32_t channel)
 						peerSerial = stringstream.str();
 					}
 				}
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel))));
+				if(returnID)
+				{
+					std::shared_ptr<RPC::RPCVariable> address(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+					array->arrayValue->push_back(address);
+					address->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)peer->getID())));
+					address->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->channel)));
+				}
+				else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel))));
 			}
 		}
 		else
 		{
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 			{
-				std::shared_ptr<RPC::RPCVariable> linkPeers = getLinkPeers(i->first);
+				std::shared_ptr<RPC::RPCVariable> linkPeers = getLinkPeers(i->first, returnID);
 				array->arrayValue->insert(array->arrayValue->end(), linkPeers->arrayValue->begin(), linkPeers->arrayValue->end());
 			}
 		}
@@ -3217,11 +3220,11 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getParamsetDescription(int32_t cha
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getServiceMessages()
+std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getServiceMessages(bool returnID)
 {
 	if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 	if(!serviceMessages) return RPC::RPCVariable::createError(-32500, "Service messages are not initialized.");
-	return serviceMessages->get();
+	return serviceMessages->get(returnID);
 }
 
 std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getValue(uint32_t channel, std::string valueKey)

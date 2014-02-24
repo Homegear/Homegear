@@ -287,7 +287,7 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
     }
 }
 
-std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
+std::shared_ptr<RPC::RPCVariable> ServiceMessages::get(bool returnID)
 {
 	try
 	{
@@ -302,7 +302,12 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 		if(_unreach)
 		{
 			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":0")));
+			if(returnID)
+			{
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peer->getID())));
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+			}
+			else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":0")));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("UNREACH"))));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 			serviceMessages->arrayValue->push_back(array);
@@ -310,7 +315,12 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 		if(_stickyUnreach)
 		{
 			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":0")));
+			if(returnID)
+			{
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peer->getID())));
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+			}
+			else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":0")));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("STICKY_UNREACH"))));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 			serviceMessages->arrayValue->push_back(array);
@@ -318,7 +328,12 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 		if(_configPending)
 		{
 			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":0")));
+			if(returnID)
+			{
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peer->getID())));
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+			}
+			else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":0")));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("CONFIG_PENDING"))));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 			serviceMessages->arrayValue->push_back(array);
@@ -326,7 +341,12 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 		if(_lowbat)
 		{
 			array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":0")));
+			if(returnID)
+			{
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peer->getID())));
+				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
+			}
+			else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":0")));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("LOWBAT"))));
 			array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 			serviceMessages->arrayValue->push_back(array);
@@ -338,7 +358,12 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get()
 			{
 				if(j->second == 0) continue;
 				array.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + ":" + std::to_string(i->first))));
+				if(returnID)
+				{
+					array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peer->getID())));
+					array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->first)));
+				}
+				else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peer->getSerialNumber() + std::to_string(i->first))));
 				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first)));
 				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)j->second)));
 				serviceMessages->arrayValue->push_back(array);

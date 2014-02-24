@@ -1148,8 +1148,28 @@ diff -Naur Original/rf_d_le_v1_7.xml Patched/rf_d_le_v1_7.xml
      <channel index="1" type="DIMMER" count_from_sysinfo="23.0:0.2">
 diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
 --- Original/rf_es_pmsw.xml	2014-02-24 20:35:39.943011748 +0100
-+++ Patched/rf_es_pmsw.xml	2014-02-24 20:35:46.911011751 +0100
-@@ -49,6 +49,13 @@
++++ Patched/rf_es_pmsw.xml	2014-02-24 21:29:30.815010052 +0100
+@@ -1,4 +1,8 @@
+ <?xml version="1.0"?>
++<!-- Modified from original
++	Changes:
++	- Added parameter for LOWBAT
++-->
+ <device version="7" supports_aes="true" cyclic_timeout="600">
+   <supported_types>
+     <type name="power meter switch actuator 1-channel" id="HM-ES-PMSw1-Pl" updatable="true" priority="2">
+@@ -37,6 +41,10 @@
+           <logical type="boolean"/>
+           <physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
+         </parameter>
++        <parameter id="LOWBAT" operations="read,event" ui_flags="service">
++          <logical type="boolean"/>
++          <physical type="integer" interface="internal" value_id="LOWBAT"/>
++        </parameter>
+         <parameter id="DUTYCYCLE" operations="read,event" ui_flags="service">
+           <logical type="boolean"/>
+           <physical type="integer" interface="internal" value_id="DUTYCYCLE"/>
+@@ -49,6 +57,13 @@
            <logical type="integer"/>
            <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
          </parameter>

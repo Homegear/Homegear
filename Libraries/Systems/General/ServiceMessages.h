@@ -53,7 +53,7 @@ public:
 	void unserialize_0_0_6(std::string serializedObject);
 	bool set(std::string id, bool value);
 	void set(std::string id, uint8_t value, uint32_t channel);
-	std::shared_ptr<RPC::RPCVariable> get();
+	std::shared_ptr<RPC::RPCVariable> get(bool returnID);
 	void dispose();
 
 	void setConfigPending(bool value);

@@ -2628,7 +2628,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLinkInfo(int32_t senderChannel
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLinkPeers(int32_t channel)
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLinkPeers(int32_t channel, bool returnID)
 {
 	try
 	{
@@ -2667,14 +2667,21 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLinkPeers(int32_t channel)
 						peerSerial = stringstream.str();
 					}
 				}
-				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel))));
+				if(returnID)
+				{
+					std::shared_ptr<RPC::RPCVariable> address(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+					array->arrayValue->push_back(address);
+					address->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)(*i)->id)));
+					address->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->channel)));
+				}
+				else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel))));
 			}
 		}
 		else
 		{
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 			{
-				std::shared_ptr<RPC::RPCVariable> linkPeers = getLinkPeers(i->first);
+				std::shared_ptr<RPC::RPCVariable> linkPeers = getLinkPeers(i->first, returnID);
 				array->arrayValue->insert(array->arrayValue->end(), linkPeers->arrayValue->begin(), linkPeers->arrayValue->end());
 			}
 		}
@@ -2796,11 +2803,11 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetId(uint32_t channel, R
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getServiceMessages()
+std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getServiceMessages(bool returnID)
 {
 	if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 	if(!serviceMessages) return RPC::RPCVariable::createError(-32500, "Service messages are not initialized.");
-	return serviceMessages->get();
+	return serviceMessages->get(returnID);
 }
 
 std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getValue(uint32_t channel, std::string valueKey)
