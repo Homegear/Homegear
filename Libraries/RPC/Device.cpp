@@ -1621,6 +1621,7 @@ void Device::parseXML(xml_node<>* node)
 			{
 				eepSize = HelperFunctions::getNumber(attributeValue);
 			}
+			else if(attributeName == "rx_default") {} //not needed
 			else if(attributeName == "ui_flags")
 			{
 				if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
