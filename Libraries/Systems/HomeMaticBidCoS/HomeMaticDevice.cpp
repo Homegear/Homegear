@@ -1067,11 +1067,13 @@ void HomeMaticDevice::savePeers(bool full)
 		for(std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			//Necessary, because peers can be assigned to multiple virtual devices
-			if(i->second->getParentID() != _deviceID &&
-			   //Necessary for database conversion from database version 0.0.7
-			   i->second->getParentID() != _address) continue;
+			if(i->second->getParentID() != _deviceID)
+			{
+				Output::printDebug("Debug: Not saving peer " + std::to_string(i->second->getID()) + ", because the parent device ID does not match. This is normal, if the peer is paired to the central AND a virtual device.");
+				continue;
+			}
 			//We are always printing this, because the init script needs it
-			Output::printMessage("(Shutdown) => Saving HomeMatic BidCoS peer " + std::to_string(i->second->getID()));
+			Output::printMessage("(Shutdown) => Saving HomeMatic BidCoS peer " + std::to_string(i->second->getID()) + " with address 0x" + HelperFunctions::getHexString(i->second->getAddress(), 6));
 			i->second->save(full, full, full);
 		}
 	}

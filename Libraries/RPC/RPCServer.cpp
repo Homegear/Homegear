@@ -520,6 +520,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		{
 			Output::printError("Warning: RPC method not found: " + methodName);
 			sendRPCResponseToClient(client, RPCVariable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
+			return;
 		}
 		if(GD::debugLevel >= 4)
 		{

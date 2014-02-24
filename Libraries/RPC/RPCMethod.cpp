@@ -52,13 +52,14 @@ RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::
 
 RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<std::vector<RPCVariableType>> types)
 {
+	RPCMethod::ParameterError::Enum error = RPCMethod::ParameterError::Enum::wrongCount;
 	for(std::vector<std::vector<RPCVariableType>>::iterator i = types.begin(); i != types.end(); ++i)
 	{
 		RPCMethod::ParameterError::Enum result = checkParameters(parameters, *i);
 		if(result == RPCMethod::ParameterError::Enum::noError) return result;
-		if(result != RPCMethod::ParameterError::Enum::wrongCount) return result; //Priority of type error is higher than wrong count
+		if(result != RPCMethod::ParameterError::Enum::wrongCount) error = result; //Priority of type error is higher than wrong count
 	}
-	return RPCMethod::ParameterError::Enum::wrongCount;
+	return error;
 }
 
 std::shared_ptr<RPCVariable> RPCMethod::getError(RPCMethod::ParameterError::Enum error)

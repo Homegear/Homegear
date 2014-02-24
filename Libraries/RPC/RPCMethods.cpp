@@ -1016,6 +1016,57 @@ std::shared_ptr<RPCVariable> RPCGetParamset::invoke(std::shared_ptr<std::vector<
     return RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+std::shared_ptr<RPCVariable> RPCGetPeerId::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
+			std::vector<RPCVariableType>({ RPCVariableType::rpcString }),
+			std::vector<RPCVariableType>({ RPCVariableType::rpcInteger })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::string serialNumber;
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == RPCVariableType::rpcString)
+		{
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1) serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		std::shared_ptr<RPC::RPCVariable> ids(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<Central> central = i->second->getCentral();
+			if(central)
+			{
+				std::shared_ptr<RPCVariable> result;
+				if(useSerialNumber) result = central->getPeerID(serialNumber);
+				else result = central->getPeerID(parameters->at(0)->integerValue);
+				if(!result->errorStruct) ids->arrayValue->push_back(result);
+			}
+		}
+
+		if(ids->arrayValue->empty()) return RPC::RPCVariable::createError(-2, "Device not found.");
+		return ids;
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
 std::shared_ptr<RPCVariable> RPCGetServiceMessages::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try

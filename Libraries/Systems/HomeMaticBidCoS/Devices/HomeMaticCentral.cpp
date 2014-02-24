@@ -680,7 +680,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					return stringStream.str();
 				}
 				_peersMutex.lock();
-				for(std::unordered_map<std::string, std::shared_ptr<BidCoSPeer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+				for(std::unordered_map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 				{
 					if(filterType == "id")
 					{
@@ -716,7 +716,9 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 						}
 					}
 
-					stringStream << std::setw(6) << std::setfill(' ') << "ID: " << i->second->getID() << "\tAddress: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 6) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
+					uint64_t currentID = i->second->getID();
+					std::string idString = (currentID > 999999) ? "0x" + HelperFunctions::getHexString(currentID, 8) : std::to_string(currentID);
+					stringStream << "ID: " << std::setw(10) << std::setfill(' ') << "\tAddress: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 6) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
 					if(i->second->rpcDevice)
 					{
 						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
@@ -3417,6 +3419,52 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetDescription(uint6
 		}
 		if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getPeerID(int32_t address)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer = getPeer(address);
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)peer->getID()));
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getPeerID(std::string serialNumber)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer = getPeer(serialNumber);
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)peer->getID()));
 	}
 	catch(const std::exception& ex)
     {

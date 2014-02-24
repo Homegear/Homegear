@@ -55,12 +55,12 @@ void LogicalDevices::convertDatabase()
 		if(result.empty()) return; //Handled in initializeDatabase
 		std::string version = result.at(0).at(3)->textValue;
 		if(version == "0.3.1") return; //Up to date
-		if(version != "0.0.7" && version != "0.3.0")
+		if(version != "0.3.0")
 		{
 			Output::printCritical("Unknown database version: " + version);
 			exit(1); //Don't know, what to do
 		}
-		if(version == "0.0.7")
+		/*if(version == "0.0.7")
 		{
 			Output::printMessage("Converting database from version " + version + " to version 0.3.0...");
 			GD::db.init(GD::settings.databasePath(), GD::settings.databaseSynchronous(), GD::settings.databaseMemoryJournal(), GD::settings.databasePath() + ".old");
@@ -82,7 +82,7 @@ void LogicalDevices::convertDatabase()
 
 			Output::printMessage("Exiting Homegear after database conversion...");
 			exit(0);
-		}
+		}*/
 		if(version == "0.3.0")
 		{
 			Output::printMessage("Converting database from version " + version + " to version 0.3.1...");

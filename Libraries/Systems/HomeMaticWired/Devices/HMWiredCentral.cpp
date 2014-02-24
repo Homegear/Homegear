@@ -1012,6 +1012,52 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamsetId(std::string seri
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getPeerID(int32_t address)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPeer> peer = getPeer(address);
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)peer->getID()));
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getPeerID(std::string serialNumber)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPeer> peer = getPeer(serialNumber);
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)peer->getID()));
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getServiceMessages()
 {
 	try

@@ -65,6 +65,7 @@ void Server::registerMethods()
 		_server->registerMethod("getParamset", std::shared_ptr<RPCMethod>(new RPCGetParamset()));
 		_server->registerMethod("getParamsetDescription", std::shared_ptr<RPCMethod>(new RPCGetParamsetDescription()));
 		_server->registerMethod("getParamsetId", std::shared_ptr<RPCMethod>(new RPCGetParamsetId()));
+		_server->registerMethod("getPeerId", std::shared_ptr<RPCMethod>(new RPCGetPeerId()));
 		_server->registerMethod("getServiceMessages", std::shared_ptr<RPCMethod>(new RPCGetServiceMessages()));
 		_server->registerMethod("getValue", std::shared_ptr<RPCMethod>(new RPCGetValue()));
 		_server->registerMethod("init", std::shared_ptr<RPCMethod>(new RPCInit()));

@@ -1885,16 +1885,21 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t chan
 
 		if(channel == -1) //Base device
 		{
+			description->structValue->insert(RPC::RPCStructElement("FAMILY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)DeviceFamilies::HomeMaticWired))));
+			description->structValue->insert(RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::deviceFamilies.at(DeviceFamilies::HomeMaticWired)->getName()))));
 			description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)_peerID))));
 			description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber))));
 
 			std::shared_ptr<RPC::RPCVariable> variable = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+			std::shared_ptr<RPC::RPCVariable> variable2 = std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 			description->structValue->insert(RPC::RPCStructElement("CHILDREN", variable));
+			description->structValue->insert(RPC::RPCStructElement("CHANNELS", variable2));
 
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 			{
 				if(i->second->hidden) continue;
 				variable->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(i->first))));
+				variable2->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->first)));
 			}
 
 			if(_firmwareVersion != 0)
@@ -1940,6 +1945,8 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t chan
 			std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
 			if(rpcChannel->hidden) return description;
 
+			description->structValue->insert(RPC::RPCStructElement("FAMILY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)DeviceFamilies::HomeMaticWired))));
+			description->structValue->insert(RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::deviceFamilies.at(DeviceFamilies::HomeMaticWired)->getName()))));
 			description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)_peerID))));
 			description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 
