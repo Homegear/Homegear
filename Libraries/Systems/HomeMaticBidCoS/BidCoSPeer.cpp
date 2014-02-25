@@ -2694,6 +2694,11 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLink(int32_t channel, int32_t f
 			{
 				if((*i)->hidden) continue;
 				std::shared_ptr<BidCoSPeer> remotePeer(central->getPeer((*i)->address));
+				if(!remotePeer)
+				{
+					Output::printDebug("Debug: Can't return link description for peer with address 0x" + HelperFunctions::getHexString((*i)->address, 6) + ". The peer is not paired to Homegear.");
+					continue;
+				}
 				bool peerKnowsMe = false;
 				if(remotePeer && remotePeer->getPeer((*i)->channel, _address, channel)) peerKnowsMe = true;
 
@@ -2736,6 +2741,8 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLink(int32_t channel, int32_t f
 				if(isSender)
 				{
 					element->structValue->insert(RPC::RPCStructElement("RECEIVER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel)))));
+					element->structValue->insert(RPC::RPCStructElement("RECEIVER_ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)remotePeer->getID()))));
+					element->structValue->insert(RPC::RPCStructElement("RECEIVER_CHANNEL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->channel))));
 					if(flags & 4)
 					{
 						std::shared_ptr<RPC::RPCVariable> paramset;
@@ -2753,6 +2760,8 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLink(int32_t channel, int32_t f
 						element->structValue->insert(RPC::RPCStructElement("RECEIVER_DESCRIPTION", description));
 					}
 					element->structValue->insert(RPC::RPCStructElement("SENDER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
+					element->structValue->insert(RPC::RPCStructElement("SENDER_ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peerID))));
+					element->structValue->insert(RPC::RPCStructElement("SENDER_CHANNEL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(channel))));
 					if(flags & 2)
 					{
 						std::shared_ptr<RPC::RPCVariable> paramset;
@@ -2773,20 +2782,42 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getLink(int32_t channel, int32_t f
 				else //When sender is broken
 				{
 					element->structValue->insert(RPC::RPCStructElement("RECEIVER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
+					element->structValue->insert(RPC::RPCStructElement("RECEIVER_ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peerID))));
+					element->structValue->insert(RPC::RPCStructElement("RECEIVER_CHANNEL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(channel))));
 					if(flags & 4)
 					{
 						std::shared_ptr<RPC::RPCVariable> paramset;
-						//Sender is broken, so just insert empty paramset
-						paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(!(brokenFlags & 2) && remotePeer) paramset = getParamset(channel, RPC::ParameterSet::Type::Enum::link, peerSerial, (*i)->channel);
+						else paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(paramset->errorStruct) paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						element->structValue->insert(RPC::RPCStructElement("RECEIVER_PARAMSET", paramset));
 					}
+					if(flags & 16)
+					{
+						std::shared_ptr<RPC::RPCVariable> description;
+						if(!(brokenFlags & 2)) description = getDeviceDescription(channel);
+						else description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(description->errorStruct) description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(RPC::RPCStructElement("RECEIVER_DESCRIPTION", description));
+					}
 					element->structValue->insert(RPC::RPCStructElement("SENDER", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel)))));
+					element->structValue->insert(RPC::RPCStructElement("SENDER_ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)remotePeer->getID()))));
+					element->structValue->insert(RPC::RPCStructElement("SENDER_CHANNEL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->channel))));
 					if(flags & 2)
 					{
 						std::shared_ptr<RPC::RPCVariable> paramset;
-						//Sender is broken, so just insert empty paramset
-						paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(!(brokenFlags & 1) && remotePeer) paramset = remotePeer->getParamset((*i)->channel, RPC::ParameterSet::Type::Enum::link, _serialNumber, channel);
+						else paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(paramset->errorStruct) paramset.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 						element->structValue->insert(RPC::RPCStructElement("SENDER_PARAMSET", paramset));
+					}
+					if(flags & 8)
+					{
+						std::shared_ptr<RPC::RPCVariable> description;
+						if(!(brokenFlags & 1) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel);
+						else description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						if(description->errorStruct) description.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(RPC::RPCStructElement("SENDER_DESCRIPTION", description));
 					}
 				}
 				array->arrayValue->push_back(element);

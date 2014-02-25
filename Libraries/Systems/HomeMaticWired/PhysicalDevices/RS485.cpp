@@ -27,18 +27,18 @@
  * files in the program, then also delete it here.
  */
 
-#include "CRC_RS485.h"
+#include "RS485.h"
 #include "../../../GD/GD.h"
 #include "../HMWiredPacket.h"
 
 namespace PhysicalDevices
 {
 
-CRCRS485::CRCRS485(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
+RS485::RS485(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
 {
 }
 
-CRCRS485::~CRCRS485()
+RS485::~RS485()
 {
 	try
 	{
@@ -63,7 +63,7 @@ CRCRS485::~CRCRS485()
     }
 }
 
-void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
+void RS485::sendPacket(std::shared_ptr<Packet> packet)
 {
 	try
 	{
@@ -99,7 +99,7 @@ void CRCRS485::sendPacket(std::shared_ptr<Packet> packet)
     }
 }
 
-void CRCRS485::openDevice()
+void RS485::openDevice()
 {
 	try
 	{
@@ -160,7 +160,7 @@ void CRCRS485::openDevice()
     }
 }
 
-void CRCRS485::closeDevice()
+void RS485::closeDevice()
 {
 	try
 	{
@@ -181,17 +181,23 @@ void CRCRS485::closeDevice()
     }
 }
 
-void CRCRS485::setup(int32_t userID, int32_t groupID)
+void RS485::setup(int32_t userID, int32_t groupID)
 {
 	try
 	{
 		setDevicePermission(userID, groupID);
-		exportGPIO(1);
-		setGPIOPermission(1, userID, groupID, false);
-		setGPIODirection(1, GPIODirection::OUT);
-		exportGPIO(2);
-		setGPIOPermission(2, userID, groupID, false);
-		setGPIODirection(2, GPIODirection::OUT);
+		if(_settings->gpio.find(1) != _settings->gpio.end())
+		{
+			exportGPIO(1);
+			setGPIOPermission(1, userID, groupID, false);
+			setGPIODirection(1, GPIODirection::OUT);
+		}
+		if(_settings->gpio.find(2) != _settings->gpio.end())
+		{
+			exportGPIO(2);
+			setGPIOPermission(2, userID, groupID, false);
+			setGPIODirection(2, GPIODirection::OUT);
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -207,7 +213,7 @@ void CRCRS485::setup(int32_t userID, int32_t groupID)
     }
 }
 
-void CRCRS485::setupDevice()
+void RS485::setupDevice()
 {
 	try
 	{
@@ -247,7 +253,7 @@ void CRCRS485::setupDevice()
     }
 }
 
-std::vector<uint8_t> CRCRS485::readFromDevice()
+std::vector<uint8_t> RS485::readFromDevice()
 {
 	try
 	{
@@ -308,7 +314,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 					break;
 			}
 			if(!_sending) _sendMutex.try_lock(); //Don't change to "lock", because it is called for each received byte!
-			else
+			else if(_settings->checkSentData)
 			{
 				receivingSentPacket = true;
 				_sendingMutex.try_lock();
@@ -333,17 +339,27 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 				escapeByte = false;
 				packet.push_back(localBuffer[0] | 0x80);
 			}
-			else if(localBuffer[0] == 0xFC) escapeByte = true;
+			else if(localBuffer[0] == 0xFC && !packet.empty()) escapeByte = true;
 			else packet.push_back(localBuffer[0]);
-			if(length == 0)
+			if(length == 0 && !packet.empty())
 			{
-				if(packet.at(0) == 0xFD && packet.size() > 6)
+				if(packet.at(0) == 0xFD)
 				{
-					if((packet.at(5) & 3) == 3 || (packet.at(5) & 8) == 0) length = packet.at(6) + 7; //Discovery packet or packet without sender address
-					else if(packet.size() > 10) length = packet.at(10) + 11; //Normal packet
+					if(packet.size() > 6)
+					{
+						if((packet.at(5) & 3) == 3 || (packet.at(5) & 8) == 0) length = packet.at(6) + 7; //Discovery packet or packet without sender address
+						else if(packet.size() > 10) length = packet.at(10) + 11; //Normal packet
+					}
 				}
-				else if(packet.at(0) == 0xFE && packet.size() > 3) length = packet.at(3);
+				else if(packet.at(0) == 0xFE) { if(packet.size() > 3) length = packet.at(3); }
 				else if(packet.at(0) == 0xF8) break;
+				else if(!_settings->checkSentData) //USB devices sometimes receive nonsense instead of 0xF8
+				{
+					Output::printWarning("Warning: Correcting wrong response: " + HelperFunctions::getHexString(packet) + ". This is normal for RS485 USB modules when searching for new devices. When not searching, this shouldn't happen.");
+					packet.clear(); //Remove something like 0xF0F0
+					packet.push_back(0xF8);
+					break;
+				}
 			}
 			else if(packet.size() == length) break;
 			timeoutTime = 7000;
@@ -371,7 +387,7 @@ std::vector<uint8_t> CRCRS485::readFromDevice()
 	return std::vector<uint8_t>();
 }
 
-void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
+void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 {
     try
     {
@@ -397,6 +413,7 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 				}
 				bytesWritten += i;
 			}
+			if(!_settings->checkSentData) break;
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			_sendingMutex.try_lock_for(std::chrono::milliseconds(200));
 			if(_receivedSentPacket == packet) break;
@@ -425,21 +442,27 @@ void CRCRS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
     _sendMutex.unlock();
 }
 
-void CRCRS485::startListening()
+void RS485::startListening()
 {
 	try
 	{
 		stopListening();
 		openDevice();
 		if(_fileDescriptor->descriptor == -1) return;
-		openGPIO(1, false);
-		setGPIO(1, false);
-		closeGPIO(1);
-		openGPIO(2, false);
-		setGPIO(2, true);
-		closeGPIO(2);
+		if(_settings->gpio.find(1) != _settings->gpio.end())
+		{
+			openGPIO(1, false);
+			setGPIO(1, false);
+			closeGPIO(1);
+		}
+		if(_settings->gpio.find(2) != _settings->gpio.end())
+		{
+			openGPIO(2, false);
+			setGPIO(2, true);
+			closeGPIO(2);
+		}
 		_stopped = false;
-		_listenThread = std::thread(&CRCRS485::listen, this);
+		_listenThread = std::thread(&RS485::listen, this);
 		Threads::setThreadPriority(_listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
@@ -456,7 +479,7 @@ void CRCRS485::startListening()
     }
 }
 
-void CRCRS485::stopListening()
+void RS485::stopListening()
 {
 	try
 	{
@@ -484,7 +507,7 @@ void CRCRS485::stopListening()
     }
 }
 
-void CRCRS485::listen()
+void RS485::listen()
 {
     try
     {
@@ -501,7 +524,7 @@ void CRCRS485::listen()
 			std::shared_ptr<HMWired::HMWiredPacket> packet(new HMWired::HMWiredPacket(rawPacket, HelperFunctions::getTime()));
 			if(packet->type() != HMWired::HMWiredPacketType::none)
 			{
-				std::thread t(&CRCRS485::callCallback, this, packet);
+				std::thread t(&RS485::callCallback, this, packet);
 				Threads::setThreadPriority(t.native_handle(), 45);
 				t.detach();
 			}

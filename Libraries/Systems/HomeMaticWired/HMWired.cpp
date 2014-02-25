@@ -28,7 +28,7 @@
  */
 
 #include "HMWired.h"
-#include "PhysicalDevices/CRC_RS485.h"
+#include "PhysicalDevices/RS485.h"
 #include "HMWiredDeviceTypes.h"
 #include "Devices/HMWiredCentral.h"
 #include "Devices/HMWired-SD.h"
@@ -54,7 +54,7 @@ std::shared_ptr<PhysicalDevices::PhysicalDevice> HMWired::createPhysicalDevice(s
 	try
 	{
 		if(!settings) return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
-		if(settings->type == "rs485") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::CRCRS485(settings));
+		if(settings->type == "rs485") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::RS485(settings));
 		else Output::printError("Error: Unsupported physical device type for family HomeMatic Wired: " + settings->type);
 	}
 	catch(const std::exception& ex)

@@ -101,7 +101,7 @@ OBJECTS := \
 	$(OBJDIR)/HMWired.o \
 	$(OBJDIR)/HMWired-SD.o \
 	$(OBJDIR)/HMWiredCentral.o \
-	$(OBJDIR)/CRC_RS485.o \
+	$(OBJDIR)/RS485.o \
 
 RESOURCES := \
 
@@ -187,7 +187,7 @@ $(OBJDIR)/HMWired-SD.o: Libraries/Systems/HomeMaticWired/Devices/HMWired-SD.cpp
 $(OBJDIR)/HMWiredCentral.o: Libraries/Systems/HomeMaticWired/Devices/HMWiredCentral.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/CRC_RS485.o: Libraries/Systems/HomeMaticWired/PhysicalDevices/CRC_RS485.cpp
+$(OBJDIR)/RS485.o: Libraries/Systems/HomeMaticWired/PhysicalDevices/RS485.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

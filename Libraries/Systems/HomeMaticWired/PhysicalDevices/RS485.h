@@ -27,8 +27,8 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef CRC_RS485_H
-#define CRC_RS485_H
+#ifndef RS485_H
+#define RS485_H
 
 #include "../../../HelperFunctions/HelperFunctions.h"
 #include "../../../PhysicalDevices/PhysicalDevice.h"
@@ -51,11 +51,11 @@
 namespace PhysicalDevices
 {
 
-class CRCRS485  : public PhysicalDevice
+class RS485  : public PhysicalDevice
 {
     public:
-        CRCRS485(std::shared_ptr<PhysicalDeviceSettings> settings);
-        virtual ~CRCRS485();
+        RS485(std::shared_ptr<PhysicalDeviceSettings> settings);
+        virtual ~RS485();
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<Packet> packet);
@@ -78,4 +78,4 @@ class CRCRS485  : public PhysicalDevice
 };
 
 }
-#endif // CRC_RS485_H
+#endif // RS485_H

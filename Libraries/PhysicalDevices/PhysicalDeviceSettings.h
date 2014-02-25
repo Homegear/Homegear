@@ -62,6 +62,7 @@ public:
 	std::string port;
 	bool ssl = false;
 	bool verifyCertificate = true;
+	bool checkSentData = true;
 };
 }
 #endif /* PHYSICALDEVICESETTINGS_H_ */

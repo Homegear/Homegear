@@ -806,27 +806,44 @@ std::shared_ptr<RPCVariable> RPCGetLinks::invoke(std::shared_ptr<std::vector<std
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
-				std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcInteger }),
+				std::vector<RPCVariableType>(),
 				std::vector<RPCVariableType>({ RPCVariableType::rpcString }),
-				std::vector<RPCVariableType>()
+				std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcInteger }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		int32_t channel = -1;
 		std::string serialNumber;
-		int32_t pos = -1;
 		int32_t flags = 0;
+		uint64_t peerID = 0;
+
+		bool useSerialNumber = false;
 		if(parameters->size() > 0)
 		{
-			pos = parameters->at(0)->stringValue.find(':');
-			if(pos > -1)
+			if(parameters->at(0)->type == RPCVariableType::rpcString)
 			{
-				serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
-			}
-			else serialNumber = parameters->at(0)->stringValue;
+				useSerialNumber = true;
+				int32_t pos = parameters->at(0)->stringValue.find(':');
+				if(pos > -1)
+				{
+					serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+					if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+				}
+				else serialNumber = parameters->at(0)->stringValue;
 
-			if(parameters->size() == 2) flags = parameters->at(1)->integerValue;
+				if(parameters->size() == 2) flags = parameters->at(1)->integerValue;
+			}
+			else
+			{
+				peerID = parameters->at(0)->integerValue;
+				if(peerID > 0)
+				{
+					channel = parameters->at(1)->integerValue;
+					if(parameters->size() == 3) flags = parameters->at(2)->integerValue;
+				}
+			}
 		}
 
 		std::shared_ptr<RPC::RPCVariable> links(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
@@ -835,15 +852,25 @@ std::shared_ptr<RPCVariable> RPCGetLinks::invoke(std::shared_ptr<std::vector<std
 			std::shared_ptr<Central> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			if(serialNumber.empty())
+			if(serialNumber.empty() && peerID == 0)
 			{
-				std::shared_ptr<RPC::RPCVariable> result = central->getLinks(serialNumber, channel, flags);
+				std::shared_ptr<RPC::RPCVariable> result = central->getLinks(peerID, channel, flags);
 				if(result && !result->arrayValue->empty()) links->arrayValue->insert(links->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 			}
-			else if(central->knowsDevice(serialNumber)) return central->getLinks(serialNumber, channel, flags);
+			else
+			{
+				if(useSerialNumber)
+				{
+					if(central->knowsDevice(serialNumber)) return central->getLinks(serialNumber, channel, flags);
+				}
+				else
+				{
+					if(central->knowsDevice(peerID)) return central->getLinks(peerID, channel, flags);
+				}
+			}
 		}
 
-		if(serialNumber.empty()) return links;
+		if(serialNumber.empty() && peerID == 0) return links;
 		else return RPC::RPCVariable::createError(-2, "Device not found.");
 	}
 	catch(const std::exception& ex)

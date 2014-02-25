@@ -557,7 +557,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::addLink(std::string senderSeri
 		std::shared_ptr<HMWiredPeer> receiver = getPeer(receiverSerialNumber);
 		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
 		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
-		addLink(sender->getID(), senderChannelIndex, receiver->getID(), receiverChannelIndex, name, description);
+		return addLink(sender->getID(), senderChannelIndex, receiver->getID(), receiverChannelIndex, name, description);
 	}
 	catch(const std::exception& ex)
 	{
@@ -916,9 +916,33 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinks(std::string serialNum
 {
 	try
 	{
+		if(serialNumber.empty()) return getLinks(0, -1, flags);
+		std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		return getLinks(peer->getID(), channel, flags);
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinks(uint64_t peerID, int32_t channel, int32_t flags)
+{
+	try
+	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 		std::shared_ptr<RPC::RPCVariable> element(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-		if(serialNumber.empty())
+		if(peerID == 0)
 		{
 			try
 			{
@@ -957,7 +981,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinks(std::string serialNum
 		}
 		else
 		{
-			std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
+			std::shared_ptr<HMWiredPeer> peer(getPeer(peerID));
 			if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 			element = peer->getLink(channel, flags, false);
 			array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
@@ -1376,6 +1400,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 		int64_t time = 0;
 		std::shared_ptr<HMWired::HMWiredPacket> receivedPacket;
 		int32_t retries = 0;
+		int32_t responseDelay = GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->responseDelay();
 		std::pair<uint32_t, std::shared_ptr<HMWiredPacket>> packet;
 		while(true)
 		{
@@ -1401,7 +1426,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			int32_t i = 0;
 			for(i = 0; i < 2; i++)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(2));
+				std::this_thread::sleep_for(std::chrono::milliseconds(responseDelay));
 				receivedPacket = _receivedPackets.get(0);
 				if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->type() == HMWiredPacketType::discoveryResponse)
 				{

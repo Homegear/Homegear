@@ -132,6 +132,12 @@ void PhysicalDevices::load(std::string filename)
 					if(settings->responseDelay > 10000) settings->responseDelay = 10000;
 					Output::printDebug("Debug: responseDelay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->responseDelay));
 				}
+				else if(name == "checksentdata")
+				{
+					HelperFunctions::toLower(value);
+					if(value == "false") settings->checkSentData = false;
+					Output::printDebug("Debug: checkSentData of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->checkSentData));
+				}
 				else if(name == "gpio1")
 				{
 					int32_t number = HelperFunctions::getNumber(value);
