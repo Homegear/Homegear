@@ -303,6 +303,8 @@ public:
 	RPCGetParamsetId()
 	{
 		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
@@ -313,6 +315,8 @@ public:
 	RPCGetParamset()
 	{
 		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
@@ -445,6 +449,9 @@ public:
 	RPCPutParamset()
 	{
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcStruct});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString, RPCVariableType::rpcStruct});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcStruct});
+
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
@@ -465,6 +472,7 @@ public:
 	RPCRemoveLink()
 	{
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
@@ -531,6 +539,8 @@ public:
 	{
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };

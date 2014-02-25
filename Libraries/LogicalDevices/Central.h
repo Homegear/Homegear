@@ -48,7 +48,6 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> addDevice(std::string serialNumber) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> addLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> addLink(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
-	virtual std::shared_ptr<RPC::RPCVariable> removeLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> deleteDevice(uint64_t peerID, int32_t flags) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
@@ -67,7 +66,9 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> getParamsetId(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
+	virtual std::shared_ptr<RPC::RPCVariable> getParamsetId(uint64_t peerID, uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> getParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
+	virtual std::shared_ptr<RPC::RPCVariable> getParamset(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> getValue(uint64_t id, uint32_t channel, std::string valueKey) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
@@ -75,7 +76,11 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> listDevices(std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> listTeams() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel, bool force = false, bool burst = true) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
+	virtual std::shared_ptr<RPC::RPCVariable> setTeam(uint64_t peerID, int32_t channel, uint64_t teamID, int32_t teamChannel, bool force = false, bool burst = true) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> putParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> paramset) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
+	virtual std::shared_ptr<RPC::RPCVariable> putParamset(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> paramset) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
+	virtual std::shared_ptr<RPC::RPCVariable> removeLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
+	virtual std::shared_ptr<RPC::RPCVariable> removeLink(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> searchDevices() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on, uint32_t duration = 60, bool debugOutput = true) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }

@@ -1181,15 +1181,15 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 		{
 			deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
-		std::shared_ptr<RPC::RPCVariable> deviceIDs(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-		deviceIDs->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)peer->getID()))));
+		std::shared_ptr<RPC::RPCVariable> deviceInfo(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+		deviceInfo->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)peer->getID()))));
 		std::shared_ptr<RPC::RPCVariable> channels(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-		deviceIDs->structValue->insert(RPC::RPCStructElement("CHANNELS", channels));
+		deviceInfo->structValue->insert(RPC::RPCStructElement("CHANNELS", channels));
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 		{
 			channels->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->first)));
 		}
-		GD::rpcClient.broadcastDeleteDevices(deviceAddresses, deviceIDs);
+		GD::rpcClient.broadcastDeleteDevices(deviceAddresses, deviceInfo);
 		Metadata::deleteMetadata(peer->getSerialNumber());
 		Metadata::deleteMetadata(std::to_string(id));
 		if(peer->rpcDevice)
@@ -2121,6 +2121,7 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer)
 		{
 			_peersMutex.lock();
 			_peersBySerial.erase(oldTeam->getSerialNumber());
+			_peersByID.erase(oldTeam->getID());
 			_peersMutex.unlock();
 		}
 		peer->setTeamRemoteSerialNumber("");
@@ -2423,8 +2424,8 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t senderID, i
 {
 	try
 	{
-		if(senderID == 0) return RPC::RPCVariable::createError(-2, "Given sender id is not set.");
-		if(receiverID == 0) return RPC::RPCVariable::createError(-2, "Given receiver is not set.");
+		if(senderID == 0) return RPC::RPCVariable::createError(-2, "Sender id is not set.");
+		if(receiverID == 0) return RPC::RPCVariable::createError(-2, "Receiver is not set.");
 		std::shared_ptr<BidCoSPeer> sender = getPeer(senderID);
 		std::shared_ptr<BidCoSPeer> receiver = getPeer(receiverID);
 		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
@@ -2683,8 +2684,37 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(std::string sende
 		std::shared_ptr<BidCoSPeer> receiver = getPeer(receiverSerialNumber);
 		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
 		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		return removeLink(sender->getID(), senderChannelIndex, receiver->getID(), receiverChannelIndex);
+	}
+	catch(const std::exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(Exception& ex)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::removeLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex)
+{
+	try
+	{
+		if(senderID == 0) return RPC::RPCVariable::createError(-2, "Sender id is not set.");
+		if(receiverID == 0) return RPC::RPCVariable::createError(-2, "Receiver id is not set.");
+		std::shared_ptr<BidCoSPeer> sender = getPeer(senderID);
+		std::shared_ptr<BidCoSPeer> receiver = getPeer(receiverID);
+		if(!sender) return RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return RPC::RPCVariable::createError(-2, "Receiver device not found.");
 		if(senderChannelIndex < 0) senderChannelIndex = 0;
 		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
+		std::string senderSerialNumber = sender->getSerialNumber();
+		std::string receiverSerialNumber = receiver->getSerialNumber();
 		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Sender channel not found.");
 		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Receiver channel not found.");
 		if(!sender->getPeer(senderChannelIndex, receiver->getAddress()) && !receiver->getPeer(receiverChannelIndex, sender->getAddress())) return RPC::RPCVariable::createError(-6, "Devices are not paired to each other.");
@@ -2960,16 +2990,46 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 {
 	try
 	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		uint64_t teamID = 0;
+		if(!teamSerialNumber.empty())
+		{
+			std::shared_ptr<BidCoSPeer> team(getPeer(teamSerialNumber));
+			if(!team) return RPC::RPCVariable::createError(-2, "Team does not exist.");
+			teamID = team->getID();
+		}
+		return setTeam(peer->getID(), channel, teamID, teamChannel);
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t peerID, int32_t channel, uint64_t teamID, int32_t teamChannel, bool force, bool burst)
+{
+	try
+	{
 		if(channel < 0) channel = 0;
 		if(teamChannel < 0) teamChannel = 0;
-		std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
+		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
 		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
 		if(peer->rpcDevice->channels.find(channel) == peer->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown channel.");
 		if(!peer->rpcDevice->channels[channel]->hasTeam) return RPC::RPCVariable::createError(-6, "Channel does not support teams.");
 		int32_t oldTeamAddress = peer->getTeamRemoteAddress();
 		int32_t oldTeamChannel = peer->getTeamRemoteChannel();
 		if(oldTeamChannel < 0) oldTeamChannel = 0;
-		if(teamSerialNumber.empty()) //Reset team to default
+		if(teamID == 0) //Reset team to default
 		{
 			if(!force && !peer->getTeamRemoteSerialNumber().empty() && peer->getTeamRemoteSerialNumber().substr(1) == peer->getSerialNumber() && peer->getTeamChannel() == channel)
 			{
@@ -2993,18 +3053,18 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		}
 		else //Set new team
 		{
-			if(!force && !peer->getTeamRemoteSerialNumber().empty() && peer->getTeamRemoteSerialNumber() == teamSerialNumber && peer->getTeamChannel() == channel && peer->getTeamRemoteChannel() == teamChannel)
+			//Don't create team if not existent!
+			std::shared_ptr<BidCoSPeer> team = getPeer(teamID);
+			if(!team) return RPC::RPCVariable::createError(-2, "Team does not exist.");
+			if(!force && !peer->getTeamRemoteSerialNumber().empty() && peer->getTeamRemoteSerialNumber() == team->getSerialNumber() && peer->getTeamChannel() == channel && peer->getTeamRemoteChannel() == teamChannel)
 			{
 				//Peer already is member of this team
 				return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 			}
-			//Don't create team if not existent!
-			std::shared_ptr<BidCoSPeer> team = getPeer(teamSerialNumber);
-			if(!team) return RPC::RPCVariable::createError(-2, "Team does not exist.");
 			if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return RPC::RPCVariable::createError(-2, "Unknown team channel.");
 			if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return RPC::RPCVariable::createError(-6, "Peer channel is not compatible to team channel.");
 
-			addPeerToTeam(peer, channel, teamChannel, teamSerialNumber);
+			addPeerToTeam(peer, channel, teamChannel, team->getSerialNumber());
 		}
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(BidCoSQueueType::CONFIG));
 		queue->noSending = true;
@@ -3046,7 +3106,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::setTeam(std::string serialNu
 		peer->pendingBidCoSQueues->push(queue);
 		if((peer->getRXModes() & RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & RPC::Device::RXModes::Enum::burst)) enqueuePendingQueues(peer->getAddress());
 		else Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-		GD::rpcClient.broadcastUpdateDevice(peer->getID(), channel, serialNumber + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
+		GD::rpcClient.broadcastUpdateDevice(peer->getID(), channel, peer->getSerialNumber() + ":" + std::to_string(channel), RPC::Client::Hint::Enum::updateHintAll);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -3489,24 +3549,89 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::string se
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamsetId(uint64_t peerID, uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		std::string remoteSerialNumber;
+		if(remoteID > 0)
+		{
+			std::shared_ptr<BidCoSPeer> remotePeer(getPeer(peerID));
+			if(!remotePeer) return RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
+			remoteSerialNumber = remotePeer->getSerialNumber();
+		}
+		return peer->getParamsetId(channel, type, remoteSerialNumber, remoteChannel);
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> paramset)
 {
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
-		if(peer)
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		std::shared_ptr<RPC::RPCVariable> result = peer->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
+		if(result->errorStruct) return result;
+		int32_t waitIndex = 0;
+		while(_bidCoSQueueManager.get(peer->getAddress()) && waitIndex < 20)
 		{
-			std::shared_ptr<RPC::RPCVariable> result = peer->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
-			if(result->errorStruct) return result;
-			int32_t waitIndex = 0;
-			while(_bidCoSQueueManager.get(peer->getAddress()) && waitIndex < 20)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-				waitIndex++;
-			}
-			return result;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
 		}
-		return RPC::RPCVariable::createError(-2, "Unknown device.");
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::putParamset(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> paramset)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		std::string remoteSerialNumber;
+		if(remoteID > 0)
+		{
+			std::shared_ptr<BidCoSPeer> remotePeer(getPeer(peerID));
+			if(!remotePeer) return RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
+			remoteSerialNumber = remotePeer->getSerialNumber();
+		}
+		std::shared_ptr<RPC::RPCVariable> result = peer->putParamset(channel, type, remoteSerialNumber, remoteChannel, paramset);
+		if(result->errorStruct) return result;
+		int32_t waitIndex = 0;
+		while(_bidCoSQueueManager.get(peer->getAddress()) && waitIndex < 20)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
+		}
+		return result;
 	}
 	catch(const std::exception& ex)
     {
@@ -3544,6 +3669,36 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(std::string seri
 			if(peer) return peer->getParamset(channel, type, remoteSerialNumber, remoteChannel);
 			return RPC::RPCVariable::createError(-2, "Unknown device.");
 		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::getParamset(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
+		if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+		std::string remoteSerialNumber;
+		if(remoteID > 0)
+		{
+			std::shared_ptr<BidCoSPeer> remotePeer(getPeer(peerID));
+			if(!remotePeer) return RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
+			remoteSerialNumber = remotePeer->getSerialNumber();
+		}
+		return peer->getParamset(channel, type, remoteSerialNumber, remoteChannel);
 	}
 	catch(const std::exception& ex)
     {

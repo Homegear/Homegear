@@ -309,7 +309,7 @@ void Client::broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions
     }
 }
 
-void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses, std::shared_ptr<RPCVariable> deviceIDs)
+void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses, std::shared_ptr<RPCVariable> deviceInfo)
 {
 	try
 	{
@@ -320,7 +320,7 @@ void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("deleteDevices") == (*server)->knownMethods.end())) continue;
 			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
 			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
-			if((*server)->useID) parameters->push_back(deviceIDs);
+			if((*server)->useID) parameters->push_back(deviceInfo);
 			else parameters->push_back(deviceAddresses);
 			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "deleteDevices", parameters);
 			t.detach();

@@ -949,13 +949,13 @@ std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<s
 			if(type == ParameterSet::Type::Enum::none)
 			{
 				type = ParameterSet::Type::Enum::link;
-				int32_t pos = parameters->at(1)->stringValue.find(':');
+				int32_t pos = parameters->at(parameterSetIndex)->stringValue.find(':');
 				if(pos > -1)
 				{
-					remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
-					if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+					remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue.substr(0, pos);
+					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
 				}
-				else remoteSerialNumber = parameters->at(1)->stringValue;
+				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
 			}
 		}
 		else
@@ -968,16 +968,14 @@ std::shared_ptr<RPCVariable> RPCGetParamsetDescription::invoke(std::shared_ptr<s
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central)
+			if(!central) continue;
+			if(useSerialNumber)
 			{
-				if(useSerialNumber)
-				{
-					if(central->knowsDevice(serialNumber)) return central->getParamsetDescription(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
-				}
-				else
-				{
-					if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamsetDescription(parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
-				}
+				if(central->knowsDevice(serialNumber)) return central->getParamsetDescription(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
+			}
+			else
+			{
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamsetDescription(parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
 			}
 		}
 
@@ -1002,39 +1000,67 @@ std::shared_ptr<RPCVariable> RPCGetParamsetId::invoke(std::shared_ptr<std::vecto
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
+				std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger }),
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		uint32_t channel = 0;
 		std::string serialNumber;
 		int32_t remoteChannel = -1;
 		std::string remoteSerialNumber;
-		int32_t pos = parameters->at(0)->stringValue.find(':');
-
-		if(pos > -1)
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == RPCVariableType::rpcString)
 		{
-			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
-		}
-		else serialNumber = parameters->at(0)->stringValue;
-
-		ParameterSet::Type::Enum type = ParameterSet::typeFromString(parameters->at(1)->stringValue);
-		if(type == ParameterSet::Type::Enum::none)
-		{
-			type = ParameterSet::Type::Enum::link;
-			pos = parameters->at(1)->stringValue.find(':');
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
 			if(pos > -1)
 			{
-				remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
-				if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+				serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 			}
-			else remoteSerialNumber = parameters->at(1)->stringValue;
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		uint64_t remoteID = 0;
+		int32_t parameterSetIndex = useSerialNumber ? 1 : 2;
+		ParameterSet::Type::Enum type;
+		if(parameters->at(parameterSetIndex)->type == RPCVariableType::rpcString)
+		{
+			type = ParameterSet::typeFromString(parameters->at(parameterSetIndex)->stringValue);
+			if(type == ParameterSet::Type::Enum::none)
+			{
+				type = ParameterSet::Type::Enum::link;
+				int32_t pos = parameters->at(parameterSetIndex)->stringValue.find(':');
+				if(pos > -1)
+				{
+					remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue.substr(0, pos);
+					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
+				}
+				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
+			}
+		}
+		else
+		{
+			type = ParameterSet::Type::Enum::link;
+			remoteID = parameters->at(2)->integerValue;
+			remoteChannel = parameters->at(3)->integerValue;
 		}
 
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central && central->knowsDevice(serialNumber)) return central->getParamsetId(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
+			if(!central) continue;
+			if(useSerialNumber)
+			{
+				if(central->knowsDevice(serialNumber)) return central->getParamsetId(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
+			}
+			else
+			{
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamsetId(parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
+			}
 		}
 
 		return RPC::RPCVariable::createError(-2, "Device not found.");
@@ -1058,40 +1084,68 @@ std::shared_ptr<RPCVariable> RPCGetParamset::invoke(std::shared_ptr<std::vector<
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
+				std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger }),
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		int32_t channel = -1;
 		std::string serialNumber;
 		int32_t remoteChannel = -1;
 		std::string remoteSerialNumber;
-		int32_t pos = -1;
 
-		pos = parameters->at(0)->stringValue.find(':');
-		if(pos > -1)
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == RPCVariableType::rpcString)
 		{
-			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
-		}
-		else serialNumber = parameters->at(0)->stringValue;
-
-		ParameterSet::Type::Enum type = ParameterSet::typeFromString(parameters->at(1)->stringValue);
-		if(type == ParameterSet::Type::Enum::none)
-		{
-			type = ParameterSet::Type::Enum::link;
-			pos = parameters->at(1)->stringValue.find(':');
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
 			if(pos > -1)
 			{
-				remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
-				if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+				serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 			}
-			else remoteSerialNumber = parameters->at(1)->stringValue;
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		uint64_t remoteID = 0;
+		int32_t parameterSetIndex = useSerialNumber ? 1 : 2;
+		ParameterSet::Type::Enum type;
+		if(parameters->at(parameterSetIndex)->type == RPCVariableType::rpcString)
+		{
+			type = ParameterSet::typeFromString(parameters->at(parameterSetIndex)->stringValue);
+			if(type == ParameterSet::Type::Enum::none)
+			{
+				type = ParameterSet::Type::Enum::link;
+				int32_t pos = parameters->at(parameterSetIndex)->stringValue.find(':');
+				if(pos > -1)
+				{
+					remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue.substr(0, pos);
+					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
+				}
+				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
+			}
+		}
+		else
+		{
+			type = ParameterSet::Type::Enum::link;
+			remoteID = parameters->at(2)->integerValue;
+			remoteChannel = parameters->at(3)->integerValue;
 		}
 
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central && central->knowsDevice(serialNumber)) return central->getParamset(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
+			if(!central) continue;
+			if(useSerialNumber)
+			{
+				if(central->knowsDevice(serialNumber)) return central->getParamset(serialNumber, channel, type, remoteSerialNumber, remoteChannel);
+			}
+			else
+			{
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->getParamset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel);
+			}
 		}
 
 		return RPC::RPCVariable::createError(-2, "Device not found.");
@@ -1564,40 +1618,68 @@ std::shared_ptr<RPCVariable> RPCPutParamset::invoke(std::shared_ptr<std::vector<
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcStruct }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
+				std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcStruct }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString, RPCVariableType::rpcStruct }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcStruct })
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		int32_t channel = -1;
 		std::string serialNumber;
 		int32_t remoteChannel = -1;
 		std::string remoteSerialNumber;
-		int32_t pos = -1;
 
-		pos = parameters->at(0)->stringValue.find(':');
-		if(pos > -1)
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == RPCVariableType::rpcString)
 		{
-			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
-			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
-		}
-		else serialNumber = parameters->at(0)->stringValue;
-
-		ParameterSet::Type::Enum type = ParameterSet::typeFromString(parameters->at(1)->stringValue);
-		if(type == ParameterSet::Type::Enum::none)
-		{
-			type = ParameterSet::Type::Enum::link;
-			pos = parameters->at(1)->stringValue.find(':');
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
 			if(pos > -1)
 			{
-				remoteSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
-				if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+				serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) channel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 			}
-			else remoteSerialNumber = parameters->at(1)->stringValue;
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		uint64_t remoteID = 0;
+		int32_t parameterSetIndex = useSerialNumber ? 1 : 2;
+		ParameterSet::Type::Enum type;
+		if(parameters->at(parameterSetIndex)->type == RPCVariableType::rpcString)
+		{
+			type = ParameterSet::typeFromString(parameters->at(parameterSetIndex)->stringValue);
+			if(type == ParameterSet::Type::Enum::none)
+			{
+				type = ParameterSet::Type::Enum::link;
+				int32_t pos = parameters->at(parameterSetIndex)->stringValue.find(':');
+				if(pos > -1)
+				{
+					remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue.substr(0, pos);
+					if(parameters->at(parameterSetIndex)->stringValue.size() > (unsigned)pos + 1) remoteChannel = std::stoll(parameters->at(parameterSetIndex)->stringValue.substr(pos + 1));
+				}
+				else remoteSerialNumber = parameters->at(parameterSetIndex)->stringValue;
+			}
+		}
+		else
+		{
+			type = ParameterSet::Type::Enum::link;
+			remoteID = parameters->at(2)->integerValue;
+			remoteChannel = parameters->at(3)->integerValue;
 		}
 
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central && central->knowsDevice(serialNumber)) return central->putParamset(serialNumber, channel, type, remoteSerialNumber, remoteChannel, parameters->at(2));
+			if(!central)continue;
+			if(useSerialNumber)
+			{
+				if(central->knowsDevice(serialNumber)) return central->putParamset(serialNumber, channel, type, remoteSerialNumber, remoteChannel, parameters->back());
+			}
+			else
+			{
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->putParamset(parameters->at(0)->integerValue, parameters->at(1)->integerValue, type, remoteID, remoteChannel, parameters->back());
+			}
 		}
 
 		return RPC::RPCVariable::createError(-2, "Device not found.");
@@ -1645,35 +1727,50 @@ std::shared_ptr<RPCVariable> RPCRemoveLink::invoke(std::shared_ptr<std::vector<s
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
+				std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger })
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		int32_t senderChannel = -1;
 		std::string senderSerialNumber;
 		int32_t receiverChannel = -1;
 		std::string receiverSerialNumber;
-		int32_t pos = -1;
 
-		pos = parameters->at(0)->stringValue.find(':');
-		if(pos > -1)
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == RPCVariableType::rpcString)
 		{
-			senderSerialNumber = parameters->at(0)->stringValue.substr(0, pos);
-			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) senderChannel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
-		}
-		else senderSerialNumber = parameters->at(0)->stringValue;
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1)
+			{
+				senderSerialNumber = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) senderChannel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
+			}
+			else senderSerialNumber = parameters->at(0)->stringValue;
 
-		pos = parameters->at(1)->stringValue.find(':');
-		if(pos > -1)
-		{
-			receiverSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
-			if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) receiverChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+			pos = parameters->at(1)->stringValue.find(':');
+			if(pos > -1)
+			{
+				receiverSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+				if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) receiverChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+			}
+			else receiverSerialNumber = parameters->at(1)->stringValue;
 		}
-		else receiverSerialNumber = parameters->at(1)->stringValue;
 
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central && central->knowsDevice(senderSerialNumber)) return central->removeLink(senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel);
+			if(!central) continue;
+			if(useSerialNumber)
+			{
+				if(central->knowsDevice(senderSerialNumber)) return central->removeLink(senderSerialNumber, senderChannel, receiverSerialNumber, receiverChannel);
+			}
+			else
+			{
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->removeLink(parameters->at(0)->integerValue, parameters->at(1)->integerValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue);
+			}
 		}
 
 		return RPC::RPCVariable::createError(-2, "Sender device not found.");
@@ -1945,39 +2042,59 @@ std::shared_ptr<RPCVariable> RPCSetTeam::invoke(std::shared_ptr<std::vector<std:
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
 				std::vector<RPCVariableType>({ RPCVariableType::rpcString }),
-				std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString })
+				std::vector<RPCVariableType>({ RPCVariableType::rpcString, RPCVariableType::rpcString }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		int32_t deviceChannel = -1;
 		std::string deviceSerialNumber;
+		uint64_t teamID = 0;
 		int32_t teamChannel = -1;
 		std::string teamSerialNumber;
-		int32_t pos = -1;
 
-		pos = parameters->at(0)->stringValue.find(':');
-		if(pos > -1)
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == RPCVariableType::rpcString)
 		{
-			deviceSerialNumber = parameters->at(0)->stringValue.substr(0, pos);
-			if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) deviceChannel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
-		}
-		else deviceSerialNumber = parameters->at(0)->stringValue;
-
-		if(parameters->size() > 1)
-		{
-			pos = parameters->at(1)->stringValue.find(':');
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
 			if(pos > -1)
 			{
-				teamSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
-				if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) teamChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+				deviceSerialNumber = parameters->at(0)->stringValue.substr(0, pos);
+				if(parameters->at(0)->stringValue.size() > (unsigned)pos + 1) deviceChannel = std::stoll(parameters->at(0)->stringValue.substr(pos + 1));
 			}
-			else teamSerialNumber = parameters->at(1)->stringValue;
+			else deviceSerialNumber = parameters->at(0)->stringValue;
+
+			if(parameters->size() > 1)
+			{
+				pos = parameters->at(1)->stringValue.find(':');
+				if(pos > -1)
+				{
+					teamSerialNumber = parameters->at(1)->stringValue.substr(0, pos);
+					if(parameters->at(1)->stringValue.size() > (unsigned)pos + 1) teamChannel = std::stoll(parameters->at(1)->stringValue.substr(pos + 1));
+				}
+				else teamSerialNumber = parameters->at(1)->stringValue;
+			}
+		}
+		else if(parameters->size() > 2)
+		{
+			teamID = (parameters->at(2)->integerValue == -1) ? 0 : parameters->at(2)->integerValue;
+			teamChannel = parameters->at(3)->integerValue;
 		}
 
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
-			if(central && central->knowsDevice(deviceSerialNumber)) return central->setTeam(deviceSerialNumber, deviceChannel, teamSerialNumber, teamChannel);
+			if(!central) continue;
+			if(useSerialNumber)
+			{
+				if(central->knowsDevice(deviceSerialNumber)) return central->setTeam(deviceSerialNumber, deviceChannel, teamSerialNumber, teamChannel);
+			}
+			else
+			{
+				if(central->knowsDevice(parameters->at(0)->integerValue)) return central->setTeam(parameters->at(0)->integerValue, parameters->at(1)->integerValue, teamID, teamChannel);
+			}
 		}
 
 		return RPC::RPCVariable::createError(-2, "Device not found.");
