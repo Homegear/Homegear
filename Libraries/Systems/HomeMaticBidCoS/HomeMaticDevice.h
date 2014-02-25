@@ -84,6 +84,7 @@ class HomeMaticDevice : public LogicalDevice
         virtual void addPeer(std::shared_ptr<BidCoSPeer> peer);
         virtual bool peerSelected() { return (bool)_currentPeer; }
         bool peerExists(int32_t address);
+        bool peerExists(uint64_t id);
         std::shared_ptr<BidCoSPeer> getPeer(int32_t address);
         std::shared_ptr<BidCoSPeer> getPeer(uint64_t id);
         std::shared_ptr<BidCoSPeer> getPeer(std::string serialNumber);

@@ -586,7 +586,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					peerID = HelperFunctions::getNumber(element, true);
+					peerID = HelperFunctions::getNumber(element);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -2473,7 +2473,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t senderID, i
 		if(hiddenPeer)
 		{
 			sender->removePeer(senderChannelIndex, hiddenPeer->address, hiddenPeer->channel);
-			if(!sender->getHiddenPeerDevice()) GD::deviceFamilies.at(DeviceFamilies::HomeMaticBidCoS)->remove(hiddenPeer->address);
+			if(!sender->getHiddenPeerDevice())
+			{
+				std::shared_ptr<HomeMaticDevice> device = getDevice(hiddenPeer->address);
+				if(device) GD::deviceFamilies.at(DeviceFamilies::HomeMaticBidCoS)->remove(device->getID());
+			}
 
 			payload.clear();
 			payload.push_back(senderChannelIndex);
@@ -2557,7 +2561,11 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t senderID, i
 		if(hiddenPeer)
 		{
 			sender->removePeer(receiverChannelIndex, hiddenPeer->address, hiddenPeer->channel);
-			if(!sender->getHiddenPeerDevice()) GD::deviceFamilies.at(DeviceFamilies::HomeMaticBidCoS)->remove(hiddenPeer->address);
+			if(!sender->getHiddenPeerDevice())
+			{
+				std::shared_ptr<HomeMaticDevice> device = getDevice(hiddenPeer->address);
+				if(device) GD::deviceFamilies.at(DeviceFamilies::HomeMaticBidCoS)->remove(device->getID());
+			}
 
 			payload.clear();
 			payload.push_back(receiverChannelIndex);

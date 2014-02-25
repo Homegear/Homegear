@@ -2035,7 +2035,7 @@ diff -Naur Original/rf_sec_sd_schueco.xml Patched/rf_sec_sd_schueco.xml
      <channel index="1" type="SMOKE_DETECTOR" count="1" direction="sender" has_team="true" team_tag="smoke_detector">
 diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
 --- Original/rf_sec_sd.xml	2014-02-24 20:35:40.127011749 +0100
-+++ Patched/rf_sec_sd.xml	2014-02-24 20:35:47.095011751 +0100
++++ Patched/rf_sec_sd.xml	2014-02-25 14:29:21.686114007 +0100
 @@ -1,4 +1,5 @@
  <?xml version="1.0"?>
 +<!-- Modified from original Changes: - Added parameter SENDERADDRESS - Added frame INFO_LEVEL_ERROR and modified LOWBAT -->
@@ -2071,8 +2071,8 @@ diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
      <frame id="INFO_LEVEL" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x10" subtype="6" subtype_index="9" channel_field="10">
        <parameter type="integer" index="11.0" size="1.0" param="STATE"/>
      </frame>
-+    <frame id="INFO_LEVEL_ERROR" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x10" subtype="6" subtype_index="9" fixed_channel="0">
-+      <parameter type="integer" index="12.7" size="0.1" param="LOWBAT"/>
++    <frame id="INFO_LEVEL_ERROR" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x40" fixed_channel="0">
++      <parameter type="integer" index="9.7" size="0.1" param="LOWBAT"/>
 +    </frame>
      <frame id="LEVEL_GET" direction="to_device" type="0x01" channel_field="9">
        <parameter type="integer" index="10.0" size="1.0" const_value="14"/>

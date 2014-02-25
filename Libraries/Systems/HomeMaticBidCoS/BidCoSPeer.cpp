@@ -821,7 +821,7 @@ void BidCoSPeer::deletePairedVirtualDevice(int32_t address)
 		std::shared_ptr<HomeMaticDevice> device(getDevice(address));
 		if(device)
 		{
-			GD::deviceFamilies.at(DeviceFamilies::HomeMaticBidCoS)->remove(address);
+			GD::deviceFamilies.at(DeviceFamilies::HomeMaticBidCoS)->remove(device->getID());
 			device->reset();
 		}
 	}
@@ -855,7 +855,7 @@ void BidCoSPeer::deletePairedVirtualDevices()
 					device = getDevice((*j)->address);
 					if(device)
 					{
-						GD::deviceFamilies.at(DeviceFamilies::HomeMaticBidCoS)->remove((*j)->address);
+						GD::deviceFamilies.at(DeviceFamilies::HomeMaticBidCoS)->remove(device->getID());
 						deleted[(*j)->address] = true;
 					}
 				}

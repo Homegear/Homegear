@@ -1969,6 +1969,33 @@ bool HomeMaticDevice::peerExists(int32_t address)
     return false;
 }
 
+bool HomeMaticDevice::peerExists(uint64_t id)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(_peersByID.find(id) != _peersByID.end())
+		{
+			_peersMutex.unlock();
+			return true;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+    return false;
+}
+
 void HomeMaticDevice::addPeer(std::shared_ptr<BidCoSPeer> peer)
 {
 	try
