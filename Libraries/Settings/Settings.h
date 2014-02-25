@@ -30,8 +30,8 @@
 #ifndef SETTINGS_H_
 #define SETTINGS_H_
 
-#include "../Libraries/HelperFunctions/HelperFunctions.h"
-#include "../Libraries/Threads/Threads.h"
+#include "../HelperFunctions/HelperFunctions.h"
+#include "../Threads/Threads.h"
 
 #include <iostream>
 #include <string>
