@@ -1181,7 +1181,15 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 		{
 			deviceAddresses->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
 		}
-		GD::rpcClient.broadcastDeleteDevices(deviceAddresses);
+		std::shared_ptr<RPC::RPCVariable> deviceIDs(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+		deviceIDs->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)peer->getID()))));
+		std::shared_ptr<RPC::RPCVariable> channels(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		deviceIDs->structValue->insert(RPC::RPCStructElement("CHANNELS", channels));
+		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		{
+			channels->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->first)));
+		}
+		GD::rpcClient.broadcastDeleteDevices(deviceAddresses, deviceIDs);
 		Metadata::deleteMetadata(peer->getSerialNumber());
 		Metadata::deleteMetadata(std::to_string(id));
 		if(peer->rpcDevice)

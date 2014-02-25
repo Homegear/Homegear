@@ -32,7 +32,7 @@
 
 #include "../General/Peer.h"
 #include "BidCoSDeviceTypes.h"
-#include "../delegate.hpp"
+#include "../../../delegate.hpp"
 #include "../../RPC/Device.h"
 #include "../../Types/RPCVariable.h"
 #include "../General/ServiceMessages.h"
