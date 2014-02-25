@@ -265,6 +265,8 @@ bool HomeMaticDevice::isSwitch(LogicalDeviceType type)
 {
 	switch((DeviceType)type.type())
 	{
+	case DeviceType::HMESPMSW1PL:
+		return true;
 	case DeviceType::HMLCSW1PL:
 		return true;
 	case DeviceType::HMLCSW1PL2:

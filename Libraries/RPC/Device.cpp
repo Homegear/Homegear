@@ -780,8 +780,6 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 
 Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 {
-	logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger());
-	physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter());
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
 		std::string attributeName(attr->name());

@@ -118,7 +118,7 @@ public:
 	std::vector<int32_t> setMasterConfigParameter(int32_t channelIndex, double index, double step, double size, std::vector<uint8_t>& binaryValue);
 	std::vector<int32_t> setMasterConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size, std::vector<uint8_t>& binaryValue);
 	std::vector<int32_t> setMasterConfigParameter(int32_t channel, std::shared_ptr<RPC::ParameterSet> parameterSet, std::shared_ptr<RPC::Parameter> parameter, std::vector<uint8_t>& binaryValue);
-	std::vector<uint8_t> getConfigParameter(double index, double size, int32_t mask = -1);
+	std::vector<uint8_t> getConfigParameter(double index, double size, int32_t mask = -1, bool onlyKnownConfig = false);
 	std::vector<uint8_t> getMasterConfigParameter(int32_t channelIndex, double index, double step, double size);
 	std::vector<uint8_t> getMasterConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size);
 	std::vector<uint8_t> getMasterConfigParameter(int32_t channel, std::shared_ptr<RPC::ParameterSet> parameterSet, std::shared_ptr<RPC::Parameter> parameter);
@@ -137,6 +137,8 @@ public:
 	std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel = -1);
 	void removePeer(int32_t channel, uint64_t id, int32_t remoteChannel);
 	int32_t getFreeEEPROMAddress(int32_t channel, bool isSender);
+	int32_t getPhysicalIndexOffset(int32_t channel);
+	void restoreLinks();
 
 	virtual std::shared_ptr<HMWiredPacket> getResponse(std::shared_ptr<HMWiredPacket> packet);
 	virtual void reset();

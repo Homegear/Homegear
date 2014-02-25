@@ -97,8 +97,6 @@ echo "console-common    console-data/keymap/policy      select  Select keymap fr
 console-common  console-data/keymap/full        select  us
 " > debconf.set
 
-wget http://homegear.eu/downloads/homegear_current_armhf.deb
-
 echo "#!/bin/bash
 debconf-set-selections /debconf.set
 rm -f /debconf.set
@@ -115,9 +113,12 @@ echo \"root:raspberry\" | chpasswd
 echo \"pi ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers
 sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
 dpkg-divert --add --local /lib/udev/rules.d/75-persistent-net-generator.rules
+read -p \"Ready to install Homegear. Hit [Enter] to continue...\"
 touch /tmp/HOMEGEAR_STATIC_INSTALLATION
+wget http://homegear.eu/downloads/homegear_current_armhf.deb
 dpkg -i /homegear_current_armhf.deb
 rm /tmp/HOMEGEAR_STATIC_INSTALLATION
+rm homegear_current_armhf.deb
 service homegear stop
 echo \"*               soft    core            unlimited\" >> /etc/security/limits.d/homegear
 service ssh stop
@@ -127,8 +128,6 @@ rm -f third-stage
 " > third-stage
 chmod +x third-stage
 LANG=C chroot $rootfs /third-stage
-
-rm homegear_current_armhf.deb
 
 #Install raspi-config
 wget https://raw.github.com/asb/raspi-config/master/raspi-config
