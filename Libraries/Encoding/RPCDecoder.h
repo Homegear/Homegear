@@ -36,7 +36,7 @@
 #include <cmath>
 
 #include "../HelperFunctions/HelperFunctions.h"
-#include "../Libraries/Types/RPCVariable.h"
+#include "../Types/RPCVariable.h"
 #include "BinaryDecoder.h"
 #include "RPCHeader.h"
 

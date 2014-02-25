@@ -31,7 +31,7 @@
 #define XMLRPCDECODER_H_
 
 #include "../HelperFunctions/HelperFunctions.h"
-#include "../Libraries/Types/RPCVariable.h"
+#include "../Types/RPCVariable.h"
 #include "rapidxml.hpp"
 
 #include <memory>

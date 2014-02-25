@@ -31,7 +31,7 @@
 #define RPCENCODER_H_
 
 #include "RPCHeader.h"
-#include "../Libraries/Types/RPCVariable.h"
+#include "../Types/RPCVariable.h"
 #include "BinaryEncoder.h"
 
 #include <memory>

@@ -33,7 +33,7 @@
 #include <vector>
 #include <memory>
 
-#include "../Libraries/Types/RPCVariable.h"
+#include "../Types/RPCVariable.h"
 
 namespace RPC
 {

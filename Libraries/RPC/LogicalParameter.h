@@ -30,7 +30,7 @@
 #ifndef LOGICALPARAMETER_H_
 #define LOGICALPARAMETER_H_
 
-#include "../Libraries/Types/RPCVariable.h"
+#include "../Types/RPCVariable.h"
 #include "../Encoding/rapidxml.hpp"
 
 #include <fstream>
