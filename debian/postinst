@@ -24,6 +24,25 @@ case $1 in
 		chown homegear:homegear /var/lib/homegear
 		chmod 750 /var/lib/homegear
 
+		if test ! -e /var/lib/homegear/scripts; then
+			rm -Rf /tmp/HomegearScriptsDir
+			[ $? -ne 0 ] && exit 1
+			mkdir /tmp/HomegearScriptsDir
+			[ $? -ne 0 ] && exit 1
+			wget -P /tmp/HomegearScriptsDir/ http://homegear.eu/downloads/HM-XMLRPC-Client.zip
+			[ $? -ne 0 ] && exit 1
+			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/HM-XMLRPC-Client.zip
+			[ $? -ne 0 ] && exit 1
+			rm /tmp/HomegearScriptsDir/HM-XMLRPC-Client.zip
+			mkdir /var/lib/homegear/scripts
+			[ $? -ne 0 ] && exit 1
+			mv /tmp/HomegearScriptsDir/* /var/lib/homegear/scripts
+			[ $? -ne 0 ] && exit 1
+			chown -R homegear:homegear /var/lib/homegear/scripts
+			chmod -R 755 /var/lib/homegear/scripts
+			rm -Rf /tmp/HomegearScriptsDir
+		fi
+
 		mkdir -p /var/log/homegear
 		chown homegear:homegear /var/log/homegear
 		chmod 750 /var/log/homegear
