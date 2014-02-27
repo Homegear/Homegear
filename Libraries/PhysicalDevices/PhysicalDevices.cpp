@@ -132,11 +132,23 @@ void PhysicalDevices::load(std::string filename)
 					if(settings->responseDelay > 10000) settings->responseDelay = 10000;
 					Output::printDebug("Debug: responseDelay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->responseDelay));
 				}
-				else if(name == "checksentdata")
+				else if(name == "oneway")
 				{
 					HelperFunctions::toLower(value);
-					if(value == "false") settings->checkSentData = false;
-					Output::printDebug("Debug: checkSentData of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->checkSentData));
+					if(value == "true") settings->oneWay = true;
+					Output::printDebug("Debug: oneWay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->oneWay));
+				}
+				else if(name == "enablerxvalue")
+				{
+					int32_t number = HelperFunctions::getNumber(value);
+					settings->enableRXValue = number;
+					Output::printDebug("Debug: enableRXValue of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->enableRXValue));
+				}
+				else if(name == "enabletxvalue")
+				{
+					int32_t number = HelperFunctions::getNumber(value);
+					settings->enableTXValue = number;
+					Output::printDebug("Debug: enableTXValue of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->enableTXValue));
 				}
 				else if(name == "gpio1")
 				{

@@ -36,6 +36,8 @@
 
 #include <algorithm>
 #include <ctime>
+#include <map>
+#include <fstream>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -53,6 +55,8 @@ public:
 	virtual ~HelperFunctions();
 
 	static void init();
+
+	static std::string getFileContent(std::string filename);
 
 	static inline int64_t getTime()
 	{
@@ -140,6 +144,12 @@ public:
 		return number;
 	}
 
+	static int32_t getNumber(char hexChar)
+	{
+		if(_hexMap.find(hexChar) == _hexMap.end()) return 0;
+		return _hexMap.at(hexChar);
+	}
+
 	static uint32_t getUnsignedNumber(std::string &s, bool isHex = false)
 	{
 		int32_t xpos = s.find('x');
@@ -170,6 +180,7 @@ public:
 
 private:
 	static bool _isBigEndian;
+	static std::map<char, int32_t> _hexMap;
 
 	static void checkEndianness()
 	{

@@ -122,6 +122,110 @@ TICC1100::~TICC1100()
     }
 }
 
+void TICC1100::enableUpdateMode()
+{
+	try
+	{
+		while(_sending) std::this_thread::sleep_for(std::chrono::milliseconds(3));
+		_txMutex.try_lock();
+		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+		_updateMode = true;
+		writeRegister(Registers::Enum::FSCTRL1, 0x08, true);
+		writeRegister(Registers::Enum::MDMCFG4, 0x5B, true);
+		writeRegister(Registers::Enum::MDMCFG3, 0xF8, true);
+		writeRegister(Registers::Enum::DEVIATN, 0x47, true);
+		writeRegister(Registers::Enum::FOCCFG, 0x1D, true);
+		writeRegister(Registers::Enum::BSCFG, 0x1C, true);
+		writeRegister(Registers::Enum::AGCCTRL2, 0xC7, true);
+		writeRegister(Registers::Enum::AGCCTRL1, 0x00, true);
+		writeRegister(Registers::Enum::AGCCTRL0, 0xB2, true);
+		writeRegister(Registers::Enum::FREND1, 0xB6, true);
+		writeRegister(Registers::Enum::FSCAL3, 0xEA, true);
+		usleep(20);
+		sendCommandStrobe(CommandStrobes::Enum::SFRX);
+		sendCommandStrobe(CommandStrobes::Enum::SRX);
+	}
+    catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _txMutex.unlock();
+}
+
+void TICC1100::disableUpdateMode()
+{
+	try
+	{
+		_updateMode = false;
+		_config = //Read from HM-CC-VD
+		{
+			0x46, //00: IOCFG2 (GDO2_CFG)
+			0x2E, //01: IOCFG1 (GDO1_CFG to High impedance (3-state))
+			0x2E, //02: IOCFG0 (GDO0_CFG, GDO0 is not connected)
+			0x07, //03: FIFOTHR (FIFO threshold to 33 (TX) and 32 (RX)
+			0xE9, //04: SYNC1
+			0xCA, //05: SYNC0
+			0xFF, //06: PKTLEN (Maximum packet length)
+			0x0C, //07: PKTCTRL1: CRC_AUTOFLUSH | APPEND_STATUS | NO_ADDR_CHECK
+			0x45, //08: PKTCTRL0
+			0x00, //09: ADDR
+			0x00, //0A: CHANNR
+			0x06, //0B: FSCTRL1
+			0x00, //0C: FSCTRL0
+			0x21, //0D: FREQ2
+			0x65, //0E: FREQ1
+			0x6A, //0F: FREQ0
+			0xC8, //10: MDMCFG4
+			0x93, //11: MDMCFG3
+			0x03, //12: MDMCFG2
+			0x22, //13: MDMCFG1
+			0xF8, //14: MDMCFG0
+			0x34, //15: DEVIATN
+			0x07, //16: MCSM2
+			0x30, //17: MCSM1: IDLE when packet has been received, RX after sending
+			0x18, //18: MCSM0
+			0x16, //19: FOCCFG
+			0x6C, //1A: BSCFG
+			0x43, //1B: AGCCTRL2
+			0x40, //1C: AGCCTRL1
+			0x91, //1D: AGCCTRL0
+			0x87, //1E: WOREVT1
+			0x6B, //1F: WOREVT0
+			0xF8, //20: WORCRTL
+			0x56, //21: FREND1
+			0x10, //22: FREND0
+			0xA9, //23: FSCAL3
+			0x0A, //24: FSCAL2
+			0x00, //25: FSCAL1
+			0x11, //26: FSCAL0
+			0x41, //27: RCCTRL1
+			0x00, //28: RCCTRL0
+		};
+		stopListening();
+		startListening();
+	}
+    catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void TICC1100::openDevice()
 {
 	try
@@ -296,11 +400,34 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 		sendCommandStrobe(CommandStrobes::Enum::SFTX);
 		if(burst)
 		{
-			sendCommandStrobe(CommandStrobes::Enum::STX);
+			//int32_t waitIndex = 0;
+			//while(waitIndex < 200)
+			//{
+				sendCommandStrobe(CommandStrobes::Enum::STX);
+				//if(readRegister(Registers::MARCSTATE) == 0x13) break;
+				//std::this_thread::sleep_for(std::chrono::milliseconds(2));
+				//waitIndex++;
+			//}
+			//if(waitIndex == 200) Output::printError("Error sending BidCoS packet. No CCA within 400ms.");
 			usleep(360000);
 		}
 		writeRegisters(Registers::Enum::FIFO, encodedPacket);
-		if(!burst) sendCommandStrobe(CommandStrobes::Enum::STX);
+		if(!burst)
+		{
+			//int32_t waitIndex = 0;
+			//while(waitIndex < 200)
+			//{
+				sendCommandStrobe(CommandStrobes::Enum::STX);
+				//if(readRegister(Registers::MARCSTATE) == 0x13) break;
+				//std::this_thread::sleep_for(std::chrono::milliseconds(2));
+				//waitIndex++;
+			//}
+			//if(waitIndex == 200)
+			//{
+				//Output::printError("Error sending BidCoS packet. No CCA within 400ms.");
+				//sendCommandStrobe(CommandStrobes::Enum::SFTX);
+			//}
+		}
 
 		if(GD::debugLevel > 3)
 		{
@@ -751,7 +878,6 @@ void TICC1100::mainThread()
 		int32_t pollResult;
 		int32_t bytesRead;
 		std::vector<char> readBuffer({'0'});
-		bool firstPacket = true;
 
         while(!_stopCallbackThread && _fileDescriptor->descriptor > -1 && _gpioDescriptors[1]->descriptor > -1)
         {
@@ -793,7 +919,7 @@ void TICC1100::mainThread()
 						uint8_t firstByte = readRegister(Registers::Enum::FIFO);
 						std::vector<uint8_t> encodedData = readRegisters(Registers::Enum::FIFO, firstByte + 1); //Read packet + RSSI
 						std::vector<uint8_t> decodedData(encodedData.size());
-						if(encodedData.size() >= 9 && encodedData.size() < 40) //Ignore too big packets. The first packet after initializing for example.
+						if(encodedData.size() >= 9) //Ignore too big packets. The first packet after initializing for example.
 						{
 							decodedData[0] = firstByte;
 							decodedData[1] = (~encodedData[1]) ^ 0x89;
@@ -810,6 +936,7 @@ void TICC1100::mainThread()
 							Threads::setThreadPriority(t.native_handle(), 45);
 							t.detach();
 						}
+						else Output::printWarning("Warning: Too small packet received: " + HelperFunctions::getHexString(encodedData));
 					}
 					else Output::printDebug("Debug: HomeMatic BidCoS packet received, but CRC failed.");
 

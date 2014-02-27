@@ -62,7 +62,9 @@ public:
 	std::string port;
 	bool ssl = false;
 	bool verifyCertificate = true;
-	bool checkSentData = true;
+	bool oneWay = false;
+	int32_t enableRXValue = -1;
+	int32_t enableTXValue = -1;
 };
 }
 #endif /* PHYSICALDEVICESETTINGS_H_ */

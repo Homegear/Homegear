@@ -2202,4 +2202,35 @@ std::shared_ptr<RPCVariable> RPCTriggerEvent::invoke(std::shared_ptr<std::vector
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCUpdateFirmware::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcInteger }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<Central> central = i->second->getCentral();
+			if(!central) continue;
+			if(central->knowsDevice(parameters->at(0)->integerValue)) return central->updateFirmware(parameters->at(0)->integerValue);
+		}
+
+		return RPC::RPCVariable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 } /* namespace RPC */

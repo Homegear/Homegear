@@ -314,7 +314,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 					break;
 			}
 			if(!_sending) _sendMutex.try_lock(); //Don't change to "lock", because it is called for each received byte!
-			else if(_settings->checkSentData)
+			else if(!_settings->oneWay)
 			{
 				receivingSentPacket = true;
 				_sendingMutex.try_lock();
@@ -353,7 +353,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 				}
 				else if(packet.at(0) == 0xFE) { if(packet.size() > 3) length = packet.at(3); }
 				else if(packet.at(0) == 0xF8) break;
-				else if(!_settings->checkSentData) //USB devices sometimes receive nonsense instead of 0xF8
+				else if(_settings->oneWay) //USB devices sometimes receive nonsense instead of 0xF8
 				{
 					Output::printWarning("Warning: Correcting wrong response: " + HelperFunctions::getHexString(packet) + ". This is normal for RS485 USB modules when searching for new devices. When not searching, this shouldn't happen.");
 					packet.clear(); //Remove something like 0xF0F0
@@ -396,6 +396,20 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
         _sendMutex.lock();
         _lastPacketSent = HelperFunctions::getTime(); //Sending takes some time, so we set _lastPacketSent two times
         _sending = true;
+        if(_settings->oneWay && gpioDefined(1))
+        {
+        	if(!gpioOpen(1))
+			{
+				closeGPIO(1);
+				openGPIO(1, false);
+				if(!gpioOpen(1))
+				{
+					Output::printError("Error: Could not send RS485 packet. GPIO to enable sending is could not be opened.");
+					return;
+				}
+			}
+        	setGPIO(1, !((bool)_settings->enableRXValue));
+        }
         int32_t i;
         int32_t j = 0;
         for(; j < 5; j++)
@@ -413,13 +427,23 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 				}
 				bytesWritten += i;
 			}
-			if(!_settings->checkSentData) break;
+			if(_settings->oneWay) break;
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			_sendingMutex.try_lock_for(std::chrono::milliseconds(200));
 			if(_receivedSentPacket == packet) break;
 			else Output::printWarning("Error sending HomeMatic Wired packet: Collision (received packet was: " + HelperFunctions::getHexString(_receivedSentPacket) + ")");
 			_sendingMutex.unlock();
         }
+		if(_settings->oneWay && gpioDefined(1))
+		{
+			if(!gpioOpen(1))
+			{
+				closeGPIO(1);
+				openGPIO(1, false);
+				if(!gpioOpen(1)) return;
+			}
+			setGPIO(1, (bool)_settings->enableRXValue);
+		}
         if(j == 5) Output::printError("Error sending HomeMatic Wired packet: Giving up sending after 5 tries.");
         else _lastPacketSent = HelperFunctions::getTime();
     }
@@ -449,16 +473,16 @@ void RS485::startListening()
 		stopListening();
 		openDevice();
 		if(_fileDescriptor->descriptor == -1) return;
-		if(_settings->gpio.find(1) != _settings->gpio.end())
+		if(gpioDefined(1))
 		{
 			openGPIO(1, false);
-			setGPIO(1, false);
-			closeGPIO(1);
+			setGPIO(1, (bool)_settings->enableRXValue);
+			if(!_settings->oneWay) closeGPIO(1);
 		}
-		if(_settings->gpio.find(2) != _settings->gpio.end())
+		if(gpioDefined(2))
 		{
 			openGPIO(2, false);
-			setGPIO(2, true);
+			setGPIO(2, (bool)_settings->enableTXValue);
 			closeGPIO(2);
 		}
 		_stopped = false;
@@ -490,6 +514,7 @@ void RS485::stopListening()
 		}
 		_stopCallbackThread = false;
 		if(_fileDescriptor->descriptor != -1) closeDevice();
+		if(gpioDefined(1) && _settings->oneWay) closeGPIO(1);
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 	}

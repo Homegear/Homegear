@@ -60,6 +60,8 @@ class COC  : public PhysicalDevice
         void stopListening();
         void sendPacket(std::shared_ptr<Packet> packet);
         virtual void setup(int32_t userID, int32_t groupID);
+        void enableUpdateMode();
+        void disableUpdateMode();
     protected:
         void openDevice();
         void closeDevice();

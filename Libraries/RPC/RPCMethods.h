@@ -568,5 +568,15 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
+class RPCUpdateFirmware : public RPCMethod
+{
+public:
+	RPCUpdateFirmware()
+	{
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger});
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 } /* namespace RPC */
 #endif /* RPCMETHODS_H_ */

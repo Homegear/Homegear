@@ -135,6 +135,11 @@ void BidCoSPacket::import(std::vector<uint8_t>& packet, bool rssiByte)
 	try
 	{
 		if(packet.size() < 10) return;
+		if(packet.size() > 200)
+		{
+			Output::printWarning("Warning: Tried to import BidCoS packet larger than 200 bytes.");
+			return;
+		}
 		_length = packet[0];
 		_messageCounter = packet[1];
 		_controlByte = packet[2];
@@ -173,6 +178,11 @@ void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 		if(packet.size() < startIndex + 20)
 		{
 			Output::printError("Error: Packet is too short: " + packet);
+			return;
+		}
+		if(packet.size() > 400)
+		{
+			Output::printWarning("Warning: Tried to import BidCoS packet larger than 200 bytes.");
 			return;
 		}
 		_length = getByte(packet.substr(startIndex, 2));

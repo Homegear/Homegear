@@ -39,7 +39,7 @@ case $1 in
 			mv /tmp/HomegearScriptsDir/* /var/lib/homegear/scripts
 			[ $? -ne 0 ] && exit 1
 			chown -R homegear:homegear /var/lib/homegear/scripts
-			chmod -R 755 /var/lib/homegear/scripts
+			chmod -R 750 /var/lib/homegear/scripts
 			rm -Rf /tmp/HomegearScriptsDir
 		fi
 

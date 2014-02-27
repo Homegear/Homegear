@@ -159,6 +159,7 @@ class HomeMaticDevice : public LogicalDevice
         bool _disposing = false;
         bool _disposed = false;
         bool _stopWorkerThread = false;
+        bool _updateMode = false;
         std::thread _workerThread;
 
         int32_t _deviceClass = 0;

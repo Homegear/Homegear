@@ -56,6 +56,16 @@ PhysicalDevice::~PhysicalDevice()
 
 }
 
+void PhysicalDevice::enableUpdateMode()
+{
+	throw Exception("Error: Method enableUpdateMode is not implemented.");
+}
+
+void PhysicalDevice::disableUpdateMode()
+{
+	throw Exception("Error: Method disableUpdateMode is not implemented.");
+}
+
 void PhysicalDevice::addLogicalDevice(LogicalDevice* device)
 {
 	try
@@ -174,7 +184,7 @@ void PhysicalDevice::openGPIO(uint32_t index, bool readOnly)
 {
 	try
 	{
-		if(_settings->gpio.find(index) == _settings->gpio.end() || _settings->gpio.at(index).number == -1)
+		if(!gpioDefined(index))
 		{
 			throw(Exception("Failed to open GPIO with index \"" + std::to_string(index) + "\" for device " + _settings->type + ": Not configured in physical devices' configuration file."));
 		}
@@ -202,7 +212,7 @@ void PhysicalDevice::getGPIOPath(uint32_t index)
 {
 	try
 	{
-		if(_settings->gpio.find(index) == _settings->gpio.end() || _settings->gpio.at(index).number == -1)
+		if(!gpioDefined(index))
 		{
 			throw(Exception("Failed to get path for GPIO with index \"" + std::to_string(index) + "\": Not configured in physical devices' configuration file."));
 		}
@@ -299,7 +309,7 @@ void PhysicalDevice::setGPIO(uint32_t index, bool value)
 {
 	try
 	{
-		if(_gpioDescriptors.find(index) == _gpioDescriptors.end() || !_gpioDescriptors.at(index) || _gpioDescriptors.at(index)->descriptor == -1)
+		if(!gpioOpen(index))
 		{
 			Output::printError("Failed to set GPIO with index \"" + std::to_string(index) + "\": Device not open.");
 			return;
@@ -328,7 +338,7 @@ void PhysicalDevice::setGPIOPermission(uint32_t index, int32_t userID, int32_t g
 {
 	try
 	{
-		if(_settings->gpio.find(index) == _settings->gpio.end() || _settings->gpio.at(index).number == -1)
+		if(!gpioDefined(index))
     	{
     		Output::printError("Error: Could not setup GPIO for device " + _settings->type + ": GPIO path for index " + std::to_string(index) + " is not set.");
     		return;
@@ -361,11 +371,53 @@ void PhysicalDevice::setGPIOPermission(uint32_t index, int32_t userID, int32_t g
     }
 }
 
+bool PhysicalDevice::gpioDefined(uint32_t index)
+{
+	try
+	{
+		if(_settings->gpio.find(index) == _settings->gpio.end() || _settings->gpio.at(index).number <= 0) return false;
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return true;
+}
+
+bool PhysicalDevice::gpioOpen(uint32_t index)
+{
+	try
+	{
+		if(_gpioDescriptors.find(index) == _gpioDescriptors.end() || !_gpioDescriptors.at(index) || _gpioDescriptors.at(index)->descriptor == -1) return false;
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return true;
+}
+
 void PhysicalDevice::exportGPIO(uint32_t index)
 {
 	try
 	{
-		if(_settings->gpio.find(index) == _settings->gpio.end() || _settings->gpio.at(index).number == -1)
+		if(!gpioDefined(index))
 		{
 			Output::printError("Error: Failed to export GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + ": GPIO not defined in physicel devices' settings.");
 			return;
@@ -416,7 +468,7 @@ void PhysicalDevice::setGPIODirection(uint32_t index, GPIODirection::Enum direct
 {
 	try
 	{
-		if(_settings->gpio.find(index) == _settings->gpio.end() || _settings->gpio.at(index).number == -1)
+		if(!gpioDefined(index))
 		{
 			Output::printError("Failed to set direction for GPIO with index \"" + std::to_string(index) + "\": GPIO not defined in physicel devices' settings.");
 			return;
@@ -451,7 +503,7 @@ void PhysicalDevice::setGPIOEdge(uint32_t index, GPIOEdge::Enum edge)
 {
 	try
 	{
-		if(_settings->gpio.find(index) == _settings->gpio.end() || _settings->gpio.at(index).number == -1)
+		if(!gpioDefined(index))
 		{
 			Output::printError("Failed to set edge for GPIO with index \"" + std::to_string(index) + "\": GPIO not defined in physicel devices' settings.");
 			return;

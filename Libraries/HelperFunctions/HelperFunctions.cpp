@@ -30,6 +30,7 @@
 #include "HelperFunctions.h"
 
 bool HelperFunctions::_isBigEndian;
+std::map<char, int32_t> HelperFunctions::_hexMap;
 
 HelperFunctions::~HelperFunctions() {
 
@@ -38,6 +39,45 @@ HelperFunctions::~HelperFunctions() {
 void HelperFunctions::init()
 {
 	checkEndianness();
+
+	_hexMap['0'] = 0x0;
+	_hexMap['1'] = 0x1;
+	_hexMap['2'] = 0x2;
+	_hexMap['3'] = 0x3;
+	_hexMap['4'] = 0x4;
+	_hexMap['5'] = 0x5;
+	_hexMap['6'] = 0x6;
+	_hexMap['7'] = 0x7;
+	_hexMap['8'] = 0x8;
+	_hexMap['9'] = 0x9;
+	_hexMap['A'] = 0xA;
+	_hexMap['B'] = 0xB;
+	_hexMap['C'] = 0xC;
+	_hexMap['D'] = 0xD;
+	_hexMap['E'] = 0xE;
+	_hexMap['F'] = 0xF;
+	_hexMap['a'] = 0xA;
+	_hexMap['b'] = 0xB;
+	_hexMap['c'] = 0xC;
+	_hexMap['d'] = 0xD;
+	_hexMap['e'] = 0xE;
+	_hexMap['f'] = 0xF;
+}
+
+std::string HelperFunctions::getFileContent(std::string filename)
+{
+	std::ifstream in(filename.c_str(), std::ios::in | std::ios::binary);
+	if(in)
+	{
+		std::string contents;
+		in.seekg(0, std::ios::end);
+		contents.resize(in.tellg());
+		in.seekg(0, std::ios::beg);
+		in.read(&contents[0], contents.size());
+		in.close();
+		return(contents);
+	}
+	throw(strerror(errno));
 }
 
 std::string HelperFunctions::getTimeString(int64_t time)

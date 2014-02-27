@@ -95,6 +95,58 @@ void CUL::sendPacket(std::shared_ptr<Packet> packet)
     }
 }
 
+void CUL::enableUpdateMode()
+{
+	try
+	{
+		_updateMode = true;
+		stopListening();
+		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+		openDevice();
+		if(_fileDescriptor->descriptor == -1) return;
+		_stopped = false;
+		writeToDevice("X21\nAR\n", false);
+		std::this_thread::sleep_for(std::chrono::milliseconds(400));
+		_listenThread = std::thread(&CUL::listen, this);
+		Threads::setThreadPriority(_listenThread.native_handle(), 45);
+	}
+    catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void CUL::disableUpdateMode()
+{
+	try
+	{
+		_updateMode = false;
+		stopListening();
+		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+		startListening();
+	}
+    catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void CUL::openDevice()
 {
 	try
@@ -433,6 +485,7 @@ void CUL::listen()
 				Threads::setThreadPriority(t.native_handle(), 45);
 				t.detach();
         	}
+        	else Output::printWarning("Warning: Too short packet received: " + packetHex);
         }
     }
     catch(const std::exception& ex)

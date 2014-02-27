@@ -194,6 +194,8 @@ public:
 	void stopListening();
 	void sendPacket(std::shared_ptr<Packet> packet);
 	virtual void setup(int32_t userID, int32_t groupID);
+	void enableUpdateMode();
+	void disableUpdateMode();
 protected:
 	//const int32_t BCM2708_PERI_BASE = 0x20000000;
 	//const int32_t GPIO_BASE = (BCM2708_PERI_BASE + 0x200000);

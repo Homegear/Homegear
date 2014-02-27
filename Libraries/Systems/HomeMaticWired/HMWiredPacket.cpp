@@ -135,6 +135,11 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 		reset();
 
 		if(packet.empty()) return;
+		if(packet.size() > 512)
+		{
+			Output::printWarning("Warning: Tried to import HomeMatic Wired packet larger than 256 bytes.");
+			return;
+		}
 		_packet = packet;
 		if(packet.at(0) == 0xFD)
 		{
@@ -281,6 +286,11 @@ void HMWiredPacket::import(std::string packetHex)
 {
 	try
 	{
+		if(packetHex.size() > 1024)
+		{
+			Output::printWarning("Warning: Tried to import HomeMatic Wired packet larger than 512 bytes.");
+			return;
+		}
 		std::vector<uint8_t> packet(HelperFunctions::getUBinary(packetHex));
 		import(packet);
 	}

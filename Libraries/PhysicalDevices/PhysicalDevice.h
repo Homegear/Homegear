@@ -75,6 +75,8 @@ public:
 
 	virtual void startListening() {}
 	virtual void stopListening() {}
+	virtual void enableUpdateMode();
+	virtual void disableUpdateMode();
 	virtual void addLogicalDevice(LogicalDevice*);
 	virtual void removeLogicalDevice(LogicalDevice*);
 	virtual void sendPacket(std::shared_ptr<Packet> packet) {}
@@ -98,6 +100,7 @@ protected:
 	std::map<uint32_t, std::shared_ptr<FileDescriptor>> _gpioDescriptors;
 	int64_t _lastPacketSent = -1;
 	int64_t _lastPacketReceived = -1;
+	bool _updateMode = false;
 
 	virtual void callCallback(std::shared_ptr<Packet> packet);
 	virtual void setDevicePermission(int32_t userID, int32_t groupID);
@@ -109,6 +112,8 @@ protected:
 	virtual void exportGPIO(uint32_t index);
 	virtual void setGPIODirection(uint32_t index, GPIODirection::Enum direction);
 	virtual void setGPIOEdge(uint32_t index, GPIOEdge::Enum edge);
+	virtual bool gpioDefined(uint32_t);
+	virtual bool gpioOpen(uint32_t);
 };
 
 }
