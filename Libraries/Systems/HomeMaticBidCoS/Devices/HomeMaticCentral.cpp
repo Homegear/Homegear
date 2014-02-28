@@ -912,14 +912,14 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		if(!manual)
 		{
 			bool responseReceived = false;
-			for(int32_t retries = 0; retries < 3; retries++)
+			for(int32_t retries = 0; retries < 10; retries++)
 			{
 				std::vector<uint8_t> payload({0xCA});
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter[0]++, 0x30, 0x11, _address, peer->getAddress(), payload, true));
 				GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->sendPacket(packet);
 				int64_t time = HelperFunctions::getTime();
 				waitIndex = 0;
-				while(waitIndex < 10)
+				while(waitIndex < 50) //Wait, wait, wait. The WOR preamble alone needs 360ms with the CUL!
 				{
 					receivedPacket = _receivedPackets.get(peer->getAddress());
 					if(receivedPacket && receivedPacket->timeReceived() > time && receivedPacket->payload()->size() == 1 && receivedPacket->payload()->at(0) == 0 && receivedPacket->destinationAddress() == _address && receivedPacket->controlByte() == 0x80 && receivedPacket->messageType() == 2)
@@ -1048,7 +1048,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 				}
 				waitIndex = 0;
 				bool okReceived = false;
-				while(waitIndex < 30)
+				while(waitIndex < 15)
 				{
 					receivedPacket = _receivedPackets.get(peer->getAddress());
 					if(receivedPacket && receivedPacket->messageCounter() == messageCounter && receivedPacket->payload()->size() == 1 && receivedPacket->payload()->at(0) == 0 && receivedPacket->destinationAddress() == 0 && receivedPacket->controlByte() == 0 && receivedPacket->messageType() == 2)
