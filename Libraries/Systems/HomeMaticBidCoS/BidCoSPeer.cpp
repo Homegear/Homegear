@@ -1555,6 +1555,31 @@ int32_t BidCoSPeer::getChannelGroupedWith(int32_t channel)
 	return -1;
 }
 
+int32_t BidCoSPeer::getNewFirmwareVersion()
+{
+	try
+	{
+		std::string filenamePrefix = HelperFunctions::getHexString((int32_t)DeviceFamilies::HomeMaticBidCoS, 4) + "." + HelperFunctions::getHexString(_deviceType.type(), 8);
+		std::string versionFile(GD::settings.firmwarePath() + filenamePrefix + ".version");
+		if(!HelperFunctions::fileExists(versionFile)) return 0;
+		std::string versionHex = HelperFunctions::getFileContent(versionFile);
+		return HelperFunctions::getNumber(versionHex, true);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return 0;
+}
+
 void BidCoSPeer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector<FrameValues>& frameValues)
 {
 	try
@@ -1983,13 +2008,22 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int32_t chann
 			if(_firmwareVersion != 0)
 			{
 				std::ostringstream stringStream;
-				stringStream << std::setw(2) << std::hex << (int32_t)_firmwareVersion << std::dec;
+				stringStream << std::setw(2) << std::hex << _firmwareVersion << std::dec;
 				std::string firmware = stringStream.str();
 				description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(firmware.substr(0, 1) + "." + firmware.substr(1)))));
 			}
 			else
 			{
 				description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("?")))));
+			}
+
+			int32_t newFirmwareVersion = getNewFirmwareVersion();
+			if(newFirmwareVersion > _firmwareVersion)
+			{
+				std::ostringstream stringStream;
+				stringStream << std::setw(2) << std::hex << newFirmwareVersion << std::dec;
+				std::string firmware = stringStream.str();
+				description->structValue->insert(RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(firmware.substr(0, 1) + "." + firmware.substr(1)))));
 			}
 
 			int32_t uiFlags = (int32_t)rpcDevice->uiFlags;

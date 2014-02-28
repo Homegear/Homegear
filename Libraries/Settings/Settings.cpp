@@ -52,6 +52,7 @@ void Settings::reset()
 	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
 	_physicalDeviceSettingsPath = "/etc/homegear/physicaldevices.conf";
 	_scriptPath = "/var/lib/homegear/scripts/";
+	_firmwarePath = "/var/lib/homegear/firmware/";
 	_tunnelClients.clear();
 	_gpioPath = "/sys/class/gpio/";
 }
@@ -193,6 +194,13 @@ void Settings::load(std::string filename)
 					if(_scriptPath.empty()) _scriptPath = "/var/lib/homegear/scripts/";
 					if(_scriptPath.back() != '/') _scriptPath.push_back('/');
 					Output::printDebug("Debug: scriptPath set to " + _scriptPath);
+				}
+				else if(name == "firmwarepath")
+				{
+					_firmwarePath = value;
+					if(_firmwarePath.empty()) _firmwarePath = "/var/lib/homegear/firmware/";
+					if(_firmwarePath.back() != '/') _firmwarePath.push_back('/');
+					Output::printDebug("Debug: firmwarePath set to " + _firmwarePath);
 				}
 				else if(name == "redirecttosshtunnel")
 				{

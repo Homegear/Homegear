@@ -2206,14 +2206,33 @@ std::shared_ptr<RPCVariable> RPCUpdateFirmware::invoke(std::shared_ptr<std::vect
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({ RPCVariableType::rpcInteger }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<RPCVariableType>>({
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcInteger, RPCVariableType::rpcBoolean }),
+				std::vector<RPCVariableType>({ RPCVariableType::rpcArray })
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::vector<uint64_t> ids;
+		bool manual = false;
+		if(parameters->at(0)->type == RPCVariableType::rpcInteger)
+		{
+			ids.push_back(parameters->at(0)->integerValue);
+			if(parameters->size() == 2 && parameters->at(1)->booleanValue) manual = true;
+		}
+		else
+		{
+			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
+			{
+				if((*i)->integerValue != 0) ids.push_back((*i)->integerValue);
+			}
+		}
 
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
 			if(!central) continue;
-			if(central->knowsDevice(parameters->at(0)->integerValue)) return central->updateFirmware(parameters->at(0)->integerValue);
+			if(central->knowsDevice(parameters->at(0)->integerValue)) return central->updateFirmware(ids, manual);
 		}
 
 		return RPC::RPCVariable::createError(-2, "Device not found.");

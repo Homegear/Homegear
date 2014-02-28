@@ -52,13 +52,14 @@ class BidCoSPacket : public Packet
         void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
         uint8_t messageType() { return _messageType; }
         uint8_t rssiDevice() { return _rssiDevice; }
+        bool isUpdatePacket() { return _updatePacket; }
         virtual std::string hexString();
         virtual std::vector<uint8_t> byteArray();
 
         BidCoSPacket();
         BidCoSPacket(std::string&, int64_t timeReceived = 0);
         BidCoSPacket(std::vector<uint8_t>&, bool rssiByte, int64_t timeReceived = 0);
-        BidCoSPacket(uint8_t, uint8_t, uint8_t, int32_t, int32_t, std::vector<uint8_t>);
+        BidCoSPacket(uint8_t messageCounter, uint8_t controlByte, uint8_t messageType, int32_t senderAddress, int32_t destinationAddress, std::vector<uint8_t> payload, bool updatePacket = false);
         /** Default destructor */
         virtual ~BidCoSPacket();
         void import(std::string&, bool removeFirstCharacter = true);
@@ -70,6 +71,7 @@ class BidCoSPacket : public Packet
         uint8_t _messageCounter = 0;
         uint8_t _messageType = 0;
         uint8_t _rssiDevice = 0;
+        bool _updatePacket = false;
 
         uint8_t getByte(std::string);
         int32_t getInt(std::string);

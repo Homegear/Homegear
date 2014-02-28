@@ -72,7 +72,8 @@ public:
 	int32_t getUniqueAddress(int32_t seed);
 	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);
 	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<BidCoSPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
-	void updateFirmwares(std::vector<uint64_t> peers);
+	void updateFirmwares(std::vector<uint64_t> ids, bool manual);
+	void updateFirmware(uint64_t id, bool manual);
 	void addPeersToVirtualDevices();
 	void addHomegearFeatures(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues);
 	void addHomegearFeaturesHMCCVD(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues);
@@ -128,7 +129,7 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on, uint32_t duration = 60, bool debugOutput = true);
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(uint64_t id, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
-	virtual std::shared_ptr<RPC::RPCVariable> updateFirmware(uint64_t id);
+	virtual std::shared_ptr<RPC::RPCVariable> updateFirmware(std::vector<uint64_t> ids, bool manual);
 protected:
 	std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
 	virtual void worker();

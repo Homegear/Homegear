@@ -574,6 +574,8 @@ public:
 	RPCUpdateFirmware()
 	{
 		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcBoolean});
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcArray});
 	}
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };

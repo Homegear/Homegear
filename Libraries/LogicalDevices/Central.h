@@ -85,7 +85,7 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on, uint32_t duration = 60, bool debugOutput = true) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(uint64_t id, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
-	virtual std::shared_ptr<RPC::RPCVariable> updateFirmware(uint64_t id) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
+	virtual std::shared_ptr<RPC::RPCVariable> updateFirmware(std::vector<uint64_t> ids, bool manual) { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable()); }
 protected:
 	int32_t _physicalAddress;
 private:

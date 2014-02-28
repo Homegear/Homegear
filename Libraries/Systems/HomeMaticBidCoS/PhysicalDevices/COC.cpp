@@ -75,8 +75,18 @@ void COC::sendPacket(std::shared_ptr<Packet> packet)
 		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
 		if(packet->payload()->size() > 54)
 		{
-			if(GD::debugLevel >= 2) Output::printError("Tried to send packet larger than 64 bytes. That is not supported.");
+			if(GD::debugLevel >= 2) Output::printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
 			return;
+		}
+		if(_updateMode)
+		{
+			std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoS::BidCoSPacket>(packet));
+			if(!bidCoSPacket) return;
+			if(!bidCoSPacket->isUpdatePacket())
+			{
+				Output::printInfo("Info: Can't send packet to BidCoS peer with address 0x" + HelperFunctions::getHexString(packet->destinationAddress(), 6) + ", because update mode is enabled.");
+				return;
+			}
 		}
 
 		writeToDevice("As" + packet->hexString() + "\r\n", true);
@@ -100,24 +110,7 @@ void COC::enableUpdateMode()
 	try
 	{
 		_updateMode = true;
-		stopListening();
-		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-		openDevice();
-		if(_fileDescriptor->descriptor == -1) return;
-		openGPIO(2, false);
-		setGPIO(2, true);
-		closeGPIO(2);
-		openGPIO(1, false);
-		setGPIO(1, false);
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		setGPIO(1, true);
-		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-		closeGPIO(1);
-		_stopped = false;
-		writeToDevice("X21\nAR\n", false);
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		_listenThread = std::thread(&COC::listen, this);
-		Threads::setThreadPriority(_listenThread.native_handle(), 45);
+		writeToDevice("AR\n", false);
 	}
     catch(const std::exception& ex)
     {
@@ -137,10 +130,10 @@ void COC::disableUpdateMode()
 {
 	try
 	{
-		_updateMode = false;
 		stopListening();
 		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 		startListening();
+		_updateMode = false;
 	}
     catch(const std::exception& ex)
     {
@@ -482,7 +475,7 @@ void COC::listen()
 				Threads::setThreadPriority(t.native_handle(), 45);
 				t.detach();
         	}
-        	else Output::printWarning("Warning: Too short packet received: " + packetHex);
+        	else if(!packetHex.empty()) Output::printWarning("Warning: Too short packet received: " + packetHex);
         }
     }
     catch(const std::exception& ex)

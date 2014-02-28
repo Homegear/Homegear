@@ -30,8 +30,6 @@
 #ifndef DEVICES_H_
 #define DEVICES_H_
 
-#include <dirent.h>
-
 #include <vector>
 #include <memory>
 

@@ -60,6 +60,7 @@ public:
 	std::string serverSettingsPath() { return _serverSettingsPath; }
 	std::string physicalDeviceSettingsPath() { return _physicalDeviceSettingsPath; }
 	std::string scriptPath() { return _scriptPath; }
+	std::string firmwarePath() { return _firmwarePath; }
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
 	std::string gpioPath() { return _gpioPath; }
 private:
@@ -79,6 +80,7 @@ private:
 	std::string _serverSettingsPath;
 	std::string _physicalDeviceSettingsPath;
 	std::string _scriptPath;
+	std::string _firmwarePath;
 	std::map<std::string, bool> _tunnelClients;
 	std::string _gpioPath;
 

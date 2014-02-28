@@ -41,42 +41,25 @@ void Devices::load()
 {
 	try
 	{
-		DIR* directory;
-		struct dirent* entry;
-		int32_t i = -1;
 		std::string deviceDir(GD::configPath + "Device types");
-		if((directory = opendir(deviceDir.c_str())) != 0)
+		std::vector<std::string> files = HelperFunctions::getFiles(deviceDir);
+		if(files.empty())
 		{
-			while((entry = readdir(directory)) != 0)
-			{
-				if(entry->d_type == 8)
-				{
-					try
-					{
-						if(i == -1) i = 0;
-						Output::printDebug("Loading XML RPC device " + deviceDir + "/" + entry->d_name);
-						std::shared_ptr<Device> device(new Device(deviceDir + "/" + entry->d_name));
-						if(device && device->loaded()) _devices.push_back(device);
-						i++;
-					}
-					catch(const std::exception& ex)
-					{
-						Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-					}
-					catch(Exception& ex)
-					{
-						Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-					}
-					catch(...)
-					{
-						Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-					}
-				}
-			}
+			Output::printError("No xml files found in \"" + GD::configPath + "Device types\".");
+			exit(3);
 		}
-		else throw(Exception("Could not open directory \"" + GD::configPath + "Device types\"."));
-		if(i == -1) throw(Exception("No xml files found in \"" + GD::configPath + "Device types\"."));
-		if(i == 0) throw(Exception("Could not open any xml files in \"" + GD::configPath + "Device types\"."));
+		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
+		{
+			Output::printDebug("Loading XML RPC device " + deviceDir + "/" + *i);
+			std::shared_ptr<Device> device(new Device(deviceDir + "/" + *i));
+			if(device && device->loaded()) _devices.push_back(device);
+		}
+
+		if(_devices.empty())
+		{
+			Output::printError("Could not load any devices from xml files in \"" + deviceDir + "\".");
+			exit(3);
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -85,7 +68,6 @@ void Devices::load()
     catch(Exception& ex)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    	exit(3);
     }
     catch(...)
     {

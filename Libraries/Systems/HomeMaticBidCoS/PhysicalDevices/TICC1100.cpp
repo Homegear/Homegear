@@ -65,7 +65,7 @@ TICC1100::TICC1100(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalD
 			0xF8, //14: MDMCFG0
 			0x34, //15: DEVIATN
 			0x07, //16: MCSM2
-			0x30, //17: MCSM1: IDLE when packet has been received, RX after sending
+			0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
 			0x18, //18: MCSM0
 			0x16, //19: FOCCFG
 			0x6C, //1A: BSCFG
@@ -126,10 +126,10 @@ void TICC1100::enableUpdateMode()
 {
 	try
 	{
+		_updateMode = true;
 		while(_sending) std::this_thread::sleep_for(std::chrono::milliseconds(3));
 		_txMutex.try_lock();
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
-		_updateMode = true;
 		writeRegister(Registers::Enum::FSCTRL1, 0x08, true);
 		writeRegister(Registers::Enum::MDMCFG4, 0x5B, true);
 		writeRegister(Registers::Enum::MDMCFG3, 0xF8, true);
@@ -164,7 +164,6 @@ void TICC1100::disableUpdateMode()
 {
 	try
 	{
-		_updateMode = false;
 		_config = //Read from HM-CC-VD
 		{
 			0x46, //00: IOCFG2 (GDO2_CFG)
@@ -190,7 +189,7 @@ void TICC1100::disableUpdateMode()
 			0xF8, //14: MDMCFG0
 			0x34, //15: DEVIATN
 			0x07, //16: MCSM2
-			0x30, //17: MCSM1: IDLE when packet has been received, RX after sending
+			0x00, //17: MCSM1: IDLE when packet has been received, RX after sending
 			0x18, //18: MCSM0
 			0x16, //19: FOCCFG
 			0x6C, //1A: BSCFG
@@ -211,6 +210,7 @@ void TICC1100::disableUpdateMode()
 		};
 		stopListening();
 		startListening();
+		_updateMode = false;
 	}
     catch(const std::exception& ex)
     {
@@ -368,11 +368,26 @@ void TICC1100::sendPacket(std::shared_ptr<Packet> packet)
 {
 	try
 	{
+		if(!packet)
+		{
+			Output::printWarning("Warning: Packet was nullptr.");
+			return;
+		}
 		if(_fileDescriptor->descriptor == -1 || _gpioDescriptors[1]->descriptor == -1 || _stopped) return;
 		if(packet->payload()->size() > 54)
 		{
-			Output::printError("Tried to send packet larger than 64 bytes. That is not supported.");
+			Output::printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
 			return;
+		}
+		if(_updateMode)
+		{
+			std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoS::BidCoSPacket>(packet));
+			if(!bidCoSPacket) return;
+			if(!bidCoSPacket->isUpdatePacket())
+			{
+				Output::printInfo("Info: Can't send packet to BidCoS peer with address 0x" + HelperFunctions::getHexString(packet->destinationAddress(), 6) + ", because update mode is enabled.");
+				return;
+			}
 		}
 		bool burst = packet->controlByte() & 0x10;
 		std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoS::BidCoSPacket>(packet));

@@ -39,6 +39,7 @@
 #include <map>
 #include <fstream>
 
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -56,7 +57,11 @@ public:
 
 	static void init();
 
+	static bool fileExists(std::string filename);
+
 	static std::string getFileContent(std::string filename);
+
+	static std::vector<std::string> getFiles(std::string path);
 
 	static inline int64_t getTime()
 	{

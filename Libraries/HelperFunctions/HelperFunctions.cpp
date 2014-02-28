@@ -64,6 +64,12 @@ void HelperFunctions::init()
 	_hexMap['f'] = 0xF;
 }
 
+bool HelperFunctions::fileExists(std::string filename)
+{
+	std::ifstream in(filename.c_str());
+	return in;
+}
+
 std::string HelperFunctions::getFileContent(std::string filename)
 {
 	std::ifstream in(filename.c_str(), std::ios::in | std::ios::binary);
@@ -78,6 +84,40 @@ std::string HelperFunctions::getFileContent(std::string filename)
 		return(contents);
 	}
 	throw(strerror(errno));
+}
+
+std::vector<std::string> HelperFunctions::getFiles(std::string path)
+{
+	std::vector<std::string> files;
+	DIR* directory;
+	struct dirent* entry;
+	if((directory = opendir(path.c_str())) != 0)
+	{
+		while((entry = readdir(directory)) != 0)
+		{
+			if(entry->d_type == 8)
+			{
+				try
+				{
+					files.push_back(std::string(entry->d_name));
+				}
+				catch(const std::exception& ex)
+				{
+					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(Exception& ex)
+				{
+					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+			}
+		}
+	}
+	else throw(Exception("Could not open directory."));
+	return files;
 }
 
 std::string HelperFunctions::getTimeString(int64_t time)

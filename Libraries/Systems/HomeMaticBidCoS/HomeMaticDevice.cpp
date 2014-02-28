@@ -1166,11 +1166,6 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<BidCoSPacket> packet, bool stea
 	try
 	{
 		if(!packet) return;
-		if(_updateMode)
-		{
-			Output::printInfo("Info: Can't send packet " + packet->hexString() + ". Central is in update mode.");
-			return;
-		}
 		uint32_t responseDelay = GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->responseDelay();
 		std::shared_ptr<BidCoSPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
 		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet);
@@ -1229,11 +1224,6 @@ void HomeMaticDevice::sendPacketMultipleTimes(std::shared_ptr<BidCoSPacket> pack
 		if(!packet) return;
 		std::shared_ptr<BidCoSPeer> peer = getPeer(peerAddress);
 		if(!peer) return;
-		if(_updateMode)
-		{
-			Output::printInfo("Info: Can't send packet " + packet->hexString() + ". Central is in update mode.");
-			return;
-		}
 		for(uint32_t i = 0; i < count; i++)
 		{
 			_sentPackets.set(packet->destinationAddress(), packet);
@@ -1696,11 +1686,6 @@ void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destination
 {
 	try
 	{
-		if(_updateMode)
-		{
-			Output::printInfo("Info: Can't send ACK packet to peer with address " + HelperFunctions::getHexString(destinationAddress, 6) + ". Central is in update mode.");
-			return;
-		}
 		//As there is no action in the queue when sending stealthy ok's, we need to manually keep it alive
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(destinationAddress);
 		if(queue) queue->keepAlive();
