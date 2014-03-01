@@ -326,6 +326,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 				Output::printError("Error reading from CRC RS485 device: " + _settings->device);
 				break;
 			}
+			if(i == 0) break;
 			_lastAction = HelperFunctions::getTime();
 			if(!packet.empty() && (localBuffer[0] == 0xFD || localBuffer[0] == 0xFE))
 			{
@@ -405,6 +406,7 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 				if(!gpioOpen(1))
 				{
 					Output::printError("Error: Could not send RS485 packet. GPIO to enable sending is could not be opened.");
+					_sendMutex.unlock();
 					return;
 				}
 			}
@@ -412,11 +414,13 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
         }
         int32_t i;
         int32_t j = 0;
+        //int64_t startTime = 0;
         for(; j < 5; j++)
         {
         	int32_t bytesWritten = 0;
 			_receivedSentPacket.clear();
 			if(GD::debugLevel > 3 && printPacket) Output::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
+			//startTime = HelperFunctions::getTime();
 			while(bytesWritten < (signed)packet.size())
 			{
 				i = write(_fileDescriptor->descriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
@@ -427,7 +431,11 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 				}
 				bytesWritten += i;
 			}
-			if(_settings->oneWay) break;
+			if(_settings->oneWay)
+			{
+				//usleep((570 * packet.size()) - ((HelperFunctions::getTime() - startTime) * 1000)); //Wait for packet to be sent
+				break;
+			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			_sendingMutex.try_lock_for(std::chrono::milliseconds(200));
 			if(_receivedSentPacket == packet) break;
@@ -440,7 +448,11 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 			{
 				closeGPIO(1);
 				openGPIO(1, false);
-				if(!gpioOpen(1)) return;
+				if(!gpioOpen(1))
+				{
+					_sendMutex.unlock();
+					return;
+				}
 			}
 			setGPIO(1, (bool)_settings->enableRXValue);
 		}

@@ -208,7 +208,7 @@ void Insteon::load(bool version_0_0_7)
 				_devicesMutex.unlock();
 			}
 		}
-		if(GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->isOpen())
+		if(GD::physicalDevices.get(DeviceFamilies::Insteon)->isOpen())
 		{
 			//if(!_central) createCentral();
 			if(!spyDeviceExists) createSpyDevice();

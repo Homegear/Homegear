@@ -343,6 +343,16 @@ public:
 	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 };
 
+class RPCGetUpdateProgress : public RPCMethod
+{
+public:
+	RPCGetUpdateProgress()
+	{
+		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>());
+	}
+	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+};
+
 class RPCGetValue : public RPCMethod
 {
 public:

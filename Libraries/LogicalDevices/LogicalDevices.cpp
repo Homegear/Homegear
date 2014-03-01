@@ -30,6 +30,22 @@
 #include "LogicalDevices.h"
 #include "../GD/GD.h"
 
+UpdateInfo::UpdateInfo()
+{
+}
+
+UpdateInfo::~UpdateInfo()
+{
+}
+
+void UpdateInfo::reset()
+{
+	devicesToUpdate = -1;
+	currentUpdate = -1;
+	currentDevice = 0;
+	currentDeviceProgress = -1;
+}
+
 LogicalDevices::LogicalDevices()
 {
 }

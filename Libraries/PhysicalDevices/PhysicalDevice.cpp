@@ -319,6 +319,7 @@ void PhysicalDevice::setGPIO(uint32_t index, bool value)
 		{
 			Output::printError("Could not write GPIO with index " + std::to_string(index) + ".");
 		}
+		Output::printDebug("Debug: GPIO " + std::to_string(_settings->gpio.at(index).number) + " set to " + std::to_string(value) + ".");
 	}
 	catch(const std::exception& ex)
     {

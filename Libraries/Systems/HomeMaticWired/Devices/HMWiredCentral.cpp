@@ -1606,6 +1606,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 		_pairing = false;
 		unlockBus();
 
+		Output::printInfo("Info: Search completed. Found " + std::to_string(newDevices.size()) + " devices.");
 		std::vector<std::shared_ptr<HMWiredPeer>> newPeers;
 		for(std::vector<int32_t>::iterator i = newDevices.begin(); i != newDevices.end(); ++i)
 		{

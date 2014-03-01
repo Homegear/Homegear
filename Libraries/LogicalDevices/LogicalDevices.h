@@ -41,9 +41,26 @@ class LogicalDevice;
 #include <memory>
 #include <mutex>
 
+class UpdateInfo
+{
+public:
+	UpdateInfo();
+	virtual ~UpdateInfo();
+	void reset();
+
+	int32_t devicesToUpdate = -1;
+	int32_t currentUpdate = -1;
+	uint64_t currentDevice = 0;
+	int32_t currentDeviceProgress = -1;
+
+	std::map<uint64_t, std::pair<int32_t, std::string>> results;
+};
+
 class LogicalDevices
 {
 public:
+	UpdateInfo updateInfo;
+
 	LogicalDevices();
 	virtual ~LogicalDevices();
 	void convertDatabase();

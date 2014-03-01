@@ -44,7 +44,6 @@
 
 namespace BidCoS
 {
-
 class BidCoSPacket;
 
 class HomeMaticCentral : public HomeMaticDevice, public Central
@@ -134,13 +133,16 @@ protected:
 	std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
 	virtual void worker();
 private:
-	std::mutex _updateMutex;
 	uint32_t _timeLeftInPairingMode = 0;
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
 	bool _stopPairingModeThread = false;
 	std::thread _pairingModeThread;
-	std::thread _updateFirmwareThread;
 	std::map<std::string, std::shared_ptr<RPC::RPCVariable>> _metadata;
+
+	//Updates:
+	std::mutex _updateMutex;
+	std::thread _updateFirmwareThread;
+	//End
 };
 
 }

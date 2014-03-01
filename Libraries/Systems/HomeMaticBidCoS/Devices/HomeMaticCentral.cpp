@@ -814,16 +814,40 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 
 void HomeMaticCentral::updateFirmwares(std::vector<uint64_t> ids, bool manual)
 {
-	for(std::vector<uint64_t>::iterator i = ids.begin(); i != ids.end(); ++i)
+	try
 	{
-		updateFirmware(*i, manual);
+		if(_updateMode || GD::devices.updateInfo.currentDevice > 0) return;
+		GD::devices.updateInfo.devicesToUpdate = ids.size();
+		GD::devices.updateInfo.currentUpdate = 0;
+		for(std::vector<uint64_t>::iterator i = ids.begin(); i != ids.end(); ++i)
+		{
+			GD::devices.updateInfo.currentDeviceProgress = 0;
+			GD::devices.updateInfo.currentUpdate++;
+			GD::devices.updateInfo.currentDevice = *i;
+			updateFirmware(*i, manual);
+			std::this_thread::sleep_for(std::chrono::milliseconds(7000));
+		}
 	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	GD::devices.updateInfo.reset();
 }
 
 void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 {
 	try
 	{
+		if(_updateMode) return;
 		std::shared_ptr<BidCoSPeer> peer = getPeer(id);
 		if(!peer) return;
 		_updateMode = true;
@@ -833,6 +857,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		if(!HelperFunctions::fileExists(versionFile))
 		{
 			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No version info file found.");
+			GD::devices.updateInfo.results[id].first = 2;
+			GD::devices.updateInfo.results[id].second = "No version file found.";
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
@@ -841,6 +867,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		if(!HelperFunctions::fileExists(firmwareFile))
 		{
 			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No firmware file found.");
+			GD::devices.updateInfo.results[id].first = 3;
+			GD::devices.updateInfo.results[id].second = "No firmware file found.";
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
@@ -848,7 +876,9 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		int32_t firmwareVersion = peer->getNewFirmwareVersion();
 		/*if(peer->getFirmwareVersion() >= firmwareVersion)
 		{
-			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". Peer firmware is already current.");
+			GD::devices.updateInfo.results[id].first = 0;
+			GD::devices.updateInfo.results[id].second = "Already up to date.";
+			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". Peer firmware is already up to date.");
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
@@ -864,6 +894,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		catch(const std::exception& ex)
 		{
 			Output::printError("Error: Could not open firmware file: " + firmwareFile + ": " + ex.what());
+			GD::devices.updateInfo.results[id].first = 4;
+			GD::devices.updateInfo.results[id].second = "Could not open firmware file.";
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
@@ -871,6 +903,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		catch(...)
 		{
 			Output::printError("Error: Could not open firmware file: " + firmwareFile + ".");
+			GD::devices.updateInfo.results[id].first = 4;
+			GD::devices.updateInfo.results[id].second = "Could not open firmware file.";
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
@@ -879,6 +913,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		Output::printDebug("Debug: Size of firmware is: " + std::to_string(firmware.size()) + " bytes.");
 		if(firmware.size() < 4)
 		{
+			GD::devices.updateInfo.results[id].first = 5;
+			GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
 			Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format.");
 			_updateMutex.unlock();
 			_updateMode = false;
@@ -895,6 +931,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			pos += 2;
 			if(pos + blockSize > firmware.size() || blockSize > 1024)
 			{
+				GD::devices.updateInfo.results[id].first = 5;
+				GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
 				Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format.");
 				_updateMutex.unlock();
 				_updateMode = false;
@@ -936,6 +974,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			{
 				_updateMutex.unlock();
 				_updateMode = false;
+				GD::devices.updateInfo.results[id].first = 6;
+				GD::devices.updateInfo.results[id].second = "Device did not respond to enter-bootloader packet.";
 				Output::printWarning("Warning: Device did not enter bootloader.");
 				return;
 			}
@@ -967,6 +1007,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			{
 				_updateMutex.unlock();
 				_updateMode = false;
+				GD::devices.updateInfo.results[id].first = 7;
+				GD::devices.updateInfo.results[id].second = "No update request received.";
 				Output::printWarning("Warning: No update request received.");
 				return;
 			}
@@ -1005,6 +1047,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		{
 			_updateMutex.unlock();
 			_updateMode = false;
+			GD::devices.updateInfo.results[id].first = 7;
+			GD::devices.updateInfo.results[id].second = "No update request received.";
 			Output::printError("Error: No update request received.");
 			return;
 		}
@@ -1016,7 +1060,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		int32_t blockCounter = 1;
 		for(std::vector<std::vector<uint8_t>>::iterator i = blocks.begin(); i != blocks.end(); ++i)
 		{
-			Output::printInfo("Info: Sending block " + std::to_string(blockCounter) + " of " + std::to_string(blocks.size()));
+			Output::printInfo("Info: Sending block " + std::to_string(blockCounter) + " of " + std::to_string(blocks.size()) + "...");
+			GD::devices.updateInfo.currentDeviceProgress = (blockCounter * 100) / blocks.size();
 			blockCounter++;
 			int32_t retries = 0;
 			for(retries = 0; retries < 10; retries++)
@@ -1068,13 +1113,22 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 				GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->disableUpdateMode();
 				_updateMutex.unlock();
 				_updateMode = false;
+				GD::devices.updateInfo.results[id].first = 8;
+				GD::devices.updateInfo.results[id].second = "Too many communication errors.";
 				Output::printError("Error: Too many communication errors.");
 				return;
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(55));
 		}
 		peer->setFirmwareVersion(firmwareVersion);
+		GD::devices.updateInfo.results[id].first = 0;
+		GD::devices.updateInfo.results[id].second = "Update successful.";
 		Output::printInfo("Info: Peer " + std::to_string(id) + " was successfully updated to firmware version " + versionString + ".");
+		Output::printInfo("Info: Disabling update mode.");
+		GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->disableUpdateMode();
+		_updateMutex.unlock();
+		_updateMode = false;
+		return;
 	}
 	catch(const std::exception& ex)
     {
@@ -1088,6 +1142,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
     {
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::devices.updateInfo.results[id].first = 1;
+	GD::devices.updateInfo.results[id].second = "Unknown error.";
     Output::printInfo("Info: Disabling update mode.");
     GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->disableUpdateMode();
     _updateMutex.unlock();
@@ -4303,7 +4359,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::updateFirmware(std::vector<u
 {
 	try
 	{
-		if(_updateMode) return RPC::RPCVariable::createError(-32500, "Central is already already updating a device. Pleas wait until the current update is finished.");
+		if(_updateMode || GD::devices.updateInfo.currentDevice > 0) return RPC::RPCVariable::createError(-32500, "Central is already already updating a device. Pleas wait until the current update is finished.");
 		if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
 		_updateFirmwareThread = std::thread(&HomeMaticCentral::updateFirmwares, this, ids, manual);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));

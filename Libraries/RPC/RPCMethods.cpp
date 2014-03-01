@@ -1256,6 +1256,47 @@ std::shared_ptr<RPCVariable> RPCGetServiceMessages::invoke(std::shared_ptr<std::
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPCVariable> RPCGetUpdateProgress::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>());
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::shared_ptr<RPC::RPCVariable> updateInfo(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+
+		updateInfo->structValue->insert(RPC::RPCStructElement("DEVICE_COUNT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)GD::devices.updateInfo.devicesToUpdate))));
+		updateInfo->structValue->insert(RPC::RPCStructElement("CURRENT_UPDATE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)GD::devices.updateInfo.currentUpdate))));
+		updateInfo->structValue->insert(RPC::RPCStructElement("CURRENT_DEVICE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)GD::devices.updateInfo.currentDevice))));
+		updateInfo->structValue->insert(RPC::RPCStructElement("CURRENT_DEVICE_PROGRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)GD::devices.updateInfo.currentDeviceProgress))));
+
+		std::shared_ptr<RPC::RPCVariable> results(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+		updateInfo->structValue->insert(RPC::RPCStructElement("RESULTS", results));
+		for(std::map<uint64_t, std::pair<int32_t, std::string>>::iterator i = GD::devices.updateInfo.results.begin(); i != GD::devices.updateInfo.results.end(); ++i)
+		{
+			std::shared_ptr<RPC::RPCVariable> result(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+			result->structValue->insert(RPC::RPCStructElement("RESULT_CODE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->second.first))));
+			result->structValue->insert(RPC::RPCStructElement("RESULT_STRING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->second.second))));
+			results->structValue->insert(RPC::RPCStructElement(std::to_string(i->first), result));
+		}
+
+		return updateInfo;
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPCVariable> RPCGetValue::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
@@ -2213,26 +2254,34 @@ std::shared_ptr<RPCVariable> RPCUpdateFirmware::invoke(std::shared_ptr<std::vect
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::vector<uint64_t> ids;
 		bool manual = false;
+		bool array = true;
 		if(parameters->at(0)->type == RPCVariableType::rpcInteger)
 		{
-			ids.push_back(parameters->at(0)->integerValue);
+			array = false;
 			if(parameters->size() == 2 && parameters->at(1)->booleanValue) manual = true;
-		}
-		else
-		{
-			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
-			{
-				if((*i)->integerValue != 0) ids.push_back((*i)->integerValue);
-			}
 		}
 
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<Central> central = i->second->getCentral();
 			if(!central) continue;
-			if(central->knowsDevice(parameters->at(0)->integerValue)) return central->updateFirmware(ids, manual);
+			if(array)
+			{
+				std::vector<uint64_t> ids;
+				for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator i = parameters->at(0)->arrayValue->begin(); i != parameters->at(0)->arrayValue->end(); ++i)
+				{
+					if((*i)->integerValue != 0 && central->knowsDevice((*i)->integerValue)) ids.push_back((*i)->integerValue);
+				}
+				if(ids.size() > 0 && ids.size() != parameters->at(0)->arrayValue->size()) return RPC::RPCVariable::createError(-2, "Please provide only devices of one device family.");
+				if(ids.size() > 0) return central->updateFirmware(ids, manual);
+			}
+			else if(central->knowsDevice(parameters->at(0)->integerValue))
+			{
+				std::vector<uint64_t> ids;
+				ids.push_back(parameters->at(0)->integerValue);
+				return central->updateFirmware(ids, manual);
+			}
 		}
 
 		return RPC::RPCVariable::createError(-2, "Device not found.");
