@@ -717,9 +717,77 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			_updateMode = false;
 			return;
 		}
-		std::vector<uint8_t> firmware = HelperFunctions::getUBinary(firmwareHex);
-		Output::printDebug("Debug: Size of firmware is: " + std::to_string(firmware.size()) + " bytes.");
 
+		std::stringstream stream(firmwareHex);
+		std::string line;
+		int32_t currentAddress = 0;
+		std::vector<uint8_t> firmware;
+		while(std::getline(stream, line))
+		{
+			if(line.at(0) != ':' || line.size() < 11)
+			{
+				GD::devices.updateInfo.results[id].first = 5;
+				GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
+				Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (no colon at position 0 or line too short).");
+				_updateMutex.unlock();
+				_updateMode = false;
+				return;
+			}
+			std::string hex = line.substr(1, 2);
+			int32_t bytes = HelperFunctions::getNumber(hex, true);
+			hex = line.substr(7, 2);
+			int32_t recordType = HelperFunctions::getNumber(hex, true);
+			if(recordType == 1) break; //End of file
+			if(recordType != 0)
+			{
+				GD::devices.updateInfo.results[id].first = 5;
+				GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
+				Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (wrong record type).");
+				_updateMutex.unlock();
+				_updateMode = false;
+				return;
+			}
+			hex = line.substr(3, 4);
+			int32_t address = HelperFunctions::getNumber(hex, true);
+			if(address != currentAddress || (11 + bytes * 2) > line.size())
+			{
+				GD::devices.updateInfo.results[id].first = 5;
+				GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
+				Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (address does not match).");
+				_updateMutex.unlock();
+				_updateMode = false;
+				return;
+			}
+			currentAddress += bytes;
+			std::vector<uint8_t> data = HelperFunctions::getUBinary(line.substr(9, bytes * 2));
+			hex = line.substr(9 + bytes * 2, 2);
+			int32_t checkSum = HelperFunctions::getNumber(hex, true);
+			int32_t calculatedCheckSum = bytes + (address >> 8) + (address & 0xFF) + recordType;
+			for(std::vector<uint8_t>::iterator i = data.begin(); i != data.end(); ++i)
+			{
+				calculatedCheckSum += *i;
+			}
+			calculatedCheckSum = (((calculatedCheckSum & 0xFF) ^ 0xFF) + 1) & 0xFF;
+			if(calculatedCheckSum != checkSum)
+			{
+				GD::devices.updateInfo.results[id].first = 5;
+				GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
+				Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (check sum failed).");
+				_updateMutex.unlock();
+				_updateMode = false;
+				return;
+			}
+			firmware.insert(firmware.end(), data.begin(), data.end());
+		}
+
+		std::vector<uint8_t> data;
+		for(int32_t i = 0; i < firmware.size(); i += 0x80)
+		{
+			data.clear();
+			if(i + 0x80 < firmware.size()) data.insert(data.begin(), firmware.begin() + i, firmware.begin() + i + 0x80);
+			else data.insert(data.begin(), firmware.begin() + i, firmware.begin() + i + (firmware.size() - i));
+			Output::printError("Block: " + HelperFunctions::getHexString(data));
+		}
 	}
 	catch(const std::exception& ex)
     {
