@@ -65,7 +65,12 @@ case $1 in
 					mkdir -p $DBPATH
 				fi
 				chown -R $RUNASUSER:$RUNASGROUP $DBPATH
-				chmod -R 750 $DBPATH
+				chmod 750 $DBPATH
+				chmod 640 $DBPATH/*
+				chmod 550 $DBPATH/scripts
+				chmod 550 $DBPATH/firmware
+				chmod 440 $DBPATH/firmware/*
+				chmod 550 $DBPATH/firmware/GetFirmwareUpdates.sh
 				
 				if test ! -d $LOGPATH; then 
 					mkdir -p $LOGPATH
