@@ -48,6 +48,7 @@ public:
 	virtual ~UpdateInfo();
 	void reset();
 
+	std::mutex updateMutex;
 	int32_t devicesToUpdate = -1;
 	int32_t currentUpdate = -1;
 	uint64_t currentDevice = 0;

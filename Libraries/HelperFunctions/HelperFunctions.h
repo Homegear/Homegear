@@ -100,6 +100,12 @@ public:
 		return s;
 	}
 
+	static inline std::wstring& toLower (std::wstring& s)
+	{
+		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+		return s;
+	}
+
 	static inline std::string& stringReplace(std::string& haystack, std::string search, std::string replace)
 	{
 		int32_t pos = 0;

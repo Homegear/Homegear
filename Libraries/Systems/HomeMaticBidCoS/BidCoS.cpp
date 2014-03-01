@@ -347,22 +347,40 @@ std::string BidCoS::handleCLICommand(std::string& command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "unselect\t\tUnselect this device family" << std::endl;
 			stringStream << "devices list\t\tList all HomeMatic BidCoS devices" << std::endl;
 			stringStream << "devices create\t\tCreate a virtual HomeMatic BidCoS device" << std::endl;
 			stringStream << "devices remove\t\tRemove a virtual HomeMatic BidCoS device" << std::endl;
 			stringStream << "devices select\t\tSelect a virtual HomeMatic BidCoS device" << std::endl;
+			stringStream << "unselect\t\tUnselect this device family" << std::endl;
 			return stringStream.str();
 		}
 		else if(command == "devices list")
 		{
+			std::string bar(" │ ");
+			const int32_t idWidth = 8;
+			const int32_t addressWidth = 7;
+			const int32_t serialWidth = 13;
+			const int32_t typeWidth = 8;
+			stringStream << std::setfill(' ')
+				<< std::setw(idWidth) << "ID" << bar
+				<< std::setw(addressWidth) << "Address" << bar
+				<< std::setw(serialWidth) << "Serial Number" << bar
+				<< std::setw(typeWidth) << "Type"
+				<< std::endl;
+			stringStream << "─────────┼─────────┼───────────────┼─────────" << std::endl;
+
 			_devicesMutex.lock();
 			std::vector<std::shared_ptr<LogicalDevice>> devices;
 			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 			{
-				stringStream << "ID: " << std::setw(6) << std::setfill(' ') << (*i)->getID() << "\tAddress: 0x" << std::hex << std::setw(6) << std::setfill('0') << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (*i)->getDeviceType() << std::endl << std::dec;
+				stringStream
+					<< std::setw(idWidth) << std::setfill(' ') << (*i)->getID() << bar
+					<< std::setw(addressWidth) << HelperFunctions::getHexString((*i)->getAddress(), 6) << bar
+					<< std::setw(serialWidth) << (*i)->getSerialNumber() << bar
+					<< std::setw(typeWidth) << HelperFunctions::getHexString((*i)->getDeviceType()) << std::endl;
 			}
 			_devicesMutex.unlock();
+			stringStream << "─────────┴─────────┴───────────────┴─────────" << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 14, "devices create") == 0)
@@ -541,4 +559,4 @@ std::string BidCoS::handleCLICommand(std::string& command)
     }
     return "Error executing command. See log file for more details.\n";
 }
-} /* namespace HMWired */
+} /* namespace BidCoS */

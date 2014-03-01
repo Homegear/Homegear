@@ -140,6 +140,7 @@ private:
 	std::map<std::string, std::shared_ptr<RPC::RPCVariable>> _metadata;
 
 	//Updates:
+	bool _updateMode = false;
 	std::mutex _updateMutex;
 	std::thread _updateFirmwareThread;
 	//End

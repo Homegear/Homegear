@@ -189,8 +189,12 @@ echo \"************************************************************\"
 echo \"************* Welcome to your homegear system! *************\"
 echo \"************************************************************\"
 echo \"************************************************************\"
-echo \"Downloading device XML files...\"
+echo \"Downloading device description files...\"
 /etc/homegear/GetDeviceFiles.sh
+[ $? -ne 0 ] && echo \"Download of device description files failed. Please execute '/etc/homegear/GetDeviceFiles.sh' manually. Homegear won't work until the files are downloaded.\"
+echo \"Downloading firmware updates...\"
+/var/lib/homegear/firmware/GetFirmwareUpdates.sh
+[ $? -ne 0 ] && echo \"Download of firmware updates failed. Please execute '/var/lib/homegear/firmware/GetFirmwareUpdates.sh' manually.\"
 echo \"Generating new SSH host keys. This might take a while.\"
 rm /etc/ssh/ssh_host* >/dev/null
 ssh-keygen -A >/dev/null

@@ -113,7 +113,7 @@ class HMWiredDevice : public LogicalDevice
         std::shared_ptr<HMWiredPeer> _currentPeer;
         std::unordered_map<int32_t, std::shared_ptr<HMWiredPeer>> _peers;
         std::unordered_map<std::string, std::shared_ptr<HMWiredPeer>> _peersBySerial;
-        std::unordered_map<uint64_t, std::shared_ptr<HMWiredPeer>> _peersByID;
+        std::map<uint64_t, std::shared_ptr<HMWiredPeer>> _peersByID;
         std::timed_mutex _peersMutex;
         std::mutex _databaseMutex;
         HMWiredPacketManager _receivedPackets;

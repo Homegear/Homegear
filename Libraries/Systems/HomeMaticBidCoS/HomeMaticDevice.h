@@ -159,7 +159,6 @@ class HomeMaticDevice : public LogicalDevice
         bool _disposing = false;
         bool _disposed = false;
         bool _stopWorkerThread = false;
-        bool _updateMode = false;
         std::thread _workerThread;
 
         int32_t _deviceClass = 0;
@@ -170,7 +169,7 @@ class HomeMaticDevice : public LogicalDevice
         std::shared_ptr<BidCoSPeer> _currentPeer;
         std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>> _peers;
         std::unordered_map<std::string, std::shared_ptr<BidCoSPeer>> _peersBySerial;
-        std::unordered_map<uint64_t, std::shared_ptr<BidCoSPeer>> _peersByID;
+        std::map<uint64_t, std::shared_ptr<BidCoSPeer>> _peersByID;
         std::timed_mutex _peersMutex;
         std::mutex _databaseMutex;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;

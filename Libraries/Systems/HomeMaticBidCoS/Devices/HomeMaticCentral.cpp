@@ -128,7 +128,7 @@ void HomeMaticCentral::worker()
 		uint32_t counter = 0;
 		int32_t lastPeer;
 		lastPeer = 0;
-		//One loop on the Raspberry Pi takes about 30µs
+		//One loop on the Raspberry Pi takes about 30Âµs
 		while(!_stopWorkerThread)
 		{
 			try
@@ -368,7 +368,6 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "unselect\t\tUnselect this device" << std::endl;
 			stringStream << "pairing on\t\tEnables pairing mode" << std::endl;
 			stringStream << "pairing off\t\tDisables pairing mode" << std::endl;
 			stringStream << "peers list\t\tList all peers" << std::endl;
@@ -378,6 +377,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			stringStream << "peers select\t\tSelect a peer" << std::endl;
 			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
 			stringStream << "peers update\t\tUpdates a peer to the newest firmware version" << std::endl;
+			stringStream << "unselect\t\tUnselect this device" << std::endl;
 			return stringStream.str();
 		}
 		if(command.compare(0, 10, "pairing on") == 0)
@@ -701,16 +701,27 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			if(all)
 			{
 				_peersMutex.lock();
-				for(std::unordered_map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+				for(std::map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 				{
 					if(i->second->firmwareUpdateAvailable()) ids.push_back(i->first);
 				}
 				_peersMutex.unlock();
+				if(ids.empty())
+				{
+					stringStream << "All peers are up to date." << std::endl;
+					return stringStream.str();
+				}
 				result = updateFirmware(ids, false);
 			}
 			else if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
+				std::shared_ptr<BidCoSPeer> peer = getPeer(peerID);
+				if(!peer->firmwareUpdateAvailable())
+				{
+					stringStream << "Peer is up to date." << std::endl;
+					return stringStream.str();
+				}
 				ids.push_back(peerID);
 				result = updateFirmware(ids, manually);
 			}
@@ -790,8 +801,40 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					return stringStream.str();
 				}
 				bool firmwareUpdates = false;
+				std::string bar(" │ ");
+				const int32_t idWidth = 11;
+				const int32_t addressWidth = 8;
+				const int32_t serialWidth = 13;
+				const int32_t typeWidth1 = 4;
+				const int32_t typeWidth2 = 25;
+				const int32_t firmwareWidth = 8;
+				const int32_t configPendingWidth = 14;
+				const int32_t unreachWidth = 7;
+				std::string typeStringHeader("Type String");
+				typeStringHeader.resize(typeWidth2, ' ');
+				stringStream << std::setfill(' ')
+					<< std::setw(idWidth) << "ID" << bar
+					<< std::setw(addressWidth) << "Address" << bar
+					<< std::setw(serialWidth) << "Serial Number" << bar
+					<< std::setw(typeWidth1) << "Type" << bar
+					<< typeStringHeader << bar
+					<< std::setw(firmwareWidth) << "Firmware" << bar
+					<< std::setw(configPendingWidth) << "Config Pending" << bar
+					<< std::setw(unreachWidth) << "Unreach"
+					<< std::endl;
+				stringStream << "────────────┼──────────┼───────────────┼──────┼───────────────────────────┼──────────┼────────────────┼────────" << std::endl;
+				stringStream << std::setfill(' ')
+					<< std::setw(idWidth) << " " << bar
+					<< std::setw(addressWidth) << " " << bar
+					<< std::setw(serialWidth) << " " << bar
+					<< std::setw(typeWidth1) << " " << bar
+					<< std::setw(typeWidth2) << " " << bar
+					<< std::setw(firmwareWidth) << " " << bar
+					<< std::setw(configPendingWidth) << " " << bar
+					<< std::setw(unreachWidth) << " "
+					<< std::endl;
 				_peersMutex.lock();
-				for(std::unordered_map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+				for(std::map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 				{
 					if(filterType == "id")
 					{
@@ -830,34 +873,37 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					uint64_t currentID = i->second->getID();
 					std::string idString = (currentID > 999999) ? "0x" + HelperFunctions::getHexString(currentID, 8) : std::to_string(currentID);
 					stringStream
-						<< "ID: " << std::setw(10) << std::setfill(' ') << idString
-						<< "\tAddress: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 6)
-						<< "\tSerial number: " << i->second->getSerialNumber()
-						<< "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
-					if(i->second->getFirmwareVersion() == 0) stringStream << "\tFirmware: " << std::setfill(' ') << std::setw(5) << "?";
-					else if(i->second->firmwareUpdateAvailable())
-					{
-						stringStream << "\tFirmware: " << std::setfill(' ') << std::setw(5) << ("*" + std::to_string(i->second->getFirmwareVersion() >> 4) + "." + std::to_string(i->second->getFirmwareVersion() & 0x0F));
-						firmwareUpdates = true;
-					}
-					else stringStream << "\tFirmware: " << std::setfill(' ') << std::setw(5) << (std::to_string(i->second->getFirmwareVersion() >> 4) + "." + std::to_string(i->second->getFirmwareVersion() & 0x0F));
+						<< std::setw(idWidth) << std::setfill(' ') << idString << bar
+						<< std::setw(addressWidth) << HelperFunctions::getHexString(i->second->getAddress(), 6) << bar
+						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
+						<< std::setw(typeWidth1) << HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
 					if(i->second->rpcDevice)
 					{
 						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
 						std::string typeID;
-						if(type) typeID = (" (" + type->id + ")");
-						typeID.resize(25, ' ');
-						stringStream << typeID;
+						if(type) typeID = type->id;
+						typeID.resize(typeWidth2, ' ');
+						stringStream << typeID  << bar;
 					}
+					else stringStream << std::setw(typeWidth2) << " " << bar;
+					if(i->second->getFirmwareVersion() == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << "?" << bar;
+					else if(i->second->firmwareUpdateAvailable())
+					{
+						stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 4) + "." + HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0x0F)) << bar;
+						firmwareUpdates = true;
+					}
+					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << (HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 4) + "." + HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0x0F)) << bar;
 					if(i->second->serviceMessages)
 					{
 						std::string configPending(i->second->serviceMessages->getConfigPending() ? "Yes" : "No");
 						std::string unreachable(i->second->serviceMessages->getUnreach() ? "Yes" : "No");
-						stringStream << "\tConfig pending: " << configPending << "\tUnreachable: " << unreachable;
+						stringStream << std::setfill(' ') << std::setw(configPendingWidth) << configPending << bar;
+						stringStream << std::setfill(' ') << std::setw(unreachWidth) << unreachable;
 					}
 					stringStream << std::endl << std::dec;
 				}
 				_peersMutex.unlock();
+				stringStream << "────────────┴──────────┴───────────────┴──────┴───────────────────────────┴──────────┴────────────────┴────────" << std::endl;
 				if(firmwareUpdates) stringStream << std::endl << "*: Firmware update available." << std::endl;
 
 				return stringStream.str();
@@ -940,6 +986,7 @@ void HomeMaticCentral::updateFirmwares(std::vector<uint64_t> ids, bool manual)
 	try
 	{
 		if(_updateMode || GD::devices.updateInfo.currentDevice > 0) return;
+		GD::devices.updateInfo.updateMutex.lock();
 		GD::devices.updateInfo.devicesToUpdate = ids.size();
 		GD::devices.updateInfo.currentUpdate = 0;
 		for(std::vector<uint64_t>::iterator i = ids.begin(); i != ids.end(); ++i)
@@ -963,6 +1010,7 @@ void HomeMaticCentral::updateFirmwares(std::vector<uint64_t> ids, bool manual)
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	GD::devices.updateInfo.reset();
+	GD::devices.updateInfo.updateMutex.unlock();
 }
 
 void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
@@ -1005,8 +1053,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			_updateMode = false;
 			return;
 		}
-		std::string oldVersionString = std::to_string(peer->getFirmwareVersion() >> 4) + "." + std::to_string(peer->getFirmwareVersion() & 0x0F);
-		std::string versionString = std::to_string(firmwareVersion >> 4) + "." + std::to_string(firmwareVersion & 0x0F);
+		std::string oldVersionString = HelperFunctions::getHexString((peer->getFirmwareVersion() >> 4)) + "." + HelperFunctions::getHexString(peer->getFirmwareVersion() & 0x0F);
+		std::string versionString = HelperFunctions::getHexString(firmwareVersion >> 4) + "." + HelperFunctions::getHexString(firmwareVersion & 0x0F);
 
 		std::string firmwareHex;
 		try
@@ -3368,7 +3416,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<
 		std::vector<std::shared_ptr<BidCoSPeer>> peers;
 		//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
 		_peersMutex.lock();
-		for(std::unordered_map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 		{
 			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
 			peers.push_back(i->second);

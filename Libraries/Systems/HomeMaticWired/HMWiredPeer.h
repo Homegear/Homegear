@@ -138,6 +138,8 @@ public:
 	void removePeer(int32_t channel, uint64_t id, int32_t remoteChannel);
 	int32_t getFreeEEPROMAddress(int32_t channel, bool isSender);
 	int32_t getPhysicalIndexOffset(int32_t channel);
+	int32_t getNewFirmwareVersion();
+    bool firmwareUpdateAvailable();
 	void restoreLinks();
 
 	virtual std::shared_ptr<HMWiredPacket> getResponse(std::shared_ptr<HMWiredPacket> packet);

@@ -46,6 +46,8 @@ HMWiredCentral::HMWiredCentral(uint32_t deviceID, std::string serialNumber, int3
 HMWiredCentral::~HMWiredCentral()
 {
 	dispose();
+
+	if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
 }
 
 void HMWiredCentral::init()
@@ -172,13 +174,14 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "unselect\t\tUnselect this device" << std::endl;
-			stringStream << "search\t\t\tSearches for new devices on the bus" << std::endl;
-			stringStream << "peers list\t\tList all peers" << std::endl;
 			stringStream << "peers add\t\tManually adds a peer (without pairing it! Only for testing)" << std::endl;
-			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
+			stringStream << "peers list\t\tList all peers" << std::endl;
 			stringStream << "peers reset\t\tUnpair a peer and reset it to factory defaults" << std::endl;
 			stringStream << "peers select\t\tSelect a peer" << std::endl;
+			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
+			stringStream << "peers update\t\tUpdates a peer to the newest firmware version" << std::endl;
+			stringStream << "search\t\t\tSearches for new devices on the bus" << std::endl;
+			stringStream << "unselect\t\tUnselect this device" << std::endl;
 			return stringStream.str();
 		}
 		if(command.compare(0, 6, "search") == 0)
@@ -349,8 +352,38 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					stringStream << "No peers are paired to this central." << std::endl;
 					return stringStream.str();
 				}
+				bool firmwareUpdates = false;
+				std::string bar(" │ ");
+				const int32_t idWidth = 8;
+				const int32_t addressWidth = 8;
+				const int32_t serialWidth = 13;
+				const int32_t typeWidth1 = 4;
+				const int32_t typeWidth2 = 25;
+				const int32_t firmwareWidth = 8;
+				const int32_t unreachWidth = 7;
+				std::string typeStringHeader("Type String");
+				typeStringHeader.resize(typeWidth2, ' ');
+				stringStream << std::setfill(' ')
+					<< std::setw(idWidth) << "ID" << bar
+					<< std::setw(addressWidth) << "Address" << bar
+					<< std::setw(serialWidth) << "Serial Number" << bar
+					<< std::setw(typeWidth1) << "Type" << bar
+					<< typeStringHeader << bar
+					<< std::setw(firmwareWidth) << "Firmware" << bar
+					<< std::setw(unreachWidth) << "Unreach"
+					<< std::endl;
+				stringStream << "─────────┼──────────┼───────────────┼──────┼───────────────────────────┼──────────┼────────" << std::endl;
+				stringStream << std::setfill(' ')
+					<< std::setw(idWidth) << " " << bar
+					<< std::setw(addressWidth) << " " << bar
+					<< std::setw(serialWidth) << " " << bar
+					<< std::setw(typeWidth1) << " " << bar
+					<< std::setw(typeWidth2) << " " << bar
+					<< std::setw(firmwareWidth) << " " << bar
+					<< std::setw(unreachWidth) << " "
+					<< std::endl;
 				_peersMutex.lock();
-				for(std::unordered_map<std::string, std::shared_ptr<HMWiredPeer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+				for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 				{
 					if(filterType == "id")
 					{
@@ -379,23 +412,38 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 						}
 					}
 
-					stringStream << "ID: " << std::setw(6) << std::setfill(' ') << std::to_string(i->second->getID()) << "\tAddress: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 8) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
+					stringStream
+						<< std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar
+						<< std::setw(addressWidth) << HelperFunctions::getHexString(i->second->getAddress(), 8) << bar
+						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
+						<< std::setw(typeWidth1) << HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
 					if(i->second->rpcDevice)
 					{
 						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
 						std::string typeID;
-						if(type) typeID = (" (" + type->id + ")");
-						typeID.resize(25, ' ');
-						stringStream << typeID;
+						if(type) typeID = type->id;
+						typeID.resize(typeWidth2, ' ');
+						stringStream << typeID  << bar;
 					}
+					else stringStream << std::setw(typeWidth2) << " " << bar;
+					if(i->second->getFirmwareVersion() == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << "?" << bar;
+					else if(i->second->firmwareUpdateAvailable())
+					{
+						stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0xFF, 2)) << bar;
+						firmwareUpdates = true;
+					}
+					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << (HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0xFF, 2)) << bar;
 					if(i->second->serviceMessages)
 					{
 						std::string unreachable(i->second->serviceMessages->getUnreach() ? "Yes" : "No");
-						stringStream << "\tUnreachable: " << unreachable;
+						stringStream << std::setw(unreachWidth) << unreachable;
 					}
 					stringStream << std::endl << std::dec;
 				}
 				_peersMutex.unlock();
+				stringStream << "─────────┴──────────┴───────────────┴──────┴───────────────────────────┴──────────┴────────" << std::endl;
+				if(firmwareUpdates) stringStream << std::endl << "*: Firmware update available." << std::endl;
+
 				return stringStream.str();
 			}
 			catch(const std::exception& ex)
@@ -413,6 +461,77 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				_peersMutex.unlock();
 				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
+		}
+		else if(command.compare(0, 12, "peers update") == 0)
+		{
+			uint64_t peerID;
+			bool all = false;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					else if(element == "all") all = true;
+					else
+					{
+						peerID = HelperFunctions::getNumber(element, false);
+						if(peerID == 0) return "Invalid id.\n";
+					}
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command updates one or all peers to the newest firmware version available in \"" << GD::settings.firmwarePath() << "\"." << std::endl;
+				stringStream << "Usage: peers update PEERID" << std::endl;
+				stringStream << "       peers update all" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PEERID:\tThe id of the peer to update. Example: 513" << std::endl;
+				return stringStream.str();
+			}
+
+			std::shared_ptr<RPC::RPCVariable> result;
+			std::vector<uint64_t> ids;
+			if(all)
+			{
+				_peersMutex.lock();
+				for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+				{
+					if(i->second->firmwareUpdateAvailable()) ids.push_back(i->first);
+				}
+				_peersMutex.unlock();
+				if(ids.empty())
+				{
+					stringStream << "All peers are up to date." << std::endl;
+					return stringStream.str();
+				}
+				result = updateFirmware(ids, false);
+			}
+			else if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
+			else
+			{
+				std::shared_ptr<HMWiredPeer> peer = getPeer(peerID);
+				if(!peer->firmwareUpdateAvailable())
+				{
+					stringStream << "Peer is up to date." << std::endl;
+					return stringStream.str();
+				}
+				ids.push_back(peerID);
+				result = updateFirmware(ids, false);
+			}
+			if(!result) stringStream << "Unknown error." << std::endl;
+			else if(result->errorStruct) stringStream << result->structValue->at("faultString")->stringValue << std::endl;
+			else stringStream << "Started firmware update(s)... This might take a long time. Use the RPC function \"getUpdateProgress\" or see the log for details." << std::endl;
+			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "peers select") == 0)
 		{
@@ -498,6 +617,126 @@ std::shared_ptr<HMWiredPeer> HMWiredCentral::createPeer(int32_t address, int32_t
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<HMWiredPeer>();
+}
+
+void HMWiredCentral::updateFirmwares(std::vector<uint64_t> ids)
+{
+	try
+	{
+		if(_updateMode || GD::devices.updateInfo.currentDevice > 0) return;
+		GD::devices.updateInfo.updateMutex.lock();
+		GD::devices.updateInfo.devicesToUpdate = ids.size();
+		GD::devices.updateInfo.currentUpdate = 0;
+		for(std::vector<uint64_t>::iterator i = ids.begin(); i != ids.end(); ++i)
+		{
+			GD::devices.updateInfo.currentDeviceProgress = 0;
+			GD::devices.updateInfo.currentUpdate++;
+			GD::devices.updateInfo.currentDevice = *i;
+			updateFirmware(*i);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	GD::devices.updateInfo.reset();
+	GD::devices.updateInfo.updateMutex.unlock();
+}
+
+void HMWiredCentral::updateFirmware(uint64_t id)
+{
+	try
+	{
+		if(_updateMode) return;
+		std::shared_ptr<HMWiredPeer> peer = getPeer(id);
+		if(!peer) return;
+		_updateMode = true;
+		_updateMutex.lock();
+		std::string filenamePrefix = HelperFunctions::getHexString((int32_t)DeviceFamilies::HomeMaticWired, 4) + "." + HelperFunctions::getHexString(peer->getDeviceType().type(), 8);
+		std::string versionFile(GD::settings.firmwarePath() + filenamePrefix + ".version");
+		if(!HelperFunctions::fileExists(versionFile))
+		{
+			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No version info file found.");
+			GD::devices.updateInfo.results[id].first = 2;
+			GD::devices.updateInfo.results[id].second = "No version file found.";
+			_updateMutex.unlock();
+			_updateMode = false;
+			return;
+		}
+		std::string firmwareFile(GD::settings.firmwarePath() + filenamePrefix + ".fw");
+		if(!HelperFunctions::fileExists(firmwareFile))
+		{
+			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No firmware file found.");
+			GD::devices.updateInfo.results[id].first = 3;
+			GD::devices.updateInfo.results[id].second = "No firmware file found.";
+			_updateMutex.unlock();
+			_updateMode = false;
+			return;
+		}
+		int32_t firmwareVersion = peer->getNewFirmwareVersion();
+		if(peer->getFirmwareVersion() >= firmwareVersion)
+		{
+			GD::devices.updateInfo.results[id].first = 0;
+			GD::devices.updateInfo.results[id].second = "Already up to date.";
+			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". Peer firmware is already up to date.");
+			_updateMutex.unlock();
+			_updateMode = false;
+			return;
+		}
+		std::string oldVersionString = HelperFunctions::getHexString(peer->getFirmwareVersion() >> 8) + "." + HelperFunctions::getHexString(peer->getFirmwareVersion() & 0xFF, 2);
+		std::string versionString = HelperFunctions::getHexString(firmwareVersion >> 8) + "." + HelperFunctions::getHexString(firmwareVersion & 0xFF, 2);
+
+		std::string firmwareHex;
+		try
+		{
+			firmwareHex = HelperFunctions::getFileContent(firmwareFile);
+		}
+		catch(const std::exception& ex)
+		{
+			Output::printError("Error: Could not open firmware file: " + firmwareFile + ": " + ex.what());
+			GD::devices.updateInfo.results[id].first = 4;
+			GD::devices.updateInfo.results[id].second = "Could not open firmware file.";
+			_updateMutex.unlock();
+			_updateMode = false;
+			return;
+		}
+		catch(...)
+		{
+			Output::printError("Error: Could not open firmware file: " + firmwareFile + ".");
+			GD::devices.updateInfo.results[id].first = 4;
+			GD::devices.updateInfo.results[id].second = "Could not open firmware file.";
+			_updateMutex.unlock();
+			_updateMode = false;
+			return;
+		}
+		std::vector<uint8_t> firmware = HelperFunctions::getUBinary(firmwareHex);
+		Output::printDebug("Debug: Size of firmware is: " + std::to_string(firmware.size()) + " bytes.");
+
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    GD::devices.updateInfo.results[id].first = 1;
+	GD::devices.updateInfo.results[id].second = "Unknown error.";
+    _updateMutex.unlock();
+    _updateMode = false;
 }
 
 bool HMWiredCentral::knowsDevice(std::string serialNumber)
@@ -957,7 +1196,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinks(uint64_t peerID, int3
 				std::vector<std::shared_ptr<HMWiredPeer>> peers;
 				//Copy all peers first, because getLinks takes very long and we don't want to lock _peersMutex too long
 				_peersMutex.lock();
-				for(std::unordered_map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+				for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 				{
 					peers.push_back(i->second);
 				}
@@ -1246,7 +1485,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getServiceMessages(bool return
 		std::vector<std::shared_ptr<HMWiredPeer>> peers;
 		//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
 		_peersMutex.lock();
-		for(std::unordered_map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 		{
 			peers.push_back(i->second);
 		}
@@ -1339,7 +1578,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::listDevices(std::shared_ptr<st
 		std::vector<std::shared_ptr<HMWiredPeer>> peers;
 		//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
 		_peersMutex.lock();
-		for(std::unordered_map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 		{
 			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
 			peers.push_back(i->second);
@@ -1859,4 +2098,27 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::setValue(uint64_t id, uint32_t
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<RPC::RPCVariable> HMWiredCentral::updateFirmware(std::vector<uint64_t> ids, bool manual)
+{
+	try
+	{
+		if(_updateMode || GD::devices.updateInfo.currentDevice > 0) return RPC::RPCVariable::createError(-32500, "Central is already already updating a device. Please wait until the current update is finished.");
+		if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
+		_updateFirmwareThread = std::thread(&HMWiredCentral::updateFirmwares, this, ids);
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
 } /* namespace HMWired */

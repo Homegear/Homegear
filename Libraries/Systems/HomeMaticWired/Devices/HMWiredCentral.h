@@ -54,6 +54,8 @@ public:
 	bool packetReceived(std::shared_ptr<Packet> packet);
 	std::string handleCLICommand(std::string command);
 	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<HMWiredPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
+	void updateFirmwares(std::vector<uint64_t> ids);
+	void updateFirmware(uint64_t id);
 
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);
@@ -92,9 +94,16 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> setLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description);
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(uint64_t id, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
+	virtual std::shared_ptr<RPC::RPCVariable> updateFirmware(std::vector<uint64_t> ids, bool manual);
 protected:
 	std::shared_ptr<HMWiredPeer> createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);
+private:
+	//Updates:
+	bool _updateMode = false;
+	std::mutex _updateMutex;
+	std::thread _updateFirmwareThread;
+	//End
 };
 
 } /* namespace HMWired */

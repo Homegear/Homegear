@@ -1714,6 +1714,52 @@ void HMWiredPeer::reset()
 	}
 }
 
+int32_t HMWiredPeer::getNewFirmwareVersion()
+{
+	try
+	{
+		std::string filenamePrefix = HelperFunctions::getHexString((int32_t)DeviceFamilies::HomeMaticWired, 4) + "." + HelperFunctions::getHexString(_deviceType.type(), 8);
+		std::string versionFile(GD::settings.firmwarePath() + filenamePrefix + ".version");
+		if(!HelperFunctions::fileExists(versionFile)) return 0;
+		std::string versionHex = HelperFunctions::getFileContent(versionFile);
+		return HelperFunctions::getNumber(versionHex, true);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return 0;
+}
+
+bool HMWiredPeer::firmwareUpdateAvailable()
+{
+	try
+	{
+		return _firmwareVersion > 0 && _firmwareVersion < getNewFirmwareVersion();
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return false;
+}
+
 void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std::vector<FrameValues>& frameValues)
 {
 	try
@@ -2035,17 +2081,11 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t chan
 				variable2->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->first)));
 			}
 
-			if(_firmwareVersion != 0)
-			{
-				std::ostringstream stringStream;
-				stringStream << std::setw(2) << std::hex << (int32_t)_firmwareVersion << std::dec;
-				std::string firmware = stringStream.str();
-				description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(firmware.substr(0, 1) + "." + firmware.substr(1)))));
-			}
-			else
-			{
-				description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("?")))));
-			}
+			if(_firmwareVersion != 0) description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(HelperFunctions::getHexString(_firmwareVersion >> 8) + "." + HelperFunctions::getHexString(_firmwareVersion & 0xFF, 2)))));
+			else description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("?")))));
+
+			int32_t newFirmwareVersion = getNewFirmwareVersion();
+			if(newFirmwareVersion > _firmwareVersion) description->structValue->insert(RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(HelperFunctions::getHexString(newFirmwareVersion >> 8) + "." + HelperFunctions::getHexString(newFirmwareVersion & 0xFF, 2)))));
 
 			int32_t uiFlags = (int32_t)rpcDevice->uiFlags;
 			if(isTeam()) uiFlags |= RPC::Device::UIFlags::dontdelete;
