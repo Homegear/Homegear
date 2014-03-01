@@ -1256,7 +1256,7 @@ std::shared_ptr<RPCVariable> RPCGetServiceMessages::invoke(std::shared_ptr<std::
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPCVariable> RPCGetUpdateProgress::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+std::shared_ptr<RPCVariable> RPCGetUpdateStatus::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
 {
 	try
 	{
