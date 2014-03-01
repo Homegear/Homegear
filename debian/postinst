@@ -49,9 +49,16 @@ case $1 in
 
 		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
 			if test ! -e /etc/homegear/Device\ types/rf_s.xml; then
+				echo "Downloading device description files..."
 				/etc/homegear/GetDeviceFiles.sh
 				[ $? -ne 0 ] && exit 1
 			fi
+			
+			chown -R homegear:homegear /var/lib/homegear/firmware
+			chmod -R 550 /var/lib/homegear/firmware
+			echo "Downloading current firmware updates..."
+			/var/lib/homegear/firmware/GetFirmwareUpdates.sh
+			[ $? -ne 0 ] && exit 1
 	
 			if test ! -e /etc/homegear/homegear.crt; then
 				openssl genrsa -out /etc/homegear/homegear.key 2048

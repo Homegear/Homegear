@@ -191,6 +191,7 @@ class BidCoSPeer : public Peer
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
         int32_t getChannelGroupedWith(int32_t channel);
         int32_t getNewFirmwareVersion();
+        bool firmwareUpdateAvailable();
         std::string printConfig();
 
         std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();

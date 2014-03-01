@@ -374,8 +374,10 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			stringStream << "peers list\t\tList all peers" << std::endl;
 			stringStream << "peers add\t\tManually adds a peer (without pairing it! Only for testing)" << std::endl;
 			stringStream << "peers remove\t\tRemove a peer (without unpairing)" << std::endl;
-			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
+			stringStream << "peers reset\t\tUnpair a peer and reset it to factory defaults" << std::endl;
 			stringStream << "peers select\t\tSelect a peer" << std::endl;
+			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
+			stringStream << "peers update\t\tUpdates a peer to the newest firmware version" << std::endl;
 			return stringStream.str();
 		}
 		if(command.compare(0, 10, "pairing on") == 0)
@@ -402,7 +404,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 						stringStream << "  DURATION:\tOptional duration in seconds to stay in pairing mode." << std::endl;
 						return stringStream.str();
 					}
-					duration = HelperFunctions::getNumber(element, true);
+					duration = HelperFunctions::getNumber(element, false);
 					if(duration < 5 || duration > 3600) return "Invalid duration. Duration has to be greater than 5 and less than 3600.\n";
 				}
 				index++;
@@ -547,7 +549,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					peerID = HelperFunctions::getNumber(element, true);
+					peerID = HelperFunctions::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -608,6 +610,113 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				stringStream << "Unpairing peer " << peerID << std::endl;
 				unpair(peerID, true);
 			}
+			return stringStream.str();
+		}
+		else if(command.compare(0, 11, "peers reset") == 0)
+		{
+			uint64_t peerID;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					peerID = HelperFunctions::getNumber(element);
+					if(peerID == 0) return "Invalid id.\n";
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command unpairs a peer and resets it to factory defaults." << std::endl;
+				stringStream << "Usage: peers reset PEERID" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PEERID:\tThe id of the peer to reset. Example: 513" << std::endl;
+				return stringStream.str();
+			}
+
+			if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
+			else
+			{
+				if(_currentPeer && _currentPeer->getID() == peerID) _currentPeer.reset();
+				stringStream << "Resetting peer " << std::to_string(peerID) << std::endl;
+				reset(peerID, true);
+			}
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "peers update") == 0)
+		{
+			uint64_t peerID;
+			bool all = false;
+			bool manually = false;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					else if(element == "all") all = true;
+					else
+					{
+						peerID = HelperFunctions::getNumber(element, false);
+						if(peerID == 0) return "Invalid id.\n";
+					}
+				}
+				else if(index == 3)
+				{
+					manually = HelperFunctions::getNumber(element, false);
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command updates one or all peers to the newest firmware version available in \"" << GD::settings.firmwarePath() << "\"." << std::endl;
+				stringStream << "Usage: peers update PEERID" << std::endl;
+				stringStream << "       peers update PEERID MANUALLY" << std::endl;
+				stringStream << "       peers update all" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PEERID:\tThe id of the peer to update. Example: 513" << std::endl;
+				stringStream << "  MANUALLY:\tIf \"1\" you need to enable the update mode on the device manually within 50 seconds after executing this command." << std::endl;
+				return stringStream.str();
+			}
+
+			std::shared_ptr<RPC::RPCVariable> result;
+			std::vector<uint64_t> ids;
+			if(all)
+			{
+				_peersMutex.lock();
+				for(std::unordered_map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+				{
+					if(i->second->firmwareUpdateAvailable()) ids.push_back(i->first);
+				}
+				_peersMutex.unlock();
+				result = updateFirmware(ids, false);
+			}
+			else if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
+			else
+			{
+				ids.push_back(peerID);
+				result = updateFirmware(ids, manually);
+			}
+			if(!result) stringStream << "Unknown error." << std::endl;
+			else if(result->errorStruct) stringStream << result->structValue->at("faultString")->stringValue << std::endl;
+			else stringStream << "Started firmware update(s)... This might take a long time. Use the RPC function \"getUpdateProgress\" or see the log for details." << std::endl;
 			return stringStream.str();
 		}
 		else if(command == "enable aes")
@@ -680,6 +789,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					stringStream << "No peers are paired to this central." << std::endl;
 					return stringStream.str();
 				}
+				bool firmwareUpdates = false;
 				_peersMutex.lock();
 				for(std::unordered_map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 				{
@@ -719,7 +829,18 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 
 					uint64_t currentID = i->second->getID();
 					std::string idString = (currentID > 999999) ? "0x" + HelperFunctions::getHexString(currentID, 8) : std::to_string(currentID);
-					stringStream << "ID: " << std::setw(10) << std::setfill(' ') << idString << "\tAddress: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 6) << "\tSerial number: " << i->second->getSerialNumber() << "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
+					stringStream
+						<< "ID: " << std::setw(10) << std::setfill(' ') << idString
+						<< "\tAddress: 0x" << std::hex << HelperFunctions::getHexString(i->second->getAddress(), 6)
+						<< "\tSerial number: " << i->second->getSerialNumber()
+						<< "\tDevice type: 0x" << std::setfill('0') << std::setw(4) << (int32_t)i->second->getDeviceType().type();
+					if(i->second->getFirmwareVersion() == 0) stringStream << "\tFirmware: " << std::setfill(' ') << std::setw(5) << "?";
+					else if(i->second->firmwareUpdateAvailable())
+					{
+						stringStream << "\tFirmware: " << std::setfill(' ') << std::setw(5) << ("*" + std::to_string(i->second->getFirmwareVersion() >> 4) + "." + std::to_string(i->second->getFirmwareVersion() & 0x0F));
+						firmwareUpdates = true;
+					}
+					else stringStream << "\tFirmware: " << std::setfill(' ') << std::setw(5) << (std::to_string(i->second->getFirmwareVersion() >> 4) + "." + std::to_string(i->second->getFirmwareVersion() & 0x0F));
 					if(i->second->rpcDevice)
 					{
 						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
@@ -737,6 +858,8 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					stringStream << std::endl << std::dec;
 				}
 				_peersMutex.unlock();
+				if(firmwareUpdates) stringStream << std::endl << "*: Firmware update available." << std::endl;
+
 				return stringStream.str();
 			}
 			catch(const std::exception& ex)
@@ -772,7 +895,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					peerID = HelperFunctions::getNumber(element, true);
+					peerID = HelperFunctions::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -825,7 +948,6 @@ void HomeMaticCentral::updateFirmwares(std::vector<uint64_t> ids, bool manual)
 			GD::devices.updateInfo.currentUpdate++;
 			GD::devices.updateInfo.currentDevice = *i;
 			updateFirmware(*i, manual);
-			std::this_thread::sleep_for(std::chrono::milliseconds(7000));
 		}
 	}
 	catch(const std::exception& ex)
@@ -874,7 +996,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			return;
 		}
 		int32_t firmwareVersion = peer->getNewFirmwareVersion();
-		/*if(peer->getFirmwareVersion() >= firmwareVersion)
+		if(peer->getFirmwareVersion() >= firmwareVersion)
 		{
 			GD::devices.updateInfo.results[id].first = 0;
 			GD::devices.updateInfo.results[id].second = "Already up to date.";
@@ -882,7 +1004,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
-		}*/
+		}
 		std::string oldVersionString = std::to_string(peer->getFirmwareVersion() >> 4) + "." + std::to_string(peer->getFirmwareVersion() & 0x0F);
 		std::string versionString = std::to_string(firmwareVersion >> 4) + "." + std::to_string(firmwareVersion & 0x0F);
 
@@ -1041,7 +1163,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			if(requestReceived) break;
 			Output::printInfo("Info: Disabling update mode.");
 			GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->disableUpdateMode();
-			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+			std::this_thread::sleep_for(std::chrono::milliseconds(4000));
 		}
 		if(retries == 10 || !receivedPacket)
 		{
@@ -1050,6 +1172,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			GD::devices.updateInfo.results[id].first = 7;
 			GD::devices.updateInfo.results[id].second = "No update request received.";
 			Output::printError("Error: No update request received.");
+			std::this_thread::sleep_for(std::chrono::milliseconds(7000));
 			return;
 		}
 
@@ -1116,6 +1239,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 				GD::devices.updateInfo.results[id].first = 8;
 				GD::devices.updateInfo.results[id].second = "Too many communication errors.";
 				Output::printError("Error: Too many communication errors.");
+				std::this_thread::sleep_for(std::chrono::milliseconds(7000));
 				return;
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(55));
@@ -1128,6 +1252,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->disableUpdateMode();
 		_updateMutex.unlock();
 		_updateMode = false;
+		std::this_thread::sleep_for(std::chrono::milliseconds(7000));
 		return;
 	}
 	catch(const std::exception& ex)
@@ -1148,6 +1273,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
     GD::physicalDevices.get(DeviceFamilies::HomeMaticBidCoS)->disableUpdateMode();
     _updateMutex.unlock();
     _updateMode = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(7000));
 }
 
 int32_t HomeMaticCentral::getUniqueAddress(int32_t seed)
@@ -4359,7 +4485,7 @@ std::shared_ptr<RPC::RPCVariable> HomeMaticCentral::updateFirmware(std::vector<u
 {
 	try
 	{
-		if(_updateMode || GD::devices.updateInfo.currentDevice > 0) return RPC::RPCVariable::createError(-32500, "Central is already already updating a device. Pleas wait until the current update is finished.");
+		if(_updateMode || GD::devices.updateInfo.currentDevice > 0) return RPC::RPCVariable::createError(-32500, "Central is already already updating a device. Please wait until the current update is finished.");
 		if(_updateFirmwareThread.joinable()) _updateFirmwareThread.join();
 		_updateFirmwareThread = std::thread(&HomeMaticCentral::updateFirmwares, this, ids, manual);
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));

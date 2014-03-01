@@ -7,6 +7,7 @@ case "$1" in
 
     upgrade|abort-upgrade)
     	service homegear stop
+    	rm -f /var/lib/homegear/firmware/GetFirmwareUpdates.sh
         ;;
 esac
 

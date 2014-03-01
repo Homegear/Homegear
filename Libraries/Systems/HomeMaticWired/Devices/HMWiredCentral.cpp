@@ -177,7 +177,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			stringStream << "peers list\t\tList all peers" << std::endl;
 			stringStream << "peers add\t\tManually adds a peer (without pairing it! Only for testing)" << std::endl;
 			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
-			stringStream << "peers reset\t\tReset and unpair a peer" << std::endl;
+			stringStream << "peers reset\t\tUnpair a peer and reset it to factory defaults" << std::endl;
 			stringStream << "peers select\t\tSelect a peer" << std::endl;
 			return stringStream.str();
 		}
@@ -229,7 +229,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					peerID = HelperFunctions::getNumber(element, true);
+					peerID = HelperFunctions::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -269,7 +269,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					peerID = HelperFunctions::getNumber(element, true);
+					peerID = HelperFunctions::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -431,7 +431,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					id = HelperFunctions::getNumber(element, true);
+					id = HelperFunctions::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;

@@ -1580,6 +1580,27 @@ int32_t BidCoSPeer::getNewFirmwareVersion()
 	return 0;
 }
 
+bool BidCoSPeer::firmwareUpdateAvailable()
+{
+	try
+	{
+		return _firmwareVersion > 0 && _firmwareVersion < getNewFirmwareVersion();
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return false;
+}
+
 void BidCoSPeer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::vector<FrameValues>& frameValues)
 {
 	try

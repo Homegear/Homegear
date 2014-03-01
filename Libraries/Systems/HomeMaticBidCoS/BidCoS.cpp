@@ -455,7 +455,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					id = HelperFunctions::getNumber(element, true);
+					id = HelperFunctions::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -500,7 +500,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 					if(element == "central") central = true;
 					else
 					{
-						id = HelperFunctions::getNumber(element, true);
+						id = HelperFunctions::getNumber(element, false);
 						if(id == 0) return "Invalid id.\n";
 					}
 				}
