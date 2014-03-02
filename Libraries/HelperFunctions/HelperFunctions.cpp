@@ -361,6 +361,8 @@ std::vector<char> HelperFunctions::getBinary(std::string hexString)
 {
 	int32_t asciiToBinaryTable[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15};
     std::vector<char> binary;
+    if(hexString.empty()) return binary;
+	if(hexString.size() % 2 != 0) hexString = hexString.substr(1);
     for (std::string::const_iterator i = hexString.begin(); i != hexString.end(); i += 2)
     {
         uint8_t byte = 0;
@@ -375,6 +377,8 @@ std::vector<uint8_t> HelperFunctions::getUBinary(std::string hexString)
 {
 	int32_t asciiToBinaryTable[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15};
     std::vector<uint8_t> binary;
+    if(hexString.empty()) return binary;
+	if(hexString.size() % 2 != 0) hexString = hexString.substr(1);
     for (std::string::const_iterator i = hexString.begin(); i != hexString.end(); i += 2)
     {
         uint8_t byte = 0;

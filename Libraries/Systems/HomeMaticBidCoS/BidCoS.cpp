@@ -370,7 +370,6 @@ std::string BidCoS::handleCLICommand(std::string& command)
 			stringStream << "─────────┼─────────┼───────────────┼─────────" << std::endl;
 
 			_devicesMutex.lock();
-			std::vector<std::shared_ptr<LogicalDevice>> devices;
 			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 			{
 				stringStream

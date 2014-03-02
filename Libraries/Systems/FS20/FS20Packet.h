@@ -27,34 +27,38 @@
  * files in the program, then also delete it here.
  */
 
-#include "SystemInitializer.h"
-//Only in this cpp file we include the family specific header files to hide them from the rest of the program
-#include "../HomeMaticBidCoS/BidCoS.h"
-#include "../HomeMaticWired/HMWired.h"
-#include "../Insteon/Insteon.h"
-#include "../FS20/FS20.h"
-#include "../../GD/GD.h"
+#ifndef FS20PACKET_H_
+#define FS20PACKET_H_
 
-void SystemInitializer::initialize()
+#include "../../Types/Packet.h"
+#include "../../HelperFunctions/HelperFunctions.h"
+
+#include <map>
+
+namespace FS20
 {
-	try
-	{
-		GD::deviceFamilies[DeviceFamilies::none] = std::shared_ptr<DeviceFamily>(new DeviceFamily());
-		GD::deviceFamilies[DeviceFamilies::HomeMaticBidCoS] = std::shared_ptr<DeviceFamily>(new BidCoS::BidCoS());
-		GD::deviceFamilies[DeviceFamilies::HomeMaticWired] = std::shared_ptr<DeviceFamily>(new HMWired::HMWired());
-		GD::deviceFamilies[DeviceFamilies::Insteon] = std::shared_ptr<DeviceFamily>(new Insteon::Insteon());
-		GD::deviceFamilies[DeviceFamilies::FS20] = std::shared_ptr<DeviceFamily>(new FS20::FS20());
-	}
-	catch(const std::exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-}
+class FS20Packet : public Packet
+{
+    public:
+        //Properties
+        FS20Packet();
+        FS20Packet(std::string packet, int64_t timeReceived = 0);
+        FS20Packet(std::vector<uint8_t>& packet, int64_t timeReceived = 0);
+        virtual ~FS20Packet();
+
+        virtual std::string hexString();
+        virtual std::vector<uint8_t> byteArray();
+
+        void import(std::vector<uint8_t>& packet);
+        void import(std::string packetHex, bool removeFirstCharacter = true);
+    private:
+        std::vector<uint8_t> _packet;
+
+        int32_t _houseCode = 0;
+        uint8_t _address = 0;
+        uint8_t _command = 0;
+        uint8_t _rssiDevice = 0;
+};
+
+} /* namespace FS20 */
+#endif /* FS20PACKET_H_ */

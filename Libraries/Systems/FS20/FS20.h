@@ -27,19 +27,36 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#ifndef FS20_H_
+#define FS20_H_
 
-#include <stdint.h>
+#include "../../Database/Database.h"
+#include "../../HelperFunctions/HelperFunctions.h"
+#include "../General/DeviceFamily.h"
 
-enum class DeviceFamilies : uint32_t
+namespace FS20
 {
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	Insteon = 0x02,
-	FS20 = 0x03,
-	MAX = 0x04
+class FS20Device;
+
+class FS20 : public DeviceFamily
+{
+public:
+	FS20();
+	virtual ~FS20();
+
+	virtual std::shared_ptr<PhysicalDevices::PhysicalDevice> createPhysicalDevice(std::shared_ptr<PhysicalDevices::PhysicalDeviceSettings> settings);
+	virtual void load(bool version_0_0_7);
+	virtual std::shared_ptr<FS20Device> getDevice(uint32_t address);
+	virtual std::shared_ptr<FS20Device> getDevice(std::string serialNumber);
+	virtual std::string handleCLICommand(std::string& command);
+	virtual bool deviceSelected() { return (bool)_currentDevice; }
+	virtual std::string getName() { return "FS20"; }
+private:
+	std::shared_ptr<LogicalDevice> _currentDevice;
+
+	void createSpyDevice();
 };
 
-#endif /* DEVICEFAMILIES_H_ */
+} /* namespace FS20 */
+
+#endif /* FS20_H_ */

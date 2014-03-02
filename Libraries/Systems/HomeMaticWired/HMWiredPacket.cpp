@@ -281,6 +281,11 @@ void HMWiredPacket::import(std::string packetHex)
 {
 	try
 	{
+		if(packetHex.size() % 2 != 0)
+		{
+			Output::printWarning("Warning: Packet has invalid size.");
+			return;
+		}
 		if(packetHex.size() > 1024)
 		{
 			Output::printWarning("Warning: Tried to import HomeMatic Wired packet larger than 512 bytes.");

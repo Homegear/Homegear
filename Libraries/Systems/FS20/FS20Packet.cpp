@@ -27,78 +27,49 @@
  * files in the program, then also delete it here.
  */
 
-#include "InsteonPacket.h"
+#include "FS20Packet.h"
 
-namespace Insteon
+namespace FS20
 {
-InsteonPacket::InsteonPacket()
+FS20Packet::FS20Packet()
 {
-	init();
 }
 
-InsteonPacket::InsteonPacket(std::string packet, int64_t timeReceived)
+FS20Packet::FS20Packet(std::string packet, int64_t timeReceived)
 {
-	init();
 	_timeReceived = timeReceived;
 	import(packet);
 }
 
-InsteonPacket::InsteonPacket(std::vector<char>& packet, uint32_t packetSize, int64_t timeReceived)
+FS20Packet::FS20Packet(std::vector<uint8_t>& packet, int64_t timeReceived)
 {
-	init();
 	_timeReceived = timeReceived;
-	import(packet, packetSize);
+	import(packet);
 }
 
-InsteonPacket::~InsteonPacket()
+FS20Packet::~FS20Packet()
 {
 }
 
-void InsteonPacket::init()
-{
-}
-
-void InsteonPacket::reset()
-{
-	_packet.clear();
-	_senderAddress = 0;
-	_destinationAddress = 0;
-	_payload.clear();
-}
-
-void InsteonPacket::import(std::vector<char>& packet, uint32_t packetSize)
+void FS20Packet::import(std::vector<uint8_t>& packet)
 {
 	try
 	{
-		reset();
 		if(packet.empty()) return;
-		_packet.insert(_packet.begin(), packet.begin(), packet.begin() + packetSize);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void InsteonPacket::import(std::string packetHex)
-{
-	try
-	{
-		if(packetHex.size() % 2 != 0)
+		if(packet.size() != 4 && packet.size() != 5)
 		{
-			Output::printWarning("Warning: Packet has invalid size.");
+			Output::printWarning("Warning: Tried to import FS20 packet of wrong size (" + std::to_string(packet.size()) + " bytes).");
 			return;
 		}
-		std::vector<char> packet(HelperFunctions::getBinary(packetHex));
 		_packet = packet;
+		_houseCode = (packet.at(0) << 8) + packet.at(1);
+		_address = packet.at(2);
+		_command = packet.at(3);
+		if(packet.size() == 5)
+		{
+			_rssiDevice = packet.at(4);
+			_packet.pop_back();
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -114,11 +85,21 @@ void InsteonPacket::import(std::string packetHex)
     }
 }
 
-std::vector<char> InsteonPacket::byteArray()
+void FS20Packet::import(std::string packetHex, bool removeFirstCharacter)
 {
 	try
 	{
-		return _packet;
+		if(packetHex.size() > 256 || packetHex.size() < 9)
+		{
+			Output::printWarning("Warning: Tried to import FS20 packet larger than 128 bytes.");
+			return;
+		}
+		int32_t tailLength = 0;
+		if(packetHex.back() == '\n') tailLength = 2;
+		if(removeFirstCharacter) packetHex = packetHex.substr(1, packetHex.length() - 1 - tailLength);
+		else if(tailLength > 0) packetHex = packetHex.substr(0, packetHex.length() - tailLength);
+		std::vector<uint8_t> packet(HelperFunctions::getUBinary(packetHex));
+		import(packet);
 	}
 	catch(const std::exception& ex)
     {
@@ -132,10 +113,34 @@ std::vector<char> InsteonPacket::byteArray()
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<char>();
 }
 
-std::string InsteonPacket::hexString()
+std::vector<uint8_t> FS20Packet::byteArray()
+{
+	try
+	{
+		if(!_packet.empty()) return _packet;
+		_packet.push_back(_houseCode >> 8);
+		_packet.push_back(_houseCode & 0xFF);
+		_packet.push_back(_address);
+		_packet.push_back(_command);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<uint8_t>();
+}
+
+std::string FS20Packet::hexString()
 {
 	try
 	{
@@ -156,4 +161,4 @@ std::string InsteonPacket::hexString()
     return "";
 }
 
-} /* namespace HMWired */
+} /* namespace FS20 */

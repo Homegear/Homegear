@@ -27,19 +27,48 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#ifndef CUL_H
+#define CUL_H
 
-#include <stdint.h>
+#include "../../../HelperFunctions/HelperFunctions.h"
+#include "../../../PhysicalDevices/PhysicalDevice.h"
 
-enum class DeviceFamilies : uint32_t
+#include <thread>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <list>
+#include <mutex>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <signal.h>
+
+namespace PhysicalDevices
 {
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	Insteon = 0x02,
-	FS20 = 0x03,
-	MAX = 0x04
+
+class CUL_FS20 : public PhysicalDevice
+{
+    public:
+		CUL_FS20(std::shared_ptr<PhysicalDeviceSettings> settings);
+        virtual ~CUL_FS20();
+        void startListening();
+        void stopListening();
+        void sendPacket(std::shared_ptr<Packet> packet);
+        virtual void setup(int32_t userID, int32_t groupID);
+    protected:
+        void openDevice();
+        void closeDevice();
+        void setupDevice();
+        void writeToDevice(std::string, bool);
+        std::string readFromDevice();
+        void listen();
+    private:
 };
 
-#endif /* DEVICEFAMILIES_H_ */
+}
+#endif // CUL_H

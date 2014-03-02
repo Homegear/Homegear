@@ -89,6 +89,8 @@ void PhysicalDevices::load(std::string filename)
 						if(name == "homematicbidcos") settings->family = DeviceFamilies::HomeMaticBidCoS;
 						else if(name == "homematicwired") settings->family = DeviceFamilies::HomeMaticWired;
 						else if(name == "insteon") settings->family = DeviceFamilies::Insteon;
+						else if(name == "fs20") settings->family = DeviceFamilies::FS20;
+						else if(name == "max") settings->family = DeviceFamilies::MAX;
 						Output::printDebug("Debug: Reading config for physical device family " + GD::deviceFamilies.at(settings->family)->getName());
 						break;
 					}

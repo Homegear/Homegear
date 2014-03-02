@@ -27,19 +27,18 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#ifndef FS20DEVICETYPES_H_
+#define FS20DEVICETYPES_H_
 
 #include <stdint.h>
 
-enum class DeviceFamilies : uint32_t
+namespace FS20
 {
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	Insteon = 0x02,
-	FS20 = 0x03,
-	MAX = 0x04
-};
-
-#endif /* DEVICEFAMILIES_H_ */
+	enum class DeviceType : uint32_t
+	{
+		none = 					0xFFFFFFFF,
+		FS20SD = 				0xFFFFFFFE,
+		FS20CENTRAL =	 		0xFFFFFFFD
+	};
+}
+#endif /* FS20DEVICETYPES_H_ */

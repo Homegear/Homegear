@@ -317,7 +317,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 			const int32_t idWidth = 5;
 			const int32_t nameWidth = 30;
 			std::string nameHeader = "Name";
-			nameHeader.resize(nameWidth);
+			nameHeader.resize(nameWidth, ' ');
 			stringStream << std::setfill(' ')
 				<< std::setw(idWidth) << "ID" << bar
 				<< nameHeader
@@ -327,7 +327,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 			{
 				if(i->first == DeviceFamilies::none || !i->second->available()) continue;
 				std::string name = i->second->getName();
-				name.resize(nameWidth);
+				name.resize(nameWidth, ' ');
 				stringStream
 						<< std::setw(idWidth) << std::setfill(' ') << (int32_t)i->first << bar
 						<< name << std::endl;

@@ -27,19 +27,48 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DEVICEFAMILIES_H_
-#define DEVICEFAMILIES_H_
+#ifndef FS20_SD_H
+#define FS20_SD_H
 
-#include <stdint.h>
+#include "../FS20Device.h"
+#include "../../../HelperFunctions/HelperFunctions.h"
 
-enum class DeviceFamilies : uint32_t
+#include <list>
+
+namespace FS20
 {
-	none = 0xFF,
-	HomeMaticBidCoS = 0x00,
-	HomeMaticWired = 0x01,
-	Insteon = 0x02,
-	FS20 = 0x03,
-	MAX = 0x04
+enum class FilterType {SenderAddress, DestinationAddress};
+
+class FS20_SD_Filter
+{
+    public:
+        FilterType filterType;
+        int32_t filterValue;
 };
 
-#endif /* DEVICEFAMILIES_H_ */
+class FS20_SD : public FS20Device
+{
+    public:
+        FS20_SD();
+        FS20_SD(uint32_t deviceType, std::string serialNumber, int32_t address);
+        virtual ~FS20_SD();
+        bool packetReceived(std::shared_ptr<Packet> packet);
+        void addFilter(FilterType, int32_t);
+        void removeFilter(FilterType, int32_t);
+        std::string handleCLICommand(std::string command);
+        void loadVariables();
+        void saveVariables();
+        void saveFilters();
+        void serializeFilters(std::vector<uint8_t>& encodedData);
+        void unserializeFilters(std::shared_ptr<std::vector<char>> serializedData);
+    protected:
+    private:
+        //In table variables
+        bool _enabled = true;
+        std::list<FS20_SD_Filter> _filters;
+        //End
+
+        virtual void init();
+};
+}
+#endif // FS20_SD_H

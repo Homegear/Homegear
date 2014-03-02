@@ -28,19 +28,19 @@ ifndef RESCOMP
 endif
 
 ifeq ($(config),debug)
-  OBJDIR     = obj/Debug/homegear
-  TARGETDIR  = bin/Debug
-  TARGET     = $(TARGETDIR)/homegear
+  OBJDIR     = obj/Debug/fs20
+  TARGETDIR  = lib/Debug
+  TARGET     = $(TARGETDIR)/libfs20.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l pthread -l sqlite3 -l readline -l ssl -l output -l helperfunctions -l physicaldevices -l types -l logicaldevices -l threads -l database -l filedescriptormanager -l encoding -l user -l settings -l metadata -l cli -l events -l gd
+  LDFLAGS   += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -50,19 +50,19 @@ ifeq ($(config),debug)
 endif
 
 ifeq ($(config),release)
-  OBJDIR     = obj/Release/homegear
-  TARGETDIR  = bin/Release
-  TARGET     = $(TARGETDIR)/homegear
+  OBJDIR     = obj/Release/fs20
+  TARGETDIR  = lib/Release
+  TARGET     = $(TARGETDIR)/libfs20.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l pthread -l sqlite3 -l readline -l ssl -l output -l helperfunctions -l physicaldevices -l types -l logicaldevices -l threads -l database -l filedescriptormanager -l encoding -l user -l settings -l metadata -l cli -l events -l gd
+  LDFLAGS   += -s
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -72,19 +72,19 @@ ifeq ($(config),release)
 endif
 
 ifeq ($(config),profiling)
-  OBJDIR     = obj/Profiling/homegear
-  TARGETDIR  = bin/Profiling
-  TARGET     = $(TARGETDIR)/homegear
+  OBJDIR     = obj/Profiling/fs20
+  TARGETDIR  = lib/Profiling
+  TARGET     = $(TARGETDIR)/libfs20.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l pthread -l sqlite3 -l readline -l ssl -l output -l helperfunctions -l physicaldevices -l types -l logicaldevices -l threads -l database -l filedescriptormanager -l encoding -l user -l settings -l metadata -l cli -l events -l gd -pg
+  LDFLAGS   += -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -94,12 +94,11 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/main.o \
-	$(OBJDIR)/ServiceMessages.o \
-	$(OBJDIR)/SystemInitializer.o \
-	$(OBJDIR)/DeviceTypes.o \
-	$(OBJDIR)/DeviceFamily.o \
-	$(OBJDIR)/Peer.o \
+	$(OBJDIR)/FS20.o \
+	$(OBJDIR)/FS20Packet.o \
+	$(OBJDIR)/FS20Device.o \
+	$(OBJDIR)/FS20-SD.o \
+	$(OBJDIR)/CUL.o \
 
 RESOURCES := \
 
@@ -117,7 +116,7 @@ all: $(TARGETDIR) $(OBJDIR) prebuild prelink $(TARGET)
 	@:
 
 $(TARGET): $(GCH) $(OBJECTS) $(LDDEPS) $(RESOURCES)
-	@echo Linking homegear
+	@echo Linking fs20
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -138,7 +137,7 @@ else
 endif
 
 clean:
-	@echo Cleaning homegear
+	@echo Cleaning fs20
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)
@@ -164,22 +163,19 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/main.o: main.cpp
+$(OBJDIR)/FS20.o: Libraries/Systems/FS20/FS20.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ServiceMessages.o: Libraries/Systems/General/ServiceMessages.cpp
+$(OBJDIR)/FS20Packet.o: Libraries/Systems/FS20/FS20Packet.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/SystemInitializer.o: Libraries/Systems/General/SystemInitializer.cpp
+$(OBJDIR)/FS20Device.o: Libraries/Systems/FS20/FS20Device.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/DeviceTypes.o: Libraries/Systems/General/DeviceTypes.cpp
+$(OBJDIR)/FS20-SD.o: Libraries/Systems/FS20/Devices/FS20-SD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/DeviceFamily.o: Libraries/Systems/General/DeviceFamily.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Peer.o: Libraries/Systems/General/Peer.cpp
+$(OBJDIR)/CUL.o: Libraries/Systems/FS20/PhysicalDevices/CUL.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

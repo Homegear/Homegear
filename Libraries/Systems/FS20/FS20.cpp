@@ -27,35 +27,33 @@
  * files in the program, then also delete it here.
  */
 
-#include "HMWired.h"
-#include "PhysicalDevices/RS485.h"
-#include "HMWiredDeviceTypes.h"
-#include "Devices/HMWiredCentral.h"
-#include "Devices/HMWired-SD.h"
+#include "FS20.h"
+#include "Devices/FS20-SD.h"
+#include "PhysicalDevices/CUL.h"
+#include "FS20DeviceTypes.h"
 #include "../../GD/GD.h"
 
-namespace HMWired
+namespace FS20
 {
 
-HMWired::HMWired()
+FS20::FS20()
 {
-	_family = DeviceFamilies::HomeMaticWired;
+	_family = DeviceFamilies::FS20;
 }
 
-HMWired::~HMWired()
+FS20::~FS20()
 {
 
 }
 
-std::shared_ptr<Central> HMWired::getCentral() { return _central; }
 
-std::shared_ptr<PhysicalDevices::PhysicalDevice> HMWired::createPhysicalDevice(std::shared_ptr<PhysicalDevices::PhysicalDeviceSettings> settings)
+std::shared_ptr<PhysicalDevices::PhysicalDevice> FS20::createPhysicalDevice(std::shared_ptr<PhysicalDevices::PhysicalDeviceSettings> settings)
 {
 	try
 	{
 		if(!settings) return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
-		if(settings->type == "rs485") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::RS485(settings));
-		else Output::printError("Error: Unsupported physical device type for family HomeMatic Wired: " + settings->type);
+		if(settings->type == "cul") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::CUL_FS20(settings));
+		else Output::printError("Error: Unsupported physical device type for family FS20: " + settings->type);
 	}
 	catch(const std::exception& ex)
 	{
@@ -72,40 +70,7 @@ std::shared_ptr<PhysicalDevices::PhysicalDevice> HMWired::createPhysicalDevice(s
 	return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
 }
 
-uint32_t HMWired::getUniqueAddress(uint32_t seed)
-{
-	uint32_t prefix = seed;
-	seed = HelperFunctions::getRandomNumber(1, 999999);
-	uint32_t i = 0;
-	while(getDevice(prefix + seed) && i++ < 10000)
-	{
-		seed += 131;
-		if(seed > 999999) seed -= 1000000;
-	}
-	return prefix + seed;
-}
-
-std::string HMWired::getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber)
-{
-	if(seedPrefix.size() != 3) throw Exception("seedPrefix must have a size of 3.");
-	uint32_t i = 0;
-	std::ostringstream stringstream;
-	stringstream << seedPrefix << std::setw(7) << std::setfill('0') << std::dec << seedNumber;
-	std::string temp2 = stringstream.str();
-	while((getDevice(temp2)) && i++ < 100000)
-	{
-		stringstream.str(std::string());
-		stringstream.clear();
-		seedNumber += 73;
-		if(seedNumber > 9999999) seedNumber -= 10000000;
-		std::ostringstream stringstream;
-		stringstream << seedPrefix << std::setw(7) << std::setfill('0') << std::dec << seedNumber;
-		temp2 = stringstream.str();
-	}
-	return temp2;
-}
-
-std::shared_ptr<HMWiredDevice> HMWired::getDevice(uint32_t address)
+std::shared_ptr<FS20Device> FS20::getDevice(uint32_t address)
 {
 	try
 	{
@@ -114,7 +79,7 @@ std::shared_ptr<HMWiredDevice> HMWired::getDevice(uint32_t address)
 		{
 			if((*i)->getAddress() == address)
 			{
-				std::shared_ptr<HMWiredDevice> device(std::dynamic_pointer_cast<HMWiredDevice>(*i));
+				std::shared_ptr<FS20Device> device(std::dynamic_pointer_cast<FS20Device>(*i));
 				if(!device) continue;
 				_devicesMutex.unlock();
 				return device;
@@ -134,10 +99,10 @@ std::shared_ptr<HMWiredDevice> HMWired::getDevice(uint32_t address)
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
-	return std::shared_ptr<HMWiredDevice>();
+	return std::shared_ptr<FS20Device>();
 }
 
-std::shared_ptr<HMWiredDevice> HMWired::getDevice(std::string serialNumber)
+std::shared_ptr<FS20Device> FS20::getDevice(std::string serialNumber)
 {
 	try
 	{
@@ -146,7 +111,7 @@ std::shared_ptr<HMWiredDevice> HMWired::getDevice(std::string serialNumber)
 		{
 			if((*i)->getSerialNumber() == serialNumber)
 			{
-				std::shared_ptr<HMWiredDevice> device(std::dynamic_pointer_cast<HMWiredDevice>(*i));
+				std::shared_ptr<FS20Device> device(std::dynamic_pointer_cast<FS20Device>(*i));
 				if(!device) continue;
 				_devicesMutex.unlock();
 				return device;
@@ -166,20 +131,20 @@ std::shared_ptr<HMWiredDevice> HMWired::getDevice(std::string serialNumber)
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
-	return std::shared_ptr<HMWiredDevice>();
+	return std::shared_ptr<FS20Device>();
 }
 
-void HMWired::load(bool version_0_0_7)
+void FS20::load(bool version_0_0_7)
 {
 	try
 	{
 		_devices.clear();
-		DataTable rows = GD::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticWired));
+		DataTable rows = GD::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::FS20));
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;
-			Output::printMessage("Loading HomeMatic Wired device " + std::to_string(deviceID));
+			Output::printMessage("Loading FS20 device " + std::to_string(deviceID));
 			int32_t address = row->second.at(1)->intValue;
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
@@ -187,13 +152,9 @@ void HMWired::load(bool version_0_0_7)
 			std::shared_ptr<LogicalDevice> device;
 			switch((DeviceType)deviceType)
 			{
-			case DeviceType::HMWIREDCENTRAL:
-				_central = std::shared_ptr<HMWiredCentral>(new HMWiredCentral(deviceID, serialNumber, address));
-				device = _central;
-				break;
-			case DeviceType::HMWIREDSD:
+			case DeviceType::FS20SD:
 				spyDeviceExists = true;
-				device = std::shared_ptr<LogicalDevice>(new HMWired_SD(deviceID, serialNumber, address));
+				device = std::shared_ptr<LogicalDevice>(new FS20_SD(deviceID, serialNumber, address));
 				break;
 			default:
 				break;
@@ -208,9 +169,8 @@ void HMWired::load(bool version_0_0_7)
 				_devicesMutex.unlock();
 			}
 		}
-		if(GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->isOpen())
+		if(GD::physicalDevices.get(DeviceFamilies::FS20)->isOpen())
 		{
-			if(!_central) createCentral();
 			if(!spyDeviceExists) createSpyDevice();
 		}
 	}
@@ -228,19 +188,15 @@ void HMWired::load(bool version_0_0_7)
 	}
 }
 
-void HMWired::createSpyDevice()
+void FS20::createSpyDevice()
 {
 	try
 	{
-		uint32_t seed = 0xfe000000 + HelperFunctions::getRandomNumber(1, 65535);
+		int32_t address = 0xFE;
 
-		//ToDo: Use HMWiredCentral to get unique address
-		int32_t address = getUniqueAddress(seed);
-		std::string serialNumber(getUniqueSerialNumber("VWS", HelperFunctions::getRandomNumber(1, 9999999)));
-
-		std::shared_ptr<LogicalDevice> device(new HMWired_SD(0, serialNumber, address));
+		std::shared_ptr<LogicalDevice> device(new FS20_SD(0, "", address));
 		add(device);
-		Output::printMessage("Created HomeMatic Wired spy device with id " + std::to_string(device->getID()) + ", address 0x" + HelperFunctions::getHexString(address, 8) + " and serial number " + serialNumber);
+		Output::printMessage("Created FS20 spy device with id " + std::to_string(device->getID()) + ", address 0x" + HelperFunctions::getHexString(address, 2) + ".");
 	}
 	catch(const std::exception& ex)
     {
@@ -256,33 +212,7 @@ void HMWired::createSpyDevice()
     }
 }
 
-void HMWired::createCentral()
-{
-	try
-	{
-		if(_central) return;
-
-		std::string serialNumber(getUniqueSerialNumber("VWC", HelperFunctions::getRandomNumber(1, 9999999)));
-
-		_central.reset(new HMWiredCentral(0, serialNumber, 1));
-		add(_central);
-		Output::printMessage("Created HomeMatic Wired central with id " + std::to_string(_central->getID()) + ", address 0x" + HelperFunctions::getHexString(1, 8) + " and serial number " + serialNumber);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-std::string HMWired::handleCLICommand(std::string& command)
+std::string FS20::handleCLICommand(std::string& command)
 {
 	try
 	{
@@ -301,10 +231,10 @@ std::string HMWired::handleCLICommand(std::string& command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "devices list\t\tList all HomeMatic Wired devices" << std::endl;
-			stringStream << "devices create\t\tCreate a virtual HomeMatic Wired device" << std::endl;
-			stringStream << "devices remove\t\tRemove a virtual HomeMatic Wired device" << std::endl;
-			stringStream << "devices select\t\tSelect a virtual HomeMatic Wired device" << std::endl;
+			stringStream << "devices list\t\tList all FS20 devices" << std::endl;
+			stringStream << "devices create\t\tCreate a virtual FS20 device" << std::endl;
+			stringStream << "devices remove\t\tRemove a virtual FS20 device" << std::endl;
+			stringStream << "devices select\t\tSelect a virtual FS20 device" << std::endl;
 			stringStream << "unselect\t\tUnselect this device family" << std::endl;
 			return stringStream.str();
 		}
@@ -312,28 +242,30 @@ std::string HMWired::handleCLICommand(std::string& command)
 		{
 			std::string bar(" │ ");
 			const int32_t idWidth = 8;
-			const int32_t addressWidth = 8;
-			const int32_t serialWidth = 13;
+			const int32_t houseCodeWidth = 10;
+			const int32_t addressWidth = 7;
 			const int32_t typeWidth = 8;
 			stringStream << std::setfill(' ')
 				<< std::setw(idWidth) << "ID" << bar
+				<< std::setw(houseCodeWidth) << "House Code" << bar
 				<< std::setw(addressWidth) << "Address" << bar
-				<< std::setw(serialWidth) << "Serial Number" << bar
 				<< std::setw(typeWidth) << "Type"
 				<< std::endl;
-			stringStream << "─────────┼──────────┼───────────────┼─────────" << std::endl;
+			stringStream << "─────────┼─────────┼────────────┼─────────" << std::endl;
 
 			_devicesMutex.lock();
 			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 			{
+				std::shared_ptr<FS20Device> device(std::dynamic_pointer_cast<FS20Device>(*i));
+				if(!device) continue;
 				stringStream
-					<< std::setw(idWidth) << std::setfill(' ') << (*i)->getID() << bar
-					<< std::setw(addressWidth) << HelperFunctions::getHexString((*i)->getAddress(), 8) << bar
-					<< std::setw(serialWidth) << (*i)->getSerialNumber() << bar
-					<< std::setw(typeWidth) << HelperFunctions::getHexString((*i)->getDeviceType()) << std::endl;
+					<< std::setw(idWidth) << std::setfill(' ') << device->getID() << bar
+					<< std::setw(addressWidth) << HelperFunctions::getHexString(device->getHouseCode(), 4) << bar
+					<< std::setw(addressWidth) << HelperFunctions::getHexString(device->getAddress(), 2) << bar
+					<< std::setw(typeWidth) << HelperFunctions::getHexString(device->getDeviceType()) << std::endl;
 			}
 			_devicesMutex.unlock();
-			stringStream << "─────────┴──────────┴───────────────┴─────────" << std::endl;
+			stringStream << "─────────┴─────────┴────────────┴─────────" << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 14, "devices create") == 0)
@@ -374,7 +306,7 @@ std::string HMWired::handleCLICommand(std::string& command)
 				stringStream << "  ADDRESS:\tAny unused 4 byte address in hexadecimal format. Example: 101A03FC" << std::endl;
 				stringStream << "  SERIALNUMBER:\tAny unused serial number with a maximum size of 10 characters. Don't use special characters. Example: VSW9179403" << std::endl;
 				stringStream << "  DEVICETYPE:\tThe type of the device to create. Example: FEFFFFFD" << std::endl << std::endl;
-				stringStream << "Currently supported HomeMatic Wired virtual device id's:" << std::endl;
+				stringStream << "Currently supported FS20 virtual device id's:" << std::endl;
 				stringStream << "  FEFFFFFD:\tCentral device" << std::endl;
 				stringStream << "  FEFFFFFE:\tSpy device" << std::endl;
 				return stringStream.str();
@@ -382,17 +314,9 @@ std::string HMWired::handleCLICommand(std::string& command)
 
 			switch(deviceType)
 			{
-			case (uint32_t)DeviceType::HMWIREDCENTRAL:
-				if(_central) stringStream << "Cannot create more than one HomeMatic Wired central device." << std::endl;
-				else
-				{
-					add(std::shared_ptr<LogicalDevice>(new HMWiredCentral(0, serialNumber, address)));
-					stringStream << "Created HomeMatic Wired Central with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
-				}
-				break;
-			case (uint32_t)DeviceType::HMWIREDSD:
-				add(std::shared_ptr<LogicalDevice>(new HMWired_SD(0, serialNumber, address)));
-				stringStream << "Created HomeMatic Wired Spy Device with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+			case (uint32_t)DeviceType::FS20SD:
+				add(std::shared_ptr<LogicalDevice>(new FS20_SD(0, serialNumber, address)));
+				stringStream << "Created FS20 Spy Device with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			default:
 				return "Unknown device type.\n";
@@ -433,7 +357,6 @@ std::string HMWired::handleCLICommand(std::string& command)
 			if(_currentDevice && _currentDevice->getID() == id) _currentDevice.reset();
 			if(get(id))
 			{
-				if(_central && id == _central->getID()) _central.reset();
 				remove(id);
 				stringStream << "Removing device." << std::endl;
 			}
@@ -476,7 +399,7 @@ std::string HMWired::handleCLICommand(std::string& command)
 				return stringStream.str();
 			}
 
-			_currentDevice = central ? _central : get(id);
+			_currentDevice = get(id);
 			if(!_currentDevice) stringStream << "Device not found." << std::endl;
 			else
 			{
@@ -503,4 +426,4 @@ std::string HMWired::handleCLICommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-} /* namespace HMWired */
+} /* namespace FS20 */
