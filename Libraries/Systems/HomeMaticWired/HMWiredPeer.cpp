@@ -1722,7 +1722,7 @@ int32_t HMWiredPeer::getNewFirmwareVersion()
 		std::string versionFile(GD::settings.firmwarePath() + filenamePrefix + ".version");
 		if(!HelperFunctions::fileExists(versionFile)) return 0;
 		std::string versionHex = HelperFunctions::getFileContent(versionFile);
-		return HelperFunctions::getNumber(versionHex, true) + 1;
+		return HelperFunctions::getNumber(versionHex, true);
 	}
 	catch(const std::exception& ex)
     {

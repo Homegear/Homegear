@@ -90,12 +90,12 @@ class HMWiredDevice : public LogicalDevice
         virtual uint8_t getMessageCounter(int32_t destinationAddress);
 
         virtual bool isInPairingMode() { return _pairing; }
-        virtual std::shared_ptr<HMWiredPacket> sendPacket(std::shared_ptr<HMWiredPacket> packet, bool resend, bool stealthy = false);
+        virtual std::shared_ptr<HMWiredPacket> sendPacket(std::shared_ptr<HMWiredPacket> packet, bool resend, bool systemResponse = false);
         std::shared_ptr<HMWiredPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }
 
         virtual std::shared_ptr<HMWiredPacket> getResponse(uint8_t command, int32_t destinationAddress, bool synchronizationBit = false);
         virtual std::shared_ptr<HMWiredPacket> getResponse(std::vector<uint8_t>& payload, int32_t destinationAddress, bool synchronizationBit = false);
-        virtual std::shared_ptr<HMWiredPacket> getResponse(std::shared_ptr<HMWiredPacket> packet);
+        virtual std::shared_ptr<HMWiredPacket> getResponse(std::shared_ptr<HMWiredPacket> packet, bool systemResponse = false);
         virtual std::vector<uint8_t> readEEPROM(int32_t deviceAddress, int32_t eepromAddress);
         virtual bool writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, std::vector<uint8_t>& data);
         virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);

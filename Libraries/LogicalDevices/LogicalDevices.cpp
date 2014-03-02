@@ -313,11 +313,26 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 		}
 		else if(command == "families list")
 		{
+			std::string bar(" │ ");
+			const int32_t idWidth = 5;
+			const int32_t nameWidth = 30;
+			std::string nameHeader = "Name";
+			nameHeader.resize(nameWidth);
+			stringStream << std::setfill(' ')
+				<< std::setw(idWidth) << "ID" << bar
+				<< nameHeader
+				<< std::endl;
+			stringStream << "──────┼───────────────────────────────" << std::endl;
 			for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 			{
 				if(i->first == DeviceFamilies::none || !i->second->available()) continue;
-				stringStream << "ID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << "\tName: " << i->second->getName() << std::endl << std::dec;
+				std::string name = i->second->getName();
+				name.resize(nameWidth);
+				stringStream
+						<< std::setw(idWidth) << std::setfill(' ') << (int32_t)i->first << bar
+						<< name << std::endl;
 			}
+			stringStream << "──────┴───────────────────────────────" << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 15, "families select") == 0)
@@ -338,7 +353,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					family = (DeviceFamilies)HelperFunctions::getNumber(element, true);
+					family = (DeviceFamilies)HelperFunctions::getNumber(element, false);
 					if(family == DeviceFamilies::none) return "Invalid family id.\n";
 				}
 				index++;
@@ -348,7 +363,7 @@ std::string LogicalDevices::handleCLICommand(std::string& command)
 				stringStream << "Description: This command selects a device family." << std::endl;
 				stringStream << "Usage: families select FAMILYID" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  FAMILYID:\tThe id of the family to select in hexadecimal format. Example: 1" << std::endl;
+				stringStream << "  FAMILYID:\tThe id of the family to select. Example: 1" << std::endl;
 				stringStream << "Supported families:" << std::endl;
 				for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 				{

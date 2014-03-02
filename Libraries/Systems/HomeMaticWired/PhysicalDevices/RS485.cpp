@@ -74,7 +74,7 @@ void RS485::sendPacket(std::shared_ptr<Packet> packet)
 		}
 		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
 		_lastAction = HelperFunctions::getTime();
-		if(packet->payload()->size() > 128)
+		if(packet->payload()->size() > 132)
 		{
 			if(GD::debugLevel >= 2) Output::printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
 			return;
@@ -326,7 +326,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 				Output::printError("Error reading from CRC RS485 device: " + _settings->device);
 				break;
 			}
-			if(i == 0) break;
+			if(i == 0 || (packet.empty() && localBuffer[0] == 0)) break;
 			_lastAction = HelperFunctions::getTime();
 			if(!packet.empty() && (localBuffer[0] == 0xFD || localBuffer[0] == 0xFE))
 			{

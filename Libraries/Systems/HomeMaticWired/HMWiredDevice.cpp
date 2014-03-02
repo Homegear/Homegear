@@ -576,7 +576,7 @@ std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(std::string serialNumber)
     return std::shared_ptr<HMWiredPeer>();
 }
 
-std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool resend, bool stealthy)
+std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWiredPacket> packet, bool resend, bool systemResponse)
 {
 	try
 	{
@@ -615,7 +615,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 		//RS485 bus should be free
 		_sendMutex.lock();
 		uint32_t responseDelay = physicalDevice->responseDelay();
-		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet);
+		_sentPackets.set(packet->destinationAddress(), packet);
 		if(txPacketInfo)
 		{
 			timeDifference = time - txPacketInfo->time;
@@ -626,7 +626,6 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 				time = HelperFunctions::getTime();
 			}
 		}
-		if(stealthy) _sentPackets.keepAlive(packet->destinationAddress());
 		rxPacketInfo = _receivedPackets.getInfo(packet->destinationAddress());
 		if(rxPacketInfo)
 		{
@@ -657,8 +656,8 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 				{
 					if(i == 5) sleepingTime = std::chrono::milliseconds(25);
 					std::this_thread::sleep_for(sleepingTime);
-					receivedPacket = _receivedPackets.get(packet->destinationAddress());
-					if(receivedPacket && receivedPacket->timeReceived() >= time)
+					receivedPacket = systemResponse ? _receivedPackets.get(0) : _receivedPackets.get(packet->destinationAddress());
+					if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->receiverMessageCounter() == packet->senderMessageCounter())
 					{
 						_sendMutex.unlock();
 						return receivedPacket;
@@ -973,15 +972,15 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::vector<uint8_t>& 
 	return std::shared_ptr<HMWiredPacket>();
 }
 
-std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::shared_ptr<HMWiredPacket> packet)
+std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::shared_ptr<HMWiredPacket> packet, bool systemResponse)
 {
 	std::shared_ptr<HMWiredPeer> peer = getPeer(packet->destinationAddress());
 	try
 	{
 		if(peer) peer->ignorePackets = true;
 		std::shared_ptr<HMWiredPacket> request(packet);
-		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true);
-		if(response && response->type() != HMWiredPacketType::ackMessage) sendOK(response->senderMessageCounter(), packet->destinationAddress());
+		std::shared_ptr<HMWiredPacket> response = sendPacket(request, true, systemResponse);
+		if(response && response->type() != HMWiredPacketType::ackMessage && response->type() != HMWiredPacketType::system) sendOK(response->senderMessageCounter(), packet->destinationAddress());
 		if(peer) peer->ignorePackets = false;
 		return response;
 	}

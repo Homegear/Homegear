@@ -96,8 +96,8 @@ HMWiredPacket::HMWiredPacket(HMWiredPacketType type, int32_t senderAddress, int3
 	_senderAddress = senderAddress;
 	_destinationAddress = destinationAddress;
 	_synchronizationBit = synchronizationBit;
-	_senderMessageCounter = senderMessageCounter;
-	_receiverMessageCounter = receiverMessageCounter;
+	_senderMessageCounter = senderMessageCounter & 3;
+	_receiverMessageCounter = receiverMessageCounter & 3;
 	_addressMask = addressMask;
 	_payload = payload;
 	generateControlByte();
@@ -165,7 +165,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 				_destinationAddress = (packet[1] << 24) + (packet[2] << 16) + (packet[3] << 8) + packet[4];
 				if(_length >= 2)
 				{
-					if(_packet.size() > 11)  _payload.insert(_payload.end(), packet.begin() + 11, packet.end() - 2);
+					if(_packet.size() > 13)  _payload.insert(_payload.end(), packet.begin() + 11, packet.end() - 2);
 					if(packet.size() == _length + 11)
 					{
 						_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
@@ -231,16 +231,11 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet)
 			_type = HMWiredPacketType::system;
 			_destinationAddress = packet[1];
 			_controlByte = packet[2];
-			if((_controlByte & 0x1F) != 0x11) //ACK message
-			{
-				reset();
-				Output::printError("HomeMatic Wired system packet has unknown type: " + HelperFunctions::getHexString(packet));
-				return;
-			}
 			_receiverMessageCounter = (_controlByte >> 5) & 3;
 			_length = packet[3];
-			if(_length == 2)
+			if(_length >= 2)
 			{
+				if(_packet.size() > 6)  _payload.insert(_payload.end(), packet.begin() + 4, packet.end() - 2);
 				if(packet.size() == _length + 4)
 				{
 					_checksum = (packet.at(packet.size() - 2) << 8) + packet.at(packet.size() - 1);
@@ -348,7 +343,7 @@ void HMWiredPacket::generateControlByte()
 			_controlByte = 0x10; //F bit
 			if(_synchronizationBit) _controlByte |= 0x80;
 			_controlByte |= ((_receiverMessageCounter & 3) << 5);
-			_controlByte |= 0x08; //Packet must contain sender address
+			if(_senderAddress != 0) _controlByte |= 0x08;
 			_controlByte |= ((_senderMessageCounter & 3) << 1);
 		}
 		else if(_type == HMWiredPacketType::ackMessage)
@@ -398,7 +393,7 @@ std::vector<uint8_t> HMWiredPacket::byteArray()
 
 		if(_type == HMWiredPacketType::none) return _escapedPacket;
 
-		if(_payload.size() > 128)
+		if(_payload.size() > 132)
 		{
 			Output::printError("Cannot create HomeMatic Wired packet with a payload size larger than 128 bytes.");
 			return _escapedPacket;
@@ -414,10 +409,13 @@ std::vector<uint8_t> HMWiredPacket::byteArray()
 			_packet.push_back((_destinationAddress >> 8) & 0xFF);
 			_packet.push_back(_destinationAddress & 0xFF);
 			_packet.push_back(_controlByte);
-			_packet.push_back(_senderAddress >> 24);
-			_packet.push_back((_senderAddress >> 16) & 0xFF);
-			_packet.push_back((_senderAddress >> 8) & 0xFF);
-			_packet.push_back(_senderAddress & 0xFF);
+			if(_controlByte & 8)
+			{
+				_packet.push_back(_senderAddress >> 24);
+				_packet.push_back((_senderAddress >> 16) & 0xFF);
+				_packet.push_back((_senderAddress >> 8) & 0xFF);
+				_packet.push_back(_senderAddress & 0xFF);
+			}
 			_packet.push_back(_payload.size() + 2);
 			_packet.insert(_packet.end(), _payload.begin(), _payload.end());
 			if(_checksum == 0) _checksum = CRC16::calculate(_packet);

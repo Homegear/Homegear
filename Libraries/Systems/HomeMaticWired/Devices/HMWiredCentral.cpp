@@ -682,7 +682,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			return;
 		}
 		int32_t firmwareVersion = peer->getNewFirmwareVersion();
-		if(peer->getFirmwareVersion() >= firmwareVersion)
+		/*if(peer->getFirmwareVersion() >= firmwareVersion)
 		{
 			GD::devices.updateInfo.results[id].first = 0;
 			GD::devices.updateInfo.results[id].second = "Already up to date.";
@@ -690,7 +690,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
-		}
+		}*/
 		std::string oldVersionString = HelperFunctions::getHexString(peer->getFirmwareVersion() >> 8) + "." + HelperFunctions::getHexString(peer->getFirmwareVersion() & 0xFF, 2);
 		std::string versionString = HelperFunctions::getHexString(firmwareVersion >> 8) + "." + HelperFunctions::getHexString(firmwareVersion & 0xFF, 2);
 
@@ -780,14 +780,107 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			firmware.insert(firmware.end(), data.begin(), data.end());
 		}
 
-		std::vector<uint8_t> data;
-		for(int32_t i = 0; i < firmware.size(); i += 0x80)
+		lockBus();
+
+		std::shared_ptr<HMWiredPacket> response = getResponse(0x75, peer->getAddress(), true);
+		if(!response || response->type() != HMWiredPacketType::ackMessage)
 		{
-			data.clear();
-			if(i + 0x80 < firmware.size()) data.insert(data.begin(), firmware.begin() + i, firmware.begin() + i + 0x80);
-			else data.insert(data.begin(), firmware.begin() + i, firmware.begin() + i + (firmware.size() - i));
-			Output::printError("Block: " + HelperFunctions::getHexString(data));
+			unlockBus();
+			GD::devices.updateInfo.results[id].first = 6;
+			GD::devices.updateInfo.results[id].second = "Device did not respond to enter-bootloader packet.";
+			Output::printWarning("Warning: Device did not enter bootloader.");
+			_updateMutex.unlock();
+			_updateMode = false;
+			return;
 		}
+
+		//Wait for the device to enter bootloader
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+		std::vector<uint8_t> payload;
+		payload.push_back(0x75);
+		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, 0, peer->getAddress(), false, getMessageCounter(peer->getAddress()), 0, 0, payload));
+		response = getResponse(packet, true);
+		if(!response || response->type() != HMWiredPacketType::system)
+		{
+			unlockBus();
+			GD::devices.updateInfo.results[id].first = 6;
+			GD::devices.updateInfo.results[id].second = "Device did not respond to enter-bootloader packet.";
+			Output::printWarning("Warning: Device did not enter bootloader.");
+			_updateMutex.unlock();
+			_updateMode = false;
+			return;
+		}
+
+		payload.clear();
+		payload.push_back(0x70);
+		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, 0, peer->getAddress(), false, getMessageCounter(peer->getAddress()), 0, 0, payload));
+		response = getResponse(packet, true);
+		int32_t packetSize = 0;
+		if(response && response->payload()->size() == 2) packetSize = (response->payload()->at(0) << 8) + response->payload()->at(1);
+		if(!response || response->type() != HMWiredPacketType::system || response->payload()->size() != 2 || packetSize > 128 || packetSize == 0)
+		{
+			unlockBus();
+			GD::devices.updateInfo.results[id].first = 8;
+			GD::devices.updateInfo.results[id].second = "Too many communication errors (block size request failed).";
+			Output::printWarning("Error: Block size request failed.");
+			_updateMutex.unlock();
+			_updateMode = false;
+			return;
+		}
+
+		std::vector<uint8_t> data;
+		for(int32_t i = 0; i < firmware.size(); i += packetSize)
+		{
+			GD::devices.updateInfo.currentDeviceProgress = (i * 100) / firmware.size();
+			int32_t currentPacketSize = (i + packetSize < firmware.size()) ? packetSize : firmware.size() - i;
+			data.clear();
+			data.push_back(0x77); //Type
+			data.push_back(i >> 8); //Address
+			data.push_back(i & 0xFF); //Address
+			data.push_back(currentPacketSize); //Length
+			data.insert(data.end(), firmware.begin() + i, firmware.begin() + i + currentPacketSize);
+
+			std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(HMWiredPacketType::iMessage, 0, peer->getAddress(), false, getMessageCounter(peer->getAddress()), 0, 0, data));
+			response = getResponse(packet, true);
+			if(!response || response->type() != HMWiredPacketType::system || response->payload()->size() != 2)
+			{
+				unlockBus();
+				GD::devices.updateInfo.results[id].first = 8;
+				GD::devices.updateInfo.results[id].second = "Too many communication errors.";
+				Output::printWarning("Error: Block size request failed.");
+				_updateMutex.unlock();
+				_updateMode = false;
+				return;
+			}
+			int32_t receivedBytes = (response->payload()->at(0) << 8) + response->payload()->at(1);
+			if(receivedBytes != currentPacketSize)
+			{
+				unlockBus();
+				GD::devices.updateInfo.results[id].first = 8;
+				GD::devices.updateInfo.results[id].second = "Too many communication errors (device received wrong number of bytes).";
+				Output::printWarning("Error: Block size request failed.");
+				_updateMutex.unlock();
+				_updateMode = false;
+				return;
+			}
+		}
+
+		payload.clear();
+		payload.push_back(0x67);
+		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, 0, peer->getAddress(), false, getMessageCounter(peer->getAddress()), 0, 0, payload));
+		sendPacket(packet, true);
+
+		unlockBus();
+
+		peer->setFirmwareVersion(firmwareVersion);
+		GD::devices.updateInfo.results[id].first = 0;
+		GD::devices.updateInfo.results[id].second = "Update successful.";
+		Output::printInfo("Info: Peer " + std::to_string(id) + " was successfully updated to firmware version " + versionString + ".");
+		Output::printInfo("Info: Disabling update mode.");
+		_updateMutex.unlock();
+		_updateMode = false;
+		return;
 	}
 	catch(const std::exception& ex)
     {
@@ -801,6 +894,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
     {
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    unlockBus();
     GD::devices.updateInfo.results[id].first = 1;
 	GD::devices.updateInfo.results[id].second = "Unknown error.";
     _updateMutex.unlock();
