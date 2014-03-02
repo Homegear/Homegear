@@ -682,7 +682,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			return;
 		}
 		int32_t firmwareVersion = peer->getNewFirmwareVersion();
-		/*if(peer->getFirmwareVersion() >= firmwareVersion)
+		if(peer->getFirmwareVersion() >= firmwareVersion)
 		{
 			GD::devices.updateInfo.results[id].first = 0;
 			GD::devices.updateInfo.results[id].second = "Already up to date.";
@@ -690,7 +690,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
-		}*/
+		}
 		std::string oldVersionString = HelperFunctions::getHexString(peer->getFirmwareVersion() >> 8) + "." + HelperFunctions::getHexString(peer->getFirmwareVersion() & 0xFF, 2);
 		std::string versionString = HelperFunctions::getHexString(firmwareVersion >> 8) + "." + HelperFunctions::getHexString(firmwareVersion & 0xFF, 2);
 
