@@ -118,7 +118,6 @@ class HMWiredDevice : public LogicalDevice
         std::mutex _databaseMutex;
         HMWiredPacketManager _receivedPackets;
         HMWiredPacketManager _sentPackets;
-        std::mutex _sendMutex;
         bool _pairing = false;
         bool _initialized = false;
 

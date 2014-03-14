@@ -869,7 +869,11 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 		payload.clear();
 		payload.push_back(0x67);
 		packet.reset(new HMWiredPacket(HMWiredPacketType::iMessage, 0, peer->getAddress(), false, getMessageCounter(peer->getAddress()), 0, 0, payload));
-		sendPacket(packet, true);
+		for(int32_t i = 0; i < 3; i++)
+		{
+			sendPacket(packet, false);
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		}
 
 		unlockBus();
 
@@ -877,7 +881,6 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 		GD::devices.updateInfo.results[id].first = 0;
 		GD::devices.updateInfo.results[id].second = "Update successful.";
 		Output::printInfo("Info: Peer " + std::to_string(id) + " was successfully updated to firmware version " + versionString + ".");
-		Output::printInfo("Info: Disabling update mode.");
 		_updateMutex.unlock();
 		_updateMode = false;
 		return;

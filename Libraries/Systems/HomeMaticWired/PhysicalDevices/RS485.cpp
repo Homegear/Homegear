@@ -136,7 +136,7 @@ void RS485::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = GD::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
+		_fileDescriptor = GD::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY ));
 
 		if(_fileDescriptor->descriptor == -1)
 		{
@@ -223,7 +223,7 @@ void RS485::setupDevice()
 		term.c_iflag = 0;
 		term.c_oflag = 0;
 		term.c_lflag = 0;
-		term.c_cc[VMIN] = 1;
+		term.c_cc[VMIN] = 0;
 		term.c_cc[VTIME] = 0;
 		cfsetispeed(&term, B19200);
 		cfsetospeed(&term, B19200);
@@ -277,7 +277,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 		int32_t timeoutTime = 500000;
 		int32_t i;
 		bool escapeByte = false;
-		bool receivingSentPacket = false;
+		_receivingSending = false;
 		uint32_t length = 0;
 		std::vector<uint8_t> localBuffer(1);
 		fd_set readFileDescriptor;
@@ -316,7 +316,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 			if(!_sending) _sendMutex.try_lock(); //Don't change to "lock", because it is called for each received byte!
 			else if(!_settings->oneWay)
 			{
-				receivingSentPacket = true;
+				_receivingSending = true;
 				_sendingMutex.try_lock();
 			}
 			i = read(_fileDescriptor->descriptor, &localBuffer.at(0), 1);
@@ -334,7 +334,7 @@ std::vector<uint8_t> RS485::readFromDevice()
 				Output::printWarning("Invalid byte received from CRC RS485 device (collision?): 0x" + HelperFunctions::getHexString(localBuffer[0], 2));
 				break;
 			}
-			if(receivingSentPacket) escapedPacket.push_back(localBuffer[0]);
+			if(_receivingSending) escapedPacket.push_back(localBuffer[0]);
 			if(escapeByte)
 			{
 				escapeByte = false;
@@ -365,12 +365,13 @@ std::vector<uint8_t> RS485::readFromDevice()
 			else if(packet.size() == length) break;
 			timeoutTime = 7000;
 		}
-		if(receivingSentPacket)
+		if(_receivingSending)
 		{
 			_receivedSentPacket = escapedPacket;
 			packet.clear();
 			_sendingMutex.unlock();
 			while(_sending) std::this_thread::sleep_for(std::chrono::microseconds(500));
+			_receivingSending = false;
 		}
 		else _sendMutex.unlock();
 		return packet;
@@ -383,6 +384,7 @@ std::vector<uint8_t> RS485::readFromDevice()
     {
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _receivingSending = false;
     _sendingMutex.unlock();
     _sendMutex.unlock();
 	return std::vector<uint8_t>();
@@ -395,9 +397,13 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
     	if(_stopped || packet.empty()) return;
         if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CRC RS485 device, because the file descriptor is not valid: " + _settings->device));
         _sendMutex.lock();
+        //Before _sending is set to true wait for the last sending to finish. Without this line
+        //the new sending is sometimes not detected when two packets are sent at the same time.
+        while(_receivingSending) std::this_thread::sleep_for(std::chrono::microseconds(500));
+        if(GD::debugLevel > 4) Output::printDebug("Debug: RS485 device: Got lock for sending... (Packet: " + HelperFunctions::getHexString(packet) + ")");
         _lastPacketSent = HelperFunctions::getTime(); //Sending takes some time, so we set _lastPacketSent two times
         _sending = true;
-        if(_settings->oneWay && gpioDefined(1))
+        /*if(_settings->oneWay && gpioDefined(1))
         {
         	if(!gpioOpen(1))
 			{
@@ -406,43 +412,35 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 				if(!gpioOpen(1))
 				{
 					Output::printError("Error: Could not send RS485 packet. GPIO to enable sending is could not be opened.");
+					_sending = false;
 					_sendMutex.unlock();
 					return;
 				}
 			}
         	setGPIO(1, !((bool)_settings->enableRXValue));
-        }
-        int32_t i;
-        int32_t j = 0;
-        //int64_t startTime = 0;
-        for(; j < 5; j++)
-        {
-        	int32_t bytesWritten = 0;
-			_receivedSentPacket.clear();
-			if(GD::debugLevel > 3 && printPacket) Output::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
-			//startTime = HelperFunctions::getTime();
-			while(bytesWritten < (signed)packet.size())
+        }*/
+		int32_t bytesWritten = 0;
+		_receivedSentPacket.clear();
+		if(GD::debugLevel > 3 && printPacket) Output::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
+		while(bytesWritten < (signed)packet.size())
+		{
+			int32_t i = write(_fileDescriptor->descriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
+			if(i == -1)
 			{
-				i = write(_fileDescriptor->descriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);
-				if(i == -1)
-				{
-					if(errno == EAGAIN) continue;
-					throw(Exception("Error writing to CRC RS485 device (3, " + std::to_string(errno) + "): " + _settings->device));
-				}
-				bytesWritten += i;
+				if(errno == EAGAIN) continue;
+				throw(Exception("Error writing to CRC RS485 device (3, " + std::to_string(errno) + "): " + _settings->device));
 			}
-			if(_settings->oneWay)
-			{
-				//usleep((570 * packet.size()) - ((HelperFunctions::getTime() - startTime) * 1000)); //Wait for packet to be sent
-				break;
-			}
+			bytesWritten += i;
+		}
+		if(!_settings->oneWay)
+		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			_sendingMutex.try_lock_for(std::chrono::milliseconds(200));
-			if(_receivedSentPacket == packet) break;
-			else Output::printWarning("Error sending HomeMatic Wired packet: Collision (received packet was: " + HelperFunctions::getHexString(_receivedSentPacket) + ")");
+			if(_receivedSentPacket.empty()) Output::printWarning("Error sending HomeMatic Wired packet: No sending detected.");
+			else if(_receivedSentPacket != packet) Output::printWarning("Error sending HomeMatic Wired packet: Collision (received packet was: " + HelperFunctions::getHexString(_receivedSentPacket) + ")");
 			_sendingMutex.unlock();
-        }
-		if(_settings->oneWay && gpioDefined(1))
+		}
+		/*if(_settings->oneWay && gpioDefined(1))
 		{
 			if(!gpioOpen(1))
 			{
@@ -450,14 +448,13 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 				openGPIO(1, false);
 				if(!gpioOpen(1))
 				{
+					_sending = false;
 					_sendMutex.unlock();
 					return;
 				}
 			}
 			setGPIO(1, (bool)_settings->enableRXValue);
-		}
-        if(j == 5) Output::printError("Error sending HomeMatic Wired packet: Giving up sending after 5 tries.");
-        else _lastPacketSent = HelperFunctions::getTime();
+		}*/
     }
     catch(const std::exception& ex)
     {
@@ -474,6 +471,7 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
     	_sendingMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _lastPacketSent = HelperFunctions::getTime();
     _sending = false;
     _sendMutex.unlock();
 }

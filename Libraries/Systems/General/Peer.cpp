@@ -192,7 +192,7 @@ void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
 	{
 		if(parameterID == 0)
 		{
-			if(!isTeam()) Output::printError("Peer " + std::to_string(_peerID) + ": Tried to save parameter without parameterID");
+			if(!isTeam()) Output::printError("Error: Peer " + std::to_string(_peerID) + ": Tried to save parameter without parameterID");
 			return;
 		}
 		_databaseMutex.lock();

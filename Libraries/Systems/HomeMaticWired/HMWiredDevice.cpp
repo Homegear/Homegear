@@ -595,7 +595,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			if(!rxPacketInfo || rxTimeDifference > 50)
 			{
 				//Communication might be in progress. Wait a little
-				if(GD::debugLevel > 4 && (time - physicalDevice->lastPacketSent() < 210 || time - physicalDevice->lastPacketReceived() < 210)) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free...");
+				if(GD::debugLevel > 4 && (time - physicalDevice->lastPacketSent() < 210 || time - physicalDevice->lastPacketReceived() < 210)) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free... (Packet: " + packet->hexString() + ")");
 				while(time - physicalDevice->lastPacketSent() < 210 || time - physicalDevice->lastPacketReceived() < 210)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -603,17 +603,16 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 					if(time - physicalDevice->lastPacketSent() >= 210 && time - physicalDevice->lastPacketReceived() >= 210)
 					{
 						int32_t sleepingTime = HelperFunctions::getRandomNumber(0, 100);
-						if(GD::debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms...");
+						if(GD::debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
 						//Sleep random time
 						std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
 						time = HelperFunctions::getTime();
 					}
 				}
-				if(GD::debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is still free... sending...");
+				if(GD::debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is still free... sending... (Packet: " + packet->hexString() + ")");
 			}
 		}
 		//RS485 bus should be free
-		_sendMutex.lock();
 		uint32_t responseDelay = physicalDevice->responseDelay();
 		_sentPackets.set(packet->destinationAddress(), packet);
 		if(txPacketInfo)
@@ -659,7 +658,6 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 					receivedPacket = systemResponse ? _receivedPackets.get(0) : _receivedPackets.get(packet->destinationAddress());
 					if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->receiverMessageCounter() == packet->senderMessageCounter())
 					{
-						_sendMutex.unlock();
 						return receivedPacket;
 					}
 				}
@@ -681,7 +679,6 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _sendMutex.unlock();
     return std::shared_ptr<HMWiredPacket>();
 }
 

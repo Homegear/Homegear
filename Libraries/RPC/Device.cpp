@@ -141,11 +141,15 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		else if(type == Type::Enum::booleanInteger)
 		{
 			value->type = RPCVariableType::rpcBoolean;
-			if(valueTrue == 0 && valueFalse == 0) value->booleanValue = (bool)value->integerValue;
+			if(valueTrue == 0 && valueFalse == 0)
+			{
+				if(value->integerValue >= threshold) value->booleanValue = true;
+				else value->booleanValue = false;
+			}
 			else
 			{
 				if(value->integerValue == valueFalse) value->booleanValue = false;
-				if(value->integerValue == valueTrue || value->integerValue > threshold) value->booleanValue = true;
+				if(value->integerValue == valueTrue || value->integerValue >= threshold) value->booleanValue = true;
 			}
 			if(invert) value->booleanValue = !value->booleanValue;
 		}

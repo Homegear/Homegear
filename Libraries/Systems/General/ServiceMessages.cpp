@@ -201,7 +201,7 @@ bool ServiceMessages::set(std::string id, bool value)
 					{
 						RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(i->first).at(id);
 						parameter->data.at(0) = (uint8_t)value;
-						_peer->saveParameter(parameter->databaseID, parameter->data);
+						_peer->saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, i->first, id, parameter->data);
 
 						std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({id}));
 						std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
@@ -226,7 +226,7 @@ bool ServiceMessages::set(std::string id, bool value)
 		{
 			RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(0).at(id);
 			parameter->data.at(0) = (uint8_t)value;
-			_peer->saveParameter(parameter->databaseID, parameter->data);
+			_peer->saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, 0, id, parameter->data);
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({id}));
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
@@ -410,14 +410,14 @@ void ServiceMessages::checkUnreach()
 			{
 				RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(0).at("UNREACH");
 				parameter->data.at(0) = 1;
-				_peer->saveParameter(parameter->databaseID, parameter->data);
+				_peer->saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, 0, "UNREACH", parameter->data);
 			}
 
 			if(_peer->valuesCentral.at(0).find("STICKY_UNREACH") != _peer->valuesCentral.at(0).end())
 			{
 				RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(0).at("STICKY_UNREACH");
 				parameter->data.at(0) = 1;
-				_peer->saveParameter(parameter->databaseID, parameter->data);
+				_peer->saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, 0, "STICKY_UNREACH", parameter->data);
 			}
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("UNREACH"), std::string("STICKY_UNREACH")}));
@@ -462,7 +462,7 @@ void ServiceMessages::endUnreach()
 			{
 				RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(0).at("UNREACH");
 				parameter->data.at(0) = 0;
-				_peer->saveParameter(parameter->databaseID, parameter->data);
+				_peer->saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, 0, "UNREACH", parameter->data);
 
 				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("UNREACH")}));
 				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
@@ -504,7 +504,7 @@ void ServiceMessages::setConfigPending(bool value)
 			{
 				RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(0).at("CONFIG_PENDING");
 				parameter->data.at(0) = (uint8_t)value;
-				_peer->saveParameter(parameter->databaseID, parameter->data);
+				_peer->saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, 0, "CONFIG_PENDING", parameter->data);
 
 				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("CONFIG_PENDING")}));
 				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
@@ -556,7 +556,7 @@ void ServiceMessages::setUnreach(bool value)
 			{
 				RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(0).at("UNREACH");
 				parameter->data.at(0) = (uint8_t)value;
-				_peer->saveParameter(parameter->databaseID, parameter->data);
+				_peer->saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, 0, "UNREACH", parameter->data);
 
 				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("UNREACH")}));
 				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
@@ -566,7 +566,7 @@ void ServiceMessages::setUnreach(bool value)
 				{
 					parameter = &_peer->valuesCentral.at(0).at("STICKY_UNREACH");
 					parameter->data.at(0) = (uint8_t)value;
-					_peer->saveParameter(parameter->databaseID, parameter->data);
+					_peer->saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, 0, "STICKY_UNREACH", parameter->data);
 
 					valueKeys->push_back("STICKY_UNREACH");
 					rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));

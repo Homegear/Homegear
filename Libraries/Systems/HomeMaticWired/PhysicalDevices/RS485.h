@@ -65,6 +65,7 @@ class RS485  : public PhysicalDevice
         uint8_t _firstByte = 0;
         int64_t _lastAction = 0;
         bool _sending = false;
+        bool _receivingSending = false;
         std::vector<uint8_t> _receivedSentPacket;
         std::timed_mutex _sendingMutex;
 

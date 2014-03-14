@@ -1830,7 +1830,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	{
 		if(!packet) return;
 		if(!_centralFeatures || _disposing) return;
-		if(packet->senderAddress() != _address && (!hasTeam() || packet->senderAddress() != _team.address)) return;
+		if(packet->senderAddress() != _address && (!hasTeam() || packet->senderAddress() != _team.address || packet->destinationAddress() == getCentral()->getAddress())) return;
 		if(!rpcDevice) return;
 		setLastPacketReceived();
 		setRSSIDevice(packet->rssiDevice());
