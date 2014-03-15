@@ -1,4 +1,4 @@
-#define VERSION "0.4.2"
+#define VERSION "0.4.3"
 
 /* Copyright 2013-2014 Sathya Laufer
  *
