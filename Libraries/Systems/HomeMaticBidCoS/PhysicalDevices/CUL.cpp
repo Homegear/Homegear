@@ -350,34 +350,13 @@ void CUL::writeToDevice(std::string data, bool printSending)
         if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
         int32_t bytesWritten = 0;
         int32_t i;
-        //struct timeval timeout;
-        //timeout.tv_sec = 0;
-        //timeout.tv_usec = 200000;
-        //fd_set writeFileDescriptor;
         if(GD::debugLevel > 3 && printSending)
         {
             Output::printInfo("Info: Sending: " + data.substr(2, data.size() - 4));
         }
         _sendMutex.lock();
-        //FD_ZERO(&writeFileDescriptor);
-        //FD_SET(_fileDescriptor, &writeFileDescriptor);
         while(bytesWritten < (signed)data.length())
         {
-            /*i = select(_fileDescriptor + 1, NULL, &writeFileDescriptor, NULL, &timeout);
-            switch(i)
-            {
-                case 0:
-                    if(GD::debugLevel >= 3) Output::printMessage( "Warning: Writing to CUL device timed out: " + _culDevice << std::endl;
-                    break;
-                case -1:
-                    throw(Exception("Error writing to CUL device (1): " + _culDevice));
-                    break;
-                case 1:
-                    break;
-                default:
-                    throw(Exception("Error writing to CUL device (2): " + _culDevice));
-
-            }*/
             i = write(_fileDescriptor->descriptor, data.c_str() + bytesWritten, data.length() - bytesWritten);
             if(i == -1)
             {

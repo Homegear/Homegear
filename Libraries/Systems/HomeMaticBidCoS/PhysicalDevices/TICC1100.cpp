@@ -819,6 +819,10 @@ void TICC1100::startListening()
 		_stopCallbackThread = false;
 		_listenThread = std::thread(&TICC1100::mainThread, this);
 		Threads::setThreadPriority(_listenThread.native_handle(), 45);
+
+		//For sniffing update packets
+		//std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		//enableUpdateMode();
 	}
     catch(const std::exception& ex)
     {
