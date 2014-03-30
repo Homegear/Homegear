@@ -29,6 +29,7 @@
 
 #include "RPCMethods.h"
 #include "../GD/GD.h"
+#include "../../Version.h"
 
 namespace RPC
 {
@@ -1352,6 +1353,31 @@ std::shared_ptr<RPCVariable> RPCGetValue::invoke(std::shared_ptr<std::vector<std
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
+std::shared_ptr<RPCVariable> RPCGetVersion::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<RPCVariableType>({}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		std::string version(VERSION);
+		return std::shared_ptr<RPCVariable>(new RPCVariable(version));
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 RPCInit::~RPCInit()
