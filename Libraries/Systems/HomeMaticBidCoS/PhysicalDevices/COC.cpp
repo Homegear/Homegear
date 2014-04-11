@@ -89,7 +89,7 @@ void COC::sendPacket(std::shared_ptr<Packet> packet)
 			}
 		}
 
-		writeToDevice("As" + packet->hexString() + "\r\n", true);
+		writeToDevice("As" + packet->hexString() + "\nAr\n", true);
 	}
 	catch(const std::exception& ex)
     {
@@ -290,7 +290,7 @@ std::string COC::readFromDevice()
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 
-		while((!_stopCallbackThread && localBuffer[0] != '\n'))
+		while((!_stopCallbackThread && localBuffer[0] != '\n' && _fileDescriptor->descriptor > -1))
 		{
 			FD_ZERO(&readFileDescriptor);
 			FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
@@ -313,7 +313,6 @@ std::string COC::readFromDevice()
 					Output::printError("Error reading from COC device: " + _settings->device);
 					return "";
 			}
-
 			i = read(_fileDescriptor->descriptor, localBuffer, 1);
 			if(i == -1)
 			{
@@ -365,25 +364,22 @@ void COC::writeToDevice(std::string data, bool printSending)
             }
             bytesWritten += i;
         }
-
-        _sendMutex.unlock();
-        _lastPacketSent = HelperFunctions::getTime();
     }
     catch(const std::exception& ex)
     {
-    	_sendMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_sendMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_sendMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    _sendMutex.unlock();
+    _lastPacketSent = HelperFunctions::getTime();
 }
 
 void COC::startListening()

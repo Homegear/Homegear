@@ -89,7 +89,7 @@ void CUL::sendPacket(std::shared_ptr<Packet> packet)
 			}
 		}
 
-		writeToDevice("As" + packet->hexString() + "\r\n", true);
+		writeToDevice("As" + packet->hexString() + "\n", true);
 	}
 	catch(const std::exception& ex)
     {
@@ -290,7 +290,7 @@ std::string CUL::readFromDevice()
 		FD_ZERO(&readFileDescriptor);
 		FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 
-		while((!_stopCallbackThread && localBuffer[0] != '\n'))
+		while((!_stopCallbackThread && localBuffer[0] != '\n' && _fileDescriptor->descriptor > -1))
 		{
 			FD_ZERO(&readFileDescriptor);
 			FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
