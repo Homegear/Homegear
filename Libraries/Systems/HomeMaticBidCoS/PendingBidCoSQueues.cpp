@@ -102,58 +102,8 @@ void PendingBidCoSQueues::unserialize(std::shared_ptr<std::vector<char>> seriali
 				queue->callbackParameter = parameters;
 				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<BidCoSPeer, &BidCoSPeer::addVariableToResetCallback>(peer);
 			}
+			queue->pendingQueueID = _id++;
 			_queues.push_back(queue);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _queuesMutex.unlock();
-}
-
-void PendingBidCoSQueues::unserialize_0_0_6(std::string serializedObject, BidCoSPeer* peer, HomeMaticDevice* device)
-{
-	try
-	{
-		Output::printDebug( "Unserializing pending BidCoS queues: " + serializedObject);
-		if(serializedObject.empty()) return;
-
-		_queuesMutex.lock();
-		std::istringstream stringstream(serializedObject);
-		uint32_t pos = 0;
-		uint32_t pendingQueuesSize = std::stoll(serializedObject.substr(pos, 8)); pos += 8;
-		for(uint32_t i = 0; i < pendingQueuesSize; i++)
-		{
-			uint32_t queueLength = std::stoll(serializedObject.substr(pos, 8), 0, 16); pos += 8;
-			if(queueLength > 6)
-			{
-				std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue());
-				queue->unserialize_0_0_6(serializedObject.substr(pos, queueLength), device);
-				pos += queueLength;
-				queue->noSending = true;
-				bool hasCallbackFunction = std::stol(serializedObject.substr(pos, 1)); pos += 1;
-				if(hasCallbackFunction)
-				{
-					std::shared_ptr<CallbackFunctionParameter> parameters(new CallbackFunctionParameter());
-					parameters->integers.push_back(std::stoll(serializedObject.substr(pos, 4), 0, 16)); pos += 4;
-					uint32_t keyLength = std::stoll(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-					parameters->strings.push_back(serializedObject.substr(pos, keyLength)); pos += keyLength;
-					parameters->integers.push_back(std::stoll(serializedObject.substr(pos, 8), 0, 16)); pos += 8;
-					parameters->integers.push_back(std::stoll(serializedObject.substr(pos, 8), 0, 16) * 1000); pos += 8;
-					queue->callbackParameter = parameters;
-					queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<BidCoSPeer, &BidCoSPeer::addVariableToResetCallback>(peer);
-				}
-				_queues.push_back(queue);
-			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -182,19 +132,17 @@ bool PendingBidCoSQueues::empty()
 	}
 	catch(const std::exception& ex)
     {
-		_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queuesMutex.unlock();
     return false;
 }
 
@@ -204,24 +152,22 @@ void PendingBidCoSQueues::push(std::shared_ptr<BidCoSQueue> queue)
 	{
 		if(!queue || queue->isEmpty()) return;
 		_queuesMutex.lock();
+		queue->pendingQueueID = _id++;
 		_queues.push_back(queue);
-		_queuesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queuesMutex.unlock();
 }
 
 void PendingBidCoSQueues::pop()
@@ -230,23 +176,42 @@ void PendingBidCoSQueues::pop()
 	{
 		_queuesMutex.lock();
 		if(!_queues.empty()) _queues.pop_front();
-		_queuesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queuesMutex.unlock();
+}
+
+void PendingBidCoSQueues::pop(uint32_t id)
+{
+	try
+	{
+		_queuesMutex.lock();
+		if(!_queues.empty() && _queues.front()->pendingQueueID == id) _queues.pop_front();
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _queuesMutex.unlock();
 }
 
 void PendingBidCoSQueues::clear()
@@ -255,23 +220,20 @@ void PendingBidCoSQueues::clear()
 	{
 		_queuesMutex.lock();
 		_queues.clear();
-		_queuesMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queuesMutex.unlock();
 }
 
 uint32_t PendingBidCoSQueues::size()
@@ -285,19 +247,17 @@ uint32_t PendingBidCoSQueues::size()
 	}
 	catch(const std::exception& ex)
     {
-		_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queuesMutex.unlock();
     return 0;
 }
 
@@ -313,19 +273,47 @@ std::shared_ptr<BidCoSQueue> PendingBidCoSQueues::front()
 	}
 	catch(const std::exception& ex)
     {
-		_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_queuesMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queuesMutex.unlock();
     return std::shared_ptr<BidCoSQueue>();
+}
+
+void PendingBidCoSQueues::removeQueue(std::string parameterName, int32_t channel)
+{
+	try
+	{
+		_queuesMutex.lock();
+		if(_queues.empty())
+		{
+			_queuesMutex.unlock();
+			return;
+		}
+		for(int32_t i = _queues.size() - 1; i >= 0; i--)
+		{
+			if(!_queues.at(i) || (_queues.at(i)->parameterName == parameterName && _queues.at(i)->channel == channel)) _queues.erase(_queues.begin() + i);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _queuesMutex.unlock();
 }
 }

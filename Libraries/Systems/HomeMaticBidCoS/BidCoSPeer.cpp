@@ -3635,8 +3635,11 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::st
 			}
 		}
 		setMessageCounter(_messageCounter + 1);
+		queue->parameterName = valueKey;
+		queue->channel = channel;
 		queue->push(packet);
 		queue->push(getCentral()->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		pendingBidCoSQueues->removeQueue(valueKey, channel);
 		pendingBidCoSQueues->push(queue);
 		if((getRXModes() & RPC::Device::RXModes::Enum::always) || (getRXModes() & RPC::Device::RXModes::Enum::burst))
 		{

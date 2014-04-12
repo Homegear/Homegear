@@ -351,7 +351,7 @@ void COC::writeToDevice(std::string data, bool printSending)
         int32_t i;
         if(GD::debugLevel > 3 && printSending)
         {
-            Output::printInfo("Info: Sending: " + data.substr(2, data.size() - 4));
+            Output::printInfo("Info: Sending: " + data.substr(2, data.size() - 6));
         }
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
@@ -377,7 +377,6 @@ void COC::writeToDevice(std::string data, bool printSending)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     _sendMutex.unlock();
     _lastPacketSent = HelperFunctions::getTime();
 }

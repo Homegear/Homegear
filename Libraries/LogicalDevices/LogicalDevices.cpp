@@ -70,8 +70,8 @@ void LogicalDevices::convertDatabase()
 		DataTable result = GD::db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result.empty()) return; //Handled in initializeDatabase
 		std::string version = result.at(0).at(3)->textValue;
-		if(version == "0.3.1") return; //Up to date
-		if(version != "0.3.0")
+		if(version == "0.4.3") return; //Up to date
+		if(version != "0.3.0" && version != "0.3.1")
 		{
 			Output::printCritical("Unknown database version: " + version);
 			exit(1); //Don't know, what to do
@@ -118,6 +118,25 @@ void LogicalDevices::convertDatabase()
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.3.1")));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			GD::db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+			Output::printMessage("Exiting Homegear after database conversion...");
+			exit(0);
+		}
+		else if(version == "0.3.1")
+		{
+			Output::printMessage("Converting database from version " + version + " to version 0.4.3...");
+			GD::db.init(GD::settings.databasePath(), GD::settings.databaseSynchronous(), GD::settings.databaseMemoryJournal(), GD::settings.databasePath() + ".old");
+
+			GD::db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
+
+			data.clear();
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(result.at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.4.3")));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			GD::db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -171,7 +190,7 @@ void LogicalDevices::initializeDatabase()
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.3.1")));
+			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.4.3")));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			GD::db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 		}

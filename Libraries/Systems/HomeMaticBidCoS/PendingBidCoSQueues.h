@@ -50,17 +50,18 @@ public:
 	virtual ~PendingBidCoSQueues() {}
 	void serialize(std::vector<uint8_t>& encodedData);
 	void unserialize(std::shared_ptr<std::vector<char>> serializedData, BidCoSPeer* peer, HomeMaticDevice* device);
-	void unserialize_0_0_6(std::string serializedObject, BidCoSPeer* peer, HomeMaticDevice* device);
 
 	void push(std::shared_ptr<BidCoSQueue> queue);
 	void pop();
+	void pop(uint32_t id);
 	bool empty();
 	uint32_t size();
 	std::shared_ptr<BidCoSQueue> front();
 	void clear();
+	void removeQueue(std::string value, int32_t channel);
 private:
+	uint32_t _id = 0;
 	std::mutex _queuesMutex;
-	//Cannot be unique_ptr because class must be copyable
     std::deque<std::shared_ptr<BidCoSQueue>> _queues;
 };
 }

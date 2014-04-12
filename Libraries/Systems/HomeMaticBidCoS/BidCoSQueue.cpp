@@ -91,21 +91,22 @@ void BidCoSQueue::serialize(std::vector<uint8_t>& encodedData)
 				encodedData.insert(encodedData.end(), packet.begin(), packet.end());
 			}
 			std::shared_ptr<BidCoSMessage> message = i->getMessage();
-			if(!message)
+			if(!message) encoder.encodeBoolean(encodedData, false);
+			else
 			{
-				encoder.encodeBoolean(encodedData, false);
-				continue;
+				encoder.encodeBoolean(encodedData, true);
+				encoder.encodeByte(encodedData, message->getDirection());
+				encoder.encodeByte(encodedData, message->getMessageType());
+				std::vector<std::pair<uint32_t, int32_t>>* subtypes = message->getSubtypes();
+				encoder.encodeByte(encodedData, subtypes->size());
+				for(std::vector<std::pair<uint32_t, int32_t>>::iterator j = subtypes->begin(); j != subtypes->end(); ++j)
+				{
+					encoder.encodeByte(encodedData, j->first);
+					encoder.encodeByte(encodedData, j->second);
+				}
 			}
-			encoder.encodeBoolean(encodedData, true);
-			encoder.encodeByte(encodedData, message->getDirection());
-			encoder.encodeByte(encodedData, message->getMessageType());
-			std::vector<std::pair<uint32_t, int32_t>>* subtypes = message->getSubtypes();
-			encoder.encodeByte(encodedData, subtypes->size());
-			for(std::vector<std::pair<uint32_t, int32_t>>::iterator j = subtypes->begin(); j != subtypes->end(); ++j)
-			{
-				encoder.encodeByte(encodedData, j->first);
-				encoder.encodeByte(encodedData, j->second);
-			}
+			encoder.encodeString(encodedData, parameterName);
+			encoder.encodeInteger(encodedData, channel);
 		}
 	}
 	catch(const std::exception& ex)
@@ -149,16 +150,20 @@ void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 				entry->setPacket(packet, false);
 			}
 			int32_t messageExists = decoder.decodeBoolean(serializedData, position);
-			if(!messageExists) continue;
-			int32_t direction = decoder.decodeByte(serializedData, position);
-			int32_t messageType = decoder.decodeByte(serializedData, position);
-			uint32_t subtypeSize = decoder.decodeByte(serializedData, position);
-			std::vector<std::pair<uint32_t, int32_t>> subtypes;
-			for(uint32_t j = 0; j < subtypeSize; j++)
+			if(messageExists)
 			{
-				subtypes.push_back(std::pair<uint32_t, int32_t>(decoder.decodeByte(serializedData, position), decoder.decodeByte(serializedData, position)));
+				int32_t direction = decoder.decodeByte(serializedData, position);
+				int32_t messageType = decoder.decodeByte(serializedData, position);
+				uint32_t subtypeSize = decoder.decodeByte(serializedData, position);
+				std::vector<std::pair<uint32_t, int32_t>> subtypes;
+				for(uint32_t j = 0; j < subtypeSize; j++)
+				{
+					subtypes.push_back(std::pair<uint32_t, int32_t>(decoder.decodeByte(serializedData, position), decoder.decodeByte(serializedData, position)));
+				}
+				entry->setMessage(device->getMessages()->find(direction, messageType, subtypes), false);
 			}
-			entry->setMessage(device->getMessages()->find(direction, messageType, subtypes), false);
+			parameterName = decoder.decodeString(serializedData, position);
+			channel = decoder.decodeInteger(serializedData, position);
 		}
 	}
 	catch(const std::exception& ex)
@@ -180,68 +185,6 @@ void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
     	_pendingQueues.reset();
     }
     _queueMutex.unlock();
-}
-
-void BidCoSQueue::unserialize_0_0_6(std::string serializedObject, HomeMaticDevice* device)
-{
-	try
-	{
-		Output::printDebug("Unserializing queue: " + serializedObject);
-		uint32_t pos = 0;
-		_queueType = (BidCoSQueueType)std::stoi(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-		uint32_t queueSize = std::stol(serializedObject.substr(pos, 4), 0, 16); pos += 4;
-		for(uint32_t i = 0; i < queueSize; i++)
-		{
-			_queueMutex.lock();
-			_queue.push_back(BidCoSQueueEntry());
-			BidCoSQueueEntry* entry = &_queue.back();
-			_queueMutex.unlock();
-			entry->setType((QueueEntryType)std::stoi(serializedObject.substr(pos, 1), 0, 16)); pos += 1;
-			entry->stealthy = std::stoi(serializedObject.substr(pos, 1)); pos += 1;
-			entry->forceResend = std::stoi(serializedObject.substr(pos, 1)); pos += 1;
-			int32_t packetExists = std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-			if(packetExists)
-			{
-				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
-				uint32_t packetLength = std::stoi(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-				std::string packetString(serializedObject.substr(pos, packetLength));
-				packet->import(packetString, false); pos += packetLength;
-				entry->setPacket(packet, false);
-			}
-			int32_t messageExists = std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-			if(!messageExists) continue;
-			int32_t direction = std::stoi(serializedObject.substr(pos, 1), 0, 16); pos += 1;
-			int32_t messageType = std::stoi(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-			uint32_t subtypeSize = std::stoi(serializedObject.substr(pos, 2), 0, 16); pos += 2;
-			std::vector<std::pair<uint32_t, int32_t>> subtypes;
-			for(uint32_t j = 0; j < subtypeSize; j++)
-			{
-				subtypes.push_back(std::pair<uint32_t, int32_t>(std::stoi(serializedObject.substr(pos, 2), 0, 16), std::stoi(serializedObject.substr(pos + 2, 2), 0, 16))); pos += 4;
-			}
-			entry->setMessage(device->getMessages()->find(direction, messageType, subtypes), false);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-		_queueMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    	clear();
-    	_pendingQueues.reset();
-    }
-    catch(Exception& ex)
-    {
-    	_queueMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    	clear();
-    	_pendingQueues.reset();
-    }
-    catch(...)
-    {
-    	_queueMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    	clear();
-    	_pendingQueues.reset();
-    }
 }
 
 void BidCoSQueue::dispose()
@@ -353,10 +296,10 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 		else
 		{
 			longKeepAlive();
-			//Sleep for 5000 ms
+			//Sleep for 2000 ms
 			i = 0;
 			sleepingTime = std::chrono::milliseconds(200);
-			while(!_stopResendThread && i < 25)
+			while(!_stopResendThread && i < 10)
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				i++;
@@ -537,26 +480,23 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmedi
 		_queueMutex.lock();
 		if(popImmediately)
 		{
-			_pendingQueues->pop();
+			if(!_pendingQueues->empty()) _pendingQueues->pop(pendingQueueID);
 			_workingOnPendingQueue = false;
 		}
-		_queueMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_queueMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_queueMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_queueMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _queueMutex.unlock();
 }
 
 void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet, bool forceResend)
@@ -963,6 +903,7 @@ void BidCoSQueue::pushPendingQueue()
 		queueEmptyCallback = queue->queueEmptyCallback;
 		callbackParameter = queue->callbackParameter;
 		retries = queue->retries;
+		pendingQueueID = queue->pendingQueueID;
 		for(std::list<BidCoSQueueEntry>::iterator i = queue->getQueue()->begin(); i != queue->getQueue()->end(); ++i)
 		{
 			if(!noSending && i->getType() == QueueEntryType::MESSAGE && i->getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
@@ -1046,7 +987,7 @@ void BidCoSQueue::nextQueueEntry()
 		_queueMutex.lock();
 		if(_queue.empty()) {
 			if(queueEmptyCallback && callbackParameter) queueEmptyCallback(callbackParameter);
-			if(_workingOnPendingQueue) _pendingQueues->pop();
+			if(_workingOnPendingQueue && !_pendingQueues->empty()) _pendingQueues->pop(pendingQueueID);
 			if(!_pendingQueues || (_pendingQueues && _pendingQueues->empty()))
 			{
 				_stopResendThread = true;

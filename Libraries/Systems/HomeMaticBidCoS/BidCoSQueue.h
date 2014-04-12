@@ -116,6 +116,7 @@ class BidCoSQueue
     public:
         uint32_t retries = 4;
         uint32_t id = 0;
+        uint32_t pendingQueueID = 0;
         std::shared_ptr<int64_t> lastAction;
         bool noSending = false;
         HomeMaticDevice* device = nullptr;
@@ -125,6 +126,8 @@ class BidCoSQueue
         BidCoSQueueType getQueueType() { return _queueType; }
         std::list<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
+        std::string parameterName;
+        int32_t channel = -1;
 
         void push(std::shared_ptr<BidCoSMessage> message, bool forceResend = false);
         void push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet, bool forceResend = false);
@@ -144,7 +147,6 @@ class BidCoSQueue
         void dispose();
         void serialize(std::vector<uint8_t>& encodedData);
         void unserialize(std::shared_ptr<std::vector<char>> serializedData, HomeMaticDevice* device, uint32_t position = 0);
-        void unserialize_0_0_6(std::string serializedObject, HomeMaticDevice* device);
 
         BidCoSQueue();
         BidCoSQueue(BidCoSQueueType queueType);
