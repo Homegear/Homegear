@@ -102,7 +102,7 @@ void PendingBidCoSQueues::unserialize(std::shared_ptr<std::vector<char>> seriali
 				queue->callbackParameter = parameters;
 				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<BidCoSPeer, &BidCoSPeer::addVariableToResetCallback>(peer);
 			}
-			queue->pendingQueueID = _id++;
+			queue->pendingQueueID = _currentID++;
 			_queues.push_back(queue);
 		}
 	}
@@ -152,7 +152,7 @@ void PendingBidCoSQueues::push(std::shared_ptr<BidCoSQueue> queue)
 	{
 		if(!queue || queue->isEmpty()) return;
 		_queuesMutex.lock();
-		queue->pendingQueueID = _id++;
+		queue->pendingQueueID = _currentID++;
 		_queues.push_back(queue);
 	}
 	catch(const std::exception& ex)
@@ -291,6 +291,7 @@ void PendingBidCoSQueues::removeQueue(std::string parameterName, int32_t channel
 {
 	try
 	{
+		if(parameterName.empty()) return;
 		_queuesMutex.lock();
 		if(_queues.empty())
 		{

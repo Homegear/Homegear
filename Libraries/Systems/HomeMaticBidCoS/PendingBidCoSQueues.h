@@ -60,7 +60,7 @@ public:
 	void clear();
 	void removeQueue(std::string value, int32_t channel);
 private:
-	uint32_t _id = 0;
+	uint32_t _currentID = 0;
 	std::mutex _queuesMutex;
     std::deque<std::shared_ptr<BidCoSQueue>> _queues;
 };
