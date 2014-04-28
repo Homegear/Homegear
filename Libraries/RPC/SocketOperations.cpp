@@ -127,7 +127,6 @@ void SocketOperations::close()
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 {
-	Output::printDebug("Calling proofread...");
 	if(!connected()) autoConnect();
 	//Timeout needs to be set every time, so don't put it outside of the while loop
 	timeval timeout;
@@ -152,32 +151,41 @@ int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>> data)
 {
 	if(!connected()) autoConnect();
 	if(!data || data->empty()) return 0;
-	return this->proofwrite(*data);
+	if(data->size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
+	int32_t ret;
+	for(uint32_t i = 0; i < 3; ++i)
+	{
+		ret = _ssl ? SSL_write(_ssl, &data->at(0), data->size()) : send(_fileDescriptor->descriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
+		if(ret <= 0)
+		{
+			close();
+			throw SocketOperationException(strerror(errno));
+		}
+		if(ret != (signed)data->size() && i == 2) throw SocketSizeMismatchException("Not all data was sent to client.");
+		else break;
+	}
+	return ret;
 }
 
 int32_t SocketOperations::proofwrite(std::vector<char>& data)
 {
-	Output::printDebug("Calling proofwrite ...");
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
 	if(data.size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
-	Output::printDebug(" ... data size is " + std::to_string(data.size()));
-	int32_t bytesSentSoFar = 0;
-	while (bytesSentSoFar < (signed)data.size()) {
-		int32_t bytesToSend = data.size() - bytesSentSoFar;
-		int32_t bytesSentInStep = _ssl ? SSL_write(_ssl, &data.at(bytesSentSoFar), bytesToSend) : send(_fileDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
-		if(bytesSentInStep <= 0)
+	int32_t ret;
+	for(uint32_t i = 0; i < 3; ++i)
+	{
+		ret = _ssl ? SSL_write(_ssl, &data.at(0), data.size()) : send(_fileDescriptor->descriptor, &data.at(0), data.size(), MSG_NOSIGNAL);
+		if(ret <= 0)
 		{
-			Output::printDebug(" ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
 			close();
 			throw SocketOperationException(strerror(errno));
 		}
-		bytesSentSoFar += bytesSentInStep;
+		if(ret != (signed)data.size() && i == 2) throw SocketSizeMismatchException("Not all data was sent to client.");
+		else break;
 	}
-	Output::printDebug(" ... sent " + std::to_string(bytesSentSoFar));
-	return bytesSentSoFar;
+	return ret;
 }
-
 
 bool SocketOperations::connected()
 {
@@ -189,7 +197,6 @@ bool SocketOperations::connected()
 
 void SocketOperations::getFileDescriptor()
 {
-	Output::printDebug("Calling getFileDescriptor...");
 	GD::fileDescriptorManager.shutdown(_fileDescriptor);
 
 	getConnection();
@@ -281,7 +288,6 @@ void SocketOperations::getConnection()
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 
-/*
 		if(!(fcntl(_fileDescriptor->descriptor, F_GETFL) & O_NONBLOCK))
 		{
 			if(fcntl(_fileDescriptor->descriptor, F_SETFL, fcntl(_fileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
@@ -291,7 +297,7 @@ void SocketOperations::getConnection()
 				throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 			}
 		}
-*/
+
 		int32_t connectResult;
 		if((connectResult = connect(_fileDescriptor->descriptor, serverInfo->ai_addr, serverInfo->ai_addrlen)) == -1 && errno != EINPROGRESS)
 		{
