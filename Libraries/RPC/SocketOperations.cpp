@@ -291,15 +291,7 @@ void SocketOperations::getConnection()
 			GD::fileDescriptorManager.shutdown(_fileDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
-/*
-		int32_t writeBufSize = 32768;
-		if(setsockopt(_fileDescriptor->descriptor, SOL_SOCKET, SO_SNDBUF, (void*)&writeBufSize, sizeof(int32_t)) == -1)
-		{
-			freeaddrinfo(serverInfo);
-			GD::fileDescriptorManager.shutdown(_fileDescriptor);
-			throw SocketOperationException("Could not set socket sndbuf size for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
-		}
-*/
+
 		if(!(fcntl(_fileDescriptor->descriptor, F_GETFL) & O_NONBLOCK))
 		{
 			if(fcntl(_fileDescriptor->descriptor, F_SETFL, fcntl(_fileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
