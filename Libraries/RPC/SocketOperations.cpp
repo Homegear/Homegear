@@ -162,8 +162,19 @@ int32_t SocketOperations::proofwrite(std::vector<char>& data)
 	if(data.empty()) return 0;
 	if(data.size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
 	Output::printDebug(" ... data size is " + std::to_string(data.size()));
+
 	int32_t bytesSentSoFar = 0;
 	while (bytesSentSoFar < (signed)data.size()) {
+		timeval timeout;
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		fd_set writeFileDescriptor;
+		FD_ZERO(&writeFileDescriptor);
+		FD_SET(_fileDescriptor->descriptor, &writeFileDescriptor);
+		int32_t readyFds = select(_fileDescriptor->descriptor + 1, NULL, &writeFileDescriptor, NULL, &timeout);
+		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
+		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
+
 		int32_t bytesToSend = data.size() - bytesSentSoFar;
 		int32_t bytesSentInStep = _ssl ? SSL_write(_ssl, &data.at(bytesSentSoFar), bytesToSend) : send(_fileDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
 		if(bytesSentInStep <= 0)
@@ -280,8 +291,15 @@ void SocketOperations::getConnection()
 			GD::fileDescriptorManager.shutdown(_fileDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
-
 /*
+		int32_t writeBufSize = 32768;
+		if(setsockopt(_fileDescriptor->descriptor, SOL_SOCKET, SO_SNDBUF, (void*)&writeBufSize, sizeof(int32_t)) == -1)
+		{
+			freeaddrinfo(serverInfo);
+			GD::fileDescriptorManager.shutdown(_fileDescriptor);
+			throw SocketOperationException("Could not set socket sndbuf size for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
+		}
+*/
 		if(!(fcntl(_fileDescriptor->descriptor, F_GETFL) & O_NONBLOCK))
 		{
 			if(fcntl(_fileDescriptor->descriptor, F_SETFL, fcntl(_fileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
@@ -291,7 +309,7 @@ void SocketOperations::getConnection()
 				throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 			}
 		}
-*/
+
 		int32_t connectResult;
 		if((connectResult = connect(_fileDescriptor->descriptor, serverInfo->ai_addr, serverInfo->ai_addrlen)) == -1 && errno != EINPROGRESS)
 		{
