@@ -152,7 +152,7 @@ int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>> data)
 {
 	if(!connected()) autoConnect();
 	if(!data || data->empty()) return 0;
-	return this->proofwrite(*data);
+	return proofwrite(*data);
 }
 
 int32_t SocketOperations::proofwrite(std::vector<char>& data)
@@ -164,7 +164,8 @@ int32_t SocketOperations::proofwrite(std::vector<char>& data)
 	Output::printDebug(" ... data size is " + std::to_string(data.size()));
 
 	int32_t bytesSentSoFar = 0;
-	while (bytesSentSoFar < (signed)data.size()) {
+	while (bytesSentSoFar < (signed)data.size())
+	{
 		timeval timeout;
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
