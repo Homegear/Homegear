@@ -127,6 +127,7 @@ void SocketOperations::close()
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 {
+	Output::printDebug("Calling proofread...");
 	if(!connected()) autoConnect();
 	//Timeout needs to be set every time, so don't put it outside of the while loop
 	timeval timeout;
@@ -151,41 +152,43 @@ int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>> data)
 {
 	if(!connected()) autoConnect();
 	if(!data || data->empty()) return 0;
-	if(data->size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
-	int32_t ret;
-	for(uint32_t i = 0; i < 3; ++i)
-	{
-		ret = _ssl ? SSL_write(_ssl, &data->at(0), data->size()) : send(_fileDescriptor->descriptor, &data->at(0), data->size(), MSG_NOSIGNAL);
-		if(ret <= 0)
-		{
-			close();
-			throw SocketOperationException(strerror(errno));
-		}
-		if(ret != (signed)data->size() && i == 2) throw SocketSizeMismatchException("Not all data was sent to client.");
-		else break;
-	}
-	return ret;
+	return this->proofwrite(*data);
 }
 
 int32_t SocketOperations::proofwrite(std::vector<char>& data)
 {
+	Output::printDebug("Calling proofwrite ...");
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
 	if(data.size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
-	int32_t ret;
-	for(uint32_t i = 0; i < 3; ++i)
-	{
-		ret = _ssl ? SSL_write(_ssl, &data.at(0), data.size()) : send(_fileDescriptor->descriptor, &data.at(0), data.size(), MSG_NOSIGNAL);
-		if(ret <= 0)
+	Output::printDebug(" ... data size is " + std::to_string(data.size()));
+
+	int32_t bytesSentSoFar = 0;
+	while (bytesSentSoFar < (signed)data.size()) {
+		timeval timeout;
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		fd_set writeFileDescriptor;
+		FD_ZERO(&writeFileDescriptor);
+		FD_SET(_fileDescriptor->descriptor, &writeFileDescriptor);
+		int32_t readyFds = select(_fileDescriptor->descriptor + 1, NULL, &writeFileDescriptor, NULL, &timeout);
+		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
+		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
+
+		int32_t bytesToSend = data.size() - bytesSentSoFar;
+		int32_t bytesSentInStep = _ssl ? SSL_write(_ssl, &data.at(bytesSentSoFar), bytesToSend) : send(_fileDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
+		if(bytesSentInStep <= 0)
 		{
+			Output::printDebug(" ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
 			close();
 			throw SocketOperationException(strerror(errno));
 		}
-		if(ret != (signed)data.size() && i == 2) throw SocketSizeMismatchException("Not all data was sent to client.");
-		else break;
+		bytesSentSoFar += bytesSentInStep;
 	}
-	return ret;
+	Output::printDebug(" ... sent " + std::to_string(bytesSentSoFar));
+	return bytesSentSoFar;
 }
+
 
 bool SocketOperations::connected()
 {
@@ -197,6 +200,7 @@ bool SocketOperations::connected()
 
 void SocketOperations::getFileDescriptor()
 {
+	Output::printDebug("Calling getFileDescriptor...");
 	GD::fileDescriptorManager.shutdown(_fileDescriptor);
 
 	getConnection();
