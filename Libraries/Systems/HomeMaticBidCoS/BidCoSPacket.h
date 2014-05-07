@@ -30,8 +30,7 @@
 #ifndef BIDCOSPACKET_H
 #define BIDCOSPACKET_H
 
-#include "../../HelperFunctions/HelperFunctions.h"
-#include "../../Types/Packet.h"
+#include "../../../Modules/Base/Types/Packet.h"
 
 #include <iostream>
 #include <string>

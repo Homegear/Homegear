@@ -30,8 +30,8 @@
 #ifndef CLICLIENT_H_
 #define CLICLIENT_H_
 
-#include "../HelperFunctions/HelperFunctions.h"
-#include "../FileDescriptorManager/FileDescriptorManager.h"
+#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
+#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

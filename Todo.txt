@@ -1,6 +1,7 @@
 - Service message when no RF device is reachable for a certain (settable) amount of time
 - RPC Server nur neu starten, wenn config-Dateien geÃ¤ndert
 - Batterie leer von Rauchmelder testen
+- Geräte auf LAZYCONFIG überprüfen
 
 When devices are available:
 - Test blind_test
@@ -17,4 +18,3 @@ Today:
 
 Questions:
 - AES handshakes
-- Lazy config, what is that?

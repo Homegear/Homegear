@@ -31,8 +31,7 @@
 #define BIDCOSQUEUE_H
 
 #include "../../../delegate.hpp"
-#include "../../HelperFunctions/HelperFunctions.h"
-#include "../General/ServiceMessages.h"
+#include "../../../Modules/Base/Systems/ServiceMessages.h"
 #include "BidCoSPacket.h"
 
 #include <iostream>

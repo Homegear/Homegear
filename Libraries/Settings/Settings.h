@@ -30,7 +30,7 @@
 #ifndef SETTINGS_H_
 #define SETTINGS_H_
 
-#include "../HelperFunctions/HelperFunctions.h"
+#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
 #include "../Threads/Threads.h"
 
 #include <iostream>
@@ -59,6 +59,7 @@ public:
 	std::string clientSettingsPath() { return _clientSettingsPath; }
 	std::string serverSettingsPath() { return _serverSettingsPath; }
 	std::string physicalDeviceSettingsPath() { return _physicalDeviceSettingsPath; }
+	std::string libraryPath() { return _libraryPath; }
 	std::string scriptPath() { return _scriptPath; }
 	std::string firmwarePath() { return _firmwarePath; }
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
@@ -79,6 +80,7 @@ private:
 	std::string _clientSettingsPath;
 	std::string _serverSettingsPath;
 	std::string _physicalDeviceSettingsPath;
+	std::string _libraryPath;
 	std::string _scriptPath;
 	std::string _firmwarePath;
 	std::map<std::string, bool> _tunnelClients;

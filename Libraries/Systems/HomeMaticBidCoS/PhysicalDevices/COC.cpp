@@ -34,7 +34,7 @@
 namespace PhysicalDevices
 {
 
-COC::COC(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
+COC::COC(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice(GD::settings.gpioPath(), settings)
 {
 }
 
@@ -51,15 +51,15 @@ COC::~COC()
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -69,13 +69,13 @@ void COC::sendPacket(std::shared_ptr<Packet> packet)
 	{
 		if(!packet)
 		{
-			Output::printWarning("Warning: Packet was nullptr.");
+			GD::output->printWarning("Warning: Packet was nullptr.");
 			return;
 		}
 		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
 		if(packet->payload()->size() > 54)
 		{
-			if(GD::debugLevel >= 2) Output::printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
+			if(GD::debugLevel >= 2) GD::output->printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
 			return;
 		}
 		if(_updateMode)
@@ -84,7 +84,7 @@ void COC::sendPacket(std::shared_ptr<Packet> packet)
 			if(!bidCoSPacket) return;
 			if(!bidCoSPacket->isUpdatePacket())
 			{
-				Output::printInfo("Info: Can't send packet to BidCoS peer with address 0x" + HelperFunctions::getHexString(packet->destinationAddress(), 6) + ", because update mode is enabled.");
+				GD::output->printInfo("Info: Can't send packet to BidCoS peer with address 0x" + GD::helperFunctions->getHexString(packet->destinationAddress(), 6) + ", because update mode is enabled.");
 				return;
 			}
 		}
@@ -93,15 +93,15 @@ void COC::sendPacket(std::shared_ptr<Packet> packet)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -114,15 +114,15 @@ void COC::enableUpdateMode()
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -137,15 +137,15 @@ void COC::disableUpdateMode()
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -161,7 +161,7 @@ void COC::openDevice()
 		{
 			if(errno != EEXIST)
 			{
-				Output::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				GD::output->printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 
@@ -170,14 +170,14 @@ void COC::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				Output::printCritical("COC device is in use: " + _settings->device);
+				GD::output->printCritical("COC device is in use: " + _settings->device);
 				return;
 			}
 			unlink(_lockfile.c_str());
 			lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 			if(lockfileDescriptor == -1)
 			{
-				Output::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				GD::output->printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 		}
@@ -186,10 +186,10 @@ void COC::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = GD::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
+		_fileDescriptor = GD::fileDescriptorManager->add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
 		if(_fileDescriptor->descriptor == -1)
 		{
-			Output::printCritical("Couldn't open COC device \"" + _settings->device + "\": " + strerror(errno));
+			GD::output->printCritical("Couldn't open COC device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 
@@ -197,15 +197,15 @@ void COC::openDevice()
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -213,20 +213,20 @@ void COC::closeDevice()
 {
 	try
 	{
-		GD::fileDescriptorManager.close(_fileDescriptor);
+		GD::fileDescriptorManager->close(_fileDescriptor);
 		unlink(_lockfile.c_str());
 	}
     catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -258,15 +258,15 @@ void COC::setupDevice()
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -277,7 +277,7 @@ std::string COC::readFromDevice()
 		if(_stopped) return "";
 		if(_fileDescriptor->descriptor == -1)
 		{
-			Output::printCritical("Couldn't read from COC device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
+			GD::output->printCritical("Couldn't read from COC device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
 			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
@@ -305,25 +305,25 @@ std::string COC::readFromDevice()
 					if(!_stopCallbackThread) continue;
 					else return "";
 				case -1:
-					Output::printError("Error reading from COC device: " + _settings->device);
+					GD::output->printError("Error reading from COC device: " + _settings->device);
 					return "";
 				case 1:
 					break;
 				default:
-					Output::printError("Error reading from COC device: " + _settings->device);
+					GD::output->printError("Error reading from COC device: " + _settings->device);
 					return "";
 			}
 			i = read(_fileDescriptor->descriptor, localBuffer, 1);
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				Output::printError("Error reading from COC device: " + _settings->device);
+				GD::output->printError("Error reading from COC device: " + _settings->device);
 				return "";
 			}
 			packet.push_back(localBuffer[0]);
 			if(packet.size() > 200)
 			{
-				Output::printError("COC was disconnected.");
+				GD::output->printError("COC was disconnected.");
 				closeDevice();
 				return "";
 			}
@@ -332,11 +332,11 @@ std::string COC::readFromDevice()
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return "";
 }
@@ -351,7 +351,7 @@ void COC::writeToDevice(std::string data, bool printSending)
         int32_t i;
         if(GD::debugLevel > 3 && printSending)
         {
-            Output::printInfo("Info: Sending: " + data.substr(2, data.size() - 6));
+            GD::output->printInfo("Info: Sending: " + data.substr(2, data.size() - 6));
         }
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
@@ -367,18 +367,18 @@ void COC::writeToDevice(std::string data, bool printSending)
     }
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _sendMutex.unlock();
-    _lastPacketSent = HelperFunctions::getTime();
+    _lastPacketSent = GD::helperFunctions->getTime();
 }
 
 void COC::startListening()
@@ -405,15 +405,15 @@ void COC::startListening()
 	}
     catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -438,15 +438,15 @@ void COC::stopListening()
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -465,25 +465,25 @@ void COC::listen()
         	std::string packetHex = readFromDevice();
         	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + COC "A")
         	{
-				std::shared_ptr<BidCoS::BidCoSPacket> packet(new BidCoS::BidCoSPacket(packetHex, HelperFunctions::getTime()));
+				std::shared_ptr<BidCoS::BidCoSPacket> packet(new BidCoS::BidCoSPacket(packetHex, GD::helperFunctions->getTime()));
 				std::thread t(&COC::callCallback, this, packet);
 				Threads::setThreadPriority(t.native_handle(), 45);
 				t.detach();
         	}
-        	else if(!packetHex.empty()) Output::printWarning("Warning: Too short packet received: " + packetHex);
+        	else if(!packetHex.empty()) GD::output->printWarning("Warning: Too short packet received: " + packetHex);
         }
     }
     catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -501,15 +501,15 @@ void COC::setup(int32_t userID, int32_t groupID)
     }
     catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

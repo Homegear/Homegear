@@ -28,6 +28,7 @@
  */
 
 #include "Auth.h"
+#include "../GD/GD.h"
 
 namespace RPC
 {
@@ -108,15 +109,15 @@ bool Auth::basicServer(std::shared_ptr<RPCHeader>& binaryHeader)
 		sendBasicUnauthorized(true);
 		throw AuthException("No header field \"Authorization\"");
 	}
-	std::pair<std::string, std::string> authData = HelperFunctions::split(binaryHeader->authorization, ' ');
-	HelperFunctions::toLower(authData.first);
+	std::pair<std::string, std::string> authData = GD::helperFunctions->split(binaryHeader->authorization, ' ');
+	GD::helperFunctions->toLower(authData.first);
 	if(authData.first != "basic")
 	{
 		sendBasicUnauthorized(true);
 		throw AuthException("Authorization type is not basic but: " + authData.first);
 	}
-	std::pair<std::string, std::string> credentials = HelperFunctions::split(Base64::decode(authData.second), ':');
-	HelperFunctions::toLower(credentials.first);
+	std::pair<std::string, std::string> credentials = GD::helperFunctions->split(Base64::decode(authData.second), ':');
+	GD::helperFunctions->toLower(credentials.first);
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
 		sendBasicUnauthorized(true);
@@ -173,15 +174,15 @@ bool Auth::basicServer(HTTP& httpPacket)
 		sendBasicUnauthorized(false);
 		throw AuthException("No header field \"Authorization\"");
 	}
-	std::pair<std::string, std::string> authData = HelperFunctions::split(_http.getHeader()->authorization, ' ');
-	HelperFunctions::toLower(authData.first);
+	std::pair<std::string, std::string> authData = GD::helperFunctions->split(_http.getHeader()->authorization, ' ');
+	GD::helperFunctions->toLower(authData.first);
 	if(authData.first != "basic")
 	{
 		sendBasicUnauthorized(false);
 		throw AuthException("Authorization type is not basic but: " + authData.first);
 	}
-	std::pair<std::string, std::string> credentials = HelperFunctions::split(Base64::decode(authData.second), ':');
-	HelperFunctions::toLower(credentials.first);
+	std::pair<std::string, std::string> credentials = GD::helperFunctions->split(Base64::decode(authData.second), ':');
+	GD::helperFunctions->toLower(credentials.first);
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
 		sendBasicUnauthorized(false);

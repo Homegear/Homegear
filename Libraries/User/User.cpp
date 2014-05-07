@@ -56,7 +56,7 @@ bool User::verify(const std::string& userName, const std::string& password)
 	{
 		DataColumnVector dataSelect;
 		dataSelect.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
-		DataTable rows = GD::db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
+		DataTable rows = GD::db->executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
 		if(rows.empty() || rows.at(0).empty() || rows.at(0).size() != 2) return false;
 		std::vector<unsigned char> salt;
 		salt.insert(salt.begin(), rows.at(0).at(1)->binaryValue->begin(), rows.at(0).at(1)->binaryValue->end());
@@ -68,11 +68,11 @@ bool User::verify(const std::string& userName, const std::string& password)
 	}
 	catch(std::exception& ex)
 	{
-		Output::printError("Error verifying user credentials: " + std::string(ex.what()));
+		GD::output->printError("Error verifying user credentials: " + std::string(ex.what()));
 	}
 	catch(...)
 	{
-		Output::printError("Unknown error verifying user credentials.");
+		GD::output->printError("Unknown error verifying user credentials.");
 	}
 	return false;
 }

@@ -31,7 +31,6 @@
 #define FS20_SD_H
 
 #include "../FS20Device.h"
-#include "../../../HelperFunctions/HelperFunctions.h"
 
 #include <list>
 

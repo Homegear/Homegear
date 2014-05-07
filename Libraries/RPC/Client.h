@@ -38,7 +38,7 @@
 
 #include "RPCClient.h"
 #include "../Threads/Threads.h"
-#include "../Types/RPCVariable.h"
+#include "../../Modules/Base/Types/RPCVariable.h"
 
 namespace RPC
 {

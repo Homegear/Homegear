@@ -43,19 +43,21 @@ class EventHandler;
 
 #include "../CLI/CLIServer.h"
 #include "../CLI/CLIClient.h"
-#include "../LogicalDevices/LogicalDevices.h"
-#include "../Database/Database.h"
+#include "../Systems/General/FamilyController.h"
+#include "../../Modules/Base/Database/Database.h"
 #include "../Settings/Settings.h"
-#include "../Systems/General/DeviceFamily.h"
-#include "../Systems/General/DeviceFamilies.h"
-#include "../FileDescriptorManager/FileDescriptorManager.h"
+#include "../../Modules/Base/Systems/DeviceFamily.h"
+#include "../../Modules/Base/Systems/DeviceFamilies.h"
+#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
-#include "../RPC/Devices.h"
+#include "../../Modules/Base/RPC/Devices.h"
+#include "../../Modules/Base/BaseFactory.h"
 
 #include <vector>
 #include <map>
 #include <string>
+#include <dlfcn.h>
 
 class GD {
 public:
@@ -65,27 +67,37 @@ public:
 	static std::string socketPath;
 	static std::string workingDirectory;
 	static std::string executablePath;
-	static LogicalDevices devices;
+	static FamilyController devices;
 	static std::map<int32_t, RPC::Server> rpcServers;
 	static RPC::Client rpcClient;
 	static CLI::Server cliServer;
 	static CLI::Client cliClient;
 	static std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>> deviceFamilies;
-	static RPC::Devices rpcDevices;
+	static std::unique_ptr<RPC::Devices> rpcDevices;
 	static Settings settings;
 	static RPC::ServerSettings serverSettings;
 	static RPC::ClientSettings clientSettings;
-	static Database db;
+	static std::shared_ptr<Database> db;
 	static PhysicalDevices::PhysicalDevices physicalDevices;
 	static int32_t debugLevel;
 	static int32_t rpcLogLevel;
 	static EventHandler eventHandler;
-	static FileDescriptorManager fileDescriptorManager;
+	static std::shared_ptr<FileDescriptorManager> fileDescriptorManager;
+	static std::unique_ptr<BaseFactory> baseFactory;
+	static std::shared_ptr<Output> output;
+	static std::shared_ptr<HelperFunctions> helperFunctions;
+	static std::shared_ptr<Metadata> metadata;
 
-	virtual ~GD() { }
+	virtual ~GD() {}
+
+	static void init();
+	static void dispose();
 private:
 	//Non public constructor
 	GD();
+	static void loadBaseLibrary();
+
+	static void* baseHandle;
 };
 
 #endif /* GD_H_ */

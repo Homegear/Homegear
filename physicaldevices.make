@@ -94,7 +94,6 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/PhysicalDevice.o \
 	$(OBJDIR)/PhysicalDevices.o \
 
 RESOURCES := \
@@ -160,9 +159,6 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/PhysicalDevice.o: Libraries/PhysicalDevices/PhysicalDevice.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhysicalDevices.o: Libraries/PhysicalDevices/PhysicalDevices.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"

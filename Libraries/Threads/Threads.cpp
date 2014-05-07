@@ -49,25 +49,25 @@ void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t poli
 		{
 			if(error == EPERM)
 			{
-				Output::printError("Could not set thread priority. The executing user does not have enough privileges. Please run \"ulimit -r 100\" before executing Homegear.");
+				GD::output->printError("Could not set thread priority. The executing user does not have enough privileges. Please run \"ulimit -r 100\" before executing Homegear.");
 			}
-			else if(error == ESRCH) Output::printError("Could not set thread priority. Thread could not be found.");
-			else if(error == EINVAL) Output::printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
-			else Output::printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
+			else if(error == ESRCH) GD::output->printError("Could not set thread priority. Thread could not be found.");
+			else if(error == EINVAL) GD::output->printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
+			else GD::output->printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
 			GD::settings.setPrioritizeThreads(false);
 		}
-		else Output::printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
+		else GD::output->printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
 	}
 	catch(const std::exception& ex)
     {
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }

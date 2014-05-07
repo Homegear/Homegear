@@ -28,6 +28,7 @@
  */
 
 #include "HTTP.h"
+#include "../GD/GD.h"
 
 namespace RPC
 {
@@ -99,12 +100,12 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 	else if(!strnaicmp(name, "host", nameSize))
 	{
 		_header.host = std::string(value, valueSize);
-		HelperFunctions::toLower(_header.host);
+		GD::helperFunctions->toLower(_header.host);
 	}
 	else if(!strnaicmp(name, "content-type", nameSize))
 	{
 		_header.contentType = std::string(value, valueSize);
-		HelperFunctions::toLower(_header.contentType);
+		GD::helperFunctions->toLower(_header.contentType);
 	}
 	else if(!strnaicmp(name, "transfer-encoding", nameSize) || !strnaicmp(name, "te", nameSize))
 	{
@@ -114,7 +115,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		while ((pos = s.find(',')) != std::string::npos || !s.empty())
 		{
 		    std::string te = (pos == std::string::npos) ? s : s.substr(0, pos);
-		    HelperFunctions::trim(HelperFunctions::toLower(te));
+		    GD::helperFunctions->trim(GD::helperFunctions->toLower(te));
 		    if(te == "chunked") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::chunked);
 			else if(te == "compress") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::compress);
 			else if(te == "deflate") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::deflate);
@@ -132,7 +133,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		while ((pos = s.find(',')) != std::string::npos || !s.empty())
 		{
 			std::string c = (pos == std::string::npos) ? s : s.substr(0, pos);
-			HelperFunctions::trim(HelperFunctions::toLower(c));
+			GD::helperFunctions->trim(GD::helperFunctions->toLower(c));
 			if(c == "keep-alive") _header.connection = Connection::Enum::keepAlive;
 			else if(c == "close") _header.connection = Connection::Enum::close;
 			else if(c == "te") {} //ignore
@@ -223,9 +224,9 @@ void HTTP::readChunkSize(char** buffer, int32_t& bufferLength)
 		if(_partialChunkSize.empty() && newlinePos == *buffer + 1 && **buffer == '\r') newlinePos = strchr(*buffer + 2, '\n'); //\r is first character
 		if(!newlinePos || newlinePos >= *buffer + bufferLength) throw Exception("Could not parse chunk size.");
 		std::string chunkSize = _partialChunkSize + std::string(*buffer, newlinePos - *buffer);
-		HelperFunctions::trim(_partialChunkSize);
-		if(!HelperFunctions::isNumber(chunkSize)) throw Exception("Chunk size is no number.");
-		_chunkSize = HelperFunctions::getNumber(chunkSize, true);
+		GD::helperFunctions->trim(_partialChunkSize);
+		if(!GD::helperFunctions->isNumber(chunkSize)) throw Exception("Chunk size is no number.");
+		_chunkSize = GD::helperFunctions->getNumber(chunkSize, true);
 		_partialChunkSize = "";
 		bufferLength -= (newlinePos + 1) - *buffer;
 		*buffer = newlinePos + 1;

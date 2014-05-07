@@ -30,8 +30,8 @@
 #ifndef THREADS_H_
 #define THREADS_H_
 
-#include "../Exception/Exception.h"
-#include "../Output/Output.h"
+#include "../../Modules/Base/Exception.h"
+#include "../../Modules/Base/Output/Output.h"
 
 class Threads {
 public:

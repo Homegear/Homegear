@@ -30,8 +30,6 @@
 #ifndef BIDCOSPACKETMANAGER_H_
 #define BIDCOSPACKETMANAGER_H_
 
-#include "../../HelperFunctions/HelperFunctions.h"
-
 #include <iostream>
 #include <string>
 #include <chrono>

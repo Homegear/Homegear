@@ -30,8 +30,7 @@
 #ifndef TICC1100_H_
 #define TICC1100_H_
 
-#include "../../../HelperFunctions/HelperFunctions.h"
-#include "../../../PhysicalDevices/PhysicalDevice.h"
+#include "../../../../Modules/Base/Systems/PhysicalDevice.h"
 
 #include <thread>
 #include <iostream>

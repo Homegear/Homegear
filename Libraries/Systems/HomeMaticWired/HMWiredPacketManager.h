@@ -31,7 +31,6 @@
 #define HMWIREDPACKETMANAGER_H_
 
 #include "HMWiredPacket.h"
-#include "../../HelperFunctions/HelperFunctions.h"
 
 #include <iostream>
 #include <string>

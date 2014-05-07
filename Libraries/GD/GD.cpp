@@ -29,7 +29,7 @@
 
 #include "GD.h"
 
-Database GD::db;
+std::shared_ptr<Database> GD::db;
 PhysicalDevices::PhysicalDevices GD::physicalDevices;
 std::string GD::configPath = "/etc/homegear/";
 std::string GD::pidfilePath = "";
@@ -37,17 +37,85 @@ std::string GD::runDir = "/var/run/homegear/";
 std::string GD::socketPath = GD::runDir + "homegear.sock";
 std::string GD::workingDirectory = "";
 std::string GD::executablePath = "";
-LogicalDevices GD::devices;
+FamilyController GD::devices;
 std::map<int32_t, RPC::Server> GD::rpcServers;
 RPC::Client GD::rpcClient;
 CLI::Server GD::cliServer;
 CLI::Client GD::cliClient;
 std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>> GD::deviceFamilies;
-RPC::Devices GD::rpcDevices;
+std::unique_ptr<RPC::Devices> GD::rpcDevices;
 int32_t GD::debugLevel = 7;
 int32_t GD::rpcLogLevel = 1;
 Settings GD::settings;
 RPC::ServerSettings GD::serverSettings;
 RPC::ClientSettings GD::clientSettings;
 EventHandler GD::eventHandler;
-FileDescriptorManager GD::fileDescriptorManager;
+std::shared_ptr<FileDescriptorManager> GD::fileDescriptorManager;
+void* GD::baseHandle = nullptr;
+std::unique_ptr<BaseFactory> GD::baseFactory;
+std::shared_ptr<Output> GD::output;
+std::shared_ptr<HelperFunctions> GD::helperFunctions;
+std::shared_ptr<Metadata> GD::metadata;
+
+void GD::init()
+{
+	loadBaseLibrary();
+
+	output = baseFactory->createOutput();
+	try
+	{
+		helperFunctions = baseFactory->createHelperFunctions();
+		fileDescriptorManager = baseFactory->createFileDescriptorManager();
+		db = baseFactory->createDatabase();
+
+		bool (*initBase)(std::shared_ptr<FileDescriptorManager> fileDescriptorManager, std::shared_ptr<Database> db);
+		initBase = (bool (*)(std::shared_ptr<FileDescriptorManager> fileDescriptorManager, std::shared_ptr<Database> db))dlsym(baseHandle, "init");
+		if(!init)
+		{
+			std::cerr << "Critical: Could not open base library (" + settings.libraryPath() + "mod_base.so). Symbol \"init\" not found." << std::endl;
+			exit(1);
+		}
+		if(!initBase(fileDescriptorManager, db)) exit(1);
+
+		metadata = baseFactory->createMetadata();
+		rpcDevices = baseFactory->createRPCDevices();
+	}
+	catch(const std::exception& ex)
+    {
+        output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void GD::loadBaseLibrary()
+{
+	std::string path(settings.libraryPath() + "mod_base.so");
+	baseHandle = dlopen(path.c_str(), RTLD_NOW);
+	if(!baseHandle)
+	{
+		std::cerr << "Critical: Could not open base library (" + settings.libraryPath() + "mod_base.so)." << std::endl;
+		exit(1);
+	}
+
+	BaseFactory* (*create)();
+	create = (BaseFactory* (*)())dlsym(baseHandle, "create");
+	if(!create)
+	{
+		std::cerr << "Critical: Could not open base library (" + settings.libraryPath() + "mod_base.so). Symbol \"create\" not found." << std::endl;
+		exit(1);
+	}
+	baseFactory.reset((BaseFactory*)create());
+}
+
+void GD::dispose()
+{
+	if(baseHandle)
+	{
+		baseFactory.reset();
+		dlclose(baseHandle);
+		baseHandle = nullptr;
+	}
+}

@@ -34,7 +34,7 @@
 namespace PhysicalDevices
 {
 
-InsteonHubX10::InsteonHubX10(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
+InsteonHubX10::InsteonHubX10(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice(GD::settings.gpioPath(), settings)
 {
 	signal(SIGPIPE, SIG_IGN);
 }
@@ -51,15 +51,15 @@ InsteonHubX10::~InsteonHubX10()
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -69,28 +69,28 @@ void InsteonHubX10::sendPacket(std::shared_ptr<Packet> packet)
 	{
 		if(!packet)
 		{
-			Output::printWarning("Warning: Packet was nullptr.");
+			GD::output->printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		_lastAction = HelperFunctions::getTime();
+		_lastAction = GD::helperFunctions->getTime();
 
 		std::shared_ptr<Insteon::InsteonPacket> insteonPacket(std::dynamic_pointer_cast<Insteon::InsteonPacket>(packet));
 		if(!insteonPacket) return;
 		std::vector<char> data = insteonPacket->byteArray();
 		send(data, true);
-		_lastPacketSent = HelperFunctions::getTime();
+		_lastPacketSent = GD::helperFunctions->getTime();
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -103,19 +103,19 @@ void InsteonHubX10::send(std::vector<char>& packet, bool printPacket)
     }
     catch(RPC::SocketOperationException& ex)
     {
-    	Output::printError(ex.what());
+    	GD::output->printError(ex.what());
     }
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _sendMutex.unlock();
 }
@@ -126,24 +126,24 @@ void InsteonHubX10::startListening()
 	{
 		stopListening();
 		_socket = RPC::SocketOperations(_settings->hostname, _settings->port, _settings->ssl, _settings->verifyCertificate);
-		Output::printDebug("Connecting to Insteon Hub X10 with Hostname " + _settings->hostname + " on port " + _settings->port + "...");
+		GD::output->printDebug("Connecting to Insteon Hub X10 with Hostname " + _settings->hostname + " on port " + _settings->port + "...");
 		_socket.open();
-		Output::printInfo("Connected to Insteon Hub X10 with Hostname " + _settings->hostname + " on port " + _settings->port + ".");
+		GD::output->printInfo("Connected to Insteon Hub X10 with Hostname " + _settings->hostname + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&InsteonHubX10::listen, this);
 		Threads::setThreadPriority(_listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -163,15 +163,15 @@ void InsteonHubX10::stopListening()
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -197,41 +197,41 @@ void InsteonHubX10::listen()
 			catch(RPC::SocketTimeOutException& ex) { continue; }
 			catch(RPC::SocketClosedException& ex)
 			{
-				Output::printWarning("Warning: " + ex.what());
+				GD::output->printWarning("Warning: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(30000));
 				continue;
 			}
 			catch(RPC::SocketOperationException& ex)
 			{
-				Output::printError("Error: " + ex.what());
+				GD::output->printError("Error: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(30000));
 				continue;
 			}
         	if(receivedBytes == 0) continue;
         	if(receivedBytes == bufferMax)
         	{
-        		Output::printError("Could not read from Insteon Hub X10: Too much data.");
+        		GD::output->printError("Could not read from Insteon Hub X10: Too much data.");
         		continue;
         	}
 
-			std::shared_ptr<Insteon::InsteonPacket> packet(new Insteon::InsteonPacket(buffer, receivedBytes, HelperFunctions::getTime()));
+			std::shared_ptr<Insteon::InsteonPacket> packet(new Insteon::InsteonPacket(buffer, receivedBytes, GD::helperFunctions->getTime()));
 			std::thread t(&InsteonHubX10::callCallback, this, packet);
 			Threads::setThreadPriority(t.native_handle(), 45);
 			t.detach();
-			_lastPacketReceived = HelperFunctions::getTime();
+			_lastPacketReceived = GD::helperFunctions->getTime();
         }
     }
     catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

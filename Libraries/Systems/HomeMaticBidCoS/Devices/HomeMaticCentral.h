@@ -30,12 +30,12 @@
 #ifndef HOMEMATICCENTRAL_H_
 #define HOMEMATICCENTRAL_H_
 
-#include "../../../LogicalDevices/Central.h"
+#include "../../../../Modules/Base/Systems/Central.h"
 #include "HM-CC-TC.h"
 #include "HM-LC-SwX-FM.h"
 #include "../HomeMaticDevice.h"
-#include "../../../Types/RPCVariable.h"
-#include "../../../Metadata/Metadata.h"
+#include "../../../../Modules/Base/Types/RPCVariable.h"
+#include "../../../../Modules/Base/Metadata/Metadata.h"
 
 #include <memory>
 #include <mutex>

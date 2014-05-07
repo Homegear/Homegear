@@ -31,17 +31,17 @@
 #define RPCSERVER_H_
 
 #include "HTTP.h"
-#include "../Types/RPCVariable.h"
+#include "../../Modules/Base/Types/RPCVariable.h"
 #include "RPCMethod.h"
-#include "../Encoding/RPCHeader.h"
-#include "../Encoding/RPCDecoder.h"
-#include "../Encoding/RPCEncoder.h"
-#include "../Encoding/XMLRPCDecoder.h"
-#include "../Encoding/XMLRPCEncoder.h"
+#include "../../Modules/Base/Encoding/RPCHeader.h"
+#include "../../Modules/Base/Encoding/RPCDecoder.h"
+#include "../../Modules/Base/Encoding/RPCEncoder.h"
+#include "../../Modules/Base/Encoding/XMLRPCDecoder.h"
+#include "../../Modules/Base/Encoding/XMLRPCEncoder.h"
 #include "SocketOperations.h"
 #include "Auth.h"
 #include "ServerSettings.h"
-#include "../FileDescriptorManager/FileDescriptorManager.h"
+#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
 
 #include <thread>
 #include <iostream>

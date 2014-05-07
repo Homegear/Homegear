@@ -30,7 +30,6 @@
 #ifndef PENDINGBIDCOSQUEUES_H_
 #define PENDINGBIDCOSQUEUES_H_
 
-#include "../../HelperFunctions/HelperFunctions.h"
 #include "BidCoSQueue.h"
 #include "BidCoSPeer.h"
 

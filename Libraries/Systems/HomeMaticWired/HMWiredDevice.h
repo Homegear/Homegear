@@ -30,8 +30,7 @@
 #ifndef HMWIREDDEVICE_H
 #define HMWIREDDEVICE_H
 
-#include "../../LogicalDevices/LogicalDevice.h"
-#include "../../HelperFunctions/HelperFunctions.h"
+#include "../../../Modules/Base/Systems/LogicalDevice.h"
 #include "HMWiredPeer.h"
 #include "HMWiredPacketManager.h"
 #include "HMWiredDeviceTypes.h"

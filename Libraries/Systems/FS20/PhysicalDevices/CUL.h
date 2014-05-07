@@ -30,8 +30,7 @@
 #ifndef CUL_H
 #define CUL_H
 
-#include "../../../HelperFunctions/HelperFunctions.h"
-#include "../../../PhysicalDevices/PhysicalDevice.h"
+#include "../../../../Modules/Base/Systems/PhysicalDevice.h"
 
 #include <thread>
 #include <iostream>

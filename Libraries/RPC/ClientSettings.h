@@ -30,7 +30,7 @@
 #ifndef CLIENTSETTINGS_H_
 #define CLIENTSETTINGS_H_
 
-#include "../HelperFunctions/HelperFunctions.h"
+#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
 
 #include <memory>
 #include <iostream>

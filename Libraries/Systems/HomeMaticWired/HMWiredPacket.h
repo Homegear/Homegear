@@ -30,8 +30,7 @@
 #ifndef HMWIREDPACKET_H_
 #define HMWIREDPACKET_H_
 
-#include "../../Types/Packet.h"
-#include "../../HelperFunctions/HelperFunctions.h"
+#include "../../../Modules/Base/Types/Packet.h"
 
 #include <map>
 

@@ -30,8 +30,8 @@
 #ifndef SOCKETOPERATIONS_H_
 #define SOCKETOPERATIONS_H_
 
-#include "../HelperFunctions/HelperFunctions.h"
-#include "../FileDescriptorManager/FileDescriptorManager.h"
+#include "../../Modules/Base/Exception.h"
+#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
 
 #include <thread>
 #include <iostream>

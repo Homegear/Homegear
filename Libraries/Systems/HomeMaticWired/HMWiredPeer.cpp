@@ -43,15 +43,15 @@ std::shared_ptr<HMWiredCentral> HMWiredPeer::getCentral()
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<HMWiredCentral>();
 }
@@ -76,10 +76,10 @@ void HMWiredPeer::initializeCentralConfig()
 	{
 		if(!rpcDevice)
 		{
-			Output::printWarning("Warning: Tried to initialize HomeMatic Wired peer's central config without rpcDevice being set.");
+			GD::output->printWarning("Warning: Tried to initialize HomeMatic Wired peer's central config without rpcDevice being set.");
 			return;
 		}
-		GD::db.executeCommand("SAVEPOINT hmWiredPeerConfig" + std::to_string(_address));
+		GD::db->executeCommand("SAVEPOINT hmWiredPeerConfig" + std::to_string(_address));
 		RPCConfigurationParameter parameter;
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
@@ -101,17 +101,17 @@ void HMWiredPeer::initializeCentralConfig()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::db.executeCommand("RELEASE hmWiredPeerConfig" + std::to_string(_address));
+    GD::db->executeCommand("RELEASE hmWiredPeerConfig" + std::to_string(_address));
 }
 
 void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPeer> peer)
@@ -121,7 +121,7 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPee
 		std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(channel, RPC::ParameterSet::Type::Enum::link);
 		if(!parameterSet)
 		{
-			Output::printError("Error: No link parameter set found.");
+			GD::output->printError("Error: No link parameter set found.");
 			return;
 		}
 		std::shared_ptr<RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
@@ -134,7 +134,7 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPee
 		if(parameterSet->channelOffset > max) max = parameterSet->channelOffset;
 		if(max - min != 5)
 		{
-			Output::printError("Error: Address format of parameter set is not supported.");
+			GD::output->printError("Error: Address format of parameter set is not supported.");
 			return;
 		}
 
@@ -147,14 +147,14 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPee
 		data.at(parameterSet->peerChannelOffset) = peer->channel + peer->physicalIndexOffset;
 		if(peer->configEEPROMAddress == -1)
 		{
-			Output::printError("Error: Link config's EEPROM address is invalid.");
+			GD::output->printError("Error: Link config's EEPROM address is invalid.");
 			return;
 		}
 		std::vector<int32_t> configBlocks = setConfigParameter((double)peer->configEEPROMAddress, 6.0, data);
 		for(std::vector<int32_t>::iterator i = configBlocks.begin(); i != configBlocks.end(); ++i)
 		{
 			std::vector<uint8_t> configBlock = binaryConfig.at(*i).data;
-			if(!getCentral()->writeEEPROM(_address, *i, configBlock)) Output::printError("Error: Could not write config to device's eeprom.");
+			if(!getCentral()->writeEEPROM(_address, *i, configBlock)) GD::output->printError("Error: Could not write config to device's eeprom.");
 		}
 
 		if(!peer->isSender) return; //Nothing more to do
@@ -165,19 +165,19 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPee
 			variables->structValue->insert(RPC::RPCStructElement((*i)->id, (*i)->logicalParameter->getDefaultValue()));
 		}
 		std::shared_ptr<RPC::RPCVariable> result = putParamset(channel, RPC::ParameterSet::Type::Enum::link, peer->id, peer->channel, variables);
-		if(result->errorStruct) Output::printError("Error: " + result->structValue->at("faultString")->stringValue);
+		if(result->errorStruct) GD::output->printError("Error: " + result->structValue->at("faultString")->stringValue);
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -255,7 +255,7 @@ std::string HMWiredPeer::handleCLICommand(std::string command)
 			stringStream << "Address\tData" << std::endl;
 			for(std::unordered_map<uint32_t, ConfigDataBlock>::iterator i = binaryConfig.begin(); i != binaryConfig.end(); ++i)
 			{
-				stringStream << "0x" << std::hex << std::setfill('0') << std::setw(4) << i->first << "\t" << HelperFunctions::getHexString(i->second.data) << std::dec << std::endl;
+				stringStream << "0x" << std::hex << std::setfill('0') << std::setw(4) << i->first << "\t" << GD::helperFunctions->getHexString(i->second.data) << std::dec << std::endl;
 			}
 			return stringStream.str();
 		}
@@ -314,63 +314,63 @@ std::string HMWiredPeer::handleCLICommand(std::string command)
 			//Test 1: Set two bytes within one config data block
 			stringStream << "EEPROM before test 1:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address1].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(0x355.0, 2.0, data)\" with data 0xABCD:" << std::endl;
 			std::vector<uint8_t> data({0xAB, 0xCD});
 			setConfigParameter(853.0, 2.0, data);
 			data = getConfigParameter(853.0, 2.0);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 1:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address1].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 1
 
 			//Test 2: Set four bytes spanning over two data blocks
 			stringStream << "EEPROM before test 2:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address2].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(0x35E.0, 4.0, data)\" with data 0xABCDEFAC:" << std::endl;
 			data = std::vector<uint8_t>({0xAB, 0xCD, 0xEF, 0xAC});
 			setConfigParameter(862.0, 4.0, data);
 			data = getConfigParameter(862.0, 4.0);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 2:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address2].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 2
 
 			//Test 3: Set 20 bytes spanning over three data blocks
 			stringStream << "EEPROM before test 3:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(0x35F.0, 20.0, data)\" with data 0xABCDEFAC112233445566778899AABBCCDDEE1223:" << std::endl;
 			data = std::vector<uint8_t>({0xAB, 0xCD, 0xEF, 0xAC, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0x12, 0x23});
 			setConfigParameter(863.0, 20.0, data);
 			data = getConfigParameter(863.0, 20.0);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 3:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 3
 
@@ -381,76 +381,76 @@ std::string HMWiredPeer::handleCLICommand(std::string command)
 			//Test 4: Size 1.4
 			stringStream << "EEPROM before test 4:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address1].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(0x352.0, 1.4, data)\" with data 0x0B5E:" << std::endl;
 			data = std::vector<uint8_t>({0x0B, 0x5E});
 			setConfigParameter(850.0, 1.4, data);
 			data = getConfigParameter(850.0, 1.4);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 4:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << HelperFunctions::getHexString(binaryConfig[address1].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address1 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address1].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 4
 
 			//Test 5: Size 0.6
 			stringStream << "EEPROM before test 5:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(0x375.0, 0.6, data)\" with data 0x15:" << std::endl;
 			data = std::vector<uint8_t>({0x15});
 			setConfigParameter(885.0, 0.6, data);
 			data = getConfigParameter(885.0, 0.6);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 5:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 5
 
 			//Test 6: Size 0.6, index offset 0.2
 			stringStream << "EEPROM before test 6:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(0x377.2, 0.6, data)\" with data 0x15:" << std::endl;
 			data = std::vector<uint8_t>({0x15});
 			setConfigParameter(887.2, 0.6, data);
 			data = getConfigParameter(887.2, 0.6);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 6:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 6
 
 			//Test 7: Size 0.3, index offset 0.6
 			stringStream << "EEPROM before test 7:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(0x379.6, 0.3, data)\" with data 0x02:" << std::endl;
 			data = std::vector<uint8_t>({0x02});
 			setConfigParameter(889.6, 0.3, data);
 			data = getConfigParameter(889.6, 0.3);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 7:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 7
 
@@ -461,21 +461,21 @@ std::string HMWiredPeer::handleCLICommand(std::string command)
 			//Test 8: Size 0.3, index offset 0.6 spanning over two data blocks
 			stringStream << "EEPROM before test 8:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(0x36F.6, 0.3, data)\" with data 0x02:" << std::endl;
 			data = std::vector<uint8_t>({0x02});
 			setConfigParameter(879.6, 0.3, data);
 			data = getConfigParameter(879.6, 0.3);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 8:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 8
 
@@ -487,59 +487,59 @@ std::string HMWiredPeer::handleCLICommand(std::string command)
 			//Test 9: Size 0.5, index offset 0.6 spanning over two data blocks
 			stringStream << "EEPROM before test 9:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(0x36F.6, 0.5, data)\" with data 0x0A:" << std::endl;
 			data = std::vector<uint8_t>({0x0A});
 			setConfigParameter(879.6, 0.5, data);
 			data = getConfigParameter(879.6, 0.5);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 9:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << HelperFunctions::getHexString(binaryConfig[address2].data) << std::dec << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address2 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address2].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 9
 
 			//Test 10: Test of steps: channelIndex 5, index offset 0.2, step 0.3
 			stringStream << "EEPROM before test 10:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(5, 881.2, 0.3, 0.3, data)\" with data 0x03:" << std::endl;
 			data = std::vector<uint8_t>({0x03});
 			setMasterConfigParameter(5, 881.2, 0.3, 0.3, data);
 			data = getMasterConfigParameter(5, 881.2, 0.3, 0.3);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 10:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 10
 
 			//Test 11: Test of steps: channelIndex 4, index offset 0.2, step 0.3
 			stringStream << "EEPROM before test 11:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "Executing \"setConfigParameter(4, 0x371.2, 0.3, 0.3, data)\" with data 0x02:" << std::endl;
 			data = std::vector<uint8_t>({0x02});
 			setMasterConfigParameter(4, 881.2, 0.3, 0.3, data);
 			data = getMasterConfigParameter(4, 881.2, 0.3, 0.3);
-			stringStream << "\"getConfigParameter\" returned: 0x" << HelperFunctions::getHexString(data) << std::endl;
+			stringStream << "\"getConfigParameter\" returned: 0x" << GD::helperFunctions->getHexString(data) << std::endl;
 			stringStream << std::endl;
 
 			stringStream << "EEPROM after test 11:" << std::endl;
 			stringStream << "    Address\tData" << std::endl;
-			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << HelperFunctions::getHexString(binaryConfig[address3].data) << std::dec << std::endl;
+			stringStream << "    0x" << std::hex << std::setfill('0') << std::setw(4) << address3 << "\t" << GD::helperFunctions->getHexString(binaryConfig[address3].data) << std::dec << std::endl;
 			stringStream << std::endl << "============================================" << std::endl << std::endl;
 			//End Test 11
 
@@ -552,15 +552,15 @@ std::string HMWiredPeer::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -572,7 +572,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 	{
 		if(size < 0 || index < 0)
 		{
-			Output::printError("Error: Can't set configuration parameter. Index or size is negative.");
+			GD::output->printError("Error: Can't set configuration parameter. Index or size is negative.");
 			return changedBlocks;
 		}
 		if(size > 0.8 && size < 1.0) size = 1.0;
@@ -586,7 +586,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 			intByteIndex -= configBlockIndex;
 			if(size > 1.0)
 			{
-				Output::printError("Error: HomeMatic Wired peer " + std::to_string(_peerID) + ": Can't set partial byte index > 1.");
+				GD::output->printError("Error: HomeMatic Wired peer " + std::to_string(_peerID) + ": Can't set partial byte index > 1.");
 				return changedBlocks;
 			}
 			uint32_t bitSize = std::lround(size * 10);
@@ -600,7 +600,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 			ConfigDataBlock* configBlock = &binaryConfig[configBlockIndex];
 			if(configBlock->data.size() != 0x10)
 			{
-				Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+				GD::output->printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 				return changedBlocks;
 			}
 			if(bitSize == 8) configBlock->data.at(intByteIndex) = 0;
@@ -623,7 +623,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 					configBlock = &binaryConfig[configBlockIndex];
 					if(configBlock->data.size() != 0x10)
 					{
-						Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+						GD::output->printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 						return changedBlocks;
 					}
 					intByteIndex = 0;
@@ -670,7 +670,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 						configBlock = &binaryConfig[configBlockIndex];
 						if(configBlock->data.size() != 0x10)
 						{
-							Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+							GD::output->printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 							return changedBlocks;
 						}
 					}
@@ -699,7 +699,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 							configBlock = &binaryConfig[configBlockIndex];
 							if(configBlock->data.size() != 0x10)
 							{
-								Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+								GD::output->printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 								return changedBlocks;
 							}
 						}
@@ -722,7 +722,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 						configBlock = &binaryConfig[configBlockIndex];
 						if(configBlock->data.size() != 0x10)
 						{
-							Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+							GD::output->printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 							return changedBlocks;
 						}
 					}
@@ -734,15 +734,15 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return changedBlocks;
 }
@@ -769,15 +769,15 @@ std::vector<int32_t> HMWiredPeer::setMasterConfigParameter(int32_t channelIndex,
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<int32_t>();
 }
@@ -791,15 +791,15 @@ std::vector<int32_t> HMWiredPeer::setMasterConfigParameter(int32_t channelIndex,
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<int32_t>();
 }
@@ -818,13 +818,13 @@ std::vector<int32_t> HMWiredPeer::setMasterConfigParameter(int32_t channel, std:
 		{
 			if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1)
 			{
-				Output::printError("Error: Can't get parameter set. address_start or address_step is not set.");
+				GD::output->printError("Error: Can't get parameter set. address_start or address_step is not set.");
 				return std::vector<int32_t>();
 			}
 			int32_t channelIndex = channel - rpcChannel->startIndex;
 			if(parameterSet->count > 0 && channelIndex >= parameterSet->count)
 			{
-				Output::printError("Error: Can't get parameter set. Out of bounds.");
+				GD::output->printError("Error: Can't get parameter set. Out of bounds.");
 				return std::vector<int32_t>();
 			}
 			return setMasterConfigParameter(channelIndex, parameterSet->addressStart, parameterSet->addressStep, parameter->physicalParameter->address.index, parameter->physicalParameter->size, binaryValue);
@@ -832,15 +832,15 @@ std::vector<int32_t> HMWiredPeer::setMasterConfigParameter(int32_t channel, std:
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<int32_t>();
 }
@@ -857,7 +857,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 		}
 		if(size < 0 || index < 0)
 		{
-			Output::printError("Error: Can't get configuration parameter. Index or size is negative.");
+			GD::output->printError("Error: Can't get configuration parameter. Index or size is negative.");
 			result.push_back(0);
 			return result;
 		}
@@ -866,14 +866,14 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 		int32_t configBlockIndex = (intByteIndex / 0x10) * 0x10;
 		if(configBlockIndex >= rpcDevice->eepSize)
 		{
-			Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+			GD::output->printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
 			result.push_back(0);
 			return result;
 		}
 		intByteIndex = intByteIndex - configBlockIndex;
 		if(configBlockIndex >= rpcDevice->eepSize)
 		{
-			Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+			GD::output->printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
 			result.clear();
 			result.push_back(0);
 			return result;
@@ -886,7 +886,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 		std::vector<uint8_t>* configBlock = &binaryConfig[configBlockIndex].data;
 		if(configBlock->size() != 0x10)
 		{
-			Output::printError("Error: Can't get configuration parameter. Can't read EEPROM.");
+			GD::output->printError("Error: Can't get configuration parameter. Can't read EEPROM.");
 			result.push_back(0);
 			return result;
 		}
@@ -894,7 +894,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 		{
 			if(size > 1)
 			{
-				Output::printError("Error: Can't get configuration parameter. Partial byte index > 1 requested.");
+				GD::output->printError("Error: Can't get configuration parameter. Partial byte index > 1 requested.");
 				result.push_back(0);
 				return result;
 			}
@@ -911,7 +911,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 					configBlockIndex += 0x10;
 					if(configBlockIndex >= rpcDevice->eepSize)
 					{
-						Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+						GD::output->printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
 						result.clear();
 						result.push_back(0);
 						return result;
@@ -924,7 +924,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 					configBlock = &binaryConfig[configBlockIndex].data;
 					if(configBlock->size() != 0x10)
 					{
-						Output::printError("Error: Can't get configuration parameter. Can't read EEPROM.");
+						GD::output->printError("Error: Can't get configuration parameter. Can't read EEPROM.");
 						result.clear();
 						result.push_back(0);
 						return result;
@@ -952,7 +952,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 					configBlockIndex += 0x10;
 					if(configBlockIndex >= rpcDevice->eepSize)
 					{
-						Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+						GD::output->printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
 						result.clear();
 						result.push_back(0);
 						return result;
@@ -965,7 +965,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 					configBlock = &binaryConfig[configBlockIndex].data;
 					if(configBlock->size() != 0x10)
 					{
-						Output::printError("Error: Can't get configuration parameter. Can't read EEPROM.");
+						GD::output->printError("Error: Can't get configuration parameter. Can't read EEPROM.");
 						result.clear();
 						result.push_back(0);
 						return result;
@@ -982,15 +982,15 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::vector<uint8_t>();
 }
@@ -1017,15 +1017,15 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channelIndex,
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -1039,15 +1039,15 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channelIndex,
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -1067,13 +1067,13 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channel, std:
 		{
 			if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1)
 			{
-				Output::printError("Error: Can't get parameter set. address_start or address_step is not set.");
+				GD::output->printError("Error: Can't get parameter set. address_start or address_step is not set.");
 				return std::vector<uint8_t>();
 			}
 			int32_t channelIndex = channel - rpcChannel->startIndex;
 			if(parameterSet->count > 0 && channelIndex >= parameterSet->count)
 			{
-				Output::printError("Error: Can't get parameter set. Out of bounds.");
+				GD::output->printError("Error: Can't get parameter set. Out of bounds.");
 				return std::vector<uint8_t>();
 			}
 			value = getMasterConfigParameter(channelIndex, parameterSet->addressStart, parameterSet->addressStep, parameter->physicalParameter->address.index, parameter->physicalParameter->size);
@@ -1082,15 +1082,15 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channel, std:
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -1113,15 +1113,15 @@ void HMWiredPeer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1147,15 +1147,15 @@ std::shared_ptr<BasicPeer> HMWiredPeer::getPeer(int32_t channel, std::string ser
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -1173,15 +1173,15 @@ std::shared_ptr<BasicPeer> HMWiredPeer::getPeer(int32_t channel, int32_t address
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -1199,15 +1199,15 @@ std::shared_ptr<BasicPeer> HMWiredPeer::getPeer(int32_t channel, uint64_t id, in
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -1226,11 +1226,11 @@ void HMWiredPeer::removePeer(int32_t channel, uint64_t id, int32_t remoteChannel
 				if(parameterSet && (*i)->configEEPROMAddress != -1 && parameterSet->addressStart > -1 && parameterSet->addressStep > 0)
 				{
 					std::vector<uint8_t> data(parameterSet->addressStep, 0xFF);
-					Output::printDebug("Debug: Erasing " + std::to_string(data.size()) + " bytes in eeprom at address " + HelperFunctions::getHexString((*i)->configEEPROMAddress, 4));
+					GD::output->printDebug("Debug: Erasing " + std::to_string(data.size()) + " bytes in eeprom at address " + GD::helperFunctions->getHexString((*i)->configEEPROMAddress, 4));
 					std::vector<int32_t> configBlocks = setConfigParameter((*i)->configEEPROMAddress, parameterSet->addressStep, data);
 					for(std::vector<int32_t>::iterator j = configBlocks.begin(); j != configBlocks.end(); ++j)
 					{
-						if(!getCentral()->writeEEPROM(_address, *j, binaryConfig[*j].data)) Output::printError("Error: Could not write config to device's eeprom.");
+						if(!getCentral()->writeEEPROM(_address, *j, binaryConfig[*j].data)) GD::output->printError("Error: Could not write config to device's eeprom.");
 					}
 				}
 				_peers[channel].erase(i);
@@ -1241,15 +1241,15 @@ void HMWiredPeer::removePeer(int32_t channel, uint64_t id, int32_t remoteChannel
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
 }
@@ -1280,22 +1280,22 @@ int32_t HMWiredPeer::getFreeEEPROMAddress(int32_t channel, bool isSender)
 		}
 		if(currentAddress >= max)
 		{
-			Output::printError("Error: There are no free EEPROM addresses to store links.");
+			GD::output->printError("Error: There are no free EEPROM addresses to store links.");
 			return -1;
 		}
 		return currentAddress;
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -1307,7 +1307,7 @@ void HMWiredPeer::loadVariables(HMWiredDevice* device)
 		_databaseMutex.lock();
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-		DataTable rows = GD::db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
+		DataTable rows = GD::db->executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
@@ -1320,7 +1320,7 @@ void HMWiredPeer::loadVariables(HMWiredDevice* device)
 				_deviceType = LogicalDeviceType(DeviceFamilies::HomeMaticWired, row->second.at(3)->intValue);
 				if(_deviceType.type() == (uint32_t)DeviceType::none)
 				{
-					Output::printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device id unknown: 0x" + HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+					GD::output->printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device id unknown: 0x" + GD::helperFunctions->getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
 				}
 				break;
 			case 5:
@@ -1342,15 +1342,15 @@ void HMWiredPeer::loadVariables(HMWiredDevice* device)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 }
@@ -1361,10 +1361,10 @@ bool HMWiredPeer::load(LogicalDevice* device)
 	{
 		loadVariables((HMWiredDevice*)device);
 
-		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
+		rpcDevice = GD::rpcDevices->find(_deviceType, _firmwareVersion, -1);
 		if(!rpcDevice)
 		{
-			Output::printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
+			GD::output->printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device type not found: 0x" + GD::helperFunctions->getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
 		std::string entry;
@@ -1376,15 +1376,15 @@ bool HMWiredPeer::load(LogicalDevice* device)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -1398,15 +1398,15 @@ void HMWiredPeer::save(bool savePeer, bool variables, bool centralConfig)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1423,15 +1423,15 @@ void HMWiredPeer::saveVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1446,15 +1446,15 @@ void HMWiredPeer::saveServiceMessages()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1468,15 +1468,15 @@ void HMWiredPeer::savePeers()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1510,15 +1510,15 @@ void HMWiredPeer::serializePeers(std::vector<uint8_t>& encodedData)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1555,15 +1555,15 @@ void HMWiredPeer::unserializePeers(std::shared_ptr<std::vector<char>> serialized
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1577,15 +1577,15 @@ int32_t HMWiredPeer::getPhysicalIndexOffset(int32_t channel)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
@@ -1607,7 +1607,7 @@ void HMWiredPeer::restoreLinks()
 			{
 				if(!i->second->linkRoles->targetNames.empty())
 				{
-					Output::printWarning("Warning: Channel " + std::to_string(i->first) + " of peer " + std::to_string(_peerID) + " is defined as source and target of a link. I don't know what to do. Not adding link.");
+					GD::output->printWarning("Warning: Channel " + std::to_string(i->first) + " of peer " + std::to_string(_peerID) + " is defined as source and target of a link. I don't know what to do. Not adding link.");
 					continue;
 				}
 				isSender = true;
@@ -1636,7 +1636,7 @@ void HMWiredPeer::restoreLinks()
 				std::shared_ptr<HMWiredPeer> remotePeer = central->getPeer(peerAddress);
 				if(!remotePeer || !remotePeer->rpcDevice)
 				{
-					Output::printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + " to peer with address 0x" + HelperFunctions::getHexString(peerAddress, 8) + ". The remote peer is not paired to Homegear.");
+					GD::output->printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + " to peer with address 0x" + GD::helperFunctions->getHexString(peerAddress, 8) + ". The remote peer is not paired to Homegear.");
 					continue;
 				}
 
@@ -1653,7 +1653,7 @@ void HMWiredPeer::restoreLinks()
 				}
 				if(!channelFound)
 				{
-					Output::printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + " to peer with id " + std::to_string(remotePeer->getID()) + ". The remote channel does not exists.");
+					GD::output->printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + " to peer with id " + std::to_string(remotePeer->getID()) + ". The remote channel does not exists.");
 					continue;
 				}
 				basicPeer->isSender = !isSender;
@@ -1663,21 +1663,21 @@ void HMWiredPeer::restoreLinks()
 				basicPeer->configEEPROMAddress = currentAddress;
 
 				addPeer(channel, basicPeer);
-				Output::printInfo("Info: Found link between peer " + std::to_string(_peerID) + " (channel " + std::to_string(channel) + ") and peer " + std::to_string(basicPeer->id) + " (channel " + std::to_string(basicPeer->channel) + ").");
+				GD::output->printInfo("Info: Found link between peer " + std::to_string(_peerID) + " (channel " + std::to_string(channel) + ") and peer " + std::to_string(basicPeer->id) + " (channel " + std::to_string(basicPeer->channel) + ").");
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1693,7 +1693,7 @@ void HMWiredPeer::reset()
 		{
 			if(!central->writeEEPROM(_address, i, data))
 			{
-				Output::printError("Error: Error resetting HomeMatic Wired peer " + std::to_string(_peerID) + ". Could not write EEPROM.");
+				GD::output->printError("Error: Error resetting HomeMatic Wired peer " + std::to_string(_peerID) + ". Could not write EEPROM.");
 				return;
 			}
 		}
@@ -1702,15 +1702,15 @@ void HMWiredPeer::reset()
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -1718,23 +1718,23 @@ int32_t HMWiredPeer::getNewFirmwareVersion()
 {
 	try
 	{
-		std::string filenamePrefix = HelperFunctions::getHexString((int32_t)DeviceFamilies::HomeMaticWired, 4) + "." + HelperFunctions::getHexString(_deviceType.type(), 8);
+		std::string filenamePrefix = GD::helperFunctions->getHexString((int32_t)DeviceFamilies::HomeMaticWired, 4) + "." + GD::helperFunctions->getHexString(_deviceType.type(), 8);
 		std::string versionFile(GD::settings.firmwarePath() + filenamePrefix + ".version");
-		if(!HelperFunctions::fileExists(versionFile)) return 0;
-		std::string versionHex = HelperFunctions::getFileContent(versionFile);
-		return HelperFunctions::getNumber(versionHex, true);
+		if(!GD::helperFunctions->fileExists(versionFile)) return 0;
+		std::string versionHex = GD::helperFunctions->getFileContent(versionFile);
+		return GD::helperFunctions->getNumber(versionHex, true);
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return 0;
 }
@@ -1747,15 +1747,15 @@ bool HMWiredPeer::firmwareUpdateAvailable()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return false;
 }
@@ -1797,13 +1797,13 @@ void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std
 					if(j->constValue > -1)
 					{
 						int32_t intValue = 0;
-						HelperFunctions::memcpyBigEndian(intValue, data);
+						GD::helperFunctions->memcpyBigEndian(intValue, data);
 						if(intValue != j->constValue) break; else continue;
 					}
 				}
 				else if(j->constValue > -1)
 				{
-					HelperFunctions::memcpyBigEndian(data, j->constValue);
+					GD::helperFunctions->memcpyBigEndian(data, j->constValue);
 				}
 				else continue;
 				for(std::vector<std::shared_ptr<RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
@@ -1853,15 +1853,15 @@ void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1876,15 +1876,15 @@ std::shared_ptr<HMWiredPacket> HMWiredPeer::getResponse(std::shared_ptr<HMWiredP
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<HMWiredPacket>();
 }
@@ -1902,7 +1902,7 @@ std::shared_ptr<RPC::ParameterSet> HMWiredPeer::getParameterSet(int32_t channel,
 			{
 				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end())
 				{
-					Output::printWarning("Parameter set of type " + std::to_string(type) + " not found in subconfig for channel " + std::to_string(channel));
+					GD::output->printWarning("Parameter set of type " + std::to_string(type) + " not found in subconfig for channel " + std::to_string(channel));
 					return std::shared_ptr<RPC::ParameterSet>();
 				}
 				parameterSet = rpcChannel->subconfig->parameterSets[type];
@@ -1912,7 +1912,7 @@ std::shared_ptr<RPC::ParameterSet> HMWiredPeer::getParameterSet(int32_t channel,
 		{
 			if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end())
 			{
-				Output::printWarning("Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
+				GD::output->printWarning("Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
 				return std::shared_ptr<RPC::ParameterSet>();
 			}
 			parameterSet = rpcChannel->parameterSets[type];
@@ -1921,15 +1921,15 @@ std::shared_ptr<RPC::ParameterSet> HMWiredPeer::getParameterSet(int32_t channel,
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<RPC::ParameterSet>();
 }
@@ -1980,24 +1980,24 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 					RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					if(rpcDevice->channels.find(*j) == rpcDevice->channels.end())
 					{
-						Output::printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Channel not found.");
+						GD::output->printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Channel not found.");
 						continue;
 					}
 					std::shared_ptr<RPC::ParameterSet> parameterSet = getParameterSet(*j, a->parameterSetType);
 					if(!parameterSet)
 					{
-						Output::printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
+						GD::output->printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
 						continue;
 					}
 					std::shared_ptr<RPC::Parameter> currentParameter = parameterSet->getParameter(i->first);
 					if(!currentParameter)
 					{
-						Output::printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
+						GD::output->printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
 						continue;
 					}
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, a->parameterSetType, *j, i->first, parameter->data);
-					if(GD::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic Wired peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+					if(GD::debugLevel >= 4) GD::output->printInfo("Info: " + i->first + " of HomeMatic Wired peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + GD::helperFunctions->getHexString(i->second.value) + ".");
 
 					 //Process service messages
 					if((currentParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
@@ -2034,15 +2034,15 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -2081,11 +2081,11 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t chan
 				variable2->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->first)));
 			}
 
-			if(_firmwareVersion != 0) description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(HelperFunctions::getHexString(_firmwareVersion >> 8) + "." + HelperFunctions::getHexString(_firmwareVersion & 0xFF, 2)))));
+			if(_firmwareVersion != 0) description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::helperFunctions->getHexString(_firmwareVersion >> 8) + "." + GD::helperFunctions->getHexString(_firmwareVersion & 0xFF, 2)))));
 			else description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("?")))));
 
 			int32_t newFirmwareVersion = getNewFirmwareVersion();
-			if(newFirmwareVersion > _firmwareVersion) description->structValue->insert(RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(HelperFunctions::getHexString(newFirmwareVersion >> 8) + "." + HelperFunctions::getHexString(newFirmwareVersion & 0xFF, 2)))));
+			if(newFirmwareVersion > _firmwareVersion) description->structValue->insert(RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::helperFunctions->getHexString(newFirmwareVersion >> 8) + "." + GD::helperFunctions->getHexString(newFirmwareVersion & 0xFF, 2)))));
 
 			int32_t uiFlags = (int32_t)rpcDevice->uiFlags;
 			if(isTeam()) uiFlags |= RPC::Device::UIFlags::dontdelete;
@@ -2186,15 +2186,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t chan
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2216,15 +2216,15 @@ std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> HMWiredPeer::get
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>>();
 }
@@ -2246,7 +2246,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t ch
 		if(rpcChannel->specialParameter && rpcChannel->subconfig)
 		{
 			std::vector<uint8_t> value = getMasterConfigParameter(channel - rpcChannel->startIndex, rpcChannel->specialParameter->physicalParameter->address.index, rpcChannel->specialParameter->physicalParameter->address.step, rpcChannel->specialParameter->physicalParameter->size);
-			Output::printDebug("Debug: Special parameter is " + std::to_string(value.at(0)));
+			GD::output->printDebug("Debug: Special parameter is " + std::to_string(value.at(0)));
 			if(value.at(0))
 			{
 				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end()) return RPC::RPCVariable::createError(-3, "Unknown parameter set");
@@ -2263,7 +2263,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t ch
 			if((*i)->id.empty() || (*i)->hidden) continue;
 			if(!((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::internal)  && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::transform))
 			{
-				Output::printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
+				GD::output->printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
 				continue;
 			}
 			if((*i)->logicalParameter->type == RPC::LogicalParameter::Type::typeBoolean)
@@ -2608,15 +2608,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetDescription(int32_t ch
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2648,7 +2648,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLink(int32_t channel, int32_t 
 				std::shared_ptr<HMWiredPeer> remotePeer(central->getPeer((*i)->address));
 				if(!remotePeer)
 				{
-					Output::printDebug("Debug: Can't return link description for peer with address 0x" + HelperFunctions::getHexString((*i)->address, 6) + ". The peer is not paired to Homegear.");
+					GD::output->printDebug("Debug: Can't return link description for peer with address 0x" + GD::helperFunctions->getHexString((*i)->address, 6) + ". The peer is not paired to Homegear.");
 					continue;
 				}
 				bool peerKnowsMe = false;
@@ -2791,15 +2791,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLink(int32_t channel, int32_t 
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2819,15 +2819,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLinkInfo(int32_t senderChannel
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2893,15 +2893,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getLinkPeers(int32_t channel, boo
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2926,7 +2926,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, RPC:
 			if((*i)->id.empty() || (*i)->hidden) continue;
 			if(!((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::internal) && !((*i)->uiFlags & RPC::Parameter::UIFlags::Enum::transform))
 			{
-				Output::printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
+				GD::output->printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
 				continue;
 			}
 			std::shared_ptr<RPC::RPCVariable> element;
@@ -2963,15 +2963,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, RPC:
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2994,15 +2994,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetId(uint32_t channel, R
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3032,15 +3032,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getValue(uint32_t channel, std::s
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3069,7 +3069,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, RPC:
 				if(!currentParameter) continue;
 				std::vector<uint8_t> value = currentParameter->convertToPacket(i->second);
 				std::vector<int32_t> result = setMasterConfigParameter(channel, parameterSet, currentParameter, value);
-				Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + HelperFunctions::getHexString(value) + ".");
+				GD::output->printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + GD::helperFunctions->getHexString(value) + ".");
 				//Only send to device when parameter is of type eeprom
 				if(currentParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::eeprom) continue;
 				for(std::vector<int32_t>::iterator i = result.begin(); i != result.end(); ++i) changedBlocks[*i] = true;
@@ -3099,7 +3099,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, RPC:
 				if(currentParameter->physicalParameter->address.operation == RPC::PhysicalParameterAddress::Operation::Enum::none) continue;
 				std::vector<uint8_t> value = currentParameter->convertToPacket(i->second);
 				std::vector<int32_t> result = setConfigParameter(remotePeer->configEEPROMAddress + currentParameter->physicalParameter->address.index, currentParameter->physicalParameter->size, value);
-				Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + HelperFunctions::getHexString(value) + ".");
+				GD::output->printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + GD::helperFunctions->getHexString(value) + ".");
 				//Only send to device when parameter is of type eeprom
 				if(currentParameter->physicalParameter->interface != RPC::PhysicalParameter::Interface::Enum::eeprom) continue;
 				for(std::vector<int32_t>::iterator i = result.begin(); i != result.end(); ++i) changedBlocks[*i] = true;
@@ -3113,7 +3113,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, RPC:
 		{
 			if(!central->writeEEPROM(_address, i->first, binaryConfig[i->first].data))
 			{
-				Output::printError("Error: Could not write config to device's eeprom.");
+				GD::output->printError("Error: Could not write config to device's eeprom.");
 				return RPC::RPCVariable::createError(-32500, "Could not write config to device's eeprom.");
 			}
 		}
@@ -3123,15 +3123,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, RPC:
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3150,15 +3150,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setLinkInfo(int32_t senderChannel
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3223,7 +3223,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
 		parameter->data = data;
 		saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, channel, valueKey, data);
-		if(GD::debugLevel > 4) Output::printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(data) + ".");
+		if(GD::debugLevel > 4) GD::output->printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + GD::helperFunctions->getHexString(data) + ".");
 
 		std::vector<uint8_t> payload({ (uint8_t)frame->type });
 		if(frame->subtype > -1 && frame->subtypeIndex >= 9)
@@ -3243,7 +3243,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 			if(i->constValue > -1)
 			{
 				std::vector<uint8_t> data;
-				HelperFunctions::memcpyBigEndian(data, i->constValue);
+				GD::helperFunctions->memcpyBigEndian(data, i->constValue);
 				packet->setPosition(i->index, i->size, data);
 				continue;
 			}
@@ -3253,7 +3253,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 			{
 				additionalParameter = &valuesCentral[channel][i->additionalParameter];
 				int32_t intValue = 0;
-				HelperFunctions::memcpyBigEndian(intValue, additionalParameter->data);
+				GD::helperFunctions->memcpyBigEndian(intValue, additionalParameter->data);
 				if(!i->omitIfSet || intValue != i->omitIf)
 				{
 					//Don't set ON_TIME when value is false
@@ -3276,7 +3276,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 						break;
 					}
 				}
-				if(!paramFound) Output::printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+				if(!paramFound) GD::output->printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 			}
 		}
 		if(!rpcParameter->physicalParameter->resetAfterSend.empty())
@@ -3293,7 +3293,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 					RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
 					tempParam->data = defaultValue;
 					saveParameter(tempParam->databaseID, RPC::ParameterSet::Type::Enum::values, channel, *j, tempParam->data);
-					Output::printInfo( "Info: Parameter \"" + *j + "\" was reset to " + HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+					GD::output->printInfo( "Info: Parameter \"" + *j + "\" was reset to " + GD::helperFunctions->getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					valueKeys->push_back(*j);
 					values->push_back(logicalDefaultValue);
 				}
@@ -3304,7 +3304,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 		std::shared_ptr<HMWiredPacket> response = getResponse(packet);
 		if(!response)
 		{
-			Output::printWarning("Error: Error sending packet to peer " + std::to_string(_peerID) + ". Peer did not respond.");
+			GD::output->printWarning("Error: Error sending packet to peer " + std::to_string(_peerID) + ". Peer did not respond.");
 			return RPC::RPCVariable::createError(-32500, "Error sending packet to peer. Peer did not respond.");
 		}
 		else
@@ -3315,15 +3315,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error. See error log for more details.");
 }

@@ -31,7 +31,6 @@
 #define HMWIRED_SD_H
 
 #include "../HMWiredDevice.h"
-#include "../../../HelperFunctions/HelperFunctions.h"
 
 #include <list>
 

@@ -31,8 +31,7 @@
 #define HM_CC_VD_H
 
 #include "../HomeMaticDevice.h"
-#include "../../../Database/Database.h"
-#include "../../../HelperFunctions/HelperFunctions.h"
+#include "../../../../Modules/Base/Database/Database.h"
 
 namespace BidCoS
 {

@@ -30,10 +30,10 @@
 #ifndef PHYSICALDEVICES_H_
 #define PHYSICALDEVICES_H_
 
-#include "../Systems/General/DeviceFamilies.h"
-#include "../Types/RPCVariable.h"
-#include "PhysicalDevice.h"
-#include "PhysicalDeviceSettings.h"
+#include "../../Modules/Base/Systems/DeviceFamilies.h"
+#include "../../Modules/Base/Types/RPCVariable.h"
+#include "../../Modules/Base/Systems/PhysicalDevice.h"
+#include "../../Modules/Base/Systems/PhysicalDeviceSettings.h"
 
 #include <memory>
 #include <mutex>

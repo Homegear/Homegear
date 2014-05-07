@@ -31,14 +31,14 @@
 #define RPCCLIENT_H_
 
 #include "ClientSettings.h"
-#include "../Encoding/RPCEncoder.h"
-#include "../Encoding/RPCDecoder.h"
-#include "../Encoding/XMLRPCEncoder.h"
-#include "../Encoding/XMLRPCDecoder.h"
+#include "../../Modules/Base/Encoding/RPCEncoder.h"
+#include "../../Modules/Base/Encoding/RPCDecoder.h"
+#include "../../Modules/Base/Encoding/XMLRPCEncoder.h"
+#include "../../Modules/Base/Encoding/XMLRPCDecoder.h"
 #include "SocketOperations.h"
 #include "HTTP.h"
 #include "Auth.h"
-#include "../FileDescriptorManager/FileDescriptorManager.h"
+#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
 
 #include <iostream>
 #include <string>

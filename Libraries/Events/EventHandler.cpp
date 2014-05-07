@@ -53,7 +53,7 @@ void EventHandler::mainThread()
 	{
 		try
 		{
-			int64_t currentTime = HelperFunctions::getTime();
+			int64_t currentTime = GD::helperFunctions->getTime();
 			_eventsMutex.lock();
 			if(!_timedEvents.empty() && _timedEvents.begin()->first <= currentTime)
 			{
@@ -64,19 +64,19 @@ void EventHandler::mainThread()
 				event->lastRaised = currentTime;
 				if(result && result->errorStruct)
 				{
-					Output::printError("Could not execute RPC method \"" + event->eventMethod + "\" for timed event \"" + event->name + "\". Error struct:");
+					GD::output->printError("Could not execute RPC method \"" + event->eventMethod + "\" for timed event \"" + event->name + "\". Error struct:");
 					result->print();
 				}
 				save(event);
 				if(event->recurEvery == 0 || (event->endTime > 0 && currentTime >= event->endTime))
 				{
-					Output::printInfo("Info: Removing event " + event->name + ", because the end time is reached.");
+					GD::output->printInfo("Info: Removing event " + event->name + ", because the end time is reached.");
 					remove(event->name);
 				}
 				else if(event->recurEvery > 0)
 				{
 					uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
-					Output::printInfo("Info: Next execution for event " + event->name + ": " + std::to_string(nextExecution));
+					GD::output->printInfo("Info: Next execution for event " + event->name + ": " + std::to_string(nextExecution));
 					_eventsMutex.lock();
 					//We don't call removeTimedEvents here, so we don't need to release the lock. Otherwise there is the possibility that the event
 					//is recreated after being deleted.
@@ -97,13 +97,13 @@ void EventHandler::mainThread()
 			else if(!_eventsToReset.empty() && _eventsToReset.begin()->first <= currentTime)
 			{
 				std::shared_ptr<Event> event = _eventsToReset.begin()->second;
-				Output::printInfo("Info: Resetting event " + event->name + ".");
+				GD::output->printInfo("Info: Resetting event " + event->name + ".");
 				_eventsMutex.unlock();
 				std::shared_ptr<RPC::RPCVariable> result;
 				if(event->enabled) result = GD::rpcServers.begin()->second.callMethod(event->resetMethod, event->resetMethodParameters);
 				if(result && result->errorStruct)
 				{
-					Output::printError("Could not execute RPC method \"" + event->eventMethod + "\" for timed event \"" + event->name + "\". Error struct:");
+					GD::output->printError("Could not execute RPC method \"" + event->eventMethod + "\" for timed event \"" + event->name + "\". Error struct:");
 					result->print();
 				}
 				removeEventToReset(event->id);
@@ -113,7 +113,7 @@ void EventHandler::mainThread()
 			else if(!_timesToReset.empty() && _timesToReset.begin()->first <= currentTime)
 			{
 				std::shared_ptr<Event> event = _timesToReset.begin()->second;
-				Output::printInfo("Info: Resetting initial time for event " + event->name + ".");
+				GD::output->printInfo("Info: Resetting initial time for event " + event->name + ".");
 				_eventsMutex.unlock();
 				removeTimeToReset(event->id);
 				event->lastReset = currentTime;
@@ -134,19 +134,19 @@ void EventHandler::mainThread()
 		{
 			_eventsMutex.unlock();
 			_mainThreadMutex.unlock();
-			Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(Exception& ex)
 		{
 			_eventsMutex.unlock();
 			_mainThreadMutex.unlock();
-			Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(...)
 		{
 			_eventsMutex.unlock();
 			_mainThreadMutex.unlock();
-			Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 	}
 }
@@ -234,7 +234,7 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
 		{
 			if(eventDescription->structValue->find("EVENTTIME") != eventDescription->structValue->end())
 				event->eventTime = eventDescription->structValue->at("EVENTTIME")->integerValue * 1000;
-			if(event->eventTime == 0) event->eventTime = HelperFunctions::getTimeSeconds();
+			if(event->eventTime == 0) event->eventTime = GD::helperFunctions->getTimeSeconds();
 			if(eventDescription->structValue->find("ENDTIME") != eventDescription->structValue->end())
 				event->endTime = eventDescription->structValue->at("ENDTIME")->integerValue * 1000;
 			if(eventDescription->structValue->find("RECUREVERY") != eventDescription->structValue->end())
@@ -260,19 +260,19 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::add(std::shared_ptr<RPC::RPCVari
     {
 		_eventsMutex.unlock();
 		_mainThreadMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_eventsMutex.unlock();
     	_mainThreadMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_eventsMutex.unlock();
     	_mainThreadMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -381,15 +381,15 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::list(int32_t type, uint64_t peer
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -443,25 +443,25 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::remove(std::string name)
 		}
 
 		_databaseMutex.lock();
-		GD::db.executeCommand("SAVEPOINT eventREMOVE");
+		GD::db->executeCommand("SAVEPOINT eventREMOVE");
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(name)));
-		GD::db.executeCommand("DELETE FROM events WHERE name=?", data);
-		GD::db.executeCommand("RELEASE eventREMOVE");
+		GD::db->executeCommand("DELETE FROM events WHERE name=?", data);
+		GD::db->executeCommand("RELEASE eventREMOVE");
 		_databaseMutex.unlock();
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
     _databaseMutex.unlock();
@@ -516,15 +516,15 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::enable(std::string name, bool en
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
     _databaseMutex.unlock();
@@ -573,15 +573,15 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::abortReset(std::string name)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
     _databaseMutex.unlock();
@@ -599,15 +599,15 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -615,7 +615,7 @@ uint64_t EventHandler::getNextExecution(uint64_t startTime, uint64_t recurEvery)
 {
 	try
 	{
-		uint64_t time = HelperFunctions::getTime();
+		uint64_t time = GD::helperFunctions->getTime();
 		if(startTime >= time) return startTime;
 		if(recurEvery == 0) return -1;
 		uint64_t difference = time - startTime;
@@ -623,15 +623,15 @@ uint64_t EventHandler::getNextExecution(uint64_t startTime, uint64_t recurEvery)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -647,15 +647,15 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -671,15 +671,15 @@ void EventHandler::triggerThreadMultipleVariables(uint64_t peerID, int32_t chann
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_triggerThreadCount--;
 }
@@ -701,15 +701,15 @@ void EventHandler::removeEventToReset(uint32_t id)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
 }
@@ -731,15 +731,15 @@ void EventHandler::removeTimeToReset(uint32_t id)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
 }
@@ -761,15 +761,15 @@ void EventHandler::removeTimedEvent(uint32_t id)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
 }
@@ -807,15 +807,15 @@ bool EventHandler::eventExists(uint32_t id)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
     return false;
@@ -854,15 +854,15 @@ bool EventHandler::eventExists(std::string name)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
     return false;
@@ -905,9 +905,9 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::trigger(std::string name)
 		_eventsMutex.unlock();
 
 		if(!event) return RPC::RPCVariable::createError(-5, "Event not found.");
-		uint64_t currentTime = HelperFunctions::getTime();
+		uint64_t currentTime = GD::helperFunctions->getTime();
 		event->lastRaised = currentTime;
-		Output::printInfo("Info: Event \"" + event->name + "\" raised for peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable \"" + event->variable + "\". Trigger: \"manual\"");
+		GD::output->printInfo("Info: Event \"" + event->name + "\" raised for peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable \"" + event->variable + "\". Trigger: \"manual\"");
 		std::shared_ptr<RPC::RPCVariable> result = GD::rpcServers.begin()->second.callMethod(event->eventMethod, event->eventMethodParameters);
 
 		postTriggerTasks(event, result, currentTime);
@@ -916,15 +916,15 @@ std::shared_ptr<RPC::RPCVariable> EventHandler::trigger(std::string name)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
     _databaseMutex.unlock();
@@ -959,7 +959,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 		}
 		std::vector<std::shared_ptr<Event>>* events = &variables->at(variable);
 		std::vector<std::shared_ptr<Event>> triggeredEvents;
-		uint64_t currentTime = HelperFunctions::getTime();
+		uint64_t currentTime = GD::helperFunctions->getTime();
 		for(std::vector<std::shared_ptr<Event>>::iterator i = events->begin(); i !=  events->end(); ++i)
 		{
 			//Don't raise the same event multiple times
@@ -976,7 +976,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				//Comparison with previous value
 				if((*i)->trigger == Event::Trigger::updated)
 				{
-					Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"updated\"");
+					GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"updated\"");
 					(*i)->lastRaised = currentTime;
 					result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 				}
@@ -984,7 +984,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*((*i)->lastValue) == *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"unchanged\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"unchanged\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -993,7 +993,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*((*i)->lastValue) != *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"changed\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"changed\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1002,7 +1002,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*((*i)->lastValue) > *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greater\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greater\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1011,7 +1011,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*((*i)->lastValue) < *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"less\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"less\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1020,7 +1020,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*((*i)->lastValue) >= *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterOrUnchanged\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterOrUnchanged\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1029,7 +1029,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*((*i)->lastValue) <= *value)
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessOrUnchanged\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessOrUnchanged\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1042,7 +1042,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*value == *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"value\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"value\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1051,7 +1051,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*value != *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"notValue\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"notValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1060,7 +1060,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*value > *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterThanValue\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterThanValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1069,7 +1069,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*value < *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessThanValue\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessThanValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1078,7 +1078,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*value >= *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterOrEqualValue\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"greaterOrEqualValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1087,7 +1087,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				{
 					if(*value <= *((*i)->triggerValue))
 					{
-						Output::printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessOrEqualValue\"");
+						GD::output->printInfo("Info: Event \"" + (*i)->name + "\" raised for peer with id " + std::to_string(peerID) + ", channel " + std::to_string(channel) + " and variable \"" + variable + "\". Trigger: \"lessOrEqualValue\"");
 						(*i)->lastRaised = currentTime;
 						result = GD::rpcServers.begin()->second.callMethod((*i)->eventMethod, (*i)->eventMethodParameters);
 					}
@@ -1100,19 +1100,19 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
     {
 		_eventsMutex.unlock();
 		_mainThreadMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_eventsMutex.unlock();
     	_mainThreadMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_eventsMutex.unlock();
     	_mainThreadMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _triggerThreadCount--;
 }
@@ -1123,12 +1123,12 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 	{
 		if(!event)
 		{
-			Output::printError("Error: Could not execute post trigger tasks. event was nullptr.");
+			GD::output->printError("Error: Could not execute post trigger tasks. event was nullptr.");
 			return;
 		}
 		if(rpcResult && rpcResult->errorStruct)
 		{
-			Output::printError("Error: Could not execute RPC method for event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ". Error struct:");
+			GD::output->printError("Error: Could not execute RPC method for event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ". Error struct:");
 			rpcResult->print();
 		}
 		if(event->resetAfter > 0 || event->initialTime > 0)
@@ -1139,7 +1139,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 				uint64_t resetTime = currentTime + event->resetAfter;
 				if(event->initialTime == 0) //Simple reset
 				{
-					Output::printInfo("Info: Event \"" + event->name + "\" for peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable \"" + event->variable + "\" will be reset in " + std::to_string(event->resetAfter / 1000) + " seconds.");
+					GD::output->printInfo("Info: Event \"" + event->name + "\" for peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable \"" + event->variable + "\" will be reset in " + std::to_string(event->resetAfter / 1000) + " seconds.");
 
 					_eventsMutex.lock();
 					while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
@@ -1149,7 +1149,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 				else //Complex reset
 				{
 					removeTimeToReset(event->id);
-					Output::printInfo("Info: INITIALTIME for event \"" + event->name + "\" will be reset in " + std::to_string(event->resetAfter / 1000)+ " seconds.");
+					GD::output->printInfo("Info: INITIALTIME for event \"" + event->name + "\" will be reset in " + std::to_string(event->resetAfter / 1000)+ " seconds.");
 					_eventsMutex.lock();
 					while(_timesToReset.find(resetTime) != _timesToReset.end()) resetTime++;
 					_timesToReset[resetTime] = event;
@@ -1157,7 +1157,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 					if(event->currentTime == 0) event->currentTime = event->initialTime;
 					if(event->factor <= 0)
 					{
-						Output::printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ".");
+						GD::output->printWarning("Warning: Factor is less or equal 0. Setting factor to 1. Event from peer with id " + std::to_string(event->peerID) + ", channel " + std::to_string(event->peerChannel) + " and variable " + event->variable + ".");
 						event->factor = 1;
 					}
 					resetTime = currentTime + event->currentTime;
@@ -1165,7 +1165,7 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 					while(_eventsToReset.find(resetTime) != _eventsToReset.end()) resetTime++;
 					_eventsToReset[resetTime] =  event;
 					_eventsMutex.unlock();
-					Output::printInfo("Info: Event \"" + event->name + "\" will be reset in " + std::to_string(event->currentTime / 1000) + " seconds.");
+					GD::output->printInfo("Info: Event \"" + event->name + "\" will be reset in " + std::to_string(event->currentTime / 1000) + " seconds.");
 					if(event->operation == Event::Operation::Enum::addition)
 					{
 						event->currentTime += event->factor;
@@ -1191,17 +1191,17 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 			catch(const std::exception& ex)
 			{
 				_eventsMutex.unlock();
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
 				_eventsMutex.unlock();
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
 				_eventsMutex.unlock();
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 
 			try
@@ -1218,32 +1218,32 @@ void EventHandler::postTriggerTasks(std::shared_ptr<Event>& event, std::shared_p
 			catch(const std::exception& ex)
 			{
 				_mainThreadMutex.unlock();
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
 				_mainThreadMutex.unlock();
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
 				_mainThreadMutex.unlock();
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
 		save(event);
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1252,7 +1252,7 @@ void EventHandler::load()
 	try
 	{
 		_databaseMutex.lock();
-		DataTable rows = GD::db.executeCommand("SELECT * FROM events");
+		DataTable rows = GD::db->executeCommand("SELECT * FROM events");
 		_databaseMutex.unlock();
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
@@ -1315,19 +1315,19 @@ void EventHandler::load()
     {
 		_eventsMutex.unlock();
 		_mainThreadMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_eventsMutex.unlock();
     	_mainThreadMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_eventsMutex.unlock();
     	_mainThreadMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1344,7 +1344,7 @@ void EventHandler::save(std::shared_ptr<Event> event)
 			_databaseMutex.unlock();
 			return;
 		}
-		GD::db.executeCommand("SAVEPOINT event" + eventID);
+		GD::db->executeCommand("SAVEPOINT event" + eventID);
 		DataColumnVector data;
 		if(event->id > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->id)));
 		else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
@@ -1376,21 +1376,21 @@ void EventHandler::save(std::shared_ptr<Event> event)
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->lastReset)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->currentTime)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(event->enabled)));
-		uint32_t result = GD::db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
+		uint32_t result = GD::db->executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
 		if(event->id == 0) event->id = result;
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::db.executeCommand("RELEASE event" + eventID);
+    GD::db->executeCommand("RELEASE event" + eventID);
     _databaseMutex.unlock();
 }

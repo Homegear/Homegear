@@ -30,7 +30,7 @@
 #ifndef SERVERSETTINGS_H_
 #define SERVERSETTINGS_H_
 
-#include "../HelperFunctions/HelperFunctions.h"
+#include "../../Modules/Base/Exception.h"
 
 #include <memory>
 #include <iostream>

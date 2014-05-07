@@ -6,47 +6,23 @@ ifndef config
 endif
 export config
 
-PROJECTS := output helperfunctions physicaldevices types logicaldevices threads database filedescriptormanager encoding user settings metadata rpc cli events gd bidcos hmwired insteon fs20 homegear
+PROJECTS := base physicaldevices threads user settings rpc cli events gd bidcos hmwired insteon fs20 homegear
 
 .PHONY: all clean help $(PROJECTS)
 
 all: $(PROJECTS)
 
-output: 
-	@echo "==== Building output ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f output.make
-
-helperfunctions: 
-	@echo "==== Building helperfunctions ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f helperfunctions.make
+base: 
+	@echo "==== Building base ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f base.make
 
 physicaldevices: 
 	@echo "==== Building physicaldevices ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f physicaldevices.make
 
-types: 
-	@echo "==== Building types ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f types.make
-
-logicaldevices: 
-	@echo "==== Building logicaldevices ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f logicaldevices.make
-
 threads: 
 	@echo "==== Building threads ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f threads.make
-
-database: 
-	@echo "==== Building database ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f database.make
-
-filedescriptormanager: 
-	@echo "==== Building filedescriptormanager ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f filedescriptormanager.make
-
-encoding: 
-	@echo "==== Building encoding ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f encoding.make
 
 user: 
 	@echo "==== Building user ($(config)) ===="
@@ -55,10 +31,6 @@ user:
 settings: 
 	@echo "==== Building settings ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f settings.make
-
-metadata: 
-	@echo "==== Building metadata ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f metadata.make
 
 rpc: 
 	@echo "==== Building rpc ($(config)) ===="
@@ -97,18 +69,11 @@ homegear:
 	@${MAKE} --no-print-directory -C . -f homegear.make
 
 clean:
-	@${MAKE} --no-print-directory -C . -f output.make clean
-	@${MAKE} --no-print-directory -C . -f helperfunctions.make clean
+	@${MAKE} --no-print-directory -C . -f base.make clean
 	@${MAKE} --no-print-directory -C . -f physicaldevices.make clean
-	@${MAKE} --no-print-directory -C . -f types.make clean
-	@${MAKE} --no-print-directory -C . -f logicaldevices.make clean
 	@${MAKE} --no-print-directory -C . -f threads.make clean
-	@${MAKE} --no-print-directory -C . -f database.make clean
-	@${MAKE} --no-print-directory -C . -f filedescriptormanager.make clean
-	@${MAKE} --no-print-directory -C . -f encoding.make clean
 	@${MAKE} --no-print-directory -C . -f user.make clean
 	@${MAKE} --no-print-directory -C . -f settings.make clean
-	@${MAKE} --no-print-directory -C . -f metadata.make clean
 	@${MAKE} --no-print-directory -C . -f rpc.make clean
 	@${MAKE} --no-print-directory -C . -f cli.make clean
 	@${MAKE} --no-print-directory -C . -f events.make clean
@@ -130,18 +95,11 @@ help:
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
-	@echo "   output"
-	@echo "   helperfunctions"
+	@echo "   base"
 	@echo "   physicaldevices"
-	@echo "   types"
-	@echo "   logicaldevices"
 	@echo "   threads"
-	@echo "   database"
-	@echo "   filedescriptormanager"
-	@echo "   encoding"
 	@echo "   user"
 	@echo "   settings"
-	@echo "   metadata"
 	@echo "   rpc"
 	@echo "   cli"
 	@echo "   events"

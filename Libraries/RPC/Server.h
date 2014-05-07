@@ -34,7 +34,7 @@
 #include <string>
 
 #include "ServerSettings.h"
-#include "../Types/RPCVariable.h"
+#include "../../Modules/Base/Types/RPCVariable.h"
 #include "RPCServer.h"
 #include "RPCMethods.h"
 

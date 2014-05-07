@@ -30,7 +30,6 @@
 #ifndef BIDCOSMESSAGES_H
 #define BIDCOSMESSAGES_H
 
-#include "../../HelperFunctions/HelperFunctions.h"
 #include "BidCoSMessage.h"
 
 #include <iostream>

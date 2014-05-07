@@ -28,6 +28,7 @@
  */
 
 #include "ServerSettings.h"
+#include "../GD/GD.h"
 
 namespace RPC
 {
@@ -54,7 +55,7 @@ void ServerSettings::load(std::string filename)
 
 		if (!(fin = fopen(filename.c_str(), "r")))
 		{
-			Output::printError("Unable to open RPC server config file: " + filename + ". " + strerror(errno));
+			GD::output->printError("Unable to open RPC server config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
@@ -100,33 +101,33 @@ void ServerSettings::load(std::string filename)
 			if(found)
 			{
 				std::string name(input);
-				HelperFunctions::toLower(name);
-				HelperFunctions::trim(name);
+				GD::helperFunctions->toLower(name);
+				GD::helperFunctions->trim(name);
 				std::string value(&input[ptr]);
-				HelperFunctions::trim(value);
+				GD::helperFunctions->trim(value);
 				if(name == "interface")
 				{
 					settings->interface = value;
 					if(settings->interface.empty()) settings->interface = "::";
-					Output::printDebug("Debug: interface of RPC server " + settings->name + " set to " + settings->interface);
+					GD::output->printDebug("Debug: interface of RPC server " + settings->name + " set to " + settings->interface);
 				}
 				else if(name == "port")
 				{
-					settings->port = HelperFunctions::getNumber(value);
-					Output::printDebug("Debug: port of RPC server " + settings->name + " set to " + std::to_string(settings->port));
+					settings->port = GD::helperFunctions->getNumber(value);
+					GD::output->printDebug("Debug: port of RPC server " + settings->name + " set to " + std::to_string(settings->port));
 				}
 				else if(name == "ssl")
 				{
-					HelperFunctions::toLower(value);
+					GD::helperFunctions->toLower(value);
 					if(value == "false") settings->ssl = false;
-					Output::printDebug("Debug: ssl of RPC server " + settings->name + " set to " + std::to_string(settings->ssl));
+					GD::output->printDebug("Debug: ssl of RPC server " + settings->name + " set to " + std::to_string(settings->ssl));
 				}
 				else if(name == "authtype")
 				{
-					HelperFunctions::toLower(value);
+					GD::helperFunctions->toLower(value);
 					if(value == "none") settings->authType = Settings::AuthType::none;
 					else if(value == "basic") settings->authType = Settings::AuthType::basic;
-					Output::printDebug("Debug: authType of RPC server " + settings->name + " set to " + std::to_string(settings->authType));
+					GD::output->printDebug("Debug: authType of RPC server " + settings->name + " set to " + std::to_string(settings->authType));
 				}
 				else if(name == "validusers")
 				{
@@ -134,20 +135,20 @@ void ServerSettings::load(std::string filename)
 					std::string element;
 					while(std::getline(stream, element, ','))
 					{
-						HelperFunctions::toLower(HelperFunctions::trim(element));
+						GD::helperFunctions->toLower(GD::helperFunctions->trim(element));
 						settings->validUsers.push_back(element);
 					}
 				}
 				else if(name == "diffiehellmankeysize")
 				{
-					settings->diffieHellmanKeySize = HelperFunctions::getNumber(value);
+					settings->diffieHellmanKeySize = GD::helperFunctions->getNumber(value);
 					if(settings->diffieHellmanKeySize < 128) settings->diffieHellmanKeySize = 128;
-					if(settings->diffieHellmanKeySize < 1024) Output::printWarning("Diffie-Hellman key size of server " + settings->name + " is smaller than 1024 bit.");
-					Output::printDebug("Debug: diffieHellmanKeySize of RPC server " + settings->name + " set to " + std::to_string(settings->diffieHellmanKeySize));
+					if(settings->diffieHellmanKeySize < 1024) GD::output->printWarning("Diffie-Hellman key size of server " + settings->name + " is smaller than 1024 bit.");
+					GD::output->printDebug("Debug: diffieHellmanKeySize of RPC server " + settings->name + " set to " + std::to_string(settings->diffieHellmanKeySize));
 				}
 				else
 				{
-					Output::printWarning("Warning: RPC client setting not found: " + std::string(input));
+					GD::output->printWarning("Warning: RPC client setting not found: " + std::string(input));
 				}
 			}
 		}
@@ -161,15 +162,15 @@ void ServerSettings::load(std::string filename)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 } /* namespace RPC */

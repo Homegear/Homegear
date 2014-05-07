@@ -30,8 +30,7 @@
 #ifndef FS20PACKET_H_
 #define FS20PACKET_H_
 
-#include "../../Types/Packet.h"
-#include "../../HelperFunctions/HelperFunctions.h"
+#include "../../../Modules/Base/Types/Packet.h"
 
 #include <map>
 

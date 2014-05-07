@@ -30,9 +30,8 @@
 #ifndef FS20_H_
 #define FS20_H_
 
-#include "../../Database/Database.h"
-#include "../../HelperFunctions/HelperFunctions.h"
-#include "../General/DeviceFamily.h"
+#include "../../../Modules/Base/Database/Database.h"
+#include "../../../Modules/Base/Systems/DeviceFamily.h"
 
 namespace FS20
 {

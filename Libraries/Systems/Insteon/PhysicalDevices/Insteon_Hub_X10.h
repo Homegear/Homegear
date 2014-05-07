@@ -30,8 +30,7 @@
 #ifndef TCPSOCKETDEVICE_H
 #define TCPSOCKETDEVICE_H
 
-#include "../../../HelperFunctions/HelperFunctions.h"
-#include "../../../PhysicalDevices/PhysicalDevice.h"
+#include "../../../../Modules/Base/Systems/PhysicalDevice.h"
 #include "../../../RPC/SocketOperations.h"
 
 #include <thread>

@@ -30,10 +30,10 @@
 #ifndef AUTH_H_
 #define AUTH_H_
 
-#include "../HelperFunctions/HelperFunctions.h"
+#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
 #include "SocketOperations.h"
 #include "HTTP.h"
-#include "../Encoding/RPCEncoder.h"
+#include "../../Modules/Base/Encoding/RPCEncoder.h"
 #include "Base64.h"
 #include "../User/User.h"
 

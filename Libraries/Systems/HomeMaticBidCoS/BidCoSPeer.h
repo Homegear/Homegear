@@ -30,13 +30,12 @@
 #ifndef BIDCOSPEER_H
 #define BIDCOSPEER_H
 
-#include "../General/Peer.h"
+#include "../../../Modules/Base/Systems/Peer.h"
 #include "BidCoSDeviceTypes.h"
 #include "../../../delegate.hpp"
-#include "../../RPC/Device.h"
-#include "../../Types/RPCVariable.h"
-#include "../General/ServiceMessages.h"
-#include "../../HelperFunctions/HelperFunctions.h"
+#include "../../../Modules/Base/RPC/Device.h"
+#include "../../../Modules/Base/Types/RPCVariable.h"
+#include "../../../Modules/Base/Systems/ServiceMessages.h"
 #include "BidCoSPacket.h"
 
 #include <iomanip>

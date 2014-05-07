@@ -30,8 +30,7 @@
 #ifndef INSTEONPACKET_H_
 #define INSTEONPACKET_H_
 
-#include "../../Types/Packet.h"
-#include "../../HelperFunctions/HelperFunctions.h"
+#include "../../../Modules/Base/Types/Packet.h"
 
 #include <map>
 

@@ -34,8 +34,7 @@ class BidCoSPacket;
 class BidCoSMessages;
 enum class BidCoSQueueType;
 
-#include "../../HelperFunctions/HelperFunctions.h"
-#include "../../LogicalDevices/LogicalDevice.h"
+#include "../../../Modules/Base/Systems/LogicalDevice.h"
 #include "BidCoSQueue.h"
 #include "BidCoSPeer.h"
 #include "BidCoSMessage.h"

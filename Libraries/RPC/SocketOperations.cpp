@@ -122,12 +122,12 @@ void SocketOperations::close()
 {
 	if(_ssl) SSL_free(_ssl);
 	_ssl = nullptr;
-	GD::fileDescriptorManager.close(_fileDescriptor);
+	GD::fileDescriptorManager->close(_fileDescriptor);
 }
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 {
-	Output::printDebug("Calling proofread...");
+	GD::output->printDebug("Calling proofread...");
 	if(!connected()) autoConnect();
 	//Timeout needs to be set every time, so don't put it outside of the while loop
 	timeval timeout;
@@ -142,7 +142,7 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	bytesRead = _ssl ? SSL_read(_ssl, buffer, bufferSize) : read(_fileDescriptor->descriptor, buffer, bufferSize);
 	if(bytesRead <= 0)
 	{
-		if(bytesRead < 0 && _ssl) throw SocketOperationException("Error reading SSL packet: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, bytesRead)));
+		if(bytesRead < 0 && _ssl) throw SocketOperationException("Error reading SSL packet: " + GD::helperFunctions->getSSLError(SSL_get_error(_ssl, bytesRead)));
 		else throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
 	}
 	return bytesRead;
@@ -157,11 +157,11 @@ int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>> data)
 
 int32_t SocketOperations::proofwrite(std::vector<char>& data)
 {
-	Output::printDebug("Calling proofwrite ...");
+	GD::output->printDebug("Calling proofwrite ...");
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
 	if(data.size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
-	Output::printDebug(" ... data size is " + std::to_string(data.size()));
+	GD::output->printDebug(" ... data size is " + std::to_string(data.size()));
 
 	int32_t bytesSentSoFar = 0;
 	while (bytesSentSoFar < (signed)data.size())
@@ -180,13 +180,13 @@ int32_t SocketOperations::proofwrite(std::vector<char>& data)
 		int32_t bytesSentInStep = _ssl ? SSL_write(_ssl, &data.at(bytesSentSoFar), bytesToSend) : send(_fileDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
 		if(bytesSentInStep <= 0)
 		{
-			Output::printDebug(" ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
+			GD::output->printDebug(" ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
 			close();
 			throw SocketOperationException(strerror(errno));
 		}
 		bytesSentSoFar += bytesSentInStep;
 	}
-	Output::printDebug(" ... sent " + std::to_string(bytesSentSoFar));
+	GD::output->printDebug(" ... sent " + std::to_string(bytesSentSoFar));
 	return bytesSentSoFar;
 }
 
@@ -201,8 +201,8 @@ bool SocketOperations::connected()
 
 void SocketOperations::getFileDescriptor()
 {
-	Output::printDebug("Calling getFileDescriptor...");
-	GD::fileDescriptorManager.shutdown(_fileDescriptor);
+	GD::output->printDebug("Calling getFileDescriptor...");
+	GD::fileDescriptorManager->shutdown(_fileDescriptor);
 
 	getConnection();
 	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) throw SocketOperationException("Could not connect to server.");
@@ -215,7 +215,7 @@ void SocketOperations::getSSL()
 	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) throw SocketSSLException("Could not connect to server using SSL. File descriptor is invalid.");
 	if(!_sslCTX)
 	{
-		GD::fileDescriptorManager.shutdown(_fileDescriptor);
+		GD::fileDescriptorManager->shutdown(_fileDescriptor);
 		throw SocketSSLException("Could not connect to server using SSL. SSL is not initialized. Look for previous error messages.");
 	}
 	_ssl = SSL_new(_sslCTX);
@@ -225,8 +225,8 @@ void SocketOperations::getSSL()
 	{
 		SSL_free(_ssl);
 		_ssl = nullptr;
-		GD::fileDescriptorManager.shutdown(_fileDescriptor);
-		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, result)));
+		GD::fileDescriptorManager->shutdown(_fileDescriptor);
+		throw SocketSSLException("Error during TLS/SSL handshake: " + GD::helperFunctions->getSSLError(SSL_get_error(_ssl, result)));
 	}
 
 	X509* serverCert = SSL_get_peer_certificate(_ssl);
@@ -234,7 +234,7 @@ void SocketOperations::getSSL()
 	{
 		SSL_free(_ssl);
 		_ssl = nullptr;
-		GD::fileDescriptorManager.shutdown(_fileDescriptor);
+		GD::fileDescriptorManager->shutdown(_fileDescriptor);
 		throw SocketSSLException("Could not get server certificate.");
 	}
 
@@ -243,8 +243,8 @@ void SocketOperations::getSSL()
 	{
 		SSL_free(_ssl);
 		_ssl = nullptr;
-		GD::fileDescriptorManager.shutdown(_fileDescriptor);
-		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
+		GD::fileDescriptorManager->shutdown(_fileDescriptor);
+		throw SocketSSLException("Error during TLS/SSL handshake: " + GD::helperFunctions->getSSLCertVerificationError(result));
 	}
 }
 
@@ -279,7 +279,7 @@ void SocketOperations::getConnection()
 		}
 		std::string ipAddress = std::string(&ipStringBuffer[0]);
 
-		_fileDescriptor = GD::fileDescriptorManager.add(socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol));
+		_fileDescriptor = GD::fileDescriptorManager->add(socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol));
 		if(_fileDescriptor->descriptor == -1)
 		{
 			freeaddrinfo(serverInfo);
@@ -289,7 +289,7 @@ void SocketOperations::getConnection()
 		if(setsockopt(_fileDescriptor->descriptor, SOL_SOCKET, SO_KEEPALIVE, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
-			GD::fileDescriptorManager.shutdown(_fileDescriptor);
+			GD::fileDescriptorManager->shutdown(_fileDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 
@@ -298,7 +298,7 @@ void SocketOperations::getConnection()
 			if(fcntl(_fileDescriptor->descriptor, F_SETFL, fcntl(_fileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
 			{
 				freeaddrinfo(serverInfo);
-				GD::fileDescriptorManager.shutdown(_fileDescriptor);
+				GD::fileDescriptorManager->shutdown(_fileDescriptor);
 				throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 			}
 		}
@@ -309,14 +309,14 @@ void SocketOperations::getConnection()
 			if(i < 5)
 			{
 				freeaddrinfo(serverInfo);
-				GD::fileDescriptorManager.shutdown(_fileDescriptor);
+				GD::fileDescriptorManager->shutdown(_fileDescriptor);
 				std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 				continue;
 			}
 			else
 			{
 				freeaddrinfo(serverInfo);
-				GD::fileDescriptorManager.shutdown(_fileDescriptor);
+				GD::fileDescriptorManager->shutdown(_fileDescriptor);
 				throw SocketTimeOutException("Connecting to server " + ipAddress + " on port " + _port + " timed out: " + strerror(errno));
 			}
 		}
@@ -340,13 +340,13 @@ void SocketOperations::getConnection()
 			{
 				if(i < 5)
 				{
-					GD::fileDescriptorManager.shutdown(_fileDescriptor);
+					GD::fileDescriptorManager->shutdown(_fileDescriptor);
 					std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 					continue;
 				}
 				else
 				{
-					GD::fileDescriptorManager.shutdown(_fileDescriptor);
+					GD::fileDescriptorManager->shutdown(_fileDescriptor);
 					throw SocketTimeOutException("Could not connect to server " + ipAddress + " on port " + _port + ". Poll failed with error code: " + std::to_string(pollResult) + ".");
 				}
 			}
@@ -355,7 +355,7 @@ void SocketOperations::getConnection()
 				socklen_t resultLength = sizeof(connectResult);
 				if(getsockopt(_fileDescriptor->descriptor, SOL_SOCKET, SO_ERROR, &connectResult, &resultLength) < 0)
 				{
-					GD::fileDescriptorManager.shutdown(_fileDescriptor);
+					GD::fileDescriptorManager->shutdown(_fileDescriptor);
 					throw SocketOperationException("Could not connect to server " + ipAddress + " on port " + _port + ": " + strerror(errno) + ".");
 				}
 				break;
@@ -364,12 +364,12 @@ void SocketOperations::getConnection()
 			{
 				if(i < 5)
 				{
-					GD::fileDescriptorManager.shutdown(_fileDescriptor);
+					GD::fileDescriptorManager->shutdown(_fileDescriptor);
 					continue;
 				}
 				else
 				{
-					GD::fileDescriptorManager.shutdown(_fileDescriptor);
+					GD::fileDescriptorManager->shutdown(_fileDescriptor);
 					throw SocketTimeOutException("Connecting to server " + ipAddress + " on port " + _port + " timed out.");
 				}
 			}

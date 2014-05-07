@@ -30,8 +30,7 @@
 #ifndef FS20DEVICE_H
 #define FS20DEVICE_H
 
-#include "../../LogicalDevices/LogicalDevice.h"
-#include "../../HelperFunctions/HelperFunctions.h"
+#include "../../../Modules/Base/Systems/LogicalDevice.h"
 #include "FS20Packet.h"
 #include "FS20DeviceTypes.h"
 

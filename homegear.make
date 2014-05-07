@@ -36,7 +36,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l pthread -l sqlite3 -l readline -l ssl -l output -l helperfunctions -l physicaldevices -l types -l logicaldevices -l threads -l database -l filedescriptormanager -l encoding -l user -l settings -l metadata -l cli -l events -l gd
+  LDFLAGS   += -Llib/Debug -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l threads -l user -l settings -l cli -l events -l gd
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -58,7 +58,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l pthread -l sqlite3 -l readline -l ssl -l output -l helperfunctions -l physicaldevices -l types -l logicaldevices -l threads -l database -l filedescriptormanager -l encoding -l user -l settings -l metadata -l cli -l events -l gd
+  LDFLAGS   += -Llib/Release -s -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l threads -l user -l settings -l cli -l events -l gd
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -80,7 +80,7 @@ ifeq ($(config),profiling)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l pthread -l sqlite3 -l readline -l ssl -l output -l helperfunctions -l physicaldevices -l types -l logicaldevices -l threads -l database -l filedescriptormanager -l encoding -l user -l settings -l metadata -l cli -l events -l gd -pg
+  LDFLAGS   += -Llib/Profiling -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l threads -l user -l settings -l cli -l events -l gd -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -95,11 +95,8 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/main.o \
-	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/SystemInitializer.o \
-	$(OBJDIR)/DeviceTypes.o \
-	$(OBJDIR)/DeviceFamily.o \
-	$(OBJDIR)/Peer.o \
+	$(OBJDIR)/FamilyController.o \
 
 RESOURCES := \
 
@@ -167,19 +164,10 @@ endif
 $(OBJDIR)/main.o: main.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/ServiceMessages.o: Libraries/Systems/General/ServiceMessages.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SystemInitializer.o: Libraries/Systems/General/SystemInitializer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/DeviceTypes.o: Libraries/Systems/General/DeviceTypes.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/DeviceFamily.o: Libraries/Systems/General/DeviceFamily.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Peer.o: Libraries/Systems/General/Peer.cpp
+$(OBJDIR)/FamilyController.o: Libraries/Systems/General/FamilyController.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

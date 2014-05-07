@@ -31,9 +31,9 @@
 #define RPCMETHODS_H_
 
 #include "RPCServer.h"
-#include "../Types/RPCVariable.h"
+#include "../../Modules/Base/Types/RPCVariable.h"
 #include "RPCMethod.h"
-#include "../Metadata/Metadata.h"
+#include "../../Modules/Base/Metadata/Metadata.h"
 #include "../Events/EventHandler.h"
 #include "../PhysicalDevices/PhysicalDevices.h"
 

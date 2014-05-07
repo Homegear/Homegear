@@ -30,8 +30,7 @@
 #ifndef INSTEONDEVICE_H
 #define INSTEONDEVICE_H
 
-#include "../../LogicalDevices/LogicalDevice.h"
-#include "../../HelperFunctions/HelperFunctions.h"
+#include "../../../Modules/Base/Systems/LogicalDevice.h"
 #include "InsteonDeviceTypes.h"
 #include "InsteonPacket.h"
 

@@ -34,9 +34,8 @@
 #include <memory>
 #include <vector>
 
-#include "../../../HelperFunctions/HelperFunctions.h"
 #include "../HomeMaticDevice.h"
-#include "../../../Database/Database.h"
+#include "../../../../Modules/Base/Database/Database.h"
 
 namespace BidCoS
 {

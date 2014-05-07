@@ -37,7 +37,6 @@
 class BidCoSQueue;
 enum class BidCoSQueueType;
 
-#include "../../../HelperFunctions/HelperFunctions.h"
 #include "../HomeMaticDevice.h"
 
 namespace BidCoS

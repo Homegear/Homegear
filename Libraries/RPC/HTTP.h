@@ -30,7 +30,7 @@
 #ifndef HTTP_H_
 #define HTTP_H_
 
-#include "../HelperFunctions/HelperFunctions.h"
+#include "../../Modules/Base/Exception.h"
 
 #include <iostream>
 #include <string>

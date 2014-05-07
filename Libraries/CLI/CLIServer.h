@@ -30,10 +30,10 @@
 #ifndef CLISERVER_H_
 #define CLISERVER_H_
 
-#include "../HelperFunctions/HelperFunctions.h"
+#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
 #include "../User/User.h"
-#include "../FileDescriptorManager/FileDescriptorManager.h"
-#include "../LogicalDevices/LogicalDevices.h"
+#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
+#include "../Systems/General/FamilyController.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

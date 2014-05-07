@@ -44,32 +44,22 @@ solution "homegear"
       includedirs { "./ARM\ headers" }
       libdirs { "./ARM\ libraries" }
 
-   project "output"
-      kind "StaticLib"
+   project "base"
+      kind "SharedLib"
       language "C++"
-      files { "./Libraries/Output/*.h", "./Libraries/Output/*.cpp" }
- 
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         targetdir "./lib/Debug"
- 
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         targetdir "./lib/Release"
-
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
-         linkoptions { "-pg" }
-		 
-   project "helperfunctions"
-      kind "StaticLib"
-      language "C++"
-      files { "./Libraries/HelperFunctions/*.h", "./Libraries/HelperFunctions/*.cpp" }
+      files
+      { 
+      	"./Modules/Base/*h", "./Modules/Base/*.cpp",
+        "./Modules/Base/HelperFunctions/*.h", "./Modules/Base/HelperFunctions/*.cpp",
+        "./Modules/Base/Output/*.h", "./Modules/Base/Output/*.cpp",
+        "./Modules/Base/RPC/*.h", "./Modules/Base/RPC/*.cpp",
+        "./Modules/Base/Systems/*.h", "./Modules/Base/Systems/*.cpp",
+        "./Modules/Base/FileDescriptorManager/*.h", "./Modules/Base/FileDescriptorManager/*.cpp",
+        "./Modules/Base/Encoding/*.h", "./Modules/Base/Encoding/*.cpp",
+        "./Modules/Base/Database/*.h", "./Modules/Base/Database/*.cpp",
+        "./Modules/Base/Metadata/*.h", "./Modules/Base/Metadata/*.cpp",
+        "./Modules/Base/Types/*.h", "./Modules/Base/Types/*.cpp"
+      }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -109,121 +99,11 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
-	  
-   project "types"
-      kind "StaticLib"
-      language "C++"
-      files { "./Libraries/Types/*.h", "./Libraries/Types/*.cpp" }
- 
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         targetdir "./lib/Debug"
- 
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         targetdir "./lib/Release"
-
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
-         linkoptions { "-pg" }
-		 
-   project "logicaldevices"
-      kind "StaticLib"
-      language "C++"
-      files { "./Libraries/LogicalDevices/*.h", "./Libraries/LogicalDevices/*.cpp" }
- 
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         targetdir "./lib/Debug"
- 
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         targetdir "./lib/Release"
-
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
-         linkoptions { "-pg" }
 		 
    project "threads"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Threads/*.h", "./Libraries/Threads/*.cpp" }
- 
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         targetdir "./lib/Debug"
- 
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         targetdir "./lib/Release"
-
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
-         linkoptions { "-pg" }
-		 
-   project "database"
-      kind "StaticLib"
-      language "C++"
-      files { "./Libraries/Database/*.h", "./Libraries/Database/*.cpp" }
- 
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         targetdir "./lib/Debug"
- 
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         targetdir "./lib/Release"
-
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
-         linkoptions { "-pg" }
-
-   project "filedescriptormanager"
-      kind "StaticLib"
-      language "C++"
-      files { "./Libraries/FileDescriptorManager/*.h", "./Libraries/FileDescriptorManager/*.cpp" }
- 
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         targetdir "./lib/Debug"
- 
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         targetdir "./lib/Release"
-
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
-         linkoptions { "-pg" }
-
-   project "encoding"
-      kind "StaticLib"
-      language "C++"
-      files { "./Libraries/Encoding/*.h", "./Libraries/Encoding/*.cpp" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -268,28 +148,6 @@ solution "homegear"
       kind "StaticLib"
       language "C++"
       files { "./Libraries/Settings/*.h", "./Libraries/Settings/*.cpp" }
- 
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         targetdir "./lib/Debug"
- 
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         targetdir "./lib/Release"
-
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         targetdir "./lib/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
-         linkoptions { "-pg" }
-   
-   project "metadata"
-      kind "StaticLib"
-      language "C++"
-      files { "./Libraries/Metadata/*.h", "./Libraries/Metadata/*.cpp" }
  
       configuration "Debug"
          defines { "DEBUG" }
@@ -497,7 +355,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
 	  files { "./Libraries/Systems/General/*.h", "./Libraries/Systems/General/*.cpp" }
-      linkoptions { "-l bidcos", "-l hmwired", "-l insteon", "-l fs20", "-l rpc", "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l output", "-l helperfunctions", "-l physicaldevices", "-l types", "-l logicaldevices", "-l threads", "-l database", "-l filedescriptormanager", "-l encoding", "-l user", "-l settings", "-l metadata", "-l cli", "-l events", "-l gd" }
+      linkoptions { "-l bidcos", "-l hmwired", "-l insteon", "-l fs20", "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l physicaldevices", "-l threads", "-l user", "-l settings", "-l cli", "-l events", "-l gd" }
  
       configuration "Debug"
          defines { "DEBUG" }

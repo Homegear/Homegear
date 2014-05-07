@@ -28,6 +28,7 @@
  */
 
 #include "FS20Packet.h"
+#include "../../GD/GD.h"
 
 namespace FS20
 {
@@ -58,7 +59,7 @@ void FS20Packet::import(std::vector<uint8_t>& packet)
 		if(packet.empty()) return;
 		if(packet.size() != 4 && packet.size() != 5)
 		{
-			Output::printWarning("Warning: Tried to import FS20 packet of wrong size (" + std::to_string(packet.size()) + " bytes).");
+			GD::output->printWarning("Warning: Tried to import FS20 packet of wrong size (" + std::to_string(packet.size()) + " bytes).");
 			return;
 		}
 		_packet = packet;
@@ -73,15 +74,15 @@ void FS20Packet::import(std::vector<uint8_t>& packet)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -91,27 +92,27 @@ void FS20Packet::import(std::string packetHex, bool removeFirstCharacter)
 	{
 		if(packetHex.size() > 256 || packetHex.size() < 9)
 		{
-			Output::printWarning("Warning: Tried to import FS20 packet larger than 128 bytes.");
+			GD::output->printWarning("Warning: Tried to import FS20 packet larger than 128 bytes.");
 			return;
 		}
 		int32_t tailLength = 0;
 		if(packetHex.back() == '\n') tailLength = 2;
 		if(removeFirstCharacter) packetHex = packetHex.substr(1, packetHex.length() - 1 - tailLength);
 		else if(tailLength > 0) packetHex = packetHex.substr(0, packetHex.length() - tailLength);
-		std::vector<uint8_t> packet(HelperFunctions::getUBinary(packetHex));
+		std::vector<uint8_t> packet(GD::helperFunctions->getUBinary(packetHex));
 		import(packet);
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -127,15 +128,15 @@ std::vector<uint8_t> FS20Packet::byteArray()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -144,19 +145,19 @@ std::string FS20Packet::hexString()
 {
 	try
 	{
-		return HelperFunctions::getHexString(byteArray());
+		return GD::helperFunctions->getHexString(byteArray());
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }

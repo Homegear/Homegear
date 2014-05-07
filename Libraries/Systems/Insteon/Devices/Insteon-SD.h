@@ -31,7 +31,6 @@
 #define INSTEON_SD_H
 
 #include "../InsteonDevice.h"
-#include "../../../HelperFunctions/HelperFunctions.h"
 
 #include <list>
 

@@ -30,9 +30,9 @@
 #ifndef EVENTHANDLER_H_
 #define EVENTHANDLER_H_
 
-#include "../HelperFunctions/HelperFunctions.h"
-#include "../Encoding/RPCEncoder.h"
-#include "../Encoding/RPCDecoder.h"
+#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
+#include "../../Modules/Base/Encoding/RPCEncoder.h"
+#include "../../Modules/Base/Encoding/RPCDecoder.h"
 #include "../RPC/Server.h"
 
 #include <memory>

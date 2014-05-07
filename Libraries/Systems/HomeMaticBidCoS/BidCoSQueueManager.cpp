@@ -54,15 +54,15 @@ BidCoSQueueManager::~BidCoSQueueManager()
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_workerThreadMutex.unlock();
 }
@@ -115,31 +115,31 @@ void BidCoSQueueManager::worker()
 			catch(const std::exception& ex)
 			{
 				_queueMutex.unlock();
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
 				_queueMutex.unlock();
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
 				_queueMutex.unlock();
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -164,11 +164,11 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 				}
 				catch(const std::exception& ex)
 				{
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
 				catch(...)
 				{
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+					GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				}
 			}
 			_workerThreadMutex.unlock();
@@ -189,21 +189,21 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		_queueMutex.lock();
 		_queues.insert(std::pair<int32_t, std::shared_ptr<BidCoSQueueData>>(address, queueData));
 		_queueMutex.unlock();
-		Output::printDebug("Creating SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
-		GD::db.executeCommand("SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
+		GD::output->printDebug("Creating SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
+		GD::db->executeCommand("SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
 		return queueData->queue;
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _queueMutex.unlock();
     _workerThreadMutex.unlock();
@@ -228,7 +228,7 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 		bool setUnreach = false;
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
 		{
-			Output::printDebug("Debug: Deleting queue " + std::to_string(id) + " for BidCoS peer with address 0x" + HelperFunctions::getHexString(address));
+			GD::output->printDebug("Debug: Deleting queue " + std::to_string(id) + " for BidCoS peer with address 0x" + GD::helperFunctions->getHexString(address));
 			queue = _queues.at(address);
 			_queues.erase(address);
 			if(!queue->queue->isEmpty() && queue->queue->getQueueType() != BidCoSQueueType::PAIRING)
@@ -250,20 +250,20 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 	catch(const std::exception& ex)
     {
 		_queueMutex.unlock();
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_queueMutex.unlock();
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    Output::printDebug("Releasing SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(id));
-    GD::db.executeCommand("RELEASE BidCoSQueue" + std::to_string(address) + "_" + std::to_string(id));
+    GD::output->printDebug("Releasing SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(id));
+    GD::db->executeCommand("RELEASE BidCoSQueue" + std::to_string(address) + "_" + std::to_string(id));
 }
 
 std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)
@@ -280,15 +280,15 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _queueMutex.unlock();
     return std::shared_ptr<BidCoSQueue>();

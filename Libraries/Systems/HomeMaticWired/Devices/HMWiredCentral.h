@@ -32,10 +32,9 @@
 
 class HMWiredPacket;
 
-#include "../../../HelperFunctions/HelperFunctions.h"
-#include "../../../LogicalDevices/Central.h"
+#include "../../../../Modules/Base/Systems/Central.h"
 #include "../HMWiredDevice.h"
-#include "../../../Types/RPCVariable.h"
+#include "../../../../Modules/Base/Types/RPCVariable.h"
 
 #include <memory>
 #include <mutex>

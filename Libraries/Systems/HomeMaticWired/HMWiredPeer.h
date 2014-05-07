@@ -30,8 +30,8 @@
 #ifndef HMWIREDPEER_H_
 #define HMWIREDPEER_H_
 
-#include "../General/Peer.h"
-#include "../General/ServiceMessages.h"
+#include "../../../Modules/Base/Systems/Peer.h"
+#include "../../../Modules/Base/Systems/ServiceMessages.h"
 #include "HMWiredPacket.h"
 
 #include <list>

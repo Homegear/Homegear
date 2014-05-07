@@ -30,9 +30,8 @@
 #ifndef HMWIRED_H_
 #define HMWIRED_H_
 
-#include "../../Database/Database.h"
-#include "../../HelperFunctions/HelperFunctions.h"
-#include "../General/DeviceFamily.h"
+#include "../../../Modules/Base/Database/Database.h"
+#include "../../../Modules/Base/Systems/DeviceFamily.h"
 
 namespace HMWired
 {
