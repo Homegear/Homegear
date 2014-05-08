@@ -209,9 +209,8 @@ public:
 	virtual std::vector<std::shared_ptr<Parameter>> getIndices(uint32_t startIndex, uint32_t endIndex, int32_t list);
 	virtual std::shared_ptr<Parameter> getIndex(double index);
 	virtual std::shared_ptr<Parameter> getParameter(std::string id);
-	virtual std::vector<std::shared_ptr<Parameter>> getParameters(std::string );
 	virtual std::string typeString();
-	virtual ParameterSet::Type::Enum typeFromString(std::string type);
+	static ParameterSet::Type::Enum typeFromString(std::string type);
 };
 
 class EnforceLink

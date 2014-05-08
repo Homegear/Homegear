@@ -29,6 +29,7 @@
 
 #include "HMWired-SD.h"
 #include "../../../GD/GD.h"
+#include "../../../../Modules/Base/BaseLib.h"
 
 namespace HMWired
 {
@@ -57,15 +58,15 @@ void HMWired_SD::init()
 	}
     catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -80,15 +81,15 @@ void HMWired_SD::saveVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -98,7 +99,7 @@ void HMWired_SD::loadVariables()
 	{
 		HMWiredDevice::loadVariables();
 		_databaseMutex.lock();
-		DataTable rows = GD::db->executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
+		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
@@ -115,15 +116,15 @@ void HMWired_SD::loadVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 }
@@ -138,15 +139,15 @@ void HMWired_SD::saveFilters()
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -164,15 +165,15 @@ void HMWired_SD::serializeFilters(std::vector<uint8_t>& encodedData)
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -193,15 +194,15 @@ void HMWired_SD::unserializeFilters(std::shared_ptr<std::vector<char>> serialize
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -226,19 +227,19 @@ bool HMWired_SD::packetReceived(std::shared_ptr<Packet> packet)
 			}
 		}
 		if(_filters.size() == 0) printPacket = true;
-		if(printPacket) std::cout << GD::helperFunctions->getTimeString(wiredPacket->timeReceived()) << " HomeMatic Wired packet received: " + wiredPacket->hexString() << std::endl;
+		if(printPacket) std::cout << HelperFunctions::getTimeString(wiredPacket->timeReceived()) << " HomeMatic Wired packet received: " + wiredPacket->hexString() << std::endl;
 	}
     catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return false;
 }
@@ -254,15 +255,15 @@ void HMWired_SD::addFilter(FilterType filterType, int32_t filterValue)
 	}
     catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -274,15 +275,15 @@ void HMWired_SD::removeFilter(FilterType filterType, int32_t filterValue)
 	}
     catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -429,10 +430,10 @@ std::string HMWired_SD::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					filterType = GD::helperFunctions->getNumber(element, true);
+					filterType = HelperFunctions::getNumber(element, true);
 					if(filterType != 0 && filterType != 1 && filterType != 3) return "Invalid filter type.\n";
 				}
-				else if(index == 3) filterValue = GD::helperFunctions->getNumber(element, true);
+				else if(index == 3) filterValue = HelperFunctions::getNumber(element, true);
 				index++;
 			}
 			if(index < 4)
@@ -472,10 +473,10 @@ std::string HMWired_SD::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					filterType = GD::helperFunctions->getNumber(element, true);
+					filterType = HelperFunctions::getNumber(element, true);
 					if(filterType != 0 && filterType != 1 && filterType != 3) return "Invalid filter type.\n";
 				}
-				else if(index == 3) filterValue = GD::helperFunctions->getNumber(element, true);
+				else if(index == 3) filterValue = HelperFunctions::getNumber(element, true);
 				index++;
 			}
 			if(index < 4)
@@ -533,15 +534,15 @@ std::string HMWired_SD::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }

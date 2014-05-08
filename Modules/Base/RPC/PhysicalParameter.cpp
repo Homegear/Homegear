@@ -28,7 +28,7 @@
  */
 
 #include "PhysicalParameter.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 namespace RPC
 {
@@ -49,7 +49,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 				if(attributeValue == "integer") type = Type::Enum::typeInteger;
 				else if(attributeValue == "boolean") type = Type::Enum::typeBoolean;
 				else if(attributeValue == "string") type = Type::Enum::typeString;
-				else GDB::output.printWarning("Warning: Unknown physical type: " + attributeValue);
+				else Output::printWarning("Warning: Unknown physical type: " + attributeValue);
 			}
 			else if(attributeName == "interface")
 			{
@@ -60,50 +60,50 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 				else if(attributeValue == "config_string") interface = Interface::Enum::configString;
 				else if(attributeValue == "store") interface = Interface::Enum::store;
 				else if(attributeValue == "eeprom") interface = Interface::Enum::eeprom;
-				else GDB::output.printWarning("Warning: Unknown interface for \"physical\": " + attributeValue);
+				else Output::printWarning("Warning: Unknown interface for \"physical\": " + attributeValue);
 			}
 			else if(attributeName == "endian")
 			{
 				if(attributeValue == "little") endian = Endian::Enum::little;
 				else if(attributeValue == "big") endian = Endian::Enum::big; //default
-				else GDB::output.printWarning("Warning: Unknown endianess for \"physical\": " + attributeValue);
+				else Output::printWarning("Warning: Unknown endianess for \"physical\": " + attributeValue);
 			}
 			else if(attributeName == "value_id") valueID = attributeValue;
 			else if(attributeName == "no_init") { if(attributeValue == "true") noInit = true; }
-			else if(attributeName == "list") list = GDB::helperFunctions.getNumber(attributeValue);
+			else if(attributeName == "list") list = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "index")
 			{
-				std::pair<std::string, std::string> splitValue = GDB::helperFunctions.split(attributeValue, '.');
+				std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, '.');
 				index = 0;
 				if(!splitValue.second.empty())
 				{
-					index += GDB::helperFunctions.getNumber(splitValue.second);
+					index += HelperFunctions::getNumber(splitValue.second);
 					index /= 10;
 				}
-				index += GDB::helperFunctions.getNumber(splitValue.first);
+				index += HelperFunctions::getNumber(splitValue.first);
 			}
 			else if(attributeName == "size")
 			{
-				std::pair<std::string, std::string> splitValue = GDB::helperFunctions.split(attributeValue, '.');
+				std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, '.');
 				size = 0;
 				if(!splitValue.second.empty())
 				{
-					size += GDB::helperFunctions.getNumber(splitValue.second);
+					size += HelperFunctions::getNumber(splitValue.second);
 					size /= 10;
 				}
-				size += GDB::helperFunctions.getNumber(splitValue.first);
+				size += HelperFunctions::getNumber(splitValue.first);
 				sizeDefined = true;
 			}
-			else if(attributeName == "read_size") readSize = GDB::helperFunctions.getNumber(attributeValue);
+			else if(attributeName == "read_size") readSize = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "counter") counter = attributeValue;
 			else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
 			else if(attributeName == "id") { id = attributeValue; }
 			else if(attributeName == "save_on_change") {} //not necessary, all values are saved on change
-			else if(attributeName == "mask") mask = GDB::helperFunctions.getNumber(attributeValue);
+			else if(attributeName == "mask") mask = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "read_size") {} //not necessary, because size can be determined through index
-			else GDB::output.printWarning("Warning: Unknown attribute for \"physical\": " + attributeName);
+			else Output::printWarning("Warning: Unknown attribute for \"physical\": " + attributeName);
 		}
-		if(mask != -1 && fmod(index, 1) != 0) GDB::output.printWarning("Warning: mask combined with unaligned index not supported.");
+		if(mask != -1 && fmod(index, 1) != 0) Output::printWarning("Warning: mask combined with unaligned index not supported.");
 		startIndex = std::lround(std::floor(index));
 		int32_t intDiff = std::lround(std::floor(size)) - 1;
 		if(intDiff < 0) intDiff = 0;
@@ -141,13 +141,13 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 							if(!attr1 || !attr2) continue;
 							event->dominoEvent = true;
 							std::string eventValue = std::string(attr1->value());
-							event->dominoEventValue = GDB::helperFunctions.getNumber(eventValue);
+							event->dominoEventValue = HelperFunctions::getNumber(eventValue);
 							event->dominoEventDelayID = std::string(attr2->value());
 						}
-						else GDB::output.printWarning("Warning: Unknown node for \"physical\\event\": " + eventNodeName);
+						else Output::printWarning("Warning: Unknown node for \"physical\\event\": " + eventNodeName);
 					}
 				}
-				else GDB::output.printWarning("Warning: domino_event is only supported for physical type integer.");
+				else Output::printWarning("Warning: domino_event is only supported for physical type integer.");
 				eventFrames.push_back(event);
 			}
 			else if(nodeName == "address")
@@ -168,22 +168,22 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 							address.operation = PhysicalParameterAddress::Operation::substraction;
 							attributeValue.erase(0, 1);
 						}
-						std::pair<std::string, std::string> splitValue = GDB::helperFunctions.split(attributeValue, '.');
+						std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, '.');
 						address.index = 0;
 						if(!splitValue.second.empty())
 						{
-							address.index += GDB::helperFunctions.getNumber(splitValue.second);
+							address.index += HelperFunctions::getNumber(splitValue.second);
 							address.index /= 10;
 						}
-						address.index += GDB::helperFunctions.getNumber(splitValue.first);
+						address.index += HelperFunctions::getNumber(splitValue.first);
 						if(std::lround(address.index * 10) % 10 >= 8) address.index += 0.2; //e. g. 15.9 => 16.1
 						index = address.index;
 					}
 					else if(attributeName == "step")
 					{
-						address.step = GDB::helperFunctions.getDouble(attributeValue);
+						address.step = HelperFunctions::getDouble(attributeValue);
 					}
-					else GDB::output.printWarning("Warning: Unknown attribute for \"address\": " + attributeName);
+					else Output::printWarning("Warning: Unknown attribute for \"address\": " + attributeName);
 				}
 			}
 			else if(nodeName == "reset_after_send")
@@ -191,20 +191,20 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 				attr = physicalNode->first_attribute("param");
 				if(attr) resetAfterSend.push_back(std::string(attr->value()));
 			}
-			else GDB::output.printWarning("Warning: Unknown node for \"physical\": " + nodeName);
+			else Output::printWarning("Warning: Unknown node for \"physical\": " + nodeName);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

@@ -28,7 +28,7 @@
  */
 
 #include "ServiceMessages.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 ServiceMessages::ServiceMessages(Peer* peer)
 {
@@ -50,18 +50,67 @@ void ServiceMessages::dispose()
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peerMutex.unlock();
 }
+
+//Event handling
+void ServiceMessages::addEventHandler(std::shared_ptr<IEventSink> eventHandler)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		_eventHandlers.push_back(eventHandler);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void ServiceMessages::raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::vector<std::shared_ptr<IEventSink>>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) (*i)->onRPCBroadcast(id, channel, deviceAddress, valueKeys, values);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+//End event handling
 
 void ServiceMessages::serialize(std::vector<uint8_t>& encodedData)
 {
@@ -89,15 +138,15 @@ void ServiceMessages::serialize(std::vector<uint8_t>& encodedData)
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_errorMutex.unlock();
 }
@@ -128,15 +177,15 @@ void ServiceMessages::unserialize(std::shared_ptr<std::vector<char>> serializedD
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _errorMutex.unlock();
 }
@@ -176,7 +225,7 @@ bool ServiceMessages::set(std::string id, bool value)
 						std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 						rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
 
-						//GDB::rpcClient.broadcastEvent(_peer->getID(), 0, _peer->getSerialNumber() + ":" + std::to_string(i->first), valueKeys, rpcValues);
+						raiseOnRPCBroadcast(_peer->getID(), 0, _peer->getSerialNumber() + ":" + std::to_string(i->first), valueKeys, rpcValues);
 					}
 					_peerMutex.unlock();
 				}
@@ -201,23 +250,23 @@ bool ServiceMessages::set(std::string id, bool value)
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
 
-			//GDB::rpcClient.broadcastEvent(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
+			raiseOnRPCBroadcast(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
 		}
 	}
 	catch(const std::exception& ex)
     {
 		_errorMutex.unlock();
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_errorMutex.unlock();
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_errorMutex.unlock();
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peerMutex.unlock();
     return true;
@@ -242,17 +291,17 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
 	catch(const std::exception& ex)
     {
 		_errorMutex.unlock();
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_errorMutex.unlock();
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_errorMutex.unlock();
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -344,15 +393,15 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get(bool returnID)
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _errorMutex.unlock();
     _peerMutex.unlock();
@@ -394,20 +443,20 @@ void ServiceMessages::checkUnreach()
 			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 
-			//GDB::rpcClient.broadcastEvent(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
+			raiseOnRPCBroadcast(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peerMutex.unlock();
 }
@@ -437,21 +486,21 @@ void ServiceMessages::endUnreach()
 				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 				rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(false)));
 
-				//GDB::rpcClient.broadcastEvent(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
+				raiseOnRPCBroadcast(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peerMutex.unlock();
 }
@@ -479,21 +528,21 @@ void ServiceMessages::setConfigPending(bool value)
 				std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 				rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
 
-				//GDB::rpcClient.broadcastEvent(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
+				raiseOnRPCBroadcast(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peerMutex.unlock();
 }
@@ -520,7 +569,7 @@ void ServiceMessages::setUnreach(bool value)
 			_unreachResendCounter = 0;
 			_unreach = value;
 
-			if(value) GDB::output.printInfo("Info: Device 0x" + GDB::helperFunctions.getHexString(_peer->getAddress()) + " is unreachable.");
+			if(value) Output::printInfo("Info: Device 0x" + HelperFunctions::getHexString(_peer->getAddress()) + " is unreachable.");
 			if(_peer->valuesCentral.at(0).find("UNREACH") != _peer->valuesCentral.at(0).end())
 			{
 				RPCConfigurationParameter* parameter = &_peer->valuesCentral.at(0).at("UNREACH");
@@ -541,21 +590,21 @@ void ServiceMessages::setUnreach(bool value)
 					rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 				}
 
-				//GDB::rpcClient.broadcastEvent(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
+				raiseOnRPCBroadcast(_peer->getID(), 0, _peer->getSerialNumber() + ":0", valueKeys, rpcValues);
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peerMutex.unlock();
 }

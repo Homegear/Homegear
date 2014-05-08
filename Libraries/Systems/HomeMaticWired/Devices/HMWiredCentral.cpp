@@ -30,6 +30,7 @@
 #include "HMWiredCentral.h"
 #include "../../../GD/GD.h"
 #include "../../../../Version.h"
+#include "../../../../Modules/Base/BaseLib.h"
 
 namespace HMWired {
 
@@ -60,15 +61,15 @@ void HMWiredCentral::init()
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -85,15 +86,15 @@ bool HMWiredCentral::packetReceived(std::shared_ptr<Packet> packet)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -120,14 +121,14 @@ void HMWiredCentral::deletePeer(uint64_t id)
 			channels->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->first)));
 		}
 		GD::rpcClient.broadcastDeleteDevices(deviceAddresses, deviceInfo);
-		GD::metadata->deleteMetadata(peer->getSerialNumber());
-		GD::metadata->deleteMetadata(std::to_string(id));
+		Metadata::deleteMetadata(peer->getSerialNumber());
+		Metadata::deleteMetadata(std::to_string(id));
 		if(peer->rpcDevice)
 		{
 			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 			{
-				GD::metadata->deleteMetadata(peer->getSerialNumber() + ':' + std::to_string(i->first));
-				GD::metadata->deleteMetadata(std::to_string(id) + ':' + std::to_string(i->first));
+				Metadata::deleteMetadata(peer->getSerialNumber() + ':' + std::to_string(i->first));
+				Metadata::deleteMetadata(std::to_string(id) + ':' + std::to_string(i->first));
 			}
 		}
 		peer->deleteFromDatabase();
@@ -136,22 +137,22 @@ void HMWiredCentral::deletePeer(uint64_t id)
 		if(_peers.find(peer->getAddress()) != _peers.end()) _peers.erase(peer->getAddress());
 		if(_peersByID.find(id) != _peersByID.end()) _peersByID.erase(id);
 		_peersMutex.unlock();
-		GD::output->printMessage("Removed HomeMatic Wired peer " + std::to_string(peer->getID()));
+		Output::printMessage("Removed HomeMatic Wired peer " + std::to_string(peer->getID()));
 	}
 	catch(const std::exception& ex)
     {
 		_peersMutex.unlock();
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_peersMutex.unlock();
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_peersMutex.unlock();
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -232,7 +233,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					peerID = GD::helperFunctions->getNumber(element, false);
+					peerID = HelperFunctions::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -272,7 +273,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					peerID = GD::helperFunctions->getNumber(element, false);
+					peerID = HelperFunctions::getNumber(element, false);
 					if(peerID == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -321,7 +322,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 							index = -1;
 							break;
 						}
-						filterType = GD::helperFunctions->toLower(element);
+						filterType = HelperFunctions::toLower(element);
 					}
 					else if(index == 3) filterValue = element;
 					index++;
@@ -387,12 +388,12 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				{
 					if(filterType == "id")
 					{
-						uint64_t id = GD::helperFunctions->getNumber(filterValue, true);
+						uint64_t id = HelperFunctions::getNumber(filterValue, true);
 						if(i->second->getID() != id) continue;
 					}
 					else if(filterType == "address")
 					{
-						int32_t address = GD::helperFunctions->getNumber(filterValue, true);
+						int32_t address = HelperFunctions::getNumber(filterValue, true);
 						if(i->second->getAddress() != address) continue;
 					}
 					else if(filterType == "serial")
@@ -401,7 +402,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					}
 					else if(filterType == "type")
 					{
-						int32_t deviceType = GD::helperFunctions->getNumber(filterValue, true);
+						int32_t deviceType = HelperFunctions::getNumber(filterValue, true);
 						if((int32_t)i->second->getDeviceType().type() != deviceType) continue;
 					}
 					else if(filterType == "unreach")
@@ -414,9 +415,9 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 
 					stringStream
 						<< std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar
-						<< std::setw(addressWidth) << GD::helperFunctions->getHexString(i->second->getAddress(), 8) << bar
+						<< std::setw(addressWidth) << HelperFunctions::getHexString(i->second->getAddress(), 8) << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
-						<< std::setw(typeWidth1) << GD::helperFunctions->getHexString(i->second->getDeviceType().type(), 4) << bar;
+						<< std::setw(typeWidth1) << HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
 					if(i->second->rpcDevice)
 					{
 						std::shared_ptr<RPC::DeviceType> type = i->second->rpcDevice->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
@@ -429,10 +430,10 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					if(i->second->getFirmwareVersion() == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << "?" << bar;
 					else if(i->second->firmwareUpdateAvailable())
 					{
-						stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + GD::helperFunctions->getHexString(i->second->getFirmwareVersion() >> 8) + "." + GD::helperFunctions->getHexString(i->second->getFirmwareVersion() & 0xFF, 2)) << bar;
+						stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0xFF, 2)) << bar;
 						firmwareUpdates = true;
 					}
-					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << (GD::helperFunctions->getHexString(i->second->getFirmwareVersion() >> 8) + "." + GD::helperFunctions->getHexString(i->second->getFirmwareVersion() & 0xFF, 2)) << bar;
+					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << (HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0xFF, 2)) << bar;
 					if(i->second->serviceMessages)
 					{
 						std::string unreachable(i->second->serviceMessages->getUnreach() ? "Yes" : "No");
@@ -449,17 +450,17 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			catch(const std::exception& ex)
 			{
 				_peersMutex.unlock();
-				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
 				_peersMutex.unlock();
-				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
 				_peersMutex.unlock();
-				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
 		else if(command.compare(0, 12, "peers update") == 0)
@@ -483,7 +484,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					else if(element == "all") all = true;
 					else
 					{
-						peerID = GD::helperFunctions->getNumber(element, false);
+						peerID = HelperFunctions::getNumber(element, false);
 						if(peerID == 0) return "Invalid id.\n";
 					}
 				}
@@ -491,7 +492,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			}
 			if(index == 2)
 			{
-				stringStream << "Description: This command updates one or all peers to the newest firmware version available in \"" << GD::settings.firmwarePath() << "\"." << std::endl;
+				stringStream << "Description: This command updates one or all peers to the newest firmware version available in \"" << BaseLib::settings.firmwarePath() << "\"." << std::endl;
 				stringStream << "Usage: peers update PEERID" << std::endl;
 				stringStream << "       peers update all" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
@@ -550,7 +551,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					id = GD::helperFunctions->getNumber(element, false);
+					id = HelperFunctions::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -577,15 +578,15 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -599,22 +600,22 @@ std::shared_ptr<HMWiredPeer> HMWiredCentral::createPeer(int32_t address, int32_t
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);
 		peer->setSerialNumber(serialNumber);
-		peer->rpcDevice = GD::rpcDevices->find(deviceType, firmwareVersion, -1);
+		peer->rpcDevice = GD::rpcDevices.find(deviceType, firmwareVersion, -1);
 		if(!peer->rpcDevice) return std::shared_ptr<HMWiredPeer>();
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;
 	}
     catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<HMWiredPeer>();
 }
@@ -637,15 +638,15 @@ void HMWiredCentral::updateFirmwares(std::vector<uint64_t> ids)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	GD::devices.updateInfo.reset();
 	GD::devices.updateInfo.updateMutex.unlock();
@@ -660,21 +661,21 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 		if(!peer) return;
 		_updateMode = true;
 		_updateMutex.lock();
-		std::string filenamePrefix = GD::helperFunctions->getHexString((int32_t)DeviceFamilies::HomeMaticWired, 4) + "." + GD::helperFunctions->getHexString(peer->getDeviceType().type(), 8);
-		std::string versionFile(GD::settings.firmwarePath() + filenamePrefix + ".version");
-		if(!GD::helperFunctions->fileExists(versionFile))
+		std::string filenamePrefix = HelperFunctions::getHexString((int32_t)DeviceFamilies::HomeMaticWired, 4) + "." + HelperFunctions::getHexString(peer->getDeviceType().type(), 8);
+		std::string versionFile(BaseLib::settings.firmwarePath() + filenamePrefix + ".version");
+		if(!HelperFunctions::fileExists(versionFile))
 		{
-			GD::output->printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No version info file found.");
+			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No version info file found.");
 			GD::devices.updateInfo.results[id].first = 2;
 			GD::devices.updateInfo.results[id].second = "No version file found.";
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
 		}
-		std::string firmwareFile(GD::settings.firmwarePath() + filenamePrefix + ".fw");
-		if(!GD::helperFunctions->fileExists(firmwareFile))
+		std::string firmwareFile(BaseLib::settings.firmwarePath() + filenamePrefix + ".fw");
+		if(!HelperFunctions::fileExists(firmwareFile))
 		{
-			GD::output->printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No firmware file found.");
+			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No firmware file found.");
 			GD::devices.updateInfo.results[id].first = 3;
 			GD::devices.updateInfo.results[id].second = "No firmware file found.";
 			_updateMutex.unlock();
@@ -686,22 +687,22 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 		{
 			GD::devices.updateInfo.results[id].first = 0;
 			GD::devices.updateInfo.results[id].second = "Already up to date.";
-			GD::output->printInfo("Info: Not updating peer with id " + std::to_string(id) + ". Peer firmware is already up to date.");
+			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". Peer firmware is already up to date.");
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
 		}
-		std::string oldVersionString = GD::helperFunctions->getHexString(peer->getFirmwareVersion() >> 8) + "." + GD::helperFunctions->getHexString(peer->getFirmwareVersion() & 0xFF, 2);
-		std::string versionString = GD::helperFunctions->getHexString(firmwareVersion >> 8) + "." + GD::helperFunctions->getHexString(firmwareVersion & 0xFF, 2);
+		std::string oldVersionString = HelperFunctions::getHexString(peer->getFirmwareVersion() >> 8) + "." + HelperFunctions::getHexString(peer->getFirmwareVersion() & 0xFF, 2);
+		std::string versionString = HelperFunctions::getHexString(firmwareVersion >> 8) + "." + HelperFunctions::getHexString(firmwareVersion & 0xFF, 2);
 
 		std::string firmwareHex;
 		try
 		{
-			firmwareHex = GD::helperFunctions->getFileContent(firmwareFile);
+			firmwareHex = HelperFunctions::getFileContent(firmwareFile);
 		}
 		catch(const std::exception& ex)
 		{
-			GD::output->printError("Error: Could not open firmware file: " + firmwareFile + ": " + ex.what());
+			Output::printError("Error: Could not open firmware file: " + firmwareFile + ": " + ex.what());
 			GD::devices.updateInfo.results[id].first = 4;
 			GD::devices.updateInfo.results[id].second = "Could not open firmware file.";
 			_updateMutex.unlock();
@@ -710,7 +711,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 		}
 		catch(...)
 		{
-			GD::output->printError("Error: Could not open firmware file: " + firmwareFile + ".");
+			Output::printError("Error: Could not open firmware file: " + firmwareFile + ".");
 			GD::devices.updateInfo.results[id].first = 4;
 			GD::devices.updateInfo.results[id].second = "Could not open firmware file.";
 			_updateMutex.unlock();
@@ -728,40 +729,40 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			{
 				GD::devices.updateInfo.results[id].first = 5;
 				GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
-				GD::output->printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (no colon at position 0 or line too short).");
+				Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (no colon at position 0 or line too short).");
 				_updateMutex.unlock();
 				_updateMode = false;
 				return;
 			}
 			std::string hex = line.substr(1, 2);
-			int32_t bytes = GD::helperFunctions->getNumber(hex, true);
+			int32_t bytes = HelperFunctions::getNumber(hex, true);
 			hex = line.substr(7, 2);
-			int32_t recordType = GD::helperFunctions->getNumber(hex, true);
+			int32_t recordType = HelperFunctions::getNumber(hex, true);
 			if(recordType == 1) break; //End of file
 			if(recordType != 0)
 			{
 				GD::devices.updateInfo.results[id].first = 5;
 				GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
-				GD::output->printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (wrong record type).");
+				Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (wrong record type).");
 				_updateMutex.unlock();
 				_updateMode = false;
 				return;
 			}
 			hex = line.substr(3, 4);
-			int32_t address = GD::helperFunctions->getNumber(hex, true);
+			int32_t address = HelperFunctions::getNumber(hex, true);
 			if(address != currentAddress || (11 + bytes * 2) > line.size())
 			{
 				GD::devices.updateInfo.results[id].first = 5;
 				GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
-				GD::output->printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (address does not match).");
+				Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (address does not match).");
 				_updateMutex.unlock();
 				_updateMode = false;
 				return;
 			}
 			currentAddress += bytes;
-			std::vector<uint8_t> data = GD::helperFunctions->getUBinary(line.substr(9, bytes * 2));
+			std::vector<uint8_t> data = HelperFunctions::getUBinary(line.substr(9, bytes * 2));
 			hex = line.substr(9 + bytes * 2, 2);
-			int32_t checkSum = GD::helperFunctions->getNumber(hex, true);
+			int32_t checkSum = HelperFunctions::getNumber(hex, true);
 			int32_t calculatedCheckSum = bytes + (address >> 8) + (address & 0xFF) + recordType;
 			for(std::vector<uint8_t>::iterator i = data.begin(); i != data.end(); ++i)
 			{
@@ -772,7 +773,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			{
 				GD::devices.updateInfo.results[id].first = 5;
 				GD::devices.updateInfo.results[id].second = "Firmware file has wrong format.";
-				GD::output->printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (check sum failed).");
+				Output::printError("Error: Could not read firmware file: " + firmwareFile + ": Wrong format (check sum failed).");
 				_updateMutex.unlock();
 				_updateMode = false;
 				return;
@@ -788,7 +789,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			unlockBus();
 			GD::devices.updateInfo.results[id].first = 6;
 			GD::devices.updateInfo.results[id].second = "Device did not respond to enter-bootloader packet.";
-			GD::output->printWarning("Warning: Device did not enter bootloader.");
+			Output::printWarning("Warning: Device did not enter bootloader.");
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
@@ -806,7 +807,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			unlockBus();
 			GD::devices.updateInfo.results[id].first = 6;
 			GD::devices.updateInfo.results[id].second = "Device did not respond to enter-bootloader packet.";
-			GD::output->printWarning("Warning: Device did not enter bootloader.");
+			Output::printWarning("Warning: Device did not enter bootloader.");
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
@@ -823,7 +824,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			unlockBus();
 			GD::devices.updateInfo.results[id].first = 8;
 			GD::devices.updateInfo.results[id].second = "Too many communication errors (block size request failed).";
-			GD::output->printWarning("Error: Block size request failed.");
+			Output::printWarning("Error: Block size request failed.");
 			_updateMutex.unlock();
 			_updateMode = false;
 			return;
@@ -848,7 +849,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 				unlockBus();
 				GD::devices.updateInfo.results[id].first = 8;
 				GD::devices.updateInfo.results[id].second = "Too many communication errors.";
-				GD::output->printWarning("Error: Block size request failed.");
+				Output::printWarning("Error: Block size request failed.");
 				_updateMutex.unlock();
 				_updateMode = false;
 				return;
@@ -859,7 +860,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 				unlockBus();
 				GD::devices.updateInfo.results[id].first = 8;
 				GD::devices.updateInfo.results[id].second = "Too many communication errors (device received wrong number of bytes).";
-				GD::output->printWarning("Error: Block size request failed.");
+				Output::printWarning("Error: Block size request failed.");
 				_updateMutex.unlock();
 				_updateMode = false;
 				return;
@@ -880,22 +881,22 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 		peer->setFirmwareVersion(firmwareVersion);
 		GD::devices.updateInfo.results[id].first = 0;
 		GD::devices.updateInfo.results[id].second = "Update successful.";
-		GD::output->printInfo("Info: Peer " + std::to_string(id) + " was successfully updated to firmware version " + versionString + ".");
+		Output::printInfo("Info: Peer " + std::to_string(id) + " was successfully updated to firmware version " + versionString + ".");
 		_updateMutex.unlock();
 		_updateMode = false;
 		return;
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     unlockBus();
     GD::devices.updateInfo.results[id].first = 1;
@@ -918,15 +919,15 @@ bool HMWiredCentral::knowsDevice(std::string serialNumber)
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_peersMutex.unlock();
 	return false;
@@ -945,15 +946,15 @@ bool HMWiredCentral::knowsDevice(uint64_t id)
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_peersMutex.unlock();
 	return false;
@@ -973,15 +974,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::addLink(std::string senderSeri
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1053,15 +1054,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::addLink(uint64_t senderID, int
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1078,15 +1079,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::deleteDevice(std::string seria
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1112,15 +1113,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::deleteDevice(uint64_t peerID, 
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1136,15 +1137,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescription(std::stri
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1160,15 +1161,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescription(uint64_t 
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1211,15 +1212,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getDeviceDescription(uint64_t 
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }*/
@@ -1238,15 +1239,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinkInfo(std::string sender
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1265,15 +1266,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinkInfo(uint64_t senderID,
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1288,15 +1289,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinkPeers(std::string seria
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1311,15 +1312,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinkPeers(uint64_t peerID, 
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1335,15 +1336,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinks(std::string serialNum
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1378,17 +1379,17 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinks(uint64_t peerID, int3
 			catch(const std::exception& ex)
 			{
 				_peersMutex.unlock();
-				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
 				_peersMutex.unlock();
-				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
 				_peersMutex.unlock();
-				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 		}
 		else
@@ -1402,15 +1403,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getLinks(uint64_t peerID, int3
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1440,15 +1441,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamset(std::string serial
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1463,15 +1464,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamset(uint64_t peerID, i
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1500,15 +1501,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamsetDescription(std::st
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1523,15 +1524,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamsetDescription(uint64_
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1561,15 +1562,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamsetId(std::string seri
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1584,15 +1585,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getParamsetId(uint64_t peerID,
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1607,15 +1608,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getPeerID(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1630,15 +1631,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getPeerID(std::string serialNu
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1669,15 +1670,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getServiceMessages(bool return
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -1693,15 +1694,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getValue(std::string serialNum
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1716,15 +1717,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::getValue(uint64_t id, uint32_t
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1766,15 +1767,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::listDevices(std::shared_ptr<st
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -1797,15 +1798,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::putParamset(std::string serial
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1820,15 +1821,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::putParamset(uint64_t peerID, i
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1847,15 +1848,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::removeLink(std::string senderS
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1886,15 +1887,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::removeLink(uint64_t senderID, 
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -1924,7 +1925,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 				if(packet.first < 3) packet.first++;
 				else
 				{
-					GD::output->printError("Event: Prevented deadlock while searching for HomeMatic Wired devices.");
+					Output::printError("Event: Prevented deadlock while searching for HomeMatic Wired devices.");
 					address++;
 					backwards = true;
 				}
@@ -1934,7 +1935,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 				packet.first = 0;
 				packet.second.reset(new HMWiredPacket(HMWiredPacketType::discovery, 0, address, false, 0, 0, addressMask, payload));
 			}
-			time = GD::helperFunctions->getTime();
+			time = HelperFunctions::getTime();
 			sendPacket(packet.second, false);
 
 			int32_t i = 0;
@@ -1952,7 +1953,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 					}
 					else
 					{
-						GD::output->printMessage("Peer found with address 0x" + GD::helperFunctions->getHexString(address, 8));
+						Output::printMessage("Peer found with address 0x" + HelperFunctions::getHexString(address, 8));
 						newDevices.push_back(address);
 						backwards = true;
 						address++;
@@ -2010,7 +2011,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 		_pairing = false;
 		unlockBus();
 
-		GD::output->printInfo("Info: Search completed. Found " + std::to_string(newDevices.size()) + " devices.");
+		Output::printInfo("Info: Search completed. Found " + std::to_string(newDevices.size()) + " devices.");
 		std::vector<std::shared_ptr<HMWiredPeer>> newPeers;
 		for(std::vector<int32_t>::iterator i = newDevices.begin(); i != newDevices.end(); ++i)
 		{
@@ -2020,7 +2021,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			std::shared_ptr<HMWiredPacket> response = getResponse(0x68, *i, true);
 			if(!response || response->payload()->size() != 2)
 			{
-				GD::output->printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + GD::helperFunctions->getHexString(*i, 8) + ". Device type request failed.");
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Device type request failed.");
 				continue;
 			}
 			int32_t deviceType = (response->payload()->at(0) << 8) + response->payload()->at(1);
@@ -2029,7 +2030,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			response = getResponse(0x76, *i);
 			if(!response || response->payload()->size() != 2)
 			{
-				GD::output->printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + GD::helperFunctions->getHexString(*i, 8) + ". Firmware version request failed.");
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Firmware version request failed.");
 				continue;
 			}
 			int32_t firmwareVersion = (response->payload()->at(0) << 8) + response->payload()->at(1);
@@ -2038,7 +2039,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			response = getResponse(0x6E, *i);
 			if(!response || response->payload()->empty())
 			{
-				GD::output->printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + GD::helperFunctions->getHexString(*i, 8) + ". Serial number request failed.");
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Serial number request failed.");
 				continue;
 			}
 			std::string serialNumber(&response->payload()->at(0), &response->payload()->at(0) + response->payload()->size());
@@ -2046,7 +2047,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			std::shared_ptr<HMWiredPeer> peer = createPeer(*i, firmwareVersion, LogicalDeviceType(DeviceFamilies::HomeMaticWired, deviceType), serialNumber, true);
 			if(!peer)
 			{
-				GD::output->printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + GD::helperFunctions->getHexString(*i, 8) + ". No matching XML file was found.");
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". No matching XML file was found.");
 				continue;
 			}
 			peer->initializeCentralConfig();
@@ -2055,7 +2056,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			peer->saveParameter(peer->binaryConfig[0].databaseID, 0, peer->binaryConfig[0].data);
 			if(peer->binaryConfig[0].data.size() != 0x10)
 			{
-				GD::output->printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + GD::helperFunctions->getHexString(*i, 8) + ". Could not read master config from EEPROM.");
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Could not read master config from EEPROM.");
 				continue;
 			}
 
@@ -2075,7 +2076,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			response = getResponse(command, *i);
 			if(!response || response->payload()->empty() || response->payload()->size() != 12 || response->payload()->at(0) != 0x65 || response->payload()->at(1) != 0 || response->payload()->at(2) != 0 || response->payload()->at(3) != 0x10)
 			{
-				GD::output->printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + GD::helperFunctions->getHexString(*i, 8) + ". Could not determine EEPROM blocks to read.");
+				Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Could not determine EEPROM blocks to read.");
 				continue;
 			}
 
@@ -2090,7 +2091,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 						{
 							peer->binaryConfig[configIndex].data = readEEPROM(peer->getAddress(), configIndex);
 							peer->saveParameter(peer->binaryConfig[configIndex].databaseID, configIndex, peer->binaryConfig[configIndex].data);
-							if(peer->binaryConfig[configIndex].data.size() != 0x10) GD::output->printError("Error: HomeMatic Wired Central: Error reading config from device with address 0x" + GD::helperFunctions->getHexString(*i, 8) + ". Size is not 16 bytes.");
+							if(peer->binaryConfig[configIndex].data.size() != 0x10) Output::printError("Error: HomeMatic Wired Central: Error reading config from device with address 0x" + HelperFunctions::getHexString(*i, 8) + ". Size is not 16 bytes.");
 						}
 					}
 					configIndex += 0x10;
@@ -2108,15 +2109,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 			}
 			catch(const std::exception& ex)
 			{
-				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(Exception& ex)
 			{
-				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
-				GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 			_peersMutex.unlock();
 		}
@@ -2140,15 +2141,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::searchDevices()
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_pairing = false;
 	unlockBus();
@@ -2173,15 +2174,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::setLinkInfo(std::string sender
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2204,15 +2205,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::setLinkInfo(uint64_t senderID,
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2227,15 +2228,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::setValue(std::string serialNum
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2250,15 +2251,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::setValue(uint64_t id, uint32_t
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2274,15 +2275,15 @@ std::shared_ptr<RPC::RPCVariable> HMWiredCentral::updateFirmware(std::vector<uin
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }

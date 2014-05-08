@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base physicaldevices threads user settings rpc cli events gd bidcos hmwired insteon fs20 homegear
+PROJECTS := base physicaldevices user rpc cli events gd bidcos hmwired insteon fs20 homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -20,17 +20,9 @@ physicaldevices:
 	@echo "==== Building physicaldevices ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f physicaldevices.make
 
-threads: 
-	@echo "==== Building threads ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f threads.make
-
 user: 
 	@echo "==== Building user ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f user.make
-
-settings: 
-	@echo "==== Building settings ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f settings.make
 
 rpc: 
 	@echo "==== Building rpc ($(config)) ===="
@@ -71,9 +63,7 @@ homegear:
 clean:
 	@${MAKE} --no-print-directory -C . -f base.make clean
 	@${MAKE} --no-print-directory -C . -f physicaldevices.make clean
-	@${MAKE} --no-print-directory -C . -f threads.make clean
 	@${MAKE} --no-print-directory -C . -f user.make clean
-	@${MAKE} --no-print-directory -C . -f settings.make clean
 	@${MAKE} --no-print-directory -C . -f rpc.make clean
 	@${MAKE} --no-print-directory -C . -f cli.make clean
 	@${MAKE} --no-print-directory -C . -f events.make clean
@@ -97,9 +87,7 @@ help:
 	@echo "   clean"
 	@echo "   base"
 	@echo "   physicaldevices"
-	@echo "   threads"
 	@echo "   user"
-	@echo "   settings"
 	@echo "   rpc"
 	@echo "   cli"
 	@echo "   events"

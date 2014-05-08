@@ -37,6 +37,7 @@
 #include "Devices/HM-CC-TC.h"
 #include "Devices/HM-CC-VD.h"
 #include "Devices/HM-SD.h"
+#include "../../../Modules/Base/BaseLib.h"
 
 namespace BidCoS
 {
@@ -68,15 +69,15 @@ std::shared_ptr<RPC::RPCVariable> BidCoS::listBidcosInterfaces()
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -86,22 +87,23 @@ std::shared_ptr<PhysicalDevices::PhysicalDevice> BidCoS::createPhysicalDevice(st
 	try
 	{
 		if(!settings) return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
-		if(settings->type == "cul") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::CUL(settings));
-		else if(settings->type == "coc") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::COC(settings));
-		else if(settings->type == "cc1100") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::TICC1100(settings));
-		else GD::output->printError("Error: Unsupported physical device type for family HomeMatic BidCoS: " + settings->type);
+		if(settings->type == "cul") _physicalDevice.reset(new PhysicalDevices::CUL(settings));
+		else if(settings->type == "coc") _physicalDevice.reset(new PhysicalDevices::COC(settings));
+		else if(settings->type == "cc1100") _physicalDevice.reset(new PhysicalDevices::TICC1100(settings));
+		else Output::printError("Error: Unsupported physical device type for family HomeMatic BidCoS: " + settings->type);
+		return _physicalDevice;
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
 }
@@ -109,7 +111,7 @@ std::shared_ptr<PhysicalDevices::PhysicalDevice> BidCoS::createPhysicalDevice(st
 int32_t BidCoS::getUniqueAddress(uint8_t firstByte)
 {
 	int32_t prefix = firstByte << 16;
-	int32_t seed = GD::helperFunctions->getRandomNumber(1, 9999);
+	int32_t seed = HelperFunctions::getRandomNumber(1, 9999);
 	uint32_t i = 0;
 	while(getDevice(prefix + seed) && i++ < 10000)
 	{
@@ -146,23 +148,23 @@ void BidCoS::createCentral()
 		if(_central) return;
 
 		int32_t address = getUniqueAddress(0xfd);
-		std::string serialNumber(getUniqueSerialNumber("VBC", GD::helperFunctions->getRandomNumber(1, 9999999)));
+		std::string serialNumber(getUniqueSerialNumber("VBC", HelperFunctions::getRandomNumber(1, 9999999)));
 
 		_central.reset(new HomeMaticCentral(0, serialNumber, address));
 		add(_central);
-		GD::output->printMessage("Created HomeMatic BidCoS central with id " + std::to_string(_central->getID()) + ", address 0x" + GD::helperFunctions->getHexString(address, 6) + " and serial number " + serialNumber);
+		Output::printMessage("Created HomeMatic BidCoS central with id " + std::to_string(_central->getID()) + ", address 0x" + HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -172,26 +174,26 @@ void BidCoS::createSpyDevice()
 	{
 		if(!_central) return;
 
-		int32_t seed = 0xfe0000 + GD::helperFunctions->getRandomNumber(1, 500);
+		int32_t seed = 0xfe0000 + HelperFunctions::getRandomNumber(1, 500);
 
 		int32_t address = _central->getUniqueAddress(seed);
-		std::string serialNumber(getUniqueSerialNumber("VBS", GD::helperFunctions->getRandomNumber(1, 9999999)));
+		std::string serialNumber(getUniqueSerialNumber("VBS", HelperFunctions::getRandomNumber(1, 9999999)));
 
 		std::shared_ptr<LogicalDevice> device(new HM_SD(0, serialNumber, address));
 		add(device);
-		GD::output->printMessage("Created HomeMatic BidCoS spy device with id " + std::to_string(device->getID()) + ", address 0x" + GD::helperFunctions->getHexString(address, 6) + " and serial number " + serialNumber);
+		Output::printMessage("Created HomeMatic BidCoS spy device with id " + std::to_string(device->getID()) + ", address 0x" + HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -213,15 +215,15 @@ std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<HomeMaticDevice>();
@@ -245,15 +247,15 @@ std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(std::string serialNumber)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<HomeMaticDevice>();
@@ -264,12 +266,12 @@ void BidCoS::load(bool version_0_0_7)
 	try
 	{
 		_devices.clear();
-		DataTable rows = GD::db->executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticBidCoS));
+		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticBidCoS));
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;
-			GD::output->printMessage("Loading HomeMatic BidCoS device " + std::to_string(deviceID));
+			Output::printMessage("Loading HomeMatic BidCoS device " + std::to_string(deviceID));
 			int32_t address = row->second.at(1)->intValue;
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
@@ -316,15 +318,15 @@ void BidCoS::load(bool version_0_0_7)
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -374,9 +376,9 @@ std::string BidCoS::handleCLICommand(std::string& command)
 			{
 				stringStream
 					<< std::setw(idWidth) << std::setfill(' ') << (*i)->getID() << bar
-					<< std::setw(addressWidth) << GD::helperFunctions->getHexString((*i)->getAddress(), 6) << bar
+					<< std::setw(addressWidth) << HelperFunctions::getHexString((*i)->getAddress(), 6) << bar
 					<< std::setw(serialWidth) << (*i)->getSerialNumber() << bar
-					<< std::setw(typeWidth) << GD::helperFunctions->getHexString((*i)->getDeviceType()) << std::endl;
+					<< std::setw(typeWidth) << HelperFunctions::getHexString((*i)->getDeviceType()) << std::endl;
 			}
 			_devicesMutex.unlock();
 			stringStream << "─────────┴─────────┴───────────────┴─────────" << std::endl;
@@ -401,7 +403,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					address = GD::helperFunctions->getNumber(element, true);
+					address = HelperFunctions::getNumber(element, true);
 					if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 				}
 				else if(index == 3)
@@ -409,7 +411,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 					serialNumber = element;
 					if(serialNumber.size() > 10) return "Serial number too long.\n";
 				}
-				else if(index == 4) deviceType = GD::helperFunctions->getNumber(element, true);
+				else if(index == 4) deviceType = HelperFunctions::getNumber(element, true);
 				index++;
 			}
 			if(index < 5)
@@ -472,7 +474,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					id = GD::helperFunctions->getNumber(element, false);
+					id = HelperFunctions::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -517,7 +519,7 @@ std::string BidCoS::handleCLICommand(std::string& command)
 					if(element == "central") central = true;
 					else
 					{
-						id = GD::helperFunctions->getNumber(element, false);
+						id = HelperFunctions::getNumber(element, false);
 						if(id == 0) return "Invalid id.\n";
 					}
 				}
@@ -546,15 +548,15 @@ std::string BidCoS::handleCLICommand(std::string& command)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }

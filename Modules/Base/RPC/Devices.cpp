@@ -28,7 +28,7 @@
  */
 
 #include "Devices.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 namespace RPC
 {
@@ -42,36 +42,36 @@ void Devices::load(std::string path)
 	try
 	{
 		std::string deviceDir(path);
-		std::vector<std::string> files = GDB::helperFunctions.getFiles(deviceDir);
+		std::vector<std::string> files = HelperFunctions::getFiles(deviceDir);
 		if(files.empty())
 		{
-			GDB::output.printError("No xml files found in \"" + path + "\".");
+			Output::printError("No xml files found in \"" + path + "\".");
 			exit(3);
 		}
 		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
 		{
-			GDB::output.printDebug("Loading XML RPC device " + deviceDir + "/" + *i);
+			Output::printDebug("Loading XML RPC device " + deviceDir + "/" + *i);
 			std::shared_ptr<Device> device(new Device(deviceDir + "/" + *i));
 			if(device && device->loaded()) _devices.push_back(device);
 		}
 
 		if(_devices.empty())
 		{
-			GDB::output.printError("Could not load any devices from xml files in \"" + deviceDir + "\".");
+			Output::printError("Could not load any devices from xml files in \"" + deviceDir + "\".");
 			exit(3);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -111,15 +111,15 @@ std::shared_ptr<Device> Devices::find(LogicalDeviceType deviceType, uint32_t fir
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return nullptr;
 }
@@ -155,15 +155,15 @@ std::shared_ptr<Device> Devices::find(LogicalDeviceType deviceType, uint32_t fir
 	}
 	catch(const std::exception& ex)
     {
-     GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+     Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-     GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+     Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-     GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+     Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return nullptr;
 }
@@ -200,15 +200,15 @@ std::shared_ptr<Device> Devices::find(DeviceFamilies family, std::string typeID,
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return nullptr;
 }
@@ -245,15 +245,15 @@ std::shared_ptr<Device> Devices::find(DeviceFamilies family, std::shared_ptr<Pac
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return nullptr;
 }

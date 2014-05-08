@@ -29,7 +29,6 @@
 
 #include "GD.h"
 
-std::shared_ptr<Database> GD::db;
 PhysicalDevices::PhysicalDevices GD::physicalDevices;
 std::string GD::configPath = "/etc/homegear/";
 std::string GD::pidfilePath = "";
@@ -43,21 +42,13 @@ RPC::Client GD::rpcClient;
 CLI::Server GD::cliServer;
 CLI::Client GD::cliClient;
 std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>> GD::deviceFamilies;
-std::unique_ptr<RPC::Devices> GD::rpcDevices;
-int32_t GD::debugLevel = 7;
+RPC::Devices GD::rpcDevices;
 int32_t GD::rpcLogLevel = 1;
-Settings GD::settings;
 RPC::ServerSettings GD::serverSettings;
 RPC::ClientSettings GD::clientSettings;
 EventHandler GD::eventHandler;
-std::shared_ptr<FileDescriptorManager> GD::fileDescriptorManager;
-void* GD::baseHandle = nullptr;
-std::unique_ptr<BaseFactory> GD::baseFactory;
-std::shared_ptr<Output> GD::output;
-std::shared_ptr<HelperFunctions> GD::helperFunctions;
-std::shared_ptr<Metadata> GD::metadata;
 
-void GD::init()
+/*void GD::init()
 {
 	loadBaseLibrary();
 
@@ -118,4 +109,4 @@ void GD::dispose()
 		dlclose(baseHandle);
 		baseHandle = nullptr;
 	}
-}
+}*/

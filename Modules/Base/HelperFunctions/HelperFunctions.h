@@ -51,47 +51,48 @@
 
 class HelperFunctions {
 public:
-	HelperFunctions();
 	virtual ~HelperFunctions();
 
-	virtual bool fileExists(std::string filename);
-	virtual std::string getFileContent(std::string filename);
-	virtual std::vector<std::string> getFiles(std::string path);
+	static void init();
 
-	virtual int64_t getTime();
-	virtual int32_t getTimeSeconds();
-	virtual std::string getTimeString(int64_t time = 0);
+	static bool fileExists(std::string filename);
+	static std::string getFileContent(std::string filename);
+	static std::vector<std::string> getFiles(std::string path);
 
-	virtual inline std::string &ltrim(std::string &s)
+	static int64_t getTime();
+	static int32_t getTimeSeconds();
+	static std::string getTimeString(int64_t time = 0);
+
+	static inline std::string &ltrim(std::string &s)
 	{
 			s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
 			return s;
 	}
 
-	virtual inline std::string &rtrim(std::string &s)
+	static inline std::string &rtrim(std::string &s)
 	{
 			s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
 			return s;
 	}
 
-	virtual inline std::string& trim(std::string& s)
+	static inline std::string& trim(std::string& s)
 	{
 			return ltrim(rtrim(s));
 	}
 
-	virtual inline std::string& toLower (std::string& s)
+	static inline std::string& toLower (std::string& s)
 	{
 		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 		return s;
 	}
 
-	virtual inline std::wstring& toLower (std::wstring& s)
+	static inline std::wstring& toLower (std::wstring& s)
 	{
 		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 		return s;
 	}
 
-	virtual inline std::string& stringReplace(std::string& haystack, std::string search, std::string replace)
+	static inline std::string& stringReplace(std::string& haystack, std::string search, std::string replace)
 	{
 		int32_t pos = 0;
 		while(true)
@@ -104,21 +105,21 @@ public:
 		return haystack;
 	}
 
-	virtual std::pair<std::string, std::string> split(std::string string, char delimiter);
+	static std::pair<std::string, std::string> split(std::string string, char delimiter);
 
-	virtual inline double getDouble(std::string &s)
+	static inline double getDouble(std::string &s)
 	{
 		double number = 0;
 		try { number = std::stod(s); } catch(...) {}
 		return number;
 	}
 
-	virtual inline bool isNotAlphaNumeric(char c)
+	static inline bool isNotAlphaNumeric(char c)
 	{
 		return !(isalpha(c) || isdigit(c) || (c == '_') || (c == '-'));
 	}
 
-	virtual bool isAlphaNumeric(std::string& s)
+	static bool isAlphaNumeric(std::string& s)
 	{
 		return find_if
 		(
@@ -128,7 +129,7 @@ public:
 		) == s.end();
 	}
 
-	virtual bool isNumber(std::string& s)
+	static bool isNumber(std::string& s)
 	{
 		int32_t xpos = s.find('x');
 		if(xpos == -1) try { std::stoll(s, 0, 10); } catch(...) { return false; }
@@ -136,7 +137,7 @@ public:
 		return true;
 	}
 
-	virtual int32_t getNumber(std::string& s, bool isHex = false)
+	static int32_t getNumber(std::string& s, bool isHex = false)
 	{
 		int32_t xpos = s.find('x');
 		int32_t number = 0;
@@ -145,13 +146,13 @@ public:
 		return number;
 	}
 
-	virtual int32_t getNumber(char hexChar)
+	static int32_t getNumber(char hexChar)
 	{
 		if(_hexMap.find(hexChar) == _hexMap.end()) return 0;
 		return _hexMap.at(hexChar);
 	}
 
-	virtual uint32_t getUnsignedNumber(std::string &s, bool isHex = false)
+	static uint32_t getUnsignedNumber(std::string &s, bool isHex = false)
 	{
 		int32_t xpos = s.find('x');
 		uint32_t number = 0;
@@ -160,30 +161,32 @@ public:
 		return number;
 	}
 
-	virtual bool getBigEndian() { return _isBigEndian; }
+	static bool getBigEndian() { return _isBigEndian; }
 
-	virtual void copyFile(std::string source, std::string dest);
-	virtual int32_t getRandomNumber(int32_t min, int32_t max);
+	static void copyFile(std::string source, std::string dest);
+	static int32_t getRandomNumber(int32_t min, int32_t max);
 
-	virtual void memcpyBigEndian(char* to, char* from, const uint32_t& length);
-	virtual void memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length);
-	virtual void memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from);
-	virtual void memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from);
-	virtual std::string getHexString(const std::vector<char>& data);
-	virtual std::string getHexString(const std::vector<uint8_t>& data);
-	virtual std::string getHexString(int32_t number, int32_t width = -1);
-	virtual std::vector<char> getBinary(std::string hexString);
-	virtual std::vector<uint8_t> getUBinary(std::string hexString);
-	virtual std::string getSSLError(int32_t errorNumber);
-	virtual std::string getSSLCertVerificationError(int32_t errorNumber);
-	virtual int32_t userID(std::string username);
-	virtual int32_t groupID(std::string groupname);
+	static void memcpyBigEndian(char* to, char* from, const uint32_t& length);
+	static void memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length);
+	static void memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from);
+	static void memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from);
+	static std::string getHexString(const std::vector<char>& data);
+	static std::string getHexString(const std::vector<uint8_t>& data);
+	static std::string getHexString(int32_t number, int32_t width = -1);
+	static std::vector<char> getBinary(std::string hexString);
+	static std::vector<uint8_t> getUBinary(std::string hexString);
+	static std::string getSSLError(int32_t errorNumber);
+	static std::string getSSLCertVerificationError(int32_t errorNumber);
+	static int32_t userID(std::string username);
+	static int32_t groupID(std::string groupname);
 
 private:
-	bool _isBigEndian;
-	std::map<char, int32_t> _hexMap;
+	static bool _isBigEndian;
+	static std::map<char, int32_t> _hexMap;
 
-	virtual void checkEndianness();
+	//Non public constructor
+	HelperFunctions() {}
+	static void checkEndianness();
 };
 
 #endif /* HELPERFUNCTIONS_H_ */

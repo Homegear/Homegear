@@ -54,7 +54,7 @@ void ClientSettings::load(std::string filename)
 
 		if (!(fin = fopen(filename.c_str(), "r")))
 		{
-			GD::output->printError("Unable to open RPC client config file: " + filename + ". " + strerror(errno));
+			Output::printError("Unable to open RPC client config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
@@ -96,52 +96,52 @@ void ClientSettings::load(std::string filename)
 			if(found)
 			{
 				std::string name(input);
-				GD::helperFunctions->toLower(name);
-				GD::helperFunctions->trim(name);
+				HelperFunctions::toLower(name);
+				HelperFunctions::trim(name);
 				std::string value(&input[ptr]);
-				GD::helperFunctions->trim(value);
+				HelperFunctions::trim(value);
 				if(name == "hostname")
 				{
-					settings->hostname = GD::helperFunctions->toLower(value);
-					GD::output->printDebug("Debug: hostname of RPC client " + settings->name + " set to " + settings->hostname);
+					settings->hostname = HelperFunctions::toLower(value);
+					Output::printDebug("Debug: hostname of RPC client " + settings->name + " set to " + settings->hostname);
 				}
 				else if(name == "forcessl")
 				{
-					GD::helperFunctions->toLower(value);
+					HelperFunctions::toLower(value);
 					if(value == "false") settings->forceSSL = false;
-					GD::output->printDebug("Debug: forceSSL of RPC client " + settings->name + " set to " + std::to_string(settings->forceSSL));
+					Output::printDebug("Debug: forceSSL of RPC client " + settings->name + " set to " + std::to_string(settings->forceSSL));
 				}
 				else if(name == "authtype")
 				{
-					GD::helperFunctions->toLower(value);
+					HelperFunctions::toLower(value);
 					if(value == "basic") settings->authType = Settings::AuthType::basic;
-					GD::output->printDebug("Debug: authType of RPC client " + settings->name + " set to " + std::to_string(settings->authType));
+					Output::printDebug("Debug: authType of RPC client " + settings->name + " set to " + std::to_string(settings->authType));
 				}
 				else if(name == "verifycertificate")
 				{
-					GD::helperFunctions->toLower(value);
+					HelperFunctions::toLower(value);
 					if(value == "false") settings->verifyCertificate = false;
-					GD::output->printDebug("Debug: verifyCertificate of RPC client " + settings->name + " set to " + std::to_string(settings->verifyCertificate));
+					Output::printDebug("Debug: verifyCertificate of RPC client " + settings->name + " set to " + std::to_string(settings->verifyCertificate));
 				}
 				else if(name == "username")
 				{
-					settings->userName = GD::helperFunctions->toLower(value);
-					GD::output->printDebug("Debug: userName of RPC client " + settings->name + " set to " + settings->userName);
+					settings->userName = HelperFunctions::toLower(value);
+					Output::printDebug("Debug: userName of RPC client " + settings->name + " set to " + settings->userName);
 				}
 				else if(name == "password")
 				{
-					settings->password = GD::helperFunctions->toLower(value);
+					settings->password = HelperFunctions::toLower(value);
 					if(settings->password.front() == '"' && settings->password.back() == '"')
 					{
 						settings->password = settings->password.substr(1, settings->password.size() - 2);
-						GD::helperFunctions->stringReplace(settings->password, "\\\"", "\"");
-						GD::helperFunctions->stringReplace(settings->password, "\\\\", "\\");
+						HelperFunctions::stringReplace(settings->password, "\\\"", "\"");
+						HelperFunctions::stringReplace(settings->password, "\\\\", "\\");
 					}
-					GD::output->printDebug("Debug: password of RPC client " + settings->name + " was set.");
+					Output::printDebug("Debug: password of RPC client " + settings->name + " was set.");
 				}
 				else
 				{
-					GD::output->printWarning("Warning: RPC client setting not found: " + std::string(input));
+					Output::printWarning("Warning: RPC client setting not found: " + std::string(input));
 				}
 			}
 		}
@@ -151,15 +151,15 @@ void ClientSettings::load(std::string filename)
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 } /* namespace RPC */

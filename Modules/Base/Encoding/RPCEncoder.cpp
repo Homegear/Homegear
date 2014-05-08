@@ -28,7 +28,7 @@
  */
 
 #include "RPCEncoder.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 namespace RPC
 {
@@ -68,20 +68,20 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeRequest(std::string methodN
 
 		uint32_t dataSize = packet->size() - 4 - headerSize;
 		char result[4];
-		GDB::helperFunctions.memcpyBigEndian(result, (char*)&dataSize, 4);
+		HelperFunctions::memcpyBigEndian(result, (char*)&dataSize, 4);
 		packet->insert(packet->begin() + 4 + headerSize, result, result + 4);
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return packet;
 }
@@ -100,22 +100,22 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RP
 
 		uint32_t dataSize = packet->size() - 4;
 		char result[4];
-		GDB::helperFunctions.memcpyBigEndian(result, (char*)&dataSize, 4);
+		HelperFunctions::memcpyBigEndian(result, (char*)&dataSize, 4);
 		packet->insert(packet->begin() + 4, result, result + 4);
 
 		return packet;
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return packet;
 }
@@ -143,11 +143,11 @@ uint32_t RPCEncoder::encodeHeader(std::shared_ptr<std::vector<char>>& packet, st
 		_encoder.encodeString(packet, header->authorization);
 	}
 	char result[4];
-	GDB::helperFunctions.memcpyBigEndian(result, (char*)&parameterCount, 4);
+	HelperFunctions::memcpyBigEndian(result, (char*)&parameterCount, 4);
 	packet->insert(packet->begin() + oldPacketSize, result, result + 4);
 
 	uint32_t headerSize = packet->size() - oldPacketSize;
-	GDB::helperFunctions.memcpyBigEndian(result, (char*)&headerSize, 4);
+	HelperFunctions::memcpyBigEndian(result, (char*)&headerSize, 4);
 	packet->insert(packet->begin() + oldPacketSize, result, result + 4);
 	return headerSize;
 }
@@ -191,15 +191,15 @@ void RPCEncoder::encodeVariable(std::shared_ptr<std::vector<char>>& packet, std:
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -219,15 +219,15 @@ void RPCEncoder::encodeStruct(std::shared_ptr<std::vector<char>>& packet, std::s
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -244,15 +244,15 @@ void RPCEncoder::encodeArray(std::shared_ptr<std::vector<char>>& packet, std::sh
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -276,15 +276,15 @@ void RPCEncoder::encodeFloat(std::shared_ptr<std::vector<char>>& packet, std::sh
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -308,15 +308,15 @@ void RPCEncoder::encodeString(std::shared_ptr<std::vector<char>>& packet, std::s
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -334,15 +334,15 @@ void RPCEncoder::encodeBase64(std::shared_ptr<std::vector<char>>& packet, std::s
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

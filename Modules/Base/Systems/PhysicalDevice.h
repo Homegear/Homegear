@@ -68,8 +68,8 @@ public:
 			};
 	};
 
-	PhysicalDevice(std::string gpioPath);
-	PhysicalDevice(std::string gpioPath, std::shared_ptr<PhysicalDeviceSettings> settings);
+	PhysicalDevice();
+	PhysicalDevice(std::shared_ptr<PhysicalDeviceSettings> settings);
 
 	virtual ~PhysicalDevice();
 
@@ -87,7 +87,6 @@ public:
 	virtual void setup(int32_t userID, int32_t groupID) {}
 	virtual std::string getType() { return _settings->type; }
 protected:
-    std::string _gpioPath;
 	std::shared_ptr<PhysicalDeviceSettings> _settings;
 	std::mutex _logicalDevicesMutex;
     std::list<LogicalDevice*> _logicalDevices;

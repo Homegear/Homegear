@@ -33,6 +33,7 @@
 //#include "Devices/InsteonCentral.h"
 #include "Devices/Insteon-SD.h"
 #include "../../GD/GD.h"
+#include "../../../Modules/Base/BaseLib.h"
 
 namespace Insteon
 {
@@ -54,20 +55,21 @@ std::shared_ptr<PhysicalDevices::PhysicalDevice> Insteon::createPhysicalDevice(s
 	try
 	{
 		if(!settings) return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
-		if(settings->type == "insteonhubx10") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::InsteonHubX10(settings));
-		else GD::output->printError("Error: Unsupported physical device type for family Insteon: " + settings->type);
+		if(settings->type == "insteonhubx10") _physicalDevice.reset(new PhysicalDevices::InsteonHubX10(settings));
+		else Output::printError("Error: Unsupported physical device type for family Insteon: " + settings->type);
+		return _physicalDevice;
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
 }
@@ -75,7 +77,7 @@ std::shared_ptr<PhysicalDevices::PhysicalDevice> Insteon::createPhysicalDevice(s
 uint32_t Insteon::getUniqueAddress(uint32_t seed)
 {
 	uint32_t prefix = seed;
-	seed = GD::helperFunctions->getRandomNumber(0, 65535);
+	seed = HelperFunctions::getRandomNumber(0, 65535);
 	uint32_t i = 0;
 	while(getDevice(prefix + seed) && i++ < 10000)
 	{
@@ -123,15 +125,15 @@ std::shared_ptr<InsteonDevice> Insteon::getDevice(uint32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<InsteonDevice>();
@@ -155,15 +157,15 @@ std::shared_ptr<InsteonDevice> Insteon::getDevice(std::string serialNumber)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<InsteonDevice>();
@@ -174,12 +176,12 @@ void Insteon::load(bool version_0_0_7)
 	try
 	{
 		_devices.clear();
-		DataTable rows = GD::db->executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticWired));
+		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticWired));
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;
-			GD::output->printMessage("Loading Insteon device " + std::to_string(deviceID));
+			Output::printMessage("Loading Insteon device " + std::to_string(deviceID));
 			int32_t address = row->second.at(1)->intValue;
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
@@ -216,15 +218,15 @@ void Insteon::load(bool version_0_0_7)
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -232,26 +234,26 @@ void Insteon::createSpyDevice()
 {
 	try
 	{
-		uint32_t seed = 0xfe0000 + GD::helperFunctions->getRandomNumber(1, 65535);
+		uint32_t seed = 0xfe0000 + HelperFunctions::getRandomNumber(1, 65535);
 
 		//ToDo: Use HMWiredCentral to get unique address
 		int32_t address = getUniqueAddress(seed);
-		std::string serialNumber(getUniqueSerialNumber("VIS", GD::helperFunctions->getRandomNumber(1, 9999999)));
+		std::string serialNumber(getUniqueSerialNumber("VIS", HelperFunctions::getRandomNumber(1, 9999999)));
 
 		add(std::shared_ptr<LogicalDevice>(new Insteon_SD(0, serialNumber, address)));
-		GD::output->printMessage("Created Insteon spy device with address 0x" + GD::helperFunctions->getHexString(address, 8) + " and serial number " + serialNumber);
+		Output::printMessage("Created Insteon spy device with address 0x" + HelperFunctions::getHexString(address, 8) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -261,23 +263,23 @@ void Insteon::createCentral()
 	{
 		/*if(_central) return;
 
-		std::string serialNumber(getUniqueSerialNumber("VWC", GD::helperFunctions->getRandomNumber(1, 9999999)));
+		std::string serialNumber(getUniqueSerialNumber("VWC", HelperFunctions::getRandomNumber(1, 9999999)));
 
 		_central.reset(new HMWiredCentral(0, serialNumber, 1));
 		add(_central);
-		GD::output->printMessage("Created HomeMatic Wired central with address 0x" + GD::helperFunctions->getHexString(1, 8) + " and serial number " + serialNumber);*/
+		Output::printMessage("Created HomeMatic Wired central with address 0x" + HelperFunctions::getHexString(1, 8) + " and serial number " + serialNumber);*/
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -337,7 +339,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					address = GD::helperFunctions->getNumber(element, true);
+					address = HelperFunctions::getNumber(element, true);
 					if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 				}
 				else if(index == 3)
@@ -345,7 +347,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 					serialNumber = element;
 					if(serialNumber.size() > 10) return "Serial number too long.\n";
 				}
-				else if(index == 4) deviceType = GD::helperFunctions->getNumber(element, true);
+				else if(index == 4) deviceType = HelperFunctions::getNumber(element, true);
 				index++;
 			}
 			if(index < 5)
@@ -398,7 +400,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					id = GD::helperFunctions->getNumber(element, true);
+					id = HelperFunctions::getNumber(element, true);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -443,7 +445,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 					if(element == "central") central = true;
 					else
 					{
-						id = GD::helperFunctions->getNumber(element, true);
+						id = HelperFunctions::getNumber(element, true);
 						if(id == 0) return "Invalid id.\n";
 					}
 				}
@@ -472,15 +474,15 @@ std::string Insteon::handleCLICommand(std::string& command)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }

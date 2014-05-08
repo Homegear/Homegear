@@ -28,7 +28,7 @@
  */
 
 #include "Database.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 Database::Database()
 {
@@ -43,7 +43,7 @@ Database::Database(std::string databasePath, bool databaseSynchronous, bool data
 void Database::init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath)
 {
 	if(_database) closeDatabase();
-	if(!backupPath.empty()) GDB::helperFunctions.copyFile(databasePath, backupPath);
+	if(!backupPath.empty()) HelperFunctions::copyFile(databasePath, backupPath);
 	if(databasePath.size() == 0) return;
     openDatabase(databasePath, databaseSynchronous, databaseMemoryJournal);
 }
@@ -60,7 +60,7 @@ void Database::openDatabase(std::string databasePath, bool databaseSynchronous, 
 		int result = sqlite3_open(databasePath.c_str(), &_database);
 		if(result)
 		{
-			GDB::output.printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
+			Output::printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
 			sqlite3_close(_database);
 			_database = nullptr;
 			return;
@@ -72,7 +72,7 @@ void Database::openDatabase(std::string databasePath, bool databaseSynchronous, 
 			sqlite3_exec(_database, "PRAGMA synchronous = OFF", 0, 0, &errorMessage);
 			if(errorMessage)
 			{
-				GDB::output.printError("Can't execute \"PRAGMA synchronous = OFF\": " + std::string(errorMessage));
+				Output::printError("Can't execute \"PRAGMA synchronous = OFF\": " + std::string(errorMessage));
 				sqlite3_free(errorMessage);
 			}
 		}
@@ -82,22 +82,22 @@ void Database::openDatabase(std::string databasePath, bool databaseSynchronous, 
 			sqlite3_exec(_database, "PRAGMA journal_mode = MEMORY", 0, 0, &errorMessage);
 			if(errorMessage)
 			{
-				GDB::output.printError("Can't execute \"PRAGMA journal_mode = MEMORY\": " + std::string(errorMessage));
+				Output::printError("Can't execute \"PRAGMA journal_mode = MEMORY\": " + std::string(errorMessage));
 				sqlite3_free(errorMessage);
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -112,15 +112,15 @@ void Database::closeDatabase()
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -235,15 +235,15 @@ uint32_t Database::executeWriteCommand(std::string command, DataColumnVector& da
 	}
 	catch(const std::exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 	return 0;
@@ -271,12 +271,12 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
-				GDB::output.printInfo("Info: " + ex.what());
+				Output::printInfo("Info: " + ex.what());
 				sqlite3_clear_bindings(statement);
 				_databaseMutex.unlock();
 				return dataRows;
 			}
-			else GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			else Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
@@ -287,15 +287,15 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 	}
 	catch(const std::exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 	return dataRows;
@@ -312,7 +312,7 @@ DataTable Database::executeCommand(std::string command)
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
-			GDB::output.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+			Output::printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
 			_databaseMutex.unlock();
 			return dataRows;
 		}
@@ -324,31 +324,31 @@ DataTable Database::executeCommand(std::string command)
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
-				GDB::output.printInfo("Info: " + ex.what());
+				Output::printInfo("Info: " + ex.what());
 				sqlite3_clear_bindings(statement);
 				_databaseMutex.unlock();
 				return dataRows;
 			}
-			else GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			else Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
-			GDB::output.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
+			Output::printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
 		}
     }
     catch(const std::exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
     return dataRows;
@@ -359,7 +359,7 @@ void Database::benchmark1()
 	//Duration for REPLACE in ms: 17836
 	//Duration for UPDATE in ms: 14973
 	std::vector<uint8_t> value({0});
-	int64_t startTime = GDB::helperFunctions.getTime();
+	int64_t startTime = HelperFunctions::getTime();
 	std::map<uint32_t, uint32_t> ids;
 	for(uint32_t i = 0; i < 10000; ++i)
 	{
@@ -375,9 +375,9 @@ void Database::benchmark1()
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 		ids[i] = executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
 	}
-	int64_t duration = GDB::helperFunctions.getTime() - startTime;
+	int64_t duration = HelperFunctions::getTime() - startTime;
 	std::cerr << "Duration for REPLACE in ms: " << duration << std::endl;
-	startTime = GDB::helperFunctions.getTime();
+	startTime = HelperFunctions::getTime();
 	for(uint32_t i = 0; i < 10000; ++i)
 	{
 		DataColumnVector data;
@@ -386,7 +386,7 @@ void Database::benchmark1()
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(ids[i])));
 		executeWriteCommand("UPDATE parameters SET value=? WHERE parameterID=?", data);
 	}
-	duration = GDB::helperFunctions.getTime() - startTime;
+	duration = HelperFunctions::getTime() - startTime;
 	std::cerr << "Duration for UPDATE in ms: " << duration << std::endl;
 	executeCommand("DELETE FROM parameters WHERE peerID=10000000");
 }
@@ -404,7 +404,7 @@ void Database::benchmark2()
 			throw(Exception("Can't execute command: " + std::string(sqlite3_errmsg(_database))));
 		}
 		std::vector<uint8_t> value({0});
-		int64_t startTime = GDB::helperFunctions.getTime();
+		int64_t startTime = HelperFunctions::getTime();
 		std::map<uint32_t, uint32_t> ids;
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
@@ -426,9 +426,9 @@ void Database::benchmark2()
 		sqlite3_finalize(statement);
 		statement = nullptr;
 		sqlite3_prepare_v2(_database, "UPDATE parameters SET value=? WHERE parameterID=?", -1, &statement, NULL);
-		int64_t duration = GDB::helperFunctions.getTime() - startTime;
+		int64_t duration = HelperFunctions::getTime() - startTime;
 		std::cerr << "Duration for REPLACE in ms: " << duration << std::endl;
-		startTime = GDB::helperFunctions.getTime();
+		startTime = HelperFunctions::getTime();
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
 			DataColumnVector data;
@@ -441,21 +441,21 @@ void Database::benchmark2()
 			sqlite3_reset(statement);
 		}
 		sqlite3_finalize(statement);
-		duration = GDB::helperFunctions.getTime() - startTime;
+		duration = HelperFunctions::getTime() - startTime;
 		std::cerr << "Duration for UPDATE in ms: " << duration << std::endl;
 		executeCommand("DELETE FROM parameters WHERE peerID=10000000");
 	}
 	catch(const std::exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -471,7 +471,7 @@ void Database::benchmark3()
 		}
 		std::vector<uint8_t> value({0});
 		executeCommand("BEGIN IMMEDIATE TRANSACTION");
-		int64_t startTime = GDB::helperFunctions.getTime();
+		int64_t startTime = HelperFunctions::getTime();
 		std::map<uint32_t, uint32_t> ids;
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
@@ -493,11 +493,11 @@ void Database::benchmark3()
 		sqlite3_finalize(statement);
 		statement = nullptr;
 		executeCommand("COMMIT TRANSACTION");
-		int64_t duration = GDB::helperFunctions.getTime() - startTime;
+		int64_t duration = HelperFunctions::getTime() - startTime;
 		std::cerr << "Duration for REPLACE in ms: " << duration << std::endl;
 		sqlite3_prepare_v2(_database, "UPDATE parameters SET value=? WHERE parameterID=?", -1, &statement, NULL);
 		executeCommand("BEGIN IMMEDIATE TRANSACTION");
-		startTime = GDB::helperFunctions.getTime();
+		startTime = HelperFunctions::getTime();
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
 			DataColumnVector data;
@@ -511,21 +511,21 @@ void Database::benchmark3()
 		}
 		sqlite3_finalize(statement);
 		executeCommand("COMMIT TRANSACTION");
-		duration = GDB::helperFunctions.getTime() - startTime;
+		duration = HelperFunctions::getTime() - startTime;
 		std::cerr << "Duration for UPDATE in ms: " << duration << std::endl;
 		executeCommand("DELETE FROM parameters WHERE peerID=10000000");
 	}
 	catch(const std::exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -541,7 +541,7 @@ void Database::benchmark4()
 		}
 		std::vector<uint8_t> value({0});
 		executeCommand("SAVEPOINT peerConfig");
-		int64_t startTime = GDB::helperFunctions.getTime();
+		int64_t startTime = HelperFunctions::getTime();
 		std::map<uint32_t, uint32_t> ids;
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
@@ -563,11 +563,11 @@ void Database::benchmark4()
 		sqlite3_finalize(statement);
 		statement = nullptr;
 		executeCommand("RELEASE peerConfig");
-		int64_t duration = GDB::helperFunctions.getTime() - startTime;
+		int64_t duration = HelperFunctions::getTime() - startTime;
 		std::cerr << "Duration for REPLACE in ms: " << duration << std::endl;
 		sqlite3_prepare_v2(_database, "UPDATE parameters SET value=? WHERE parameterID=?", -1, &statement, NULL);
 		executeCommand("SAVEPOINT peerConfig");
-		startTime = GDB::helperFunctions.getTime();
+		startTime = HelperFunctions::getTime();
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
 			DataColumnVector data;
@@ -581,20 +581,20 @@ void Database::benchmark4()
 		}
 		sqlite3_finalize(statement);
 		executeCommand("RELEASE peerConfig");
-		duration = GDB::helperFunctions.getTime() - startTime;
+		duration = HelperFunctions::getTime() - startTime;
 		std::cerr << "Duration for UPDATE in ms: " << duration << std::endl;
 		executeCommand("DELETE FROM parameters WHERE peerID=10000000");
 	}
 	catch(const std::exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }

@@ -29,10 +29,7 @@
 
 #include "Output.h"
 
-Output::Output()
-{
-	_debugLevel = 3;
-}
+int32_t Output::_debugLevel = 3;
 
 Output::~Output()
 {

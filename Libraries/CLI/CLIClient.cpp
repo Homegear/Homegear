@@ -29,6 +29,7 @@
 
 #include "CLIClient.h"
 #include "../GD/GD.h"
+#include "../../Modules/Base/BaseLib.h"
 
 namespace CLI {
 
@@ -46,15 +47,15 @@ Client::~Client()
 	}
     catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -81,17 +82,17 @@ void Client::ping()
     catch(const std::exception& ex)
     {
     	_sendMutex.unlock();
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_sendMutex.unlock();
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_sendMutex.unlock();
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -102,20 +103,20 @@ void Client::start()
 		int32_t fileDescriptor = socket(AF_UNIX, SOCK_STREAM, 0);
 		if(fileDescriptor == -1)
 		{
-			GD::output->printError("Could not create socket.");
+			Output::printError("Could not create socket.");
 			return;
 		}
-		_fileDescriptor = GD::fileDescriptorManager->add(fileDescriptor);
-		if(GD::debugLevel >= 4) std::cout << "Info: Trying to connect..." << std::endl;
+		_fileDescriptor = BaseLib::fileDescriptorManager.add(fileDescriptor);
+		if(BaseLib::debugLevel >= 4) std::cout << "Info: Trying to connect..." << std::endl;
 		sockaddr_un remoteAddress;
 		remoteAddress.sun_family = AF_UNIX;
 		strcpy(remoteAddress.sun_path, GD::socketPath.c_str());
 		if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
 		{
-			GD::output->printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
+			Output::printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
 			return;
 		}
-		if(GD::debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
+		if(BaseLib::debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
 
 		_pingThread = std::thread(&CLI::Client::ping, this);
 
@@ -134,7 +135,7 @@ void Client::start()
 			if(strcmp(sendBuffer, "quit") == 0 || strcmp(sendBuffer, "exit") == 0)
 			{
 				_closed = true;
-				GD::fileDescriptorManager->close(_fileDescriptor);
+				BaseLib::fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -143,8 +144,8 @@ void Client::start()
 			if(send(_fileDescriptor->descriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
 			{
 				_sendMutex.unlock();
-				GD::output->printError("Error sending to socket.");
-				GD::fileDescriptorManager->close(_fileDescriptor);
+				Output::printError("Error sending to socket.");
+				BaseLib::fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -173,7 +174,7 @@ void Client::start()
 					_sendMutex.unlock();
 					if(bytes < 0) std::cerr << "Error receiving data from socket." << std::endl;
 					else std::cout << "Connection closed." << std::endl;
-					GD::fileDescriptorManager->close(_fileDescriptor);
+					BaseLib::fileDescriptorManager.close(_fileDescriptor);
 					return;
 				}
 			}
@@ -182,15 +183,15 @@ void Client::start()
 	}
     catch(const std::exception& ex)
     {
-    	GD::output->printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());;
+    	Output::printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());;
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

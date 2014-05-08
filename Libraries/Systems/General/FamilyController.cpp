@@ -29,6 +29,7 @@
 
 #include "FamilyController.h"
 #include "../../GD/GD.h"
+#include "../../../Modules/Base/BaseLib.h"
 
 UpdateInfo::UpdateInfo()
 {
@@ -62,27 +63,27 @@ void FamilyController::convertDatabase()
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string("table"))));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string("homegearVariables"))));
-		DataTable rows = GD::db->executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
+		DataTable rows = BaseLib::db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
 		//Cannot proceed, because table homegearVariables does not exist
 		if(rows.empty()) return;
 		data.clear();
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
-		DataTable result = GD::db->executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
+		DataTable result = BaseLib::db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result.empty()) return; //Handled in initializeDatabase
 		std::string version = result.at(0).at(3)->textValue;
 		if(version == "0.4.3") return; //Up to date
 		if(version != "0.3.0" && version != "0.3.1")
 		{
-			GD::output->printCritical("Unknown database version: " + version);
+			Output::printCritical("Unknown database version: " + version);
 			exit(1); //Don't know, what to do
 		}
 		/*if(version == "0.0.7")
 		{
-			GD::output->printMessage("Converting database from version " + version + " to version 0.3.0...");
-			GD::db->init(GD::settings.databasePath(), GD::settings.databaseSynchronous(), GD::settings.databaseMemoryJournal(), GD::settings.databasePath() + ".old");
+			Output::printMessage("Converting database from version " + version + " to version 0.3.0...");
+			BaseLib::db.init(BaseLib::settings.databasePath(), BaseLib::settings.databaseSynchronous(), BaseLib::settings.databaseMemoryJournal(), BaseLib::settings.databasePath() + ".old");
 
-			GD::db->executeCommand("ALTER TABLE events ADD COLUMN enabled INTEGER");
-			GD::db->executeCommand("UPDATE events SET enabled=1");
+			BaseLib::db.executeCommand("ALTER TABLE events ADD COLUMN enabled INTEGER");
+			BaseLib::db.executeCommand("UPDATE events SET enabled=1");
 
 			loadDevicesFromDatabase(true);
 			save(true);
@@ -94,20 +95,20 @@ void FamilyController::convertDatabase()
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.3.0")));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			GD::db->executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			BaseLib::db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-			GD::output->printMessage("Exiting Homegear after database conversion...");
+			Output::printMessage("Exiting Homegear after database conversion...");
 			exit(0);
 		}*/
 		if(version == "0.3.0")
 		{
-			GD::output->printMessage("Converting database from version " + version + " to version 0.3.1...");
-			GD::db->init(GD::settings.databasePath(), GD::settings.databaseSynchronous(), GD::settings.databaseMemoryJournal(), GD::settings.databasePath() + ".old");
+			Output::printMessage("Converting database from version " + version + " to version 0.3.1...");
+			BaseLib::db.init(BaseLib::settings.databasePath(), BaseLib::settings.databaseSynchronous(), BaseLib::settings.databaseMemoryJournal(), BaseLib::settings.databasePath() + ".old");
 
-			GD::db->executeCommand("ALTER TABLE devices ADD COLUMN deviceFamily INTEGER DEFAULT 0 NOT NULL");
-			GD::db->executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190077");
-			GD::db->executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190078");
-			GD::db->executeCommand("DROP TABLE events");
+			BaseLib::db.executeCommand("ALTER TABLE devices ADD COLUMN deviceFamily INTEGER DEFAULT 0 NOT NULL");
+			BaseLib::db.executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190077");
+			BaseLib::db.executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190078");
+			BaseLib::db.executeCommand("DROP TABLE events");
 
 			loadDevicesFromDatabase(true);
 			save(true);
@@ -119,17 +120,17 @@ void FamilyController::convertDatabase()
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.3.1")));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			GD::db->executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			BaseLib::db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-			GD::output->printMessage("Exiting Homegear after database conversion...");
+			Output::printMessage("Exiting Homegear after database conversion...");
 			exit(0);
 		}
 		else if(version == "0.3.1")
 		{
-			GD::output->printMessage("Converting database from version " + version + " to version 0.4.3...");
-			GD::db->init(GD::settings.databasePath(), GD::settings.databaseSynchronous(), GD::settings.databaseMemoryJournal(), GD::settings.databasePath() + ".old");
+			Output::printMessage("Converting database from version " + version + " to version 0.4.3...");
+			BaseLib::db.init(BaseLib::settings.databasePath(), BaseLib::settings.databaseSynchronous(), BaseLib::settings.databaseMemoryJournal(), BaseLib::settings.databasePath() + ".old");
 
-			GD::db->executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
+			BaseLib::db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
 			data.clear();
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(result.at(0).at(0)->intValue)));
@@ -138,23 +139,23 @@ void FamilyController::convertDatabase()
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.4.3")));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			GD::db->executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			BaseLib::db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-			GD::output->printMessage("Exiting Homegear after database conversion...");
+			Output::printMessage("Exiting Homegear after database conversion...");
 			exit(0);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -162,28 +163,28 @@ void FamilyController::initializeDatabase()
 {
 	try
 	{
-		GD::db->executeCommand("CREATE TABLE IF NOT EXISTS homegearVariables (variableID INTEGER PRIMARY KEY UNIQUE, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		GD::db->executeCommand("CREATE INDEX IF NOT EXISTS homegearVariablesIndex ON homegearVariables (variableID, variableIndex)");
-		GD::db->executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL)");
-		GD::db->executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
-		GD::db->executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		GD::db->executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
-		GD::db->executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
-		GD::db->executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
-		GD::db->executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
-		GD::db->executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
-		GD::db->executeCommand("CREATE TABLE IF NOT EXISTS devices (deviceID INTEGER PRIMARY KEY UNIQUE, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, deviceType INTEGER NOT NULL, deviceFamily INTEGER NOT NULL)");
-		GD::db->executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType, deviceFamily)");
-		GD::db->executeCommand("CREATE TABLE IF NOT EXISTS deviceVariables (variableID INTEGER PRIMARY KEY UNIQUE, deviceID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		GD::db->executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
-		GD::db->executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL)");
-		GD::db->executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
-		GD::db->executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
-		GD::db->executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, peerID, peerChannel)");
+		BaseLib::db.executeCommand("CREATE TABLE IF NOT EXISTS homegearVariables (variableID INTEGER PRIMARY KEY UNIQUE, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		BaseLib::db.executeCommand("CREATE INDEX IF NOT EXISTS homegearVariablesIndex ON homegearVariables (variableID, variableIndex)");
+		BaseLib::db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL)");
+		BaseLib::db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
+		BaseLib::db.executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		BaseLib::db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
+		BaseLib::db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
+		BaseLib::db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
+		BaseLib::db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
+		BaseLib::db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
+		BaseLib::db.executeCommand("CREATE TABLE IF NOT EXISTS devices (deviceID INTEGER PRIMARY KEY UNIQUE, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, deviceType INTEGER NOT NULL, deviceFamily INTEGER NOT NULL)");
+		BaseLib::db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType, deviceFamily)");
+		BaseLib::db.executeCommand("CREATE TABLE IF NOT EXISTS deviceVariables (variableID INTEGER PRIMARY KEY UNIQUE, deviceID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		BaseLib::db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
+		BaseLib::db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL)");
+		BaseLib::db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
+		BaseLib::db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
+		BaseLib::db.executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, peerID, peerChannel)");
 
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
-		DataTable result = GD::db->executeCommand("SELECT 1 FROM homegearVariables WHERE variableIndex=?", data);
+		DataTable result = BaseLib::db.executeCommand("SELECT 1 FROM homegearVariables WHERE variableIndex=?", data);
 		if(result.empty())
 		{
 			data.clear();
@@ -192,20 +193,20 @@ void FamilyController::initializeDatabase()
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.4.3")));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			GD::db->executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+			BaseLib::db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -220,15 +221,15 @@ void FamilyController::loadDevicesFromDatabase(bool version_0_0_7)
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -241,15 +242,15 @@ void FamilyController::load()
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -264,15 +265,15 @@ void FamilyController::dispose()
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -282,12 +283,12 @@ void FamilyController::save(bool full, bool crash)
 	{
 		if(!crash)
 		{
-			GD::output->printMessage("(Shutdown) => Waiting for threads");
+			Output::printMessage("(Shutdown) => Waiting for threads");
 			//The disposing is necessary, because there is a small time gap between setting "_lastDutyCycleEvent" and the duty cycle message counter.
 			//If saving takes place within this gap, the paired duty cycle devices are out of sync after restart of the program.
 			dispose();
 		}
-		GD::output->printMessage("(Shutdown) => Saving devices");
+		Output::printMessage("(Shutdown) => Saving devices");
 		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			i->second->save(full);
@@ -295,15 +296,15 @@ void FamilyController::save(bool full, bool crash)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -372,7 +373,7 @@ std::string FamilyController::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					family = (DeviceFamilies)GD::helperFunctions->getNumber(element, false);
+					family = (DeviceFamilies)HelperFunctions::getNumber(element, false);
 					if(family == DeviceFamilies::none) return "Invalid family id.\n";
 				}
 				index++;
@@ -411,15 +412,15 @@ std::string FamilyController::handleCLICommand(std::string& command)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }

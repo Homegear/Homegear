@@ -41,10 +41,22 @@
 #include <chrono>
 #include <map>
 #include <mutex>
+#include <vector>
 
 class ServiceMessages
 {
 public:
+	//Event handling
+	class IEventSink
+	{
+	public:
+		virtual void onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) {}
+	};
+
+	virtual void addEventHandler(std::shared_ptr<IEventSink> eventHandler);
+	virtual void raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	//End event handling
+
 	void setPeer(Peer* peer) { _peer = peer; }
 
 	ServiceMessages(Peer* peer);
@@ -65,6 +77,11 @@ public:
 	virtual void checkUnreach();
     virtual void endUnreach();
 protected:
+    //Event handling
+    std::mutex _eventHandlerMutex;
+    std::vector<std::shared_ptr<IEventSink>> _eventHandlers;
+    //End event handling
+
     bool _disposing = false;
     bool _configPending = false;
     int32_t _unreachResendCounter = 0;

@@ -36,7 +36,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l threads -l user -l settings -l cli -l events -l gd
+  LDFLAGS   += -Llib/Debug -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l user -l cli -l events -l gd -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -58,7 +58,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l threads -l user -l settings -l cli -l events -l gd
+  LDFLAGS   += -Llib/Release -s -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l user -l cli -l events -l gd -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -80,7 +80,7 @@ ifeq ($(config),profiling)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l threads -l user -l settings -l cli -l events -l gd -pg
+  LDFLAGS   += -Llib/Profiling -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l user -l cli -l events -l gd -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 

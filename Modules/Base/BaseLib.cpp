@@ -27,28 +27,15 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef GDBASE_H_
-#define GDBASE_H_
+#include "BaseLib.h"
 
-#include "Exception.h"
-#include "Output/Output.h"
-#include "HelperFunctions/HelperFunctions.h"
-#include "FileDescriptorManager/FileDescriptorManager.h"
-#include "Database/Database.h"
-#include "Metadata/Metadata.h"
+int32_t BaseLib::debugLevel = 3;
+FileDescriptorManager BaseLib::fileDescriptorManager;
+Database BaseLib::db;
+Settings BaseLib::settings;
+std::string BaseLib::executablePath;
 
-class GDB {
-public:
-	static Output output;
-	static HelperFunctions helperFunctions;
-	static std::shared_ptr<FileDescriptorManager> fileDescriptorManager;
-	static std::shared_ptr<Database> db;
-	static Metadata metadata;
-
-	virtual ~GDB() {}
-private:
-	//Non public constructor
-	GDB();
-};
-
-#endif
+void BaseLib::init(std::string exePath)
+{
+	executablePath = exePath;
+}

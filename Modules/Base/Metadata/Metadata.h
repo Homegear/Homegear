@@ -40,16 +40,17 @@
 class Metadata
 {
 public:
-	Metadata();
 	virtual ~Metadata() {}
 
-	virtual std::shared_ptr<RPC::RPCVariable> setMetadata(std::string objectID, std::string dataID, std::shared_ptr<RPC::RPCVariable> metadata);
-	virtual std::shared_ptr<RPC::RPCVariable> getMetadata(std::string objectID, std::string dataID);
-	virtual std::shared_ptr<RPC::RPCVariable> getAllMetadata(std::string objectID);
-	virtual std::shared_ptr<RPC::RPCVariable> deleteMetadata(std::string objectID, std::string dataID = "");
+	static std::shared_ptr<RPC::RPCVariable> setMetadata(std::string objectID, std::string dataID, std::shared_ptr<RPC::RPCVariable> metadata);
+	static std::shared_ptr<RPC::RPCVariable> getMetadata(std::string objectID, std::string dataID);
+	static std::shared_ptr<RPC::RPCVariable> getAllMetadata(std::string objectID);
+	static std::shared_ptr<RPC::RPCVariable> deleteMetadata(std::string objectID, std::string dataID = "");
 private:
-	RPC::RPCEncoder _rpcEncoder;
-	RPC::RPCDecoder _rpcDecoder;
+	static RPC::RPCEncoder _rpcEncoder;
+	static RPC::RPCDecoder _rpcDecoder;
+
+	Metadata() {}
 };
 
 #endif /* METADATA_H_ */

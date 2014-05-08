@@ -28,7 +28,7 @@
  */
 
 #include "Device.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 namespace RPC {
 
@@ -40,7 +40,7 @@ DescriptionField::DescriptionField(xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "value") value = attributeValue;
-		else GDB::output.printWarning("Warning: Unknown attribute for \"field\": " + attributeName);
+		else Output::printWarning("Warning: Unknown attribute for \"field\": " + attributeName);
 	}
 }
 
@@ -54,7 +54,7 @@ ParameterDescription::ParameterDescription(xml_node<>* node)
 			DescriptionField field(descriptionNode);
 			fields.push_back(field);
 		}
-		else GDB::output.printWarning("Warning: Unknown subnode for \"description\": " + nodeName);
+		else Output::printWarning("Warning: Unknown subnode for \"description\": " + nodeName);
 	}
 }
 
@@ -68,7 +68,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		{
 			if(attributeValue == "from_device") direction = Direction::Enum::fromDevice;
 			else if(attributeValue == "to_device") direction = Direction::Enum::toDevice;
-			else GDB::output.printWarning("Warning: Unknown direction for \"frame\": " + attributeValue);
+			else Output::printWarning("Warning: Unknown direction for \"frame\": " + attributeValue);
 		}
 		else if(attributeName == "allowed_receivers")
 		{
@@ -76,7 +76,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 			std::string element;
 			while(std::getline(stream, element, ','))
 			{
-				GDB::helperFunctions.toLower(GDB::helperFunctions.trim(element));
+				HelperFunctions::toLower(HelperFunctions::trim(element));
 				if(element == "broadcast") allowedReceivers = (AllowedReceivers::Enum)(allowedReceivers | AllowedReceivers::Enum::broadcast);
 				else if(element == "central") allowedReceivers = (AllowedReceivers::Enum)(allowedReceivers | AllowedReceivers::Enum::central);
 				else if(element == "other") allowedReceivers = (AllowedReceivers::Enum)(allowedReceivers | AllowedReceivers::Enum::other);
@@ -87,31 +87,31 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		else if(attributeName == "type")
 		{
 			if(attributeValue.size() == 2 && attributeValue.at(0) == '#') type = (uint32_t)attributeValue.at(1);
-			else type = GDB::helperFunctions.getNumber(attributeValue);
+			else type = HelperFunctions::getNumber(attributeValue);
 		}
-		else if(attributeName == "subtype") subtype = GDB::helperFunctions.getNumber(attributeValue);
+		else if(attributeName == "subtype") subtype = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "subtype_index") subtypeIndex = std::stoll(attributeValue);
 		else if(attributeName == "channel_field")
 		{
 			if(channelField == -1) //Might already be set by receiver_channel_field. We don't need both
 			{
-				std::pair<std::string, std::string> splitString = GDB::helperFunctions.split(attributeValue, ':');
-				channelField = GDB::helperFunctions.getNumber(splitString.first);
-				if(!splitString.second.empty()) channelFieldSize = GDB::helperFunctions.getDouble(splitString.second);
+				std::pair<std::string, std::string> splitString = HelperFunctions::split(attributeValue, ':');
+				channelField = HelperFunctions::getNumber(splitString.first);
+				if(!splitString.second.empty()) channelFieldSize = HelperFunctions::getDouble(splitString.second);
 			}
 		}
 		else if(attributeName == "receiver_channel_field")
 		{
-			std::pair<std::string, std::string> splitString = GDB::helperFunctions.split(attributeValue, ':');
-			channelField = GDB::helperFunctions.getNumber(splitString.first);
-			if(!splitString.second.empty()) channelFieldSize = GDB::helperFunctions.getDouble(splitString.second);
+			std::pair<std::string, std::string> splitString = HelperFunctions::split(attributeValue, ':');
+			channelField = HelperFunctions::getNumber(splitString.first);
+			if(!splitString.second.empty()) channelFieldSize = HelperFunctions::getDouble(splitString.second);
 		}
 		else if(attributeName == "fixed_channel")
 		{
 			if(attributeValue == "*") fixedChannel = -2;
-			else fixedChannel = GDB::helperFunctions.getNumber(attributeValue);
+			else fixedChannel = HelperFunctions::getNumber(attributeValue);
 		}
-		else GDB::output.printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
+		else Output::printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))
 	{
@@ -218,20 +218,20 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::blindTest)
 		{
-			value->integerValue = GDB::helperFunctions.getNumber(stringValue);
+			value->integerValue = HelperFunctions::getNumber(stringValue);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -320,25 +320,25 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 		}
 		else if(type == Type::Enum::stringUnsignedInteger)
 		{
-			value->integerValue = GDB::helperFunctions.getUnsignedNumber(value->stringValue);
+			value->integerValue = HelperFunctions::getUnsignedNumber(value->stringValue);
 		}
 		else if(type == Type::Enum::blindTest)
 		{
-			value->integerValue = GDB::helperFunctions.getNumber(stringValue);
+			value->integerValue = HelperFunctions::getNumber(stringValue);
 		}
 		value->type = RPCVariableType::rpcInteger;
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -368,34 +368,34 @@ ParameterConversion::ParameterConversion(xml_node<>* node) : ParameterConversion
 			else if(attributeValue == "rc19display") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "blind_test") type = Type::Enum::blindTest;
 			else if(attributeValue == "cfm") type = Type::Enum::cfm; //Used in "SUBMIT" of HM-OU-CFM-Pl
-			else GDB::output.printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
+			else Output::printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
-		else if(attributeName == "factor") factor = GDB::helperFunctions.getDouble(attributeValue);
+		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
 		else if(attributeName == "factors")
 		{
 			std::stringstream stream(attributeValue);
 			std::string element;
 			factors.clear();
-			while(std::getline(stream, element, ',')) factors.push_back(GDB::helperFunctions.getDouble(element));
+			while(std::getline(stream, element, ',')) factors.push_back(HelperFunctions::getDouble(element));
 		}
-		else if(attributeName == "value_size") valueSize = GDB::helperFunctions.getDouble(attributeValue);
-		else if(attributeName == "threshold") threshold = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "false") valueFalse = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "true") valueTrue = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "div") div = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "mul") mul = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "offset") offset = GDB::helperFunctions.getDouble(attributeValue);
+		else if(attributeName == "value_size") valueSize = HelperFunctions::getDouble(attributeValue);
+		else if(attributeName == "threshold") threshold = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "false") valueFalse = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "true") valueTrue = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "div") div = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "mul") mul = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "offset") offset = HelperFunctions::getDouble(attributeValue);
 		else if(attributeName == "value") stringValue = attributeValue;
-		else if(attributeName == "mantissa_start") mantissaStart = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "mantissa_size") mantissaSize = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "exponent_start") exponentStart = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "exponent_size") exponentSize = GDB::helperFunctions.getNumber(attributeValue);
+		else if(attributeName == "mantissa_start") mantissaStart = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "mantissa_size") mantissaSize = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "exponent_start") exponentStart = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "exponent_size") exponentSize = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "sim_counter") {}
 		else if(attributeName == "counter_size") {}
-		else if(attributeName == "on") on = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "off") off = GDB::helperFunctions.getNumber(attributeValue);
+		else if(attributeName == "on") on = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "off") off = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "invert") { if(attributeValue == "true") invert = true; }
-		else GDB::output.printWarning("Warning: Unknown attribute for \"conversion\": " + attributeName);
+		else Output::printWarning("Warning: Unknown attribute for \"conversion\": " + attributeName);
 	}
 	for(xml_node<>* conversionNode = node->first_node(); conversionNode; conversionNode = conversionNode->next_sibling())
 	{
@@ -408,17 +408,17 @@ ParameterConversion::ParameterConversion(xml_node<>* node) : ParameterConversion
 			{
 				std::string valueMapAttributeName(valueMapAttr->name());
 				std::string valueMapAttributeValue(valueMapAttr->value());
-				if(valueMapAttributeName == "device_value") deviceValue = GDB::helperFunctions.getNumber(valueMapAttributeValue);
-				else if(valueMapAttributeName == "parameter_value") parameterValue = GDB::helperFunctions.getNumber(valueMapAttributeValue);
+				if(valueMapAttributeName == "device_value") deviceValue = HelperFunctions::getNumber(valueMapAttributeValue);
+				else if(valueMapAttributeName == "parameter_value") parameterValue = HelperFunctions::getNumber(valueMapAttributeValue);
 				else if(valueMapAttributeName == "from_device") { if(valueMapAttributeValue == "false") fromDevice = false; }
 				else if(valueMapAttributeName == "to_device") { if(valueMapAttributeValue == "false") toDevice = false; }
 				else if(valueMapAttributeName == "mask") {} //ignore, not needed
-				else GDB::output.printWarning("Warning: Unknown attribute for \"value_map\": " + valueMapAttributeName);
+				else Output::printWarning("Warning: Unknown attribute for \"value_map\": " + valueMapAttributeName);
 			}
 			integerValueMapDevice[deviceValue] = parameterValue;
 			integerValueMapParameter[parameterValue] = deviceValue;
 		}
-		else GDB::output.printWarning( "Warning: Unknown subnode for \"conversion\": " + nodeName);
+		else Output::printWarning( "Warning: Unknown subnode for \"conversion\": " + nodeName);
 	}
 }
 
@@ -444,21 +444,21 @@ bool Parameter::checkCondition(int32_t value)
 			return value <= constValue;
 			break;
 		default:
-			GDB::output.printWarning("Warning: Boolean operator is none.");
+			Output::printWarning("Warning: Boolean operator is none.");
 			break;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return false;
 }
@@ -480,15 +480,15 @@ std::vector<uint8_t> Parameter::reverseData(const std::vector<uint8_t>& data)
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return reversedData;
 }
@@ -565,15 +565,15 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger));
 }
@@ -583,10 +583,10 @@ std::vector<uint8_t> Parameter::convertToPacket(std::string value)
 	try
 	{
 		std::shared_ptr<RPCVariable> convertedValue;
-		if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) convertedValue.reset(new RPCVariable(GDB::helperFunctions.getNumber(value)));
+		if(logicalParameter->type == LogicalParameter::Type::Enum::typeInteger) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
 		{
-			if(GDB::helperFunctions.isNumber(value)) convertedValue.reset(new RPCVariable(GDB::helperFunctions.getNumber(value)));
+			if(HelperFunctions::isNumber(value)) convertedValue.reset(new RPCVariable(HelperFunctions::getNumber(value)));
 			else //value is id of enum element
 			{
 				LogicalParameterEnum* parameter = (LogicalParameterEnum*)logicalParameter.get();
@@ -604,28 +604,28 @@ std::vector<uint8_t> Parameter::convertToPacket(std::string value)
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean || logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 		{
 			convertedValue.reset(new RPCVariable(false));
-			if(GDB::helperFunctions.toLower(value) == "true") convertedValue->booleanValue = true;
+			if(HelperFunctions::toLower(value) == "true") convertedValue->booleanValue = true;
 		}
-		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) convertedValue.reset(new RPCVariable(GDB::helperFunctions.getDouble(value)));
+		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat) convertedValue.reset(new RPCVariable(HelperFunctions::getDouble(value)));
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) convertedValue.reset(new RPCVariable(value));
 		if(!convertedValue)
 		{
-			GDB::output.printWarning("Warning: Could not convert parameter " + id + " from String.");
+			Output::printWarning("Warning: Could not convert parameter " + id + " from String.");
 			return std::vector<uint8_t>();
 		}
 		return convertToPacket(convertedValue);
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -668,20 +668,20 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 			{
 				if(i == 0)
 				{
-					data.at(0) = std::lround(200 * GDB::helperFunctions.getDouble(element));
+					data.at(0) = std::lround(200 * HelperFunctions::getDouble(element));
 				}
 				else if(i == 1)
 				{
-					data.at(1) = GDB::helperFunctions.getNumber(element);
+					data.at(1) = HelperFunctions::getNumber(element);
 				}
 				else if(i == 2)
 				{
-					variable->integerValue = std::lround(GDB::helperFunctions.getDouble(element) * 10);
+					variable->integerValue = std::lround(HelperFunctions::getDouble(element) * 10);
 					ParameterConversion conversion;
 					conversion.type = ParameterConversion::Type::integerTinyFloat;
 					conversion.toPacket(variable);
 					std::vector<uint8_t> time;
-					GDB::helperFunctions.memcpyBigEndian(time, variable->integerValue);
+					HelperFunctions::memcpyBigEndian(time, variable->integerValue);
 					if(time.size() == 1) data.at(13) = time.at(0);
 					else
 					{
@@ -689,7 +689,7 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 						data.at(13) = time.at(1);
 					}
 				}
-				else data.at(i - 1) = GDB::helperFunctions.getNumber(element);
+				else data.at(i - 1) = HelperFunctions::getNumber(element);
 			}
 			if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little) data = reverseData(data);
 			return data;
@@ -768,22 +768,22 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 				int32_t valueMask = 0xFFFFFFFF >> (((4 - byteSize) * 8) - bitSize);
 				value->integerValue &= valueMask;
 			}
-			GDB::helperFunctions.memcpyBigEndian(data, value->integerValue);
+			HelperFunctions::memcpyBigEndian(data, value->integerValue);
 		}
 
 		if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little) data = reverseData(data);
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return data;
 }
@@ -805,15 +805,15 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		else if(attributeName == "signed") { if(attributeValue == "true") isSigned = true; }
 		else if(attributeName == "cond_op")
 		{
-			GDB::helperFunctions.toLower(GDB::helperFunctions.trim(attributeValue));
+			HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
 			if(attributeValue == "e" || attributeValue == "eq") booleanOperator = BooleanOperator::Enum::e;
 			else if(attributeValue == "g") booleanOperator = BooleanOperator::Enum::g;
 			else if(attributeValue == "l") booleanOperator = BooleanOperator::Enum::l;
 			else if(attributeValue == "ge") booleanOperator = BooleanOperator::Enum::ge;
 			else if(attributeValue == "le") booleanOperator = BooleanOperator::Enum::le;
-			else GDB::output.printWarning("Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " + attributeValue);
+			else Output::printWarning("Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " + attributeValue);
 		}
-		else if(attributeName == "const_value") constValue = GDB::helperFunctions.getNumber(attributeValue);
+		else if(attributeName == "const_value") constValue = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "param") param = attributeValue;
 		else if(attributeName == "PARAM") additionalParameter = attributeValue;
@@ -823,7 +823,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		else if(attributeName == "default") {} //Not necessary and not used
 		else if(attributeName == "burst_suppression")
 		{
-			if(attributeValue != "0") GDB::output.printWarning("Warning: Unknown value for \"burst_suppression\" in node \"parameter\": " + attributeValue);
+			if(attributeValue != "0") Output::printWarning("Warning: Unknown value for \"burst_suppression\" in node \"parameter\": " + attributeValue);
 		}
 		else if(attributeName == "type")
 		{
@@ -831,17 +831,17 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 			else if(attributeValue == "boolean") type = PhysicalParameter::Type::Enum::typeBoolean;
 			else if(attributeValue == "string") type = PhysicalParameter::Type::Enum::typeString;
 			else if(attributeValue == "option") type = PhysicalParameter::Type::Enum::typeOption;
-			else GDB::output.printWarning("Warning: Unknown attribute value for \"type\" in node \"parameter\": " + attributeValue);
+			else Output::printWarning("Warning: Unknown attribute value for \"type\" in node \"parameter\": " + attributeValue);
 		}
 		else if(attributeName == "omit_if")
 		{
 			if(type != PhysicalParameter::Type::Enum::typeInteger)
 			{
-				GDB::output.printWarning("Warning: \"omit_if\" is only supported for type \"integer\" in node \"parameter\".");
+				Output::printWarning("Warning: \"omit_if\" is only supported for type \"integer\" in node \"parameter\".");
 				continue;
 			}
 			omitIfSet = true;
-			omitIf = GDB::helperFunctions.getNumber(attributeValue);
+			omitIf = HelperFunctions::getNumber(attributeValue);
 		}
 		else if(attributeName == "operations")
 		{
@@ -850,7 +850,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 			std::string element;
 			while(std::getline(stream, element, ','))
 			{
-				GDB::helperFunctions.toLower(GDB::helperFunctions.trim(element));
+				HelperFunctions::toLower(HelperFunctions::trim(element));
 				if(element == "read") operations = (Operations::Enum)(operations | Operations::Enum::read);
 				else if(element == "write") operations = (Operations::Enum)(operations | Operations::Enum::write);
 				else if(element == "event") operations = (Operations::Enum)(operations | Operations::Enum::event);
@@ -863,19 +863,19 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 			std::string element;
 			while(std::getline(stream, element, ','))
 			{
-				GDB::helperFunctions.toLower(GDB::helperFunctions.trim(element));
+				HelperFunctions::toLower(HelperFunctions::trim(element));
 				if(element == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
 				else if(element == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
 				else if(element == "transform") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::transform);
 				else if(element == "service") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::service);
 				else if(element == "sticky") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::sticky);
 				else if(element == "invisible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::invisible);
-				else GDB::output.printWarning("Warning: Unknown ui flag for \"parameter\": " + attributeValue);
+				else Output::printWarning("Warning: Unknown ui flag for \"parameter\": " + attributeValue);
 			}
 		}
-		else GDB::output.printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
+		else Output::printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
 	}
-	if(checkForID && id.empty()) GDB::output.printError("Error: Parameter has no id. Index: " + std::to_string(index));
+	if(checkForID && id.empty()) Output::printError("Error: Parameter has no id. Index: " + std::to_string(index));
 	for(xml_node<>* parameterNode = node->first_node(); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
 		std::string nodeName(parameterNode->name());
@@ -905,7 +905,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		{
 			description = ParameterDescription(parameterNode);
 		}
-		else GDB::output.printWarning("Warning: Unknown subnode for \"parameter\": " + nodeName);
+		else Output::printWarning("Warning: Unknown subnode for \"parameter\": " + nodeName);
 	}
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
 	{
@@ -925,10 +925,10 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 	{
 		if(data.size() > 4 || data.empty()) return;
 		int32_t value = 0;
-		GDB::helperFunctions.memcpyBigEndian(value, data);
+		HelperFunctions::memcpyBigEndian(value, data);
 		if(physicalParameter->size < 0)
 		{
-			GDB::output.printError("Error: Negative size not allowed.");
+			Output::printError("Error: Negative size not allowed.");
 			return;
 		}
 		double i = physicalParameter->index;
@@ -938,7 +938,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 		{
 			if(physicalParameter->size > 1)
 			{
-				GDB::output.printError("Error: Can't set partial byte index > 1.");
+				Output::printError("Error: Can't set partial byte index > 1.");
 				return;
 			}
 			data.clear();
@@ -956,15 +956,15 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -989,15 +989,15 @@ bool DeviceType::matches(LogicalDeviceType deviceType, uint32_t firmwareVersion)
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
     return false;
 }
@@ -1011,15 +1011,15 @@ bool DeviceType::matches(DeviceFamilies family, std::string typeID)
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
     return false;
 }
@@ -1033,22 +1033,22 @@ bool DeviceType::matches(DeviceFamilies family, std::shared_ptr<Packet> packet)
 		{
 			int32_t intValue = 0;
 			std::vector<uint8_t> data = packet->getPosition(i->index, i->size, -1);
-			GDB::helperFunctions.memcpyBigEndian(intValue, data);
+			HelperFunctions::memcpyBigEndian(intValue, data);
 			if(!i->checkCondition(intValue)) return false;
 		}
 		return true;
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
     return false;
 }
@@ -1065,9 +1065,9 @@ DeviceType::DeviceType(xml_node<>* typeNode) : DeviceType()
 		std::string attributeValue(attr->value());
 		if(attributeName == "name") name = attributeValue;
 		else if(attributeName == "id") id = attributeValue;
-		else if(attributeName == "priority") priority = GDB::helperFunctions.getNumber(attributeValue);
+		else if(attributeName == "priority") priority = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "updatable") { if(attributeValue == "true") updatable = true; }
-		else GDB::output.printWarning("Warning: Unknown attribute for \"type\": " + attributeName);
+		else Output::printWarning("Warning: Unknown attribute for \"type\": " + attributeName);
 	}
 	for(xml_node<>* parameterNode = typeNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
@@ -1100,15 +1100,15 @@ std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(uint32_t startI
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return filteredParameters;
 }
@@ -1124,15 +1124,15 @@ std::shared_ptr<Parameter> ParameterSet::getIndex(double index)
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<Parameter>();
 }
@@ -1155,7 +1155,7 @@ std::string ParameterSet::typeString()
 
 ParameterSet::Type::Enum ParameterSet::typeFromString(std::string type)
 {
-	GDB::helperFunctions.toLower(GDB::helperFunctions.trim(type));
+	HelperFunctions::toLower(HelperFunctions::trim(type));
 	if(type == "master") return Type::Enum::master;
 	else if(type == "values") return Type::Enum::values;
 	else if(type == "link") return Type::Enum::link;
@@ -1173,15 +1173,15 @@ std::shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<Parameter>();
 }
@@ -1197,16 +1197,16 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		{
 			std::stringstream stream(attributeValue);
 			type = typeFromString(attributeValue);
-			if(type == Type::Enum::none) GDB::output.printWarning("Warning: Unknown parameter set type: " + attributeValue);
+			if(type == Type::Enum::none) Output::printWarning("Warning: Unknown parameter set type: " + attributeValue);
 		}
-		else if(attributeName == "address_start") addressStart = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "address_step") addressStep = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "count") count = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "channel_offset") channelOffset = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "peer_address_offset") peerAddressOffset = GDB::helperFunctions.getNumber(attributeValue);
-		else if(attributeName == "peer_channel_offset") peerChannelOffset = GDB::helperFunctions.getNumber(attributeValue);
+		else if(attributeName == "address_start") addressStart = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "address_step") addressStep = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "count") count = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "channel_offset") channelOffset = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "peer_address_offset") peerAddressOffset = HelperFunctions::getNumber(attributeValue);
+		else if(attributeName == "peer_channel_offset") peerChannelOffset = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "link") {} //Ignored
-		else GDB::output.printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
+		else Output::printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
 	}
 	std::vector<std::pair<std::string, std::string>> enforce;
 	for(xml_node<>* parameterNode = parameterSetNode->first_node(); parameterNode; parameterNode = parameterNode->next_sibling())
@@ -1225,7 +1225,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr2 = parameterNode->first_attribute("value");
 			if(!attr1 || !attr2)
 			{
-				GDB::output.printWarning("Warning: Could not parse \"enforce\". Attribute id or value not set.");
+				Output::printWarning("Warning: Could not parse \"enforce\". Attribute id or value not set.");
 				continue;
 			}
 			enforce.push_back(std::pair<std::string, std::string>(std::string(attr1->value()), std::string(attr2->value())));
@@ -1235,7 +1235,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr = parameterNode->first_attribute("ref");
 			if(!attr)
 			{
-				GDB::output.printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
+				Output::printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
 				continue;
 			}
 			subsetReference = std::string(attr->value());
@@ -1245,7 +1245,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr = parameterNode->first_attribute("function");
 			if(!attr)
 			{
-				GDB::output.printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
+				Output::printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
 				continue;
 			}
 			std::string function = std::string(attr->value());
@@ -1259,15 +1259,15 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 					xml_attribute<>* attr2 = defaultValueNode->first_attribute("value");
 					if(!attr1 || !attr2)
 					{
-						GDB::output.printWarning("Warning: Could not parse \"value\" (in default_values). Attribute id or value not set.");
+						Output::printWarning("Warning: Could not parse \"value\" (in default_values). Attribute id or value not set.");
 						continue;
 					}
 					defaultValues[function].push_back(std::pair<std::string, std::string>(std::string(attr1->value()), std::string(attr2->value())));
 				}
-				else GDB::output.printWarning("Warning: Unknown node name for \"default_values\": " + nodeName);
+				else Output::printWarning("Warning: Unknown node name for \"default_values\": " + nodeName);
 			}
 		}
-		else GDB::output.printWarning("Warning: Unknown node name for \"paramset\": " + nodeName);
+		else Output::printWarning("Warning: Unknown node name for \"paramset\": " + nodeName);
 	}
 	for(std::vector<std::pair<std::string, std::string>>::iterator i = enforce.begin(); i != enforce.end(); ++i)
 	{
@@ -1278,27 +1278,27 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeInteger)
 		{
 			LogicalParameterInteger* logicalParameter = (LogicalParameterInteger*)parameter->logicalParameter.get();
-			logicalParameter->enforceValue = GDB::helperFunctions.getNumber(i->second);
+			logicalParameter->enforceValue = HelperFunctions::getNumber(i->second);
 		}
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean)
 		{
 			LogicalParameterBoolean* logicalParameter = (LogicalParameterBoolean*)parameter->logicalParameter.get();
-			if(GDB::helperFunctions.toLower(i->second) == "true") logicalParameter->enforceValue = true;
+			if(HelperFunctions::toLower(i->second) == "true") logicalParameter->enforceValue = true;
 		}
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
 		{
 			LogicalParameterFloat* logicalParameter = (LogicalParameterFloat*)parameter->logicalParameter.get();
-			logicalParameter->enforceValue = GDB::helperFunctions.getDouble(i->second);
+			logicalParameter->enforceValue = HelperFunctions::getDouble(i->second);
 		}
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeAction)
 		{
 			LogicalParameterAction* logicalParameter = (LogicalParameterAction*)parameter->logicalParameter.get();
-			if(GDB::helperFunctions.toLower(i->second) == "true") logicalParameter->enforceValue = true;
+			if(HelperFunctions::toLower(i->second) == "true") logicalParameter->enforceValue = true;
 		}
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeEnum)
 		{
 			LogicalParameterEnum* logicalParameter = (LogicalParameterEnum*)parameter->logicalParameter.get();
-			logicalParameter->enforceValue = GDB::helperFunctions.getNumber(i->second);
+			logicalParameter->enforceValue = HelperFunctions::getNumber(i->second);
 		}
 		else if(parameter->logicalParameter->type == LogicalParameter::Type::Enum::typeString)
 		{
@@ -1323,7 +1323,7 @@ LinkRole::LinkRole(xml_node<>* node)
 			xml_attribute<>* attr = linkRoleNode->first_attribute("name");
 			if(attr != nullptr) sourceNames.push_back(attr->value());
 		}
-		else GDB::output.printWarning("Warning: Unknown node name for \"link_roles\": " + nodeName);
+		else Output::printWarning("Warning: Unknown node name for \"link_roles\": " + nodeName);
 	}
 }
 
@@ -1339,7 +1339,7 @@ EnforceLink::EnforceLink(xml_node<>* node) : EnforceLink()
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "value") value = attributeValue;
-		else GDB::output.printWarning("Warning: Unknown attribute for \"enforce_link - value\": " + attributeName);
+		else Output::printWarning("Warning: Unknown attribute for \"enforce_link - value\": " + attributeName);
 	}
 }
 
@@ -1354,15 +1354,15 @@ std::shared_ptr<RPCVariable> EnforceLink::getValue(LogicalParameter::Type::Enum 
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RPCVariable>();
 }
@@ -1379,28 +1379,28 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 		std::string attributeValue(attr->value());
 		if(attributeName == "index")
 		{
-			startIndex = GDB::helperFunctions.getNumber(attributeValue);
+			startIndex = HelperFunctions::getNumber(attributeValue);
 			index = startIndex;
 		}
-		else if(attributeName == "physical_index_offset") physicalIndexOffset = GDB::helperFunctions.getNumber(attributeValue);
+		else if(attributeName == "physical_index_offset") physicalIndexOffset = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "ui_flags")
 		{
 			if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
 			else if(attributeValue == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
 			else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
-			else GDB::output.printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
+			else Output::printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
 		}
 		else if(attributeName == "direction")
 		{
 			if(attributeValue == "sender") direction = (Direction::Enum)(direction | Direction::Enum::sender);
 			else if(attributeValue == "receiver") direction = (Direction::Enum)(direction | Direction::Enum::receiver);
-			else GDB::output.printWarning("Warning: Unknown direction for \"channel\": " + attributeValue);
+			else Output::printWarning("Warning: Unknown direction for \"channel\": " + attributeValue);
 		}
 		else if(attributeName == "class") channelClass = attributeValue;
 		else if(attributeName == "type") type = attributeValue;
 		else if(attributeName == "hidden") { if(attributeValue == "true") hidden = true; }
 		else if(attributeName == "autoregister") { if(attributeValue == "true") autoregister = true; }
-		else if(attributeName == "count") count = GDB::helperFunctions.getNumber(attributeValue);
+		else if(attributeName == "count") count = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "has_team") { if(attributeValue == "true") hasTeam = true; }
 		else if(attributeName == "aes_default") { if(attributeValue == "true") aesDefault = true; }
 		else if(attributeName == "aes_always") { if(attributeValue == "true") aesDefault = true; }
@@ -1412,7 +1412,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 		{
 			if(attributeValue.size() != 2)
 			{
-				GDB::output.printWarning("Warning: pair_function does not consist of two functions.");
+				Output::printWarning("Warning: pair_function does not consist of two functions.");
 				continue;
 			}
 			pairFunction1 = attributeValue.substr(0, 1);
@@ -1420,27 +1420,27 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 		}
 		else if(attributeName == "count_from_sysinfo")
 		{
-			std::pair<std::string, std::string> splitValue = GDB::helperFunctions.split(attributeValue, ':');
+			std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, ':');
 			if(!splitValue.first.empty())
 			{
-				countFromSysinfo = GDB::helperFunctions.getDouble(splitValue.first);
+				countFromSysinfo = HelperFunctions::getDouble(splitValue.first);
 				if(countFromSysinfo < 9)
 				{
-					GDB::output.printError("Error: count_from_sysinfo has to be >= 9.");
+					Output::printError("Error: count_from_sysinfo has to be >= 9.");
 					countFromSysinfo = -1;
 				}
 			}
 			if(!splitValue.second.empty())
 			{
-				countFromSysinfoSize = GDB::helperFunctions.getDouble(splitValue.second);
+				countFromSysinfoSize = HelperFunctions::getDouble(splitValue.second);
 				if(countFromSysinfoSize > 1)
 				{
-					GDB::output.printError("Error: The size of count_from_sysinfo has to be <= 1.");
+					Output::printError("Error: The size of count_from_sysinfo has to be <= 1.");
 					countFromSysinfoSize = 1;
 				}
 			}
 		}
-		else GDB::output.printWarning("Warning: Unknown attribute for \"channel\": " + attributeName);
+		else Output::printWarning("Warning: Unknown attribute for \"channel\": " + attributeName);
 	}
 	for(xml_node<>* channelNode = node->first_node(); channelNode; channelNode = channelNode->next_sibling())
 	{
@@ -1449,7 +1449,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 		{
 			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(channelNode));
 			if(parameterSets.find(parameterSet->type) == parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
-			else GDB::output.printError("Error: Tried to add same parameter set type twice.");
+			else Output::printError("Error: Tried to add same parameter set type twice.");
 			//Set physical settings of special_parameter
 			if(specialParameter && parameterSet->type == ParameterSet::Type::master)
 			{
@@ -1464,7 +1464,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 		}
 		else if(nodeName == "link_roles")
 		{
-			if(linkRoles) GDB::output.printWarning("Warning: Multiple link roles are defined for channel " + std::to_string(index) + ".");
+			if(linkRoles) Output::printWarning("Warning: Multiple link roles are defined for channel " + std::to_string(index) + ".");
 			linkRoles.reset(new LinkRole(channelNode));
 		}
 		else if(nodeName == "enforce_link")
@@ -1491,7 +1491,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 				}
 			}
 		}
-		else GDB::output.printWarning("Warning: Unknown node name for \"device\": " + nodeName);
+		else Output::printWarning("Warning: Unknown node name for \"device\": " + nodeName);
 	}
 }
 
@@ -1554,15 +1554,15 @@ Device::Device(std::string xmlFilename) : Device()
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1589,20 +1589,20 @@ void Device::load(std::string xmlFilename)
 			doc.parse<parse_no_entity_translation | parse_validate_closing_tags>(buffer);
 			parseXML(doc.first_node("device"));
 		}
-		else GDB::output.printError("Error reading file " + xmlFilename + ": " + strerror(errno));
+		else Output::printError("Error reading file " + xmlFilename + ": " + strerror(errno));
 		_loaded = true;
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     doc.clear();
 }
@@ -1615,10 +1615,10 @@ void Device::parseXML(xml_node<>* node)
 		{
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
-			if(attributeName == "version") version = GDB::helperFunctions.getNumber(attributeValue);
+			if(attributeName == "version") version = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "family")
 			{
-				GDB::helperFunctions.toLower(GDB::helperFunctions.trim(attributeValue));
+				HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
 				if(attributeValue == "homematicbidcos") family = DeviceFamilies::HomeMaticBidCoS;
 				else if(attributeValue == "homematicwired") family = DeviceFamilies::HomeMaticWired;
 			}
@@ -1629,13 +1629,13 @@ void Device::parseXML(xml_node<>* node)
 				rxModes = RXModes::Enum::none;
 				while(std::getline(stream, element, ','))
 				{
-					GDB::helperFunctions.toLower(GDB::helperFunctions.trim(element));
+					HelperFunctions::toLower(HelperFunctions::trim(element));
 					if(element == "wakeup") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::wakeUp);
 					else if(element == "config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::config);
 					else if(element == "burst") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::burst);
 					else if(element == "always") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::always);
 					else if(element == "lazy_config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::lazyConfig);
-					else GDB::output.printWarning("Warning: Unknown rx mode for \"device\": " + element);
+					else Output::printWarning("Warning: Unknown rx mode for \"device\": " + element);
 				}
 				if(rxModes == RXModes::Enum::none) rxModes = RXModes::Enum::always;
 				if(rxModes != RXModes::Enum::always) hasBattery = true;
@@ -1646,7 +1646,7 @@ void Device::parseXML(xml_node<>* node)
 			}
 			else if(attributeName == "eep_size")
 			{
-				eepSize = GDB::helperFunctions.getNumber(attributeValue);
+				eepSize = HelperFunctions::getNumber(attributeValue);
 			}
 			else if(attributeName == "rx_default") {} //not needed
 			else if(attributeName == "ui_flags")
@@ -1654,12 +1654,12 @@ void Device::parseXML(xml_node<>* node)
 				if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
 				else if(attributeValue == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
 				else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
-				else GDB::output.printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
+				else Output::printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
 			}
-			else if(attributeName == "cyclic_timeout") cyclicTimeout = GDB::helperFunctions.getNumber(attributeValue);
+			else if(attributeName == "cyclic_timeout") cyclicTimeout = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "supports_aes") { if(attributeValue == "true") supportsAES = true; }
 			else if(attributeName == "peering_sysinfo_expect_channel") { if(attributeValue == "false") peeringSysinfoExpectChannel = false; }
-			else GDB::output.printWarning("Warning: Unknown attribute for \"device\": " + attributeName);
+			else Output::printWarning("Warning: Unknown attribute for \"device\": " + attributeName);
 		}
 
 		std::map<std::string, std::shared_ptr<ParameterSet>> parameterSetDefinitions;
@@ -1681,14 +1681,14 @@ void Device::parseXML(xml_node<>* node)
 				{
 					std::string attributeName(attr->name());
 					std::string attributeValue(attr->value());
-					GDB::helperFunctions.toLower(GDB::helperFunctions.trim(attributeValue));
+					HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
 					if(attributeName == "id") parameterSet->id = attributeValue;
 					else if(attributeName == "type")
 					{
 						if(attributeValue == "master") parameterSet->type = ParameterSet::Type::Enum::master;
-						else GDB::output.printError("Error: Tried to add parameter set of type \"" + attributeValue + "\" to device. That is not allowed.");
+						else Output::printError("Error: Tried to add parameter set of type \"" + attributeValue + "\" to device. That is not allowed.");
 					}
-					else GDB::output.printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
+					else Output::printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
 				}
 				parameterSet->init(node);
 			}
@@ -1698,9 +1698,9 @@ void Device::parseXML(xml_node<>* node)
 				{
 					std::string attributeName(attr->name());
 					std::string attributeValue(attr->value());
-					GDB::helperFunctions.toLower(GDB::helperFunctions.trim(attributeValue));
+					HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
 					if(attributeName == "id") parameterSet->id = attributeValue;
-					else GDB::output.printWarning("Warning: Unknown attribute for \"paramset_defs\": " + attributeName);
+					else Output::printWarning("Warning: Unknown attribute for \"paramset_defs\": " + attributeName);
 				}
 
 				for(xml_node<>* paramsetNode = node->first_node(); paramsetNode; paramsetNode = paramsetNode->next_sibling())
@@ -1711,7 +1711,7 @@ void Device::parseXML(xml_node<>* node)
 						std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(paramsetNode));
 						parameterSetDefinitions[parameterSet->id] = parameterSet;
 					}
-					else GDB::output.printWarning("Warning: Unknown node name for \"paramset_defs\": " + nodeName);
+					else Output::printWarning("Warning: Unknown node name for \"paramset_defs\": " + nodeName);
 				}
 			}
 			else if(nodeName == "channels")
@@ -1724,14 +1724,14 @@ void Device::parseXML(xml_node<>* node)
 					for(uint32_t i = index; i < index + channel->count; i++)
 					{
 						if(channels.find(i) == channels.end()) channels[i] = channel;
-						else GDB::output.printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
+						else Output::printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
 					}
 					if(channel->countFromSysinfo)
 					{
-						if(countFromSysinfoIndex > -1) GDB::output.printError("Error: count_from_sysinfo is defined for two channels. That is not allowed.");
+						if(countFromSysinfoIndex > -1) Output::printError("Error: count_from_sysinfo is defined for two channels. That is not allowed.");
 						if(std::floor(channel->countFromSysinfo) != channel->countFromSysinfo)
 						{
-							GDB::output.printError("Error: count_from_sysinfo has to start with index 0 of a byte.");
+							Output::printError("Error: count_from_sysinfo has to start with index 0 of a byte.");
 							continue;
 						}
 						countFromSysinfoIndex = (int32_t)channel->countFromSysinfo;
@@ -1755,7 +1755,7 @@ void Device::parseXML(xml_node<>* node)
 				team.reset(new Device());
 				team->parseXML(node);
 			}
-			else GDB::output.printWarning("Warning: Unknown node name for \"device\": " + nodeName);
+			else Output::printWarning("Warning: Unknown node name for \"device\": " + nodeName);
 		}
 
 		if(!parameterSetDefinitions.empty())
@@ -1793,7 +1793,7 @@ void Device::parseXML(xml_node<>* node)
 		{
 			if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0)
 			{
-				GDB::output.printError("Error: Master parameter set of channnel 0 has to be empty.");
+				Output::printError("Error: Master parameter set of channnel 0 has to be empty.");
 			}
 			channels[0]->parameterSets[ParameterSet::Type::Enum::master] = parameterSet;
 		}
@@ -1829,15 +1829,15 @@ void Device::parseXML(xml_node<>* node)
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1855,15 +1855,15 @@ int32_t Device::getCountFromSysinfo(std::shared_ptr<Packet> packet)
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -1887,20 +1887,20 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
 		for(uint32_t i = index + 1; i < index + countFromSysinfo; i++)
 		{
 			if(channels.find(i) == channels.end()) channels[i] = channel;
-			else GDB::output.printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
+			else Output::printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
 		}
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1915,15 +1915,15 @@ std::shared_ptr<DeviceType> Device::getType(LogicalDeviceType deviceType, int32_
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<DeviceType>();
 }

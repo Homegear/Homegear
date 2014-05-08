@@ -28,7 +28,7 @@
  */
 
 #include "Peer.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 Peer::Peer(uint32_t parentID, bool centralFeatures)
 {
@@ -36,20 +36,20 @@ Peer::Peer(uint32_t parentID, bool centralFeatures)
 	{
 		_parentID = parentID;
 		_centralFeatures = centralFeatures;
-		_lastPacketReceived = GDB::helperFunctions.getTimeSeconds();
+		_lastPacketReceived = HelperFunctions::getTimeSeconds();
 		rpcDevice.reset();
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -63,15 +63,15 @@ Peer::Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t paren
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -83,7 +83,7 @@ Peer::~Peer()
 void Peer::setID(uint64_t id)
 {
 	if(_peerID == 0) _peerID = id;
-	else GDB::output.printError("Cannot reset peer ID");
+	else Output::printError("Cannot reset peer ID");
 }
 
 RPC::Device::RXModes::Enum Peer::getRXModes()
@@ -111,47 +111,47 @@ RPC::Device::RXModes::Enum Peer::getRXModes()
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return _rxModes;
 }
 
 void Peer::setLastPacketReceived()
 {
-	_lastPacketReceived = GDB::helperFunctions.getTimeSeconds();
+	_lastPacketReceived = HelperFunctions::getTimeSeconds();
 }
 
 void Peer::deleteFromDatabase()
 {
 	try
 	{
-		GDB::metadata.deleteMetadata(_serialNumber);
-		GDB::metadata.deleteMetadata(std::to_string(_peerID));
+		Metadata::deleteMetadata(_serialNumber);
+		Metadata::deleteMetadata(std::to_string(_peerID));
 		_databaseMutex.lock();
 		DataColumnVector data({std::shared_ptr<DataColumn>(new DataColumn(_peerID))});
-		GDB::db->executeCommand("DELETE FROM parameters WHERE peerID=?", data);
-		GDB::db->executeCommand("DELETE FROM peerVariables WHERE peerID=?", data);
-		GDB::db->executeCommand("DELETE FROM peers WHERE peerID=?", data);
+		BaseLib::db.executeCommand("DELETE FROM parameters WHERE peerID=?", data);
+		BaseLib::db.executeCommand("DELETE FROM peerVariables WHERE peerID=?", data);
+		BaseLib::db.executeCommand("DELETE FROM peers WHERE peerID=?", data);
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
 }
@@ -161,7 +161,7 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 	try
 	{
 		if(deleting || isTeam()) return;
-		GDB::db->executeCommand("SAVEPOINT peer" + std::to_string(_address));
+		BaseLib::db.executeCommand("SAVEPOINT peer" + std::to_string(_address));
 		if(savePeer)
 		{
 			_databaseMutex.lock();
@@ -171,7 +171,7 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_parentID)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_address)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
-			int32_t result = GDB::db->executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);
+			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);
 			if(_peerID == 0) _peerID = result;
 			_databaseMutex.unlock();
 		}
@@ -181,19 +181,19 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 	catch(const std::exception& ex)
     {
 		_databaseMutex.unlock();
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_databaseMutex.unlock();
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_databaseMutex.unlock();
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GDB::db->executeCommand("RELEASE peer" + std::to_string(_address));
+    BaseLib::db.executeCommand("RELEASE peer" + std::to_string(_address));
 }
 
 void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
@@ -202,29 +202,29 @@ void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
 	{
 		if(parameterID == 0)
 		{
-			if(!isTeam()) GDB::output.printError("Error: Peer " + std::to_string(_peerID) + ": Tried to save parameter without parameterID");
+			if(!isTeam()) Output::printError("Error: Peer " + std::to_string(_peerID) + ": Tried to save parameter without parameterID");
 			return;
 		}
 		_databaseMutex.lock();
-		GDB::db->executeCommand("SAVEPOINT peerParameter" + std::to_string(_address));
+		BaseLib::db.executeCommand("SAVEPOINT peerParameter" + std::to_string(_address));
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameterID)));
-		GDB::db->executeWriteCommand("UPDATE parameters SET value=? WHERE parameterID=?", data);
+		BaseLib::db.executeWriteCommand("UPDATE parameters SET value=? WHERE parameterID=?", data);
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GDB::db->executeCommand("RELEASE peerParameter" + std::to_string(_address));
+    BaseLib::db.executeCommand("RELEASE peerParameter" + std::to_string(_address));
     _databaseMutex.unlock();
 }
 
@@ -249,21 +249,21 @@ void Peer::saveParameter(uint32_t parameterID, uint32_t address, std::vector<uin
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string(""))));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
-		uint32_t result = GDB::db->executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+		uint32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
 
 		binaryConfig[address].databaseID = result;
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
 }
@@ -289,7 +289,7 @@ void Peer::saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum par
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteChannel)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameterName)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
-		uint32_t result = GDB::db->executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+		uint32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
 
 		if(parameterSetType == RPC::ParameterSet::Type::Enum::master) configCentral[channel][parameterName].databaseID = result;
 		else if(parameterSetType == RPC::ParameterSet::Type::Enum::values) valuesCentral[channel][parameterName].databaseID = result;
@@ -298,15 +298,15 @@ void Peer::saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum par
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
 }
@@ -317,20 +317,20 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		GDB::db->executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
+		BaseLib::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			GDB::db->executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
+			BaseLib::db.executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
 		}
 		else
 		{
 			if(_peerID == 0)
 			{
-				GDB::db->executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
+				BaseLib::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
@@ -340,23 +340,23 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = GDB::db->executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GDB::db->executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
+    BaseLib::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 
@@ -366,20 +366,20 @@ void Peer::saveVariable(uint32_t index, int64_t intValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		GDB::db->executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
+		BaseLib::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			GDB::db->executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
+			BaseLib::db.executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
 		}
 		else
 		{
 			if(_peerID == 0)
 			{
-				GDB::db->executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
+				BaseLib::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
@@ -389,23 +389,23 @@ void Peer::saveVariable(uint32_t index, int64_t intValue)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = GDB::db->executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GDB::db->executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
+    BaseLib::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 
@@ -415,20 +415,20 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		GDB::db->executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
+		BaseLib::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			GDB::db->executeWriteCommand("UPDATE peerVariables SET stringValue=? WHERE variableID=?", data);
+			BaseLib::db.executeWriteCommand("UPDATE peerVariables SET stringValue=? WHERE variableID=?", data);
 		}
 		else
 		{
 			if(_peerID == 0)
 			{
-				GDB::db->executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
+				BaseLib::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
@@ -438,23 +438,23 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = GDB::db->executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GDB::db->executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
+    BaseLib::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 
@@ -464,20 +464,20 @@ void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		GDB::db->executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
+		BaseLib::db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
 		DataColumnVector data;
 		if(idIsKnown)
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			GDB::db->executeWriteCommand("UPDATE peerVariables SET binaryValue=? WHERE variableID=?", data);
+			BaseLib::db.executeWriteCommand("UPDATE peerVariables SET binaryValue=? WHERE variableID=?", data);
 		}
 		else
 		{
 			if(_peerID == 0)
 			{
-				GDB::db->executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
+				BaseLib::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
@@ -487,23 +487,23 @@ void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
-			int32_t result = GDB::db->executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GDB::db->executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
+    BaseLib::db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 
@@ -524,7 +524,7 @@ void Peer::saveConfig()
 			{
 				if(j->first.empty())
 				{
-					GDB::output.printError("Error: Parameter has no id.");
+					Output::printError("Error: Parameter has no id.");
 					continue;
 				}
 				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
@@ -537,7 +537,7 @@ void Peer::saveConfig()
 			{
 				if(j->first.empty())
 				{
-					GDB::output.printError("Error: Parameter has no id.");
+					Output::printError("Error: Parameter has no id.");
 					continue;
 				}
 				if(j->second.databaseID > 0) saveParameter(j->second.databaseID, j->second.data);
@@ -554,7 +554,7 @@ void Peer::saveConfig()
 					{
 						if(l->first.empty())
 						{
-							GDB::output.printError("Error: Parameter has no id.");
+							Output::printError("Error: Parameter has no id.");
 							continue;
 						}
 						if(l->second.databaseID > 0) saveParameter(l->second.databaseID, l->second.data);
@@ -566,15 +566,15 @@ void Peer::saveConfig()
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -585,7 +585,7 @@ void Peer::loadConfig()
 		_databaseMutex.lock();
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-		DataTable rows = GDB::db->executeCommand("SELECT * FROM parameters WHERE peerID=?", data);
+		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM parameters WHERE peerID=?", data);
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			uint32_t databaseID = row->second.at(0)->intValue;
@@ -606,12 +606,12 @@ void Peer::loadConfig()
 				std::string* parameterName = &row->second.at(6)->textValue;
 				if(parameterName->empty())
 				{
-					GDB::output.printCritical("Critical: Added central config parameter without id. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(channel));
+					Output::printCritical("Critical: Added central config parameter without id. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(channel));
 					_databaseMutex.lock();
 					data.clear();
 					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string(""))));
-					GDB::db->executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
+					BaseLib::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
 					_databaseMutex.unlock();
 					continue;
 				}
@@ -624,13 +624,13 @@ void Peer::loadConfig()
 				parameter->data.insert(parameter->data.begin(), row->second.at(7)->binaryValue->begin(), row->second.at(7)->binaryValue->end());
 				if(!rpcDevice)
 				{
-					GDB::output.printError("Critical: No xml rpc device found for peer " + std::to_string(_peerID) + ".");
+					Output::printError("Critical: No xml rpc device found for peer " + std::to_string(_peerID) + ".");
 					continue;
 				}
 				parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(*parameterName);
 				if(!parameter->rpcParameter)
 				{
-					GDB::output.printError("Error: Deleting parameter " + *parameterName + ", because no corresponding RPC parameter was found. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(channel));
+					Output::printError("Error: Deleting parameter " + *parameterName + ", because no corresponding RPC parameter was found. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(channel));
 					DataColumnVector data;
 					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
 					data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)parameterSetType)));
@@ -639,19 +639,19 @@ void Peer::loadConfig()
 					if(parameterSetType == RPC::ParameterSet::Type::Enum::master)
 					{
 						configCentral[channel].erase(*parameterName);
-						GDB::db->executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
+						BaseLib::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
 					}
 					else if(parameterSetType == RPC::ParameterSet::Type::Enum::values)
 					{
 						valuesCentral[channel].erase(*parameterName);
-						GDB::db->executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
+						BaseLib::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
 					}
 					else if(parameterSetType == RPC::ParameterSet::Type::Enum::link)
 					{
 						linksCentral[channel][remoteAddress][remoteChannel].erase(*parameterName);
 						data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteAddress)));
 						data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteChannel)));
-						GDB::db->executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=? AND remotePeer=? AND remoteChannel=?", data);
+						BaseLib::db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=? AND remotePeer=? AND remoteChannel=?", data);
 					}
 				}
 			}
@@ -659,15 +659,15 @@ void Peer::loadConfig()
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
 }

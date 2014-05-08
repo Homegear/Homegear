@@ -27,39 +27,32 @@
  * files in the program, then also delete it here.
  */
 
-#include "BaseFactory.h"
-#include "GDB.h"
+#ifndef GDBASE_H_
+#define GDBASE_H_
 
-BaseFactory::BaseFactory()
+#include "Exception.h"
+#include "Output/Output.h"
+#include "HelperFunctions/HelperFunctions.h"
+#include "FileDescriptorManager/FileDescriptorManager.h"
+#include "Database/Database.h"
+#include "Settings/Settings.h"
+
+class BaseLib
 {
+public:
+	static int32_t debugLevel;
+	static FileDescriptorManager fileDescriptorManager;
+	static Database db;
+	static std::string executablePath;
+	static Settings settings;
 
 
-}
+	static void init(std::string exePath);
 
-BaseFactory::~BaseFactory()
-{
+	virtual ~BaseLib() {}
+private:
+	//Non public constructor
+	BaseLib();
+};
 
-}
-
-bool BaseFactory::init(std::shared_ptr<FileDescriptorManager> fileDescriptorManager, std::shared_ptr<Database> db)
-{
-	if(!fileDescriptorManager || !db)
-	{
-		GDB::output.printCritical("Critical: BaseFactory: fileDescriptorManager or db was nullptr.");
-		return false;
-	}
-	GDB::fileDescriptorManager = fileDescriptorManager;
-	GDB::db = db;
-	return true;
-}
-
-bool BaseFactory::setDatabase(std::shared_ptr<Database> db)
-{
-	if(!db)
-	{
-		GDB::output.printCritical("Critical: BaseFactory: db was nullptr.");
-		return false;
-	}
-	GDB::db = db;
-	return true;
-}
+#endif

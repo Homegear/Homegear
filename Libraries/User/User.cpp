@@ -29,6 +29,7 @@
 
 #include "User.h"
 #include "../GD/GD.h"
+#include "../../Modules/Base/BaseLib.h"
 
 std::vector<unsigned char> User::generatePBKDF2(const std::string& password, std::vector<unsigned char>& salt)
 {
@@ -56,7 +57,7 @@ bool User::verify(const std::string& userName, const std::string& password)
 	{
 		DataColumnVector dataSelect;
 		dataSelect.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
-		DataTable rows = GD::db->executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
+		DataTable rows = BaseLib::db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
 		if(rows.empty() || rows.at(0).empty() || rows.at(0).size() != 2) return false;
 		std::vector<unsigned char> salt;
 		salt.insert(salt.begin(), rows.at(0).at(1)->binaryValue->begin(), rows.at(0).at(1)->binaryValue->end());
@@ -68,11 +69,11 @@ bool User::verify(const std::string& userName, const std::string& password)
 	}
 	catch(std::exception& ex)
 	{
-		GD::output->printError("Error verifying user credentials: " + std::string(ex.what()));
+		Output::printError("Error verifying user credentials: " + std::string(ex.what()));
 	}
 	catch(...)
 	{
-		GD::output->printError("Unknown error verifying user credentials.");
+		Output::printError("Unknown error verifying user credentials.");
 	}
 	return false;
 }

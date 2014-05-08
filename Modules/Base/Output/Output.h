@@ -43,26 +43,28 @@
 
 class Output {
 public:
-	Output();
+
 	virtual ~Output();
 
-	virtual void setDebugLevel(int32_t debugLevel) { _debugLevel = debugLevel; }
+	static void setDebugLevel(int32_t debugLevel) { _debugLevel = debugLevel; }
 
-	virtual void printThreadPriority();
+	static void printThreadPriority();
 
-	virtual std::string getTimeString(int64_t time = 0);
+	static std::string getTimeString(int64_t time = 0);
 
-	virtual void printBinary(std::vector<unsigned char>& data);
-	virtual void printBinary(std::shared_ptr<std::vector<char>> data);
-	virtual void printEx(std::string file, uint32_t line, std::string function, std::string what = "");
-	virtual void printCritical(std::string errorString);
-	virtual void printError(std::string errorString);
-	virtual void printWarning(std::string errorString);
-	virtual void printInfo(std::string message);
-	virtual void printDebug(std::string message, int32_t minDebugLevel = 5);
-	virtual void printMessage(std::string message, int32_t minDebugLevel = 0);
+	static void printBinary(std::vector<unsigned char>& data);
+	static void printBinary(std::shared_ptr<std::vector<char>> data);
+	static void printEx(std::string file, uint32_t line, std::string function, std::string what = "");
+	static void printCritical(std::string errorString);
+	static void printError(std::string errorString);
+	static void printWarning(std::string errorString);
+	static void printInfo(std::string message);
+	static void printDebug(std::string message, int32_t minDebugLevel = 5);
+	static void printMessage(std::string message, int32_t minDebugLevel = 0);
 private:
-	int32_t _debugLevel = 3;
+	static int32_t _debugLevel;
+
+	Output() {}
 };
 
 #endif /* OUTPUT_H_ */

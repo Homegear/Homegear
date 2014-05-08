@@ -32,6 +32,7 @@
 #include "PhysicalDevices/CUL.h"
 #include "FS20DeviceTypes.h"
 #include "../../GD/GD.h"
+#include "../../../Modules/Base/BaseLib.h"
 
 namespace FS20
 {
@@ -52,20 +53,21 @@ std::shared_ptr<PhysicalDevices::PhysicalDevice> FS20::createPhysicalDevice(std:
 	try
 	{
 		if(!settings) return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
-		if(settings->type == "cul") return std::shared_ptr<PhysicalDevices::PhysicalDevice>(new PhysicalDevices::CUL_FS20(settings));
-		else GD::output->printError("Error: Unsupported physical device type for family FS20: " + settings->type);
+		if(settings->type == "cul") _physicalDevice.reset(new PhysicalDevices::CUL_FS20(settings));
+		else Output::printError("Error: Unsupported physical device type for family FS20: " + settings->type);
+		return _physicalDevice;
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<PhysicalDevices::PhysicalDevice>();
 }
@@ -88,15 +90,15 @@ std::shared_ptr<FS20Device> FS20::getDevice(uint32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<FS20Device>();
@@ -120,15 +122,15 @@ std::shared_ptr<FS20Device> FS20::getDevice(std::string serialNumber)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<FS20Device>();
@@ -139,12 +141,12 @@ void FS20::load(bool version_0_0_7)
 	try
 	{
 		_devices.clear();
-		DataTable rows = GD::db->executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::FS20));
+		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::FS20));
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;
-			GD::output->printMessage("Loading FS20 device " + std::to_string(deviceID));
+			Output::printMessage("Loading FS20 device " + std::to_string(deviceID));
 			int32_t address = row->second.at(1)->intValue;
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
@@ -176,15 +178,15 @@ void FS20::load(bool version_0_0_7)
 	}
 	catch(const std::exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -196,19 +198,19 @@ void FS20::createSpyDevice()
 
 		std::shared_ptr<LogicalDevice> device(new FS20_SD(0, "", address));
 		add(device);
-		GD::output->printMessage("Created FS20 spy device with id " + std::to_string(device->getID()) + ", address 0x" + GD::helperFunctions->getHexString(address, 2) + ".");
+		Output::printMessage("Created FS20 spy device with id " + std::to_string(device->getID()) + ", address 0x" + HelperFunctions::getHexString(address, 2) + ".");
 	}
 	catch(const std::exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -260,9 +262,9 @@ std::string FS20::handleCLICommand(std::string& command)
 				if(!device) continue;
 				stringStream
 					<< std::setw(idWidth) << std::setfill(' ') << device->getID() << bar
-					<< std::setw(addressWidth) << GD::helperFunctions->getHexString(device->getHouseCode(), 4) << bar
-					<< std::setw(addressWidth) << GD::helperFunctions->getHexString(device->getAddress(), 2) << bar
-					<< std::setw(typeWidth) << GD::helperFunctions->getHexString(device->getDeviceType()) << std::endl;
+					<< std::setw(addressWidth) << HelperFunctions::getHexString(device->getHouseCode(), 4) << bar
+					<< std::setw(addressWidth) << HelperFunctions::getHexString(device->getAddress(), 2) << bar
+					<< std::setw(typeWidth) << HelperFunctions::getHexString(device->getDeviceType()) << std::endl;
 			}
 			_devicesMutex.unlock();
 			stringStream << "─────────┴─────────┴────────────┴─────────" << std::endl;
@@ -287,7 +289,7 @@ std::string FS20::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					address = GD::helperFunctions->getNumber(element, true);
+					address = HelperFunctions::getNumber(element, true);
 					if(address == 0) return "Invalid address. Address has to be provided in hexadecimal format and with a maximum size of 4 bytes. A value of \"0\" is not allowed.\n";
 				}
 				else if(index == 3)
@@ -295,7 +297,7 @@ std::string FS20::handleCLICommand(std::string& command)
 					serialNumber = element;
 					if(serialNumber.size() > 10) return "Serial number too long.\n";
 				}
-				else if(index == 4) deviceType = GD::helperFunctions->getNumber(element, true);
+				else if(index == 4) deviceType = HelperFunctions::getNumber(element, true);
 				index++;
 			}
 			if(index < 5)
@@ -340,7 +342,7 @@ std::string FS20::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					id = GD::helperFunctions->getNumber(element, false);
+					id = HelperFunctions::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -384,7 +386,7 @@ std::string FS20::handleCLICommand(std::string& command)
 					if(element == "central") central = true;
 					else
 					{
-						id = GD::helperFunctions->getNumber(element, false);
+						id = HelperFunctions::getNumber(element, false);
 						if(id == 0) return "Invalid id.\n";
 					}
 				}
@@ -413,15 +415,15 @@ std::string FS20::handleCLICommand(std::string& command)
 	}
 	catch(const std::exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }

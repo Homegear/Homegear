@@ -28,7 +28,7 @@
  */
 
 #include "BinaryDecoder.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 BinaryDecoder::BinaryDecoder()
 {
@@ -45,23 +45,23 @@ int32_t BinaryDecoder::decodeInteger(std::shared_ptr<std::vector<char>>& encoded
 			//IP-Symcon encodes integers as string => Difficult to interpret. This works for numbers up to 3 digits:
 			std::string string(&encodedData->at(position), &encodedData->at(encodedData->size() - 1) + 1);
 			position = encodedData->size();
-			integer = GDB::helperFunctions.getNumber(string);
+			integer = HelperFunctions::getNumber(string);
 			return integer;
 		}
-		GDB::helperFunctions.memcpyBigEndian((char*)&integer, &encodedData->at(position), 4);
+		HelperFunctions::memcpyBigEndian((char*)&integer, &encodedData->at(position), 4);
 		position += 4;
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return integer;
 }
@@ -77,15 +77,15 @@ uint8_t BinaryDecoder::decodeByte(std::shared_ptr<std::vector<char>>& encodedDat
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return byte;
 }
@@ -102,15 +102,15 @@ std::string BinaryDecoder::decodeString(std::shared_ptr<std::vector<char>>& enco
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }
@@ -122,9 +122,9 @@ double BinaryDecoder::decodeFloat(std::shared_ptr<std::vector<char>>& encodedDat
 		if(position + 8 > encodedData->size()) return 0;
 		int32_t mantissa = 0;
 		int32_t exponent = 0;
-		GDB::helperFunctions.memcpyBigEndian((char*)&mantissa, &encodedData->at(position), 4);
+		HelperFunctions::memcpyBigEndian((char*)&mantissa, &encodedData->at(position), 4);
 		position += 4;
-		GDB::helperFunctions.memcpyBigEndian((char*)&exponent, &encodedData->at(position), 4);
+		HelperFunctions::memcpyBigEndian((char*)&exponent, &encodedData->at(position), 4);
 		position += 4;
 		double floatValue = (double)mantissa / 0x40000000;
 		floatValue *= std::pow(2, exponent);
@@ -132,15 +132,15 @@ double BinaryDecoder::decodeFloat(std::shared_ptr<std::vector<char>>& encodedDat
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
@@ -156,15 +156,15 @@ bool BinaryDecoder::decodeBoolean(std::shared_ptr<std::vector<char>>& encodedDat
 	}
 	catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }

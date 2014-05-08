@@ -30,17 +30,17 @@ endif
 ifeq ($(config),debug)
   OBJDIR     = obj/Debug/base
   TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/libbase.so
+  TARGET     = $(TARGETDIR)/libbase.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -shared
+  LDFLAGS   += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -52,17 +52,17 @@ endif
 ifeq ($(config),release)
   OBJDIR     = obj/Release/base
   TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/libbase.so
+  TARGET     = $(TARGETDIR)/libbase.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s -shared
+  LDFLAGS   += -s
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -74,17 +74,17 @@ endif
 ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/base
   TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/libbase.so
+  TARGET     = $(TARGETDIR)/libbase.a
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -std=c++11 -pg
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -shared -pg
+  LDFLAGS   += -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
+  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -94,8 +94,7 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/BaseFactory.o \
-	$(OBJDIR)/GDB.o \
+	$(OBJDIR)/BaseLib.o \
 	$(OBJDIR)/HelperFunctions.o \
 	$(OBJDIR)/Output.o \
 	$(OBJDIR)/LogicalParameter.o \
@@ -121,6 +120,8 @@ OBJECTS := \
 	$(OBJDIR)/Metadata.o \
 	$(OBJDIR)/RPCVariable.o \
 	$(OBJDIR)/Packet.o \
+	$(OBJDIR)/Threads.o \
+	$(OBJDIR)/Settings.o \
 
 RESOURCES := \
 
@@ -185,10 +186,7 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/BaseFactory.o: Modules/Base/BaseFactory.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/GDB.o: Modules/Base/GDB.cpp
+$(OBJDIR)/BaseLib.o: Modules/Base/BaseLib.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HelperFunctions.o: Modules/Base/HelperFunctions/HelperFunctions.cpp
@@ -264,6 +262,12 @@ $(OBJDIR)/RPCVariable.o: Modules/Base/Types/RPCVariable.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Packet.o: Modules/Base/Types/Packet.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Threads.o: Modules/Base/Threads/Threads.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Settings.o: Modules/Base/Settings/Settings.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

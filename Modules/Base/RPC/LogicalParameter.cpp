@@ -28,7 +28,7 @@
  */
 
 #include "LogicalParameter.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 namespace RPC {
 
@@ -40,8 +40,8 @@ ParameterOption::ParameterOption(xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "default" && attributeValue == "true") isDefault = true;
-		else if(attributeName == "index") index = GDB::helperFunctions.getNumber(attributeValue);
-		else GDB::output.printWarning("Warning: Unknown attribute for \"option\": " + attributeName);
+		else if(attributeName == "index") index = HelperFunctions::getNumber(attributeValue);
+		else Output::printWarning("Warning: Unknown attribute for \"option\": " + attributeName);
 	}
 }
 
@@ -66,15 +66,15 @@ std::shared_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return parameter;
 }
@@ -94,7 +94,7 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node) : LogicalParameterE
 			std::string attributeValue(attr->value());
 			if(attributeName == "type") {}
 			else if(attributeName == "unit") unit = attributeValue;
-			else GDB::output.printWarning("Warning: Unknown attribute for \"logical\" with type enum: " + attributeName);
+			else Output::printWarning("Warning: Unknown attribute for \"logical\" with type enum: " + attributeName);
 		}
 		int32_t index = 0;
 		for(xml_node<>* optionNode = node->first_node("option"); optionNode; optionNode = optionNode->next_sibling())
@@ -118,15 +118,15 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node) : LogicalParameterE
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -144,15 +144,15 @@ LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node) : LogicalPara
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
 			if(attributeName == "type") {}
-			else if(attributeName == "min") min = GDB::helperFunctions.getNumber(attributeValue);
-			else if(attributeName == "max") max = GDB::helperFunctions.getNumber(attributeValue);
+			else if(attributeName == "min") min = HelperFunctions::getNumber(attributeValue);
+			else if(attributeName == "max") max = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "default")
 			{
-				defaultValue = GDB::helperFunctions.getNumber(attributeValue);
+				defaultValue = HelperFunctions::getNumber(attributeValue);
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else GDB::output.printWarning("Warning: Unknown attribute for \"logical\" with type integer: " + attributeName);
+			else Output::printWarning("Warning: Unknown attribute for \"logical\" with type integer: " + attributeName);
 		}
 		for(xml_node<>* logicalNode = node->first_node(); logicalNode; logicalNode = logicalNode->next_sibling())
 		{
@@ -165,22 +165,22 @@ LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node) : LogicalPara
 				attr2 = logicalNode->first_attribute("value");
 				if(!attr1 || !attr2) continue;
 				std::string valueString(attr2->value());
-				specialValues[attr1->value()] = GDB::helperFunctions.getNumber(valueString);
+				specialValues[attr1->value()] = HelperFunctions::getNumber(valueString);
 			}
-			else GDB::output.printWarning("Warning: Unknown node in \"logical\" with type integer: " + nodeName);
+			else Output::printWarning("Warning: Unknown node in \"logical\" with type integer: " + nodeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -198,15 +198,15 @@ LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node) : LogicalParamete
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
 			if(attributeName == "type") {}
-			else if(attributeName == "min") min = GDB::helperFunctions.getDouble(attributeValue);
-			else if(attributeName == "max") max = GDB::helperFunctions.getDouble(attributeValue);
+			else if(attributeName == "min") min = HelperFunctions::getDouble(attributeValue);
+			else if(attributeName == "max") max = HelperFunctions::getDouble(attributeValue);
 			else if(attributeName == "default")
 			{
-				defaultValue = GDB::helperFunctions.getDouble(attributeValue);
+				defaultValue = HelperFunctions::getDouble(attributeValue);
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else GDB::output.printWarning("Warning: Unknown attribute for \"logical\" with type float: " + attributeName);
+			else Output::printWarning("Warning: Unknown attribute for \"logical\" with type float: " + attributeName);
 		}
 		for(xml_node<>* logicalNode = node->first_node(); logicalNode; logicalNode = logicalNode->next_sibling())
 		{
@@ -219,22 +219,22 @@ LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node) : LogicalParamete
 				attr2 = logicalNode->first_attribute("value");
 				if(!attr1 || !attr2) continue;
 				std::string valueString(attr2->value());
-				specialValues[attr1->value()] = GDB::helperFunctions.getDouble(valueString);
+				specialValues[attr1->value()] = HelperFunctions::getDouble(valueString);
 			}
-			else GDB::output.printWarning("Warning: Unknown node in \"logical\" with type float: " + nodeName);
+			else Output::printWarning("Warning: Unknown node in \"logical\" with type float: " + nodeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -258,20 +258,20 @@ LogicalParameterBoolean::LogicalParameterBoolean(xml_node<>* node) : LogicalPara
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else if(attributeName != "type") GDB::output.printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
+			else if(attributeName != "type") Output::printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -296,20 +296,20 @@ LogicalParameterString::LogicalParameterString(xml_node<>* node) : LogicalParame
 			}
 			else if(attributeName == "unit") unit = attributeValue;
 			else if(attributeName == "use_default_on_failure") {} //ignore, not necessary - all values are initialized
-			else if(attributeName != "type") GDB::output.printWarning("Warning: Unknown attribute for \"logical\" with type string: " + attributeName);
+			else if(attributeName != "type") Output::printWarning("Warning: Unknown attribute for \"logical\" with type string: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -326,20 +326,20 @@ LogicalParameterAction::LogicalParameterAction(xml_node<>* node) : LogicalParame
 		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 		{
 			std::string attributeName(attr->name());
-			if(attributeName != "type") GDB::output.printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
+			if(attributeName != "type") Output::printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

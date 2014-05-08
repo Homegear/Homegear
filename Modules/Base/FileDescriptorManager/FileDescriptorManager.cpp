@@ -28,7 +28,7 @@
  */
 
 #include "FileDescriptorManager.h"
-#include "../GDB.h"
+#include "../BaseLib.h"
 
 FileDescriptorManager::FileDescriptorManager()
 {
@@ -42,7 +42,7 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescripto
 		_descriptorsMutex.lock();
 		if(_descriptors.find(fileDescriptor) != _descriptors.end())
 		{
-			GDB::output.printInfo("Old file descriptor " + std::to_string(fileDescriptor) + " was invalidated.");
+			Output::printInfo("Old file descriptor " + std::to_string(fileDescriptor) + " was invalidated.");
 			_descriptors.at(fileDescriptor)->descriptor = -1;
 		}
 		std::shared_ptr<FileDescriptor> descriptor(new FileDescriptor());
@@ -54,15 +54,15 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescripto
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_descriptorsMutex.unlock();
 	return std::shared_ptr<FileDescriptor>(new FileDescriptor());
@@ -82,15 +82,15 @@ void FileDescriptorManager::remove(std::shared_ptr<FileDescriptor> descriptor)
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_descriptorsMutex.unlock();
 }
@@ -110,15 +110,15 @@ void FileDescriptorManager::close(std::shared_ptr<FileDescriptor> descriptor)
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_descriptorsMutex.unlock();
 }
@@ -139,15 +139,15 @@ void FileDescriptorManager::shutdown(std::shared_ptr<FileDescriptor> descriptor)
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_descriptorsMutex.unlock();
 }
@@ -165,15 +165,15 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::get(int32_t fileDescripto
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_descriptorsMutex.unlock();
 	return std::shared_ptr<FileDescriptor>();
@@ -192,15 +192,15 @@ bool FileDescriptorManager::isValid(int32_t fileDescriptor, int32_t id)
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_descriptorsMutex.unlock();
 	return false;
@@ -219,15 +219,15 @@ bool FileDescriptorManager::isValid(std::shared_ptr<FileDescriptor> descriptor)
 	}
 	catch(const std::exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		GDB::output.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_descriptorsMutex.unlock();
 	return false;

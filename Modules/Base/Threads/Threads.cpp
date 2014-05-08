@@ -28,7 +28,7 @@
  */
 
 #include "Threads.h"
-#include "../GD/GD.h"
+#include "../BaseLib.h"
 
 Threads::~Threads() {
 
@@ -38,7 +38,7 @@ void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t poli
 {
 	try
 	{
-		if(!GD::settings.prioritizeThreads()) return;
+		if(!BaseLib::settings.prioritizeThreads()) return;
 		if(policy != SCHED_FIFO && policy != SCHED_RR) priority = 0;
 		if((policy == SCHED_FIFO || policy == SCHED_RR) && (priority < 1 || priority > 99)) throw Exception("Invalid thread priority: " + std::to_string(priority));
 		sched_param schedParam;
@@ -49,25 +49,25 @@ void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t poli
 		{
 			if(error == EPERM)
 			{
-				GD::output->printError("Could not set thread priority. The executing user does not have enough privileges. Please run \"ulimit -r 100\" before executing Homegear.");
+				Output::printError("Could not set thread priority. The executing user does not have enough privileges. Please run \"ulimit -r 100\" before executing Homegear.");
 			}
-			else if(error == ESRCH) GD::output->printError("Could not set thread priority. Thread could not be found.");
-			else if(error == EINVAL) GD::output->printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
-			else GD::output->printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
-			GD::settings.setPrioritizeThreads(false);
+			else if(error == ESRCH) Output::printError("Could not set thread priority. Thread could not be found.");
+			else if(error == EINVAL) Output::printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
+			else Output::printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
+			BaseLib::settings.setPrioritizeThreads(false);
 		}
-		else GD::output->printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
+		else Output::printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
 	}
 	catch(const std::exception& ex)
     {
-		GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::output->printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }

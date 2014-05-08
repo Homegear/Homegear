@@ -44,15 +44,11 @@ class EventHandler;
 #include "../CLI/CLIServer.h"
 #include "../CLI/CLIClient.h"
 #include "../Systems/General/FamilyController.h"
-#include "../../Modules/Base/Database/Database.h"
-#include "../Settings/Settings.h"
 #include "../../Modules/Base/Systems/DeviceFamily.h"
 #include "../../Modules/Base/Systems/DeviceFamilies.h"
-#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
 #include "../../Modules/Base/RPC/Devices.h"
-#include "../../Modules/Base/BaseFactory.h"
 
 #include <vector>
 #include <map>
@@ -73,31 +69,17 @@ public:
 	static CLI::Server cliServer;
 	static CLI::Client cliClient;
 	static std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>> deviceFamilies;
-	static std::unique_ptr<RPC::Devices> rpcDevices;
-	static Settings settings;
+	static RPC::Devices rpcDevices;
 	static RPC::ServerSettings serverSettings;
 	static RPC::ClientSettings clientSettings;
-	static std::shared_ptr<Database> db;
 	static PhysicalDevices::PhysicalDevices physicalDevices;
-	static int32_t debugLevel;
 	static int32_t rpcLogLevel;
 	static EventHandler eventHandler;
-	static std::shared_ptr<FileDescriptorManager> fileDescriptorManager;
-	static std::unique_ptr<BaseFactory> baseFactory;
-	static std::shared_ptr<Output> output;
-	static std::shared_ptr<HelperFunctions> helperFunctions;
-	static std::shared_ptr<Metadata> metadata;
 
 	virtual ~GD() {}
-
-	static void init();
-	static void dispose();
 private:
 	//Non public constructor
 	GD();
-	static void loadBaseLibrary();
-
-	static void* baseHandle;
 };
 
 #endif /* GD_H_ */
