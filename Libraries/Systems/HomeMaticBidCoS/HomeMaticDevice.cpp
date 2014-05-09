@@ -257,6 +257,28 @@ void HomeMaticDevice::stopThreads()
     }
 }
 
+//Event handling
+void HomeMaticDevice::onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+{
+	try
+	{
+		GD::rpcClient.broadcastEvent(id, channel, deviceAddress, valueKeys, values);
+	}
+    catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+//End event handling
+
 bool HomeMaticDevice::isCentral()
 {
 	return _deviceType == (uint32_t)DeviceType::HMCENTRAL;
@@ -623,7 +645,7 @@ void HomeMaticDevice::loadPeers(bool version_0_0_7)
 			int32_t peerID = row->second.at(0)->intValue;
 			Output::printMessage("Loading HomeMatic BidCoS peer " + std::to_string(peerID));
 			int32_t address = row->second.at(2)->intValue;
-			std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral()));
+			std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
 			if(!peer->rpcDevice) continue;
 			_peers[peer->getAddress()] = peer;
@@ -1340,14 +1362,14 @@ void HomeMaticDevice::handleWakeUp(int32_t messageCounter, std::shared_ptr<BidCo
 
 std::shared_ptr<BidCoSPeer> HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
 {
-    return std::shared_ptr<BidCoSPeer>(new BidCoSPeer(_deviceID, isCentral()));
+    return std::shared_ptr<BidCoSPeer>(new BidCoSPeer(_deviceID, isCentral(), this));
 }
 
 std::shared_ptr<BidCoSPeer> HomeMaticDevice::createTeam(int32_t address, LogicalDeviceType deviceType, std::string serialNumber)
 {
 	try
 	{
-		std::shared_ptr<BidCoSPeer> team(new BidCoSPeer(_deviceID, isCentral()));
+		std::shared_ptr<BidCoSPeer> team(new BidCoSPeer(_deviceID, isCentral(), this));
 		team->setAddress(address);
 		team->setDeviceType(deviceType);
 		team->setSerialNumber(serialNumber);
@@ -1580,7 +1602,7 @@ void HomeMaticDevice::handleConfigStart(int32_t messageCounter, std::shared_ptr<
 		if(_pairing)
 		{
 			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRINGCENTRAL, packet->senderAddress());
-			std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(_deviceID, isCentral()));
+			std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(_deviceID, isCentral(), this));
 			peer->setAddress(packet->senderAddress());
 			peer->setDeviceType(LogicalDeviceType(DeviceFamilies::HomeMaticBidCoS, (uint32_t)DeviceType::HMRCV50));
 			peer->setMessageCounter(0); //Unknown at this point

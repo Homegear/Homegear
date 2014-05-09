@@ -55,7 +55,7 @@ enum class BidCoSQueueType;
 namespace BidCoS
 {
 
-class HomeMaticDevice : public LogicalDevice
+class HomeMaticDevice : public LogicalDevice, public Peer::IEventSink
 {
     public:
         //In table variables
@@ -64,6 +64,10 @@ class HomeMaticDevice : public LogicalDevice
         int32_t getCentralAddress() { return _centralAddress; }
         void setCentralAddress(int32_t value) { _centralAddress = value; saveVariable(1, value); }
         //End
+
+        //Event handling
+        void onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+        //End event handling
 
         std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
         virtual bool isCentral();

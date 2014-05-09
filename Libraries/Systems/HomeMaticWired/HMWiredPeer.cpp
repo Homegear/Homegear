@@ -57,11 +57,11 @@ std::shared_ptr<HMWiredCentral> HMWiredPeer::getCentral()
 	return std::shared_ptr<HMWiredCentral>();
 }
 
-HMWiredPeer::HMWiredPeer(uint32_t parentID, bool centralFeatures) : Peer(parentID, centralFeatures)
+HMWiredPeer::HMWiredPeer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler) : Peer(parentID, centralFeatures, eventHandler)
 {
 }
 
-HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures) : Peer(id, address, serialNumber, parentID, centralFeatures)
+HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler) : Peer(id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
 }
 

@@ -317,7 +317,7 @@ std::shared_ptr<BidCoSPeer> HomeMaticCentral::createPeer(int32_t address, int32_
 {
 	try
 	{
-		std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(_deviceID, true));
+		std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(_deviceID, true, this));
 		peer->setAddress(address);
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);

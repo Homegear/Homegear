@@ -121,6 +121,28 @@ void HMWiredDevice::init()
     }
 }
 
+//Event handling
+void HMWiredDevice::onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+{
+	try
+	{
+		GD::rpcClient.broadcastEvent(id, channel, deviceAddress, valueKeys, values);
+	}
+    catch(const std::exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+//End event handling
+
 bool HMWiredDevice::isCentral()
 {
 	return _deviceType == (uint32_t)DeviceType::HMWIREDCENTRAL;
@@ -160,7 +182,7 @@ void HMWiredDevice::loadPeers(bool version_0_0_7)
 			int32_t peerID = row->second.at(0)->intValue;
 			Output::printMessage("Loading HomeMatic Wired peer " + std::to_string(peerID));
 			int32_t address = row->second.at(2)->intValue;
-			std::shared_ptr<HMWiredPeer> peer(new HMWiredPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral()));
+			std::shared_ptr<HMWiredPeer> peer(new HMWiredPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
 			if(!peer->rpcDevice) continue;
 			_peers[peer->getAddress()] = peer;

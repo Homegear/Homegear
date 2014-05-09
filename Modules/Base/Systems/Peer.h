@@ -91,8 +91,8 @@ public:
 	std::shared_ptr<RPC::Device> rpcDevice;
 	std::shared_ptr<ServiceMessages> serviceMessages;
 
-	Peer(uint32_t parentID, bool centralFeatures);
-	Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
+	Peer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
+	Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
 	virtual ~Peer();
 
 	//In table peers:

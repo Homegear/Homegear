@@ -595,7 +595,7 @@ std::shared_ptr<HMWiredPeer> HMWiredCentral::createPeer(int32_t address, int32_t
 {
 	try
 	{
-		std::shared_ptr<HMWiredPeer> peer(new HMWiredPeer(_deviceID, true));
+		std::shared_ptr<HMWiredPeer> peer(new HMWiredPeer(_deviceID, true, this));
 		peer->setAddress(address);
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);

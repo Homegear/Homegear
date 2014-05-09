@@ -31,7 +31,7 @@
 #include "ServiceMessages.h"
 #include "../BaseLib.h"
 
-Peer::Peer(uint32_t parentID, bool centralFeatures)
+Peer::Peer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler)
 {
 	try
 	{
@@ -44,6 +44,7 @@ Peer::Peer(uint32_t parentID, bool centralFeatures)
 		}
 		_lastPacketReceived = HelperFunctions::getTimeSeconds();
 		rpcDevice.reset();
+		addEventHandler(eventHandler);
 	}
 	catch(const std::exception& ex)
     {
@@ -59,7 +60,7 @@ Peer::Peer(uint32_t parentID, bool centralFeatures)
     }
 }
 
-Peer::Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures) : Peer(parentID, centralFeatures)
+Peer::Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler) : Peer(parentID, centralFeatures, eventHandler)
 {
 	try
 	{

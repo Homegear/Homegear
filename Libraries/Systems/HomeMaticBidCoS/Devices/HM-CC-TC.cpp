@@ -782,7 +782,7 @@ std::shared_ptr<BidCoSPeer> HM_CC_TC::createPeer(int32_t address, int32_t firmwa
 {
 	try
 	{
-		std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(_deviceID, false));
+		std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(_deviceID, false, this));
 		peer->setAddress(address);
 		peer->setFirmwareVersion(firmwareVersion);
 		peer->setDeviceType(deviceType);

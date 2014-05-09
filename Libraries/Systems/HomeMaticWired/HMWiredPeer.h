@@ -94,8 +94,8 @@ public:
 class HMWiredPeer : public Peer
 {
 public:
-	HMWiredPeer(uint32_t parentID, bool centralFeatures);
-	HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
+	HMWiredPeer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
+	HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
 	virtual ~HMWiredPeer();
 
 	//In table variables:

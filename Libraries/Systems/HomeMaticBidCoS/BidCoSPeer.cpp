@@ -269,7 +269,7 @@ void BidCoSPeer::dispose()
     }
 }
 
-BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures) : Peer(parentID, centralFeatures)
+BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler) : Peer(parentID, centralFeatures, eventHandler)
 {
 	try
 	{
@@ -293,7 +293,7 @@ BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures) : Peer(parentID,
     }
 }
 
-BidCoSPeer::BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures) : Peer(id, address, serialNumber, parentID, centralFeatures)
+BidCoSPeer::BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler) : Peer(id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
 }
 

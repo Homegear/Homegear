@@ -105,8 +105,8 @@ public:
 class BidCoSPeer : public Peer
 {
     public:
-		BidCoSPeer(uint32_t parentID, bool centralFeatures);
-		BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
+		BidCoSPeer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
+		BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
 		virtual ~BidCoSPeer();
 		void dispose();
 
