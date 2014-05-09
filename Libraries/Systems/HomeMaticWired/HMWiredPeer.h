@@ -31,7 +31,6 @@
 #define HMWIREDPEER_H_
 
 #include "../../../Modules/Base/Systems/Peer.h"
-#include "../../../Modules/Base/Systems/ServiceMessages.h"
 #include "HMWiredPacket.h"
 
 #include <list>
@@ -109,7 +108,6 @@ public:
 	//End
 
 	bool ignorePackets = false;
-	std::shared_ptr<ServiceMessages> serviceMessages;
 
 	std::string handleCLICommand(std::string command);
 	void initializeCentralConfig();
@@ -129,7 +127,6 @@ public:
     void loadVariables(HMWiredDevice* device = nullptr);
     void saveVariables();
 	void savePeers();
-	void saveServiceMessages();
 	bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
 	void addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer);
 	std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address, int32_t remoteChannel = -1);
@@ -148,6 +145,7 @@ public:
 	void getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std::vector<FrameValues>& frameValue);
 	void packetReceived(std::shared_ptr<HMWiredPacket> packet);
 
+	//RPC methods
 	std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
 	std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);
 	std::shared_ptr<RPC::RPCVariable> getLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
@@ -157,10 +155,10 @@ public:
 	std::shared_ptr<RPC::RPCVariable> getParamsetDescription(int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
 	std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
 	std::shared_ptr<RPC::RPCVariable> getParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
-	std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
 	std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
 	std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
 	std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
+	//End RPC methods
 protected:
 	std::shared_ptr<HMWiredCentral> _central;
 	uint32_t _bitmask[9] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF};

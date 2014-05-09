@@ -35,7 +35,6 @@
 #include "../../../delegate.hpp"
 #include "../../../Modules/Base/RPC/Device.h"
 #include "../../../Modules/Base/Types/RPCVariable.h"
-#include "../../../Modules/Base/Systems/ServiceMessages.h"
 #include "BidCoSPacket.h"
 
 #include <iomanip>
@@ -137,7 +136,6 @@ class BidCoSPeer : public Peer
 		std::vector<uint8_t>& getTeamData() { return _team.data; }
 		//End
 
-		std::shared_ptr<ServiceMessages> serviceMessages;
         void setCentralFeatures(bool value) { _centralFeatures = value; }
 
         std::unordered_map<int32_t, int32_t> config;
@@ -165,7 +163,6 @@ class BidCoSPeer : public Peer
         void savePeers();
         void saveNonCentralConfig();
         void saveVariablesToReset();
-        void saveServiceMessages();
         void savePendingQueues();
         void deletePairedVirtualDevice(int32_t address);
         void deletePairedVirtualDevices();
@@ -193,6 +190,7 @@ class BidCoSPeer : public Peer
         bool firmwareUpdateAvailable();
         std::string printConfig();
 
+        //RPC methods
         std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescription();
         std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel);
         std::shared_ptr<RPC::RPCVariable> getLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
@@ -202,10 +200,10 @@ class BidCoSPeer : public Peer
         std::shared_ptr<RPC::RPCVariable> getParamsetDescription(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
         std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
         std::shared_ptr<RPC::RPCVariable> getParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
-        std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
         std::shared_ptr<RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
         std::shared_ptr<RPC::RPCVariable> putParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> variables, bool putUnchanged = false, bool onlyPushing = false);
         std::shared_ptr<RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
+        //End RPC methods
     private:
         uint32_t _lastRSSIDevice = 0;
         std::mutex _variablesToResetMutex;

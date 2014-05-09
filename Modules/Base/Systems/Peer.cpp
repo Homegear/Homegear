@@ -28,6 +28,7 @@
  */
 
 #include "Peer.h"
+#include "ServiceMessages.h"
 #include "../BaseLib.h"
 
 Peer::Peer(uint32_t parentID, bool centralFeatures)
@@ -36,6 +37,11 @@ Peer::Peer(uint32_t parentID, bool centralFeatures)
 	{
 		_parentID = parentID;
 		_centralFeatures = centralFeatures;
+		if(centralFeatures)
+		{
+			serviceMessages.reset(new ServiceMessages(0, ""));
+			serviceMessages->addEventHandler(this);
+		}
 		_lastPacketReceived = HelperFunctions::getTimeSeconds();
 		rpcDevice.reset();
 	}
@@ -60,6 +66,11 @@ Peer::Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t paren
 		_peerID = id;
 		_address = address;
 		_serialNumber = serialNumber;
+		if(serviceMessages)
+		{
+			serviceMessages->setPeerID(id);
+			serviceMessages->setPeerSerial(serialNumber);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -77,13 +88,128 @@ Peer::Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t paren
 
 Peer::~Peer()
 {
-
+	serviceMessages->removeEventHandler(this);
 }
+
+//Event handling
+void Peer::raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IEventSink*)*i)->onRPCBroadcast(id, channel, deviceAddress, valueKeys, values);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+//End event handling
+
+//ServiceMessages event handling
+void Peer::onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+{
+	try
+	{
+		raiseOnRPCBroadcast(id, channel, deviceAddress, valueKeys, values);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Peer::onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data)
+{
+	try
+	{
+		if(valuesCentral.find(channel) == valuesCentral.end())
+		{
+			Output::printWarning("Warning: Could not set parameter " + name + " on channel " + std::to_string(channel) + " for peer " + std::to_string(_peerID) + ". Channel does not exist.");
+			return;
+		}
+		if(valuesCentral.at(channel).find(name) == valuesCentral.at(channel).end())
+		{
+			Output::printWarning("Warning: Could not set parameter " + name + " on channel " + std::to_string(channel) + " for peer " + std::to_string(_peerID) + ". Parameter does not exist.");
+			return;
+		}
+		RPCConfigurationParameter* parameter = &valuesCentral.at(channel).at(name);
+		parameter->data = data;
+		saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, channel, name, parameter->data);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Peer::onEnqueuePendingQueues()
+{
+	try
+	{
+		if(pendingQueuesEmpty()) return;
+		if(!(getRXModes() & RPC::Device::RXModes::Enum::always) && !(getRXModes() & RPC::Device::RXModes::Enum::burst)) return;
+		enqueuePendingQueues();
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+//End ServiceMessages event handling
 
 void Peer::setID(uint64_t id)
 {
-	if(_peerID == 0) _peerID = id;
+	if(_peerID == 0)
+	{
+		_peerID = id;
+		if(serviceMessages) serviceMessages->setPeerID(id);
+	}
 	else Output::printError("Cannot reset peer ID");
+}
+
+void Peer::setSerialNumber(std::string serialNumber)
+{
+	if(serialNumber.length() > 20) return;
+	_serialNumber = serialNumber;
+	if(serviceMessages) serviceMessages->setPeerSerial(serialNumber);
+	if(_peerID > 0) save(true, false, false);
 }
 
 RPC::Device::RXModes::Enum Peer::getRXModes()
@@ -175,7 +301,11 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 			if(_peerID == 0) _peerID = result;
 			_databaseMutex.unlock();
 		}
-		if(variables) saveVariables();
+		if(variables)
+		{
+			saveVariables();
+			saveServiceMessages();
+		}
 		if(centralConfig) saveConfig();
 	}
 	catch(const std::exception& ex)
@@ -458,6 +588,29 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
     _databaseMutex.unlock();
 }
 
+void Peer::saveServiceMessages()
+{
+	try
+	{
+		if(!_centralFeatures || !serviceMessages) return;
+		std::vector<uint8_t> serializedData;
+		serviceMessages->serialize(serializedData);
+		saveVariable(15, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
 {
 	try
@@ -670,4 +823,11 @@ void Peer::loadConfig()
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
+}
+
+std::shared_ptr<RPC::RPCVariable> Peer::getServiceMessages(bool returnID)
+{
+	if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+	if(!serviceMessages) return RPC::RPCVariable::createError(-32500, "Service messages are not initialized.");
+	return serviceMessages->get(returnID);
 }

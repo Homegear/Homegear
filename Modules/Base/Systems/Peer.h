@@ -33,6 +33,7 @@
 #include "../Metadata/Metadata.h"
 #include "../RPC/Device.h"
 #include "../Database/Database.h"
+#include "ServiceMessages.h"
 class LogicalDevice;
 
 #include <string>
@@ -62,9 +63,25 @@ public:
 	std::vector<uint8_t> data;
 };
 
-class Peer
+class Peer : public ServiceMessages::IEventSink, public IEvents
 {
 public:
+	//Event handling
+	class IEventSink : public IEventSinkBase
+	{
+	public:
+		virtual void onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+	};
+
+	virtual void raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	//End event handling
+
+	//ServiceMessages event handling
+	void onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
+	void onEnqueuePendingQueues();
+	//End ServiceMessages event handling
+
 	bool deleting = false; //Needed, so the peer gets not saved in central's worker thread while being deleted
 
 	std::unordered_map<uint32_t, ConfigDataBlock> binaryConfig;
@@ -72,6 +89,7 @@ public:
 	std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>> valuesCentral;
 	std::unordered_map<uint32_t, std::unordered_map<int32_t, std::unordered_map<uint32_t, std::unordered_map<std::string, RPCConfigurationParameter>>>> linksCentral;
 	std::shared_ptr<RPC::Device> rpcDevice;
+	std::shared_ptr<ServiceMessages> serviceMessages;
 
 	Peer(uint32_t parentID, bool centralFeatures);
 	Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures);
@@ -84,7 +102,7 @@ public:
 	virtual void setID(uint64_t id);
 	virtual void setAddress(int32_t value) { _address = value; if(_peerID > 0) save(true, false, false); }
 	virtual std::string getSerialNumber() { return _serialNumber; }
-	virtual void setSerialNumber(std::string serialNumber) { if(serialNumber.length() > 20) return; _serialNumber = serialNumber; if(_peerID > 0) save(true, false, false); }
+	virtual void setSerialNumber(std::string serialNumber);
 	//End
 
 	virtual RPC::Device::RXModes::Enum getRXModes();
@@ -107,6 +125,11 @@ public:
     virtual void saveVariable(uint32_t index, std::string& stringValue);
     virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
     virtual void deleteFromDatabase();
+    virtual void saveServiceMessages();
+
+    //RPC methods
+    virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
+    //End RPC methods
 protected:
     std::map<uint32_t, uint32_t> _variableDatabaseIDs;
 

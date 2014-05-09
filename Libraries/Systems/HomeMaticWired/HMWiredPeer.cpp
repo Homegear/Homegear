@@ -59,7 +59,6 @@ std::shared_ptr<HMWiredCentral> HMWiredPeer::getCentral()
 
 HMWiredPeer::HMWiredPeer(uint32_t parentID, bool centralFeatures) : Peer(parentID, centralFeatures)
 {
-	if(centralFeatures) serviceMessages.reset(new ServiceMessages(this));
 }
 
 HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures) : Peer(id, address, serialNumber, parentID, centralFeatures)
@@ -1333,13 +1332,18 @@ void HMWiredPeer::loadVariables(HMWiredDevice* device)
 			case 15:
 				if(_centralFeatures)
 				{
-					serviceMessages.reset(new ServiceMessages(this));
+					serviceMessages.reset(new ServiceMessages(_peerID, _serialNumber));
+					serviceMessages->addEventHandler(this);
 					serviceMessages->unserialize(row->second.at(5)->binaryValue);
 				}
 				break;
 			}
 		}
-		if(_centralFeatures && !serviceMessages) serviceMessages.reset(new ServiceMessages(this));
+		if(_centralFeatures && !serviceMessages)
+		{
+			serviceMessages.reset(new ServiceMessages(_peerID, _serialNumber));
+			serviceMessages->addEventHandler(this);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -1395,7 +1399,6 @@ void HMWiredPeer::save(bool savePeer, bool variables, bool centralConfig)
 	try
 	{
 		Peer::save(savePeer, variables, centralConfig);
-		if(!variables) saveServiceMessages();
 	}
 	catch(const std::exception& ex)
     {
@@ -1421,29 +1424,6 @@ void HMWiredPeer::saveVariables()
 		saveVariable(5, (int32_t)_messageCounter);
 		savePeers(); //12
 		saveServiceMessages(); //15
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void HMWiredPeer::saveServiceMessages()
-{
-	try
-	{
-		if(!_centralFeatures || !serviceMessages) return;
-		std::vector<uint8_t> serializedData;
-		serviceMessages->serialize(serializedData);
-		saveVariable(15, serializedData);
 	}
 	catch(const std::exception& ex)
     {
@@ -3006,13 +2986,6 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getParamsetId(uint32_t channel, R
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getServiceMessages(bool returnID)
-{
-	if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-	if(!serviceMessages) return RPC::RPCVariable::createError(-32500, "Service messages are not initialized.");
-	return serviceMessages->get(returnID);
 }
 
 std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getValue(uint32_t channel, std::string valueKey)

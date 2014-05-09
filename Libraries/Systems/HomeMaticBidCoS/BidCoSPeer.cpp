@@ -232,7 +232,6 @@ BidCoSPeer::~BidCoSPeer()
 {
 	try
 	{
-		if(serviceMessages) serviceMessages->dispose();
 		dispose();
 	}
 	catch(const std::exception& ex)
@@ -277,7 +276,6 @@ BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures) : Peer(parentID,
 		_team.address = 0;
 		if(centralFeatures)
 		{
-			serviceMessages.reset(new ServiceMessages(this));
 			pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 		}
 	}
@@ -352,7 +350,7 @@ void BidCoSPeer::worker()
 			positionsToDelete.clear();
 			variablesToReset.clear();
 		}
-		serviceMessages->checkUnreach();
+		if(rpcDevice) serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
 		if(serviceMessages->getConfigPending() && (!pendingBidCoSQueues || pendingBidCoSQueues->empty()))
 		{
 			serviceMessages->setConfigPending(false);
@@ -797,7 +795,6 @@ void BidCoSPeer::save(bool savePeer, bool variables, bool centralConfig)
 		{
 			saveNonCentralConfig();
 			saveVariablesToReset();
-			saveServiceMessages();
 			savePendingQueues();
 		}
 	}
@@ -1199,29 +1196,6 @@ void BidCoSPeer::saveVariablesToReset()
     }
 }
 
-void BidCoSPeer::saveServiceMessages()
-{
-	try
-	{
-		if(!_centralFeatures || !serviceMessages) return;
-		std::vector<uint8_t> serializedData;
-		serviceMessages->serialize(serializedData);
-		saveVariable(15, serializedData);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 void BidCoSPeer::savePendingQueues()
 {
 	try
@@ -1346,7 +1320,8 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 			case 15:
 				if(_centralFeatures)
 				{
-					serviceMessages.reset(new ServiceMessages(this));
+					serviceMessages.reset(new ServiceMessages(_peerID, _serialNumber));
+					serviceMessages->addEventHandler(this);
 					serviceMessages->unserialize(row->second.at(5)->binaryValue);
 				}
 				break;
@@ -1361,7 +1336,11 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 		}
 		if(_centralFeatures)
 		{
-			if(!serviceMessages) serviceMessages.reset(new ServiceMessages(this));
+			if(!serviceMessages)
+			{
+				serviceMessages.reset(new ServiceMessages(_peerID, _serialNumber));
+				serviceMessages->addEventHandler(this);
+			}
 			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 		}
 	}
@@ -3305,13 +3284,6 @@ std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getParamsetDescription(int32_t cha
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getServiceMessages(bool returnID)
-{
-	if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-	if(!serviceMessages) return RPC::RPCVariable::createError(-32500, "Service messages are not initialized.");
-	return serviceMessages->get(returnID);
 }
 
 std::shared_ptr<RPC::RPCVariable> BidCoSPeer::getValue(uint32_t channel, std::string valueKey)

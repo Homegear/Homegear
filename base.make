@@ -95,6 +95,7 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/BaseLib.o \
+	$(OBJDIR)/IEvents.o \
 	$(OBJDIR)/HelperFunctions.o \
 	$(OBJDIR)/Output.o \
 	$(OBJDIR)/LogicalParameter.o \
@@ -187,6 +188,9 @@ endif
 endif
 
 $(OBJDIR)/BaseLib.o: Modules/Base/BaseLib.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/IEvents.o: Modules/Base/IEvents.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HelperFunctions.o: Modules/Base/HelperFunctions/HelperFunctions.cpp

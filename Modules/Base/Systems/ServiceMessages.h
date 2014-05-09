@@ -30,10 +30,10 @@
 #ifndef SERVICEMESSAGES_H_
 #define SERVICEMESSAGES_H_
 
-#include "Peer.h"
 #include "../Types/RPCVariable.h"
 #include "../Encoding/BinaryEncoder.h"
 #include "../Encoding/BinaryDecoder.h"
+#include "../IEvents.h"
 
 #include <string>
 #include <iomanip>
@@ -43,45 +43,45 @@
 #include <mutex>
 #include <vector>
 
-class ServiceMessages
+class ServiceMessages : public IEvents
 {
 public:
 	//Event handling
-	class IEventSink
+	class IEventSink : public IEventSinkBase
 	{
 	public:
-		virtual void onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) {}
+		virtual void onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+		virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data) = 0;
+		virtual void onEnqueuePendingQueues() = 0;
 	};
 
-	virtual void addEventHandler(std::shared_ptr<IEventSink> eventHandler);
 	virtual void raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseOnSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
+	virtual void raiseOnEnqueuePendingQueues();
 	//End event handling
 
-	void setPeer(Peer* peer) { _peer = peer; }
-
-	ServiceMessages(Peer* peer);
+	ServiceMessages(uint64_t peerID, std::string peerSerial);
 	virtual ~ServiceMessages();
+
+	virtual void setPeerID(uint64_t peerID) { _peerID = peerID; }
+	virtual void setPeerSerial(std::string peerSerial) { _peerSerial = peerSerial; }
 
 	virtual void serialize(std::vector<uint8_t>& encodedData);
 	virtual void unserialize(std::shared_ptr<std::vector<char>> serializedData);
 	virtual bool set(std::string id, bool value);
 	virtual void set(std::string id, uint8_t value, uint32_t channel);
 	virtual std::shared_ptr<RPC::RPCVariable> get(bool returnID);
-	virtual void dispose();
 
 	virtual void setConfigPending(bool value);
 	virtual bool getConfigPending() { return _configPending; }
 
 	virtual void setUnreach(bool value);
 	virtual bool getUnreach() { return _unreach; }
-	virtual void checkUnreach();
+	virtual void checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketReceived);
     virtual void endUnreach();
 protected:
-    //Event handling
-    std::mutex _eventHandlerMutex;
-    std::vector<std::shared_ptr<IEventSink>> _eventHandlers;
-    //End event handling
-
+    uint64_t _peerID = 0;
+    std::string _peerSerial;
     bool _disposing = false;
     bool _configPending = false;
     int32_t _unreachResendCounter = 0;
@@ -91,9 +91,6 @@ protected:
 
 	std::mutex _errorMutex;
 	std::map<uint32_t, std::map<std::string, uint8_t>> _errors;
-
-	std::mutex _peerMutex;
-	Peer* _peer = nullptr;
 };
 
 #endif /* SERVICEMESSAGES_H_ */
