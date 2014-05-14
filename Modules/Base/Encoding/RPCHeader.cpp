@@ -29,8 +29,11 @@
 
 #include "RPCHeader.h"
 
+namespace BaseLib
+{
 namespace RPC
 {
 
 
-} /* namespace RPC */
+}
+}

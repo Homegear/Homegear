@@ -29,18 +29,18 @@ endif
 
 ifeq ($(config),debug)
   OBJDIR     = obj/Debug/bidcos
-  TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/libbidcos.a
+  TARGETDIR  = lib/Modules/HomeMaticBidCoS/Debug
+  TARGET     = $(TARGETDIR)/libbidcos.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += 
+  LDFLAGS   += -Llib/Debug -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -51,18 +51,18 @@ endif
 
 ifeq ($(config),release)
   OBJDIR     = obj/Release/bidcos
-  TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/libbidcos.a
+  TARGETDIR  = lib/Modules/HomeMaticBidCoS/Release
+  TARGET     = $(TARGETDIR)/libbidcos.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s
+  LDFLAGS   += -Llib/Release -s -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -73,18 +73,18 @@ endif
 
 ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/bidcos
-  TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/libbidcos.a
+  TARGETDIR  = lib/Modules/HomeMaticBidCoS/Profiling
+  TARGET     = $(TARGETDIR)/libbidcos.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -pg
+  LDFLAGS   += -Llib/Profiling -shared -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -95,6 +95,7 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/PendingBidCoSQueues.o \
+	$(OBJDIR)/GD.o \
 	$(OBJDIR)/BidCoS.o \
 	$(OBJDIR)/BidCoSMessage.o \
 	$(OBJDIR)/BidCoSQueueManager.o \
@@ -103,6 +104,7 @@ OBJECTS := \
 	$(OBJDIR)/BidCoSPeer.o \
 	$(OBJDIR)/BidCoSPacketManager.o \
 	$(OBJDIR)/BidCoSPacket.o \
+	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/BidCoSMessages.o \
 	$(OBJDIR)/HM-CC-VD.o \
 	$(OBJDIR)/HM-LC-SwX-FM.o \
@@ -176,58 +178,64 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/PendingBidCoSQueues.o: Libraries/Systems/HomeMaticBidCoS/PendingBidCoSQueues.cpp
+$(OBJDIR)/PendingBidCoSQueues.o: Modules/HomeMaticBidCoS/PendingBidCoSQueues.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BidCoS.o: Libraries/Systems/HomeMaticBidCoS/BidCoS.cpp
+$(OBJDIR)/GD.o: Modules/HomeMaticBidCoS/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BidCoSMessage.o: Libraries/Systems/HomeMaticBidCoS/BidCoSMessage.cpp
+$(OBJDIR)/BidCoS.o: Modules/HomeMaticBidCoS/BidCoS.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BidCoSQueueManager.o: Libraries/Systems/HomeMaticBidCoS/BidCoSQueueManager.cpp
+$(OBJDIR)/BidCoSMessage.o: Modules/HomeMaticBidCoS/BidCoSMessage.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BidCoSQueue.o: Libraries/Systems/HomeMaticBidCoS/BidCoSQueue.cpp
+$(OBJDIR)/BidCoSQueueManager.o: Modules/HomeMaticBidCoS/BidCoSQueueManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HomeMaticDevice.o: Libraries/Systems/HomeMaticBidCoS/HomeMaticDevice.cpp
+$(OBJDIR)/BidCoSQueue.o: Modules/HomeMaticBidCoS/BidCoSQueue.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BidCoSPeer.o: Libraries/Systems/HomeMaticBidCoS/BidCoSPeer.cpp
+$(OBJDIR)/HomeMaticDevice.o: Modules/HomeMaticBidCoS/HomeMaticDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BidCoSPacketManager.o: Libraries/Systems/HomeMaticBidCoS/BidCoSPacketManager.cpp
+$(OBJDIR)/BidCoSPeer.o: Modules/HomeMaticBidCoS/BidCoSPeer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BidCoSPacket.o: Libraries/Systems/HomeMaticBidCoS/BidCoSPacket.cpp
+$(OBJDIR)/BidCoSPacketManager.o: Modules/HomeMaticBidCoS/BidCoSPacketManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/BidCoSMessages.o: Libraries/Systems/HomeMaticBidCoS/BidCoSMessages.cpp
+$(OBJDIR)/BidCoSPacket.o: Modules/HomeMaticBidCoS/BidCoSPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HM-CC-VD.o: Libraries/Systems/HomeMaticBidCoS/Devices/HM-CC-VD.cpp
+$(OBJDIR)/Factory.o: Modules/HomeMaticBidCoS/Factory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HM-LC-SwX-FM.o: Libraries/Systems/HomeMaticBidCoS/Devices/HM-LC-SwX-FM.cpp
+$(OBJDIR)/BidCoSMessages.o: Modules/HomeMaticBidCoS/BidCoSMessages.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HomeMaticCentral.o: Libraries/Systems/HomeMaticBidCoS/Devices/HomeMaticCentral.cpp
+$(OBJDIR)/HM-CC-VD.o: Modules/HomeMaticBidCoS/Devices/HM-CC-VD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HM-SD.o: Libraries/Systems/HomeMaticBidCoS/Devices/HM-SD.cpp
+$(OBJDIR)/HM-LC-SwX-FM.o: Modules/HomeMaticBidCoS/Devices/HM-LC-SwX-FM.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/HM-CC-TC.o: Libraries/Systems/HomeMaticBidCoS/Devices/HM-CC-TC.cpp
+$(OBJDIR)/HomeMaticCentral.o: Modules/HomeMaticBidCoS/Devices/HomeMaticCentral.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/TICC1100.o: Libraries/Systems/HomeMaticBidCoS/PhysicalDevices/TICC1100.cpp
+$(OBJDIR)/HM-SD.o: Modules/HomeMaticBidCoS/Devices/HM-SD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/COC.o: Libraries/Systems/HomeMaticBidCoS/PhysicalDevices/COC.cpp
+$(OBJDIR)/HM-CC-TC.o: Modules/HomeMaticBidCoS/Devices/HM-CC-TC.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/CUL.o: Libraries/Systems/HomeMaticBidCoS/PhysicalDevices/CUL.cpp
+$(OBJDIR)/TICC1100.o: Modules/HomeMaticBidCoS/PhysicalDevices/TICC1100.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/COC.o: Modules/HomeMaticBidCoS/PhysicalDevices/COC.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/CUL.o: Modules/HomeMaticBidCoS/PhysicalDevices/CUL.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

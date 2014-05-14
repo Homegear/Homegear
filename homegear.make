@@ -36,7 +36,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l user -l cli -l events -l gd -l base
+  LDFLAGS   += -Llib/Debug -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l user -l cli -l events -l gd -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -58,7 +58,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l user -l cli -l events -l gd -l base
+  LDFLAGS   += -Llib/Release -s -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l user -l cli -l events -l gd -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -80,7 +80,7 @@ ifeq ($(config),profiling)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -l bidcos -l hmwired -l insteon -l fs20 -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l physicaldevices -l user -l cli -l events -l gd -l base -pg
+  LDFLAGS   += -Llib/Profiling -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l user -l cli -l events -l gd -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -95,7 +95,6 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/main.o \
-	$(OBJDIR)/SystemInitializer.o \
 	$(OBJDIR)/FamilyController.o \
 
 RESOURCES := \
@@ -162,9 +161,6 @@ endif
 endif
 
 $(OBJDIR)/main.o: main.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/SystemInitializer.o: Libraries/Systems/General/SystemInitializer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/FamilyController.o: Libraries/Systems/General/FamilyController.cpp

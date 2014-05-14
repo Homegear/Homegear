@@ -49,7 +49,10 @@
 #include <pwd.h>
 #include <grp.h>
 
-class HelperFunctions {
+namespace BaseLib
+{
+class HelperFunctions
+{
 public:
 	virtual ~HelperFunctions();
 
@@ -188,5 +191,5 @@ private:
 	HelperFunctions() {}
 	static void checkEndianness();
 };
-
+}
 #endif /* HELPERFUNCTIONS_H_ */

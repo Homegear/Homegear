@@ -34,12 +34,17 @@
 #include "../RPC/Device.h"
 #include "../Database/Database.h"
 #include "ServiceMessages.h"
-class LogicalDevice;
 
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <memory>
+
+namespace BaseLib
+{
+namespace Systems
+{
+class LogicalDevice;
 
 class RPCConfigurationParameter
 {
@@ -147,4 +152,6 @@ protected:
 	std::mutex _databaseMutex;
 };
 
+}
+}
 #endif /* PEER_H_ */

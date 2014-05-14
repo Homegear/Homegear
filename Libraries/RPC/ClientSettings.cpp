@@ -54,7 +54,7 @@ void ClientSettings::load(std::string filename)
 
 		if (!(fin = fopen(filename.c_str(), "r")))
 		{
-			Output::printError("Unable to open RPC client config file: " + filename + ". " + strerror(errno));
+			BaseLib::Output::printError("Unable to open RPC client config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
@@ -96,52 +96,52 @@ void ClientSettings::load(std::string filename)
 			if(found)
 			{
 				std::string name(input);
-				HelperFunctions::toLower(name);
-				HelperFunctions::trim(name);
+				BaseLib::HelperFunctions::toLower(name);
+				BaseLib::HelperFunctions::trim(name);
 				std::string value(&input[ptr]);
-				HelperFunctions::trim(value);
+				BaseLib::HelperFunctions::trim(value);
 				if(name == "hostname")
 				{
-					settings->hostname = HelperFunctions::toLower(value);
-					Output::printDebug("Debug: hostname of RPC client " + settings->name + " set to " + settings->hostname);
+					settings->hostname = BaseLib::HelperFunctions::toLower(value);
+					BaseLib::Output::printDebug("Debug: hostname of RPC client " + settings->name + " set to " + settings->hostname);
 				}
 				else if(name == "forcessl")
 				{
-					HelperFunctions::toLower(value);
+					BaseLib::HelperFunctions::toLower(value);
 					if(value == "false") settings->forceSSL = false;
-					Output::printDebug("Debug: forceSSL of RPC client " + settings->name + " set to " + std::to_string(settings->forceSSL));
+					BaseLib::Output::printDebug("Debug: forceSSL of RPC client " + settings->name + " set to " + std::to_string(settings->forceSSL));
 				}
 				else if(name == "authtype")
 				{
-					HelperFunctions::toLower(value);
+					BaseLib::HelperFunctions::toLower(value);
 					if(value == "basic") settings->authType = Settings::AuthType::basic;
-					Output::printDebug("Debug: authType of RPC client " + settings->name + " set to " + std::to_string(settings->authType));
+					BaseLib::Output::printDebug("Debug: authType of RPC client " + settings->name + " set to " + std::to_string(settings->authType));
 				}
 				else if(name == "verifycertificate")
 				{
-					HelperFunctions::toLower(value);
+					BaseLib::HelperFunctions::toLower(value);
 					if(value == "false") settings->verifyCertificate = false;
-					Output::printDebug("Debug: verifyCertificate of RPC client " + settings->name + " set to " + std::to_string(settings->verifyCertificate));
+					BaseLib::Output::printDebug("Debug: verifyCertificate of RPC client " + settings->name + " set to " + std::to_string(settings->verifyCertificate));
 				}
 				else if(name == "username")
 				{
-					settings->userName = HelperFunctions::toLower(value);
-					Output::printDebug("Debug: userName of RPC client " + settings->name + " set to " + settings->userName);
+					settings->userName = BaseLib::HelperFunctions::toLower(value);
+					BaseLib::Output::printDebug("Debug: userName of RPC client " + settings->name + " set to " + settings->userName);
 				}
 				else if(name == "password")
 				{
-					settings->password = HelperFunctions::toLower(value);
+					settings->password = BaseLib::HelperFunctions::toLower(value);
 					if(settings->password.front() == '"' && settings->password.back() == '"')
 					{
 						settings->password = settings->password.substr(1, settings->password.size() - 2);
-						HelperFunctions::stringReplace(settings->password, "\\\"", "\"");
-						HelperFunctions::stringReplace(settings->password, "\\\\", "\\");
+						BaseLib::HelperFunctions::stringReplace(settings->password, "\\\"", "\"");
+						BaseLib::HelperFunctions::stringReplace(settings->password, "\\\\", "\\");
 					}
-					Output::printDebug("Debug: password of RPC client " + settings->name + " was set.");
+					BaseLib::Output::printDebug("Debug: password of RPC client " + settings->name + " was set.");
 				}
 				else
 				{
-					Output::printWarning("Warning: RPC client setting not found: " + std::string(input));
+					BaseLib::Output::printWarning("Warning: RPC client setting not found: " + std::string(input));
 				}
 			}
 		}
@@ -151,15 +151,15 @@ void ClientSettings::load(std::string filename)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 } /* namespace RPC */

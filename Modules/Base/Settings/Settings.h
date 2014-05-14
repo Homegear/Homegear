@@ -34,7 +34,10 @@
 #include <string>
 #include <map>
 
-class Settings {
+namespace BaseLib
+{
+class Settings
+{
 public:
 	Settings();
 	virtual ~Settings() {}
@@ -86,4 +89,5 @@ private:
 	void reset();
 };
 
+}
 #endif /* SETTINGS_H_ */

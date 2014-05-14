@@ -30,6 +30,9 @@
 #include "Threads.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
+
 Threads::~Threads() {
 
 }
@@ -38,7 +41,7 @@ void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t poli
 {
 	try
 	{
-		if(!BaseLib::settings.prioritizeThreads()) return;
+		if(!Obj::ins->settings.prioritizeThreads()) return;
 		if(policy != SCHED_FIFO && policy != SCHED_RR) priority = 0;
 		if((policy == SCHED_FIFO || policy == SCHED_RR) && (priority < 1 || priority > 99)) throw Exception("Invalid thread priority: " + std::to_string(priority));
 		sched_param schedParam;
@@ -54,7 +57,7 @@ void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t poli
 			else if(error == ESRCH) Output::printError("Could not set thread priority. Thread could not be found.");
 			else if(error == EINVAL) Output::printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
 			else Output::printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
-			BaseLib::settings.setPrioritizeThreads(false);
+			Obj::ins->settings.setPrioritizeThreads(false);
 		}
 		else Output::printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
 	}
@@ -70,4 +73,6 @@ void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t poli
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
 }

@@ -39,7 +39,7 @@ std::shared_ptr<HMWiredCentral> HMWiredPeer::getCentral()
 	try
 	{
 		if(_central) return _central;
-		_central = std::dynamic_pointer_cast<HMWiredCentral>(GD::deviceFamilies.at(DeviceFamilies::HomeMaticWired)->getCentral());
+		_central = std::dynamic_pointer_cast<HMWiredCentral>(BaseLib::Obj::ins->deviceFamilies.at(DeviceFamilies::HomeMaticWired)->getCentral());
 		return _central;
 	}
 	catch(const std::exception& ex)
@@ -79,7 +79,7 @@ void HMWiredPeer::initializeCentralConfig()
 			Output::printWarning("Warning: Tried to initialize HomeMatic Wired peer's central config without rpcDevice being set.");
 			return;
 		}
-		BaseLib::db.executeCommand("SAVEPOINT hmWiredPeerConfig" + std::to_string(_address));
+		BaseLib::Obj::ins->db.executeCommand("SAVEPOINT hmWiredPeerConfig" + std::to_string(_address));
 		RPCConfigurationParameter parameter;
 		for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
@@ -111,7 +111,7 @@ void HMWiredPeer::initializeCentralConfig()
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    BaseLib::db.executeCommand("RELEASE hmWiredPeerConfig" + std::to_string(_address));
+    BaseLib::Obj::ins->db.executeCommand("RELEASE hmWiredPeerConfig" + std::to_string(_address));
 }
 
 void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPeer> peer)
@@ -1307,7 +1307,7 @@ void HMWiredPeer::loadVariables(HMWiredDevice* device)
 		_databaseMutex.lock();
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
+		DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
@@ -1366,7 +1366,7 @@ bool HMWiredPeer::load(LogicalDevice* device)
 	{
 		loadVariables((HMWiredDevice*)device);
 
-		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
+		rpcDevice = BaseLib::rpcDevices->find(_deviceType, _firmwareVersion, -1);
 		if(!rpcDevice)
 		{
 			Output::printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device type not found: 0x" + HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
@@ -1700,7 +1700,7 @@ int32_t HMWiredPeer::getNewFirmwareVersion()
 	try
 	{
 		std::string filenamePrefix = HelperFunctions::getHexString((int32_t)DeviceFamilies::HomeMaticWired, 4) + "." + HelperFunctions::getHexString(_deviceType.type(), 8);
-		std::string versionFile(BaseLib::settings.firmwarePath() + filenamePrefix + ".version");
+		std::string versionFile(BaseLib::Obj::ins->settings.firmwarePath() + filenamePrefix + ".version");
 		if(!HelperFunctions::fileExists(versionFile)) return 0;
 		std::string versionHex = HelperFunctions::getFileContent(versionFile);
 		return HelperFunctions::getNumber(versionHex, true);
@@ -1978,7 +1978,7 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 					}
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, a->parameterSetType, *j, i->first, parameter->data);
-					if(BaseLib::debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic Wired peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
+					if(BaseLib::Obj::ins->debugLevel >= 4) Output::printInfo("Info: " + i->first + " of HomeMatic Wired peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
 					if((currentParameter->uiFlags & RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
@@ -2046,7 +2046,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t chan
 		if(channel == -1) //Base device
 		{
 			description->structValue->insert(RPC::RPCStructElement("FAMILY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)DeviceFamilies::HomeMaticWired))));
-			description->structValue->insert(RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::deviceFamilies.at(DeviceFamilies::HomeMaticWired)->getName()))));
+			description->structValue->insert(RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(BaseLib::Obj::ins->deviceFamilies.at(DeviceFamilies::HomeMaticWired)->getName()))));
 			description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)_peerID))));
 			description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber))));
 
@@ -2100,7 +2100,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t chan
 			if(rpcChannel->hidden) return description;
 
 			description->structValue->insert(RPC::RPCStructElement("FAMILY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)DeviceFamilies::HomeMaticWired))));
-			description->structValue->insert(RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(GD::deviceFamilies.at(DeviceFamilies::HomeMaticWired)->getName()))));
+			description->structValue->insert(RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(BaseLib::Obj::ins->deviceFamilies.at(DeviceFamilies::HomeMaticWired)->getName()))));
 			description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)_peerID))));
 			description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 
@@ -3197,7 +3197,7 @@ std::shared_ptr<RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::s
 		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
 		parameter->data = data;
 		saveParameter(parameter->databaseID, RPC::ParameterSet::Type::Enum::values, channel, valueKey, data);
-		if(BaseLib::debugLevel > 4) Output::printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(data) + ".");
+		if(BaseLib::Obj::ins->debugLevel > 4) Output::printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + HelperFunctions::getHexString(data) + ".");
 
 		std::vector<uint8_t> payload({ (uint8_t)frame->type });
 		if(frame->subtype > -1 && frame->subtypeIndex >= 9)

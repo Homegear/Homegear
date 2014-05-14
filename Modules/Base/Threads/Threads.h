@@ -33,7 +33,11 @@
 #include "../Exception.h"
 #include "../Output/Output.h"
 
-class Threads {
+namespace BaseLib
+{
+
+class Threads
+{
 public:
 	virtual ~Threads();
 
@@ -43,4 +47,5 @@ private:
 	Threads() {}
 };
 
+}
 #endif /* THREADS_H_ */

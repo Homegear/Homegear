@@ -36,6 +36,11 @@
 #include <string>
 #include <map>
 
+namespace BaseLib
+{
+namespace Systems
+{
+
 class LogicalDeviceType
 {
 public:
@@ -52,4 +57,7 @@ private:
 	DeviceFamilies _family = DeviceFamilies::none;
 	uint32_t _type = 0xFFFFFFFF;
 };
+
+}
+}
 #endif

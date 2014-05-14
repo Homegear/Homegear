@@ -44,11 +44,9 @@ class EventHandler;
 #include "../CLI/CLIServer.h"
 #include "../CLI/CLIClient.h"
 #include "../Systems/General/FamilyController.h"
-#include "../../Modules/Base/Systems/DeviceFamily.h"
-#include "../../Modules/Base/Systems/DeviceFamilies.h"
+#include "../../Modules/Base/BaseLib.h"
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
-#include "../../Modules/Base/RPC/Devices.h"
 
 #include <vector>
 #include <map>
@@ -68,11 +66,8 @@ public:
 	static RPC::Client rpcClient;
 	static CLI::Server cliServer;
 	static CLI::Client cliClient;
-	static std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>> deviceFamilies;
-	static RPC::Devices rpcDevices;
 	static RPC::ServerSettings serverSettings;
 	static RPC::ClientSettings clientSettings;
-	static PhysicalDevices::PhysicalDevices physicalDevices;
 	static int32_t rpcLogLevel;
 	static EventHandler eventHandler;
 

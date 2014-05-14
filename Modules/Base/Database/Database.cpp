@@ -30,6 +30,9 @@
 #include "Database.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
+
 Database::Database()
 {
 }
@@ -597,4 +600,6 @@ void Database::benchmark4()
     {
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
 }

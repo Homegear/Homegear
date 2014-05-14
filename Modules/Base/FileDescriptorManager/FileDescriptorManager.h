@@ -38,6 +38,8 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+namespace BaseLib
+{
 class FileDescriptor
 {
 public:
@@ -66,5 +68,5 @@ private:
 	std::mutex _descriptorsMutex;
 	std::map<int32_t, std::shared_ptr<FileDescriptor>> _descriptors;
 };
-
+}
 #endif

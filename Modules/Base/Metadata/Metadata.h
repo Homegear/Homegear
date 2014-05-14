@@ -30,13 +30,15 @@
 #ifndef METADATA_H_
 #define METADATA_H_
 
-#include "../Types/RPCVariable.h"
+#include "../RPC/RPCVariable.h"
 #include "../Encoding/RPCEncoder.h"
 #include "../Encoding/RPCDecoder.h"
 #include "../Database/Database.h"
 
 #include <thread>
 
+namespace BaseLib
+{
 class Metadata
 {
 public:
@@ -52,5 +54,5 @@ private:
 
 	Metadata() {}
 };
-
+}
 #endif /* METADATA_H_ */

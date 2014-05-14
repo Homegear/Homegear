@@ -30,7 +30,7 @@
 #ifndef LOGICALPARAMETER_H_
 #define LOGICALPARAMETER_H_
 
-#include "../Types/RPCVariable.h"
+#include "../RPC/RPCVariable.h"
 #include "../Encoding/rapidxml.hpp"
 
 #include <fstream>
@@ -44,6 +44,8 @@
 
 using namespace rapidxml;
 
+namespace BaseLib
+{
 namespace RPC
 {
 
@@ -171,5 +173,6 @@ public:
 	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
 };
 
-} /* namespace XMLRPC */
+}
+}
 #endif /* LOGICALPARAMETER_H_ */

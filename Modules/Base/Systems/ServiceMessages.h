@@ -30,7 +30,7 @@
 #ifndef SERVICEMESSAGES_H_
 #define SERVICEMESSAGES_H_
 
-#include "../Types/RPCVariable.h"
+#include "../RPC/RPCVariable.h"
 #include "../Encoding/BinaryEncoder.h"
 #include "../Encoding/BinaryDecoder.h"
 #include "../IEvents.h"
@@ -43,7 +43,11 @@
 #include <mutex>
 #include <vector>
 
-class ServiceMessages : public IEvents
+namespace BaseLib
+{
+namespace Systems
+{
+class ServiceMessages : public BaseLib::IEvents
 {
 public:
 	//Event handling
@@ -93,4 +97,6 @@ protected:
 	std::map<uint32_t, std::map<std::string, uint8_t>> _errors;
 };
 
+}
+}
 #endif /* SERVICEMESSAGES_H_ */

@@ -30,8 +30,11 @@
 #include "XMLRPCEncoder.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
 namespace RPC
 {
+
 XMLRPCEncoder::XMLRPCEncoder()
 {
 }
@@ -282,4 +285,6 @@ void XMLRPCEncoder::encodeArray(xml_document<>* doc, xml_node<>* node, std::shar
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
-} /* namespace RPC */
+
+}
+}

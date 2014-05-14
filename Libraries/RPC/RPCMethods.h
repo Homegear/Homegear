@@ -31,11 +31,9 @@
 #define RPCMETHODS_H_
 
 #include "RPCServer.h"
-#include "../../Modules/Base/Types/RPCVariable.h"
+#include "../../Modules/Base/BaseLib.h"
 #include "RPCMethod.h"
-#include "../../Modules/Base/Metadata/Metadata.h"
 #include "../Events/EventHandler.h"
-#include "../PhysicalDevices/PhysicalDevices.h"
 
 #include <vector>
 #include <memory>
@@ -49,9 +47,9 @@ public:
 	RPCSystemGetCapabilities()
 	{
 		setHelp("Lists server's XML RPC capabilities.");
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>());
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCSystemListMethods : public RPCMethod
@@ -61,9 +59,9 @@ public:
 	{
 		_server = server;
 		setHelp("Lists all XML RPC methods.");
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 private:
 	std::shared_ptr<RPCServer> _server;
 };
@@ -75,9 +73,9 @@ public:
 	{
 		_server = server;
 		setHelp("Returns a description of the method.");
-		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcString, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 private:
 	std::shared_ptr<RPCServer> _server;
 };
@@ -89,9 +87,9 @@ public:
 	{
 		_server = server;
 		setHelp("Returns the method's signature.");
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 private:
 	std::shared_ptr<RPCServer> _server;
 };
@@ -103,9 +101,9 @@ public:
 	{
 		_server = server;
 		setHelp("Calls multiple XML RPC methods.");
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcArray});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcArray});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 private:
 	std::shared_ptr<RPCServer> _server;
 };
@@ -115,9 +113,9 @@ class RPCAbortEventReset : public RPCMethod
 public:
 	RPCAbortEventReset()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCAddDevice : public RPCMethod
@@ -125,9 +123,9 @@ class RPCAddDevice : public RPCMethod
 public:
 	RPCAddDevice()
 	{
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCAddEvent : public RPCMethod
@@ -135,9 +133,9 @@ class RPCAddEvent : public RPCMethod
 public:
 	RPCAddEvent()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcStruct});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcStruct});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCAddLink : public RPCMethod
@@ -145,13 +143,13 @@ class RPCAddLink : public RPCMethod
 public:
 	RPCAddLink()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCClientServerInitialized : public RPCMethod
@@ -159,9 +157,9 @@ class RPCClientServerInitialized : public RPCMethod
 public:
 	RPCClientServerInitialized()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString}));
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>({BaseLib::RPC::RPCVariableType::rpcString}));
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCDeleteDevice : public RPCMethod
@@ -169,10 +167,10 @@ class RPCDeleteDevice : public RPCMethod
 public:
 	RPCDeleteDevice()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcInteger});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCDeleteMetadata : public RPCMethod
@@ -180,10 +178,10 @@ class RPCDeleteMetadata : public RPCMethod
 public:
 	RPCDeleteMetadata()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCEnableEvent : public RPCMethod
@@ -191,9 +189,9 @@ class RPCEnableEvent : public RPCMethod
 public:
 	RPCEnableEvent()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcBoolean});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcBoolean});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetAllMetadata : public RPCMethod
@@ -201,9 +199,9 @@ class RPCGetAllMetadata : public RPCMethod
 public:
 	RPCGetAllMetadata()
 	{
-		addSignature(RPCVariableType::rpcVariant, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVariant, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetDeviceDescription : public RPCMethod
@@ -211,10 +209,10 @@ class RPCGetDeviceDescription : public RPCMethod
 public:
 	RPCGetDeviceDescription()
 	{
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetInstallMode : public RPCMethod
@@ -222,9 +220,9 @@ class RPCGetInstallMode : public RPCMethod
 public:
 	RPCGetInstallMode()
 	{
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>());
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetKeyMismatchDevice : public RPCMethod
@@ -232,9 +230,9 @@ class RPCGetKeyMismatchDevice : public RPCMethod
 public:
 	RPCGetKeyMismatchDevice()
 	{
-		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcBoolean});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcString, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcBoolean});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetLinkInfo : public RPCMethod
@@ -242,10 +240,10 @@ class RPCGetLinkInfo : public RPCMethod
 public:
 	RPCGetLinkInfo()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetLinkPeers : public RPCMethod
@@ -253,10 +251,10 @@ class RPCGetLinkPeers : public RPCMethod
 public:
 	RPCGetLinkPeers()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetLinks : public RPCMethod
@@ -264,13 +262,13 @@ class RPCGetLinks : public RPCMethod
 public:
 	RPCGetLinks()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcInteger});
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetMetadata : public RPCMethod
@@ -278,11 +276,11 @@ class RPCGetMetadata : public RPCMethod
 public:
 	RPCGetMetadata()
 	{
-		addSignature(RPCVariableType::rpcVariant, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVariant, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 private:
-	RPCDecoder _rpcDecoder;
+	BaseLib::RPC::RPCDecoder _rpcDecoder;
 };
 
 class RPCGetParamsetDescription : public RPCMethod
@@ -290,11 +288,11 @@ class RPCGetParamsetDescription : public RPCMethod
 public:
 	RPCGetParamsetDescription()
 	{
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetParamsetId : public RPCMethod
@@ -302,11 +300,11 @@ class RPCGetParamsetId : public RPCMethod
 public:
 	RPCGetParamsetId()
 	{
-		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcString, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcString, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcString, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetParamset : public RPCMethod
@@ -314,11 +312,11 @@ class RPCGetParamset : public RPCMethod
 public:
 	RPCGetParamset()
 	{
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcStruct, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetPeerId : public RPCMethod
@@ -326,10 +324,10 @@ class RPCGetPeerId : public RPCMethod
 public:
 	RPCGetPeerId()
 	{
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetServiceMessages : public RPCMethod
@@ -337,10 +335,10 @@ class RPCGetServiceMessages : public RPCMethod
 public:
 	RPCGetServiceMessages()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>{RPCVariableType::rpcBoolean});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcBoolean});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetUpdateStatus : public RPCMethod
@@ -348,9 +346,9 @@ class RPCGetUpdateStatus : public RPCMethod
 public:
 	RPCGetUpdateStatus()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>());
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetValue : public RPCMethod
@@ -358,10 +356,10 @@ class RPCGetValue : public RPCMethod
 public:
 	RPCGetValue()
 	{
-		addSignature(RPCVariableType::rpcVariant, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVariant, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVariant, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVariant, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCGetVersion : public RPCMethod
@@ -369,9 +367,9 @@ class RPCGetVersion : public RPCMethod
 public:
 	RPCGetVersion()
 	{
-		addSignature(RPCVariableType::rpcString, std::vector<RPCVariableType>{});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcString, std::vector<BaseLib::RPC::RPCVariableType>{});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCInit : public RPCMethod
@@ -379,12 +377,12 @@ class RPCInit : public RPCMethod
 public:
 	RPCInit()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
 	virtual ~RPCInit();
 
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 private:
 	std::thread _initServerThread;
 };
@@ -394,9 +392,9 @@ class RPCListBidcosInterfaces : public RPCMethod
 public:
 	RPCListBidcosInterfaces()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCListDevices : public RPCMethod
@@ -404,9 +402,9 @@ class RPCListDevices : public RPCMethod
 public:
 	RPCListDevices()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCListEvents : public RPCMethod
@@ -414,11 +412,11 @@ class RPCListEvents : public RPCMethod
 public:
 	RPCListEvents()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcInteger}));
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcInteger, RPCVariableType::rpcInteger}));
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString}));
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>({BaseLib::RPC::RPCVariableType::rpcInteger}));
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>({BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger}));
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>({BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString}));
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCListClientServers : public RPCMethod
@@ -426,10 +424,10 @@ class RPCListClientServers : public RPCMethod
 public:
 	RPCListClientServers()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>({RPCVariableType::rpcString}));
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>({BaseLib::RPC::RPCVariableType::rpcString}));
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCListInterfaces : public RPCMethod
@@ -437,9 +435,9 @@ class RPCListInterfaces : public RPCMethod
 public:
 	RPCListInterfaces()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCListTeams : public RPCMethod
@@ -447,9 +445,9 @@ class RPCListTeams : public RPCMethod
 public:
 	RPCListTeams()
 	{
-		addSignature(RPCVariableType::rpcArray, std::vector<RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCLogLevel : public RPCMethod
@@ -457,10 +455,10 @@ class RPCLogLevel : public RPCMethod
 public:
 	RPCLogLevel()
 	{
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcInteger});
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>());
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCPutParamset : public RPCMethod
@@ -468,12 +466,12 @@ class RPCPutParamset : public RPCMethod
 public:
 	RPCPutParamset()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcStruct});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString, RPCVariableType::rpcStruct});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcStruct});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcStruct});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcStruct});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcStruct});
 
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCRemoveEvent : public RPCMethod
@@ -481,9 +479,9 @@ class RPCRemoveEvent : public RPCMethod
 public:
 	RPCRemoveEvent()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCRemoveLink : public RPCMethod
@@ -491,10 +489,10 @@ class RPCRemoveLink : public RPCMethod
 public:
 	RPCRemoveLink()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCRunScript : public RPCMethod
@@ -502,12 +500,12 @@ class RPCRunScript : public RPCMethod
 public:
 	RPCRunScript()
 	{
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcBoolean});
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcBoolean});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcBoolean});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcBoolean});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCSearchDevices : public RPCMethod
@@ -515,9 +513,9 @@ class RPCSearchDevices : public RPCMethod
 public:
 	RPCSearchDevices()
 	{
-		addSignature(RPCVariableType::rpcInteger, std::vector<RPCVariableType>{RPCVariableType::rpcVoid});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcInteger, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcVoid});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCSetLinkInfo : public RPCMethod
@@ -525,10 +523,10 @@ class RPCSetLinkInfo : public RPCMethod
 public:
 	RPCSetLinkInfo()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString, RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCSetMetadata : public RPCMethod
@@ -536,9 +534,9 @@ class RPCSetMetadata : public RPCMethod
 public:
 	RPCSetMetadata()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcVariant});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcVariant});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCSetInstallMode : public RPCMethod
@@ -546,10 +544,10 @@ class RPCSetInstallMode : public RPCMethod
 public:
 	RPCSetInstallMode()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcBoolean});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcBoolean, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcBoolean});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCSetTeam : public RPCMethod
@@ -557,12 +555,12 @@ class RPCSetTeam : public RPCMethod
 public:
 	RPCSetTeam()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCSetValue : public RPCMethod
@@ -570,12 +568,12 @@ class RPCSetValue : public RPCMethod
 public:
 	RPCSetValue()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString, RPCVariableType::rpcVariant});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString, RPCVariableType::rpcString});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString, RPCVariableType::rpcVariant});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcInteger, RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcVariant});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcVariant});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCTriggerEvent : public RPCMethod
@@ -583,9 +581,9 @@ class RPCTriggerEvent : public RPCMethod
 public:
 	RPCTriggerEvent()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcString});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 class RPCUpdateFirmware : public RPCMethod
@@ -593,11 +591,11 @@ class RPCUpdateFirmware : public RPCMethod
 public:
 	RPCUpdateFirmware()
 	{
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcInteger, RPCVariableType::rpcBoolean});
-		addSignature(RPCVariableType::rpcVoid, std::vector<RPCVariableType>{RPCVariableType::rpcArray});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcBoolean});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcArray});
 	}
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
 } /* namespace RPC */

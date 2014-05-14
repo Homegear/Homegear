@@ -94,15 +94,15 @@ void Server::registerMethods()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -111,9 +111,9 @@ uint32_t Server::connectionCount()
 	if(_server) return _server->connectionCount(); else return 0;
 }
 
-std::shared_ptr<RPCVariable> Server::callMethod(std::string methodName, std::shared_ptr<RPCVariable> parameters)
+std::shared_ptr<BaseLib::RPC::RPCVariable> Server::callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::RPCVariable> parameters)
 {
-	if(!_server) return RPCVariable::createError(-32500, "Server is nullptr.");
+	if(!_server) return BaseLib::RPC::RPCVariable::createError(-32500, "Server is nullptr.");
 	return _server->callMethod(methodName, parameters);
 }
 

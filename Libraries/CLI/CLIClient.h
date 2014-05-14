@@ -30,8 +30,7 @@
 #ifndef CLICLIENT_H_
 #define CLICLIENT_H_
 
-#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
-#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
+#include "../../Modules/Base/BaseLib.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -56,7 +55,7 @@ public:
 
 	void start();
 private:
-	std::shared_ptr<FileDescriptor> _fileDescriptor;
+	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	bool _stopPingThread = false;
 	std::thread _pingThread;
 	bool _closed = false;

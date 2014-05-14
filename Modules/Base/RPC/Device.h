@@ -40,7 +40,7 @@
 #include <cmath>
 #include <memory>
 
-#include "../Types/Packet.h"
+#include "../Systems/Packet.h"
 #include "../Encoding/rapidxml.hpp"
 #include "../Systems/DeviceTypes.h"
 #include "LogicalParameter.h"
@@ -48,7 +48,10 @@
 
 using namespace rapidxml;
 
-namespace RPC {
+namespace BaseLib
+{
+namespace RPC
+{
 
 class ParameterSet;
 class Device;
@@ -176,9 +179,9 @@ public:
 	DeviceType(xml_node<>* typeNode);
 	virtual ~DeviceType() {}
 
-	virtual bool matches(DeviceFamilies family, std::shared_ptr<Packet> packet);
-	virtual bool matches(DeviceFamilies family, std::string typeID);
-	virtual bool matches(LogicalDeviceType deviceType, uint32_t firmwareVersion);
+	virtual bool matches(Systems::DeviceFamilies family, std::shared_ptr<Systems::Packet> packet);
+	virtual bool matches(Systems::DeviceFamilies family, std::string typeID);
+	virtual bool matches(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion);
 };
 
 typedef std::vector<std::pair<std::string, std::string>> DefaultValue;
@@ -324,7 +327,7 @@ public:
 
 	bool loaded() { return _loaded; }
 	bool hasBattery = false;
-	DeviceFamilies family = DeviceFamilies::HomeMaticBidCoS;
+	Systems::DeviceFamilies family = Systems::DeviceFamilies::HomeMaticBidCoS;
 	uint32_t version = 0;
 	uint32_t cyclicTimeout = 0;
 	int32_t eepSize = 1024;
@@ -345,9 +348,9 @@ public:
 	Device();
 	Device(std::string xmlFilename);
 	virtual ~Device();
-	virtual std::shared_ptr<DeviceType> getType(LogicalDeviceType deviceType, int32_t firmwareVersion);
+	virtual std::shared_ptr<DeviceType> getType(Systems::LogicalDeviceType deviceType, int32_t firmwareVersion);
 	virtual int32_t getCountFromSysinfo() { return _countFromSysinfo; }
-	virtual int32_t getCountFromSysinfo(std::shared_ptr<Packet> packet);
+	virtual int32_t getCountFromSysinfo(std::shared_ptr<Systems::Packet> packet);
 	virtual void setCountFromSysinfo(int32_t countFromSysinfo);
 protected:
 	bool _loaded = false;
@@ -356,6 +359,6 @@ protected:
 	virtual void load(std::string xmlFilename);
 	virtual void parseXML(xml_node<>* node);
 };
-
+}
 }
 #endif /* DEVICE_H_ */

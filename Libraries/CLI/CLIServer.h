@@ -30,9 +30,8 @@
 #ifndef CLISERVER_H_
 #define CLISERVER_H_
 
-#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
+#include "../../Modules/Base/BaseLib.h"
 #include "../User/User.h"
-#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
 #include "../Systems/General/FamilyController.h"
 
 #include <sys/types.h>
@@ -54,12 +53,12 @@ namespace CLI {
 class ClientData
 {
 public:
-	ClientData() { fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor()); }
-	ClientData(std::shared_ptr<FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; }
+	ClientData() { fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor); }
+	ClientData(std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor) { fileDescriptor = clientFileDescriptor; }
 	virtual ~ClientData() {}
 
 	int32_t id = 0;
-	std::shared_ptr<FileDescriptor> fileDescriptor;
+	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 };
 
 class Server {
@@ -73,7 +72,7 @@ private:
 	bool _stopServer = false;
 	std::thread _mainThread;
 	int32_t _backlog = 10;
-	std::shared_ptr<FileDescriptor> _serverFileDescriptor;
+	std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 	int32_t _maxConnections = 100;
 	std::mutex _stateMutex;
 	std::vector<std::shared_ptr<ClientData>> _fileDescriptors;
@@ -84,7 +83,7 @@ private:
 	std::string handleUserCommand(std::string& command);
 	std::string handleGlobalCommand(std::string& command);
 	void getFileDescriptor(bool deleteOldSocket = false);
-	std::shared_ptr<FileDescriptor> getClientFileDescriptor();
+	std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
 	void removeClientData(int32_t clientFileDescriptor);
 	void mainThread();
 	void readClient(std::shared_ptr<ClientData> clientData);

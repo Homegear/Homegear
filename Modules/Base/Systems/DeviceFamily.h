@@ -36,21 +36,28 @@
 #include "PhysicalDeviceSettings.h"
 #include "PhysicalDevice.h"
 #include "DeviceFamilies.h"
-#include "../Types/RPCVariable.h"
+#include "../RPC/RPCVariable.h"
 
 #include <iostream>
 #include <string>
 #include <memory>
 
+namespace BaseLib
+{
+
+class Obj;
+
+namespace Systems
+{
 class DeviceFamily
 {
 public:
-	DeviceFamily();
+	DeviceFamily(std::shared_ptr<Obj> baseLib);
 	virtual ~DeviceFamily();
 
 	bool available();
 	virtual std::shared_ptr<RPC::RPCVariable> listBidcosInterfaces() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid)); }
-	virtual std::shared_ptr<PhysicalDevices::PhysicalDevice> createPhysicalDevice(std::shared_ptr<PhysicalDevices::PhysicalDeviceSettings> settings) { return _physicalDevice; }
+	virtual std::shared_ptr<Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<Systems::PhysicalDeviceSettings> settings) { return std::shared_ptr<Systems::PhysicalDevice>(); }
 	virtual void load(bool version_0_0_7) {}
 	virtual void save(bool full);
 	virtual void add(std::shared_ptr<LogicalDevice> device);
@@ -65,8 +72,6 @@ public:
 	virtual std::string handleCLICommand(std::string& command) { return ""; }
 	virtual bool deviceSelected() { return false; }
 protected:
-	std::shared_ptr<PhysicalDevices::PhysicalDevice> _physicalDevice;
-
 	DeviceFamilies _family = DeviceFamilies::none;
 	std::mutex _devicesMutex;
 	std::thread _removeThread;
@@ -75,4 +80,6 @@ protected:
 	void removeThread(uint64_t id);
 };
 
+}
+}
 #endif

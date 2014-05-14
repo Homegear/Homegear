@@ -72,7 +72,7 @@ void HMWiredDevice::dispose(bool wait)
 		if(_disposing) return;
 		_disposing = true;
 		Output::printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
-		GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->removeLogicalDevice(this);
+		BaseLib::physicalDevices.get(DeviceFamilies::HomeMaticWired)->removeLogicalDevice(this);
 		int64_t startTime = HelperFunctions::getTime();
 		//stopThreads();
 		int64_t timeDifference = HelperFunctions::getTime() - startTime;
@@ -101,7 +101,7 @@ void HMWiredDevice::init()
 	{
 		if(_initialized) return; //Prevent running init two times
 
-		GD::physicalDevices.get(DeviceFamilies::HomeMaticWired)->addLogicalDevice(this);
+		BaseLib::physicalDevices.get(DeviceFamilies::HomeMaticWired)->addLogicalDevice(this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
 
@@ -176,7 +176,7 @@ void HMWiredDevice::loadPeers(bool version_0_0_7)
 		//Change peers identifier for device to id
 		_peersMutex.lock();
 		_databaseMutex.lock();
-		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_deviceID));
+		DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_deviceID));
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			int32_t peerID = row->second.at(0)->intValue;
@@ -211,7 +211,7 @@ void HMWiredDevice::loadVariables()
 	try
 	{
 		_databaseMutex.lock();
-		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
+		DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
@@ -258,7 +258,7 @@ void HMWiredDevice::save(bool saveDevice)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceType)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn((uint32_t)DeviceFamilies::HomeMaticWired)));
-			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?, ?)", data);
 			if(_deviceID == 0) _deviceID = result;
 			_databaseMutex.unlock();
 		}
@@ -292,7 +292,7 @@ void HMWiredDevice::saveVariable(uint32_t index, int64_t intValue)
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::db.executeWriteCommand("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
+			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
 		}
 		else
 		{
@@ -307,7 +307,7 @@ void HMWiredDevice::saveVariable(uint32_t index, int64_t intValue)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
@@ -337,7 +337,7 @@ void HMWiredDevice::saveVariable(uint32_t index, std::string& stringValue)
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::db.executeWriteCommand("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
+			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
 		}
 		else
 		{
@@ -352,7 +352,7 @@ void HMWiredDevice::saveVariable(uint32_t index, std::string& stringValue)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
@@ -382,7 +382,7 @@ void HMWiredDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryVal
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
+			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
 		}
 		else
 		{
@@ -397,7 +397,7 @@ void HMWiredDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryVal
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
-			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
@@ -609,7 +609,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 		std::shared_ptr<HMWiredPacketInfo> txPacketInfo = _sentPackets.getInfo(packet->destinationAddress());
 		int64_t timeDifference = 0;
 		if(txPacketInfo) timeDifference = time - txPacketInfo->time;
-		std::shared_ptr<PhysicalDevices::PhysicalDevice> physicalDevice = GD::physicalDevices.get(DeviceFamilies::HomeMaticWired);
+		std::shared_ptr<PhysicalDevices::PhysicalDevice> physicalDevice = BaseLib::physicalDevices.get(DeviceFamilies::HomeMaticWired);
 		if((!txPacketInfo || timeDifference > 210) && packet->type() != HMWiredPacketType::discovery)
 		{
 			rxPacketInfo = _receivedPackets.getInfo(packet->destinationAddress());
@@ -618,7 +618,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			if(!rxPacketInfo || rxTimeDifference > 50)
 			{
 				//Communication might be in progress. Wait a little
-				if(BaseLib::debugLevel > 4 && (time - physicalDevice->lastPacketSent() < 210 || time - physicalDevice->lastPacketReceived() < 210)) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free... (Packet: " + packet->hexString() + ")");
+				if(BaseLib::Obj::ins->debugLevel > 4 && (time - physicalDevice->lastPacketSent() < 210 || time - physicalDevice->lastPacketReceived() < 210)) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free... (Packet: " + packet->hexString() + ")");
 				while(time - physicalDevice->lastPacketSent() < 210 || time - physicalDevice->lastPacketReceived() < 210)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -626,13 +626,13 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 					if(time - physicalDevice->lastPacketSent() >= 210 && time - physicalDevice->lastPacketReceived() >= 210)
 					{
 						int32_t sleepingTime = HelperFunctions::getRandomNumber(0, 100);
-						if(BaseLib::debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
+						if(BaseLib::Obj::ins->debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
 						//Sleep random time
 						std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
 						time = HelperFunctions::getTime();
 					}
 				}
-				if(BaseLib::debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is still free... sending... (Packet: " + packet->hexString() + ")");
+				if(BaseLib::Obj::ins->debugLevel > 4) Output::printDebug("Debug: HomeMatic Wired Device 0x" + HelperFunctions::getHexString(_deviceID) + ": RS485 bus is still free... sending... (Packet: " + packet->hexString() + ")");
 			}
 		}
 		//RS485 bus should be free
@@ -663,7 +663,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			//Set time to now. This is necessary if two packets are sent after each other without a response in between
 			rxPacketInfo->time = time;
 		}
-		else if(BaseLib::debugLevel > 4) Output::printDebug("Debug: Sending HomeMatic Wired packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
+		else if(BaseLib::Obj::ins->debugLevel > 4) Output::printDebug("Debug: Sending HomeMatic Wired packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
 
 		if(resend)
 		{
@@ -787,7 +787,7 @@ void HMWiredDevice::deletePeersFromDatabase()
 		_databaseMutex.lock();
 		std::ostringstream command;
 		command << "DELETE FROM peers WHERE parent=" << std::dec << _deviceID;
-		BaseLib::db.executeCommand(command.str());
+		BaseLib::Obj::ins->db.executeCommand(command.str());
 	}
 	catch(const std::exception& ex)
     {

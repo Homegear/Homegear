@@ -176,7 +176,7 @@ void HMWired::load(bool version_0_0_7)
 	try
 	{
 		_devices.clear();
-		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticWired));
+		DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticWired));
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
@@ -388,7 +388,8 @@ std::string HMWired::handleCLICommand(std::string& command)
 				if(_central) stringStream << "Cannot create more than one HomeMatic Wired central device." << std::endl;
 				else
 				{
-					add(std::shared_ptr<LogicalDevice>(new HMWiredCentral(0, serialNumber, address)));
+					_central.reset(new HMWiredCentral(0, serialNumber, address));
+					add(_central);
 					stringStream << "Created HomeMatic Wired Central with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				}
 				break;

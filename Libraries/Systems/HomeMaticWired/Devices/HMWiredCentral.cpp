@@ -492,7 +492,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			}
 			if(index == 2)
 			{
-				stringStream << "Description: This command updates one or all peers to the newest firmware version available in \"" << BaseLib::settings.firmwarePath() << "\"." << std::endl;
+				stringStream << "Description: This command updates one or all peers to the newest firmware version available in \"" << BaseLib::Obj::ins->settings.firmwarePath() << "\"." << std::endl;
 				stringStream << "Usage: peers update PEERID" << std::endl;
 				stringStream << "       peers update all" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
@@ -662,7 +662,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 		_updateMode = true;
 		_updateMutex.lock();
 		std::string filenamePrefix = HelperFunctions::getHexString((int32_t)DeviceFamilies::HomeMaticWired, 4) + "." + HelperFunctions::getHexString(peer->getDeviceType().type(), 8);
-		std::string versionFile(BaseLib::settings.firmwarePath() + filenamePrefix + ".version");
+		std::string versionFile(BaseLib::Obj::ins->settings.firmwarePath() + filenamePrefix + ".version");
 		if(!HelperFunctions::fileExists(versionFile))
 		{
 			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No version info file found.");
@@ -672,7 +672,7 @@ void HMWiredCentral::updateFirmware(uint64_t id)
 			_updateMode = false;
 			return;
 		}
-		std::string firmwareFile(BaseLib::settings.firmwarePath() + filenamePrefix + ".fw");
+		std::string firmwareFile(BaseLib::Obj::ins->settings.firmwarePath() + filenamePrefix + ".fw");
 		if(!HelperFunctions::fileExists(firmwareFile))
 		{
 			Output::printInfo("Info: Not updating peer with id " + std::to_string(id) + ". No firmware file found.");

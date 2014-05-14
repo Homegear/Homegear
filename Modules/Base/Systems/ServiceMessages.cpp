@@ -30,6 +30,11 @@
 #include "ServiceMessages.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
+namespace Systems
+{
+
 ServiceMessages::ServiceMessages(uint64_t peerID, std::string peerSerial)
 {
 	_peerID = peerID;
@@ -528,4 +533,7 @@ void ServiceMessages::setUnreach(bool value)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+}
 }

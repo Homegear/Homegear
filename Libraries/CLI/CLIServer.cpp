@@ -51,15 +51,15 @@ void Server::start()
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -72,17 +72,17 @@ void Server::stop()
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_stateMutex.unlock();
 	}
-	catch(Exception& ex)
+	catch(BaseLib::Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_stateMutex.unlock();
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		_stateMutex.unlock();
 	}
 }
@@ -102,12 +102,12 @@ void Server::mainThread()
 					std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 					continue;
 				}
-				std::shared_ptr<FileDescriptor> clientFileDescriptor = getClientFileDescriptor();
+				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientFileDescriptor();
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
 				if(clientFileDescriptor->descriptor > _maxConnections)
 				{
-					Output::printError("Error: Client connection rejected, because there are too many clients connected to me.");
-					BaseLib::fileDescriptorManager.shutdown(clientFileDescriptor);
+					BaseLib::Output::printError("Error: Client connection rejected, because there are too many clients connected to me.");
+					BaseLib::Obj::ins->fileDescriptorManager.shutdown(clientFileDescriptor);
 					continue;
 				}
 				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
@@ -121,39 +121,39 @@ void Server::mainThread()
 			}
 			catch(const std::exception& ex)
 			{
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				_stateMutex.unlock();
 			}
-			catch(Exception& ex)
+			catch(BaseLib::Exception& ex)
 			{
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				_stateMutex.unlock();
 			}
 			catch(...)
 			{
-				Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				_stateMutex.unlock();
 			}
 		}
-		BaseLib::fileDescriptorManager.close(_serverFileDescriptor);
+		BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-std::shared_ptr<FileDescriptor> Server::getClientFileDescriptor()
+std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
 {
-	std::shared_ptr<FileDescriptor> descriptor;
+	std::shared_ptr<BaseLib::FileDescriptor> descriptor;
 	try
 	{
 		timeval timeout;
@@ -168,23 +168,23 @@ std::shared_ptr<FileDescriptor> Server::getClientFileDescriptor()
 		socklen_t addressSize = sizeof(addressSize);
 		int32_t clientFileDescriptor = accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize);
 		if(clientFileDescriptor == -1) return descriptor;
-		descriptor = BaseLib::fileDescriptorManager.add(clientFileDescriptor);
+		descriptor = BaseLib::Obj::ins->fileDescriptorManager.add(clientFileDescriptor);
 
-		Output::printInfo("Info: CLI connection accepted. Client number: " + std::to_string(clientFileDescriptor));
+		BaseLib::Output::printInfo("Info: CLI connection accepted. Client number: " + std::to_string(clientFileDescriptor));
 
 		return descriptor;
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return descriptor;
 }
@@ -208,17 +208,17 @@ void Server::removeClientData(int32_t clientID)
 	catch(const std::exception& ex)
     {
     	_stateMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
     	_stateMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_stateMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -229,44 +229,44 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 		struct stat sb;
 		if(stat(GD::runDir.c_str(), &sb) == -1)
 		{
-			if(errno == ENOENT) Output::printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
-			else throw Exception("Error reading information of directory " + GD::runDir + ": " + strerror(errno));
+			if(errno == ENOENT) BaseLib::Output::printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
+			else throw BaseLib::Exception("Error reading information of directory " + GD::runDir + ": " + strerror(errno));
 			return;
 		}
 		if(!S_ISDIR(sb.st_mode))
 		{
-			Output::printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
+			BaseLib::Output::printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
 			return;
 		}
 		if(deleteOldSocket)
 		{
-			if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+			if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(BaseLib::Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
 		}
 		else if(stat(GD::socketPath.c_str(), &sb) == 0) return;
-		_serverFileDescriptor = BaseLib::fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0));
-		if(_serverFileDescriptor->descriptor == -1) throw(Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+		_serverFileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0));
+		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
 		sockaddr_un serverAddress;
 		serverAddress.sun_family = AF_UNIX;
 		strcpy(serverAddress.sun_path, GD::socketPath.c_str());
 		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
-			BaseLib::fileDescriptorManager.close(_serverFileDescriptor);
-			throw Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
+			BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+			throw BaseLib::Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
 		}
 		chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
     }
     catch(const std::exception& ex)
     {
-    	Output::printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());
+    	BaseLib::Output::printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -282,7 +282,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 		uint32_t packetLength = 0;
 		int32_t bytesRead;
 		uint32_t dataSize = 0;
-		Output::printDebug("Listening for incoming commands from client number " + std::to_string(clientData->fileDescriptor->descriptor) + ".");
+		BaseLib::Output::printDebug("Listening for incoming commands from client number " + std::to_string(clientData->fileDescriptor->descriptor) + ".");
 		while(!_stopServer)
 		{
 			//Timeout needs to be set every time, so don't put it outside of the while loop
@@ -297,10 +297,10 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			if(bytesRead != 1)
 			{
 				removeClientData(clientData->id);
-				Output::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
-				BaseLib::fileDescriptorManager.close(clientData->fileDescriptor);
+				BaseLib::Output::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
+				BaseLib::Obj::ins->fileDescriptorManager.close(clientData->fileDescriptor);
 				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
-				BaseLib::fileDescriptorManager.close(_serverFileDescriptor);
+				BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 
@@ -308,10 +308,10 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			if(bytesRead <= 0)
 			{
 				removeClientData(clientData->id);
-				Output::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
-				BaseLib::fileDescriptorManager.close(clientData->fileDescriptor);
+				BaseLib::Output::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
+				BaseLib::Obj::ins->fileDescriptorManager.close(clientData->fileDescriptor);
 				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
-				BaseLib::fileDescriptorManager.close(_serverFileDescriptor);
+				BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 
@@ -321,19 +321,19 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 		}
 		//This point is only reached, when stopServer is true
 		removeClientData(clientData->id);
-		BaseLib::fileDescriptorManager.close(clientData->fileDescriptor);
+		BaseLib::Obj::ins->fileDescriptorManager.close(clientData->fileDescriptor);
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -380,11 +380,11 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			DataTable rows = BaseLib::db.executeCommand("SELECT userID, name FROM users");
+			BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID, name FROM users");
 			if(rows.size() == 0) return "No users exist.\n";
 
 			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
-			for(DataTable::const_iterator i = rows.begin(); i != rows.end(); ++i)
+			for(BaseLib::DataTable::const_iterator i = rows.begin(); i != rows.end(); ++i)
 			{
 				if(!i->second.size() == 2 || !i->second.at(0) || !i->second.at(1)) continue;
 				stringStream << std::setw(6) << i->second.at(0)->intValue << std::setw(30) << i->second.at(1)->textValue << std::endl;
@@ -412,8 +412,8 @@ std::string Server::handleUserCommand(std::string& command)
 					if(element == "help") break;
 					else
 					{
-						userName = HelperFunctions::toLower(HelperFunctions::trim(element));
-						if(userName.empty() || !HelperFunctions::isAlphaNumeric(userName))
+						userName = BaseLib::HelperFunctions::toLower(BaseLib::HelperFunctions::trim(element));
+						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
 						{
 							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
 							return stringStream.str();
@@ -422,13 +422,13 @@ std::string Server::handleUserCommand(std::string& command)
 				}
 				else if(index == 3)
 				{
-					password = HelperFunctions::trim(element);
+					password = BaseLib::HelperFunctions::trim(element);
 
 					if(password.front() == '"' && password.back() == '"')
 					{
 						password = password.substr(1, password.size() - 2);
-						HelperFunctions::stringReplace(password, "\\\"", "\"");
-						HelperFunctions::stringReplace(password, "\\\\", "\\");
+						BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
+						BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
 					}
 					if(password.size() < 8)
 					{
@@ -452,21 +452,21 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			DataColumnVector dataSelect;
-			dataSelect.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
-			DataTable rows = BaseLib::db.executeCommand("SELECT userID FROM users WHERE name=?", dataSelect);
+			BaseLib::DataColumnVector dataSelect;
+			dataSelect.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
+			BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE name=?", dataSelect);
 			if(rows.size() > 0) return "A user with that name already exists.\n";
 
 			std::vector<unsigned char> salt;
 			std::vector<unsigned char> passwordHash = User::generatePBKDF2(password, salt);
 
-			DataColumnVector dataInsert;
-			dataInsert.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
-			dataInsert.push_back(std::shared_ptr<DataColumn>(new DataColumn(passwordHash)));
-			dataInsert.push_back(std::shared_ptr<DataColumn>(new DataColumn(salt)));
-			BaseLib::db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?)", dataInsert);
+			BaseLib::DataColumnVector dataInsert;
+			dataInsert.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
+			dataInsert.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(passwordHash)));
+			dataInsert.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(salt)));
+			BaseLib::Obj::ins->db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?)", dataInsert);
 
-			rows = BaseLib::db.executeCommand("SELECT userID FROM users WHERE name=?", dataSelect);
+			rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE name=?", dataSelect);
 			if(rows.size() > 0) stringStream << "User successfully created." << std::endl;
 			else stringStream << "Error creating user. See log for more details." << std::endl;
 
@@ -492,8 +492,8 @@ std::string Server::handleUserCommand(std::string& command)
 					if(element == "help") break;
 					else
 					{
-						userName = HelperFunctions::trim(element);
-						if(userName.empty() || !HelperFunctions::isAlphaNumeric(userName))
+						userName = BaseLib::HelperFunctions::trim(element);
+						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
 						{
 							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
 							return stringStream.str();
@@ -502,12 +502,12 @@ std::string Server::handleUserCommand(std::string& command)
 				}
 				else if(index == 3)
 				{
-					password = HelperFunctions::trim(element);
+					password = BaseLib::HelperFunctions::trim(element);
 
 					if(password.front() == '"' && password.back() == '"')
 					{
-						HelperFunctions::stringReplace(password, "\\\"", "\"");
-						HelperFunctions::stringReplace(password, "\\\\", "\\");
+						BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
+						BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
 					}
 					if(password.size() < 8)
 					{
@@ -530,9 +530,9 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			DataColumnVector data;
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
-			DataTable rows = BaseLib::db.executeCommand("SELECT userID FROM users WHERE name=?", data);
+			BaseLib::DataColumnVector data;
+			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
+			BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE name=?", data);
 			if(rows.size() == 0 || rows.at(0).size() == 0) return "The user doesn't exist.\n";
 			uint32_t userID = rows.at(0).at(0)->intValue;
 
@@ -540,12 +540,12 @@ std::string Server::handleUserCommand(std::string& command)
 			std::vector<unsigned char> passwordHash = User::generatePBKDF2(password, salt);
 
 			data.clear();
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(passwordHash)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(salt)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(userID)));
-			BaseLib::db.executeCommand("UPDATE users SET password=?, salt=? WHERE userID=?", data);
+			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(passwordHash)));
+			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(salt)));
+			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userID)));
+			BaseLib::Obj::ins->db.executeCommand("UPDATE users SET password=?, salt=? WHERE userID=?", data);
 
-			rows = BaseLib::db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
+			rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
 			if(rows.size() > 0) stringStream << "User successfully updated." << std::endl;
 			else stringStream << "Error updating user. See log for more details." << std::endl;
 
@@ -570,8 +570,8 @@ std::string Server::handleUserCommand(std::string& command)
 					if(element == "help") break;
 					else
 					{
-						userName = HelperFunctions::trim(element);
-						if(userName.empty() || !HelperFunctions::isAlphaNumeric(userName))
+						userName = BaseLib::HelperFunctions::trim(element);
+						if(userName.empty() || !BaseLib::HelperFunctions::isAlphaNumeric(userName))
 						{
 							stringStream << "The user name contains invalid characters. Only alphanumeric characters, \"_\" and \"-\" are allowed." << std::endl;
 							return stringStream.str();
@@ -589,17 +589,17 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			DataColumnVector data;
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
-			DataTable rows = BaseLib::db.executeCommand("SELECT userID FROM users WHERE name=?", data);
+			BaseLib::DataColumnVector data;
+			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
+			BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE name=?", data);
 			if(rows.size() == 0 || rows.at(0).size() == 0) return "The user doesn't exist.\n";
 			uint32_t userID = rows.at(0).at(0)->intValue;
 
 			data.clear();
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(userID)));
-			BaseLib::db.executeCommand("DELETE FROM users WHERE userID=?", data);
+			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userID)));
+			BaseLib::Obj::ins->db.executeCommand("DELETE FROM users WHERE userID=?", data);
 
-			rows = BaseLib::db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
+			rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
 			if(rows.size() == 0) stringStream << "User successfully deleted." << std::endl;
 			else stringStream << "Error deleting user. See log for more details." << std::endl;
 
@@ -609,15 +609,15 @@ std::string Server::handleUserCommand(std::string& command)
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -653,7 +653,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				else if(index == 1)
 				{
 					if(element == "help") break;
-					debugLevel = HelperFunctions::getNumber(element);
+					debugLevel = BaseLib::HelperFunctions::getNumber(element);
 					if(debugLevel < 0 || debugLevel > 10) return "Invalid debug level. Please provide a debug level between 0 and 10.\n";
 				}
 				index++;
@@ -667,8 +667,8 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			BaseLib::debugLevel = debugLevel;
-			Output::setDebugLevel(debugLevel);
+			BaseLib::Obj::ins->debugLevel = debugLevel;
+			BaseLib::Output::setDebugLevel(debugLevel);
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
 			return stringStream.str();
 		}
@@ -676,15 +676,15 @@ std::string Server::handleGlobalCommand(std::string& command)
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -703,20 +703,20 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		response.push_back(0);
 		if(send(clientData->fileDescriptor->descriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
 		{
-			Output::printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+			BaseLib::Output::printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 		}
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

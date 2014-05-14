@@ -29,6 +29,9 @@
 
 #include "Output.h"
 
+namespace BaseLib
+{
+
 int32_t Output::_debugLevel = 3;
 
 Output::~Output()
@@ -178,4 +181,6 @@ void Output::printMessage(std::string message, int32_t minDebugLevel)
 {
 	if(_debugLevel < minDebugLevel) return;
 	std::cout << getTimeString() << " " << message << std::endl;
+}
+
 }

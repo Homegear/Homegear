@@ -100,13 +100,17 @@ OBJECTS := \
 	$(OBJDIR)/Output.o \
 	$(OBJDIR)/LogicalParameter.o \
 	$(OBJDIR)/PhysicalParameter.o \
+	$(OBJDIR)/RPCVariable.o \
 	$(OBJDIR)/Devices.o \
 	$(OBJDIR)/Device.o \
 	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/LogicalDevice.o \
 	$(OBJDIR)/PhysicalDevice.o \
+	$(OBJDIR)/UpdateInfo.o \
 	$(OBJDIR)/DeviceTypes.o \
+	$(OBJDIR)/PhysicalDevices.o \
 	$(OBJDIR)/DeviceFamily.o \
+	$(OBJDIR)/Packet.o \
 	$(OBJDIR)/Central.o \
 	$(OBJDIR)/Peer.o \
 	$(OBJDIR)/FileDescriptorManager.o \
@@ -119,8 +123,6 @@ OBJECTS := \
 	$(OBJDIR)/BinaryEncoder.o \
 	$(OBJDIR)/Database.o \
 	$(OBJDIR)/Metadata.o \
-	$(OBJDIR)/RPCVariable.o \
-	$(OBJDIR)/Packet.o \
 	$(OBJDIR)/Threads.o \
 	$(OBJDIR)/Settings.o \
 
@@ -205,6 +207,9 @@ $(OBJDIR)/LogicalParameter.o: Modules/Base/RPC/LogicalParameter.cpp
 $(OBJDIR)/PhysicalParameter.o: Modules/Base/RPC/PhysicalParameter.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RPCVariable.o: Modules/Base/RPC/RPCVariable.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Devices.o: Modules/Base/RPC/Devices.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -220,10 +225,19 @@ $(OBJDIR)/LogicalDevice.o: Modules/Base/Systems/LogicalDevice.cpp
 $(OBJDIR)/PhysicalDevice.o: Modules/Base/Systems/PhysicalDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/UpdateInfo.o: Modules/Base/Systems/UpdateInfo.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/DeviceTypes.o: Modules/Base/Systems/DeviceTypes.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PhysicalDevices.o: Modules/Base/Systems/PhysicalDevices.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/DeviceFamily.o: Modules/Base/Systems/DeviceFamily.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Packet.o: Modules/Base/Systems/Packet.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Central.o: Modules/Base/Systems/Central.cpp
@@ -260,12 +274,6 @@ $(OBJDIR)/Database.o: Modules/Base/Database/Database.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Metadata.o: Modules/Base/Metadata/Metadata.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/RPCVariable.o: Modules/Base/Types/RPCVariable.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Packet.o: Modules/Base/Types/Packet.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Threads.o: Modules/Base/Threads/Threads.cpp

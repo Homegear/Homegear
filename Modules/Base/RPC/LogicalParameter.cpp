@@ -30,7 +30,10 @@
 #include "LogicalParameter.h"
 #include "../BaseLib.h"
 
-namespace RPC {
+namespace BaseLib
+{
+namespace RPC
+{
 
 ParameterOption::ParameterOption(xml_node<>* node)
 {
@@ -343,4 +346,5 @@ LogicalParameterAction::LogicalParameterAction(xml_node<>* node) : LogicalParame
     }
 }
 
-} /* namespace XMLRPC */
+}
+}

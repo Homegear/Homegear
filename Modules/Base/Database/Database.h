@@ -42,6 +42,8 @@
 
 #include <sqlite3.h>
 
+namespace BaseLib
+{
 class DataColumn
 {
     public:
@@ -108,5 +110,5 @@ class Database
         void getDataRows(sqlite3_stmt* statement, DataTable& dataRows);
         void bindData(sqlite3_stmt* statement, DataColumnVector& dataToEscape);
 };
-
+}
 #endif // DATABASE_H

@@ -36,8 +36,11 @@
 #include <string>
 #include <map>
 
-namespace PhysicalDevices
+namespace BaseLib
 {
+namespace Systems
+{
+
 class GPIOSetting
 {
 public:
@@ -66,5 +69,7 @@ public:
 	int32_t enableRXValue = -1;
 	int32_t enableTXValue = -1;
 };
+
+}
 }
 #endif /* PHYSICALDEVICESETTINGS_H_ */

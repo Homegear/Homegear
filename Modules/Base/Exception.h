@@ -33,6 +33,8 @@
 #include <exception>
 #include <string>
 
+namespace BaseLib
+{
 class Exception : std::exception
 {
     public:
@@ -42,5 +44,5 @@ class Exception : std::exception
     protected:
         std::string _message;
 };
-
+}
 #endif // EXCEPTION_H

@@ -42,7 +42,10 @@
 
 using namespace rapidxml;
 
-namespace RPC {
+namespace BaseLib
+{
+namespace RPC
+{
 
 class PhysicalParameterEvent
 {
@@ -109,5 +112,7 @@ public:
 	PhysicalParameter(xml_node<>* node);
 	virtual ~PhysicalParameter() {}
 };
-} /* namespace XMLRPC */
+
+}
+}
 #endif /* PHYSICALPARAMETER_H_ */

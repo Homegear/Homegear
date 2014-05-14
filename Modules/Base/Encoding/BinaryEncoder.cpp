@@ -30,6 +30,9 @@
 #include "BinaryEncoder.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
+
 BinaryEncoder::BinaryEncoder()
 {
 }
@@ -278,4 +281,6 @@ void BinaryEncoder::encodeFloat(std::vector<uint8_t>& encodedData, double floatV
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
 }

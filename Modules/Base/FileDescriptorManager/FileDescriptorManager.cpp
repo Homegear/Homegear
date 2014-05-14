@@ -30,6 +30,9 @@
 #include "FileDescriptorManager.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
+
 FileDescriptorManager::FileDescriptorManager()
 {
 }
@@ -231,4 +234,6 @@ bool FileDescriptorManager::isValid(std::shared_ptr<FileDescriptor> descriptor)
 	}
 	_descriptorsMutex.unlock();
 	return false;
+}
+
 }

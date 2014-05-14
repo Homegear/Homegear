@@ -30,9 +30,13 @@
 #ifndef CENTRAL_H_
 #define CENTRAL_H_
 
-#include "../Types/RPCVariable.h"
+#include "../RPC/RPCVariable.h"
 #include "../RPC/Device.h"
 
+namespace BaseLib
+{
+namespace Systems
+{
 class Central
 {
 public:
@@ -91,4 +95,6 @@ protected:
 private:
 };
 
+}
+}
 #endif /* CENTRAL_H_ */

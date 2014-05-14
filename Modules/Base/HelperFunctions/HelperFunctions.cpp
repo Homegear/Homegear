@@ -28,7 +28,10 @@
  */
 
 #include "HelperFunctions.h"
-#include "../BaseLib.h"
+#include "../Output/Output.h"
+
+namespace BaseLib
+{
 
 bool HelperFunctions::_isBigEndian;
 std::map<char, int32_t> HelperFunctions::_hexMap;
@@ -590,4 +593,6 @@ void HelperFunctions::checkEndianness()
 	} bint = {0x01020304};
 
 	_isBigEndian = bint.c[0] == 1;
+}
+
 }

@@ -30,9 +30,7 @@
 #ifndef EVENTHANDLER_H_
 #define EVENTHANDLER_H_
 
-#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
-#include "../../Modules/Base/Encoding/RPCEncoder.h"
-#include "../../Modules/Base/Encoding/RPCDecoder.h"
+#include "../../Modules/Base/BaseLib.h"
 #include "../RPC/Server.h"
 
 #include <memory>
@@ -67,9 +65,9 @@ public:
 	int32_t peerChannel = -1;
 	std::string variable;
 	Trigger::Enum trigger = Trigger::Enum::none;
-	std::shared_ptr<RPC::RPCVariable> triggerValue;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> triggerValue;
 	std::string eventMethod;
-	std::shared_ptr<RPC::RPCVariable> eventMethodParameters;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> eventMethodParameters;
 	uint64_t resetAfter = 0;
 	uint64_t initialTime = 0;
 	uint64_t currentTime = 0;
@@ -77,11 +75,11 @@ public:
 	double factor = 1;
 	uint64_t limit = 0;
 	std::string resetMethod;
-	std::shared_ptr<RPC::RPCVariable> resetMethodParameters;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> resetMethodParameters;
 	uint64_t eventTime = 0;
 	uint64_t endTime = 0;
 	uint64_t recurEvery = 0;
-	std::shared_ptr<RPC::RPCVariable> lastValue;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> lastValue;
 	uint64_t lastRaised = 0;
 	uint64_t lastReset = 0;
 
@@ -96,14 +94,14 @@ public:
 	virtual ~EventHandler();
 
 	void load();
-	std::shared_ptr<RPC::RPCVariable> add(std::shared_ptr<RPC::RPCVariable> eventDescription);
-	std::shared_ptr<RPC::RPCVariable> remove(std::string name);
-	std::shared_ptr<RPC::RPCVariable> list(int32_t type, uint64_t peerID, int32_t peerChannel, std::string variable);
-	std::shared_ptr<RPC::RPCVariable> enable(std::string name, bool enabled);
-	std::shared_ptr<RPC::RPCVariable> abortReset(std::string name);
-	std::shared_ptr<RPC::RPCVariable> trigger(std::string name);
-	void trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
-	void trigger(uint64_t peerID, int32_t channel, std::string& variable, std::shared_ptr<RPC::RPCVariable>& value);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> add(std::shared_ptr<BaseLib::RPC::RPCVariable> eventDescription);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> remove(std::string name);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> list(int32_t type, uint64_t peerID, int32_t peerChannel, std::string variable);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> enable(std::string name, bool enabled);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> abortReset(std::string name);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> trigger(std::string name);
+	void trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	void trigger(uint64_t peerID, int32_t channel, std::string& variable, std::shared_ptr<BaseLib::RPC::RPCVariable>& value);
 protected:
 	bool _disposing = false;
 	int32_t _triggerThreadCount = 0;
@@ -116,11 +114,11 @@ protected:
 	std::thread _mainThread;
 	std::mutex _mainThreadMutex;
 	std::mutex _databaseMutex;
-	RPC::RPCEncoder _rpcEncoder;
-	RPC::RPCDecoder _rpcDecoder;
+	BaseLib::RPC::RPCEncoder _rpcEncoder;
+	BaseLib::RPC::RPCDecoder _rpcDecoder;
 
-	void triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
-	void triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<RPC::RPCVariable> value);
+	void triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	void triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
 	void mainThread();
 	uint64_t getNextExecution(uint64_t startTime, uint64_t recurEvery);
 	void removeEventToReset(uint32_t id);
@@ -129,6 +127,6 @@ protected:
 	bool eventExists(uint32_t id);
 	bool eventExists(std::string name);
 	void save(std::shared_ptr<Event>);
-	void postTriggerTasks(std::shared_ptr<Event>& event, std::shared_ptr<RPC::RPCVariable>& rpcResult, uint64_t currentTime);
+	void postTriggerTasks(std::shared_ptr<Event>& event, std::shared_ptr<BaseLib::RPC::RPCVariable>& rpcResult, uint64_t currentTime);
 };
 #endif /* EVENTHANDLER_H_ */

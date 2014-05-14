@@ -93,7 +93,7 @@ void HMWiredPacketManager::worker()
 					{
 						int32_t packetsPerSecond = (_packets.size() * 1000) / sleepingTime.count();
 						if(packetsPerSecond <= 0) packetsPerSecond = 1;
-						int32_t timePerPacket = (BaseLib::settings.workerThreadWindow() * 10) / packetsPerSecond;
+						int32_t timePerPacket = (BaseLib::Obj::ins->settings.workerThreadWindow() * 10) / packetsPerSecond;
 						if(timePerPacket < 10) timePerPacket = 10;
 						sleepingTime = std::chrono::milliseconds(timePerPacket);
 					}

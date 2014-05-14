@@ -100,12 +100,12 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 	else if(!strnaicmp(name, "host", nameSize))
 	{
 		_header.host = std::string(value, valueSize);
-		HelperFunctions::toLower(_header.host);
+		BaseLib::HelperFunctions::toLower(_header.host);
 	}
 	else if(!strnaicmp(name, "content-type", nameSize))
 	{
 		_header.contentType = std::string(value, valueSize);
-		HelperFunctions::toLower(_header.contentType);
+		BaseLib::HelperFunctions::toLower(_header.contentType);
 	}
 	else if(!strnaicmp(name, "transfer-encoding", nameSize) || !strnaicmp(name, "te", nameSize))
 	{
@@ -115,7 +115,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		while ((pos = s.find(',')) != std::string::npos || !s.empty())
 		{
 		    std::string te = (pos == std::string::npos) ? s : s.substr(0, pos);
-		    HelperFunctions::trim(HelperFunctions::toLower(te));
+		    BaseLib::HelperFunctions::trim(BaseLib::HelperFunctions::toLower(te));
 		    if(te == "chunked") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::chunked);
 			else if(te == "compress") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::compress);
 			else if(te == "deflate") _header.transferEncoding = (TransferEncoding::Enum)(_header.transferEncoding | TransferEncoding::Enum::deflate);
@@ -133,7 +133,7 @@ void HTTP::processHeaderField(char* name, uint32_t nameSize, char* value, uint32
 		while ((pos = s.find(',')) != std::string::npos || !s.empty())
 		{
 			std::string c = (pos == std::string::npos) ? s : s.substr(0, pos);
-			HelperFunctions::trim(HelperFunctions::toLower(c));
+			BaseLib::HelperFunctions::trim(BaseLib::HelperFunctions::toLower(c));
 			if(c == "keep-alive") _header.connection = Connection::Enum::keepAlive;
 			else if(c == "close") _header.connection = Connection::Enum::close;
 			else if(c == "te") {} //ignore
@@ -222,11 +222,11 @@ void HTTP::readChunkSize(char** buffer, int32_t& bufferLength)
 		newlinePos = strchr(*buffer, '\n');
 		if(_partialChunkSize.empty() && newlinePos == *buffer) newlinePos = strchr(*buffer + 1, '\n'); //\n is first character
 		if(_partialChunkSize.empty() && newlinePos == *buffer + 1 && **buffer == '\r') newlinePos = strchr(*buffer + 2, '\n'); //\r is first character
-		if(!newlinePos || newlinePos >= *buffer + bufferLength) throw Exception("Could not parse chunk size.");
+		if(!newlinePos || newlinePos >= *buffer + bufferLength) throw BaseLib::Exception("Could not parse chunk size.");
 		std::string chunkSize = _partialChunkSize + std::string(*buffer, newlinePos - *buffer);
-		HelperFunctions::trim(_partialChunkSize);
-		if(!HelperFunctions::isNumber(chunkSize)) throw Exception("Chunk size is no number.");
-		_chunkSize = HelperFunctions::getNumber(chunkSize, true);
+		BaseLib::HelperFunctions::trim(_partialChunkSize);
+		if(!BaseLib::HelperFunctions::isNumber(chunkSize)) throw BaseLib::Exception("Chunk size is no number.");
+		_chunkSize = BaseLib::HelperFunctions::getNumber(chunkSize, true);
 		_partialChunkSize = "";
 		bufferLength -= (newlinePos + 1) - *buffer;
 		*buffer = newlinePos + 1;

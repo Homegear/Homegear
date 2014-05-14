@@ -30,8 +30,11 @@
 #include "RPCDecoder.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
 namespace RPC
 {
+
 RPCDecoder::RPCDecoder()
 {
 }
@@ -228,4 +231,5 @@ std::shared_ptr<RPCStruct> RPCDecoder::decodeStruct(std::shared_ptr<std::vector<
     return std::shared_ptr<RPCStruct>();
 }
 
-} /* namespace RPC */
+}
+}

@@ -41,10 +41,10 @@
 
 namespace RPC
 {
-class HTTPException : public Exception
+class HTTPException : public BaseLib::Exception
 {
 public:
-	HTTPException(std::string message) : Exception(message) {}
+	HTTPException(std::string message) : BaseLib::Exception(message) {}
 };
 
 class HTTP

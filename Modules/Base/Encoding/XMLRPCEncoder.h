@@ -35,12 +35,15 @@
 
 #include "../Exception.h"
 #include "../Output/Output.h"
-#include "../Types/RPCVariable.h"
+#include "../RPC/RPCVariable.h"
 #include "rapidxml_print.hpp"
 
 using namespace rapidxml;
 
-namespace RPC {
+namespace BaseLib
+{
+namespace RPC
+{
 
 class XMLRPCEncoder
 {
@@ -57,5 +60,6 @@ private:
 	void encodeArray(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
 };
 
+}
 } /* namespace RPC */
 #endif /* XMLRPCENCODER_H_ */

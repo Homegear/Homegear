@@ -30,9 +30,11 @@
 #include "Settings.h"
 #include "../BaseLib.h"
 
-Settings::Settings()
+namespace BaseLib
 {
 
+Settings::Settings()
+{
 }
 
 void Settings::reset()
@@ -41,7 +43,7 @@ void Settings::reset()
 	_keyPath = "/etc/homegear/homegear.key";
 	_dhParamPath = "/etc/homegear/dh2048.pem";
 	_debugLevel = 3;
-	_databasePath = BaseLib::executablePath + "db.sql";
+	_databasePath = Obj::ins->executablePath + "db.sql";
 	_databaseSynchronous = false;
 	_databaseMemoryJournal = true;
 	_logfilePath = "/var/log/homegear/";
@@ -127,14 +129,14 @@ void Settings::load(std::string filename)
 				{
 					_debugLevel = HelperFunctions::getNumber(value);
 					if(_debugLevel < 0) _debugLevel = 3;
-					BaseLib::debugLevel = _debugLevel;
+					Obj::ins->debugLevel = _debugLevel;
 					Output::setDebugLevel(_debugLevel);
 					Output::printDebug("Debug: debugLevel set to " + std::to_string(_debugLevel));
 				}
 				else if(name == "databasepath")
 				{
 					_databasePath = value;
-					if(_databasePath.empty()) _databasePath = BaseLib::executablePath + "db.sql";
+					if(_databasePath.empty()) _databasePath = Obj::ins->executablePath + "db.sql";
 					Output::printDebug("Debug: databasePath set to " + _databasePath);
 				}
 				else if(name == "databasesynchronous")
@@ -244,4 +246,6 @@ void Settings::load(std::string filename)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
 }

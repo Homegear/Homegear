@@ -30,14 +30,22 @@
 #include "DeviceFamily.h"
 #include "../BaseLib.h"
 
-DeviceFamily::DeviceFamily()
+namespace BaseLib
 {
+namespace Systems
+{
+
+DeviceFamily::DeviceFamily(std::shared_ptr<Obj> baseLib)
+{
+	Obj::ins = baseLib;
+	Output::setDebugLevel(baseLib->debugLevel);
 }
 
 DeviceFamily::~DeviceFamily()
 {
 	try
 	{
+		BaseLib::Output::printDebug("Debug: Disposing device family " + getName());
 		if(_removeThread.joinable()) _removeThread.join();
 	}
 	catch(const std::exception& ex)
@@ -56,8 +64,8 @@ DeviceFamily::~DeviceFamily()
 
 bool DeviceFamily::available()
 {
-	if(!_physicalDevice) return false;
-	return _physicalDevice->isOpen();
+	if(!Obj::ins->physicalDevices.get(_family)) return false;
+	return Obj::ins->physicalDevices.get(_family)->isOpen();
 }
 
 void DeviceFamily::save(bool full)
@@ -272,7 +280,7 @@ void DeviceFamily::removeThread(uint64_t id)
 				Output::printDebug("Deleting database entry...");
 				DataColumnVector data;
 				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(id)));
-				BaseLib::db.executeCommand("DELETE FROM devices WHERE deviceID=?", data);
+				Obj::ins->db.executeCommand("DELETE FROM devices WHERE deviceID=?", data);
 				return;
 			}
 		}
@@ -296,16 +304,17 @@ void DeviceFamily::dispose()
 {
 	try
 	{
+		if(_devices.empty()) return;
 		std::vector<std::shared_ptr<LogicalDevice>> devices;
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			Output::printDebug("Debug: Disposing device " + std::to_string((*i)->getID()));
 			devices.push_back(*i);
 		}
 		_devicesMutex.unlock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = devices.begin(); i != devices.end(); ++i)
 		{
+			Output::printDebug("Debug: Disposing device " + std::to_string((*i)->getID()));
 			(*i)->dispose(false);
 		}
 	}
@@ -325,4 +334,7 @@ void DeviceFamily::dispose()
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+}
+
+}
 }

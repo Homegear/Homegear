@@ -29,13 +29,23 @@
 
 #include "BaseLib.h"
 
-int32_t BaseLib::debugLevel = 3;
-FileDescriptorManager BaseLib::fileDescriptorManager;
-Database BaseLib::db;
-Settings BaseLib::settings;
-std::string BaseLib::executablePath;
+namespace BaseLib
+{
 
-void BaseLib::init(std::string exePath)
+std::shared_ptr<Obj> Obj::ins;
+
+void Obj::init(std::string exePath)
+{
+	ins.reset(new Obj(exePath));
+}
+
+Obj::Obj(std::string exePath)
 {
 	executablePath = exePath;
+}
+
+Obj::~Obj()
+{
+}
+
 }

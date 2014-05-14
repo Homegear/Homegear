@@ -30,8 +30,11 @@
 #include "RPCEncoder.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
 namespace RPC
 {
+
 RPCEncoder::RPCEncoder()
 {
 	strncpy(&_packetStartRequest[0], "Bin", 3);
@@ -352,4 +355,5 @@ void RPCEncoder::encodeVoid(std::shared_ptr<std::vector<char>>& packet)
 	encodeString(packet, string);
 }
 
-} /* namespace RPC */
+}
+}

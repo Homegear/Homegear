@@ -32,6 +32,10 @@
 
 #include <stdint.h>
 
+namespace BaseLib
+{
+namespace Systems
+{
 enum class DeviceFamilies : uint32_t
 {
 	none = 0xFF,
@@ -52,5 +56,6 @@ enum class DeviceFamilies : uint32_t
 	CUSTOM10 = 0x0E,
 	CUSTOM11 = 0x0F
 };
-
+}
+}
 #endif /* DEVICEFAMILIES_H_ */

@@ -29,6 +29,11 @@
 
 #include "LogicalDevice.h"
 
+namespace BaseLib
+{
+namespace Systems
+{
+
 LogicalDevice::LogicalDevice()
 {
 }
@@ -41,3 +46,5 @@ LogicalDevice::~LogicalDevice()
 {
 }
 
+}
+}

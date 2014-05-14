@@ -35,13 +35,14 @@
 #include <cstring>
 #include <cmath>
 
-#include "../Types/RPCVariable.h"
+#include "../RPC/RPCVariable.h"
 #include "BinaryDecoder.h"
 #include "RPCHeader.h"
 
+namespace BaseLib
+{
 namespace RPC
 {
-
 class RPCDecoder
 {
 public:
@@ -59,6 +60,6 @@ private:
 	std::shared_ptr<RPCArray> decodeArray(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
 	std::shared_ptr<RPCStruct> decodeStruct(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
 };
-
-} /* namespace RPC */
+}
+}
 #endif /* RPCDECODER_H_ */

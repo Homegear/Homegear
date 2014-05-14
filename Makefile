@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base physicaldevices user rpc cli events gd bidcos hmwired insteon fs20 homegear
+PROJECTS := base bidcos user rpc cli events gd homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -16,9 +16,9 @@ base:
 	@echo "==== Building base ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f base.make
 
-physicaldevices: 
-	@echo "==== Building physicaldevices ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f physicaldevices.make
+bidcos: 
+	@echo "==== Building bidcos ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f bidcos.make
 
 user: 
 	@echo "==== Building user ($(config)) ===="
@@ -40,38 +40,18 @@ gd:
 	@echo "==== Building gd ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f gd.make
 
-bidcos: 
-	@echo "==== Building bidcos ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f bidcos.make
-
-hmwired: 
-	@echo "==== Building hmwired ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f hmwired.make
-
-insteon: 
-	@echo "==== Building insteon ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f insteon.make
-
-fs20: 
-	@echo "==== Building fs20 ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f fs20.make
-
 homegear: 
 	@echo "==== Building homegear ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f homegear.make
 
 clean:
 	@${MAKE} --no-print-directory -C . -f base.make clean
-	@${MAKE} --no-print-directory -C . -f physicaldevices.make clean
+	@${MAKE} --no-print-directory -C . -f bidcos.make clean
 	@${MAKE} --no-print-directory -C . -f user.make clean
 	@${MAKE} --no-print-directory -C . -f rpc.make clean
 	@${MAKE} --no-print-directory -C . -f cli.make clean
 	@${MAKE} --no-print-directory -C . -f events.make clean
 	@${MAKE} --no-print-directory -C . -f gd.make clean
-	@${MAKE} --no-print-directory -C . -f bidcos.make clean
-	@${MAKE} --no-print-directory -C . -f hmwired.make clean
-	@${MAKE} --no-print-directory -C . -f insteon.make clean
-	@${MAKE} --no-print-directory -C . -f fs20.make clean
 	@${MAKE} --no-print-directory -C . -f homegear.make clean
 
 help:
@@ -86,16 +66,12 @@ help:
 	@echo "   all (default)"
 	@echo "   clean"
 	@echo "   base"
-	@echo "   physicaldevices"
+	@echo "   bidcos"
 	@echo "   user"
 	@echo "   rpc"
 	@echo "   cli"
 	@echo "   events"
 	@echo "   gd"
-	@echo "   bidcos"
-	@echo "   hmwired"
-	@echo "   insteon"
-	@echo "   fs20"
 	@echo "   homegear"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

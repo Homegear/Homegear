@@ -29,7 +29,14 @@
 
 #include "Central.h"
 
+namespace BaseLib
+{
+namespace Systems
+{
+
 Central::~Central()
 {
 }
 
+}
+}

@@ -30,10 +30,9 @@
 #ifndef AUTH_H_
 #define AUTH_H_
 
-#include "../../Modules/Base/HelperFunctions/HelperFunctions.h"
 #include "SocketOperations.h"
 #include "HTTP.h"
-#include "../../Modules/Base/Encoding/RPCEncoder.h"
+#include "../../Modules/Base/BaseLib.h"
 #include "Base64.h"
 #include "../User/User.h"
 
@@ -44,10 +43,10 @@
 namespace RPC
 {
 
-class AuthException : public Exception
+class AuthException : public BaseLib::Exception
 {
 public:
-	AuthException(std::string message) : Exception(message) {}
+	AuthException(std::string message) : BaseLib::Exception(message) {}
 };
 
 class Auth
@@ -60,7 +59,7 @@ public:
 
 	bool initialized() { return _initialized; }
 	std::pair<std::string, std::string> basicClient();
-	bool basicServer(std::shared_ptr<RPCHeader>& binaryHeader);
+	bool basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader);
 	bool basicServer(HTTP& httpPacket);
 protected:
 	bool _initialized = false;
@@ -74,7 +73,7 @@ protected:
 	std::string _password;
 	std::pair<std::string, std::string> _basicAuthString;
 	HTTP _http;
-	RPCEncoder _rpcEncoder;
+	BaseLib::RPC::RPCEncoder _rpcEncoder;
 
 	void sendBasicUnauthorized(bool binary);
 };

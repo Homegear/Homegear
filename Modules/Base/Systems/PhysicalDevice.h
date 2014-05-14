@@ -34,8 +34,6 @@
 #include "PhysicalDeviceSettings.h"
 #include "../FileDescriptorManager/FileDescriptorManager.h"
 
-class Packet;
-
 #include <list>
 #include <thread>
 #include <mutex>
@@ -43,8 +41,12 @@ class Packet;
 
 #include <dirent.h>
 
-namespace PhysicalDevices
+namespace BaseLib
 {
+namespace Systems
+{
+
+class Packet;
 
 class PhysicalDevice
 {
@@ -116,5 +118,6 @@ protected:
 	virtual bool gpioOpen(uint32_t);
 };
 
+}
 }
 #endif /* PHYSICALDEVICE_H_ */

@@ -34,7 +34,7 @@
 #include <string>
 
 #include "ServerSettings.h"
-#include "../../Modules/Base/Types/RPCVariable.h"
+#include "../../Modules/Base/BaseLib.h"
 #include "RPCServer.h"
 #include "RPCMethods.h"
 
@@ -48,7 +48,7 @@ public:
 	void start(std::shared_ptr<ServerSettings::Settings>& settings);
 	void stop();
 	uint32_t connectionCount();
-	std::shared_ptr<RPCVariable> callMethod(std::string methodName, std::shared_ptr<RPCVariable> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::RPCVariable> parameters);
 protected:
 	std::shared_ptr<RPCServer> _server;
 };

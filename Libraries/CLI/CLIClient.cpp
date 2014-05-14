@@ -35,7 +35,7 @@ namespace CLI {
 
 Client::Client()
 {
-	_fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor());
+	_fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 }
 
 Client::~Client()
@@ -47,15 +47,15 @@ Client::~Client()
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -82,17 +82,17 @@ void Client::ping()
     catch(const std::exception& ex)
     {
     	_sendMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
     	_sendMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_sendMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -103,20 +103,20 @@ void Client::start()
 		int32_t fileDescriptor = socket(AF_UNIX, SOCK_STREAM, 0);
 		if(fileDescriptor == -1)
 		{
-			Output::printError("Could not create socket.");
+			BaseLib::Output::printError("Could not create socket.");
 			return;
 		}
-		_fileDescriptor = BaseLib::fileDescriptorManager.add(fileDescriptor);
-		if(BaseLib::debugLevel >= 4) std::cout << "Info: Trying to connect..." << std::endl;
+		_fileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(fileDescriptor);
+		if(BaseLib::Obj::ins->debugLevel >= 4) std::cout << "Info: Trying to connect..." << std::endl;
 		sockaddr_un remoteAddress;
 		remoteAddress.sun_family = AF_UNIX;
 		strcpy(remoteAddress.sun_path, GD::socketPath.c_str());
 		if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
 		{
-			Output::printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
+			BaseLib::Output::printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
 			return;
 		}
-		if(BaseLib::debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
+		if(BaseLib::Obj::ins->debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
 
 		_pingThread = std::thread(&CLI::Client::ping, this);
 
@@ -135,7 +135,7 @@ void Client::start()
 			if(strcmp(sendBuffer, "quit") == 0 || strcmp(sendBuffer, "exit") == 0)
 			{
 				_closed = true;
-				BaseLib::fileDescriptorManager.close(_fileDescriptor);
+				BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -144,8 +144,8 @@ void Client::start()
 			if(send(_fileDescriptor->descriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
 			{
 				_sendMutex.unlock();
-				Output::printError("Error sending to socket.");
-				BaseLib::fileDescriptorManager.close(_fileDescriptor);
+				BaseLib::Output::printError("Error sending to socket.");
+				BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -174,7 +174,7 @@ void Client::start()
 					_sendMutex.unlock();
 					if(bytes < 0) std::cerr << "Error receiving data from socket." << std::endl;
 					else std::cout << "Connection closed." << std::endl;
-					BaseLib::fileDescriptorManager.close(_fileDescriptor);
+					BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
 					return;
 				}
 			}
@@ -183,15 +183,15 @@ void Client::start()
 	}
     catch(const std::exception& ex)
     {
-    	Output::printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());;
+    	BaseLib::Output::printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());;
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

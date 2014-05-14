@@ -35,6 +35,8 @@
 #include <vector>
 #include <mutex>
 
+namespace BaseLib
+{
 class IEventSinkBase
 {
 public:
@@ -54,5 +56,5 @@ protected:
 	std::mutex _eventHandlerMutex;
     std::vector<IEventSinkBase*> _eventHandlers;
 };
-
+}
 #endif /* IEVENTS_H_ */

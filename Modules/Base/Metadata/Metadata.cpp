@@ -30,6 +30,9 @@
 #include "Metadata.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
+
 RPC::RPCEncoder Metadata::_rpcEncoder;
 RPC::RPCDecoder Metadata::_rpcDecoder;
 
@@ -42,7 +45,7 @@ std::shared_ptr<RPC::RPCVariable> Metadata::getAllMetadata(std::string objectID)
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(objectID)));
 
-		DataTable rows = BaseLib::db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
+		DataTable rows = Obj::ins->db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
 		if(rows.empty()) return RPC::RPCVariable::createError(-1, "No metadata found.");
 
 		std::shared_ptr<RPC::RPCVariable> metadataStruct(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
@@ -84,7 +87,7 @@ std::shared_ptr<RPC::RPCVariable> Metadata::getMetadata(std::string objectID, st
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(objectID)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(dataID)));
 
-		DataTable rows = BaseLib::db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
+		DataTable rows = Obj::ins->db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
 		if(rows.empty() || rows.at(0).empty()) return RPC::RPCVariable::createError(-1, "No metadata found.");
 
 		std::shared_ptr<RPC::RPCVariable> metadata = _rpcDecoder.decodeResponse(rows.at(0).at(0)->binaryValue);
@@ -116,21 +119,21 @@ std::shared_ptr<RPC::RPCVariable> Metadata::setMetadata(std::string objectID, st
 		if(metadata->stringValue.size() > 1000) return RPC::RPCVariable::createError(-32602, "Data has more than 1000 characters.");
 		if(metadata->type != RPC::RPCVariableType::rpcBase64 && metadata->type != RPC::RPCVariableType::rpcString && metadata->type != RPC::RPCVariableType::rpcInteger && metadata->type != RPC::RPCVariableType::rpcFloat && metadata->type != RPC::RPCVariableType::rpcBoolean) return RPC::RPCVariable::createError(-32602, "Type " + RPC::RPCVariable::getTypeString(metadata->type) + " is currently not supported.");
 
-		DataTable rows = BaseLib::db.executeCommand("SELECT COUNT(*) FROM metadata");
+		DataTable rows = Obj::ins->db.executeCommand("SELECT COUNT(*) FROM metadata");
 		if(rows.size() == 0 || rows.at(0).size() == 0) return RPC::RPCVariable::createError(-32500, "Error counting metadata in database.");
 		if(rows.at(0).at(0)->intValue > 1000000) return RPC::RPCVariable::createError(-32500, "Reached limit of 1000000 metadata entries. Please delete metadata before adding new entries.");
 
 		DataColumnVector data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(objectID)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(dataID)));
-		BaseLib::db.executeCommand("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
+		Obj::ins->db.executeCommand("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
 
 		std::shared_ptr<std::vector<char>> value = _rpcEncoder.encodeResponse(metadata);
 		if(!value) return RPC::RPCVariable::createError(-32700, "Could not encode data.");
 		if(value->size() > 1000) return RPC::RPCVariable::createError(-32602, "Data is larger than 1000 bytes.");
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 
-		BaseLib::db.executeCommand("INSERT INTO metadata VALUES(?, ?, ?)", data);
+		Obj::ins->db.executeCommand("INSERT INTO metadata VALUES(?, ?, ?)", data);
 
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
@@ -161,7 +164,7 @@ std::shared_ptr<RPC::RPCVariable> Metadata::deleteMetadata(std::string objectID,
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(dataID)));
 			command.append(" AND dataID=?");
 		}
-		BaseLib::db.executeCommand(command, data);
+		Obj::ins->db.executeCommand(command, data);
 
 		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 	}
@@ -178,4 +181,6 @@ std::shared_ptr<RPC::RPCVariable> Metadata::deleteMetadata(std::string objectID,
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 }

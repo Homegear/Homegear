@@ -29,6 +29,11 @@
 
 #include "DeviceTypes.h"
 
+namespace BaseLib
+{
+namespace Systems
+{
+
 LogicalDeviceType::LogicalDeviceType(DeviceFamilies family, uint32_t type)
 {
 	_family = family;
@@ -45,4 +50,7 @@ bool LogicalDeviceType::operator!=(LogicalDeviceType& other)
 {
 	if(other.family() != _family || other.type() != _type) return true;
 	return false;
+}
+
+}
 }

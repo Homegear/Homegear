@@ -30,6 +30,8 @@
 #include "Devices.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
 namespace RPC
 {
 
@@ -75,7 +77,7 @@ void Devices::load(std::string path)
     }
 }
 
-std::shared_ptr<Device> Devices::find(LogicalDeviceType deviceType, uint32_t firmwareVersion, std::shared_ptr<Packet> packet)
+std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion, std::shared_ptr<Systems::Packet> packet)
 {
 	try
 	{
@@ -124,7 +126,7 @@ std::shared_ptr<Device> Devices::find(LogicalDeviceType deviceType, uint32_t fir
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(LogicalDeviceType deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo)
+std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo)
 {
 	try
 	{
@@ -168,7 +170,7 @@ std::shared_ptr<Device> Devices::find(LogicalDeviceType deviceType, uint32_t fir
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(DeviceFamilies family, std::string typeID, std::shared_ptr<Packet> packet)
+std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::string typeID, std::shared_ptr<Systems::Packet> packet)
 {
 	try
 	{
@@ -213,7 +215,7 @@ std::shared_ptr<Device> Devices::find(DeviceFamilies family, std::string typeID,
     return nullptr;
 }
 
-std::shared_ptr<Device> Devices::find(DeviceFamilies family, std::shared_ptr<Packet> packet)
+std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::shared_ptr<Systems::Packet> packet)
 {
 	try
 	{
@@ -258,4 +260,5 @@ std::shared_ptr<Device> Devices::find(DeviceFamilies family, std::shared_ptr<Pac
     return nullptr;
 }
 
-} /* namespace XMLRPC */
+}
+}

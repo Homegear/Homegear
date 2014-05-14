@@ -65,7 +65,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 	{
 		if(!_basicUnauthBinaryHeader || _basicUnauthBinaryHeader->empty())
 		{
-			std::shared_ptr<RPCVariable> error = RPCVariable::createError(-32603, "Unauthorized");
+			std::shared_ptr<BaseLib::RPC::RPCVariable> error = BaseLib::RPC::RPCVariable::createError(-32603, "Unauthorized");
 			_basicUnauthBinaryHeader = _rpcEncoder.encodeResponse(error);
 		}
 		try
@@ -100,7 +100,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 	}
 }
 
-bool Auth::basicServer(std::shared_ptr<RPCHeader>& binaryHeader)
+bool Auth::basicServer(std::shared_ptr<BaseLib::RPC::RPCHeader>& binaryHeader)
 {
 	if(!_initialized) throw AuthException("Not initialized.");
 	if(!binaryHeader) throw AuthException("Header is nullptr.");
@@ -109,15 +109,15 @@ bool Auth::basicServer(std::shared_ptr<RPCHeader>& binaryHeader)
 		sendBasicUnauthorized(true);
 		throw AuthException("No header field \"Authorization\"");
 	}
-	std::pair<std::string, std::string> authData = HelperFunctions::split(binaryHeader->authorization, ' ');
-	HelperFunctions::toLower(authData.first);
+	std::pair<std::string, std::string> authData = BaseLib::HelperFunctions::split(binaryHeader->authorization, ' ');
+	BaseLib::HelperFunctions::toLower(authData.first);
 	if(authData.first != "basic")
 	{
 		sendBasicUnauthorized(true);
 		throw AuthException("Authorization type is not basic but: " + authData.first);
 	}
-	std::pair<std::string, std::string> credentials = HelperFunctions::split(Base64::decode(authData.second), ':');
-	HelperFunctions::toLower(credentials.first);
+	std::pair<std::string, std::string> credentials = BaseLib::HelperFunctions::split(Base64::decode(authData.second), ':');
+	BaseLib::HelperFunctions::toLower(credentials.first);
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
 		sendBasicUnauthorized(true);
@@ -174,15 +174,15 @@ bool Auth::basicServer(HTTP& httpPacket)
 		sendBasicUnauthorized(false);
 		throw AuthException("No header field \"Authorization\"");
 	}
-	std::pair<std::string, std::string> authData = HelperFunctions::split(_http.getHeader()->authorization, ' ');
-	HelperFunctions::toLower(authData.first);
+	std::pair<std::string, std::string> authData = BaseLib::HelperFunctions::split(_http.getHeader()->authorization, ' ');
+	BaseLib::HelperFunctions::toLower(authData.first);
 	if(authData.first != "basic")
 	{
 		sendBasicUnauthorized(false);
 		throw AuthException("Authorization type is not basic but: " + authData.first);
 	}
-	std::pair<std::string, std::string> credentials = HelperFunctions::split(Base64::decode(authData.second), ':');
-	HelperFunctions::toLower(credentials.first);
+	std::pair<std::string, std::string> credentials = BaseLib::HelperFunctions::split(Base64::decode(authData.second), ':');
+	BaseLib::HelperFunctions::toLower(credentials.first);
 	if(std::find(_validUsers.begin(), _validUsers.end(), credentials.first) == _validUsers.end())
 	{
 		sendBasicUnauthorized(false);

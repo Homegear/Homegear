@@ -29,6 +29,9 @@
 
 #include "IEvents.h"
 
+namespace BaseLib
+{
+
 IEvents::IEvents()
 {
 
@@ -89,4 +92,6 @@ void IEvents::removeEventHandler(IEventSinkBase* eventHandler)
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
+}
+
 }

@@ -30,7 +30,9 @@
 #include "PhysicalDevice.h"
 #include "../BaseLib.h"
 
-namespace PhysicalDevices
+namespace BaseLib
+{
+namespace Systems
 {
 
 PhysicalDevice::PhysicalDevice()
@@ -187,7 +189,7 @@ void PhysicalDevice::openGPIO(uint32_t index, bool readOnly)
 		if(_settings->gpio.at(index).path.empty()) getGPIOPath(index);
 		if(_settings->gpio[index].path.empty()) throw(Exception("Failed to open value file for GPIO with index " + std::to_string(index) + " and device \"" + _settings->type + "\": Unable to retrieve path."));
 		std::string path = _settings->gpio[index].path + "value";
-		_gpioDescriptors[index] = BaseLib::fileDescriptorManager.add(open(path.c_str(), readOnly ? O_RDONLY : O_RDWR));
+		_gpioDescriptors[index] = Obj::ins->fileDescriptorManager.add(open(path.c_str(), readOnly ? O_RDONLY : O_RDWR));
 		if (_gpioDescriptors[index]->descriptor == -1) throw(Exception("Failed to open GPIO value file \"" + path + "\": " + std::string(strerror(errno))));
 	}
 	catch(const std::exception& ex)
@@ -215,7 +217,7 @@ void PhysicalDevice::getGPIOPath(uint32_t index)
 		if(!_settings->gpio.at(index).path.empty()) return;
 		DIR* directory;
 		struct dirent* entry;
-		std::string gpioDir(BaseLib::settings.gpioPath());
+		std::string gpioDir(Obj::ins->settings.gpioPath());
 		if((directory = opendir(gpioDir.c_str())) != 0)
 		{
 			while((entry = readdir(directory)) != 0)
@@ -262,7 +264,7 @@ void PhysicalDevice::getGPIOPath(uint32_t index)
 				}
 			}
 		}
-		else throw(Exception("Could not open directory \"" + BaseLib::settings.gpioPath() + "."));
+		else throw(Exception("Could not open directory \"" + Obj::ins->settings.gpioPath() + "\"."));
 	}
 	catch(const std::exception& ex)
     {
@@ -284,7 +286,7 @@ void PhysicalDevice::closeGPIO(uint32_t index)
 	{
 		if(_gpioDescriptors.find(index) != _gpioDescriptors.end())
 		{
-			BaseLib::fileDescriptorManager.close(_gpioDescriptors.at(index));
+			Obj::ins->fileDescriptorManager.close(_gpioDescriptors.at(index));
 		}
 	}
 	catch(const std::exception& ex)
@@ -426,26 +428,26 @@ void PhysicalDevice::exportGPIO(uint32_t index)
 		if(!_settings->gpio[index].path.empty())
 		{
 			Output::printDebug("Debug: Unexporting GPIO with index " + std::to_string(index) + " and number " + std::to_string(_settings->gpio[index].number) + " for device \"" + _settings->type + "\".");
-			path = BaseLib::settings.gpioPath() + "unexport";
-			fileDescriptor = BaseLib::fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
+			path = Obj::ins->settings.gpioPath() + "unexport";
+			fileDescriptor = Obj::ins->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
 			if (fileDescriptor->descriptor == -1) throw(Exception("Could not unexport GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + "\". Failed to write to unexport file: " + std::string(strerror(errno))));
 			if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) == -1)
 			{
 				Output::printError("Error: Could not unexport GPIO with index " + std::to_string(index) + " and number " + temp + " for device \"" + _settings->type + "\": " + std::string(strerror(errno)));
 			}
-			BaseLib::fileDescriptorManager.close(fileDescriptor);
+			Obj::ins->fileDescriptorManager.close(fileDescriptor);
 			_settings->gpio[index].path.clear();
 		}
 
 		Output::printDebug("Debug: Exporting GPIO with index " + std::to_string(index) + " and number " + std::to_string(_settings->gpio[index].number) + " for device \"" + _settings->type + "\".");
-		path = BaseLib::settings.gpioPath() + "export";
-		fileDescriptor = BaseLib::fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
+		path = Obj::ins->settings.gpioPath() + "export";
+		fileDescriptor = Obj::ins->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
 		if (fileDescriptor->descriptor == -1) throw(Exception("Error: Could not export GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + "\". Failed to write to export file: " + std::string(strerror(errno))));
 		if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) == -1)
 		{
 			Output::printError("Error: Could not export GPIO with index " + std::to_string(index) + " and number " + temp + " for device \"" + _settings->type + "\": " + std::string(strerror(errno)));
 		}
-		BaseLib::fileDescriptorManager.close(fileDescriptor);
+		Obj::ins->fileDescriptorManager.close(fileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -473,14 +475,14 @@ void PhysicalDevice::setGPIODirection(uint32_t index, GPIODirection::Enum direct
 		if(_settings->gpio[index].path.empty()) getGPIOPath(index);
 		if(_settings->gpio[index].path.empty()) throw(Exception("Failed to open direction file for GPIO with index " + std::to_string(index) + " and device \"" + _settings->type + "\": Unable to retrieve path."));
 		std::string path(_settings->gpio[index].path + "direction");
-		std::shared_ptr<FileDescriptor> fileDescriptor = BaseLib::fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
+		std::shared_ptr<FileDescriptor> fileDescriptor = Obj::ins->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
 		if (fileDescriptor->descriptor == -1) throw(Exception("Could not write to direction file (" + path + ") of GPIO with index " + std::to_string(index) + ": " + std::string(strerror(errno))));
 		std::string temp((direction == GPIODirection::OUT) ? "out" : "in");
 		if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) <= 0)
 		{
 			Output::printError("Could not write to direction file \"" + path + "\": " + std::string(strerror(errno)));
 		}
-		BaseLib::fileDescriptorManager.close(fileDescriptor);
+		Obj::ins->fileDescriptorManager.close(fileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -508,14 +510,14 @@ void PhysicalDevice::setGPIOEdge(uint32_t index, GPIOEdge::Enum edge)
 		if(_settings->gpio[index].path.empty()) getGPIOPath(index);
 		if(_settings->gpio[index].path.empty()) throw(Exception("Failed to open edge file for GPIO with index " + std::to_string(index) + " and device \"" + _settings->type + "\": Unable to retrieve path."));
 		std::string path(_settings->gpio[index].path + "edge");
-		std::shared_ptr<FileDescriptor> fileDescriptor = BaseLib::fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
+		std::shared_ptr<FileDescriptor> fileDescriptor = Obj::ins->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
 		if (fileDescriptor->descriptor == -1) throw(Exception("Could not write to edge file (" + path + ") of GPIO with index " + std::to_string(index) + ": " + std::string(strerror(errno))));
 		std::string temp((edge == GPIOEdge::RISING) ? "rising" : ((edge == GPIOEdge::FALLING) ? "falling" : "both"));
 		if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) <= 0)
 		{
 			Output::printError("Could not write to edge file \"" + path + "\": " + std::string(strerror(errno)));
 		}
-		BaseLib::fileDescriptorManager.close(fileDescriptor);
+		Obj::ins->fileDescriptorManager.close(fileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -531,4 +533,5 @@ void PhysicalDevice::setGPIOEdge(uint32_t index, GPIOEdge::Enum edge)
     }
 }
 
+}
 }

@@ -176,7 +176,7 @@ void Insteon::load(bool version_0_0_7)
 	try
 	{
 		_devices.clear();
-		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticWired));
+		DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM devices WHERE deviceFamily=" + std::to_string((uint32_t)DeviceFamilies::HomeMaticWired));
 		bool spyDeviceExists = false;
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{

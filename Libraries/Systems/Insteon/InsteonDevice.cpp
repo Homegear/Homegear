@@ -108,7 +108,7 @@ void InsteonDevice::saveVariable(uint32_t index, int64_t intValue)
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::db.executeWriteCommand("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
+			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
 		}
 		else
 		{
@@ -123,7 +123,7 @@ void InsteonDevice::saveVariable(uint32_t index, int64_t intValue)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
@@ -153,7 +153,7 @@ void InsteonDevice::saveVariable(uint32_t index, std::string& stringValue)
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::db.executeWriteCommand("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
+			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
 		}
 		else
 		{
@@ -168,7 +168,7 @@ void InsteonDevice::saveVariable(uint32_t index, std::string& stringValue)
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
@@ -198,7 +198,7 @@ void InsteonDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryVal
 		{
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
+			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
 		}
 		else
 		{
@@ -213,7 +213,7 @@ void InsteonDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryVal
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
-			int32_t result = BaseLib::db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
+			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 			_variableDatabaseIDs[index] = result;
 		}
 	}
@@ -237,7 +237,7 @@ void InsteonDevice::loadVariables()
 	try
 	{
 		_databaseMutex.lock();
-		DataTable rows = BaseLib::db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
+		DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
 		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;

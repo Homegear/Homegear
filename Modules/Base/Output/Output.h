@@ -41,7 +41,10 @@
 #include <chrono>
 #include <ctime>
 
-class Output {
+namespace BaseLib
+{
+class Output
+{
 public:
 
 	virtual ~Output();
@@ -66,5 +69,5 @@ private:
 
 	Output() {}
 };
-
+}
 #endif /* OUTPUT_H_ */

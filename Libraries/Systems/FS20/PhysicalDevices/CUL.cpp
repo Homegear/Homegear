@@ -76,7 +76,7 @@ void CUL_FS20::sendPacket(std::shared_ptr<Packet> packet)
 		if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
 		if(packet->payload()->size() > 54)
 		{
-			if(BaseLib::debugLevel >= 2) Output::printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
+			if(BaseLib::Obj::ins->debugLevel >= 2) Output::printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
 			return;
 		}
 
@@ -133,7 +133,7 @@ void CUL_FS20::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = BaseLib::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
+		_fileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
 		if(_fileDescriptor->descriptor == -1)
 		{
 			Output::printCritical("Couldn't open CUL device \"" + _settings->device + "\": " + strerror(errno));
@@ -160,7 +160,7 @@ void CUL_FS20::closeDevice()
 {
 	try
 	{
-		BaseLib::fileDescriptorManager.close(_fileDescriptor);
+		BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
 		unlink(_lockfile.c_str());
 	}
     catch(const std::exception& ex)
@@ -297,7 +297,7 @@ void CUL_FS20::writeToDevice(std::string data, bool printSending)
         if(_fileDescriptor->descriptor == -1) throw(Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
         int32_t bytesWritten = 0;
         int32_t i;
-        if(BaseLib::debugLevel > 3 && printSending)
+        if(BaseLib::Obj::ins->debugLevel > 3 && printSending)
         {
             Output::printInfo("Info: Sending: " + data.substr(2, data.size() - 4));
         }

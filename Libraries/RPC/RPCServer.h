@@ -31,17 +31,11 @@
 #define RPCSERVER_H_
 
 #include "HTTP.h"
-#include "../../Modules/Base/Types/RPCVariable.h"
+#include "../../Modules/Base/BaseLib.h"
 #include "RPCMethod.h"
-#include "../../Modules/Base/Encoding/RPCHeader.h"
-#include "../../Modules/Base/Encoding/RPCDecoder.h"
-#include "../../Modules/Base/Encoding/RPCEncoder.h"
-#include "../../Modules/Base/Encoding/XMLRPCDecoder.h"
-#include "../../Modules/Base/Encoding/XMLRPCEncoder.h"
 #include "SocketOperations.h"
 #include "Auth.h"
 #include "ServerSettings.h"
-#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
 
 #include <thread>
 #include <iostream>
@@ -76,16 +70,17 @@ namespace RPC
 {
 	class RPCServer {
 		public:
-			class Client {
+			class Client
+			{
 			public:
 				int32_t id = -1;
 				std::thread readThread;
-				std::shared_ptr<FileDescriptor> fileDescriptor;
+				std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 				SSL* ssl = nullptr;
 				SocketOperations socket;
 				Auth auth;
 
-				Client() { fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor()); }
+				Client() { fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor()); }
 				virtual ~Client() { if(ssl) SSL_free(ssl); };
 			};
 
@@ -102,7 +97,7 @@ namespace RPC
 			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> getMethods() { return _rpcMethods; }
 			uint32_t connectionCount();
-			std::shared_ptr<RPCVariable> callMethod(std::string& methodName, std::shared_ptr<RPCVariable>& parameters);
+			std::shared_ptr<BaseLib::RPC::RPCVariable> callMethod(std::string& methodName, std::shared_ptr<BaseLib::RPC::RPCVariable>& parameters);
 		protected:
 		private:
 			int32_t _currentClientID = 0;
@@ -113,28 +108,28 @@ namespace RPC
 			bool _stopServer = false;
 			std::thread _mainThread;
 			int32_t _backlog = 10;
-			std::shared_ptr<FileDescriptor> _serverFileDescriptor;
+			std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
 			int32_t _maxConnections = 100;
 			std::mutex _stateMutex;
 			std::map<int32_t, std::shared_ptr<Client>> _clients;
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;
-			RPCDecoder _rpcDecoder;
-			RPCEncoder _rpcEncoder;
-			XMLRPCDecoder _xmlRpcDecoder;
-			XMLRPCEncoder _xmlRpcEncoder;
+			BaseLib::RPC::RPCDecoder _rpcDecoder;
+			BaseLib::RPC::RPCEncoder _rpcEncoder;
+			BaseLib::RPC::XMLRPCDecoder _xmlRpcDecoder;
+			BaseLib::RPC::XMLRPCEncoder _xmlRpcEncoder;
 
 			void getFileDescriptor();
-			std::shared_ptr<FileDescriptor> getClientFileDescriptor();
+			std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
 			void getSSLFileDescriptor(std::shared_ptr<Client>);
 			void mainThread();
 			void readClient(std::shared_ptr<Client> client);
-			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<RPCVariable> error, PacketType::Enum packetType, bool keepAlive);
+			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<BaseLib::RPC::RPCVariable> error, PacketType::Enum packetType, bool keepAlive);
 			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> data, bool keepAlive);
 			void packetReceived(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive);
 			void analyzeRPC(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive);
 			void analyzeRPCResponse(std::shared_ptr<Client> client, std::shared_ptr<std::vector<char>> packet, PacketType::Enum packetType, bool keepAlive);
 			void removeClient(int32_t clientID);
-			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive);
+			void callMethod(std::shared_ptr<Client> client, std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters, PacketType::Enum responseType, bool keepAlive);
 			std::string getHttpResponseHeader(uint32_t contentLength);
 			void closeClientConnection(std::shared_ptr<Client> client);
 			bool clientValid(std::shared_ptr<Client>& client);

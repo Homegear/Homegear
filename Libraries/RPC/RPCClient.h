@@ -31,14 +31,10 @@
 #define RPCCLIENT_H_
 
 #include "ClientSettings.h"
-#include "../../Modules/Base/Encoding/RPCEncoder.h"
-#include "../../Modules/Base/Encoding/RPCDecoder.h"
-#include "../../Modules/Base/Encoding/XMLRPCEncoder.h"
-#include "../../Modules/Base/Encoding/XMLRPCDecoder.h"
+#include "../../Modules/Base/BaseLib.h"
 #include "SocketOperations.h"
 #include "HTTP.h"
 #include "Auth.h"
-#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
 
 #include <iostream>
 #include <string>
@@ -70,7 +66,7 @@ class RemoteRPCServer
 public:
 	RemoteRPCServer()
 	{
-		knownDevices.reset(new std::map<uint64_t, int32_t>()); fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor());
+		knownDevices.reset(new std::map<uint64_t, int32_t>()); fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 		path = "/RPC2";
 	}
 	virtual ~RemoteRPCServer() {}
@@ -89,7 +85,7 @@ public:
 	std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
 	SocketOperations socket;
-	std::shared_ptr<FileDescriptor> fileDescriptor;
+	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	std::mutex sendMutex;
 	Auth auth;
 	int32_t lastPacketSent = -1;
@@ -100,15 +96,15 @@ public:
 	RPCClient();
 	virtual ~RPCClient();
 
-	void invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
-	std::shared_ptr<RPCVariable> invoke(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
+	void invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<RemoteRPCServer> server, std::string methodName, std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 
 	void reset();
 protected:
-	RPCDecoder _rpcDecoder;
-	RPCEncoder _rpcEncoder;
-	XMLRPCDecoder _xmlRpcDecoder;
-	XMLRPCEncoder _xmlRpcEncoder;
+	BaseLib::RPC::RPCDecoder _rpcDecoder;
+	BaseLib::RPC::RPCEncoder _rpcEncoder;
+	BaseLib::RPC::XMLRPCDecoder _xmlRpcDecoder;
+	BaseLib::RPC::XMLRPCEncoder _xmlRpcEncoder;
 	int32_t _sendCounter = 0;
 
 	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>> data, bool insertHeader, bool& timedout);

@@ -30,6 +30,8 @@
 #include "PhysicalParameter.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
 namespace RPC
 {
 
@@ -208,4 +210,5 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
     }
 }
 
-} /* namespace XMLRPC */
+}
+}

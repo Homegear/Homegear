@@ -30,6 +30,9 @@
 #include "BinaryDecoder.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
+
 BinaryDecoder::BinaryDecoder()
 {
 }
@@ -167,4 +170,6 @@ bool BinaryDecoder::decodeBoolean(std::shared_ptr<std::vector<char>>& encodedDat
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
+}
+
 }

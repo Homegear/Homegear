@@ -30,7 +30,7 @@
 #ifndef XMLRPCDECODER_H_
 #define XMLRPCDECODER_H_
 
-#include "../Types/RPCVariable.h"
+#include "../RPC/RPCVariable.h"
 #include "rapidxml.hpp"
 
 #include <memory>
@@ -38,7 +38,10 @@
 
 using namespace rapidxml;
 
-namespace RPC {
+namespace BaseLib
+{
+namespace RPC
+{
 
 class XMLRPCDecoder {
 public:
@@ -56,4 +59,5 @@ private:
 };
 
 } /* namespace RPC */
+}
 #endif /* XMLRPCDECODER_H_ */

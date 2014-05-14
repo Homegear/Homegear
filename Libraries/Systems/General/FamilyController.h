@@ -34,6 +34,7 @@ class LogicalDevice;
 
 #include "../../../Modules/Base/HelperFunctions/HelperFunctions.h"
 #include "../../../Modules/Base/Systems/DeviceFamily.h"
+#include "../../../Modules/Base/Systems/SystemFactory.h"
 
 #include <string>
 #include <iostream>
@@ -41,37 +42,23 @@ class LogicalDevice;
 #include <memory>
 #include <mutex>
 
-class UpdateInfo
-{
-public:
-	UpdateInfo();
-	virtual ~UpdateInfo();
-	void reset();
-
-	std::mutex updateMutex;
-	int32_t devicesToUpdate = -1;
-	int32_t currentUpdate = -1;
-	uint64_t currentDevice = 0;
-	int32_t currentDeviceProgress = -1;
-
-	std::map<uint64_t, std::pair<int32_t, std::string>> results;
-};
-
 class FamilyController
 {
 public:
-	UpdateInfo updateInfo;
-
 	FamilyController();
 	virtual ~FamilyController();
 	void convertDatabase();
+	void loadModules();
+	void disposeModules();
 	void load();
 	void save(bool full, bool crash = false);
 	void dispose();
 	bool familySelected() { return (bool)_currentFamily; }
 	std::string handleCLICommand(std::string& command);
 private:
-	std::shared_ptr<DeviceFamily> _currentFamily;
+	std::map<std::string, void*> moduleHandles;
+	std::map<std::string, BaseLib::Systems::SystemFactory*> moduleFactories;
+	std::shared_ptr<BaseLib::Systems::DeviceFamily> _currentFamily;
 
 	void initializeDatabase();
 	void loadDevicesFromDatabase(bool version_0_0_7);

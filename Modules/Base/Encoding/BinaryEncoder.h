@@ -36,6 +36,8 @@
 #include <vector>
 #include <string>
 
+namespace BaseLib
+{
 class BinaryEncoder
 {
 public:
@@ -53,5 +55,5 @@ public:
 	virtual void encodeFloat(std::shared_ptr<std::vector<char>>& encodedData, double floatValue);
 	virtual void encodeFloat(std::vector<uint8_t>& encodedData, double floatValue);
 };
-
+}
 #endif /* BINARYENCODER_H_ */

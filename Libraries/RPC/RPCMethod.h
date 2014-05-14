@@ -33,7 +33,7 @@
 #include <vector>
 #include <memory>
 
-#include "../../Modules/Base/Types/RPCVariable.h"
+#include "../../Modules/Base/BaseLib.h"
 
 namespace RPC
 {
@@ -49,17 +49,17 @@ public:
 	RPCMethod() {}
 	virtual ~RPCMethod() {}
 
-	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<RPCVariableType> types);
-	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<std::vector<RPCVariableType>> types);
-	virtual std::shared_ptr<RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
-	std::shared_ptr<RPCVariable> getError(ParameterError::Enum error);
-	std::shared_ptr<RPCVariable> getSignature() { return _signatures; }
-	std::shared_ptr<RPCVariable> getHelp() { return _help; }
+	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters, std::vector<BaseLib::RPC::RPCVariableType> types);
+	ParameterError::Enum checkParameters(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>> types);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> getError(ParameterError::Enum error);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> getSignature() { return _signatures; }
+	std::shared_ptr<BaseLib::RPC::RPCVariable> getHelp() { return _help; }
 protected:
-	std::shared_ptr<RPCVariable> _signatures;
-	std::shared_ptr<RPCVariable> _help;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> _signatures;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> _help;
 
-	void addSignature(RPCVariableType returnType, std::vector<RPCVariableType> parameterTypes);
+	void addSignature(BaseLib::RPC::RPCVariableType returnType, std::vector<BaseLib::RPC::RPCVariableType> parameterTypes);
 	void setHelp(std::string help);
 };
 

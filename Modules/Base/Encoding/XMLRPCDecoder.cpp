@@ -30,8 +30,11 @@
 #include "XMLRPCDecoder.h"
 #include "../BaseLib.h"
 
+namespace BaseLib
+{
 namespace RPC
 {
+
 XMLRPCDecoder::XMLRPCDecoder()
 {
 }
@@ -351,4 +354,5 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeArray(xml_node<>* arrayNode)
 	return rpcArray;
 }
 
-} /* namespace RPC */
+}
+}

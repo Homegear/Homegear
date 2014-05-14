@@ -33,7 +33,6 @@
 #include "Modules/Base/BaseLib.h"
 #include "Modules/Base/HelperFunctions/HelperFunctions.h"
 #include "Libraries/RPC/ServerSettings.h"
-#include "Libraries/Systems/General/SystemInitializer.h"
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -63,19 +62,19 @@ void startRPCServers()
 		if(settings->ssl) info += ", SSL enabled";
 		if(settings->authType != RPC::ServerSettings::Settings::AuthType::none) info += ", authentification enabled";
 		info += "...";
-		Output::printInfo(info);
+		BaseLib::Output::printInfo(info);
 		GD::rpcServers[i].start(settings);
 	}
 	if(GD::rpcServers.size() == 0)
 	{
-		Output::printCritical("Critical: No RPC servers are running. Terminating Homegear.");
+		BaseLib::Output::printCritical("Critical: No RPC servers are running. Terminating Homegear.");
 		exit(1);
 	}
 }
 
 void stopRPCServers()
 {
-	Output::printInfo( "(Shutdown) => Stopping RPC servers");
+	BaseLib::Output::printInfo( "(Shutdown) => Stopping RPC servers");
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		i->second.stop();
@@ -89,19 +88,19 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
-			Output::printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
+			BaseLib::Output::printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			if(_startAsDaemon)
 			{
-				Output::printInfo("(Shutdown) => Stopping CLI server");
+				BaseLib::Output::printInfo("(Shutdown) => Stopping CLI server");
 				GD::cliServer.stop();
 			}
 			stopRPCServers();
-			Output::printInfo( "(Shutdown) => Stopping RPC client");
+			BaseLib::Output::printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
-			Output::printInfo( "(Shutdown) => Closing physical devices");
-			GD::physicalDevices.stopListening();
+			BaseLib::Output::printInfo( "(Shutdown) => Closing physical devices");
+			BaseLib::Obj::ins->physicalDevices.stopListening();
 			GD::devices.save(false);
-			Output::printMessage("(Shutdown) => Shutdown complete.");
+			BaseLib::Output::printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{
 				fclose(stdout);
@@ -113,55 +112,55 @@ void terminate(int32_t signalNumber)
 		{
 			if(!_startUpComplete)
 			{
-				Output::printError("Error: Cannot reload. Startup is not completed.");
+				BaseLib::Output::printError("Error: Cannot reload. Startup is not completed.");
 				return;
 			}
 			_startUpComplete = false;
 			stopRPCServers();
-			GD::physicalDevices.stopListening();
+			BaseLib::Obj::ins->physicalDevices.stopListening();
 			//Binding fails sometimes with "address is already in use" without waiting.
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-			Output::printMessage("Reloading settings...");
-			BaseLib::settings.load(GD::configPath + "main.conf");
-			GD::clientSettings.load(BaseLib::settings.clientSettingsPath());
-			GD::serverSettings.load(BaseLib::settings.serverSettingsPath());
-			GD::physicalDevices.startListening();
+			BaseLib::Output::printMessage("Reloading settings...");
+			BaseLib::Obj::ins->settings.load(GD::configPath + "main.conf");
+			GD::clientSettings.load(BaseLib::Obj::ins->settings.clientSettingsPath());
+			GD::serverSettings.load(BaseLib::Obj::ins->settings.serverSettingsPath());
+			BaseLib::Obj::ins->physicalDevices.startListening();
 			startRPCServers();
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon)
 			{
-				if(!std::freopen((BaseLib::settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+				if(!std::freopen((BaseLib::Obj::ins->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 				{
-					Output::printError("Error: Could not redirect output to new log file.");
+					BaseLib::Output::printError("Error: Could not redirect output to new log file.");
 				}
-				if(!std::freopen((BaseLib::settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
+				if(!std::freopen((BaseLib::Obj::ins->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
 				{
-					Output::printError("Error: Could not redirect errors to new log file.");
+					BaseLib::Output::printError("Error: Could not redirect errors to new log file.");
 				}
 			}
 			_startUpComplete = true;
 		}
 		else
 		{
-			Output::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
-			Output::printCritical("Critical: Trying to save data to " + BaseLib::settings.databasePath() + ".crash");
-			BaseLib::db.init(BaseLib::settings.databasePath(), BaseLib::settings.databaseSynchronous(), BaseLib::settings.databaseMemoryJournal(), BaseLib::settings.databasePath() + ".crash");
-			if(BaseLib::db.isOpen()) GD::devices.save(false, true);
+			BaseLib::Output::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
+			BaseLib::Output::printCritical("Critical: Trying to save data to " + BaseLib::Obj::ins->settings.databasePath() + ".crash");
+			BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".crash");
+			if(BaseLib::Obj::ins->db.isOpen()) GD::devices.save(false, true);
 			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 			kill(getpid(), signalNumber); //Generate core dump
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -183,6 +182,18 @@ int32_t getHexInput()
     return intInput;
 }
 
+void getExecutablePath()
+{
+	char path[1024];
+	if(!getcwd(path, 1024)) throw BaseLib::Exception("Could not get working directory.");
+	GD::workingDirectory = std::string(path);
+	ssize_t length = readlink("/proc/self/exe", path, sizeof(path) - 1);
+	if (length == -1) throw BaseLib::Exception("Could not get executable path.");
+	path[length] = '\0';
+	GD::executablePath = std::string(path);
+	GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
+}
+
 void printHelp()
 {
 	std::cout << "Usage: homegear [OPTIONS]" << std::endl << std::endl;
@@ -202,17 +213,26 @@ void startDaemon()
 	{
 		pid_t pid, sid;
 		pid = fork();
-		if(pid < 0) exit(1);
-		if(pid > 0) exit(0);
+		if(pid < 0)
+		{
+			exit(1);
+		}
+		if(pid > 0)
+		{
+			exit(0);
+		}
 		//Set process permission
 		umask(S_IWGRP | S_IWOTH);
 		//Set child processe's id
 		sid = setsid();
-		if(sid < 0) exit(1);
-		//Set root directory as working directory (always available)
-		if((chdir(BaseLib::settings.logfilePath().c_str())) < 0)
+		if(sid < 0)
 		{
-			Output::printError("Could not change working directory to " + BaseLib::settings.logfilePath() + ".");
+			exit(1);
+		}
+		//Set root directory as working directory (always available)
+		if((chdir(BaseLib::Obj::ins->settings.logfilePath().c_str())) < 0)
+		{
+			BaseLib::Output::printError("Could not change working directory to " + BaseLib::Obj::ins->settings.logfilePath() + ".");
 			exit(1);
 		}
 
@@ -220,15 +240,15 @@ void startDaemon()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -236,6 +256,9 @@ int main(int argc, char* argv[])
 {
     try
     {
+    	getExecutablePath();
+    	BaseLib::Obj::init(GD::executablePath);
+
     	for(int32_t i = 1; i < argc; i++)
     	{
     		std::string arg(argv[i]);
@@ -280,18 +303,18 @@ int main(int argc, char* argv[])
     					std::cout <<  "Please run Homegear as root to set the device permissions." << std::endl;
     					exit(1);
     				}
-    				SystemInitializer::initialize();
-    				BaseLib::settings.load(GD::configPath + "main.conf");
-    				GD::physicalDevices.load(BaseLib::settings.physicalDeviceSettingsPath());
-    				int32_t userID = HelperFunctions::userID(std::string(argv[i + 1]));
-    				int32_t groupID = HelperFunctions::groupID(std::string(argv[i + 2]));
-    				Output::printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
+    				BaseLib::Obj::ins->settings.load(GD::configPath + "main.conf");
+    				GD::devices.loadModules();
+    				BaseLib::Obj::ins->physicalDevices.load(BaseLib::Obj::ins->settings.physicalDeviceSettingsPath());
+    				int32_t userID = BaseLib::HelperFunctions::userID(std::string(argv[i + 1]));
+    				int32_t groupID = BaseLib::HelperFunctions::groupID(std::string(argv[i + 2]));
+    				BaseLib::Output::printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
     				if(userID == -1 || groupID == -1)
     				{
-    					Output::printCritical("Could not setup physical devices. Username or group name is not valid.");
+    					BaseLib::Output::printCritical("Could not setup physical devices. Username or group name is not valid.");
     					exit(1);
     				}
-    				GD::physicalDevices.setup(userID, groupID);
+    				BaseLib::Obj::ins->physicalDevices.setup(userID, groupID);
     				exit(0);
     			}
     			else
@@ -324,7 +347,7 @@ int main(int argc, char* argv[])
 
         /*int row,col;
         WINDOW* mainWindow = initscr();
-        if(!mainWindow) Output::printError("Bla" << std::endl;
+        if(!mainWindow) BaseLib::Output::printError("Bla" << std::endl;
 
         getmaxyx(stdscr, row, col);
         WINDOW* left = newwin(row, col / 2, 0, 0);
@@ -342,22 +365,13 @@ int main(int argc, char* argv[])
         //delscreen for all screens!!!
         return 0;*/
 
-    	char path[1024];
-    	if(!getcwd(path, 1024)) throw Exception("Could not get working directory.");
-    	GD::workingDirectory = std::string(path);
-		ssize_t length = readlink("/proc/self/exe", path, sizeof(path) - 1);
-		if (length == -1) throw Exception("Could not get executable path.");
-		path[length] = '\0';
-		GD::executablePath = std::string(path);
-		GD::executablePath = GD::executablePath.substr(0, GD::executablePath.find_last_of("/") + 1);
-		BaseLib::init(GD::executablePath);
 		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
-		Output::printInfo("Loading settings from " + GD::configPath + "main.conf");
-		BaseLib::settings.load(GD::configPath + "main.conf");
-		Output::printInfo("Loading RPC server settings from " + BaseLib::settings.serverSettingsPath());
-		GD::serverSettings.load(BaseLib::settings.serverSettingsPath());
-		Output::printInfo("Loading RPC client settings from " + BaseLib::settings.clientSettingsPath());
-		GD::clientSettings.load(BaseLib::settings.clientSettingsPath());
+		BaseLib::Output::printInfo("Loading settings from " + GD::configPath + "main.conf");
+		BaseLib::Obj::ins->settings.load(GD::configPath + "main.conf");
+		BaseLib::Output::printInfo("Loading RPC server settings from " + BaseLib::Obj::ins->settings.serverSettingsPath());
+		GD::serverSettings.load(BaseLib::Obj::ins->settings.serverSettingsPath());
+		BaseLib::Output::printInfo("Loading RPC client settings from " + BaseLib::Obj::ins->settings.clientSettingsPath());
+		GD::clientSettings.load(BaseLib::Obj::ins->settings.clientSettingsPath());
 
     	if(_startAsDaemon) startDaemon();
 
@@ -390,92 +404,95 @@ int main(int argc, char* argv[])
 				int32_t rc = flock(pidfile, LOCK_EX | LOCK_NB);
 				if(rc && errno == EWOULDBLOCK)
 				{
-					Output::printError("Error: Homegear is already running - Can't lock PID file.");
+					BaseLib::Output::printError("Error: Homegear is already running - Can't lock PID file.");
 				}
 				std::string pid(std::to_string(getpid()));
 				int32_t bytesWritten = write(pidfile, pid.c_str(), pid.size());
-				if(bytesWritten <= 0) Output::printError("Error writing to PID file: " + std::string(strerror(errno)));
+				if(bytesWritten <= 0) BaseLib::Output::printError("Error writing to PID file: " + std::string(strerror(errno)));
 				close(pidfile);
 			}
 		}
 		catch(const std::exception& ex)
 		{
-			Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(Exception& ex)
+		catch(BaseLib::Exception& ex)
 		{
-			Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(...)
 		{
-			Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 
 		if(_startAsDaemon)
 		{
-			if(!std::freopen((BaseLib::settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+			if(!std::freopen((BaseLib::Obj::ins->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 			{
-				Output::printError("Error: Could not redirect output to log file.");
+				BaseLib::Output::printError("Error: Could not redirect output to log file.");
 			}
-			if(!std::freopen((BaseLib::settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
+			if(!std::freopen((BaseLib::Obj::ins->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
 			{
-				Output::printError("Error: Could not redirect errors to log file.");
+				BaseLib::Output::printError("Error: Could not redirect errors to log file.");
 			}
 		}
 
 		for(uint32_t i = 0; i < 10; ++i)
 		{
-			if(HelperFunctions::getTime() < 1000000000000)
+			if(BaseLib::HelperFunctions::getTime() < 1000000000000)
 			{
-				Output::printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
+				BaseLib::Output::printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 			}
 			else break;
 		}
-		if(HelperFunctions::getTime() < 1000000000000)
+		if(BaseLib::HelperFunctions::getTime() < 1000000000000)
 		{
-			Output::printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
+			BaseLib::Output::printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
 			terminate(SIGTERM);
 			return 1;
 		}
 
-		SystemInitializer::initialize();
+		GD::devices.loadModules();
 
-    	BaseLib::db.init(BaseLib::settings.databasePath(), BaseLib::settings.databaseSynchronous(), BaseLib::settings.databaseMemoryJournal(), BaseLib::settings.databasePath() + ".bak");
-    	if(!BaseLib::db.isOpen()) exit(1);
+    	BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".bak");
+    	if(!BaseLib::Obj::ins->db.isOpen())
+    	{
+    		exit(1);
+    	}
 
-    	GD::physicalDevices.load(BaseLib::settings.physicalDeviceSettingsPath());
-        if(GD::physicalDevices.count() == 0)
+    	BaseLib::Obj::ins->physicalDevices.load(BaseLib::Obj::ins->settings.physicalDeviceSettingsPath());
+        if(BaseLib::Obj::ins->physicalDevices.count() == 0)
         {
-        	Output::printCritical("Critical: No physical device could be initialized... Exiting...");
+        	BaseLib::Output::printCritical("Critical: No physical device could be initialized... Exiting...");
         	terminate(SIGTERM);
         	return 1;
         }
-        Output::printInfo("Loading XML RPC devices...");
-        GD::rpcDevices.load(GD::configPath + "Device types");
+        BaseLib::Output::printInfo("Loading XML RPC devices...");
+        BaseLib::Obj::ins->rpcDevices.load(GD::configPath + "Device types");
         GD::devices.convertDatabase();
-        Output::printInfo("Start listening for packets...");
-        GD::physicalDevices.startListening();
-        if(!GD::physicalDevices.isOpen())
+        BaseLib::Output::printInfo("Start listening for packets...");
+        BaseLib::Obj::ins->physicalDevices.startListening();
+        if(!BaseLib::Obj::ins->physicalDevices.isOpen())
         {
-        	Output::printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
+        	BaseLib::Output::printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
         	terminate(SIGTERM);
         	return 1;
         }
-        Output::printInfo("Loading devices...");
+        BaseLib::Output::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
         if(_startAsDaemon)
         {
-        	Output::printInfo("Starting CLI server...");
+        	BaseLib::Output::printInfo("Starting CLI server...");
         	GD::cliServer.start();
         }
 
         startRPCServers();
 
-        Output::printInfo("Loading events...");
+        BaseLib::Output::printInfo("Loading events...");
         GD::eventHandler.load();
         _startUpComplete = true;
-        Output::printInfo("Startup complete.");
+        BaseLib::Output::printInfo("Startup complete.");
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 
@@ -515,15 +532,15 @@ int main(int argc, char* argv[])
     }
     catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(Exception& ex)
+	catch(BaseLib::Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	terminate(SIGTERM);
 

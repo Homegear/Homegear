@@ -30,8 +30,7 @@
 #ifndef SOCKETOPERATIONS_H_
 #define SOCKETOPERATIONS_H_
 
-#include "../../Modules/Base/Exception.h"
-#include "../../Modules/Base/FileDescriptorManager/FileDescriptorManager.h"
+#include "../../Modules/Base/BaseLib.h"
 
 #include <thread>
 #include <iostream>
@@ -67,10 +66,10 @@
 
 namespace RPC
 {
-class SocketOperationException : public Exception
+class SocketOperationException : public BaseLib::Exception
 {
 public:
-	SocketOperationException(std::string message) : Exception(message) {}
+	SocketOperationException(std::string message) : BaseLib::Exception(message) {}
 };
 
 class SocketSizeMismatchException : public SocketOperationException
@@ -113,7 +112,7 @@ class SocketOperations
 {
 public:
 	SocketOperations();
-	SocketOperations(std::shared_ptr<FileDescriptor> fileDescriptor, SSL* ssl);
+	SocketOperations(std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor, SSL* ssl);
 	SocketOperations(std::string hostname, std::string port);
 	SocketOperations(std::string hostname, std::string port, bool useSSL, bool verifyCertificate);
 	virtual ~SocketOperations();
@@ -136,7 +135,7 @@ protected:
 	std::string _port;
 	bool _verifyCertificate = true;
 
-	std::shared_ptr<FileDescriptor> _fileDescriptor;
+	std::shared_ptr<BaseLib::FileDescriptor> _fileDescriptor;
 	bool _useSSL = false;
 	SSL* _ssl = nullptr;
 	SSL_CTX* _sslCTX = nullptr;

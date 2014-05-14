@@ -77,7 +77,7 @@ void RS485::sendPacket(std::shared_ptr<Packet> packet)
 		_lastAction = HelperFunctions::getTime();
 		if(packet->payload()->size() > 132)
 		{
-			if(BaseLib::debugLevel >= 2) Output::printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
+			if(BaseLib::Obj::ins->debugLevel >= 2) Output::printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
 			return;
 		}
 
@@ -137,7 +137,8 @@ void RS485::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = BaseLib::fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY ));
+		_fileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY ));
+		setvbuf(_fileDescriptor->descriptor, 0, _IONBF, 0);
 
 		if(_fileDescriptor->descriptor == -1)
 		{
@@ -165,7 +166,7 @@ void RS485::closeDevice()
 {
 	try
 	{
-		BaseLib::fileDescriptorManager.close(_fileDescriptor);
+		BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
 		unlink(_lockfile.c_str());
 	}
     catch(const std::exception& ex)
@@ -401,7 +402,7 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
         //Before _sending is set to true wait for the last sending to finish. Without this line
         //the new sending is sometimes not detected when two packets are sent at the same time.
         while(_receivingSending) std::this_thread::sleep_for(std::chrono::microseconds(500));
-        if(BaseLib::debugLevel > 4) Output::printDebug("Debug: RS485 device: Got lock for sending... (Packet: " + HelperFunctions::getHexString(packet) + ")");
+        if(BaseLib::Obj::ins->debugLevel > 4) Output::printDebug("Debug: RS485 device: Got lock for sending... (Packet: " + HelperFunctions::getHexString(packet) + ")");
         _lastPacketSent = HelperFunctions::getTime(); //Sending takes some time, so we set _lastPacketSent two times
         _sending = true;
         /*if(_settings->oneWay && gpioDefined(1))
@@ -422,7 +423,7 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
         }*/
 		int32_t bytesWritten = 0;
 		_receivedSentPacket.clear();
-		if(BaseLib::debugLevel > 3 && printPacket) Output::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
+		if(BaseLib::Obj::ins->debugLevel > 3 && printPacket) Output::printInfo("Info: Sending: " + HelperFunctions::getHexString(packet));
 		while(bytesWritten < (signed)packet.size())
 		{
 			int32_t i = write(_fileDescriptor->descriptor, &packet.at(0) + bytesWritten, packet.size() - bytesWritten);

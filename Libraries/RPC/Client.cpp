@@ -29,6 +29,7 @@
 
 #include "Client.h"
 #include "../GD/GD.h"
+#include "../../Modules/Base/BaseLib.h"
 
 namespace RPC
 {
@@ -53,66 +54,66 @@ void Client::initServerMethods(std::pair<std::string, std::string> address)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> values)
+void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
 {
 	try
 	{
 		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
-		std::string methodName("event"); //We can't just create the methods RPCVariable with new RPCVariable("methodName", "event") because "event" is not a string object. That's why we create the string object here.
+		std::string methodName("event"); //We can't just create the methods BaseLib::RPC::RPCVariable with new BaseLib::RPC::RPCVariable("methodName", "event") because "event" is not a string object. That's why we create the string object here.
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end()))) continue;
-			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
-			std::shared_ptr<RPCVariable> array(new RPCVariable(RPCVariableType::rpcArray));
-			std::shared_ptr<RPCVariable> method;
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
+			std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			std::shared_ptr<BaseLib::RPC::RPCVariable> method;
 			for(uint32_t i = 0; i < valueKeys->size(); i++)
 			{
-				method.reset(new RPCVariable(RPCVariableType::rpcStruct));
+				method.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 				array->arrayValue->push_back(method);
-				method->structValue->insert(RPCStructElement("methodName", std::shared_ptr<RPCVariable>(new RPCVariable(methodName))));
-				std::shared_ptr<RPCVariable> params(new RPCVariable(RPCVariableType::rpcArray));
-				method->structValue->insert(RPCStructElement("params", params));
-				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
+				method->structValue->insert(BaseLib::RPC::RPCStructElement("methodName", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(methodName))));
+				std::shared_ptr<BaseLib::RPC::RPCVariable> params(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+				method->structValue->insert(BaseLib::RPC::RPCStructElement("params", params));
+				params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
 				if((*server)->useID)
 				{
-					params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)id)));
-					params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(channel)));
+					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)id)));
+					params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel)));
 				}
-				else params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(deviceAddress)));
-				params->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(valueKeys->at(i))));
+				else params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(deviceAddress)));
+				params->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(valueKeys->at(i))));
 				params->arrayValue->push_back(values->at(i));
 			}
 			parameters->push_back(array);
 			//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
 			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "system.multicall", parameters);
-			Threads::setThreadPriority(t.native_handle(), 40);
+			BaseLib::Threads::setThreadPriority(t.native_handle(), 40);
 			t.detach();
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _serversMutex.unlock();
 }
@@ -123,26 +124,26 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 	{
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
-		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>> { std::shared_ptr<RPCVariable>(new RPCVariable(server->id)) });
-		std::shared_ptr<RPCVariable> result = _client.invoke(server, "system.listMethods", parameters);
+		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>> { std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(server->id)) });
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client.invoke(server, "system.listMethods", parameters);
 		if(result->errorStruct)
 		{
-			Output::printWarning("Warning: Error calling XML RPC method system.listMethods on server " + address.first + " with port " + address.second + ". Error struct: ");
+			BaseLib::Output::printWarning("Warning: Error calling XML RPC method system.listMethods on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
 		}
-		if(result->type != RPCVariableType::rpcArray) return;
+		if(result->type != BaseLib::RPC::RPCVariableType::rpcArray) return;
 		server->knownMethods.clear();
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
+		for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
 		{
-			if((*i)->type == RPCVariableType::rpcString)
+			if((*i)->type == BaseLib::RPC::RPCVariableType::rpcString)
 			{
 				std::pair<std::string, bool> method;
 				if((*i)->stringValue.empty()) continue;
 				method.first = (*i)->stringValue;
 				//openHAB prepends some methods with "CallbackHandler."
 				if(method.first.size() > 16 && method.first.substr(0, 16) == "CallbackHandler.") method.first = method.first.substr(16);
-				Output::printDebug("Debug: Adding method " + method.first);
+				BaseLib::Output::printDebug("Debug: Adding method " + method.first);
 				method.second = true;
 				server->knownMethods.insert(method);
 			}
@@ -151,15 +152,15 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -170,23 +171,23 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
-		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>> { std::shared_ptr<RPCVariable>(new RPCVariable(server->id)) });
-		std::shared_ptr<RPCVariable> result = _client.invoke(server, "listDevices", parameters);
+		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>> { std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(server->id)) });
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client.invoke(server, "listDevices", parameters);
 		if(result->errorStruct)
 		{
-			Output::printError("Error calling XML RPC method listDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
+			BaseLib::Output::printError("Error calling XML RPC method listDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
 		}
-		if(result->type != RPCVariableType::rpcArray) return;
+		if(result->type != BaseLib::RPC::RPCVariableType::rpcArray) return;
 		server->knownDevices->clear();
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
+		for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = result->arrayValue->begin(); i != result->arrayValue->end(); ++i)
 		{
-			if((*i)->type == RPCVariableType::rpcStruct)
+			if((*i)->type == BaseLib::RPC::RPCVariableType::rpcStruct)
 			{
 				std::pair<uint64_t, int32_t> device;
 				std::string serialNumber;
-				for(RPCStruct::iterator j = (*i)->structValue->begin(); j != (*i)->structValue->end(); ++j)
+				for(BaseLib::RPC::RPCStruct::iterator j = (*i)->structValue->begin(); j != (*i)->structValue->end(); ++j)
 				{
 					if(!j->second) continue;
 					if(j->first == "ID")
@@ -206,9 +207,9 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 				if(device.first == 0) //Client doesn't support ID's
 				{
 					if(serialNumber.empty()) break;
-					for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+					for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
 					{
-						std::shared_ptr<Central> central = i->second->getCentral();
+						std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 						if(central)
 						{
 							device.first = central->getPeerIDFromSerial(serialNumber);
@@ -222,15 +223,15 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -241,40 +242,40 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("newDevices") == server->knownMethods.end()) return;
-		std::shared_ptr<RPC::RPCVariable> devices(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
-		for(std::map<DeviceFamilies, std::shared_ptr<DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		std::shared_ptr<BaseLib::RPC::RPCVariable> devices(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
 		{
-			std::shared_ptr<Central> central = i->second->getCentral();
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<RPC::RPCVariable> result = central->listDevices(server->knownDevices);
+			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->listDevices(server->knownDevices);
 			if(!result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 		if(devices->arrayValue->empty()) return;
-		std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>{ std::shared_ptr<RPCVariable>(new RPCVariable(server->id)), devices });
-		std::shared_ptr<RPCVariable> result = _client.invoke(server, "newDevices", parameters);
+		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>{ std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(server->id)), devices });
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client.invoke(server, "newDevices", parameters);
 		if(result->errorStruct)
 		{
-			Output::printError("Error calling XML RPC method newDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
+			BaseLib::Output::printError("Error calling XML RPC method newDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
 		}
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void Client::broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions)
+void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions)
 {
 	try
 	{
@@ -284,8 +285,8 @@ void Client::broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("newDevices") == (*server)->knownMethods.end())) continue;
-			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
-			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
 			parameters->push_back(deviceDescriptions);
 			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "newDevices", parameters);
 			t.detach();
@@ -295,21 +296,21 @@ void Client::broadcastNewDevices(std::shared_ptr<RPCVariable> deviceDescriptions
 	catch(const std::exception& ex)
     {
 		_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses, std::shared_ptr<RPCVariable> deviceInfo)
+void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses, std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo)
 {
 	try
 	{
@@ -318,8 +319,8 @@ void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("deleteDevices") == (*server)->knownMethods.end())) continue;
-			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
-			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
 			if((*server)->useID) parameters->push_back(deviceInfo);
 			else parameters->push_back(deviceAddresses);
 			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "deleteDevices", parameters);
@@ -330,17 +331,17 @@ void Client::broadcastDeleteDevices(std::shared_ptr<RPCVariable> deviceAddresses
 	catch(const std::exception& ex)
     {
 		_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -353,30 +354,30 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && (*server)->knownMethods.find("updateDevice") == (*server)->knownMethods.end())) continue;
-			std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters(new std::list<std::shared_ptr<RPCVariable>>());
-			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((*server)->id)));
+			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
 			if((*server)->useID)
 			{
-				parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)id)));
-				parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(channel)));
+				parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)id)));
+				parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel)));
 			}
-			else parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(address)));
-			parameters->push_back(std::shared_ptr<RPCVariable>(new RPCVariable((int32_t)hint)));
+			else parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(address)));
+			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)hint)));
 			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "updateDevice", parameters);
 			t.detach();
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _serversMutex.unlock();
 }
@@ -392,17 +393,17 @@ void Client::reset()
 	catch(const std::exception& ex)
     {
 		_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -422,15 +423,15 @@ std::shared_ptr<RemoteRPCServer> Client::addServer(std::pair<std::string, std::s
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _serversMutex.unlock();
     return std::shared_ptr<RemoteRPCServer>(new RemoteRPCServer());
@@ -455,17 +456,17 @@ void Client::removeServer(std::pair<std::string, std::string> server)
 	catch(const std::exception& ex)
     {
 		_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -485,22 +486,22 @@ std::shared_ptr<RemoteRPCServer> Client::getServer(std::pair<std::string, std::s
 	catch(const std::exception& ex)
     {
 		_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RemoteRPCServer>();
 }
 
-std::shared_ptr<RPCVariable> Client::listClientServers(std::string id)
+std::shared_ptr<BaseLib::RPC::RPCVariable> Client::listClientServers(std::string id)
 {
 	try
 	{
@@ -512,27 +513,27 @@ std::shared_ptr<RPCVariable> Client::listClientServers(std::string id)
 			servers->push_back(*i);
 		}
 		_serversMutex.unlock();
-		if(servers->empty()) return RPC::RPCVariable::createError(-32602, "Server is unknown.");
-		std::shared_ptr<RPCVariable> serverInfos(new RPCVariable(RPCVariableType::rpcArray));
+		if(servers->empty()) return BaseLib::RPC::RPCVariable::createError(-32602, "Server is unknown.");
+		std::shared_ptr<BaseLib::RPC::RPCVariable> serverInfos(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator i = servers->begin(); i != servers->end(); ++i)
 		{
-			std::shared_ptr<RPCVariable> serverInfo(new RPCVariable(RPCVariableType::rpcStruct));
-			serverInfo->structValue->insert(RPC::RPCStructElement("INTERFACE_ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->id))));
-			serverInfo->structValue->insert(RPC::RPCStructElement("HOSTNAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->hostname))));
-			serverInfo->structValue->insert(RPC::RPCStructElement("PORT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->address.second))));
-			serverInfo->structValue->insert(RPC::RPCStructElement("PATH", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->path))));
-			serverInfo->structValue->insert(RPC::RPCStructElement("SSL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->useSSL))));
-			serverInfo->structValue->insert(RPC::RPCStructElement("BINARY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->binary))));
-			serverInfo->structValue->insert(RPC::RPCStructElement("KEEP_ALIVE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->keepAlive))));
-			serverInfo->structValue->insert(RPC::RPCStructElement("USEID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->useID))));
+			std::shared_ptr<BaseLib::RPC::RPCVariable> serverInfo(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE_ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->id))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("HOSTNAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->hostname))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("PORT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->address.second))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("PATH", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->path))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("SSL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->useSSL))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("BINARY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->binary))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("KEEP_ALIVE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->keepAlive))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("USEID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->useID))));
 			if((*i)->settings)
 			{
-				serverInfo->structValue->insert(RPC::RPCStructElement("FORCESSL", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->settings->forceSSL))));
-				serverInfo->structValue->insert(RPC::RPCStructElement("AUTH_TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)(*i)->settings->authType))));
-				serverInfo->structValue->insert(RPC::RPCStructElement("VERIFICATION_HOSTNAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->settings->hostname))));
-				serverInfo->structValue->insert(RPC::RPCStructElement("VERIFY_CERTIFICATE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->settings->verifyCertificate))));
+				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("FORCESSL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->settings->forceSSL))));
+				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("AUTH_TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(*i)->settings->authType))));
+				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("VERIFICATION_HOSTNAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->settings->hostname))));
+				serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("VERIFY_CERTIFICATE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->settings->verifyCertificate))));
 			}
-			serverInfo->structValue->insert(RPC::RPCStructElement("LASTPACKETSENT", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((*i)->lastPacketSent))));
+			serverInfo->structValue->insert(BaseLib::RPC::RPCStructElement("LASTPACKETSENT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->lastPacketSent))));
 
 			serverInfos->arrayValue->push_back(serverInfo);
 		}
@@ -541,22 +542,22 @@ std::shared_ptr<RPCVariable> Client::listClientServers(std::string id)
 	catch(const std::exception& ex)
     {
 		_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<RPCVariable> Client::clientServerInitialized(std::string id)
+std::shared_ptr<BaseLib::RPC::RPCVariable> Client::clientServerInitialized(std::string id)
 {
 	try
 	{
@@ -571,24 +572,24 @@ std::shared_ptr<RPCVariable> Client::clientServerInitialized(std::string id)
 			}
 		}
 		_serversMutex.unlock();
-		return std::shared_ptr<RPCVariable>(new RPCVariable(initialized));
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(initialized));
 	}
 	catch(const std::exception& ex)
     {
 		_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_serversMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 } /* namespace RPC */

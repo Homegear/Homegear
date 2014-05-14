@@ -36,6 +36,8 @@
 #include <vector>
 #include <string>
 
+namespace BaseLib
+{
 class BinaryDecoder
 {
 public:
@@ -48,5 +50,5 @@ public:
 	virtual bool decodeBoolean(std::shared_ptr<std::vector<char>>& encodedData, uint32_t& position);
 	virtual double decodeFloat(std::shared_ptr<std::vector<char>>& encodedData, uint32_t& position);
 };
-
+}
 #endif /* BINARYDECODER_H_ */

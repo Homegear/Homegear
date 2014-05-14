@@ -33,23 +33,28 @@
 #include <vector>
 #include <memory>
 
-#include "../Types/Packet.h"
+#include "../Systems/Packet.h"
 #include "Device.h"
 
-namespace RPC {
+namespace BaseLib
+{
+namespace RPC
+{
 
-class Devices {
+class Devices
+{
 public:
 	Devices();
 	virtual ~Devices() {}
 	virtual void load(std::string path);
-	virtual std::shared_ptr<Device> find(DeviceFamilies family, std::shared_ptr<Packet> packet);
-	virtual std::shared_ptr<Device> find(DeviceFamilies family, std::string typeID, std::shared_ptr<Packet> packet = std::shared_ptr<Packet>());
-	virtual std::shared_ptr<Device> find(LogicalDeviceType deviceType, uint32_t firmwareVersion, std::shared_ptr<Packet> packet = std::shared_ptr<Packet>());
-	virtual std::shared_ptr<Device> find(LogicalDeviceType deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo);
+	virtual std::shared_ptr<Device> find(Systems::DeviceFamilies family, std::shared_ptr<Systems::Packet> packet);
+	virtual std::shared_ptr<Device> find(Systems::DeviceFamilies family, std::string typeID, std::shared_ptr<Systems::Packet> packet = std::shared_ptr<Systems::Packet>());
+	virtual std::shared_ptr<Device> find(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion, std::shared_ptr<Systems::Packet> packet = std::shared_ptr<Systems::Packet>());
+	virtual std::shared_ptr<Device> find(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo);
 protected:
 	std::vector<std::shared_ptr<Device>> _devices;
 };
 
-} /* namespace XMLRPC */
+}
+}
 #endif /* DEVICES_H_ */

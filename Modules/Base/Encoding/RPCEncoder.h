@@ -31,13 +31,15 @@
 #define RPCENCODER_H_
 
 #include "RPCHeader.h"
-#include "../Types/RPCVariable.h"
+#include "../RPC/RPCVariable.h"
 #include "BinaryEncoder.h"
 
 #include <memory>
 #include <cstring>
 #include <list>
 
+namespace BaseLib
+{
 namespace RPC
 {
 
@@ -68,6 +70,6 @@ private:
 	void encodeStruct(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
 	void encodeArray(std::shared_ptr<std::vector<char>>& packet, std::shared_ptr<RPCVariable>& variable);
 };
-
+}
 } /* namespace RPC */
 #endif /* RPCENCODER_H_ */

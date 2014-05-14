@@ -30,7 +30,10 @@
 #include "Device.h"
 #include "../BaseLib.h"
 
-namespace RPC {
+namespace BaseLib
+{
+namespace RPC
+{
 
 DescriptionField::DescriptionField(xml_node<>* node)
 {
@@ -968,7 +971,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
     }
 }
 
-bool DeviceType::matches(LogicalDeviceType deviceType, uint32_t firmwareVersion)
+bool DeviceType::matches(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion)
 {
 	try
 	{
@@ -1002,7 +1005,7 @@ bool DeviceType::matches(LogicalDeviceType deviceType, uint32_t firmwareVersion)
     return false;
 }
 
-bool DeviceType::matches(DeviceFamilies family, std::string typeID)
+bool DeviceType::matches(Systems::DeviceFamilies family, std::string typeID)
 {
 	try
 	{
@@ -1024,7 +1027,7 @@ bool DeviceType::matches(DeviceFamilies family, std::string typeID)
     return false;
 }
 
-bool DeviceType::matches(DeviceFamilies family, std::shared_ptr<Packet> packet)
+bool DeviceType::matches(Systems::DeviceFamilies family, std::shared_ptr<Systems::Packet> packet)
 {
 	try
 	{
@@ -1619,8 +1622,8 @@ void Device::parseXML(xml_node<>* node)
 			else if(attributeName == "family")
 			{
 				HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
-				if(attributeValue == "homematicbidcos") family = DeviceFamilies::HomeMaticBidCoS;
-				else if(attributeValue == "homematicwired") family = DeviceFamilies::HomeMaticWired;
+				if(attributeValue == "homematicbidcos") family = Systems::DeviceFamilies::HomeMaticBidCoS;
+				else if(attributeValue == "homematicwired") family = Systems::DeviceFamilies::HomeMaticWired;
 			}
 			else if(attributeName == "rx_modes")
 			{
@@ -1841,7 +1844,7 @@ void Device::parseXML(xml_node<>* node)
     }
 }
 
-int32_t Device::getCountFromSysinfo(std::shared_ptr<Packet> packet)
+int32_t Device::getCountFromSysinfo(std::shared_ptr<Systems::Packet> packet)
 {
 	try
 	{
@@ -1904,7 +1907,7 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
     }
 }
 
-std::shared_ptr<DeviceType> Device::getType(LogicalDeviceType deviceType, int32_t firmwareVersion)
+std::shared_ptr<DeviceType> Device::getType(Systems::LogicalDeviceType deviceType, int32_t firmwareVersion)
 {
 	try
 	{
@@ -1928,4 +1931,5 @@ std::shared_ptr<DeviceType> Device::getType(LogicalDeviceType deviceType, int32_
 	return std::shared_ptr<DeviceType>();
 }
 
+}
 }

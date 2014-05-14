@@ -55,9 +55,9 @@ bool User::verify(const std::string& userName, const std::string& password)
 {
 	try
 	{
-		DataColumnVector dataSelect;
-		dataSelect.push_back(std::shared_ptr<DataColumn>(new DataColumn(userName)));
-		DataTable rows = BaseLib::db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
+		BaseLib::DataColumnVector dataSelect;
+		dataSelect.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
+		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
 		if(rows.empty() || rows.at(0).empty() || rows.at(0).size() != 2) return false;
 		std::vector<unsigned char> salt;
 		salt.insert(salt.begin(), rows.at(0).at(1)->binaryValue->begin(), rows.at(0).at(1)->binaryValue->end());
@@ -69,11 +69,11 @@ bool User::verify(const std::string& userName, const std::string& password)
 	}
 	catch(std::exception& ex)
 	{
-		Output::printError("Error verifying user credentials: " + std::string(ex.what()));
+		BaseLib::Output::printError("Error verifying user credentials: " + std::string(ex.what()));
 	}
 	catch(...)
 	{
-		Output::printError("Unknown error verifying user credentials.");
+		BaseLib::Output::printError("Unknown error verifying user credentials.");
 	}
 	return false;
 }

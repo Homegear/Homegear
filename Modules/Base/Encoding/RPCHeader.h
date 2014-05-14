@@ -32,6 +32,8 @@
 
 #include <string>
 
+namespace BaseLib
+{
 namespace RPC
 {
 class RPCHeader
@@ -43,4 +45,5 @@ public:
 	std::string authorization;
 };
 } /* namespace RPC */
+}
 #endif /* RPCHEADER_H_ */

@@ -32,10 +32,14 @@
 
 #include "../HelperFunctions/HelperFunctions.h"
 #include "../Systems/DeviceFamilies.h"
-#include "../Types/Packet.h"
+#include "../Systems/Packet.h"
 
 #include <memory>
 
+namespace BaseLib
+{
+namespace Systems
+{
 class LogicalDevice
 {
 public:
@@ -65,4 +69,6 @@ protected:
     uint32_t _deviceType = 0;
 };
 
+}
+}
 #endif /* LOGICALDEVICE_H_ */

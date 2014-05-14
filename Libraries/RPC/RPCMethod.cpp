@@ -32,12 +32,12 @@
 
 namespace RPC
 {
-std::shared_ptr<RPCVariable> RPCMethod::invoke(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters)
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCMethod::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
 {
-	return std::shared_ptr<RPCVariable>(new RPCVariable());
+	return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable());
 }
 
-RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<RPCVariableType> types)
+RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters, std::vector<BaseLib::RPC::RPCVariableType> types)
 {
 	if(types.size() != parameters->size())
 	{
@@ -45,16 +45,16 @@ RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::
 	}
 	for(uint32_t i = 0; i < types.size(); i++)
 	{
-		if(types.at(i) == RPCVariableType::rpcVariant && parameters->at(i)->type != RPCVariableType::rpcVoid) continue;
+		if(types.at(i) == BaseLib::RPC::RPCVariableType::rpcVariant && parameters->at(i)->type != BaseLib::RPC::RPCVariableType::rpcVoid) continue;
 		if(types.at(i) != parameters->at(i)->type) return RPCMethod::ParameterError::Enum::wrongType;
 	}
 	return RPCMethod::ParameterError::Enum::noError;
 }
 
-RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters, std::vector<std::vector<RPCVariableType>> types)
+RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>> types)
 {
 	RPCMethod::ParameterError::Enum error = RPCMethod::ParameterError::Enum::wrongCount;
-	for(std::vector<std::vector<RPCVariableType>>::iterator i = types.begin(); i != types.end(); ++i)
+	for(std::vector<std::vector<BaseLib::RPC::RPCVariableType>>::iterator i = types.begin(); i != types.end(); ++i)
 	{
 		RPCMethod::ParameterError::Enum result = checkParameters(parameters, *i);
 		if(result == RPCMethod::ParameterError::Enum::noError) return result;
@@ -63,60 +63,60 @@ RPCMethod::ParameterError::Enum RPCMethod::checkParameters(std::shared_ptr<std::
 	return error;
 }
 
-std::shared_ptr<RPCVariable> RPCMethod::getError(RPCMethod::ParameterError::Enum error)
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCMethod::getError(RPCMethod::ParameterError::Enum error)
 {
-	if(error == ParameterError::Enum::wrongCount) return RPCVariable::createError(-1, "Wrong parameter count.");
-	else if(error == ParameterError::Enum::wrongType) return RPCVariable::createError(-1, "Type error.");
-	return RPCVariable::createError(-1, "Unknown parameter error.");
+	if(error == ParameterError::Enum::wrongCount) return BaseLib::RPC::RPCVariable::createError(-1, "Wrong parameter count.");
+	else if(error == ParameterError::Enum::wrongType) return BaseLib::RPC::RPCVariable::createError(-1, "Type error.");
+	return BaseLib::RPC::RPCVariable::createError(-1, "Unknown parameter error.");
 }
 
 void RPCMethod::setHelp(std::string help)
 {
 	try
 	{
-		_help.reset(new RPCVariable(help));
+		_help.reset(new BaseLib::RPC::RPCVariable(help));
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void RPCMethod::addSignature(RPCVariableType returnType, std::vector<RPCVariableType> parameterTypes)
+void RPCMethod::addSignature(BaseLib::RPC::RPCVariableType returnType, std::vector<BaseLib::RPC::RPCVariableType> parameterTypes)
 {
 	try
 	{
-		if(!_signatures) _signatures.reset(new RPCVariable(RPCVariableType::rpcArray));
+		if(!_signatures) _signatures.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 
-		std::shared_ptr<RPCVariable> element(new RPCVariable(RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::RPCVariable> element(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 
-		element->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariable::getTypeString(returnType))));
+		element->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariable::getTypeString(returnType))));
 
-		for(std::vector<RPCVariableType>::iterator i = parameterTypes.begin(); i != parameterTypes.end(); ++i)
+		for(std::vector<BaseLib::RPC::RPCVariableType>::iterator i = parameterTypes.begin(); i != parameterTypes.end(); ++i)
 		{
-			element->arrayValue->push_back(std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariable::getTypeString(*i))));
+			element->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariable::getTypeString(*i))));
 		}
 		_signatures->arrayValue->push_back(element);
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(Exception& ex)
+    catch(BaseLib::Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
