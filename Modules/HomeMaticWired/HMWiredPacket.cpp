@@ -472,6 +472,29 @@ std::vector<uint8_t> HMWiredPacket::byteArray()
     return _escapedPacket;
 }
 
+std::vector<char> HMWiredPacket::byteArraySigned()
+{
+	std::vector<char> packet;
+	try
+	{
+		byteArray();
+		packet.insert(packet.begin(), _escapedPacket.begin(), _escapedPacket.end());
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return packet;
+}
+
 std::string HMWiredPacket::hexString()
 {
 	try

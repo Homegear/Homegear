@@ -127,7 +127,7 @@ void SocketOperations::close()
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 {
-	Output::printDebug("Calling proofread...");
+	Output::printDebug("Debug: Calling proofread...");
 	if(!connected()) autoConnect();
 	//Timeout needs to be set every time, so don't put it outside of the while loop
 	timeval timeout;
@@ -157,11 +157,11 @@ int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>> data)
 
 int32_t SocketOperations::proofwrite(std::vector<char>& data)
 {
-	Output::printDebug("Calling proofwrite ...");
+	Output::printDebug("Debug: Calling proofwrite ...");
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
 	if(data.size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
-	Output::printDebug(" ... data size is " + std::to_string(data.size()));
+	Output::printDebug("Debug: ... data size is " + std::to_string(data.size()));
 
 	int32_t bytesSentSoFar = 0;
 	while (bytesSentSoFar < (signed)data.size())
@@ -180,13 +180,13 @@ int32_t SocketOperations::proofwrite(std::vector<char>& data)
 		int32_t bytesSentInStep = _ssl ? SSL_write(_ssl, &data.at(bytesSentSoFar), bytesToSend) : send(_fileDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
 		if(bytesSentInStep <= 0)
 		{
-			Output::printDebug(" ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
+			Output::printDebug("Debug: ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
 			close();
 			throw SocketOperationException(strerror(errno));
 		}
 		bytesSentSoFar += bytesSentInStep;
 	}
-	Output::printDebug(" ... sent " + std::to_string(bytesSentSoFar));
+	Output::printDebug("Debug: ... sent " + std::to_string(bytesSentSoFar));
 	return bytesSentSoFar;
 }
 
@@ -201,7 +201,7 @@ bool SocketOperations::connected()
 
 void SocketOperations::getFileDescriptor()
 {
-	Output::printDebug("Calling getFileDescriptor...");
+	Output::printDebug("Debug: Calling getFileDescriptor...");
 	Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
 
 	getConnection();

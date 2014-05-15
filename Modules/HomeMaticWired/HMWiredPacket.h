@@ -70,6 +70,7 @@ class HMWiredPacket : public BaseLib::Systems::Packet
         bool synchronizationBit() { return _synchronizationBit; }
         virtual std::string hexString();
         virtual std::vector<uint8_t> byteArray();
+        virtual std::vector<char> byteArraySigned();
 
         void import(std::vector<uint8_t>& packet);
         void import(std::string packetHex);
