@@ -32,14 +32,14 @@
 
 namespace RPC
 {
-Auth::Auth(SocketOperations& socket, std::vector<std::string>& validUsers)
+Auth::Auth(BaseLib::SocketOperations& socket, std::vector<std::string>& validUsers)
 {
 	_socket = socket;
 	_validUsers = validUsers;
 	_initialized = true;
 }
 
-Auth::Auth(SocketOperations& socket, std::string userName, std::string password)
+Auth::Auth(BaseLib::SocketOperations& socket, std::string userName, std::string password)
 {
 	_socket = socket;
 	_userName = userName;
@@ -72,7 +72,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 		{
 			_socket.proofwrite(_basicUnauthBinaryHeader);
 		}
-		catch(SocketOperationException& ex)
+		catch(BaseLib::SocketOperationException& ex)
 		{
 			throw AuthException("Authorization failed because of socket exception: " + ex.what());
 		}
@@ -93,7 +93,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 		{
 			_socket.proofwrite(_basicUnauthHTTPHeader);
 		}
-		catch(SocketOperationException& ex)
+		catch(BaseLib::SocketOperationException& ex)
 		{
 			throw AuthException("Authorization failed because of socket exception: " + ex.what());
 		}
@@ -163,7 +163,7 @@ bool Auth::basicServer(HTTP& httpPacket)
 				throw AuthException("Authorization failed because of HTTP exception: " + ex.what());
 			}
 		}
-		catch(SocketOperationException& ex)
+		catch(BaseLib::SocketOperationException& ex)
 		{
 			throw AuthException("Authorization failed because of socket exception: " + ex.what());
 		}

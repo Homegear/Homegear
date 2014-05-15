@@ -44,8 +44,8 @@ enum class BidCoSQueueType;
 class HM_LC_SWX_FM : public HomeMaticDevice
 {
     public:
-        HM_LC_SWX_FM();
-        HM_LC_SWX_FM(uint32_t deviceType, std::string, int32_t);
+        HM_LC_SWX_FM(IDeviceEventSink* eventHandler);
+        HM_LC_SWX_FM(uint32_t deviceType, std::string, int32_t, IDeviceEventSink* eventHandler);
         virtual ~HM_LC_SWX_FM();
 
         std::string handleCLICommand(std::string command);

@@ -33,12 +33,12 @@
 
 namespace BidCoS
 {
-HM_SD::HM_SD() : HomeMaticDevice()
+HM_SD::HM_SD(IDeviceEventSink* eventHandler) : HomeMaticDevice(eventHandler)
 {
 	init();
 }
 
-HM_SD::HM_SD(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
+HM_SD::HM_SD(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : HomeMaticDevice(deviceID, serialNumber, address, eventHandler)
 {
 	init();
 }

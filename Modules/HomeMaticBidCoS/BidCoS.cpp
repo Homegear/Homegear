@@ -41,9 +41,10 @@
 
 namespace BidCoS
 {
-BidCoS::BidCoS(std::shared_ptr<BaseLib::Obj> baseLib) : BaseLib::Systems::DeviceFamily(baseLib)
+BidCoS::BidCoS(std::shared_ptr<BaseLib::Obj> baseLib, IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(baseLib, eventHandler)
 {
-	BaseLib::Output::printDebug("Debug: Loading module HomeMatic BidCoS");
+	BaseLib::Output::setPrefix("Module HomeMatic BidCoS: ");
+	BaseLib::Output::printDebug("Debug: Loading module...");
 	_family = BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS;
 }
 
@@ -87,7 +88,7 @@ std::shared_ptr<BaseLib::Systems::PhysicalDevice> BidCoS::createPhysicalDevice(s
 {
 	try
 	{
-		BaseLib::Output::printDebug("Debug: Creating physical device for family HomeMatic BidCoS. Type defined in physicaldevices.conf is: " + settings->type);
+		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicaldevices.conf is: " + settings->type);
 		GD::physicalDevice = std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
 		if(!settings) return GD::physicalDevice;
 		if(settings->type == "cul") GD::physicalDevice.reset(new CUL(settings));
@@ -153,7 +154,7 @@ void BidCoS::createCentral()
 		int32_t address = getUniqueAddress(0xfd);
 		std::string serialNumber(getUniqueSerialNumber("VBC", BaseLib::HelperFunctions::getRandomNumber(1, 9999999)));
 
-		_central.reset(new HomeMaticCentral(0, serialNumber, address));
+		_central.reset(new HomeMaticCentral(0, serialNumber, address, this));
 		add(_central);
 		BaseLib::Output::printMessage("Created HomeMatic BidCoS central with id " + std::to_string(_central->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
 	}
@@ -182,7 +183,7 @@ void BidCoS::createSpyDevice()
 		int32_t address = _central->getUniqueAddress(seed);
 		std::string serialNumber(getUniqueSerialNumber("VBS", BaseLib::HelperFunctions::getRandomNumber(1, 9999999)));
 
-		std::shared_ptr<BaseLib::Systems::LogicalDevice> device(new HM_SD(0, serialNumber, address));
+		std::shared_ptr<BaseLib::Systems::LogicalDevice> device(new HM_SD(0, serialNumber, address, this));
 		add(device);
 		BaseLib::Output::printMessage("Created HomeMatic BidCoS spy device with id " + std::to_string(device->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
 	}
@@ -283,21 +284,21 @@ void BidCoS::load(bool version_0_0_7)
 			switch((DeviceType)deviceType)
 			{
 			case DeviceType::HMCCTC:
-				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_CC_TC(deviceID, serialNumber, address));
+				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_CC_TC(deviceID, serialNumber, address, this));
 				break;
 			case DeviceType::HMLCSW1FM:
-				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_LC_SWX_FM(deviceID, serialNumber, address));
+				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_LC_SWX_FM(deviceID, serialNumber, address, this));
 				break;
 			case DeviceType::HMCCVD:
-				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_CC_VD(deviceID, serialNumber, address));
+				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_CC_VD(deviceID, serialNumber, address, this));
 				break;
 			case DeviceType::HMCENTRAL:
-				_central = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral(deviceID, serialNumber, address));
+				_central = std::shared_ptr<HomeMaticCentral>(new HomeMaticCentral(deviceID, serialNumber, address, this));
 				device = _central;
 				break;
 			case DeviceType::HMSD:
 				spyDeviceExists = true;
-				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_SD(deviceID, serialNumber, address));
+				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_SD(deviceID, serialNumber, address, this));
 				break;
 			default:
 				break;
@@ -436,24 +437,24 @@ std::string BidCoS::handleCLICommand(std::string& command)
 			switch(deviceType)
 			{
 			case (uint32_t)DeviceType::HMCCTC:
-				add(std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_CC_TC(0, serialNumber, address)));
+				add(std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_CC_TC(0, serialNumber, address, this)));
 				stringStream << "Created HM_CC_TC with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			case (uint32_t)DeviceType::HMCCVD:
-				add(std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_CC_VD(0, serialNumber, address)));
+				add(std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_CC_VD(0, serialNumber, address, this)));
 				stringStream << "Created HM_CC_VD with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			case (uint32_t)DeviceType::HMCENTRAL:
 				if(_central) stringStream << "Cannot create more than one HomeMatic BidCoS central device." << std::endl;
 				else
 				{
-					_central.reset(new HomeMaticCentral(0, serialNumber, address));
+					_central.reset(new HomeMaticCentral(0, serialNumber, address, this));
 					add(_central);
 					stringStream << "Created HomeMatic BidCoS Central with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				}
 				break;
 			case (uint32_t)DeviceType::HMSD:
-				add(std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_SD(0, serialNumber, address)));
+				add(std::shared_ptr<BaseLib::Systems::LogicalDevice>(new HM_SD(0, serialNumber, address, this)));
 				stringStream << "Created HomeMatic BidCoS Spy Device with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			default:

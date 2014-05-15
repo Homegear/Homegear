@@ -51,7 +51,9 @@ public:
 	virtual ~IEvents();
 
 	virtual void addEventHandler(IEventSinkBase* eventHandler);
+	virtual void addEventHandlers(std::vector<IEventSinkBase*> eventHandlers);
 	virtual void removeEventHandler(IEventSinkBase* eventHandler);
+	virtual std::vector<IEventSinkBase*> getEventHandlers();
 protected:
 	std::mutex _eventHandlerMutex;
     std::vector<IEventSinkBase*> _eventHandlers;

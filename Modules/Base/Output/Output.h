@@ -50,6 +50,7 @@ public:
 	virtual ~Output();
 
 	static void setDebugLevel(int32_t debugLevel) { _debugLevel = debugLevel; }
+	static void setPrefix(std::string prefix) { _prefix = prefix; }
 
 	static void printThreadPriority();
 
@@ -66,6 +67,7 @@ public:
 	static void printMessage(std::string message, int32_t minDebugLevel = 0);
 private:
 	static int32_t _debugLevel;
+	static std::string _prefix;
 
 	Output() {}
 };

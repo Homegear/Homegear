@@ -33,6 +33,7 @@ namespace BaseLib
 {
 
 int32_t Output::_debugLevel = 3;
+std::string Output::_prefix;
 
 Output::~Output()
 {
@@ -143,44 +144,44 @@ void Output::printBinary(std::shared_ptr<std::vector<char>> data)
 
 void Output::printEx(std::string file, uint32_t line, std::string function, std::string what)
 {
-	if(!what.empty()) std::cerr << getTimeString() << " Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
-	else std::cerr << getTimeString() << " Unknown error in file " << file << " line " << line << " in function " << function << "." << std::endl;
+	if(!what.empty()) std::cerr << getTimeString() << " " << _prefix << "Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
+	else std::cerr << getTimeString() << " " << _prefix << "Unknown error in file " << file << " line " << line << " in function " << function << "." << std::endl;
 }
 
 void Output::printCritical(std::string errorString)
 {
 	if(_debugLevel < 1) return;
-	std::cerr << getTimeString() << " " << errorString << std::endl;
+	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
 }
 
 void Output::printError(std::string errorString)
 {
 	if(_debugLevel < 2) return;
-	std::cerr << getTimeString() << " " << errorString << std::endl;
+	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
 }
 
 void Output::printWarning(std::string errorString)
 {
 	if(_debugLevel < 3) return;
-	std::cerr << getTimeString() << " " << errorString << std::endl;
+	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
 }
 
 void Output::printInfo(std::string message)
 {
 	if(_debugLevel < 4) return;
-	std::cout << getTimeString() << " " << message << std::endl;
+	std::cout << getTimeString() << " " << _prefix << message << std::endl;
 }
 
 void Output::printDebug(std::string message, int32_t minDebugLevel)
 {
 	if(_debugLevel < minDebugLevel) return;
-	std::cout << getTimeString() << " " << message << std::endl;
+	std::cout << getTimeString() << " " << _prefix << message << std::endl;
 }
 
 void Output::printMessage(std::string message, int32_t minDebugLevel)
 {
 	if(_debugLevel < minDebugLevel) return;
-	std::cout << getTimeString() << " " << message << std::endl;
+	std::cout << getTimeString() << " " << _prefix << message << std::endl;
 }
 
 }

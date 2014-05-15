@@ -32,7 +32,7 @@
 
 namespace BidCoS
 {
-HM_CC_VD::HM_CC_VD(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
+HM_CC_VD::HM_CC_VD(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : HomeMaticDevice(deviceID, serialNumber, address, eventHandler)
 {
 	try
 	{
@@ -64,7 +64,7 @@ HM_CC_VD::HM_CC_VD(uint32_t deviceID, std::string serialNumber, int32_t address)
     }
 }
 
-HM_CC_VD::HM_CC_VD() : HomeMaticDevice()
+HM_CC_VD::HM_CC_VD(IDeviceEventSink* eventHandler) : HomeMaticDevice(eventHandler)
 {
 	init();
 }

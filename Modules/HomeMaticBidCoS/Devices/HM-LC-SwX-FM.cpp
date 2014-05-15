@@ -33,12 +33,12 @@
 
 namespace BidCoS
 {
-HM_LC_SWX_FM::HM_LC_SWX_FM() : HomeMaticDevice()
+HM_LC_SWX_FM::HM_LC_SWX_FM(IDeviceEventSink* eventHandler) : HomeMaticDevice(eventHandler)
 {
 	init();
 }
 
-HM_LC_SWX_FM::HM_LC_SWX_FM(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
+HM_LC_SWX_FM::HM_LC_SWX_FM(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : HomeMaticDevice(deviceID, serialNumber, address, eventHandler)
 {
 	init();
 }

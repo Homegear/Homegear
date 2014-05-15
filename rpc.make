@@ -96,7 +96,6 @@ endif
 OBJECTS := \
 	$(OBJDIR)/RPCMethod.o \
 	$(OBJDIR)/RPCServer.o \
-	$(OBJDIR)/SocketOperations.o \
 	$(OBJDIR)/Base64.o \
 	$(OBJDIR)/RPCClient.o \
 	$(OBJDIR)/HTTP.o \
@@ -174,9 +173,6 @@ $(OBJDIR)/RPCMethod.o: Libraries/RPC/RPCMethod.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RPCServer.o: Libraries/RPC/RPCServer.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/SocketOperations.o: Libraries/RPC/SocketOperations.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Base64.o: Libraries/RPC/Base64.cpp

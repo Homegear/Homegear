@@ -53,7 +53,7 @@ void Settings::reset()
 	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
 	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
 	_physicalDeviceSettingsPath = "/etc/homegear/physicaldevices.conf";
-	_libraryPath = "/var/lib/homegear/modules/";
+	_modulePath = "/var/lib/homegear/modules/";
 	_scriptPath = "/var/lib/homegear/scripts/";
 	_firmwarePath = "/var/lib/homegear/firmware/";
 	_tunnelClients.clear();
@@ -192,11 +192,11 @@ void Settings::load(std::string filename)
 					if(_physicalDeviceSettingsPath.empty()) _physicalDeviceSettingsPath = "/etc/homegear/physicaldevices.conf";
 					Output::printDebug("Debug: physicalDeviceSettingsPath set to " + _physicalDeviceSettingsPath);
 				}
-				else if(name == "librarypath")
+				else if(name == "modulepath")
 				{
-					_libraryPath = value;
-					if(_libraryPath.empty()) _libraryPath = "/var/lib/homegear/modules/";
-					Output::printDebug("Debug: libraryPath set to " + _libraryPath);
+					_modulePath = value;
+					if(_modulePath.empty()) _modulePath = "/var/lib/homegear/modules/";
+					Output::printDebug("Debug: libraryPath set to " + _modulePath);
 				}
 				else if(name == "scriptpath")
 				{

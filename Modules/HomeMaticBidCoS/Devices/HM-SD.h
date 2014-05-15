@@ -54,8 +54,8 @@ class HM_SD_OverwriteResponse
 class HM_SD : public HomeMaticDevice
 {
     public:
-        HM_SD();
-        HM_SD(uint32_t deviceType, std::string serialNumber, int32_t address);
+        HM_SD(IDeviceEventSink* eventHandler);
+        HM_SD(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~HM_SD();
         bool packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
         void addFilter(FilterType, int32_t);

@@ -36,7 +36,7 @@ namespace BaseLib
 namespace Systems
 {
 
-Peer::Peer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler)
+Peer::Peer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler)
 {
 	try
 	{
@@ -44,8 +44,7 @@ Peer::Peer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler)
 		_centralFeatures = centralFeatures;
 		if(centralFeatures)
 		{
-			serviceMessages.reset(new ServiceMessages(0, ""));
-			serviceMessages->addEventHandler(this);
+			serviceMessages.reset(new ServiceMessages(0, "", this));
 		}
 		_lastPacketReceived = HelperFunctions::getTimeSeconds();
 		rpcDevice.reset();
@@ -65,7 +64,7 @@ Peer::Peer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler)
     }
 }
 
-Peer::Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler) : Peer(parentID, centralFeatures, eventHandler)
+Peer::Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(parentID, centralFeatures, eventHandler)
 {
 	try
 	{
@@ -98,14 +97,64 @@ Peer::~Peer()
 }
 
 //Event handling
-void Peer::raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void Peer::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	try
 	{
 		_eventHandlerMutex.lock();
 		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
-			if(*i) ((IEventSink*)*i)->onRPCBroadcast(id, channel, deviceAddress, valueKeys, values);
+			if(*i) ((IPeerEventSink*)*i)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void Peer::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IPeerEventSink*)*i)->onRPCUpdateDevice(id, channel, address, hint);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void Peer::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IPeerEventSink*)*i)->onEvent(peerID, channel, variables, values);
 		}
 	}
 	catch(const std::exception& ex)
@@ -125,11 +174,11 @@ void Peer::raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceA
 //End event handling
 
 //ServiceMessages event handling
-void Peer::onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void Peer::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	try
 	{
-		raiseOnRPCBroadcast(id, channel, deviceAddress, valueKeys, values);
+		raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
 	}
 	catch(const std::exception& ex)
     {

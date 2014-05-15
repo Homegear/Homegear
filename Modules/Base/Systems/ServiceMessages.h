@@ -51,20 +51,20 @@ class ServiceMessages : public BaseLib::IEvents
 {
 public:
 	//Event handling
-	class IEventSink : public IEventSinkBase
+	class IServiceEventSink : public IEventSinkBase
 	{
 	public:
-		virtual void onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
 		virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data) = 0;
 		virtual void onEnqueuePendingQueues() = 0;
 	};
 
-	virtual void raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
-	virtual void raiseOnSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
-	virtual void raiseOnEnqueuePendingQueues();
+	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
+	virtual void raiseEnqueuePendingQueues();
 	//End event handling
 
-	ServiceMessages(uint64_t peerID, std::string peerSerial);
+	ServiceMessages(uint64_t peerID, std::string peerSerial, IServiceEventSink* eventHandler);
 	virtual ~ServiceMessages();
 
 	virtual void setPeerID(uint64_t peerID) { _peerID = peerID; }

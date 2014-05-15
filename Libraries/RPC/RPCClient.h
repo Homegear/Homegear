@@ -32,7 +32,6 @@
 
 #include "ClientSettings.h"
 #include "../../Modules/Base/BaseLib.h"
-#include "SocketOperations.h"
 #include "HTTP.h"
 #include "Auth.h"
 
@@ -84,7 +83,7 @@ public:
 	std::string id;
 	std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
-	SocketOperations socket;
+	BaseLib::SocketOperations socket;
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	std::mutex sendMutex;
 	Auth auth;

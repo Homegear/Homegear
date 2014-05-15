@@ -35,11 +35,11 @@
 namespace BidCoS
 {
 
-HomeMaticDevice::HomeMaticDevice() : LogicalDevice()
+HomeMaticDevice::HomeMaticDevice(IDeviceEventSink* eventHandler) : LogicalDevice(eventHandler)
 {
 }
 
-HomeMaticDevice::HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address)  : LogicalDevice(deviceID, serialNumber, address)
+HomeMaticDevice::HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler)  : LogicalDevice(deviceID, serialNumber, address, eventHandler)
 {
 }
 
@@ -256,28 +256,6 @@ void HomeMaticDevice::stopThreads()
         BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
-
-//Event handling
-void HomeMaticDevice::onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
-{
-	try
-	{
-		//GD::rpcClient.broadcastEvent(id, channel, deviceAddress, valueKeys, values);
-	}
-    catch(const std::exception& ex)
-    {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-//End event handling
 
 bool HomeMaticDevice::isCentral()
 {

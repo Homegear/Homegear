@@ -36,7 +36,7 @@
 class BidCoSFactory : BaseLib::Systems::SystemFactory
 {
 public:
-	virtual std::shared_ptr<BaseLib::Systems::DeviceFamily> createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib);
+	virtual std::shared_ptr<BaseLib::Systems::DeviceFamily> createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
 };
 
 extern "C"

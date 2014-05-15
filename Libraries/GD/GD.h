@@ -30,20 +30,9 @@
 #ifndef GD_H_
 #define GD_H_
 
-namespace PhysicalDevices
-{
-	class PhysicalDevices;
-}
-namespace RPC
-{
-	class ServerSettings;
-	class ClientSettings;
-}
-class EventHandler;
-
 #include "../CLI/CLIServer.h"
 #include "../CLI/CLIClient.h"
-#include "../Systems/General/FamilyController.h"
+#include "../Systems/FamilyController.h"
 #include "../../Modules/Base/BaseLib.h"
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
@@ -53,7 +42,8 @@ class EventHandler;
 #include <string>
 #include <dlfcn.h>
 
-class GD {
+class GD
+{
 public:
 	static std::string configPath;
 	static std::string runDir;

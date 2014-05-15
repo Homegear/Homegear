@@ -58,6 +58,7 @@ solution "homegear"
         "./Modules/Base/Encoding/*.h", "./Modules/Base/Encoding/*.cpp",
         "./Modules/Base/Database/*.h", "./Modules/Base/Database/*.cpp",
         "./Modules/Base/Metadata/*.h", "./Modules/Base/Metadata/*.cpp",
+        "./Modules/Base/Sockets/*.h", "./Modules/Base/Sockets/*.cpp",
         "./Modules/Base/Threads/*.h", "./Modules/Base/Threads/*.cpp",
         "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp"
       }
@@ -104,6 +105,90 @@ solution "homegear"
          flags { "Optimize", "Symbols" }
          libdirs { "./lib/Profiling" }
          targetdir "./lib/Modules/HomeMaticBidCoS/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+   
+   project "homematicwired"
+      kind "SharedLib"
+      language "C++"
+      files { "./Modules/HomeMaticWired/*.h", "./Modules/HomeMaticWired/*.cpp" }
+	  files { "./Modules/HomeMaticWired/Devices/*.h", "./Modules/HomeMaticWired/Devices/*.cpp" }
+	  files { "./Modules/HomeMaticWired/PhysicalDevices/*.h", "./Modules/HomeMaticWired/PhysicalDevices/*.cpp" }
+	  linkoptions { "-l base" }
+	   
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         libdirs { "./lib/Debug" }
+         targetdir "./lib/Modules/HomeMaticWired/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         libdirs { "./lib/Release" }
+         targetdir "./lib/Modules/HomeMaticWired/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         libdirs { "./lib/Profiling" }
+         targetdir "./lib/Modules/HomeMaticWired/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+   
+   project "fs20"
+      kind "SharedLib"
+      language "C++"
+      files { "./Modules/FS20/*.h", "./Modules/FS20/*.cpp" }
+	  files { "./Modules/FS20/Devices/*.h", "./Modules/FS20/Devices/*.cpp" }
+	  files { "./Modules/FS20/PhysicalDevices/*.h", "./Modules/FS20/PhysicalDevices/*.cpp" }
+	  linkoptions { "-l base" }
+	   
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         libdirs { "./lib/Debug" }
+         targetdir "./lib/Modules/FS20/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         libdirs { "./lib/Release" }
+         targetdir "./lib/Modules/FS20/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         libdirs { "./lib/Profiling" }
+         targetdir "./lib/Modules/FS20/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+         
+   project "insteon"
+      kind "SharedLib"
+      language "C++"
+      files { "./Modules/Insteon/*.h", "./Modules/Insteon/*.cpp" }
+	  files { "./Modules/Insteon/Devices/*.h", "./Modules/Insteon/Devices/*.cpp" }
+	  files { "./Modules/Insteon/PhysicalDevices/*.h", "./Modules/Insteon/PhysicalDevices/*.cpp" }
+	  linkoptions { "-l base" }
+	   
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         libdirs { "./lib/Debug" }
+         targetdir "./lib/Modules/Insteon/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         libdirs { "./lib/Release" }
+         targetdir "./lib/Modules/Insteon/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         libdirs { "./lib/Profiling" }
+         targetdir "./lib/Modules/Insteon/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
 		 
@@ -216,84 +301,12 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
-		 
---   project "hmwired"
---      kind "StaticLib"
---      language "C++"
---      files { "./Libraries/Systems/HomeMaticWired/*.h", "./Libraries/Systems/HomeMaticWired/*.cpp" }
---	  files { "./Libraries/Systems/HomeMaticWired/Devices/*.h", "./Libraries/Systems/HomeMaticWired/Devices/*.cpp" }
---	  files { "./Libraries/Systems/HomeMaticWired/PhysicalDevices/*.h", "./Libraries/Systems/HomeMaticWired/PhysicalDevices/*.cpp" }
- 
---      configuration "Debug"
---         defines { "DEBUG" }
---         flags { "Symbols" }
---         targetdir "./lib/Debug"
- 
---      configuration "Release"
---         defines { "NDEBUG" }
---         flags { "Optimize" }
---         targetdir "./lib/Release"
-
---      configuration "Profiling"
---         defines { "NDEBUG" }
---         flags { "Optimize", "Symbols" }
---         targetdir "./lib/Profiling"
---         buildoptions { "-std=c++11", "-pg" }
---         linkoptions { "-pg" }
-		 
---   project "insteon"
---      kind "StaticLib"
---      language "C++"
---      files { "./Libraries/Systems/Insteon/*.h", "./Libraries/Systems/Insteon/*.cpp" }
---	  files { "./Libraries/Systems/Insteon/Devices/*.h", "./Libraries/Systems/Insteon/Devices/*.cpp" }
---	  files { "./Libraries/Systems/Insteon/PhysicalDevices/*.h", "./Libraries/Systems/Insteon/PhysicalDevices/*.cpp" }
- 
---      configuration "Debug"
---         defines { "DEBUG" }
---         flags { "Symbols" }
---         targetdir "./lib/Debug"
- 
---      configuration "Release"
---         defines { "NDEBUG" }
---         flags { "Optimize" }
---         targetdir "./lib/Release"
-
---      configuration "Profiling"
---         defines { "NDEBUG" }
---         flags { "Optimize", "Symbols" }
---         targetdir "./lib/Profiling"
---         buildoptions { "-std=c++11", "-pg" }
---         linkoptions { "-pg" }
-   
---   project "fs20"
---      kind "StaticLib"
---      language "C++"
---      files { "./Libraries/Systems/HomeMaticWired/*.h", "./Libraries/Systems/FS20/*.cpp" }
---      files { "./Libraries/Systems/HomeMaticWired/Devices/*.h", "./Libraries/Systems/FS20/Devices/*.cpp" }
---      files { "./Libraries/Systems/HomeMaticWired/PhysicalDevices/*.h", "./Libraries/Systems/FS20/PhysicalDevices/*.cpp" }
- 
---      configuration "Debug"
---         defines { "DEBUG" }
---         flags { "Symbols" }
---         targetdir "./lib/Debug"
- 
---      configuration "Release"
---         defines { "NDEBUG" }
---         flags { "Optimize" }
---         targetdir "./lib/Release"
-
---      configuration "Profiling"
---         defines { "NDEBUG" }
---         flags { "Optimize", "Symbols" }
---         targetdir "./lib/Profiling"
---         buildoptions { "-std=c++11", "-pg" }
---         linkoptions { "-pg" }
    
    project "homegear"
       kind "ConsoleApp"
       language "C++"
       files { "*.h", "*.cpp" }
-	  files { "./Libraries/Systems/General/*.h", "./Libraries/Systems/General/*.cpp" }
+	  files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
       linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l user", "-l cli", "-l events", "-l gd", "-l base" }
  
       configuration "Debug"

@@ -49,12 +49,39 @@ class Obj;
 
 namespace Systems
 {
-class DeviceFamily
+class DeviceFamily : public LogicalDevice::IDeviceEventSink, public IEvents
 {
 public:
-	DeviceFamily(std::shared_ptr<Obj> baseLib);
+	//Event handling
+	class IFamilyEventSink : public IEventSinkBase
+	{
+	public:
+		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint) = 0;
+		virtual void onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions) = 0;
+		virtual void onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo) = 0;
+		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values) = 0;
+	};
+
+	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
+	virtual void raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions);
+	virtual void raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo);
+	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	//End event handling
+
+	//Device event handling
+	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
+	virtual void onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions);
+	virtual void onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo);
+	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	//End Device event handling
+
+	DeviceFamily(std::shared_ptr<Obj> baseLib, IFamilyEventSink* eventHandler);
 	virtual ~DeviceFamily();
 
+	virtual DeviceFamilies getFamily() { return _family; }
 	bool available();
 	virtual std::shared_ptr<RPC::RPCVariable> listBidcosInterfaces() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid)); }
 	virtual std::shared_ptr<Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<Systems::PhysicalDeviceSettings> settings) { return std::shared_ptr<Systems::PhysicalDevice>(); }
@@ -68,7 +95,7 @@ public:
 	virtual std::shared_ptr<LogicalDevice> get(std::string serialNumber);
 	virtual std::vector<std::shared_ptr<LogicalDevice>> getDevices();
 	virtual std::shared_ptr<Central> getCentral() { return std::shared_ptr<Central>(); }
-	virtual std::string getName() { return ""; }
+	virtual std::string getName() = 0;
 	virtual std::string handleCLICommand(std::string& command) { return ""; }
 	virtual bool deviceSelected() { return false; }
 protected:

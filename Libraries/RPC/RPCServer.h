@@ -33,7 +33,6 @@
 #include "HTTP.h"
 #include "../../Modules/Base/BaseLib.h"
 #include "RPCMethod.h"
-#include "SocketOperations.h"
 #include "Auth.h"
 #include "ServerSettings.h"
 
@@ -77,7 +76,7 @@ namespace RPC
 				std::thread readThread;
 				std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 				SSL* ssl = nullptr;
-				SocketOperations socket;
+				BaseLib::SocketOperations socket;
 				Auth auth;
 
 				Client() { fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor()); }

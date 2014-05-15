@@ -33,12 +33,12 @@
 
 namespace BidCoS
 {
-HM_CC_TC::HM_CC_TC() : HomeMaticDevice()
+HM_CC_TC::HM_CC_TC(IDeviceEventSink* eventHandler) : HomeMaticDevice(eventHandler)
 {
 	init();
 }
 
-HM_CC_TC::HM_CC_TC(uint32_t deviceID, std::string serialNumber, int32_t address) : HomeMaticDevice(deviceID, serialNumber, address)
+HM_CC_TC::HM_CC_TC(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : HomeMaticDevice(deviceID, serialNumber, address, eventHandler)
 {
 	init();
 	if(deviceID == 0) startDutyCycle(-1); //Device is newly created

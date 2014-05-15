@@ -33,6 +33,9 @@
 #include "../HelperFunctions/HelperFunctions.h"
 #include "../Systems/DeviceFamilies.h"
 #include "../Systems/Packet.h"
+#include "../RPC/RPCVariable.h"
+#include "../IEvents.h"
+#include "Peer.h"
 
 #include <memory>
 
@@ -40,15 +43,39 @@ namespace BaseLib
 {
 namespace Systems
 {
-class LogicalDevice
+class LogicalDevice : public Peer::IPeerEventSink, public IEvents
 {
 public:
-	LogicalDevice();
-	LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address);
+	//Event handling
+	class IDeviceEventSink : public IEventSinkBase
+	{
+	public:
+		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint) = 0;
+		virtual void onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions) = 0;
+		virtual void onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo) = 0;
+		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values) = 0;
+	};
+
+	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
+	virtual void raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions);
+	virtual void raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo);
+	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	//End event handling
+
+	//Peer event handling
+	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
+	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	//End Peer event handling
+
+	LogicalDevice(IDeviceEventSink* eventHandler);
+	LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
 	virtual ~LogicalDevice();
 
 	virtual bool packetReceived(std::shared_ptr<Packet> packet) { return false; }
-	virtual DeviceFamilies deviceFamily() { return DeviceFamilies::none; }
+	virtual DeviceFamilies deviceFamily() = 0;
 
 	virtual int32_t getAddress() { return _address; }
 	virtual int32_t getID() { return _deviceID; }

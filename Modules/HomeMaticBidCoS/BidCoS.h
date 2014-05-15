@@ -40,7 +40,7 @@ class HomeMaticCentral;
 class BidCoS : public BaseLib::Systems::DeviceFamily
 {
 public:
-	BidCoS(std::shared_ptr<BaseLib::Obj> baseLib);
+	BidCoS(std::shared_ptr<BaseLib::Obj> baseLib, IFamilyEventSink* eventHandler);
 	virtual ~BidCoS();
 
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listBidcosInterfaces();

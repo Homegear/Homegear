@@ -37,8 +37,8 @@ namespace BidCoS
 class HM_CC_VD : public HomeMaticDevice
 {
     public:
-        HM_CC_VD();
-        HM_CC_VD(uint32_t deviceType, std::string, int32_t);
+        HM_CC_VD(IDeviceEventSink* eventHandler);
+        HM_CC_VD(uint32_t deviceType, std::string, int32_t, IDeviceEventSink* eventHandler);
         virtual ~HM_CC_VD();
         void setValveDriveBlocked(bool);
         void setValveDriveLoose(bool);

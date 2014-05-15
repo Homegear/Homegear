@@ -268,7 +268,7 @@ void BidCoSPeer::dispose()
     }
 }
 
-BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler) : Peer(parentID, centralFeatures, eventHandler)
+BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(parentID, centralFeatures, eventHandler)
 {
 	try
 	{
@@ -292,7 +292,7 @@ BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IEventSink* even
     }
 }
 
-BidCoSPeer::BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler) : Peer(id, address, serialNumber, parentID, centralFeatures, eventHandler)
+BidCoSPeer::BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
 }
 
@@ -331,7 +331,7 @@ void BidCoSPeer::worker()
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
 					std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data) });
 					BaseLib::Output::printInfo("Info: Domino event: " + (*i)->key + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
-					raiseOnRPCBroadcast(_peerID, (*i)->channel, _serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
+					raiseRPCEvent(_peerID, (*i)->channel, _serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
 				}
 				else
 				{
@@ -1319,8 +1319,7 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 			case 15:
 				if(_centralFeatures)
 				{
-					serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_peerID, _serialNumber));
-					serviceMessages->addEventHandler(this);
+					serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_peerID, _serialNumber, this));
 					serviceMessages->unserialize(row->second.at(5)->binaryValue);
 				}
 				break;
@@ -1337,8 +1336,7 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 		{
 			if(!serviceMessages)
 			{
-				serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_peerID, _serialNumber));
-				serviceMessages->addEventHandler(this);
+				serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_peerID, _serialNumber, this));
 			}
 			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 		}
@@ -1753,7 +1751,7 @@ void BidCoSPeer::setRSSIDevice(uint8_t rssi)
 			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
 			rpcValues->push_back(parameter->rpcParameter->convertFromPacket(parameter->data));
 
-			raiseOnRPCBroadcast(_peerID, 0, _serialNumber + ":0", valueKeys, rpcValues);
+			raiseRPCEvent(_peerID, 0, _serialNumber + ":0", valueKeys, rpcValues);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1951,8 +1949,8 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 			{
 				if(j->second->empty()) continue;
 				std::string address(_serialNumber + ":" + std::to_string(j->first));
-				//GD::eventHandler.trigger(_peerID, j->first, j->second, rpcValues.at(j->first));
-				raiseOnRPCBroadcast(_peerID, j->first, address, j->second, rpcValues.at(j->first));
+				raiseEvent(_peerID, j->first, j->second, rpcValues.at(j->first));
+				raiseRPCEvent(_peerID, j->first, address, j->second, rpcValues.at(j->first));
 			}
 		}
 	}
@@ -2359,7 +2357,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			pendingBidCoSQueues->push(queue);
 			if(!onlyPushing && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))) getCentral()->enqueuePendingQueues(_address);
 			else BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-			//GD::rpcClient.broadcastUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), BaseLib::RPC::Client::Hint::Enum::updateHintAll);
+			raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
 		else if(type == BaseLib::RPC::ParameterSet::Type::Enum::values)
 		{
@@ -2490,7 +2488,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			pendingBidCoSQueues->push(queue);
 			if(!onlyPushing && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))) getCentral()->enqueuePendingQueues(_address);
 			else BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-			//GD::rpcClient.broadcastUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), BaseLib::RPC::Client::Hint::Enum::updateHintAll);
+			raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
@@ -3459,7 +3457,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 		{
 			parameter->data = rpcParameter->convertToPacket(value);
 			saveParameter(parameter->databaseID, parameter->data);
-			raiseOnRPCBroadcast(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+			raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 		}
 		else if(rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::command) return BaseLib::RPC::RPCVariable::createError(-6, "Parameter is not settable.");
@@ -3620,7 +3618,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 		}
 		else BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 
-		raiseOnRPCBroadcast(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
+		raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}

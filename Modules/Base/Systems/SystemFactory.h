@@ -45,7 +45,7 @@ public:
 	SystemFactory() {}
 	virtual ~SystemFactory() {}
 
-	virtual std::shared_ptr<DeviceFamily> createDeviceFamily(std::shared_ptr<Obj> baseLib) = 0;
+	virtual std::shared_ptr<DeviceFamily> createDeviceFamily(std::shared_ptr<Obj> baseLib, DeviceFamily::IFamilyEventSink* eventHandler) = 0;
 };
 
 }

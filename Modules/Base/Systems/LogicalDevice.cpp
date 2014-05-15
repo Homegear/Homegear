@@ -34,17 +34,210 @@ namespace BaseLib
 namespace Systems
 {
 
-LogicalDevice::LogicalDevice()
+LogicalDevice::LogicalDevice(IDeviceEventSink* eventHandler)
 {
+	addEventHandler(eventHandler);
 }
 
-LogicalDevice::LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address) : _deviceID(deviceID), _address(address), _serialNumber(serialNumber)
+LogicalDevice::LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(eventHandler)
 {
+	_deviceID = deviceID;
+	_serialNumber = serialNumber;
+	_address = address;
 }
 
 LogicalDevice::~LogicalDevice()
 {
 }
+
+//Event handling
+void LogicalDevice::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void LogicalDevice::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onRPCUpdateDevice(id, channel, address, hint);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void LogicalDevice::raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onRPCNewDevices(deviceDescriptions);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void LogicalDevice::raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onRPCDeleteDevices(deviceAddresses, deviceInfo);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void LogicalDevice::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onEvent(peerID, channel, variables, values);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+//End event handling
+
+//Peer event handling
+void LogicalDevice::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+{
+	try
+	{
+		raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void LogicalDevice::onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint)
+{
+	try
+	{
+		raiseRPCUpdateDevice(id, channel, address, hint);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void LogicalDevice::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
+{
+	try
+	{
+		raiseEvent(peerID, channel, variables, values);
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+//End Peer event handling
 
 }
 }

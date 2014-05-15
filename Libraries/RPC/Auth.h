@@ -30,7 +30,6 @@
 #ifndef AUTH_H_
 #define AUTH_H_
 
-#include "SocketOperations.h"
 #include "HTTP.h"
 #include "../../Modules/Base/BaseLib.h"
 #include "Base64.h"
@@ -53,8 +52,8 @@ class Auth
 {
 public:
 	Auth() {}
-	Auth(SocketOperations& socket, std::vector<std::string>& validUsers);
-	Auth(SocketOperations& socket, std::string userName, std::string password);
+	Auth(BaseLib::SocketOperations& socket, std::vector<std::string>& validUsers);
+	Auth(BaseLib::SocketOperations& socket, std::string userName, std::string password);
 	virtual ~Auth() {}
 
 	bool initialized() { return _initialized; }
@@ -64,7 +63,7 @@ public:
 protected:
 	bool _initialized = false;
 	std::string _hostname;
-	SocketOperations _socket;
+	BaseLib::SocketOperations _socket;
 	std::string _basicAuthHTTPHeader;
 	std::shared_ptr<std::vector<char>> _basicUnauthBinaryHeader;
 	std::shared_ptr<std::vector<char>> _basicUnauthHTTPHeader;

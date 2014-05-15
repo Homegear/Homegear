@@ -9,6 +9,7 @@
 #include "Output/Output.h"
 #include "RPC/Devices.h"
 #include "Settings/Settings.h"
+#include "Sockets/SocketOperations.h"
 #include "Systems/DeviceFamily.h"
 #include "Systems/Peer.h"
 #include "Systems/PhysicalDevices.h"

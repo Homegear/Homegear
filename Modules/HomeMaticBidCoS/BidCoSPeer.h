@@ -103,8 +103,8 @@ public:
 class BidCoSPeer : public BaseLib::Systems::Peer
 {
     public:
-		BidCoSPeer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
-		BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
+		BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
+		BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 		virtual ~BidCoSPeer();
 		void dispose();
 

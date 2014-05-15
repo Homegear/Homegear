@@ -46,8 +46,8 @@ class BidCoSPacket;
 class HomeMaticCentral : public HomeMaticDevice, public BaseLib::Systems::Central
 {
 public:
-	HomeMaticCentral();
-	HomeMaticCentral(uint32_t deviceType, std::string, int32_t);
+	HomeMaticCentral(IDeviceEventSink* eventHandler);
+	HomeMaticCentral(uint32_t deviceType, std::string, int32_t, IDeviceEventSink* eventHandler);
 	virtual ~HomeMaticCentral();
 	void init();
 	bool packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);

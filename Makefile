@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base bidcos user rpc cli events gd homegear
+PROJECTS := base bidcos homematicwired fs20 insteon user rpc cli events gd homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -19,6 +19,18 @@ base:
 bidcos: 
 	@echo "==== Building bidcos ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f bidcos.make
+
+homematicwired: 
+	@echo "==== Building homematicwired ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f homematicwired.make
+
+fs20: 
+	@echo "==== Building fs20 ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f fs20.make
+
+insteon: 
+	@echo "==== Building insteon ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f insteon.make
 
 user: 
 	@echo "==== Building user ($(config)) ===="
@@ -47,6 +59,9 @@ homegear:
 clean:
 	@${MAKE} --no-print-directory -C . -f base.make clean
 	@${MAKE} --no-print-directory -C . -f bidcos.make clean
+	@${MAKE} --no-print-directory -C . -f homematicwired.make clean
+	@${MAKE} --no-print-directory -C . -f fs20.make clean
+	@${MAKE} --no-print-directory -C . -f insteon.make clean
 	@${MAKE} --no-print-directory -C . -f user.make clean
 	@${MAKE} --no-print-directory -C . -f rpc.make clean
 	@${MAKE} --no-print-directory -C . -f cli.make clean
@@ -67,6 +82,9 @@ help:
 	@echo "   clean"
 	@echo "   base"
 	@echo "   bidcos"
+	@echo "   homematicwired"
+	@echo "   fs20"
+	@echo "   insteon"
 	@echo "   user"
 	@echo "   rpc"
 	@echo "   cli"

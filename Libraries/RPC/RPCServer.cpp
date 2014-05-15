@@ -297,7 +297,7 @@ void RPCServer::mainThread()
 						continue;
 					}
 				}
-				client->socket = SocketOperations(client->fileDescriptor, client->ssl);
+				client->socket = BaseLib::SocketOperations(client->fileDescriptor, client->ssl);
 
 				client->readThread = std::thread(&RPCServer::readClient, this, client);
 				BaseLib::Threads::setThreadPriority(client->readThread.native_handle(), _threadPriority, _threadPolicy);
@@ -369,11 +369,11 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 		{
 			client->socket.proofwrite(data);
 		}
-		catch(SocketDataLimitException& ex)
+		catch(BaseLib::SocketDataLimitException& ex)
 		{
 			BaseLib::Output::printWarning("Warning: " + ex.what());
 		}
-		catch(SocketOperationException& ex)
+		catch(BaseLib::SocketOperationException& ex)
 		{
 			BaseLib::Output::printError("Error: " + ex.what());
 			error = true;
@@ -658,16 +658,16 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				//Some clients send only one byte in the first packet
 				if(packetLength == 0 && bytesRead == 1) bytesRead += client->socket.proofread(&buffer[1], bufferMax - 1);
 			}
-			catch(SocketTimeOutException& ex)
+			catch(BaseLib::SocketTimeOutException& ex)
 			{
 				continue;
 			}
-			catch(SocketClosedException& ex)
+			catch(BaseLib::SocketClosedException& ex)
 			{
 				BaseLib::Output::printInfo("Info: " + ex.what());
 				break;
 			}
-			catch(SocketOperationException& ex)
+			catch(BaseLib::SocketOperationException& ex)
 			{
 				BaseLib::Output::printError(ex.what());
 				break;

@@ -29,18 +29,18 @@ endif
 
 ifeq ($(config),debug)
   OBJDIR     = obj/Debug/fs20
-  TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/libfs20.a
+  TARGETDIR  = lib/Modules/FS20/Debug
+  TARGET     = $(TARGETDIR)/libfs20.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += 
+  LDFLAGS   += -Llib/Debug -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -51,18 +51,18 @@ endif
 
 ifeq ($(config),release)
   OBJDIR     = obj/Release/fs20
-  TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/libfs20.a
+  TARGETDIR  = lib/Modules/FS20/Release
+  TARGET     = $(TARGETDIR)/libfs20.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s
+  LDFLAGS   += -Llib/Release -s -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -73,18 +73,18 @@ endif
 
 ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/fs20
-  TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/libfs20.a
+  TARGETDIR  = lib/Modules/FS20/Profiling
+  TARGET     = $(TARGETDIR)/libfs20.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -pg
+  LDFLAGS   += -Llib/Profiling -shared -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -95,8 +95,10 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/FS20.o \
+	$(OBJDIR)/GD.o \
 	$(OBJDIR)/FS20Packet.o \
 	$(OBJDIR)/FS20Device.o \
+	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/FS20-SD.o \
 	$(OBJDIR)/CUL.o \
 
@@ -163,19 +165,25 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/FS20.o: Libraries/Systems/FS20/FS20.cpp
+$(OBJDIR)/FS20.o: Modules/FS20/FS20.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/FS20Packet.o: Libraries/Systems/FS20/FS20Packet.cpp
+$(OBJDIR)/GD.o: Modules/FS20/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/FS20Device.o: Libraries/Systems/FS20/FS20Device.cpp
+$(OBJDIR)/FS20Packet.o: Modules/FS20/FS20Packet.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/FS20-SD.o: Libraries/Systems/FS20/Devices/FS20-SD.cpp
+$(OBJDIR)/FS20Device.o: Modules/FS20/FS20Device.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/CUL.o: Libraries/Systems/FS20/PhysicalDevices/CUL.cpp
+$(OBJDIR)/Factory.o: Modules/FS20/Factory.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/FS20-SD.o: Modules/FS20/Devices/FS20-SD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/CUL.o: Modules/FS20/PhysicalDevices/CUL.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

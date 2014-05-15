@@ -32,7 +32,7 @@
 
 #include "../../Modules/Base/BaseLib.h"
 #include "../User/User.h"
-#include "../Systems/General/FamilyController.h"
+#include "../Systems/FamilyController.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

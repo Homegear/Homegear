@@ -29,9 +29,9 @@
 
 #include "Factory.h"
 
-std::shared_ptr<BaseLib::Systems::DeviceFamily> BidCoSFactory::createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib)
+std::shared_ptr<BaseLib::Systems::DeviceFamily> BidCoSFactory::createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
-	return std::shared_ptr<BaseLib::Systems::DeviceFamily>(new BidCoS::BidCoS(baseLib));
+	return std::shared_ptr<BaseLib::Systems::DeviceFamily>(new BidCoS::BidCoS(baseLib, eventHandler));
 }
 
 BaseLib::Systems::SystemFactory* create()

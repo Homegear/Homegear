@@ -163,7 +163,7 @@ endif
 $(OBJDIR)/main.o: main.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/FamilyController.o: Libraries/Systems/General/FamilyController.cpp
+$(OBJDIR)/FamilyController.o: Libraries/Systems/FamilyController.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

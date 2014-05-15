@@ -47,6 +47,7 @@ void IEvents::addEventHandler(IEventSinkBase* eventHandler)
 {
 	try
 	{
+		if(!eventHandler) return;
 		_eventHandlerMutex.lock();
 		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
@@ -69,10 +70,43 @@ void IEvents::addEventHandler(IEventSinkBase* eventHandler)
     _eventHandlerMutex.unlock();
 }
 
+void IEvents::addEventHandlers(std::vector<IEventSinkBase*> eventHandlers)
+{
+	try
+	{
+		if(eventHandlers.empty()) return;
+		_eventHandlerMutex.lock();
+		for(std::vector<IEventSinkBase*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
+		{
+			bool exists = false;
+			for(std::vector<IEventSinkBase*>::iterator j = _eventHandlers.begin(); j != _eventHandlers.end(); ++j)
+			{
+				if(*j == *i)
+				{
+					exists = true;
+					break;
+				}
+			}
+			if(exists) continue;
+			_eventHandlers.push_back(*i);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
 void IEvents::removeEventHandler(IEventSinkBase* eventHandler)
 {
 	try
 	{
+		if(!eventHandler) return;
 		_eventHandlerMutex.lock();
 		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
@@ -92,6 +126,27 @@ void IEvents::removeEventHandler(IEventSinkBase* eventHandler)
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
+}
+
+std::vector<IEventSinkBase*> IEvents::getEventHandlers()
+{
+	std::vector<IEventSinkBase*> eventHandlers;
+	try
+	{
+
+		_eventHandlerMutex.lock();
+		eventHandlers = _eventHandlers;
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return eventHandlers;
 }
 
 }

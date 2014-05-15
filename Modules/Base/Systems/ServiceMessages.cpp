@@ -35,10 +35,11 @@ namespace BaseLib
 namespace Systems
 {
 
-ServiceMessages::ServiceMessages(uint64_t peerID, std::string peerSerial)
+ServiceMessages::ServiceMessages(uint64_t peerID, std::string peerSerial, IServiceEventSink* eventHandler)
 {
 	_peerID = peerID;
 	_peerSerial = peerSerial;
+	addEventHandler(eventHandler);
 }
 
 ServiceMessages::~ServiceMessages()
@@ -47,14 +48,14 @@ ServiceMessages::~ServiceMessages()
 }
 
 //Event handling
-void ServiceMessages::raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
+void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	try
 	{
 		_eventHandlerMutex.lock();
 		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
-			if(*i) ((IEventSink*)*i)->onRPCBroadcast(id, channel, deviceAddress, valueKeys, values);
+			if(*i) ((IServiceEventSink*)*i)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 		}
 	}
 	catch(const std::exception& ex)
@@ -72,14 +73,14 @@ void ServiceMessages::raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::str
     _eventHandlerMutex.unlock();
 }
 
-void ServiceMessages::raiseOnSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data)
+void ServiceMessages::raiseSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data)
 {
 	try
 	{
 		_eventHandlerMutex.lock();
 		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
-			if(*i) ((IEventSink*)*i)->onSaveParameter(name, channel, data);
+			if(*i) ((IServiceEventSink*)*i)->onSaveParameter(name, channel, data);
 		}
 	}
 	catch(const std::exception& ex)
@@ -97,14 +98,14 @@ void ServiceMessages::raiseOnSaveParameter(std::string name, uint32_t channel, s
     _eventHandlerMutex.unlock();
 }
 
-void ServiceMessages::raiseOnEnqueuePendingQueues()
+void ServiceMessages::raiseEnqueuePendingQueues()
 {
 	try
 	{
 		_eventHandlerMutex.lock();
 		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
-			if(*i) ((IEventSink*)*i)->onEnqueuePendingQueues();
+			if(*i) ((IServiceEventSink*)*i)->onEnqueuePendingQueues();
 		}
 	}
 	catch(const std::exception& ex)
@@ -220,12 +221,12 @@ bool ServiceMessages::set(std::string id, bool value)
 				{
 					i->second.at(id) = 0;
 					std::vector<uint8_t> data = { (uint8_t)value };
-					raiseOnSaveParameter(id, i->first, data);
+					raiseSaveParameter(id, i->first, data);
 
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({id}));
 					std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 					rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)0)));
-					raiseOnRPCBroadcast(_peerID, 0, _peerSerial + ":" + std::to_string(i->first), valueKeys, rpcValues);
+					raiseRPCEvent(_peerID, 0, _peerSerial + ":" + std::to_string(i->first), valueKeys, rpcValues);
 				}
 			}
 			_errorMutex.unlock();
@@ -233,13 +234,13 @@ bool ServiceMessages::set(std::string id, bool value)
 		}
 
 		std::vector<uint8_t> data = { (uint8_t)value };
-		raiseOnSaveParameter(id, 0, data);
+		raiseSaveParameter(id, 0, data);
 
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({id}));
 		std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 		rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
 
-		raiseOnRPCBroadcast(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
+		raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
 	}
 	catch(const std::exception& ex)
     {
@@ -398,15 +399,15 @@ void ServiceMessages::checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketRec
 			_stickyUnreach = true;
 
 			std::vector<uint8_t> data = { 1 };
-			raiseOnSaveParameter("UNREACH", 0, data);
-			raiseOnSaveParameter("STICKY_UNREACH", 0, data);
+			raiseSaveParameter("UNREACH", 0, data);
+			raiseSaveParameter("STICKY_UNREACH", 0, data);
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("UNREACH"), std::string("STICKY_UNREACH")}));
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 
-			raiseOnRPCBroadcast(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
+			raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
 		}
 	}
 	catch(const std::exception& ex)
@@ -433,13 +434,13 @@ void ServiceMessages::endUnreach()
 			_unreachResendCounter = 0;
 
 			std::vector<uint8_t> data = { 0 };
-			raiseOnSaveParameter("UNREACH", 0, data);
+			raiseSaveParameter("UNREACH", 0, data);
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("UNREACH")}));
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(false)));
 
-			raiseOnRPCBroadcast(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
+			raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
 		}
 	}
 	catch(const std::exception& ex)
@@ -464,13 +465,13 @@ void ServiceMessages::setConfigPending(bool value)
 		{
 			_configPending = value;
 			std::vector<uint8_t> data = { (uint8_t)value };
-			raiseOnSaveParameter("CONFIG_PENDING", 0, data);
+			raiseSaveParameter("CONFIG_PENDING", 0, data);
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("CONFIG_PENDING")}));
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
 			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
 
-			raiseOnRPCBroadcast(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
+			raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
 		}
 	}
 	catch(const std::exception& ex)
@@ -495,7 +496,7 @@ void ServiceMessages::setUnreach(bool value)
 		{
 			if(value == true && _unreachResendCounter < 3)
 			{
-				raiseOnEnqueuePendingQueues();
+				raiseEnqueuePendingQueues();
 				_unreachResendCounter++;
 				return;
 			}
@@ -504,7 +505,7 @@ void ServiceMessages::setUnreach(bool value)
 
 			if(value) Output::printInfo("Info: Peer " + std::to_string(_peerID) + " is unreachable.");
 			std::vector<uint8_t> data = { (uint8_t)value };
-			raiseOnSaveParameter("UNREACH", 0, data);
+			raiseSaveParameter("UNREACH", 0, data);
 
 			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("UNREACH")}));
 			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<RPC::RPCVariable>>());
@@ -512,13 +513,13 @@ void ServiceMessages::setUnreach(bool value)
 
 			if(value)
 			{
-				raiseOnSaveParameter("STICKY_UNREACH", 0, data);
+				raiseSaveParameter("STICKY_UNREACH", 0, data);
 
 				valueKeys->push_back("STICKY_UNREACH");
 				rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(true)));
 			}
 
-			raiseOnRPCBroadcast(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
+			raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
 		}
 	}
 	catch(const std::exception& ex)

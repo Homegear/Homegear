@@ -68,23 +68,27 @@ public:
 	std::vector<uint8_t> data;
 };
 
-class Peer : public ServiceMessages::IEventSink, public IEvents
+class Peer : public ServiceMessages::IServiceEventSink, public IEvents
 {
 public:
 	//Event handling
-	class IEventSink : public IEventSinkBase
+	class IPeerEventSink : public IEventSinkBase
 	{
 	public:
-		virtual void onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint) = 0;
+		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values) = 0;
 	};
 
-	virtual void raiseOnRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
+	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
 	//End event handling
 
 	//ServiceMessages event handling
-	void onRPCBroadcast(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
-	void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
-	void onEnqueuePendingQueues();
+	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
+	virtual void onEnqueuePendingQueues();
 	//End ServiceMessages event handling
 
 	bool deleting = false; //Needed, so the peer gets not saved in central's worker thread while being deleted
@@ -96,8 +100,8 @@ public:
 	std::shared_ptr<RPC::Device> rpcDevice;
 	std::shared_ptr<ServiceMessages> serviceMessages;
 
-	Peer(uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
-	Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IEventSink* eventHandler);
+	Peer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
+	Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 	virtual ~Peer();
 
 	//In table peers:

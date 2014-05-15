@@ -29,18 +29,18 @@ endif
 
 ifeq ($(config),debug)
   OBJDIR     = obj/Debug/insteon
-  TARGETDIR  = lib/Debug
-  TARGET     = $(TARGETDIR)/libinsteon.a
+  TARGETDIR  = lib/Modules/Insteon/Debug
+  TARGET     = $(TARGETDIR)/libinsteon.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += 
+  LDFLAGS   += -Llib/Debug -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -51,18 +51,18 @@ endif
 
 ifeq ($(config),release)
   OBJDIR     = obj/Release/insteon
-  TARGETDIR  = lib/Release
-  TARGET     = $(TARGETDIR)/libinsteon.a
+  TARGETDIR  = lib/Modules/Insteon/Release
+  TARGET     = $(TARGETDIR)/libinsteon.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -s
+  LDFLAGS   += -Llib/Release -s -shared -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -73,18 +73,18 @@ endif
 
 ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/insteon
-  TARGETDIR  = lib/Profiling
-  TARGET     = $(TARGETDIR)/libinsteon.a
+  TARGETDIR  = lib/Modules/Insteon/Profiling
+  TARGET     = $(TARGETDIR)/libinsteon.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -pg
+  LDFLAGS   += -Llib/Profiling -shared -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
-  LINKCMD    = $(AR) -rcs $(TARGET) $(OBJECTS)
+  LINKCMD    = $(CXX) -o $(TARGET) $(OBJECTS) $(RESOURCES) $(ARCH) $(LIBS) $(LDFLAGS)
   define PREBUILDCMDS
   endef
   define PRELINKCMDS
@@ -95,7 +95,9 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/InsteonPacket.o \
+	$(OBJDIR)/GD.o \
 	$(OBJDIR)/InsteonDevice.o \
+	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/Insteon.o \
 	$(OBJDIR)/Insteon-SD.o \
 	$(OBJDIR)/Insteon_Hub_X10.o \
@@ -163,19 +165,25 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
-$(OBJDIR)/InsteonPacket.o: Libraries/Systems/Insteon/InsteonPacket.cpp
+$(OBJDIR)/InsteonPacket.o: Modules/Insteon/InsteonPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/InsteonDevice.o: Libraries/Systems/Insteon/InsteonDevice.cpp
+$(OBJDIR)/GD.o: Modules/Insteon/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Insteon.o: Libraries/Systems/Insteon/Insteon.cpp
+$(OBJDIR)/InsteonDevice.o: Modules/Insteon/InsteonDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Insteon-SD.o: Libraries/Systems/Insteon/Devices/Insteon-SD.cpp
+$(OBJDIR)/Factory.o: Modules/Insteon/Factory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/Insteon_Hub_X10.o: Libraries/Systems/Insteon/PhysicalDevices/Insteon_Hub_X10.cpp
+$(OBJDIR)/Insteon.o: Modules/Insteon/Insteon.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Insteon-SD.o: Modules/Insteon/Devices/Insteon-SD.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/Insteon_Hub_X10.o: Modules/Insteon/PhysicalDevices/Insteon_Hub_X10.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

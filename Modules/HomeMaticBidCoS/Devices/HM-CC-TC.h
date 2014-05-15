@@ -44,8 +44,8 @@ namespace BidCoS
 class HM_CC_TC : public HomeMaticDevice
 {
     public:
-        HM_CC_TC();
-        HM_CC_TC(uint32_t deviceType, std::string, int32_t);
+        HM_CC_TC(IDeviceEventSink* eventHandler);
+        HM_CC_TC(uint32_t deviceType, std::string, int32_t, IDeviceEventSink* eventHandler);
         virtual ~HM_CC_TC();
         void dispose();
         void stopThreads();

@@ -52,6 +52,10 @@ void Devices::load(std::string path)
 		}
 		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
 		{
+			if(i->size() < 5) continue;
+			std::string extension = i->substr(i->size() - 4, 4);
+			HelperFunctions::toLower(extension);
+			if(extension != ".xml") continue;
 			Output::printDebug("Loading XML RPC device " + deviceDir + "/" + *i);
 			std::shared_ptr<Device> device(new Device(deviceDir + "/" + *i));
 			if(device && device->loaded()) _devices.push_back(device);

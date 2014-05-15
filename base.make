@@ -123,6 +123,7 @@ OBJECTS := \
 	$(OBJDIR)/BinaryEncoder.o \
 	$(OBJDIR)/Database.o \
 	$(OBJDIR)/Metadata.o \
+	$(OBJDIR)/SocketOperations.o \
 	$(OBJDIR)/Threads.o \
 	$(OBJDIR)/Settings.o \
 
@@ -274,6 +275,9 @@ $(OBJDIR)/Database.o: Modules/Base/Database/Database.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Metadata.o: Modules/Base/Metadata/Metadata.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/SocketOperations.o: Modules/Base/Sockets/SocketOperations.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Threads.o: Modules/Base/Threads/Threads.cpp
