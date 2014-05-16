@@ -53,7 +53,7 @@ override_dh_auto_install:
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/firmware
 	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/firmware
 	mkdir -p $(CURDIR)/debian/homegear/var/lib/homegear/modules
-	cp $(CURDIR)/lib/Modules/Release/*.so $(CURDIR)/debian/homegear/var/lib/homegear/modules/*.so
+	cp $(CURDIR)/lib/Modules/Release/*.so $(CURDIR)/debian/homegear/var/lib/homegear/modules
 	rename 's/lib/mod_/' $(CURDIR)/debian/homegear/var/lib/homegear/modules/*.so
 	chown -R root:root $(CURDIR)/debian/homegear/var/lib/homegear/modules
 	chmod -R 550 $(CURDIR)/debian/homegear/var/lib/homegear/modules
