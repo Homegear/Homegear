@@ -23,8 +23,7 @@ class Obj
 {
 public:
 	static Systems::DeviceFamily* family;
-	static std::shared_ptr<Obj> ins;
-	static void init(std::string exePath);
+	static Obj* ins;
 
 	int32_t debugLevel;
 	std::string executablePath;

@@ -29,7 +29,7 @@
 
 #include "Factory.h"
 
-BaseLib::Systems::DeviceFamily* FS20Factory::createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* FS20Factory::createDeviceFamily(BaseLib::Obj* baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
 	return new FS20::FS20(baseLib, eventHandler);
 }

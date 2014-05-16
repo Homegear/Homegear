@@ -35,7 +35,7 @@ namespace BaseLib
 namespace Systems
 {
 
-DeviceFamily::DeviceFamily(std::shared_ptr<Obj> baseLib, IFamilyEventSink* eventHandler)
+DeviceFamily::DeviceFamily(Obj* baseLib, IFamilyEventSink* eventHandler)
 {
 	Obj::family = this;
 	Obj::ins = baseLib;

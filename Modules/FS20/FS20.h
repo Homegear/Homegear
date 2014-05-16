@@ -39,7 +39,7 @@ class FS20Device;
 class FS20 : public BaseLib::Systems::DeviceFamily
 {
 public:
-	FS20(std::shared_ptr<BaseLib::Obj> baseLib, IFamilyEventSink* eventHandler);
+	FS20(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler);
 	virtual ~FS20();
 
 	virtual std::shared_ptr<BaseLib::Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);

@@ -29,7 +29,7 @@
 
 #include "Factory.h"
 
-BaseLib::Systems::DeviceFamily* BidCoSFactory::createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* BidCoSFactory::createDeviceFamily(BaseLib::Obj* baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
 	return new BidCoS::BidCoS(baseLib, eventHandler);
 }

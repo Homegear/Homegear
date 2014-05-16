@@ -78,7 +78,7 @@ public:
 	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
 	//End Device event handling
 
-	DeviceFamily(std::shared_ptr<Obj> baseLib, IFamilyEventSink* eventHandler);
+	DeviceFamily(Obj* baseLib, IFamilyEventSink* eventHandler);
 	virtual ~DeviceFamily();
 
 	virtual DeviceFamilies getFamily() { return _family; }

@@ -41,7 +41,7 @@
 
 namespace BidCoS
 {
-BidCoS::BidCoS(std::shared_ptr<BaseLib::Obj> baseLib, IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(baseLib, eventHandler)
+BidCoS::BidCoS(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(baseLib, eventHandler)
 {
 	BaseLib::Output::setPrefix("Module HomeMatic BidCoS: ");
 	BaseLib::Output::printDebug("Debug: Loading module...");

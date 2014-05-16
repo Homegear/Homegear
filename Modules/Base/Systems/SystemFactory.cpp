@@ -37,9 +37,6 @@ namespace Systems
 
 SystemFactory::~SystemFactory()
 {
-	Output::printDebug("Debug: Disposing base library...");
-	//We need to dispose all static objects!!! Otherwise dlclose() will cause a SEGFAULT
-	Obj::ins.reset();
 }
 
 }

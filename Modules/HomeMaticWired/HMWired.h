@@ -40,7 +40,7 @@ class HMWiredCentral;
 class HMWired : public BaseLib::Systems::DeviceFamily
 {
 public:
-	HMWired(std::shared_ptr<BaseLib::Obj> baseLib, IFamilyEventSink* eventHandler);
+	HMWired(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler);
 	virtual ~HMWired();
 
 	virtual std::shared_ptr<BaseLib::Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);

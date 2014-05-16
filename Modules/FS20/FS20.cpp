@@ -36,7 +36,7 @@
 namespace FS20
 {
 
-FS20::FS20(std::shared_ptr<BaseLib::Obj> baseLib, IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(baseLib, eventHandler)
+FS20::FS20(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(baseLib, eventHandler)
 {
 	BaseLib::Output::setPrefix("Module FS20: ");
 	BaseLib::Output::printDebug("Debug: Loading module...");

@@ -32,16 +32,12 @@
 namespace BaseLib
 {
 
-std::shared_ptr<Obj> Obj::ins;
+Obj* Obj::ins;
 Systems::DeviceFamily* Obj::family = nullptr;
-
-void Obj::init(std::string exePath)
-{
-	ins.reset(new Obj(exePath));
-}
 
 Obj::Obj(std::string exePath)
 {
+	ins = this;
 	executablePath = exePath;
 }
 

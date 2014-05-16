@@ -76,9 +76,9 @@ ModuleLoader::~ModuleLoader()
 	{
 		BaseLib::Output::printInfo("Info: Disposing family module " + _name);
 		BaseLib::Output::printDebug("Debug: Deleting factory pointer of module " + _name);
-		//delete _factory.release();
+		delete _factory.release();
 		BaseLib::Output::printDebug("Debug: Closing dynamic library module " + _name);
-		//dlclose(_handle);
+		dlclose(_handle);
 		_handle = nullptr;
 		BaseLib::Output::printDebug("Debug: Dynamic library " + _name + " disposed");
 	}

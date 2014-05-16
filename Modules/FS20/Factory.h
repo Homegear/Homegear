@@ -36,7 +36,7 @@
 class FS20Factory : BaseLib::Systems::SystemFactory
 {
 public:
-	virtual BaseLib::Systems::DeviceFamily* createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
+	virtual BaseLib::Systems::DeviceFamily* createDeviceFamily(BaseLib::Obj* baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
 };
 
 extern "C" BaseLib::Systems::SystemFactory* getFactory();

@@ -37,7 +37,7 @@
 namespace Insteon
 {
 
-Insteon::Insteon(std::shared_ptr<BaseLib::Obj> baseLib, IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(baseLib, eventHandler)
+Insteon::Insteon(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(baseLib, eventHandler)
 {
 	BaseLib::Output::setPrefix("Module Insteon: ");
 	BaseLib::Output::printDebug("Debug: Loading module...");

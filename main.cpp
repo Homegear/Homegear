@@ -266,7 +266,7 @@ int main(int argc, char* argv[])
     try
     {
     	getExecutablePath();
-    	BaseLib::Obj::init(GD::executablePath);
+    	std::unique_ptr<BaseLib::Obj> baseLib(new BaseLib::Obj(GD::executablePath));
 
     	for(int32_t i = 1; i < argc; i++)
     	{

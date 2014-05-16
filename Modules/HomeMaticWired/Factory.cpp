@@ -29,7 +29,7 @@
 
 #include "Factory.h"
 
-BaseLib::Systems::DeviceFamily* HMWiredFactory::createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* HMWiredFactory::createDeviceFamily(BaseLib::Obj* baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
 	return new HMWired::HMWired(baseLib, eventHandler);
 }
