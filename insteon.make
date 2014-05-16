@@ -29,7 +29,7 @@ endif
 
 ifeq ($(config),debug)
   OBJDIR     = obj/Debug/insteon
-  TARGETDIR  = lib/Modules/Insteon/Debug
+  TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libinsteon.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
@@ -51,7 +51,7 @@ endif
 
 ifeq ($(config),release)
   OBJDIR     = obj/Release/insteon
-  TARGETDIR  = lib/Modules/Insteon/Release
+  TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libinsteon.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
@@ -73,7 +73,7 @@ endif
 
 ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/insteon
-  TARGETDIR  = lib/Modules/Insteon/Profiling
+  TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libinsteon.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 

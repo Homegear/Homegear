@@ -196,6 +196,7 @@ void Settings::load(std::string filename)
 				{
 					_modulePath = value;
 					if(_modulePath.empty()) _modulePath = "/var/lib/homegear/modules/";
+					if(_modulePath.back() != '/') _modulePath.push_back('/');
 					Output::printDebug("Debug: libraryPath set to " + _modulePath);
 				}
 				else if(name == "scriptpath")
