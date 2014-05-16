@@ -72,6 +72,7 @@ public:
 
 	std::shared_ptr<ClientSettings::Settings> settings;
 
+	bool removed = false;
 	bool initialized = false;
 	bool useSSL = false;
 	bool keepAlive = false;

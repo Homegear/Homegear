@@ -128,6 +128,7 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client.invoke(server, "system.listMethods", parameters);
 		if(result->errorStruct)
 		{
+			if(server->removed) return;
 			BaseLib::Output::printWarning("Warning: Error calling XML RPC method system.listMethods on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
@@ -175,6 +176,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client.invoke(server, "listDevices", parameters);
 		if(result->errorStruct)
 		{
+			if(server->removed) return;
 			BaseLib::Output::printError("Error calling XML RPC method listDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;
@@ -256,6 +258,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client.invoke(server, "newDevices", parameters);
 		if(result->errorStruct)
 		{
+			if(server->removed) return;
 			BaseLib::Output::printError("Error calling XML RPC method newDevices on server " + address.first + " with port " + address.second + ". Error struct: ");
 			result->print();
 			return;

@@ -83,6 +83,11 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 			BaseLib::Output::printError("Error: Could not invoke XML RPC method for server " + server->address.first + ". methodName is empty.");
 			return;
 		}
+		if(!server)
+		{
+			BaseLib::Output::printError("RPC Client: Could not send packet. Pointer to server is nullptr.");
+			return;
+		}
 		server->sendMutex.lock();
 		BaseLib::Output::printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
 		if(BaseLib::Obj::ins->debugLevel >= 5)
@@ -102,9 +107,9 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		{
 			if(i == 0) result = sendRequest(server, requestData, true, timedout);
 			else result = sendRequest(server, requestData, false, timedout);
-			if(!timedout) break;
+			if(!timedout || server->removed) break;
 		}
-		if(timedout)
+		if(timedout || server->removed)
 		{
 			server->sendMutex.unlock();
 			return;
@@ -150,6 +155,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 	try
 	{
 		if(methodName.empty()) return BaseLib::RPC::RPCVariable::createError(-32601, "Method name is empty");
+		if(!server) return BaseLib::RPC::RPCVariable::createError(-32500, "Could not send packet. Pointer to server is nullptr.");
 		server->sendMutex.lock();
 		BaseLib::Output::printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
 		if(BaseLib::Obj::ins->debugLevel >= 5)
@@ -169,7 +175,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 		{
 			if(i == 0) result = sendRequest(server, requestData, true, timedout);
 			else result = sendRequest(server, requestData, false, timedout);
-			if(!timedout) break;
+			if(!timedout || server->removed) break;
+		}
+		if(server->removed)
+		{
+			server->sendMutex.unlock();
+			return BaseLib::RPC::RPCVariable::createError(-32300, "Server was removed and has to send \"init\" again.");
 		}
 		if(timedout)
 		{
@@ -265,6 +276,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			BaseLib::Output::printError("RPC Client: Could not send packet. Pointer to server or data is nullptr.");
 			return std::shared_ptr<std::vector<char>>();
 		}
+		if(server->removed) return std::shared_ptr<std::vector<char>>();
 
 		if(server->hostname.empty()) server->hostname = getIPAddress(server->address.first);
 		if(server->hostname.empty()) return std::shared_ptr<std::vector<char>>();
@@ -274,14 +286,15 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		if(!server->useSSL && server->settings && server->settings->forceSSL)
 		{
 			BaseLib::Output::printError("RPC Client: Tried to send unencrypted packet to " + server->hostname + " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again.");
+			server->removed = true;
 			GD::rpcClient.removeServer(server->address);
 			return std::shared_ptr<std::vector<char>>();
 		}
 
 		_sendCounter++;
-		if(_sendCounter > 100)
+		if(_sendCounter > 50)
 		{
-			BaseLib::Output::printCritical("Could not execute XML RPC method on server " + server->address.first + " and port " + server->address.second + ", because there are more than 100 requests queued. Your server is either not reachable currently or your connection is too slow.");
+			BaseLib::Output::printCritical("Critical: Could not execute XML RPC method on server " + server->address.first + " and port " + server->address.second + ", because there are more than 50 requests queued. Your server is either not reachable currently or your connection is too slow.");
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
@@ -300,6 +313,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		catch(BaseLib::SocketOperationException& ex)
 		{
 			BaseLib::Output::printError(ex.what() + " Removing server. Server has to send \"init\" again.");
+			server->removed = true;
 			GD::rpcClient.removeServer(server->address);
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
