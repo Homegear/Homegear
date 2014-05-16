@@ -27,18 +27,20 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef FACTORY_H
-#define FACTORY_H
+#include "SystemFactory.h"
+#include "../BaseLib.h"
 
-#include "../Base/BaseLib.h"
-#include "BidCoS.h"
-
-class BidCoSFactory : BaseLib::Systems::SystemFactory
+namespace BaseLib
 {
-public:
-	virtual BaseLib::Systems::DeviceFamily* createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
-};
+namespace Systems
+{
 
-extern "C" BaseLib::Systems::SystemFactory* getFactory();
+SystemFactory::~SystemFactory()
+{
+	Output::printDebug("Debug: Disposing base library...");
+	//We need to dispose all static objects!!! Otherwise dlclose() will cause a SEGFAULT
+	Obj::ins.reset();
+}
 
-#endif
+}
+}

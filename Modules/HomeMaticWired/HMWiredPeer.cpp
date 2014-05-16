@@ -37,7 +37,7 @@ std::shared_ptr<HMWiredCentral> HMWiredPeer::getCentral()
 	try
 	{
 		if(_central) return _central;
-		_central = std::dynamic_pointer_cast<HMWiredCentral>(BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticWired)->getCentral());
+		_central = std::dynamic_pointer_cast<HMWiredCentral>(BaseLib::Obj::family->getCentral());
 		return _central;
 	}
 	catch(const std::exception& ex)
@@ -2042,7 +2042,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int
 		if(channel == -1) //Base device
 		{
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticWired)->getName()))));
+			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber))));
 
@@ -2096,7 +2096,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int
 			if(rpcChannel->hidden) return description;
 
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticWired)->getName()))));
+			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 

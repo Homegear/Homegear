@@ -29,17 +29,12 @@
 
 #include "Factory.h"
 
-std::shared_ptr<BaseLib::Systems::DeviceFamily> InsteonFactory::createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* InsteonFactory::createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
-	return std::shared_ptr<BaseLib::Systems::DeviceFamily>(new Insteon::Insteon(baseLib, eventHandler));
+	return new Insteon::Insteon(baseLib, eventHandler);
 }
 
-BaseLib::Systems::SystemFactory* create()
+BaseLib::Systems::SystemFactory* getFactory()
 {
 	return (BaseLib::Systems::SystemFactory*)(new InsteonFactory);
-}
-
-void destroy(BaseLib::Systems::SystemFactory* factory)
-{
-	delete factory;
 }

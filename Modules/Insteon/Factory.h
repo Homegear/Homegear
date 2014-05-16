@@ -36,14 +36,9 @@
 class InsteonFactory : BaseLib::Systems::SystemFactory
 {
 public:
-	virtual std::shared_ptr<BaseLib::Systems::DeviceFamily> createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
+	virtual BaseLib::Systems::DeviceFamily* createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
 };
 
-extern "C"
-{
-	BaseLib::Systems::SystemFactory* create();
-
-	void destroy(BaseLib::Systems::SystemFactory* factory);
-}
+extern "C" BaseLib::Systems::SystemFactory* getFactory();
 
 #endif

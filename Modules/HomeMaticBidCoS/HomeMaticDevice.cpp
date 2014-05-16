@@ -363,7 +363,7 @@ std::shared_ptr<HomeMaticCentral> HomeMaticDevice::getCentral()
 	try
 	{
 		if(_central) return _central;
-		_central = std::dynamic_pointer_cast<HomeMaticCentral>(BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->getCentral());
+		_central = std::dynamic_pointer_cast<HomeMaticCentral>(BaseLib::Obj::family->getCentral());
 		return _central;
 	}
 	catch(const std::exception& ex)
@@ -385,7 +385,7 @@ std::shared_ptr<HomeMaticDevice> HomeMaticDevice::getDevice(int32_t address)
 {
 	try
 	{
-		std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->get(address)));
+		std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(BaseLib::Obj::family->get(address)));
 		return device;
 	}
 	catch(const std::exception& ex)

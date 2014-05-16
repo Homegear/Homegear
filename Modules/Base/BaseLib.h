@@ -12,7 +12,6 @@
 #include "Sockets/SocketOperations.h"
 #include "Systems/DeviceFamily.h"
 #include "Systems/Peer.h"
-#include "Systems/PhysicalDevices.h"
 #include "Systems/SystemFactory.h"
 #include "Systems/UpdateInfo.h"
 #include "Threads/Threads.h"
@@ -23,6 +22,7 @@ namespace BaseLib
 class Obj
 {
 public:
+	static Systems::DeviceFamily* family;
 	static std::shared_ptr<Obj> ins;
 	static void init(std::string exePath);
 
@@ -30,8 +30,6 @@ public:
 	std::string executablePath;
 	FileDescriptorManager fileDescriptorManager;
 	Settings settings;
-	std::map<Systems::DeviceFamilies, std::shared_ptr<Systems::DeviceFamily>> deviceFamilies;
-	Systems::PhysicalDevices physicalDevices;
 	Database db;
 	RPC::Devices rpcDevices;
 	Systems::UpdateInfo deviceUpdateInfo;

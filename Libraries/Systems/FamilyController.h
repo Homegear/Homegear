@@ -38,6 +38,19 @@
 #include <memory>
 #include <mutex>
 
+class ModuleLoader
+{
+public:
+	ModuleLoader(std::string name, std::string path);
+	virtual ~ModuleLoader();
+
+	std::unique_ptr<BaseLib::Systems::DeviceFamily> createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
+private:
+	std::string _name;
+	void* _handle = nullptr;
+	std::unique_ptr<BaseLib::Systems::SystemFactory> _factory;
+};
+
 class FamilyController : public BaseLib::Systems::DeviceFamily::IFamilyEventSink
 {
 public:
@@ -53,16 +66,15 @@ public:
 	virtual ~FamilyController();
 	void convertDatabase();
 	void loadModules();
-	void disposeModules();
 	void load();
 	void save(bool full, bool crash = false);
 	void dispose();
 	bool familySelected() { return (bool)_currentFamily; }
 	std::string handleCLICommand(std::string& command);
+	bool familyAvailable(BaseLib::Systems::DeviceFamilies family);
 private:
-	std::map<std::string, void*> moduleHandles;
-	std::map<std::string, BaseLib::Systems::SystemFactory*> moduleFactories;
-	std::shared_ptr<BaseLib::Systems::DeviceFamily> _currentFamily;
+	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;
+	BaseLib::Systems::DeviceFamily* _currentFamily;
 
 	void initializeDatabase();
 	void loadDevicesFromDatabase(bool version_0_0_7);

@@ -33,6 +33,7 @@ namespace BaseLib
 {
 
 std::shared_ptr<Obj> Obj::ins;
+Systems::DeviceFamily* Obj::family = nullptr;
 
 void Obj::init(std::string exePath)
 {

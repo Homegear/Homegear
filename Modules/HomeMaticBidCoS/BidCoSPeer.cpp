@@ -42,7 +42,7 @@ std::shared_ptr<HomeMaticCentral> BidCoSPeer::getCentral()
 	try
 	{
 		if(_central) return _central;
-		_central = std::dynamic_pointer_cast<HomeMaticCentral>(BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->getCentral());
+		_central = std::dynamic_pointer_cast<HomeMaticCentral>(BaseLib::Obj::family->getCentral());
 		return _central;
 	}
 	catch(const std::exception& ex)
@@ -64,7 +64,7 @@ std::shared_ptr<HomeMaticDevice> BidCoSPeer::getDevice(int32_t address)
 {
 	try
 	{
-		std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->get(address)));
+		std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(BaseLib::Obj::family->get(address)));
 		return device;
 	}
 	catch(const std::exception& ex)
@@ -818,7 +818,7 @@ void BidCoSPeer::deletePairedVirtualDevice(int32_t address)
 		std::shared_ptr<HomeMaticDevice> device(getDevice(address));
 		if(device)
 		{
-			BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->remove(device->getID());
+			BaseLib::Obj::family->remove(device->getID());
 			device->reset();
 		}
 	}
@@ -852,7 +852,7 @@ void BidCoSPeer::deletePairedVirtualDevices()
 					device = getDevice((*j)->address);
 					if(device)
 					{
-						BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->remove(device->getID());
+						BaseLib::Obj::family->remove(device->getID());
 						deleted[(*j)->address] = true;
 					}
 				}
@@ -1987,7 +1987,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int3
 		if(channel == -1) //Base device
 		{
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->getName()))));
+			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber))));
 
@@ -2054,7 +2054,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int3
 			if(rpcChannel->hidden) return description;
 
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->getName()))));
+			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 

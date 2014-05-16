@@ -50,6 +50,7 @@
 #include <memory>
 #include <algorithm>
 
+bool _dbDumpFailed = false;
 bool _startAsDaemon = false;
 bool _startUpComplete = false;
 
@@ -98,7 +99,7 @@ void terminate(int32_t signalNumber)
 			BaseLib::Output::printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
 			BaseLib::Output::printInfo( "(Shutdown) => Closing physical devices");
-			BaseLib::Obj::ins->physicalDevices.stopListening();
+			GD::physicalDevices.stopListening();
 			GD::devices.save(false);
 			BaseLib::Output::printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
@@ -117,14 +118,14 @@ void terminate(int32_t signalNumber)
 			}
 			_startUpComplete = false;
 			stopRPCServers();
-			BaseLib::Obj::ins->physicalDevices.stopListening();
+			GD::physicalDevices.stopListening();
 			//Binding fails sometimes with "address is already in use" without waiting.
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			BaseLib::Output::printMessage("Reloading settings...");
 			BaseLib::Obj::ins->settings.load(GD::configPath + "main.conf");
 			GD::clientSettings.load(BaseLib::Obj::ins->settings.clientSettingsPath());
 			GD::serverSettings.load(BaseLib::Obj::ins->settings.serverSettingsPath());
-			BaseLib::Obj::ins->physicalDevices.startListening();
+			GD::physicalDevices.startListening();
 			startRPCServers();
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon)
@@ -142,10 +143,18 @@ void terminate(int32_t signalNumber)
 		}
 		else
 		{
-			BaseLib::Output::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
-			BaseLib::Output::printCritical("Critical: Trying to save data to " + BaseLib::Obj::ins->settings.databasePath() + ".crash");
-			BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".crash");
-			if(BaseLib::Obj::ins->db.isOpen()) GD::devices.save(false, true);
+			if(!_dbDumpFailed)
+			{
+				_dbDumpFailed = true;
+				BaseLib::Output::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
+				BaseLib::Output::printCritical("Critical: Trying to save data to " + BaseLib::Obj::ins->settings.databasePath() + ".crash");
+				BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".crash");
+				if(BaseLib::Obj::ins->db.isOpen()) GD::devices.save(false, true);
+			}
+			else
+			{
+				BaseLib::Output::printCritical("Critical: Database dump failed. Stopping Homegear...");
+			}
 			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 			kill(getpid(), signalNumber); //Generate core dump
 		}
@@ -305,7 +314,7 @@ int main(int argc, char* argv[])
     				}
     				BaseLib::Obj::ins->settings.load(GD::configPath + "main.conf");
     				GD::devices.loadModules();
-    				BaseLib::Obj::ins->physicalDevices.load(BaseLib::Obj::ins->settings.physicalDeviceSettingsPath());
+    				GD::physicalDevices.load(BaseLib::Obj::ins->settings.physicalDeviceSettingsPath());
     				int32_t userID = BaseLib::HelperFunctions::userID(std::string(argv[i + 1]));
     				int32_t groupID = BaseLib::HelperFunctions::groupID(std::string(argv[i + 2]));
     				BaseLib::Output::printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
@@ -314,7 +323,7 @@ int main(int argc, char* argv[])
     					BaseLib::Output::printCritical("Could not setup physical devices. Username or group name is not valid.");
     					exit(1);
     				}
-    				BaseLib::Obj::ins->physicalDevices.setup(userID, groupID);
+    				GD::physicalDevices.setup(userID, groupID);
     				exit(0);
     			}
     			else
@@ -461,8 +470,8 @@ int main(int argc, char* argv[])
     		exit(1);
     	}
 
-    	BaseLib::Obj::ins->physicalDevices.load(BaseLib::Obj::ins->settings.physicalDeviceSettingsPath());
-        if(BaseLib::Obj::ins->physicalDevices.count() == 0)
+    	GD::physicalDevices.load(BaseLib::Obj::ins->settings.physicalDeviceSettingsPath());
+        if(GD::physicalDevices.count() == 0)
         {
         	BaseLib::Output::printCritical("Critical: No physical device could be initialized... Exiting...");
         	terminate(SIGTERM);
@@ -472,8 +481,8 @@ int main(int argc, char* argv[])
         BaseLib::Obj::ins->rpcDevices.load(GD::configPath + "Device types");
         GD::devices.convertDatabase();
         BaseLib::Output::printInfo("Start listening for packets...");
-        BaseLib::Obj::ins->physicalDevices.startListening();
-        if(!BaseLib::Obj::ins->physicalDevices.isOpen())
+        GD::physicalDevices.startListening();
+        if(!GD::physicalDevices.isOpen())
         {
         	BaseLib::Output::printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
         	terminate(SIGTERM);

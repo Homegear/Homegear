@@ -1329,7 +1329,7 @@ int32_t HomeMaticCentral::getUniqueAddress(int32_t seed)
 	try
 	{
 		uint32_t i = 0;
-		while((_peers.find(seed) != _peers.end() || BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->get(seed)) && i++ < 200000)
+		while((_peers.find(seed) != _peers.end() || BaseLib::Obj::family->get(seed)) && i++ < 200000)
 		{
 			seed += 9345;
 			if(seed > 16777215) seed -= 16777216;
@@ -1389,7 +1389,7 @@ std::string HomeMaticCentral::getUniqueSerialNumber(std::string seedPrefix, uint
 		std::ostringstream stringstream;
 		stringstream << seedPrefix << std::setw(numberSize) << std::setfill('0') << std::dec << seedNumber;
 		std::string temp2 = stringstream.str();
-		while((_peersBySerial.find(temp2) != _peersBySerial.end() || BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->get(temp2)) && i++ < 100000)
+		while((_peersBySerial.find(temp2) != _peersBySerial.end() || BaseLib::Obj::family->get(temp2)) && i++ < 100000)
 		{
 			stringstream.str(std::string());
 			stringstream.clear();
@@ -1427,7 +1427,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<BidCoSPeer> pee
 			if(peer->hasPeers(1) && !peer->getPeer(1, hmcctcAddress)) return; //Already linked to a HM-CC-TC
 			std::string temp = peer->getSerialNumber().substr(3);
 			std::string serialNumber = getUniqueSerialNumber("VCD", BaseLib::HelperFunctions::getNumber(temp));
-			BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->add(std::shared_ptr<LogicalDevice>(new HM_CC_TC(0, serialNumber, hmcctcAddress, (IDeviceEventSink*)getEventHandlers().at(0))));
+			BaseLib::Obj::family->add(std::shared_ptr<LogicalDevice>(new HM_CC_TC(0, serialNumber, hmcctcAddress, (IDeviceEventSink*)getEventHandlers().at(0))));
 			tc = getDevice(hmcctcAddress);
 			tc->addPeer(peer);
 		}
@@ -1497,7 +1497,7 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<BidCoSPeer> pee
 			if(channels.empty()) return; //All channels are already paired to actors
 			std::string temp = peer->getSerialNumber().substr(3);
 			std::string serialNumber = getUniqueSerialNumber("VSW", BaseLib::HelperFunctions::getNumber(temp));
-			BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->add(std::shared_ptr<LogicalDevice>(new HM_LC_SWX_FM(0, serialNumber, actorAddress, (IDeviceEventSink*)getEventHandlers().at(0))));
+			BaseLib::Obj::family->add(std::shared_ptr<LogicalDevice>(new HM_LC_SWX_FM(0, serialNumber, actorAddress, (IDeviceEventSink*)getEventHandlers().at(0))));
 			sw = getDevice(actorAddress);
 			uint32_t channelCount = peer->rpcDevice->channels.size();
 			sw->setChannelCount(channelCount);
@@ -2998,7 +2998,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t se
 			if(!sender->getHiddenPeerDevice())
 			{
 				std::shared_ptr<HomeMaticDevice> device = getDevice(hiddenPeer->address);
-				if(device) BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->remove(device->getID());
+				if(device) BaseLib::Obj::family->remove(device->getID());
 			}
 
 			payload.clear();
@@ -3086,7 +3086,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addLink(uint64_t se
 			if(!sender->getHiddenPeerDevice())
 			{
 				std::shared_ptr<HomeMaticDevice> device = getDevice(hiddenPeer->address);
-				if(device) BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->remove(device->getID());
+				if(device) BaseLib::Obj::family->remove(device->getID());
 			}
 
 			payload.clear();

@@ -37,6 +37,7 @@ namespace Systems
 
 DeviceFamily::DeviceFamily(std::shared_ptr<Obj> baseLib, IFamilyEventSink* eventHandler)
 {
+	Obj::family = this;
 	Obj::ins = baseLib;
 	Output::setDebugLevel(baseLib->debugLevel);
 	addEventHandler(eventHandler);
@@ -290,12 +291,6 @@ void DeviceFamily::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std
 	}
 }
 //End Device event handling
-
-bool DeviceFamily::available()
-{
-	if(!Obj::ins->physicalDevices.get(_family)) return false;
-	return Obj::ins->physicalDevices.get(_family)->isOpen();
-}
 
 void DeviceFamily::save(bool full)
 {

@@ -82,7 +82,6 @@ public:
 	virtual ~DeviceFamily();
 
 	virtual DeviceFamilies getFamily() { return _family; }
-	bool available();
 	virtual std::shared_ptr<RPC::RPCVariable> listBidcosInterfaces() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid)); }
 	virtual std::shared_ptr<Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<Systems::PhysicalDeviceSettings> settings) { return std::shared_ptr<Systems::PhysicalDevice>(); }
 	virtual void load(bool version_0_0_7) {}

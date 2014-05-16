@@ -30,10 +30,7 @@
 #ifndef PHYSICALDEVICES_H_
 #define PHYSICALDEVICES_H_
 
-#include "DeviceFamilies.h"
-#include "../RPC/RPCVariable.h"
-#include "PhysicalDevice.h"
-#include "PhysicalDeviceSettings.h"
+#include "../../Modules/Base/BaseLib.h"
 
 #include <memory>
 #include <mutex>
@@ -43,10 +40,6 @@
 #include <cstring>
 #include <vector>
 
-namespace BaseLib
-{
-namespace Systems
-{
 class PhysicalDevices
 {
 public:
@@ -55,19 +48,17 @@ public:
 	void load(std::string filename);
 
 	uint32_t count();
-	std::shared_ptr<PhysicalDevice> get(DeviceFamilies family);
+	std::shared_ptr<BaseLib::Systems::PhysicalDevice> get(BaseLib::Systems::DeviceFamilies family);
 	void stopListening();
 	void startListening();
 	bool isOpen();
 	void setup(int32_t userID, int32_t groupID);
-	std::shared_ptr<RPC::RPCVariable> listInterfaces();
+	std::shared_ptr<BaseLib::RPC::RPCVariable> listInterfaces();
 private:
 	std::mutex _physicalDevicesMutex;
-	std::map<DeviceFamilies, std::shared_ptr<PhysicalDevice>> _physicalDevices;
+	std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::PhysicalDevice>> _physicalDevices;
 
 	void reset();
 };
 
-}
-}
 #endif /* PHYSICALDEVICES_H_ */

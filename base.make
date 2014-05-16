@@ -108,7 +108,7 @@ OBJECTS := \
 	$(OBJDIR)/PhysicalDevice.o \
 	$(OBJDIR)/UpdateInfo.o \
 	$(OBJDIR)/DeviceTypes.o \
-	$(OBJDIR)/PhysicalDevices.o \
+	$(OBJDIR)/SystemFactory.o \
 	$(OBJDIR)/DeviceFamily.o \
 	$(OBJDIR)/Packet.o \
 	$(OBJDIR)/Central.o \
@@ -232,7 +232,7 @@ $(OBJDIR)/UpdateInfo.o: Modules/Base/Systems/UpdateInfo.cpp
 $(OBJDIR)/DeviceTypes.o: Modules/Base/Systems/DeviceTypes.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhysicalDevices.o: Modules/Base/Systems/PhysicalDevices.cpp
+$(OBJDIR)/SystemFactory.o: Modules/Base/Systems/SystemFactory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/DeviceFamily.o: Modules/Base/Systems/DeviceFamily.cpp

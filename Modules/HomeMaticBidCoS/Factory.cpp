@@ -29,17 +29,12 @@
 
 #include "Factory.h"
 
-std::shared_ptr<BaseLib::Systems::DeviceFamily> BidCoSFactory::createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* BidCoSFactory::createDeviceFamily(std::shared_ptr<BaseLib::Obj> baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
-	return std::shared_ptr<BaseLib::Systems::DeviceFamily>(new BidCoS::BidCoS(baseLib, eventHandler));
+	return new BidCoS::BidCoS(baseLib, eventHandler);
 }
 
-BaseLib::Systems::SystemFactory* create()
+BaseLib::Systems::SystemFactory* getFactory()
 {
 	return (BaseLib::Systems::SystemFactory*)(new BidCoSFactory);
-}
-
-void destroy(BaseLib::Systems::SystemFactory* factory)
-{
-	delete factory;
 }

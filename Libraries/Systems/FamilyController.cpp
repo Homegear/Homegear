@@ -31,14 +31,83 @@
 #include "../GD/GD.h"
 #include "../../Modules/Base/BaseLib.h"
 
+ModuleLoader::ModuleLoader(std::string name, std::string path)
+{
+	try
+	{
+		_name = name;
+		BaseLib::Output::printInfo("Info: Loading family module " + _name);
+
+		void* moduleHandle = dlopen(path.c_str(), RTLD_NOW);
+		if(!moduleHandle)
+		{
+			BaseLib::Output::printCritical("Critical: Could not open module \"" + path + "\": " + std::string(dlerror()));
+			return;
+		}
+
+		BaseLib::Systems::SystemFactory* (*getFactory)();
+		getFactory = (BaseLib::Systems::SystemFactory* (*)())dlsym(moduleHandle, "getFactory");
+		if(!getFactory)
+		{
+			BaseLib::Output::printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getFactory\" not found.");
+			exit(4);
+		}
+
+		_handle = moduleHandle;
+		_factory = std::unique_ptr<BaseLib::Systems::SystemFactory>(getFactory());
+	}
+	catch(const std::exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+ModuleLoader::~ModuleLoader()
+{
+	try
+	{
+		BaseLib::Output::printInfo("Info: Disposing family module " + _name);
+		BaseLib::Output::printDebug("Debug: Deleting factory pointer of module " + _name);
+		//delete _factory.release();
+		BaseLib::Output::printDebug("Debug: Closing dynamic library module " + _name);
+		//dlclose(_handle);
+		_handle = nullptr;
+		BaseLib::Output::printDebug("Debug: Dynamic library " + _name + " disposed");
+	}
+	catch(const std::exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+std::unique_ptr<BaseLib::Systems::DeviceFamily> ModuleLoader::createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+{
+	if(!_factory) return std::unique_ptr<BaseLib::Systems::DeviceFamily>();
+	return std::unique_ptr<BaseLib::Systems::DeviceFamily>(_factory->createDeviceFamily(BaseLib::Obj::ins, eventHandler));
+}
+
 FamilyController::FamilyController()
 {
 }
 
 FamilyController::~FamilyController()
 {
-	//Don't call dispose here. It's not necessary and causes a segmentation fault.
-	disposeModules();
 }
 
 //Device event handling
@@ -143,6 +212,12 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 }
 //End Device event handling
 
+bool FamilyController::familyAvailable(BaseLib::Systems::DeviceFamilies family)
+{
+	if(!GD::physicalDevices.get(family)) return false;
+	return GD::physicalDevices.get(family)->isOpen();
+}
+
 void FamilyController::loadModules()
 {
 	try
@@ -163,38 +238,13 @@ void FamilyController::loadModules()
 			if(extension != ".so" || prefix != "mod_") continue;
 			std::string path(BaseLib::Obj::ins->settings.modulePath() + *i);
 
-			BaseLib::Output::printInfo("Info: Loading family module " + path);
+			moduleLoaders.insert(std::pair<std::string, std::unique_ptr<ModuleLoader>>(*i, std::unique_ptr<ModuleLoader>(new ModuleLoader(*i, path))));
 
-			void* moduleHandle = dlopen(path.c_str(), RTLD_NOW);
-			if(!moduleHandle)
-			{
-				BaseLib::Output::printCritical("Critical: Could not open module \"" + path + "\": " + std::string(dlerror()));
-				continue;
-			}
+			std::unique_ptr<BaseLib::Systems::DeviceFamily> family = moduleLoaders.at(*i)->createModule(this);
 
-			BaseLib::Systems::SystemFactory* (*create)();
-			create = (BaseLib::Systems::SystemFactory* (*)())dlsym(moduleHandle, "create");
-			if(!create)
-			{
-				BaseLib::Output::printCritical("Critical: Could not open module \"" + path + "\". Symbol \"create\" not found.");
-				dlclose(moduleHandle);
-				continue;
-			}
-			if(!dlsym(moduleHandle, "destroy"))
-			{
-				BaseLib::Output::printCritical("Critical: Could not open module \"" + path + "\". Symbol \"destroy\" not found.");
-				dlclose(moduleHandle);
-				continue;
-			}
-
-			moduleHandles[*i] = moduleHandle;
-			moduleFactories[*i] = (BaseLib::Systems::SystemFactory*)create();
-
-			std::shared_ptr<BaseLib::Systems::DeviceFamily> family = moduleFactories[*i]->createDeviceFamily(BaseLib::Obj::ins, this);
-
-			BaseLib::Obj::ins->deviceFamilies[family->getFamily()] = family;
+			if(family) GD::deviceFamilies[family->getFamily()].swap(family);
 		}
-		if(BaseLib::Obj::ins->deviceFamilies.empty())
+		if(GD::deviceFamilies.empty())
 		{
 			BaseLib::Output::printCritical("Critical: Could not load any family modules from \"" + BaseLib::Obj::ins->settings.modulePath() + "\".");
 			exit(3);
@@ -372,7 +422,7 @@ void FamilyController::loadDevicesFromDatabase(bool version_0_0_7)
 {
 	try
 	{
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			i->second->load(version_0_0_7);
 		}
@@ -416,7 +466,7 @@ void FamilyController::dispose()
 {
 	try
 	{
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			if(!i->second)
 			{
@@ -424,43 +474,6 @@ void FamilyController::dispose()
 				continue;
 			}
 			i->second->dispose();
-		}
-	}
-	catch(const std::exception& ex)
-    {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void FamilyController::disposeModules()
-{
-	try
-	{
-		BaseLib::Output::printDebug("Debug: Disposing modules");
-		for(std::map<std::string, BaseLib::Systems::SystemFactory*>::iterator i = moduleFactories.begin(); i != moduleFactories.end(); ++i)
-		{
-			if(moduleHandles.find(i->first) == moduleHandles.end()) continue;
-			void (*destroy)(BaseLib::Systems::SystemFactory*);
-			destroy = (void (*)(BaseLib::Systems::SystemFactory*))dlsym(moduleHandles.at(i->first), "destroy");
-			if(!destroy)
-			{
-				BaseLib::Output::printCritical("Critical: Could not find symbol \"destroy\" in module \"" + i->first + "\".");
-				continue;
-			}
-			destroy(i->second);
-		}
-		moduleFactories.clear();
-		for(std::map<std::string, void*>::iterator i = moduleHandles.begin(); i != moduleHandles.end(); ++i)
-		{
-			dlclose(i->second);
 		}
 	}
 	catch(const std::exception& ex)
@@ -489,7 +502,7 @@ void FamilyController::save(bool full, bool crash)
 			dispose();
 		}
 		BaseLib::Output::printMessage("(Shutdown) => Saving devices");
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			i->second->save(full);
 		}
@@ -515,7 +528,7 @@ std::string FamilyController::handleCLICommand(std::string& command)
 		std::ostringstream stringStream;
 		if(command == "unselect" && _currentFamily && !_currentFamily->deviceSelected())
 		{
-			_currentFamily.reset();
+			_currentFamily = nullptr;
 			return "Device family unselected.\n";
 		}
 		else if(command.compare(0, 8, "families") != 0 && _currentFamily)
@@ -543,9 +556,9 @@ std::string FamilyController::handleCLICommand(std::string& command)
 				<< nameHeader
 				<< std::endl;
 			stringStream << "──────┼───────────────────────────────" << std::endl;
-			for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+			for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 			{
-				if(i->first == BaseLib::Systems::DeviceFamilies::none || !i->second->available()) continue;
+				if(i->first == BaseLib::Systems::DeviceFamilies::none || !familyAvailable(i->first)) continue;
 				std::string name = i->second->getName();
 				name.resize(nameWidth, ' ');
 				stringStream
@@ -585,20 +598,20 @@ std::string FamilyController::handleCLICommand(std::string& command)
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  FAMILYID:\tThe id of the family to select. Example: 1" << std::endl;
 				stringStream << "Supported families:" << std::endl;
-				for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+				for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 				{
-					if(i->first == BaseLib::Systems::DeviceFamilies::none || !i->second->available()) continue;
+					if(i->first == BaseLib::Systems::DeviceFamilies::none || !familyAvailable(i->first)) continue;
 					stringStream << "  FAMILYID: 0x" << std::hex << std::setfill('0') << std::setw(2) << (uint32_t)i->first << ":\t" << i->second->getName() << std::endl << std::dec;
 				}
 				return stringStream.str();
 			}
-			if(BaseLib::Obj::ins->deviceFamilies.find(family) == BaseLib::Obj::ins->deviceFamilies.end())
+			if(GD::deviceFamilies.find(family) == GD::deviceFamilies.end())
 			{
 				stringStream << "Device family not found." << std::endl;
 				return stringStream.str();
 			}
 
-			_currentFamily = BaseLib::Obj::ins->deviceFamilies.at(family);
+			_currentFamily = GD::deviceFamilies.at(family).get();
 			if(!_currentFamily) stringStream << "Device family not found." << std::endl;
 			else
 			{

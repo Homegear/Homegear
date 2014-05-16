@@ -273,7 +273,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCAddDevice::invoke(std::shared_ptr<
 		}
 		else serialNumber = parameters->at(0)->stringValue;
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central && central->knowsDevice(serialNumber)) return central->addDevice(serialNumber);
@@ -376,7 +376,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCAddLink::invoke(std::shared_ptr<st
 		}
 
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -444,7 +444,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCDeleteDevice::invoke(std::shared_p
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		bool useSerialNumber = (parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcString) ? true : false;
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -581,7 +581,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetDeviceDescription::invoke(std::
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -621,7 +621,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetInstallMode::invoke(std::shared
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -708,7 +708,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetLinkInfo::invoke(std::shared_pt
 			else receiverSerialNumber = parameters->at(1)->stringValue;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -770,7 +770,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetLinkPeers::invoke(std::shared_p
 			}
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -849,7 +849,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetLinks::invoke(std::shared_ptr<s
 		}
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> links(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
@@ -967,7 +967,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetParamsetDescription::invoke(std
 			remoteChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
@@ -1051,7 +1051,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetParamsetId::invoke(std::shared_
 			remoteChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
@@ -1136,7 +1136,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetParamset::invoke(std::shared_pt
 			remoteChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
@@ -1188,7 +1188,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetPeerId::invoke(std::shared_ptr<
 		}
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> ids(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -1231,7 +1231,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetServiceMessages::invoke(std::sh
 		if(parameters->size() == 1) id = parameters->at(0)->booleanValue;
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> serviceMessages(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
@@ -1323,7 +1323,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetValue::invoke(std::shared_ptr<s
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -1469,7 +1469,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListBidcosInterfaces::invoke(std::
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		return BaseLib::Obj::ins->deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->listBidcosInterfaces();
+		return GD::deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->listBidcosInterfaces();
 	}
 	catch(const std::exception& ex)
     {
@@ -1528,7 +1528,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListDevices::invoke(std::shared_pt
 		}
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> devices(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
@@ -1605,7 +1605,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListInterfaces::invoke(std::shared
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		return BaseLib::Obj::ins->physicalDevices.listInterfaces();
+		return GD::physicalDevices.listInterfaces();
 	}
 	catch(const std::exception& ex)
     {
@@ -1629,7 +1629,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListTeams::invoke(std::shared_ptr<
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> teams(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
@@ -1736,7 +1736,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCPutParamset::invoke(std::shared_pt
 			remoteChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central)continue;
@@ -1827,7 +1827,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCRemoveLink::invoke(std::shared_ptr
 			else receiverSerialNumber = parameters->at(1)->stringValue;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
@@ -1933,7 +1933,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSearchDevices::invoke(std::shared_
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> result(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central) result->integerValue += central->searchDevices()->integerValue;
@@ -1969,7 +1969,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetInstallMode::invoke(std::shared
 		uint32_t time = (parameters->size() > 1) ? parameters->at(1)->integerValue : 60;
 		if(time < 5) time = 60;
 		if(time > 3600) time = 3600;
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central) central->setInstallMode(parameters->at(0)->booleanValue, time);
@@ -2047,7 +2047,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetLinkInfo::invoke(std::shared_pt
 		}
 
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -2151,7 +2151,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetTeam::invoke(std::shared_ptr<st
 			teamChannel = parameters->at(3)->integerValue;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
@@ -2213,7 +2213,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetValue::invoke(std::shared_ptr<s
 		else if(!useSerialNumber && parameters->size() == 4) value = parameters->at(3);
 		else value.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(central)
@@ -2289,7 +2289,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCUpdateFirmware::invoke(std::shared
 			if(parameters->size() == 2 && parameters->at(1)->booleanValue) manual = true;
 		}
 
-		for(std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = BaseLib::Obj::ins->deviceFamilies.begin(); i != BaseLib::Obj::ins->deviceFamilies.end(); ++i)
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;

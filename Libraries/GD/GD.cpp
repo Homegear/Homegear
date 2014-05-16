@@ -44,6 +44,8 @@ int32_t GD::rpcLogLevel = 1;
 RPC::ServerSettings GD::serverSettings;
 RPC::ClientSettings GD::clientSettings;
 EventHandler GD::eventHandler;
+PhysicalDevices GD::physicalDevices;
+std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> GD::deviceFamilies;
 
 /*void GD::init()
 {
