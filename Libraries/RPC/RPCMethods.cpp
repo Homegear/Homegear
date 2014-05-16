@@ -1411,6 +1411,25 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCInit::invoke(std::shared_ptr<std::
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
+		//Fix for openHABs init
+		//Todo: Delete this block when issue 1000 is fixed in openHAB
+		if(parameters->at(0)->stringValue.empty() && parameters->at(1)->stringValue.substr(parameters->at(1)->stringValue.size() - 8, 8) == "/OPENHAB")
+		{
+			std::pair<std::string, std::string> server = BaseLib::HelperFunctions::split(parameters->at(1)->stringValue, ':');
+			if(server.first.empty() || server.second.empty()) return BaseLib::RPC::RPCVariable::createError(-32602, "Server address or port is empty.");
+			BaseLib::HelperFunctions::toLower(server.first);
+			server.first = "http://" + server.first;
+
+			int32_t pos = server.second.find_first_of('/');
+			server.second = server.second.substr(0, pos);
+			server.second = std::to_string(BaseLib::HelperFunctions::getNumber(server.second));
+			if(server.second.empty() || server.second == "0") return BaseLib::RPC::RPCVariable::createError(-32602, "Port number is invalid.");
+
+			GD::rpcClient.removeServer(server);
+
+			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		}
+
 		std::pair<std::string, std::string> server = BaseLib::HelperFunctions::split(parameters->at(0)->stringValue, ':');
 		if(server.first.empty() || server.second.empty()) return BaseLib::RPC::RPCVariable::createError(-32602, "Server address or port is empty.");
 		if(server.first.size() < 5) return BaseLib::RPC::RPCVariable::createError(-32602, "Server address too short.");
