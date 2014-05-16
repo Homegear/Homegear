@@ -363,7 +363,7 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get(bool returnID)
 					array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peerID)));
 					array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(i->first)));
 				}
-				else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peerSerial + std::to_string(i->first))));
+				else array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_peerSerial + ":" + std::to_string(i->first))));
 				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(j->first)));
 				array->arrayValue->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)j->second)));
 				serviceMessages->arrayValue->push_back(array);
