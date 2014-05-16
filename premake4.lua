@@ -92,19 +92,19 @@ solution "homegear"
          defines { "DEBUG" }
          flags { "Symbols" }
          libdirs { "./lib/Debug" }
-         targetdir "./lib/Modules/HomeMaticBidCoS/Debug"
+         targetdir "./lib/Modules/Debug"
  
       configuration "Release"
          defines { "NDEBUG" }
          flags { "Optimize" }
          libdirs { "./lib/Release" }
-         targetdir "./lib/Modules/HomeMaticBidCoS/Release"
+         targetdir "./lib/Modules/Release"
 
       configuration "Profiling"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          libdirs { "./lib/Profiling" }
-         targetdir "./lib/Modules/HomeMaticBidCoS/Profiling"
+         targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
    
@@ -120,19 +120,19 @@ solution "homegear"
          defines { "DEBUG" }
          flags { "Symbols" }
          libdirs { "./lib/Debug" }
-         targetdir "./lib/Modules/HomeMaticWired/Debug"
+         targetdir "./lib/Modules/Debug"
  
       configuration "Release"
          defines { "NDEBUG" }
          flags { "Optimize" }
          libdirs { "./lib/Release" }
-         targetdir "./lib/Modules/HomeMaticWired/Release"
+         targetdir "./lib/Modules/Release"
 
       configuration "Profiling"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          libdirs { "./lib/Profiling" }
-         targetdir "./lib/Modules/HomeMaticWired/Profiling"
+         targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
    
@@ -148,19 +148,19 @@ solution "homegear"
          defines { "DEBUG" }
          flags { "Symbols" }
          libdirs { "./lib/Debug" }
-         targetdir "./lib/Modules/FS20/Debug"
+         targetdir "./lib/Modules/Debug"
  
       configuration "Release"
          defines { "NDEBUG" }
          flags { "Optimize" }
          libdirs { "./lib/Release" }
-         targetdir "./lib/Modules/FS20/Release"
+         targetdir "./lib/Modules/Release"
 
       configuration "Profiling"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          libdirs { "./lib/Profiling" }
-         targetdir "./lib/Modules/FS20/Profiling"
+         targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
          
@@ -176,19 +176,19 @@ solution "homegear"
          defines { "DEBUG" }
          flags { "Symbols" }
          libdirs { "./lib/Debug" }
-         targetdir "./lib/Modules/Insteon/Debug"
+         targetdir "./lib/Modules/Debug"
  
       configuration "Release"
          defines { "NDEBUG" }
          flags { "Optimize" }
          libdirs { "./lib/Release" }
-         targetdir "./lib/Modules/Insteon/Release"
+         targetdir "./lib/Modules/Release"
 
       configuration "Profiling"
          defines { "NDEBUG" }
          flags { "Optimize", "Symbols" }
          libdirs { "./lib/Profiling" }
-         targetdir "./lib/Modules/Insteon/Profiling"
+         targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
 		 

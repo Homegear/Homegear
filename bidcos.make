@@ -29,7 +29,7 @@ endif
 
 ifeq ($(config),debug)
   OBJDIR     = obj/Debug/bidcos
-  TARGETDIR  = lib/Modules/HomeMaticBidCoS/Debug
+  TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libbidcos.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
@@ -51,7 +51,7 @@ endif
 
 ifeq ($(config),release)
   OBJDIR     = obj/Release/bidcos
-  TARGETDIR  = lib/Modules/HomeMaticBidCoS/Release
+  TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libbidcos.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
@@ -73,7 +73,7 @@ endif
 
 ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/bidcos
-  TARGETDIR  = lib/Modules/HomeMaticBidCoS/Profiling
+  TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libbidcos.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 

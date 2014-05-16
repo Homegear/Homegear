@@ -29,7 +29,7 @@ endif
 
 ifeq ($(config),debug)
   OBJDIR     = obj/Debug/fs20
-  TARGETDIR  = lib/Modules/FS20/Debug
+  TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libfs20.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
@@ -51,7 +51,7 @@ endif
 
 ifeq ($(config),release)
   OBJDIR     = obj/Release/fs20
-  TARGETDIR  = lib/Modules/FS20/Release
+  TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libfs20.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
@@ -73,7 +73,7 @@ endif
 
 ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/fs20
-  TARGETDIR  = lib/Modules/FS20/Profiling
+  TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libfs20.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 

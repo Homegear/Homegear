@@ -47,6 +47,11 @@ case $1 in
 		chown homegear:homegear /var/log/homegear
 		chmod 750 /var/log/homegear
 
+		chown -R homegear:homegear /var/lib/homegear/firmware
+		chmod -R 550 /var/lib/homegear/firmware
+		chown -R homegear:homegear /var/lib/homegear/modules
+		chmod -R 550 /var/lib/homegear/modules
+
 		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
 			if test ! -e /etc/homegear/Device\ types/rf_s.xml; then
 				echo "Downloading device description files..."
@@ -54,8 +59,6 @@ case $1 in
 				[ $? -ne 0 ] && exit 1
 			fi
 			
-			chown -R homegear:homegear /var/lib/homegear/firmware
-			chmod -R 550 /var/lib/homegear/firmware
 			echo "Downloading current firmware updates..."
 			/var/lib/homegear/firmware/GetFirmwareUpdates.sh
 			[ $? -ne 0 ] && exit 1

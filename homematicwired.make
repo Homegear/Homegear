@@ -29,7 +29,7 @@ endif
 
 ifeq ($(config),debug)
   OBJDIR     = obj/Debug/homematicwired
-  TARGETDIR  = lib/Modules/HomeMaticWired/Debug
+  TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libhomematicwired.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
@@ -51,7 +51,7 @@ endif
 
 ifeq ($(config),release)
   OBJDIR     = obj/Release/homematicwired
-  TARGETDIR  = lib/Modules/HomeMaticWired/Release
+  TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libhomematicwired.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
@@ -73,7 +73,7 @@ endif
 
 ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/homematicwired
-  TARGETDIR  = lib/Modules/HomeMaticWired/Profiling
+  TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libhomematicwired.so
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
