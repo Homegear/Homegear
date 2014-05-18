@@ -67,6 +67,7 @@ solution "homegear"
          defines { "DEBUG" }
          flags { "Symbols" }
          targetdir "./lib/Debug"
+         buildoptions "-fPIC"
  
       configuration "Release"
          defines { "NDEBUG" }
@@ -80,7 +81,7 @@ solution "homegear"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
          
-   project "bidcos"
+   project "homematicbidcos"
       kind "SharedLib"
       language "C++"
       files { "./Modules/HomeMaticBidCoS/*.h", "./Modules/HomeMaticBidCoS/*.cpp" }

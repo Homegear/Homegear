@@ -458,9 +458,7 @@ void CUL::listen()
         	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + CUL "A")
         	{
 				std::shared_ptr<BidCoS::BidCoSPacket> packet(new BidCoS::BidCoSPacket(packetHex, BaseLib::HelperFunctions::getTime()));
-				std::thread t(&CUL::callCallback, this, packet);
-				BaseLib::Threads::setThreadPriority(t.native_handle(), 45);
-				t.detach();
+				raisePacketReceived(packet);
         	}
         	else if(!packetHex.empty()) BaseLib::Output::printWarning("Warning: Too short packet received: " + packetHex);
         }

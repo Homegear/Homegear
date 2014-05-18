@@ -123,7 +123,7 @@ void Insteon_SD::loadVariables()
 	_databaseMutex.unlock();
 }
 
-bool Insteon_SD::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool Insteon_SD::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{

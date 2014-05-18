@@ -177,7 +177,7 @@ std::shared_ptr<HMWiredDevice> HMWired::getDevice(std::string serialNumber)
 	return std::shared_ptr<HMWiredDevice>();
 }
 
-void HMWired::load(bool version_0_0_7)
+void HMWired::load()
 {
 	try
 	{
@@ -210,7 +210,7 @@ void HMWired::load(bool version_0_0_7)
 			if(device)
 			{
 				device->load();
-				device->loadPeers(version_0_0_7);
+				device->loadPeers();
 				_devicesMutex.lock();
 				_devices.push_back(device);
 				_devicesMutex.unlock();

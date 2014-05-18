@@ -289,7 +289,7 @@ void HM_SD::unserializeResponsesToOverwrite(std::shared_ptr<std::vector<char>> s
     }
 }
 
-bool HM_SD::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool HM_SD::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{

@@ -57,7 +57,7 @@ class HM_SD : public HomeMaticDevice
         HM_SD(IDeviceEventSink* eventHandler);
         HM_SD(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~HM_SD();
-        bool packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
         void addFilter(FilterType, int32_t);
         void removeFilter(FilterType, int32_t);
         void addOverwriteResponse(std::string packetPartToCapture, std::string response, int32_t sendAfter);

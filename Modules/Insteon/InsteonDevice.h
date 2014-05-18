@@ -54,23 +54,14 @@ class InsteonDevice : public BaseLib::Systems::LogicalDevice
         InsteonDevice(IDeviceEventSink* eventHandler);
         InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~InsteonDevice();
-        virtual BaseLib::Systems::DeviceFamilies deviceFamily() { return BaseLib::Systems::DeviceFamilies::Insteon; }
-        bool packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual void dispose(bool wait = true);
+        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
 
         virtual void loadVariables();
         virtual void saveVariables();
-        virtual void saveVariable(uint32_t index, int64_t intValue);
-        virtual void saveVariable(uint32_t index, std::string& stringValue);
-        virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
 
         virtual void sendPacket(std::shared_ptr<InsteonPacket> packet);
     protected:
-        std::map<uint32_t, uint32_t> _variableDatabaseIDs;
-        bool _disposing = false;
-
-        std::mutex _databaseMutex;
-        bool _initialized = false;
-
         virtual void init();
     private:
 };

@@ -50,7 +50,7 @@ public:
 	HomeMaticCentral(uint32_t deviceType, std::string, int32_t, IDeviceEventSink* eventHandler);
 	virtual ~HomeMaticCentral();
 	void init();
-	bool packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+	virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
 	void enablePairingMode() { _pairing = true; }
 	void disablePairingMode() { _pairing = false; }
 	void unpair(uint64_t id, bool defer);

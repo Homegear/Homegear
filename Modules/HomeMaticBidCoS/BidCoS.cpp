@@ -265,7 +265,7 @@ std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(std::string serialNumber)
 	return std::shared_ptr<HomeMaticDevice>();
 }
 
-void BidCoS::load(bool version_0_0_7)
+void BidCoS::load()
 {
 	try
 	{
@@ -307,7 +307,7 @@ void BidCoS::load(bool version_0_0_7)
 			if(device)
 			{
 				device->load();
-				device->loadPeers(version_0_0_7);
+				device->loadPeers();
 				_devicesMutex.lock();
 				_devices.push_back(device);
 				_devicesMutex.unlock();

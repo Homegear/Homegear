@@ -1553,6 +1553,11 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListDevices::invoke(std::shared_pt
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->listDevices();
+			if(result->errorStruct)
+			{
+				BaseLib::Output::printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
+				continue;
+			}
 			if(result && !result->arrayValue->empty()) devices->arrayValue->insert(devices->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
 		}
 

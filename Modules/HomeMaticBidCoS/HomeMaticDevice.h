@@ -76,9 +76,8 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice
         HomeMaticDevice(IDeviceEventSink* eventHandler);
         HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~HomeMaticDevice();
-        virtual BaseLib::Systems::DeviceFamilies deviceFamily() { return BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS; }
         virtual void dispose(bool wait = true);
-        virtual bool packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
 
         virtual void addPeer(std::shared_ptr<BidCoSPeer> peer);
         virtual bool peerSelected() { return (bool)_currentPeer; }
@@ -87,18 +86,12 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice
         std::shared_ptr<BidCoSPeer> getPeer(int32_t address);
         std::shared_ptr<BidCoSPeer> getPeer(uint64_t id);
         std::shared_ptr<BidCoSPeer> getPeer(std::string serialNumber);
-        virtual void deletePeersFromDatabase();
-        virtual void loadPeers(bool version_0_0_7);
+        virtual void loadPeers();
         virtual void savePeers(bool full);
         virtual void loadVariables();
         virtual void saveVariables();
-        virtual void saveVariable(uint32_t index, int64_t intValue);
-        virtual void saveVariable(uint32_t index, std::string& stringValue);
-        virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
         virtual void saveMessageCounters();
         virtual void saveConfig();
-        virtual void load();
-        virtual void save(bool saveDevice);
         virtual void serializeMessageCounters(std::vector<uint8_t>& encodedData);
         virtual void unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData);
         virtual void serializeConfig(std::vector<uint8_t>& encodedData);
@@ -154,9 +147,6 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice
         std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>> _config;
         //End
 
-        std::map<uint32_t, uint32_t> _variableDatabaseIDs;
-        bool _disposing = false;
-        bool _disposed = false;
         bool _stopWorkerThread = false;
         std::thread _workerThread;
 
@@ -170,7 +160,6 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice
         std::unordered_map<std::string, std::shared_ptr<BidCoSPeer>> _peersBySerial;
         std::map<uint64_t, std::shared_ptr<BidCoSPeer>> _peersByID;
         std::timed_mutex _peersMutex;
-        std::mutex _databaseMutex;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
         bool _pairing = false;
         bool _justPairedToOrThroughCentral = false;
@@ -179,7 +168,6 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice
         BidCoSPacketManager _sentPackets;
         std::shared_ptr<BidCoSMessages> _messages;
         std::shared_ptr<HomeMaticCentral> _central;
-        bool _initialized = false;
 
         bool _lowBattery = false;
 

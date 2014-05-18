@@ -64,13 +64,14 @@ void PhysicalDevice::disableUpdateMode()
 	throw Exception("Error: Method disableUpdateMode is not implemented.");
 }
 
-void PhysicalDevice::addLogicalDevice(LogicalDevice* device)
+void PhysicalDevice::raisePacketReceived(std::shared_ptr<Packet> packet)
 {
 	try
 	{
-		_logicalDevicesMutex.lock();
-		_logicalDevices.push_back(device);
-    }
+		std::thread t(&PhysicalDevice::raisePacketReceivedThread, this, packet);
+		BaseLib::Threads::setThreadPriority(t.native_handle(), 45);
+		t.detach();
+	}
     catch(const std::exception& ex)
     {
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -83,62 +84,39 @@ void PhysicalDevice::addLogicalDevice(LogicalDevice* device)
     {
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _logicalDevicesMutex.unlock();
 }
 
-void PhysicalDevice::removeLogicalDevice(LogicalDevice* device)
+void PhysicalDevice::raisePacketReceivedThread(std::shared_ptr<Packet> packet)
 {
 	try
 	{
-		_logicalDevicesMutex.lock();
-		_logicalDevices.remove(device);
-    }
-    catch(const std::exception& ex)
-    {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _logicalDevicesMutex.unlock();
-}
-
-void PhysicalDevice::callCallback(std::shared_ptr<Packet> packet)
-{
-	try
-	{
-		std::vector<LogicalDevice*> devices;
-		_logicalDevicesMutex.lock();
+		std::vector<IPhysicalDeviceEventSink*> eventHandlers;
+		_eventHandlerMutex.lock();
 		//We need to copy all elements. In packetReceived so much can happen, that _homeMaticDevicesMutex might deadlock
-		for(std::list<LogicalDevice*>::const_iterator i = _logicalDevices.begin(); i != _logicalDevices.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::const_iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
-			if((*i)->deviceFamily() == _settings->family) devices.push_back(*i);
+			if(*i) eventHandlers.push_back((IPhysicalDeviceEventSink*)(*i));
 		}
-		_logicalDevicesMutex.unlock();
+		_eventHandlerMutex.unlock();
 		_lastPacketReceived = HelperFunctions::getTime();
-		for(std::vector<LogicalDevice*>::iterator i = devices.begin(); i != devices.end(); ++i)
+		for(std::vector<IPhysicalDeviceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
 		{
-			(*i)->packetReceived(packet);
+			(*i)->onPacketReceived(packet);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	_logicalDevicesMutex.unlock();
+    	_eventHandlerMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_logicalDevicesMutex.unlock();
+    	_eventHandlerMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_logicalDevicesMutex.unlock();
+    	_eventHandlerMutex.unlock();
         Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 

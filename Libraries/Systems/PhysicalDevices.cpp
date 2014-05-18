@@ -239,7 +239,6 @@ std::shared_ptr<BaseLib::Systems::PhysicalDevice> PhysicalDevices::get(BaseLib::
 	{
 		_physicalDevicesMutex.lock();
 		if(_physicalDevices.find(family) != _physicalDevices.end()) device = _physicalDevices[family];
-		else device = std::shared_ptr<BaseLib::Systems::PhysicalDevice>(new BaseLib::Systems::PhysicalDevice());
 	}
 	catch(const std::exception& ex)
     {

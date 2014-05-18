@@ -198,7 +198,7 @@ void HomeMaticCentral::worker()
     }
 }
 
-bool HomeMaticCentral::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool HomeMaticCentral::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
@@ -218,7 +218,7 @@ bool HomeMaticCentral::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> 
 			}
 			return false;
 		}
-		bool handled = HomeMaticDevice::packetReceived(bidCoSPacket);
+		bool handled = HomeMaticDevice::onPacketReceived(bidCoSPacket);
 		std::shared_ptr<BidCoSPeer> peer(getPeer(bidCoSPacket->senderAddress()));
 		if(!peer) return false;
 		std::shared_ptr<BidCoSPeer> team;
@@ -1427,7 +1427,7 @@ void HomeMaticCentral::addHomegearFeaturesHMCCVD(std::shared_ptr<BidCoSPeer> pee
 			if(peer->hasPeers(1) && !peer->getPeer(1, hmcctcAddress)) return; //Already linked to a HM-CC-TC
 			std::string temp = peer->getSerialNumber().substr(3);
 			std::string serialNumber = getUniqueSerialNumber("VCD", BaseLib::HelperFunctions::getNumber(temp));
-			BaseLib::Obj::family->add(std::shared_ptr<LogicalDevice>(new HM_CC_TC(0, serialNumber, hmcctcAddress, (IDeviceEventSink*)getEventHandlers().at(0))));
+			BaseLib::Obj::family->add(std::shared_ptr<LogicalDevice>(new HM_CC_TC(0, serialNumber, hmcctcAddress, (IDeviceEventSink*)getEventHandlers().front())));
 			tc = getDevice(hmcctcAddress);
 			tc->addPeer(peer);
 		}
@@ -1497,7 +1497,7 @@ void HomeMaticCentral::addHomegearFeaturesRemote(std::shared_ptr<BidCoSPeer> pee
 			if(channels.empty()) return; //All channels are already paired to actors
 			std::string temp = peer->getSerialNumber().substr(3);
 			std::string serialNumber = getUniqueSerialNumber("VSW", BaseLib::HelperFunctions::getNumber(temp));
-			BaseLib::Obj::family->add(std::shared_ptr<LogicalDevice>(new HM_LC_SWX_FM(0, serialNumber, actorAddress, (IDeviceEventSink*)getEventHandlers().at(0))));
+			BaseLib::Obj::family->add(std::shared_ptr<LogicalDevice>(new HM_LC_SWX_FM(0, serialNumber, actorAddress, (IDeviceEventSink*)getEventHandlers().front())));
 			sw = getDevice(actorAddress);
 			uint32_t channelCount = peer->rpcDevice->channels.size();
 			sw->setChannelCount(channelCount);

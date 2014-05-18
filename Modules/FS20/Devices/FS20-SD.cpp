@@ -204,7 +204,7 @@ void FS20_SD::unserializeFilters(std::shared_ptr<std::vector<char>> serializedDa
     }
 }
 
-bool FS20_SD::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool FS20_SD::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{

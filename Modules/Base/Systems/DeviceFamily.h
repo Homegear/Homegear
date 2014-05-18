@@ -84,7 +84,7 @@ public:
 	virtual DeviceFamilies getFamily() { return _family; }
 	virtual std::shared_ptr<RPC::RPCVariable> listBidcosInterfaces() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid)); }
 	virtual std::shared_ptr<Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<Systems::PhysicalDeviceSettings> settings) { return std::shared_ptr<Systems::PhysicalDevice>(); }
-	virtual void load(bool version_0_0_7) {}
+	virtual void load() = 0;
 	virtual void save(bool full);
 	virtual void add(std::shared_ptr<LogicalDevice> device);
 	virtual void remove(uint64_t id);
@@ -93,15 +93,16 @@ public:
 	virtual std::shared_ptr<LogicalDevice> get(uint64_t id);
 	virtual std::shared_ptr<LogicalDevice> get(std::string serialNumber);
 	virtual std::vector<std::shared_ptr<LogicalDevice>> getDevices();
-	virtual std::shared_ptr<Central> getCentral() { return std::shared_ptr<Central>(); }
+	virtual std::shared_ptr<Central> getCentral() = 0;
 	virtual std::string getName() = 0;
-	virtual std::string handleCLICommand(std::string& command) { return ""; }
-	virtual bool deviceSelected() { return false; }
+	virtual std::string handleCLICommand(std::string& command) = 0;
+	virtual bool deviceSelected() { return (bool)_currentDevice; }
 protected:
 	DeviceFamilies _family = DeviceFamilies::none;
 	std::mutex _devicesMutex;
 	std::thread _removeThread;
 	std::vector<std::shared_ptr<LogicalDevice>> _devices;
+	std::shared_ptr<BaseLib::Systems::LogicalDevice> _currentDevice;
 
 	void removeThread(uint64_t id);
 };

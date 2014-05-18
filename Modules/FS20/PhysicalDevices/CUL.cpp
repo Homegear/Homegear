@@ -403,9 +403,7 @@ void CUL::listen()
         	if(packetHex.size() > 11) //11 is minimal packet length (=5 Byte + CUL "F")
         	{
 				std::shared_ptr<FS20::FS20Packet> packet(new FS20::FS20Packet(packetHex, BaseLib::HelperFunctions::getTime()));
-				std::thread t(&CUL::callCallback, this, packet);
-				BaseLib::Threads::setThreadPriority(t.native_handle(), 45);
-				t.detach();
+				raisePacketReceived(packet);
         	}
         	else if(!packetHex.empty()) BaseLib::Output::printWarning("Warning: Too short packet received: " + packetHex);
         }

@@ -69,7 +69,7 @@ void DeviceFamily::raiseRPCEvent(uint64_t id, int32_t channel, std::string devic
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IFamilyEventSink*)*i)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 		}
@@ -94,7 +94,7 @@ void DeviceFamily::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::strin
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IFamilyEventSink*)*i)->onRPCUpdateDevice(id, channel, address, hint);
 		}
@@ -119,7 +119,7 @@ void DeviceFamily::raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDe
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IFamilyEventSink*)*i)->onRPCNewDevices(deviceDescriptions);
 		}
@@ -144,7 +144,7 @@ void DeviceFamily::raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> devic
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IFamilyEventSink*)*i)->onRPCDeleteDevices(deviceAddresses, deviceInfo);
 		}
@@ -169,7 +169,7 @@ void DeviceFamily::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IFamilyEventSink*)*i)->onEvent(peerID, channel, variables, values);
 		}

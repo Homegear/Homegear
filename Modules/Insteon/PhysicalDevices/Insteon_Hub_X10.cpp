@@ -213,9 +213,7 @@ void InsteonHubX10::listen()
         	}
 
 			std::shared_ptr<Insteon::InsteonPacket> packet(new Insteon::InsteonPacket(buffer, receivedBytes, BaseLib::HelperFunctions::getTime()));
-			std::thread t(&InsteonHubX10::callCallback, this, packet);
-			BaseLib::Threads::setThreadPriority(t.native_handle(), 45);
-			t.detach();
+			raisePacketReceived(packet);
 			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
         }
     }

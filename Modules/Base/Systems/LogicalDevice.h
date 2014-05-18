@@ -31,8 +31,9 @@
 #define LOGICALDEVICE_H_
 
 #include "../HelperFunctions/HelperFunctions.h"
-#include "../Systems/DeviceFamilies.h"
-#include "../Systems/Packet.h"
+#include "PhysicalDevice.h"
+#include "DeviceFamilies.h"
+#include "Packet.h"
 #include "../RPC/RPCVariable.h"
 #include "../IEvents.h"
 #include "Peer.h"
@@ -43,7 +44,7 @@ namespace BaseLib
 {
 namespace Systems
 {
-class LogicalDevice : public Peer::IPeerEventSink, public IEvents
+class LogicalDevice : public Peer::IPeerEventSink, public PhysicalDevice::IPhysicalDeviceEventSink, public IEvents
 {
 public:
 	//Event handling
@@ -70,12 +71,15 @@ public:
 	virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
 	//End Peer event handling
 
+	//Physical device event handling
+	virtual bool onPacketReceived(std::shared_ptr<Packet> packet) = 0;
+	//End physical device event handling
+
 	LogicalDevice(IDeviceEventSink* eventHandler);
 	LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
 	virtual ~LogicalDevice();
 
-	virtual bool packetReceived(std::shared_ptr<Packet> packet) { return false; }
-	virtual DeviceFamilies deviceFamily() = 0;
+	virtual DeviceFamilies deviceFamily();
 
 	virtual int32_t getAddress() { return _address; }
 	virtual int32_t getID() { return _deviceID; }
@@ -84,16 +88,26 @@ public:
 	virtual std::string handleCLICommand(std::string command) { return ""; }
 	virtual bool peerSelected() { return false; }
 	virtual void dispose(bool wait = true) {}
-	virtual void deletePeersFromDatabase() {}
-	virtual void load() {}
-	virtual void loadPeers(bool version_0_0_7) {}
-	virtual void save(bool saveDevice) {}
+	virtual void deletePeersFromDatabase();
+	virtual void load();
+	virtual void loadVariables() = 0;
+	virtual void loadPeers() {}
+	virtual void save(bool saveDevice);
+	virtual void saveVariables() = 0;
+	virtual void saveVariable(uint32_t index, int64_t intValue);
+	virtual void saveVariable(uint32_t index, std::string& stringValue);
+	virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
 	virtual void savePeers(bool full) {}
 protected:
 	int32_t _deviceID = 0;
 	int32_t _address = 0;
     std::string _serialNumber;
     uint32_t _deviceType = 0;
+    std::mutex _databaseMutex;
+    std::map<uint32_t, uint32_t> _variableDatabaseIDs;
+    bool _initialized = false;
+    bool _disposing = false;
+	bool _disposed = false;
 };
 
 }

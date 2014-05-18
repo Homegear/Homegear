@@ -43,15 +43,13 @@ public:
 	virtual ~FS20();
 
 	virtual std::shared_ptr<BaseLib::Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
-	virtual void load(bool version_0_0_7);
+	virtual void load();
 	virtual std::shared_ptr<FS20Device> getDevice(uint32_t address);
 	virtual std::shared_ptr<FS20Device> getDevice(std::string serialNumber);
+	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral() { return std::shared_ptr<BaseLib::Systems::Central>(); }
 	virtual std::string handleCLICommand(std::string& command);
-	virtual bool deviceSelected() { return (bool)_currentDevice; }
 	virtual std::string getName() { return "FS20"; }
 private:
-	std::shared_ptr<BaseLib::Systems::LogicalDevice> _currentDevice;
-
 	void createSpyDevice();
 };
 

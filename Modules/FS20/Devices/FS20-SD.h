@@ -51,7 +51,7 @@ class FS20_SD : public FS20Device
         FS20_SD(IDeviceEventSink* eventHandler);
         FS20_SD(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~FS20_SD();
-        bool packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
         void addFilter(FilterType, int32_t);
         void removeFilter(FilterType, int32_t);
         std::string handleCLICommand(std::string command);

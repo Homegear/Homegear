@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base bidcos homematicwired fs20 insteon user rpc cli events gd homegear
+PROJECTS := base homematicbidcos homematicwired fs20 insteon user rpc cli events gd homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -16,9 +16,9 @@ base:
 	@echo "==== Building base ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f base.make
 
-bidcos: 
-	@echo "==== Building bidcos ($(config)) ===="
-	@${MAKE} --no-print-directory -C . -f bidcos.make
+homematicbidcos: 
+	@echo "==== Building homematicbidcos ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f homematicbidcos.make
 
 homematicwired: 
 	@echo "==== Building homematicwired ($(config)) ===="
@@ -58,7 +58,7 @@ homegear:
 
 clean:
 	@${MAKE} --no-print-directory -C . -f base.make clean
-	@${MAKE} --no-print-directory -C . -f bidcos.make clean
+	@${MAKE} --no-print-directory -C . -f homematicbidcos.make clean
 	@${MAKE} --no-print-directory -C . -f homematicwired.make clean
 	@${MAKE} --no-print-directory -C . -f fs20.make clean
 	@${MAKE} --no-print-directory -C . -f insteon.make clean
@@ -81,7 +81,7 @@ help:
 	@echo "   all (default)"
 	@echo "   clean"
 	@echo "   base"
-	@echo "   bidcos"
+	@echo "   homematicbidcos"
 	@echo "   homematicwired"
 	@echo "   fs20"
 	@echo "   insteon"

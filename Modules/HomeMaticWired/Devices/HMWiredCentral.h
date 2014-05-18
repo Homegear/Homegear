@@ -48,7 +48,7 @@ public:
 	HMWiredCentral(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
 	virtual ~HMWiredCentral();
 	void init();
-	bool packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+	virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
 	std::string handleCLICommand(std::string command);
 	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<HMWiredPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 	void updateFirmwares(std::vector<uint64_t> ids);

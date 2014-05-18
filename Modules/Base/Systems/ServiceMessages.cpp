@@ -53,7 +53,7 @@ void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string de
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IServiceEventSink*)*i)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 		}
@@ -78,7 +78,7 @@ void ServiceMessages::raiseSaveParameter(std::string name, uint32_t channel, std
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IServiceEventSink*)*i)->onSaveParameter(name, channel, data);
 		}
@@ -103,7 +103,7 @@ void ServiceMessages::raiseEnqueuePendingQueues()
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IServiceEventSink*)*i)->onEnqueuePendingQueues();
 		}

@@ -30,7 +30,7 @@
 #ifndef PHYSICALDEVICE_H_
 #define PHYSICALDEVICE_H_
 
-#include "LogicalDevice.h"
+#include "../IEvents.h"
 #include "PhysicalDeviceSettings.h"
 #include "../FileDescriptorManager/FileDescriptorManager.h"
 
@@ -48,7 +48,7 @@ namespace Systems
 
 class Packet;
 
-class PhysicalDevice
+class PhysicalDevice : public IEvents
 {
 public:
 	struct GPIODirection
@@ -70,6 +70,14 @@ public:
 			};
 	};
 
+	//Event handling
+	class IPhysicalDeviceEventSink : public IEventSinkBase
+	{
+	public:
+		virtual bool onPacketReceived(std::shared_ptr<Packet> packet) = 0;
+	};
+	//End event handling
+
 	PhysicalDevice();
 	PhysicalDevice(std::shared_ptr<PhysicalDeviceSettings> settings);
 
@@ -79,9 +87,7 @@ public:
 	virtual void stopListening() {}
 	virtual void enableUpdateMode();
 	virtual void disableUpdateMode();
-	virtual void addLogicalDevice(LogicalDevice*);
-	virtual void removeLogicalDevice(LogicalDevice*);
-	virtual void sendPacket(std::shared_ptr<Packet> packet) {}
+	virtual void sendPacket(std::shared_ptr<Packet> packet) = 0;
 	virtual bool isOpen() { return _fileDescriptor && _fileDescriptor->descriptor > -1; }
 	virtual uint32_t responseDelay() { return _settings->responseDelay; }
 	virtual int64_t lastPacketSent() { return _lastPacketSent; }
@@ -90,8 +96,6 @@ public:
 	virtual std::string getType() { return _settings->type; }
 protected:
 	std::shared_ptr<PhysicalDeviceSettings> _settings;
-	std::mutex _logicalDevicesMutex;
-    std::list<LogicalDevice*> _logicalDevices;
 	std::thread _listenThread;
 	std::thread _callbackThread;
 	bool _stopCallbackThread;
@@ -104,7 +108,10 @@ protected:
 	int64_t _lastPacketReceived = -1;
 	bool _updateMode = false;
 
-	virtual void callCallback(std::shared_ptr<Packet> packet);
+	//Event handling
+	virtual void raisePacketReceived(std::shared_ptr<Packet> packet);
+	virtual void raisePacketReceivedThread(std::shared_ptr<Packet> packet);
+	//End event handling
 	virtual void setDevicePermission(int32_t userID, int32_t groupID);
 	virtual void openGPIO(uint32_t index, bool readOnly);
 	virtual void getGPIOPath(uint32_t index);

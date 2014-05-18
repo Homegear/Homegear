@@ -37,7 +37,7 @@ std::string BidCoSPacket::hexString()
 {
 	try
 	{
-		if(_payload.size() > 100) return "";
+		if(_payload.size() > 200) return "";
 		std::ostringstream stringStream;
 		stringStream << std::hex << std::uppercase << std::setfill('0') << std::setw(2);
 		stringStream << std::setw(2) << (9 + _payload.size());
@@ -69,7 +69,7 @@ std::vector<uint8_t> BidCoSPacket::byteArray()
 	try
 	{
 		std::vector<uint8_t> data;
-		if(_payload.size() > 100) return data;
+		if(_payload.size() > 200) return data;
 		data.push_back(9 + _payload.size());
 		data.push_back(_messageCounter);
 		data.push_back(_controlByte);
@@ -141,20 +141,31 @@ void BidCoSPacket::import(std::vector<uint8_t>& packet, bool rssiByte)
 			BaseLib::Output::printWarning("Warning: Tried to import BidCoS packet larger than 200 bytes.");
 			return;
 		}
-		_length = packet[0];
 		_messageCounter = packet[1];
 		_controlByte = packet[2];
 		_messageType = packet[3];
 		_senderAddress = (packet[4] << 16) + (packet[5] << 8) + packet[6];
 		_destinationAddress = (packet[7] << 16) + (packet[8] << 8) + packet[9];
 		_payload.clear();
-		if(packet.size() == 10) return;
-		if(rssiByte)
+		if(packet.size() == 10)
 		{
-			_payload.insert(_payload.end(), packet.begin() + 10, packet.end() - 1);
-			_rssiDevice = packet.back();
+			_length = packet.size();
 		}
-		else _payload.insert(_payload.end(), packet.begin() + 10, packet.end());
+		else
+		{
+			if(rssiByte)
+			{
+				_payload.insert(_payload.end(), packet.begin() + 10, packet.end() - 1);
+				_rssiDevice = packet.back();
+			}
+			else _payload.insert(_payload.end(), packet.begin() + 10, packet.end());
+			_length = 9 + _payload.size();
+		}
+		if(_length != packet[0])
+		{
+			BaseLib::Output::printWarning("Warning: Packet with wrong length byte received.");
+			return;
+		}
 	}
 	catch(const std::exception& ex)
     {

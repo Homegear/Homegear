@@ -280,7 +280,7 @@ void FamilyController::convertDatabase()
 		if(result.empty()) return; //Handled in initializeDatabase
 		std::string version = result.at(0).at(3)->textValue;
 		if(version == "0.4.3") return; //Up to date
-		if(version != "0.3.0" && version != "0.3.1")
+		if(version != "0.3.1")
 		{
 			BaseLib::Output::printCritical("Unknown database version: " + version);
 			exit(1); //Don't know, what to do
@@ -308,7 +308,7 @@ void FamilyController::convertDatabase()
 			BaseLib::Output::printMessage("Exiting Homegear after database conversion...");
 			exit(0);
 		}*/
-		if(version == "0.3.0")
+		/*if(version == "0.3.0")
 		{
 			BaseLib::Output::printMessage("Converting database from version " + version + " to version 0.3.1...");
 			BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".old");
@@ -333,7 +333,8 @@ void FamilyController::convertDatabase()
 			BaseLib::Output::printMessage("Exiting Homegear after database conversion...");
 			exit(0);
 		}
-		else if(version == "0.3.1")
+		else*/
+		if(version == "0.3.1")
 		{
 			BaseLib::Output::printMessage("Converting database from version " + version + " to version 0.4.3...");
 			BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".old");
@@ -418,13 +419,13 @@ void FamilyController::initializeDatabase()
     }
 }
 
-void FamilyController::loadDevicesFromDatabase(bool version_0_0_7)
+void FamilyController::loadDevicesFromDatabase()
 {
 	try
 	{
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
-			i->second->load(version_0_0_7);
+			if(familyAvailable(i->first)) i->second->load();
 		}
 	}
 	catch(const std::exception& ex)
@@ -446,7 +447,7 @@ void FamilyController::load()
 	try
 	{
 		initializeDatabase();
-		loadDevicesFromDatabase(false);
+		loadDevicesFromDatabase();
 	}
 	catch(const std::exception& ex)
     {

@@ -814,9 +814,9 @@ void TICC1100::startListening()
 	{
 		stopListening();
 		openGPIO(1, true);
-		if(_gpioDescriptors[1]->descriptor == -1) throw(BaseLib::Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _settings->device));
+		if(!_gpioDescriptors[1] || _gpioDescriptors[1]->descriptor == -1) throw(BaseLib::Exception("Couldn't listen to rf device, because the gpio pointer is not valid: " + _settings->device));
 		openDevice();
-		if(_fileDescriptor->descriptor == -1) return;
+		if(!_fileDescriptor || _fileDescriptor->descriptor == -1) return;
 		_stopped = false;
 
 		initChip();
@@ -943,7 +943,7 @@ void TICC1100::mainThread()
 						uint8_t firstByte = readRegister(Registers::Enum::FIFO);
 						std::vector<uint8_t> encodedData = readRegisters(Registers::Enum::FIFO, firstByte + 1); //Read packet + RSSI
 						std::vector<uint8_t> decodedData(encodedData.size());
-						if(encodedData.size() >= 9) //Ignore too big packets. The first packet after initializing for example.
+						if(encodedData.size() >= 9)
 						{
 							decodedData[0] = firstByte;
 							decodedData[1] = (~encodedData[1]) ^ 0x89;
@@ -956,9 +956,7 @@ void TICC1100::mainThread()
 							decodedData[i + 1] = encodedData[i + 1]; //RSSI_DEVICE
 
 							std::shared_ptr<BidCoS::BidCoSPacket> packet(new BidCoS::BidCoSPacket(decodedData, true, BaseLib::HelperFunctions::getTime()));
-							std::thread t(&TICC1100::callCallback, this, packet);
-							BaseLib::Threads::setThreadPriority(t.native_handle(), 45);
-							t.detach();
+							raisePacketReceived(packet);
 						}
 						else BaseLib::Output::printWarning("Warning: Too small packet received: " + BaseLib::HelperFunctions::getHexString(encodedData));
 					}

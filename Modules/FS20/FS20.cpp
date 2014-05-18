@@ -138,7 +138,7 @@ std::shared_ptr<FS20Device> FS20::getDevice(std::string serialNumber)
 	return std::shared_ptr<FS20Device>();
 }
 
-void FS20::load(bool version_0_0_7)
+void FS20::load()
 {
 	try
 	{
@@ -167,7 +167,7 @@ void FS20::load(bool version_0_0_7)
 			if(device)
 			{
 				device->load();
-				device->loadPeers(version_0_0_7);
+				device->loadPeers();
 				_devicesMutex.lock();
 				_devices.push_back(device);
 				_devicesMutex.unlock();

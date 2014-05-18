@@ -44,15 +44,13 @@ public:
 	virtual ~HMWired();
 
 	virtual std::shared_ptr<BaseLib::Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
-	virtual void load(bool version_0_0_7);
+	virtual void load();
 	virtual std::shared_ptr<HMWiredDevice> getDevice(uint32_t address);
 	virtual std::shared_ptr<HMWiredDevice> getDevice(std::string serialNumber);
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::string handleCLICommand(std::string& command);
-	virtual bool deviceSelected() { return (bool)_currentDevice; }
 	virtual std::string getName() { return "HomeMatic Wired"; }
 private:
-	std::shared_ptr<BaseLib::Systems::LogicalDevice> _currentDevice;
 	std::shared_ptr<HMWiredCentral> _central;
 
 	void createCentral();

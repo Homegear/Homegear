@@ -204,7 +204,7 @@ void HMWired_SD::unserializeFilters(std::shared_ptr<std::vector<char>> serialize
     }
 }
 
-bool HMWired_SD::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool HMWired_SD::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{

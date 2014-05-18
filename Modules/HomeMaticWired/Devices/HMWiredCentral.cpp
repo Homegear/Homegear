@@ -71,12 +71,12 @@ void HMWiredCentral::init()
 	}
 }
 
-bool HMWiredCentral::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool HMWiredCentral::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
 		if(_disposing) return false;
-		HMWiredDevice::packetReceived(packet);
+		HMWiredDevice::onPacketReceived(packet);
 		std::shared_ptr<HMWiredPacket> hmWiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
 		if(!hmWiredPacket) return false;
 		std::shared_ptr<HMWiredPeer> peer(getPeer(hmWiredPacket->senderAddress()));

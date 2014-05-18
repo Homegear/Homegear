@@ -215,9 +215,7 @@ void RawLAN::listen()
         	std::vector<uint8_t> data((uint8_t*)&buffer.at(0), ((uint8_t*)&buffer.at(0)) + receivedBytes);
 
 			std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime()));
-			std::thread t(&RawLAN::callCallback, this, packet);
-			BaseLib::Threads::setThreadPriority(t.native_handle(), 45);
-			t.detach();
+			raisePacketReceived(packet);
 			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
         }
     }

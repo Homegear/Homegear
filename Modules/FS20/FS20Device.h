@@ -52,32 +52,19 @@ class FS20Device : public BaseLib::Systems::LogicalDevice
         FS20Device(IDeviceEventSink* eventHandler);
         FS20Device(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~FS20Device();
-        virtual BaseLib::Systems::DeviceFamilies deviceFamily() { return BaseLib::Systems::DeviceFamilies::FS20; }
         virtual void dispose(bool wait = true);
-        bool packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
 
         int32_t getHouseCode() { return _houseCode; }
 
-        virtual void load();
-        void save(bool saveDevice);
         virtual void loadVariables();
         virtual void saveVariables();
-        virtual void saveVariable(uint32_t index, int64_t intValue);
-        virtual void saveVariable(uint32_t index, std::string& stringValue);
-        virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
 
         virtual void sendPacket(std::shared_ptr<FS20Packet> packet);
     protected:
         //In table variables
         int32_t _houseCode = 0;
         //End
-
-        std::map<uint32_t, uint32_t> _variableDatabaseIDs;
-        bool _disposing = false;
-        bool _disposed = false;
-
-        std::mutex _databaseMutex;
-        bool _initialized = false;
 
         virtual void init();
     private:

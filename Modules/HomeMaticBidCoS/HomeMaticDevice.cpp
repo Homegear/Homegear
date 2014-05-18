@@ -48,9 +48,10 @@ void HomeMaticDevice::init()
 	try
 	{
 		if(_initialized) return; //Prevent running init two times
+		_initialized = true;
 		_messages = std::shared_ptr<BidCoSMessages>(new BidCoSMessages());
 
-		GD::physicalDevice->addLogicalDevice(this);
+		if(GD::physicalDevice) GD::physicalDevice->addEventHandler((BaseLib::Systems::PhysicalDevice::IPhysicalDeviceEventSink*)this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
 		_messageCounter[1] = 0; //Duty cycle message counter
@@ -58,7 +59,6 @@ void HomeMaticDevice::init()
 		setUpBidCoSMessages();
 		_workerThread = std::thread(&HomeMaticDevice::worker, this);
 		BaseLib::Threads::setThreadPriority(_workerThread.native_handle(), 19);
-		_initialized = true;
 	}
 	catch(const std::exception& ex)
     {
@@ -195,7 +195,7 @@ void HomeMaticDevice::dispose(bool wait)
 		if(_disposing) return;
 		_disposing = true;
 		BaseLib::Output::printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
-		GD::physicalDevice->removeLogicalDevice(this);
+		if(GD::physicalDevice) GD::physicalDevice->removeEventHandler((BaseLib::Systems::PhysicalDevice::IPhysicalDeviceEventSink*)this);
 		int64_t startTime = BaseLib::HelperFunctions::getTime();
 		stopThreads();
 		int64_t timeDifference = BaseLib::HelperFunctions::getTime() - startTime;
@@ -552,64 +552,7 @@ std::string HomeMaticDevice::handleCLICommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
-void HomeMaticDevice::save(bool saveDevice)
-{
-	try
-	{
-		if(saveDevice)
-		{
-			_databaseMutex.lock();
-			BaseLib::DataColumnVector data;
-			if(_deviceID > 0) data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_deviceID)));
-			else data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_address)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_serialNumber)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_deviceType)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)));
-			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?, ?)", data);
-			if(_deviceID == 0) _deviceID = result;
-			_databaseMutex.unlock();
-		}
-		saveVariables();
-	}
-    catch(const std::exception& ex)
-    {
-    	_databaseMutex.unlock();
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_databaseMutex.unlock();
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_databaseMutex.unlock();
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void HomeMaticDevice::load()
-{
-	try
-	{
-		loadVariables();
-	}
-    catch(const std::exception& ex)
-    {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void HomeMaticDevice::loadPeers(bool version_0_0_7)
+void HomeMaticDevice::loadPeers()
 {
 	try
 	{
@@ -617,11 +560,11 @@ void HomeMaticDevice::loadPeers(bool version_0_0_7)
 		//Change peers identifier for device to id
 		_peersMutex.lock();
 		_databaseMutex.lock();
-		BaseLib::DataTable rows = version_0_0_7 ? BaseLib::Obj::ins->db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_address)) : BaseLib::Obj::ins->db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_deviceID));
+		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_deviceID));
 		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			int32_t peerID = row->second.at(0)->intValue;
-			BaseLib::Output::printMessage("Loading HomeMatic BidCoS peer " + std::to_string(peerID));
+			BaseLib::Output::printMessage("Loading peer " + std::to_string(peerID));
 			int32_t address = row->second.at(2)->intValue;
 			std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
@@ -665,141 +608,6 @@ void HomeMaticDevice::loadPeers(bool version_0_0_7)
     }
     _databaseMutex.unlock();
     _peersMutex.unlock();
-}
-
-void HomeMaticDevice::saveVariable(uint32_t index, int64_t intValue)
-{
-	try
-	{
-		_databaseMutex.lock();
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		BaseLib::DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(intValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_deviceID == 0)
-			{
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_deviceID)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(index)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(intValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
-}
-
-void HomeMaticDevice::saveVariable(uint32_t index, std::string& stringValue)
-{
-	try
-	{
-		_databaseMutex.lock();
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		BaseLib::DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_deviceID == 0)
-			{
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_deviceID)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(index)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
-}
-
-void HomeMaticDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
-{
-	try
-	{
-		_databaseMutex.lock();
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		BaseLib::DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(binaryValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_deviceID == 0)
-			{
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_deviceID)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(index)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(binaryValue)));
-			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
 }
 
 void HomeMaticDevice::saveVariables()
@@ -1037,30 +845,6 @@ void HomeMaticDevice::unserializeConfig(std::shared_ptr<std::vector<char>> seria
     }
 }
 
-void HomeMaticDevice::deletePeersFromDatabase()
-{
-	try
-	{
-		_databaseMutex.lock();
-		std::ostringstream command;
-		command << "DELETE FROM peers WHERE parent=" << std::dec << _deviceID;
-		BaseLib::Obj::ins->db.executeCommand(command.str());
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
-}
-
 void HomeMaticDevice::savePeers(bool full)
 {
 	try
@@ -1131,7 +915,7 @@ bool HomeMaticDevice::pairDevice(int32_t timeout)
     return false;
 }
 
-bool HomeMaticDevice::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool HomeMaticDevice::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{

@@ -77,7 +77,7 @@ private:
 	BaseLib::Systems::DeviceFamily* _currentFamily;
 
 	void initializeDatabase();
-	void loadDevicesFromDatabase(bool version_0_0_7);
+	void loadDevicesFromDatabase();
 };
 
 #endif

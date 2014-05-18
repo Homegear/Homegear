@@ -32,7 +32,7 @@
 
 #include "Output/Output.h"
 
-#include <vector>
+#include <forward_list>
 #include <mutex>
 
 namespace BaseLib
@@ -51,12 +51,12 @@ public:
 	virtual ~IEvents();
 
 	virtual void addEventHandler(IEventSinkBase* eventHandler);
-	virtual void addEventHandlers(std::vector<IEventSinkBase*> eventHandlers);
+	virtual void addEventHandlers(std::forward_list<IEventSinkBase*> eventHandlers);
 	virtual void removeEventHandler(IEventSinkBase* eventHandler);
-	virtual std::vector<IEventSinkBase*> getEventHandlers();
+	virtual std::forward_list<IEventSinkBase*> getEventHandlers();
 protected:
 	std::mutex _eventHandlerMutex;
-    std::vector<IEventSinkBase*> _eventHandlers;
+    std::forward_list<IEventSinkBase*> _eventHandlers;
 };
 }
 #endif /* IEVENTS_H_ */

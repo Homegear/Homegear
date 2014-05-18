@@ -102,7 +102,7 @@ void Peer::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IPeerEventSink*)*i)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 		}
@@ -127,7 +127,7 @@ void Peer::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string addres
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IPeerEventSink*)*i)->onRPCUpdateDevice(id, channel, address, hint);
 		}
@@ -152,7 +152,7 @@ void Peer::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vec
 	try
 	{
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i) ((IPeerEventSink*)*i)->onEvent(peerID, channel, variables, values);
 		}

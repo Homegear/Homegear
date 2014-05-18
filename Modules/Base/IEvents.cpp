@@ -49,7 +49,7 @@ void IEvents::addEventHandler(IEventSinkBase* eventHandler)
 	{
 		if(!eventHandler) return;
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
 			if(*i == eventHandler)
 			{
@@ -57,7 +57,7 @@ void IEvents::addEventHandler(IEventSinkBase* eventHandler)
 				return;
 			}
 		}
-		_eventHandlers.push_back(eventHandler);
+		_eventHandlers.push_front(eventHandler);
 	}
 	catch(const std::exception& ex)
     {
@@ -70,16 +70,16 @@ void IEvents::addEventHandler(IEventSinkBase* eventHandler)
     _eventHandlerMutex.unlock();
 }
 
-void IEvents::addEventHandlers(std::vector<IEventSinkBase*> eventHandlers)
+void IEvents::addEventHandlers(std::forward_list<IEventSinkBase*> eventHandlers)
 {
 	try
 	{
 		if(eventHandlers.empty()) return;
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
+		for(std::forward_list<IEventSinkBase*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
 		{
 			bool exists = false;
-			for(std::vector<IEventSinkBase*>::iterator j = _eventHandlers.begin(); j != _eventHandlers.end(); ++j)
+			for(std::forward_list<IEventSinkBase*>::iterator j = _eventHandlers.begin(); j != _eventHandlers.end(); ++j)
 			{
 				if(*j == *i)
 				{
@@ -88,7 +88,7 @@ void IEvents::addEventHandlers(std::vector<IEventSinkBase*> eventHandlers)
 				}
 			}
 			if(exists) continue;
-			_eventHandlers.push_back(*i);
+			_eventHandlers.push_front(*i);
 		}
 	}
 	catch(const std::exception& ex)
@@ -108,14 +108,7 @@ void IEvents::removeEventHandler(IEventSinkBase* eventHandler)
 	{
 		if(!eventHandler) return;
 		_eventHandlerMutex.lock();
-		for(std::vector<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i == eventHandler)
-			{
-				_eventHandlers.erase(i);
-				break;
-			}
-		}
+		_eventHandlers.remove(eventHandler);
 	}
 	catch(const std::exception& ex)
     {
@@ -128,9 +121,9 @@ void IEvents::removeEventHandler(IEventSinkBase* eventHandler)
     _eventHandlerMutex.unlock();
 }
 
-std::vector<IEventSinkBase*> IEvents::getEventHandlers()
+std::forward_list<IEventSinkBase*> IEvents::getEventHandlers()
 {
-	std::vector<IEventSinkBase*> eventHandlers;
+	std::forward_list<IEventSinkBase*> eventHandlers;
 	try
 	{
 

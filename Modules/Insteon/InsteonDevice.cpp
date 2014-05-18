@@ -43,6 +43,54 @@ InsteonDevice::InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_
 
 InsteonDevice::~InsteonDevice()
 {
+	try
+	{
+		dispose();
+		//dispose might have been called by another thread, so wait until dispose is finished
+		while(!_disposed) std::this_thread::sleep_for(std::chrono::milliseconds(50)); //Wait for received packets, without this, program sometimes SIGABRTs
+	}
+    catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void InsteonDevice::dispose(bool wait)
+{
+	try
+	{
+		if(_disposing) return;
+		_disposing = true;
+		BaseLib::Output::printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
+		if(GD::physicalDevice) GD::physicalDevice->removeEventHandler((BaseLib::Systems::PhysicalDevice::IPhysicalDeviceEventSink*)this);
+		int64_t startTime = BaseLib::HelperFunctions::getTime();
+		//stopThreads();
+		int64_t timeDifference = BaseLib::HelperFunctions::getTime() - startTime;
+		//Packets might still arrive, after removing this device from the rfDevice, so sleep a little bit
+		//This is not necessary if the rfDevice doesn't listen anymore
+		if(wait && timeDifference >= 0 && timeDifference < 2000) std::this_thread::sleep_for(std::chrono::milliseconds(2000 - timeDifference));
+	}
+    catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_disposed = true;
 }
 
 void InsteonDevice::init()
@@ -51,7 +99,7 @@ void InsteonDevice::init()
 	{
 		if(_initialized) return; //Prevent running init two times
 
-		GD::physicalDevice->addLogicalDevice(this);
+		if(GD::physicalDevice) GD::physicalDevice->addEventHandler((BaseLib::Systems::PhysicalDevice::IPhysicalDeviceEventSink*)this);
 
 		_initialized = true;
 	}
@@ -69,7 +117,7 @@ void InsteonDevice::init()
     }
 }
 
-bool InsteonDevice::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool InsteonDevice::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
@@ -94,141 +142,6 @@ bool InsteonDevice::packetReceived(std::shared_ptr<BaseLib::Systems::Packet> pac
 bool InsteonDevice::isCentral()
 {
 	return _deviceType == (uint32_t)DeviceType::INSTEONCENTRAL;
-}
-
-void InsteonDevice::saveVariable(uint32_t index, int64_t intValue)
-{
-	try
-	{
-		_databaseMutex.lock();
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		BaseLib::DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(intValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_deviceID == 0)
-			{
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_deviceID)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(index)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(intValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
-}
-
-void InsteonDevice::saveVariable(uint32_t index, std::string& stringValue)
-{
-	try
-	{
-		_databaseMutex.lock();
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		BaseLib::DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_deviceID == 0)
-			{
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_deviceID)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(index)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
-}
-
-void InsteonDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
-{
-	try
-	{
-		_databaseMutex.lock();
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		BaseLib::DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(binaryValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_variableDatabaseIDs[index])));
-			BaseLib::Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_deviceID == 0)
-			{
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_deviceID)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(index)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(binaryValue)));
-			int32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _databaseMutex.unlock();
 }
 
 void InsteonDevice::loadVariables()

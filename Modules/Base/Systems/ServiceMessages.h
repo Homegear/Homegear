@@ -47,7 +47,7 @@ namespace BaseLib
 {
 namespace Systems
 {
-class ServiceMessages : public BaseLib::IEvents
+class ServiceMessages : public IEvents
 {
 public:
 	//Event handling
