@@ -61,8 +61,9 @@ public:
 	std::string type;
 	uint32_t responseDelay = 95;
 	std::map<uint32_t, GPIOSetting> gpio;
-	std::string hostname;
+	std::string host;
 	std::string port;
+	std::string key;
 	bool ssl = false;
 	bool verifyCertificate = true;
 	bool oneWay = false;

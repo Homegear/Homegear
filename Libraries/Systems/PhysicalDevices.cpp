@@ -73,7 +73,7 @@ void PhysicalDevices::load(std::string filename)
 					if (input[ptr] == ']')
 					{
 						input[ptr] = '\0';
-						if((!settings->device.empty() || (!settings->hostname.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
+						if((!settings->device.empty() || (!settings->host.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
 						{
 							std::shared_ptr<BaseLib::Systems::PhysicalDevice> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
 							_physicalDevicesMutex.lock();
@@ -177,15 +177,20 @@ void PhysicalDevices::load(std::string filename)
 						BaseLib::Output::printDebug("Debug: GPIO3 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[3].number));
 					}
 				}
-				else if(name == "hostname")
+				else if(name == "host")
 				{
-					settings->hostname = value;
-					BaseLib::Output::printDebug("Debug: Hostname of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->hostname);
+					settings->host = value;
+					BaseLib::Output::printDebug("Debug: Host of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->host);
 				}
 				else if(name == "port")
 				{
 					settings->port = value;
 					BaseLib::Output::printDebug("Debug: Port of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->port);
+				}
+				else if(name == "key")
+				{
+					settings->key = value;
+					BaseLib::Output::printDebug("Debug: Key of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->key);
 				}
 				else if(name == "ssl")
 				{
@@ -205,7 +210,7 @@ void PhysicalDevices::load(std::string filename)
 				}
 			}
 		}
-		if((!settings->device.empty() || (!settings->hostname.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
+		if((!settings->device.empty() || (!settings->host.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
 		{
 			std::shared_ptr<BaseLib::Systems::PhysicalDevice> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
 			_physicalDevicesMutex.lock();

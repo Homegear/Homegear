@@ -27,23 +27,35 @@
  * files in the program, then also delete it here.
  */
 
-#include "BaseLib.h"
+#ifndef HM_CFG_USB_H
+#define HM_CFG_USB_H
 
-namespace BaseLib
+#include "../../Base/BaseLib.h"
+
+//#include <libusb-1.0/libusb.h>
+
+namespace BidCoS
 {
 
-Obj* Obj::ins;
-Systems::DeviceFamily* Obj::family = nullptr;
-
-Obj::Obj(std::string exePath)
+class HM_CFG_USB  : public BaseLib::Systems::PhysicalDevice
 {
-	ins = this;
-	executablePath = exePath;
-	HelperFunctions::init();
-}
+    public:
+		HM_CFG_USB(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+        virtual ~HM_CFG_USB();
+        void startListening();
+        void stopListening();
+        void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual void setup(int32_t userID, int32_t groupID);
+        void enableUpdateMode();
+        void disableUpdateMode();
+    protected:
+        void openDevice();
+        void closeDevice();
+        void writeToDevice(std::string, bool);
+        std::string readFromDevice();
+        void listen();
+    private:
+};
 
-Obj::~Obj()
-{
 }
-
-}
+#endif // CUL_H

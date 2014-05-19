@@ -176,8 +176,10 @@ public:
 	static std::string getHexString(const std::vector<char>& data);
 	static std::string getHexString(const std::vector<uint8_t>& data);
 	static std::string getHexString(int32_t number, int32_t width = -1);
+	static char getHexChar(int32_t nibble);
 	static std::vector<char> getBinary(std::string hexString);
 	static std::vector<uint8_t> getUBinary(std::string hexString);
+	static std::vector<uint8_t> getUBinary(std::vector<uint8_t>& hexData);
 	static std::string getSSLError(int32_t errorNumber);
 	static std::string getSSLCertVerificationError(int32_t errorNumber);
 	static int32_t userID(std::string username);
@@ -186,6 +188,8 @@ public:
 private:
 	static bool _isBigEndian;
 	static std::map<char, int32_t> _hexMap;
+	static int32_t _asciiToBinaryTable[];
+	static char _binaryToASCIITable[];
 
 	//Non public constructor
 	HelperFunctions() {}

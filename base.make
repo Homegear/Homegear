@@ -34,7 +34,7 @@ ifeq ($(config),debug)
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11 -fPIC
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 

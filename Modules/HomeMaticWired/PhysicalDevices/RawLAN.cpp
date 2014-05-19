@@ -123,10 +123,10 @@ void RawLAN::startListening()
 	try
 	{
 		stopListening();
-		_socket = BaseLib::SocketOperations(_settings->hostname, _settings->port, _settings->ssl, _settings->verifyCertificate);
-		BaseLib::Output::printDebug("Connecting to raw RS485 LAN device with Hostname " + _settings->hostname + " on port " + _settings->port + "...");
+		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
+		BaseLib::Output::printDebug("Connecting to raw RS485 LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket.open();
-		BaseLib::Output::printInfo("Connected to raw RS485 LAN device with Hostname " + _settings->hostname + " on port " + _settings->port + ".");
+		BaseLib::Output::printInfo("Connected to raw RS485 LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&RawLAN::listen, this);
 		BaseLib::Threads::setThreadPriority(_listenThread.native_handle(), 45);

@@ -97,6 +97,40 @@ std::vector<uint8_t> BidCoSPacket::byteArray()
     }
     return std::vector<uint8_t>();
 }
+
+std::vector<char> BidCoSPacket::byteArraySigned()
+{
+	try
+	{
+		std::vector<char> data;
+		if(_payload.size() > 200) return data;
+		data.push_back(9 + _payload.size());
+		data.push_back(_messageCounter);
+		data.push_back(_controlByte);
+		data.push_back(_messageType);
+		data.push_back(_senderAddress >> 16);
+		data.push_back((_senderAddress >> 8) & 0xFF);
+		data.push_back(_senderAddress & 0xFF);
+		data.push_back(_destinationAddress >> 16);
+		data.push_back((_destinationAddress >> 8) & 0xFF);
+		data.push_back(_destinationAddress & 0xFF);
+		data.insert(data.end(), _payload.begin(), _payload.end());
+		return data;
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<char>();
+}
 //End of properties
 
 BidCoSPacket::BidCoSPacket()

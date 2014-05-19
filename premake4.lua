@@ -67,7 +67,6 @@ solution "homegear"
          defines { "DEBUG" }
          flags { "Symbols" }
          targetdir "./lib/Debug"
-         buildoptions "-fPIC"
  
       configuration "Release"
          defines { "NDEBUG" }

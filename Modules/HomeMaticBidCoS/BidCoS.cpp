@@ -31,6 +31,7 @@
 #include "PhysicalDevices/COC.h"
 #include "PhysicalDevices/CUL.h"
 #include "PhysicalDevices/TICC1100.h"
+#include "PhysicalDevices/HM-CFG-LAN.h"
 #include "Devices/HomeMaticCentral.h"
 #include "BidCoSDeviceTypes.h"
 #include "Devices/HM-CC-TC.h"
@@ -94,6 +95,7 @@ std::shared_ptr<BaseLib::Systems::PhysicalDevice> BidCoS::createPhysicalDevice(s
 		if(settings->type == "cul") GD::physicalDevice.reset(new CUL(settings));
 		else if(settings->type == "coc") GD::physicalDevice.reset(new COC(settings));
 		else if(settings->type == "cc1100") GD::physicalDevice.reset(new TICC1100(settings));
+		else if(settings->type == "hmcfglan") GD::physicalDevice.reset(new HM_CFG_LAN(settings));
 		else BaseLib::Output::printError("Error: Unsupported physical device type for family HomeMatic BidCoS: " + settings->type);
 		return GD::physicalDevice;
 	}

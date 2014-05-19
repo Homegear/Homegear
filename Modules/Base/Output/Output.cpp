@@ -91,6 +91,7 @@ void Output::printBinary(std::vector<unsigned char>& data)
 {
 	try
 	{
+		if(data.empty()) return;
 		std::ostringstream stringstream;
 		stringstream << std::hex << std::setfill('0') << std::uppercase;
 		for(std::vector<unsigned char>::iterator i = data.begin(); i != data.end(); ++i)
@@ -118,10 +119,38 @@ void Output::printBinary(std::shared_ptr<std::vector<char>> data)
 {
 	try
 	{
-		if(!data) return;
+		if(!data || data->empty()) return;
 		std::ostringstream stringstream;
 		stringstream << std::hex << std::setfill('0') << std::uppercase;
 		for(std::vector<char>::iterator i = data->begin(); i != data->end(); ++i)
+		{
+			stringstream << std::setw(2) << (int32_t)((uint8_t)(*i));
+		}
+		stringstream << std::dec;
+		std::cout << stringstream.str() << std::endl;
+	}
+	catch(const std::exception& ex)
+    {
+    	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void Output::printBinary(std::vector<char>& data)
+{
+	try
+	{
+		if(data.empty()) return;
+		std::ostringstream stringstream;
+		stringstream << std::hex << std::setfill('0') << std::uppercase;
+		for(std::vector<char>::iterator i = data.begin(); i != data.end(); ++i)
 		{
 			stringstream << std::setw(2) << (int32_t)((uint8_t)(*i));
 		}

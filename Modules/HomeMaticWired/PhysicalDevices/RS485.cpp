@@ -431,6 +431,7 @@ void RS485::writeToDevice(std::vector<uint8_t>& packet, bool printPacket)
 			}
 			bytesWritten += i;
 		}
+		fsync(_fileDescriptor->descriptor);
 		if(!_settings->oneWay)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));

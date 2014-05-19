@@ -40,6 +40,7 @@ DeviceFamily::DeviceFamily(Obj* baseLib, IFamilyEventSink* eventHandler)
 	Obj::family = this;
 	Obj::ins = baseLib;
 	Output::setDebugLevel(baseLib->debugLevel);
+	HelperFunctions::init();
 	addEventHandler(eventHandler);
 }
 

@@ -35,6 +35,8 @@ namespace BaseLib
 
 bool HelperFunctions::_isBigEndian;
 std::map<char, int32_t> HelperFunctions::_hexMap;
+int32_t HelperFunctions::_asciiToBinaryTable[23];
+char HelperFunctions::_binaryToASCIITable[16];
 
 void HelperFunctions::init()
 {
@@ -62,6 +64,47 @@ void HelperFunctions::init()
 	_hexMap['d'] = 0xD;
 	_hexMap['e'] = 0xE;
 	_hexMap['f'] = 0xF;
+
+	_asciiToBinaryTable[0] = 0;
+	_asciiToBinaryTable[1] = 1;
+	_asciiToBinaryTable[2] = 2;
+	_asciiToBinaryTable[3] = 3;
+	_asciiToBinaryTable[4] = 4;
+	_asciiToBinaryTable[5] = 5;
+	_asciiToBinaryTable[6] = 6;
+	_asciiToBinaryTable[7] = 7;
+	_asciiToBinaryTable[8] = 8;
+	_asciiToBinaryTable[9] = 9;
+	_asciiToBinaryTable[10] = 0;
+	_asciiToBinaryTable[11] = 0;
+	_asciiToBinaryTable[12] = 0;
+	_asciiToBinaryTable[13] = 0;
+	_asciiToBinaryTable[14] = 0;
+	_asciiToBinaryTable[15] = 0;
+	_asciiToBinaryTable[16] = 0;
+	_asciiToBinaryTable[17] = 10;
+	_asciiToBinaryTable[18] = 11;
+	_asciiToBinaryTable[19] = 12;
+	_asciiToBinaryTable[20] = 13;
+	_asciiToBinaryTable[21] = 14;
+	_asciiToBinaryTable[22] = 15;
+
+	_binaryToASCIITable[0] = 0x30;
+	_binaryToASCIITable[1] = 0x31;
+	_binaryToASCIITable[2] = 0x32;
+	_binaryToASCIITable[3] = 0x33;
+	_binaryToASCIITable[4] = 0x34;
+	_binaryToASCIITable[5] = 0x35;
+	_binaryToASCIITable[6] = 0x36;
+	_binaryToASCIITable[7] = 0x37;
+	_binaryToASCIITable[8] = 0x38;
+	_binaryToASCIITable[9] = 0x39;
+	_binaryToASCIITable[0xA] = 0x41;
+	_binaryToASCIITable[0xB] = 0x42;
+	_binaryToASCIITable[0xC] = 0x43;
+	_binaryToASCIITable[0xD] = 0x44;
+	_binaryToASCIITable[0xE] = 0x45;
+	_binaryToASCIITable[0xF] = 0x46;
 }
 
 HelperFunctions::~HelperFunctions()
@@ -309,6 +352,28 @@ std::pair<std::string, std::string> HelperFunctions::split(std::string string, c
     return std::pair<std::string, std::string>();
 }
 
+char HelperFunctions::getHexChar(int32_t nibble)
+{
+	try
+	{
+		if(nibble < 0 || nibble > 15) return 0;
+		return _binaryToASCIITable[nibble];
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
+
 std::string HelperFunctions::getHexString(const std::vector<uint8_t>& data)
 {
 	try
@@ -376,15 +441,14 @@ std::string HelperFunctions::getHexString(int32_t number, int32_t width)
 
 std::vector<char> HelperFunctions::getBinary(std::string hexString)
 {
-	int32_t asciiToBinaryTable[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15};
     std::vector<char> binary;
     if(hexString.empty()) return binary;
 	if(hexString.size() % 2 != 0) hexString = hexString.substr(1);
     for (std::string::const_iterator i = hexString.begin(); i != hexString.end(); i += 2)
     {
         uint8_t byte = 0;
-        if(isxdigit(*i)) byte = asciiToBinaryTable[std::toupper(*i) - '0'] << 4;
-        if(i + 1 != hexString.end() && isxdigit(*(i + 1))) byte += asciiToBinaryTable[std::toupper(*(i + 1)) - '0'];
+        if(isxdigit(*i)) byte = _asciiToBinaryTable[std::toupper(*i) - '0'] << 4;
+        if(i + 1 != hexString.end() && isxdigit(*(i + 1))) byte += _asciiToBinaryTable[std::toupper(*(i + 1)) - '0'];
         binary.push_back(byte);
     }
     return binary;
@@ -392,15 +456,28 @@ std::vector<char> HelperFunctions::getBinary(std::string hexString)
 
 std::vector<uint8_t> HelperFunctions::getUBinary(std::string hexString)
 {
-	int32_t asciiToBinaryTable[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15};
     std::vector<uint8_t> binary;
     if(hexString.empty()) return binary;
 	if(hexString.size() % 2 != 0) hexString = hexString.substr(1);
     for (std::string::const_iterator i = hexString.begin(); i != hexString.end(); i += 2)
     {
         uint8_t byte = 0;
-        if(isxdigit(*i)) byte = (asciiToBinaryTable[std::toupper(*i) - '0'] << 4);
-        if(i + 1 != hexString.end() && isxdigit(*(i + 1))) byte += asciiToBinaryTable[std::toupper(*(i + 1)) - '0'];
+        if(isxdigit(*i)) byte = (_asciiToBinaryTable[std::toupper(*i) - '0'] << 4);
+        if(i + 1 != hexString.end() && isxdigit(*(i + 1))) byte += _asciiToBinaryTable[std::toupper(*(i + 1)) - '0'];
+        binary.push_back(byte);
+    }
+    return binary;
+}
+
+std::vector<uint8_t> HelperFunctions::getUBinary(std::vector<uint8_t>& hexData)
+{
+    std::vector<uint8_t> binary;
+    if(hexData.empty()) return binary;
+    for (std::vector<uint8_t>::const_iterator i = hexData.begin(); i != hexData.end(); i += 2)
+    {
+        uint8_t byte = 0;
+        if(isxdigit(*i)) byte = (_asciiToBinaryTable[std::toupper(*i) - '0'] << 4);
+        if(i + 1 != hexData.end() && isxdigit(*(i + 1))) byte += _asciiToBinaryTable[std::toupper(*(i + 1)) - '0'];
         binary.push_back(byte);
     }
     return binary;

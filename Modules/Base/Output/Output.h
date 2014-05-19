@@ -58,6 +58,7 @@ public:
 
 	static void printBinary(std::vector<unsigned char>& data);
 	static void printBinary(std::shared_ptr<std::vector<char>> data);
+	static void printBinary(std::vector<char>& data);
 	static void printEx(std::string file, uint32_t line, std::string function, std::string what = "");
 	static void printCritical(std::string errorString);
 	static void printError(std::string errorString);

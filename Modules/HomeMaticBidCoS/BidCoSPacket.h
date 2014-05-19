@@ -54,6 +54,7 @@ class BidCoSPacket : public BaseLib::Systems::Packet
         bool isUpdatePacket() { return _updatePacket; }
         virtual std::string hexString();
         virtual std::vector<uint8_t> byteArray();
+        virtual std::vector<char> byteArraySigned();
 
         BidCoSPacket();
         BidCoSPacket(std::string&, int64_t timeReceived = 0);
