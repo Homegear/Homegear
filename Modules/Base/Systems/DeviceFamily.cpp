@@ -64,6 +64,11 @@ DeviceFamily::~DeviceFamily()
 	}
 }
 
+void DeviceFamily::setDebugLevel(int32_t debugLevel)
+{
+	BaseLib::Output::setDebugLevel(debugLevel);
+}
+
 //Event handling
 void DeviceFamily::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {

@@ -118,6 +118,7 @@ public:
 	SocketOperations(std::string hostname, std::string port, bool useSSL, bool verifyCertificate);
 	virtual ~SocketOperations();
 
+	void setReadTimeout(int64_t timeout) { _readTimeout = timeout; }
 	void setAutoConnect(bool autoConnect) { _autoConnect = autoConnect; }
 	void setHostname(std::string hostname) { close(); _hostname = hostname; }
 	void setPort(std::string port) { close(); _port = port; }
@@ -131,6 +132,7 @@ public:
 	void open();
 	void close();
 protected:
+	int64_t _readTimeout = 5000000;
 	bool _autoConnect = true;
 	std::string _hostname;
 	std::string _port;

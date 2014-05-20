@@ -478,7 +478,7 @@ std::vector<char> HMWiredPacket::byteArraySigned()
 	try
 	{
 		byteArray();
-		packet.insert(packet.begin(), _escapedPacket.begin(), _escapedPacket.end());
+		if(!_escapedPacket.empty()) packet.insert(packet.begin(), &_escapedPacket.at(0), &_escapedPacket.at(0) + _escapedPacket.size());
 	}
 	catch(const std::exception& ex)
     {

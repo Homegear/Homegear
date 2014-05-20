@@ -669,6 +669,10 @@ std::string Server::handleGlobalCommand(std::string& command)
 
 			BaseLib::Obj::ins->debugLevel = debugLevel;
 			BaseLib::Output::setDebugLevel(debugLevel);
+			for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+			{
+				i->second->setDebugLevel(debugLevel);
+			}
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
 			return stringStream.str();
 		}

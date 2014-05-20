@@ -30,14 +30,14 @@
 #ifndef HM_CFG_USB_H
 #define HM_CFG_USB_H
 
-#include "../../Base/BaseLib.h"
+#include "BidCoSDevice.h"
 
 //#include <libusb-1.0/libusb.h>
 
 namespace BidCoS
 {
 
-class HM_CFG_USB  : public BaseLib::Systems::PhysicalDevice
+class HM_CFG_USB  : public BidCoSDevice
 {
     public:
 		HM_CFG_USB(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);

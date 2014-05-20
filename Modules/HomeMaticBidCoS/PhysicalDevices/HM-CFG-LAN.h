@@ -31,7 +31,7 @@
 #define HM_CFG_LAN_H
 
 #include "../BidCoSPacket.h"
-#include "../../Base/BaseLib.h"
+#include "BidCoSDevice.h"
 
 #include <thread>
 #include <iostream>
@@ -55,7 +55,7 @@
 namespace BidCoS
 {
 
-class HM_CFG_LAN  : public BaseLib::Systems::PhysicalDevice
+class HM_CFG_LAN  : public BidCoSDevice
 {
     public:
         HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
@@ -72,6 +72,8 @@ class HM_CFG_LAN  : public BaseLib::Systems::PhysicalDevice
         BaseLib::SocketOperations _socket;
         std::mutex _sendMutex;
         std::list<std::vector<char>> _initCommandQueue;
+        int32_t _lastKeepAlive = 0;
+        int32_t _lastKeepAliveResponse = 0;
         std::vector<char> _keepAlivePacket = { 'K', '\r', '\n' };
 
         //AES stuff

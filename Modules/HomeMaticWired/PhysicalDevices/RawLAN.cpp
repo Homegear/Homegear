@@ -71,12 +71,16 @@ void RawLAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			return;
 		}
 		_lastAction = BaseLib::HelperFunctions::getTime();
+		if(packet->payload()->size() > 132)
+		{
+			if(BaseLib::Obj::ins->debugLevel >= 2) BaseLib::Output::printError("Tried to send packet with payload larger than 128 bytes. That is not supported.");
+			return;
+		}
 
 		std::shared_ptr<HMWiredPacket> hmWiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
 		if(!hmWiredPacket) return;
 		std::vector<char> data = hmWiredPacket->byteArraySigned();
 		send(data, true);
-		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
     {
@@ -97,7 +101,10 @@ void RawLAN::send(std::vector<char>& packet, bool printPacket)
     try
     {
     	_sendMutex.lock();
+    	_lastPacketSent = BaseLib::HelperFunctions::getTime(); //Sending takes some time, so we set _lastPacketSent two times
+    	if(BaseLib::Obj::ins->debugLevel > 3 && printPacket) BaseLib::Output::printInfo("Info: Sending: " + BaseLib::HelperFunctions::getHexString(packet));
     	int32_t written = _socket.proofwrite(packet);
+    	_lastPacketSent = BaseLib::HelperFunctions::getTime();
     }
     catch(BaseLib::SocketOperationException& ex)
     {
@@ -180,6 +187,7 @@ void RawLAN::listen()
     	uint32_t receivedBytes;
     	int32_t bufferMax = 1024;
 		std::vector<char> buffer(bufferMax);
+		std::vector<uint8_t> data;
         while(!_stopCallbackThread)
         {
         	if(_stopped)
@@ -192,7 +200,23 @@ void RawLAN::listen()
 			{
 				receivedBytes = _socket.proofread(&buffer[0], bufferMax);
 			}
-			catch(BaseLib::SocketTimeOutException& ex) { continue; }
+			catch(BaseLib::SocketTimeOutException& ex)
+			{
+				if(!data.empty())
+				{
+					if(data.size() == 1 && data.at(0) != 0xF8)
+					{
+						BaseLib::Output::printDebug("Debug: Correcting wrong response to 0xF8: " + BaseLib::HelperFunctions::getHexString(data));
+						data.at(0) == 0xF8;
+					}
+					std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime()));
+					raisePacketReceived(packet);
+					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+					data.clear();
+					_socket.setReadTimeout(5000000);
+				}
+				continue;
+			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
 				BaseLib::Output::printWarning("Warning: " + ex.what());
@@ -212,11 +236,26 @@ void RawLAN::listen()
         		continue;
         	}
 
-        	std::vector<uint8_t> data((uint8_t*)&buffer.at(0), ((uint8_t*)&buffer.at(0)) + receivedBytes);
+        	if(!data.empty() && (buffer.at(0) == 0xFD || buffer.at(0) == 0xFE || buffer.at(0) == 0xF8))
+        	{
+        		if(data.size() == 1 && data.at(0) != 0xF8)
+				{
+					BaseLib::Output::printDebug("Debug: Correcting wrong response to 0xF8: " + BaseLib::HelperFunctions::getHexString(data));
+					data.at(0) == 0xF8;
+				}
+        		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime()));
+        		raisePacketReceived(packet);
+        		_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+        		data.clear();
+        	}
 
-			std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime()));
-			raisePacketReceived(packet);
-			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+        	_socket.setReadTimeout(10000);
+        	data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
+        	if(BaseLib::Obj::ins->debugLevel >= 6)
+        	{
+        		BaseLib::Output::printDebug("Debug: Packet received from RS485 raw LAN device. Data:");
+        		BaseLib::Output::printBinary(data);
+        	}
         }
     }
     catch(const std::exception& ex)

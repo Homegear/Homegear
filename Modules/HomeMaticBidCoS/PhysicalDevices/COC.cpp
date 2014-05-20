@@ -34,7 +34,7 @@
 namespace BidCoS
 {
 
-COC::COC(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
+COC::COC(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BidCoSDevice(settings)
 {
 }
 

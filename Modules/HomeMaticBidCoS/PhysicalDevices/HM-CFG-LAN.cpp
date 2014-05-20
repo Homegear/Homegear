@@ -32,7 +32,7 @@
 namespace BidCoS
 {
 
-HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BaseLib::Systems::PhysicalDevice(settings)
+HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BidCoSDevice(settings)
 {
 	signal(SIGPIPE, SIG_IGN);
 	if(!settings->key.empty())
@@ -151,7 +151,6 @@ void HM_CFG_LAN::startListening()
 	{
 		stopListening();
 		if(_useAES) openSSLInit();
-		createInitCommandQueue();
 		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
 		BaseLib::Output::printDebug("Connecting to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket.open();
@@ -236,8 +235,22 @@ void HM_CFG_LAN::createInitCommandQueue()
 	{
 		_initCommandQueue.clear();
 
+		int32_t i = 0;
+		while(!BaseLib::Obj::family->getCentral() && i < 30)
+		{
+			BaseLib::Output::printDebug("Debug: HM-CFG-LAN: Waiting for central to load.");
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			i++;
+		}
+		if(!BaseLib::Obj::family->getCentral())
+		{
+			_stopCallbackThread = true;
+			BaseLib::Output::printError("Error: Could not get central address for HM-CFG-LAN. Stopping listening.");
+			return;
+		}
+
 		std::vector<char> packet = {'A'};
-		std::string hexString = "FD3456\r\n";
+		std::string hexString = BaseLib::HelperFunctions::getHexString(BaseLib::Obj::family->getCentral()->physicalAddress(), 6) + "\r\n";
 		packet.insert(packet.end(), hexString.begin(), hexString.end());
 		_initCommandQueue.push_back(packet);
 
@@ -374,7 +387,18 @@ void HM_CFG_LAN::sendKeepAlive()
 {
 	try
     {
-		send(_keepAlivePacket, false, true);
+		if(BaseLib::HelperFunctions::getTimeSeconds() - _lastKeepAlive >= 10)
+		{
+			if(_lastKeepAliveResponse < _lastKeepAlive)
+			{
+				_lastKeepAliveResponse = _lastKeepAlive;
+				_stopped = true;
+				return;
+			}
+
+			_lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
+			send(_keepAlivePacket, false, true);
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -394,10 +418,13 @@ void HM_CFG_LAN::listen()
 {
     try
     {
-    	uint32_t receivedBytes;
+    	createInitCommandQueue(); //Called here in a seperate thread so that startListening is not blocking Homegear
+
+    	uint32_t receivedBytes = 0;
     	int32_t bufferMax = 2048;
 		std::vector<char> buffer(bufferMax);
-		int32_t lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
+		_lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
+		_lastKeepAliveResponse = _lastKeepAlive;
 
         while(!_stopCallbackThread)
         {
@@ -409,18 +436,30 @@ void HM_CFG_LAN::listen()
         		reconnect();
         		continue;
         	}
-        	try
+        	std::vector<uint8_t> data;
+			try
 			{
-				receivedBytes = _socket.proofread(&buffer[0], bufferMax);
+				do
+				{
+					receivedBytes = _socket.proofread(&buffer[0], bufferMax);
+					if(receivedBytes > 0)
+					{
+						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
+						if(data.size() > 1000000)
+						{
+							BaseLib::Output::printError("Could not read from HM-CFG-LAN: Too much data.");
+							break;
+						}
+					}
+				} while(receivedBytes == bufferMax);
 			}
 			catch(BaseLib::SocketTimeOutException& ex)
 			{
-				if(BaseLib::HelperFunctions::getTimeSeconds() - lastKeepAlive >= 10)
+				if(data.empty()) //When receivedBytes is exactly 2048 bytes long, proofread will be called again and time out.
 				{
-					lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
 					sendKeepAlive();
+					continue;
 				}
-				continue;
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
@@ -436,14 +475,7 @@ void HM_CFG_LAN::listen()
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
-        	if(receivedBytes == 0) continue;
-        	if(receivedBytes == bufferMax)
-        	{
-        		BaseLib::Output::printError("Could not read from HM-CFG-LAN: Too much data.");
-        		continue;
-        	}
-
-        	std::vector<uint8_t> data(&buffer.at(0), &buffer.at(0) + receivedBytes);
+			if(data.empty() || data.size() > 1000000) continue;
 
         	if(BaseLib::Obj::ins->debugLevel >= 6)
         	{
@@ -640,7 +672,11 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 		if(packet.empty()) return;
 		if(BaseLib::Obj::ins->debugLevel >= 5) BaseLib::Output::printDebug(std::string("Debug: Packet received from HM-CFG-LAN") + (_useAES ? + " (encrypted)" : "") + ": " + packet);
 
+		if(packet.at(0) == 'H') _lastKeepAliveResponse = BaseLib::HelperFunctions::getTimeSeconds();
+		else if(packet.at(0) == 'E' || packet.at(0) == 'R')
+		{
 
+		}
 	}
     catch(const std::exception& ex)
     {

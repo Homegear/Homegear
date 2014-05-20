@@ -34,7 +34,7 @@
 namespace BidCoS
 {
 
-TICC1100::TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
+TICC1100::TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BidCoSDevice(settings)
 {
 	try
 	{

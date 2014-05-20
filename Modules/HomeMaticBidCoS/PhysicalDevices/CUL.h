@@ -30,7 +30,7 @@
 #ifndef CUL_H
 #define CUL_H
 
-#include "../../Base/BaseLib.h"
+#include "BidCoSDevice.h"
 
 #include <thread>
 #include <iostream>
@@ -50,7 +50,7 @@
 namespace BidCoS
 {
 
-class CUL  : public BaseLib::Systems::PhysicalDevice
+class CUL  : public BidCoSDevice
 {
     public:
 		CUL(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);

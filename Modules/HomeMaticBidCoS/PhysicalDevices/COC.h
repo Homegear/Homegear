@@ -30,7 +30,7 @@
 #ifndef COC_H
 #define COC_H
 
-#include "../../Base/BaseLib.h"
+#include "BidCoSDevice.h"
 
 #include <thread>
 #include <iostream>
@@ -50,7 +50,7 @@
 namespace BidCoS
 {
 
-class COC  : public BaseLib::Systems::PhysicalDevice
+class COC : public BidCoSDevice
 {
     public:
 		COC(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);

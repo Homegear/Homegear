@@ -173,7 +173,6 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "peers add\t\tManually adds a peer (without pairing it! Only for testing)" << std::endl;
 			stringStream << "peers list\t\tList all peers" << std::endl;
 			stringStream << "peers reset\t\tUnpair a peer and reset it to factory defaults" << std::endl;
 			stringStream << "peers select\t\tSelect a peer" << std::endl;

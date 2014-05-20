@@ -131,8 +131,9 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	if(!connected()) autoConnect();
 	//Timeout needs to be set every time, so don't put it outside of the while loop
 	timeval timeout;
-	timeout.tv_sec = 5;
-	timeout.tv_usec = 0;
+	int32_t seconds = _readTimeout / 1000000;
+	timeout.tv_sec = seconds;
+	timeout.tv_usec = _readTimeout - (1000000 * seconds);
 	fd_set readFileDescriptor;
 	FD_ZERO(&readFileDescriptor);
 	FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);

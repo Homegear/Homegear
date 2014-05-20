@@ -31,5 +31,5 @@
 
 namespace BidCoS
 {
-	std::shared_ptr<BaseLib::Systems::PhysicalDevice> GD::physicalDevice;
+	std::shared_ptr<BidCoSDevice> GD::physicalDevice;
 } /* namespace BidCoS */

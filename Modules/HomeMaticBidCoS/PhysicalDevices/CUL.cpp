@@ -34,7 +34,7 @@
 namespace BidCoS
 {
 
-CUL::CUL(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
+CUL::CUL(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BidCoSDevice(settings)
 {
 }
 

@@ -30,7 +30,7 @@
 #ifndef TICC1100_H_
 #define TICC1100_H_
 
-#include "../../Base/BaseLib.h"
+#include "BidCoSDevice.h"
 
 #include <thread>
 #include <iostream>
@@ -53,7 +53,7 @@
 
 namespace BidCoS
 {
-class TICC1100 : public BaseLib::Systems::PhysicalDevice
+class TICC1100 : public BidCoSDevice
 {
 public:
 	struct CommandStrobes

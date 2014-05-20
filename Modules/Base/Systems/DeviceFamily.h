@@ -81,6 +81,7 @@ public:
 	DeviceFamily(Obj* baseLib, IFamilyEventSink* eventHandler);
 	virtual ~DeviceFamily();
 
+	virtual void setDebugLevel(int32_t debugLevel);
 	virtual DeviceFamilies getFamily() { return _family; }
 	virtual std::shared_ptr<RPC::RPCVariable> listBidcosInterfaces() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid)); }
 	virtual std::shared_ptr<Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<Systems::PhysicalDeviceSettings> settings) { return std::shared_ptr<Systems::PhysicalDevice>(); }

@@ -28,6 +28,7 @@
  */
 
 #include "BidCoS.h"
+#include "PhysicalDevices/BidCoSDevice.h"
 #include "PhysicalDevices/COC.h"
 #include "PhysicalDevices/CUL.h"
 #include "PhysicalDevices/TICC1100.h"
@@ -90,7 +91,7 @@ std::shared_ptr<BaseLib::Systems::PhysicalDevice> BidCoS::createPhysicalDevice(s
 	try
 	{
 		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicaldevices.conf is: " + settings->type);
-		GD::physicalDevice = std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
+		GD::physicalDevice = std::shared_ptr<BidCoSDevice>();
 		if(!settings) return GD::physicalDevice;
 		if(settings->type == "cul") GD::physicalDevice.reset(new CUL(settings));
 		else if(settings->type == "coc") GD::physicalDevice.reset(new COC(settings));

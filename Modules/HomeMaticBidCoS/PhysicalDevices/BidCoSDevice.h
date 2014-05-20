@@ -27,24 +27,20 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef GD_H_
-#define GD_H_
+#ifndef BIDCOSDEVICE_H_
+#define BIDCOSDEVICE_H_
 
-#include "PhysicalDevices/BidCoSDevice.h"
+#include "../../Base/BaseLib.h"
 
-namespace BidCoS
-{
+namespace BidCoS {
 
-class GD
+class BidCoSDevice : public BaseLib::Systems::PhysicalDevice
 {
 public:
-	virtual ~GD();
-
-	static std::shared_ptr<BidCoSDevice> physicalDevice;
-private:
-	GD();
+	BidCoSDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+	virtual ~BidCoSDevice();
 };
 
-} /* namespace BidCoS */
+}
 
-#endif /* GD_H_ */
+#endif /* BIDCOSDEVICE_H_ */

@@ -114,6 +114,7 @@ OBJECTS := \
 	$(OBJDIR)/HM-CFG-USB.o \
 	$(OBJDIR)/TICC1100.o \
 	$(OBJDIR)/COC.o \
+	$(OBJDIR)/BidCoSDevice.o \
 	$(OBJDIR)/HM-CFG-LAN.o \
 	$(OBJDIR)/CUL.o \
 
@@ -238,6 +239,9 @@ $(OBJDIR)/TICC1100.o: Modules/HomeMaticBidCoS/PhysicalDevices/TICC1100.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/COC.o: Modules/HomeMaticBidCoS/PhysicalDevices/COC.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/BidCoSDevice.o: Modules/HomeMaticBidCoS/PhysicalDevices/BidCoSDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HM-CFG-LAN.o: Modules/HomeMaticBidCoS/PhysicalDevices/HM-CFG-LAN.cpp
