@@ -86,7 +86,7 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		std::shared_ptr<BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoSPacket>(packet));
 		if(!bidCoSPacket) return;
 		std::vector<char> data = bidCoSPacket->byteArraySigned();
-		send(data, true);
+		send(data, false, true);
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
@@ -103,16 +103,19 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
     }
 }
 
-void HM_CFG_LAN::send(std::vector<char>& data, bool printData)
+void HM_CFG_LAN::send(std::vector<char>& data, bool raw, bool printData)
 {
     try
     {
+    	if(data.size() < 3) return; //Otherwise error in printInfo
+    	std::vector<char> encryptedData;
+    	if(_useAES && !raw) encryptedData = encrypt(data);
     	_sendMutex.lock();
     	if(BaseLib::Obj::ins->debugLevel > 3 && printData)
         {
-            BaseLib::Output::printInfo("Info: Sending: " + BaseLib::HelperFunctions::getHexString(data));
+            BaseLib::Output::printInfo(std::string("Info: Sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
         }
-    	int32_t written = _socket.proofwrite(data);
+    	(_useAES && !raw) ? _socket.proofwrite(encryptedData) : _socket.proofwrite(data);
     }
     catch(BaseLib::SocketOperationException& ex)
     {
@@ -139,6 +142,7 @@ void HM_CFG_LAN::startListening()
 	{
 		stopListening();
 		if(_useAES) openSSLInit();
+		createInitCommandQueue();
 		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
 		BaseLib::Output::printDebug("Connecting to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket.open();
@@ -190,6 +194,53 @@ void HM_CFG_LAN::stopListening()
     }
 }
 
+void HM_CFG_LAN::createInitCommandQueue()
+{
+	try
+	{
+		std::vector<char> packet = {'A'};
+		std::string hexString = "FD3456\r\n";
+		packet.insert(packet.end(), hexString.begin(), hexString.end());
+		_initCommandQueue.push_back(packet);
+
+		packet.clear();
+		hexString = "C\r\nY01,00,\r\n";
+		packet.insert(packet.end(), hexString.begin(), hexString.end());
+		_initCommandQueue.push_back(packet);
+
+		packet.clear();
+		hexString = "Y02,00,\r\n";
+		packet.insert(packet.end(), hexString.begin(), hexString.end());
+		_initCommandQueue.push_back(packet);
+
+		packet.clear();
+		hexString = "Y03,00,\r\n";
+		packet.insert(packet.end(), hexString.begin(), hexString.end());
+		_initCommandQueue.push_back(packet);
+
+		packet.clear();
+		const auto timePoint = std::chrono::system_clock::now();
+		time_t t = std::chrono::system_clock::to_time_t(timePoint);
+		tm* localTime = std::localtime(&t);
+		uint32_t time = (uint32_t)(t - 946684800) + 1; //I add one second for processing time
+		hexString = "T" + BaseLib::HelperFunctions::getHexString(time, 8) + ',' + BaseLib::HelperFunctions::getHexString(localTime->tm_gmtoff / 1800, 2) + ",00,00000000\r\n";
+		packet.insert(packet.end(), hexString.begin(), hexString.end());
+		_initCommandQueue.push_back(packet);
+	}
+	catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HM_CFG_LAN::openSSLPrintError()
 {
 	uint32_t errorCode = ERR_get_error();
@@ -200,6 +251,8 @@ void HM_CFG_LAN::openSSLPrintError()
 
 bool HM_CFG_LAN::openSSLInit()
 {
+	openSSLCleanup();
+
 	if(_settings->key.size() != 32)
 	{
 		BaseLib::Output::printError("Error: The AES key specified in physicaldevices.conf for communication with your HM-CFG-LAN has the wrong size.");
@@ -230,6 +283,7 @@ bool HM_CFG_LAN::openSSLInit()
 		return false;
 	}
 	_aesInitialized = true;
+	_aesExchangeComplete = false;
 	return true;
 }
 
@@ -241,11 +295,25 @@ void HM_CFG_LAN::openSSLCleanup()
 	if(_ctxEncrypt)	EVP_CIPHER_CTX_free(_ctxEncrypt);
 	EVP_cleanup();
 	ERR_free_strings();
+	_myIV.clear();
+	_remoteIV.clear();
+	_aesExchangeComplete = false;
 }
 
-bool HM_CFG_LAN::encrypt()
+std::vector<char> HM_CFG_LAN::encrypt(std::vector<char>& data)
 {
-	return false;
+	std::vector<char> encryptedData(data.size());
+
+	int length = 0;
+	if(EVP_EncryptUpdate(_ctxEncrypt, (uint8_t*)&encryptedData.at(0), &length, (uint8_t*)&data.at(0), data.size()) != 1)
+	{
+		openSSLPrintError();
+		_stopCallbackThread = true;
+		return std::vector<char>();
+	}
+	EVP_EncryptFinal_ex(_ctxEncrypt, (uint8_t*)&encryptedData.at(0) + length, &length);
+
+	return encryptedData;
 }
 
 std::vector<uint8_t> HM_CFG_LAN::decrypt(std::vector<uint8_t>& data)
@@ -259,11 +327,29 @@ std::vector<uint8_t> HM_CFG_LAN::decrypt(std::vector<uint8_t>& data)
 		_stopCallbackThread = true;
 		return std::vector<uint8_t>();
 	}
-	uint32_t totalLength = length;
-	EVP_DecryptFinal_ex(_ctxDecrypt, &decryptedData.at(0) + totalLength, &length);
-	totalLength += length;
+	EVP_DecryptFinal_ex(_ctxDecrypt, &decryptedData.at(0) + length, &length);
 
 	return decryptedData;
+}
+
+void HM_CFG_LAN::sendKeepAlive()
+{
+	try
+    {
+		send(_keepAlivePacket, false, true);
+	}
+    catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HM_CFG_LAN::listen()
@@ -273,6 +359,7 @@ void HM_CFG_LAN::listen()
     	uint32_t receivedBytes;
     	int32_t bufferMax = 2048;
 		std::vector<char> buffer(bufferMax);
+		int32_t lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
 
         while(!_stopCallbackThread)
         {
@@ -286,7 +373,15 @@ void HM_CFG_LAN::listen()
 			{
 				receivedBytes = _socket.proofread(&buffer[0], bufferMax);
 			}
-			catch(BaseLib::SocketTimeOutException& ex) { continue; }
+			catch(BaseLib::SocketTimeOutException& ex)
+			{
+				if(BaseLib::HelperFunctions::getTimeSeconds() - lastKeepAlive >= 10)
+				{
+					lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
+					sendKeepAlive();
+				}
+				continue;
+			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
 				BaseLib::Output::printWarning("Warning: " + ex.what());
@@ -308,9 +403,9 @@ void HM_CFG_LAN::listen()
 
         	std::vector<uint8_t> data(&buffer.at(0), &buffer.at(0) + receivedBytes);
 
-        	if(BaseLib::Obj::ins->debugLevel >= 5)
+        	if(BaseLib::Obj::ins->debugLevel >= 6)
         	{
-        		BaseLib::Output::printDebug("Debug: Packet received from HM-CFG-LAN:");
+        		BaseLib::Output::printDebug("Debug: Packet received from HM-CFG-LAN. Raw data:");
         		BaseLib::Output::printBinary(data);
         	}
 
@@ -333,7 +428,7 @@ void HM_CFG_LAN::listen()
     }
 }
 
-void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
+bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 {
 	try
 	{
@@ -343,13 +438,13 @@ void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
 			{
 				_stopCallbackThread = true;
 				BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. Device requires AES, but no AES key was specified in physicaldevices.conf.");
-				return;
+				return false;
 			}
 			if(data.size() != 35)
 			{
 				_stopCallbackThread = true;
 				BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. Received IV has wrong size.");
-				return;
+				return false;
 			}
 			_remoteIV.clear();
 			std::string ivHex(&data.at(1), &data.at(1) + (data.size() - 3));
@@ -358,7 +453,7 @@ void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
 			{
 				_stopCallbackThread = true;
 				BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. Received IV is not in hexadecimal format.");
-				return;
+				return false;
 			}
 			if(BaseLib::Obj::ins->debugLevel >= 5)
 			{
@@ -370,7 +465,7 @@ void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
 			{
 				_stopCallbackThread = true;
 				openSSLPrintError();
-				return;
+				return false;
 			}
 
 			std::vector<char> response = { 'V' };
@@ -403,26 +498,59 @@ void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
 			{
 				_stopCallbackThread = true;
 				openSSLPrintError();
-				return;
+				return false;
 			}
 
-			send(response, true);
-			return;
+			send(response, true, true);
+			_aesExchangeComplete = true;
+			return true;
 		}
+		else if(_remoteIV.empty())
+		{
+			_stopCallbackThread = true;
+			BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. AES is enabled but no IV was send from HM-CFG-LAN.");
+			return false;
+		}
+	}
+    catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
+void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
+{
+	try
+	{
+		if(data.empty()) return;
 		std::string packets;
 		if(_useAES)
 		{
+			if(!_aesExchangeComplete)
+			{
+				aesKeyExchange(data);
+				return;
+			}
 			std::vector<uint8_t> decryptedData = decrypt(data);
 			if(decryptedData.empty()) return;
-			packets = std::string(&decryptedData.at(0), &decryptedData.at(0) + decryptedData.size());
+			packets.insert(packets.end(), decryptedData.begin(), decryptedData.end());
 		}
-		else packets = std::string(&data.at(0), &data.at(0) + data.size());
+		else packets.insert(packets.end(), data.begin(), data.end());
 
 		std::istringstream stringStream(packets);
 		std::string packet;
 		while(std::getline(stringStream, packet))
 		{
-			parsePacket(packet);
+			if(_initCommandQueue.empty()) parsePacket(packet); else processInit(packet);
 		}
 	}
     catch(const std::exception& ex)
@@ -439,12 +567,38 @@ void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
     }
 }
 
+void HM_CFG_LAN::processInit(std::string& packet)
+{
+	if(_initCommandQueue.empty() || packet.length() < 10) return;
+	if(_initCommandQueue.front().at(0) == 'A') //No init packet has been sent yet
+	{
+		std::string hexString(&packet.at(0), & packet.at(0) + 10);
+		if(hexString != "HHM-LAN-IF")
+		{
+			_stopCallbackThread = true;
+			BaseLib::Output::printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\". Please check your AES key in physicaldevices.conf. Stopping listening.");
+			return;
+		}
+		send(_initCommandQueue.front(), false, true);
+		_initCommandQueue.pop_front();
+		send(_initCommandQueue.front(), false, true);
+	}
+	else if((_initCommandQueue.front().at(0) == 'C' || _initCommandQueue.front().at(0) == 'Y') && packet.at(0) == 'I')
+	{
+		_initCommandQueue.pop_front();
+		send(_initCommandQueue.front(), false, true);
+		if(_initCommandQueue.front().at(0) == 'T') _initCommandQueue.pop_front();
+	}
+}
+
 void HM_CFG_LAN::parsePacket(std::string& packet)
 {
 	try
 	{
 		if(packet.empty()) return;
-		if(BaseLib::Obj::ins->debugLevel >= 5) BaseLib::Output::printDebug("Debug: Packet received from HM-CFG-LAN: " + packet);
+		if(BaseLib::Obj::ins->debugLevel >= 5) BaseLib::Output::printDebug(std::string("Debug: Packet received from HM-CFG-LAN") + (_useAES ? + " (encrypted)" : "") + ": " + packet);
+
+
 	}
     catch(const std::exception& ex)
     {

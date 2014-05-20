@@ -127,7 +127,7 @@ void SocketOperations::close()
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 {
-	Output::printDebug("Debug: Calling proofread...");
+	Output::printDebug("Debug: Calling proofread...", 6);
 	if(!connected()) autoConnect();
 	//Timeout needs to be set every time, so don't put it outside of the while loop
 	timeval timeout;
@@ -157,11 +157,11 @@ int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>> data)
 
 int32_t SocketOperations::proofwrite(std::vector<char>& data)
 {
-	Output::printDebug("Debug: Calling proofwrite ...");
+	Output::printDebug("Debug: Calling proofwrite ...", 6);
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
 	if(data.size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
-	Output::printDebug("Debug: ... data size is " + std::to_string(data.size()));
+	Output::printDebug("Debug: ... data size is " + std::to_string(data.size()), 6);
 
 	int32_t bytesSentSoFar = 0;
 	while (bytesSentSoFar < (signed)data.size())
@@ -186,7 +186,7 @@ int32_t SocketOperations::proofwrite(std::vector<char>& data)
 		}
 		bytesSentSoFar += bytesSentInStep;
 	}
-	Output::printDebug("Debug: ... sent " + std::to_string(bytesSentSoFar));
+	Output::printDebug("Debug: ... sent " + std::to_string(bytesSentSoFar), 6);
 	return bytesSentSoFar;
 }
 

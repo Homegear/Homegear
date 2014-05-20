@@ -71,9 +71,12 @@ class HM_CFG_LAN  : public BaseLib::Systems::PhysicalDevice
         std::string _port;
         BaseLib::SocketOperations _socket;
         std::mutex _sendMutex;
+        std::list<std::vector<char>> _initCommandQueue;
+        std::vector<char> _keepAlivePacket = { 'K', '\r', '\n' };
 
         //AES stuff
         bool _aesInitialized = false;
+        bool _aesExchangeComplete = false;
         bool _useAES = false;
         std::vector<uint8_t> _key;
 		std::vector<uint8_t> _remoteIV;
@@ -81,16 +84,20 @@ class HM_CFG_LAN  : public BaseLib::Systems::PhysicalDevice
         EVP_CIPHER_CTX* _ctxEncrypt;
         EVP_CIPHER_CTX* _ctxDecrypt;
 
-        bool encrypt();
+        std::vector<char> encrypt(std::vector<char>& data);
         std::vector<uint8_t> decrypt(std::vector<uint8_t>& data);
+        bool aesKeyExchange(std::vector<uint8_t>& data);
         bool openSSLInit();
         void openSSLCleanup();
         void openSSLPrintError();
         //End AES stuff
 
+        void createInitCommandQueue();
         void processData(std::vector<uint8_t>& data);
+        void processInit(std::string& packet);
         void parsePacket(std::string& packet);
-        void send(std::vector<char>& data, bool printData);
+        void send(std::vector<char>& data, bool raw, bool printData);
+        void sendKeepAlive();
         void listen();
         void getFileDescriptor(bool& timedout);
         std::shared_ptr<BaseLib::FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
