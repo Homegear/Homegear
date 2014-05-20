@@ -111,11 +111,19 @@ void HM_CFG_LAN::send(std::vector<char>& data, bool raw, bool printData)
     	std::vector<char> encryptedData;
     	if(_useAES && !raw) encryptedData = encrypt(data);
     	_sendMutex.lock();
+    	if(!_socket.connected() || _stopped)
+    	{
+    		BaseLib::Output::printWarning(std::string("Warning: !!!Not!!! sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+    		_sendMutex.unlock();
+    		return;
+    	}
     	if(BaseLib::Obj::ins->debugLevel > 3 && printData)
         {
             BaseLib::Output::printInfo(std::string("Info: Sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
         }
     	(_useAES && !raw) ? _socket.proofwrite(encryptedData) : _socket.proofwrite(data);
+    	 _sendMutex.unlock();
+    	 return;
     }
     catch(BaseLib::SocketOperationException& ex)
     {
@@ -133,6 +141,7 @@ void HM_CFG_LAN::send(std::vector<char>& data, bool raw, bool printData)
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _stopped = true;
     _sendMutex.unlock();
 }
 
@@ -150,6 +159,33 @@ void HM_CFG_LAN::startListening()
 		_stopped = false;
 		_listenThread = std::thread(&HM_CFG_LAN::listen, this);
 		BaseLib::Threads::setThreadPriority(_listenThread.native_handle(), 45);
+	}
+    catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_CFG_LAN::reconnect()
+{
+	try
+	{
+		_socket.close();
+		if(_useAES) openSSLInit();
+		createInitCommandQueue();
+		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
+		BaseLib::Output::printDebug("Connecting to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_socket.open();
+		BaseLib::Output::printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		_stopped = false;
 	}
     catch(const std::exception& ex)
     {
@@ -198,6 +234,8 @@ void HM_CFG_LAN::createInitCommandQueue()
 {
 	try
 	{
+		_initCommandQueue.clear();
+
 		std::vector<char> packet = {'A'};
 		std::string hexString = "FD3456\r\n";
 		packet.insert(packet.end(), hexString.begin(), hexString.end());
@@ -365,8 +403,10 @@ void HM_CFG_LAN::listen()
         {
         	if(_stopped)
         	{
-        		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         		if(_stopCallbackThread) return;
+        		BaseLib::Output::printWarning("Warning: Connection to HM-CFG-LAN closed. Trying to reconnect...");
+        		reconnect();
         		continue;
         	}
         	try
@@ -384,14 +424,16 @@ void HM_CFG_LAN::listen()
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
+				_stopped = true;
 				BaseLib::Output::printWarning("Warning: " + ex.what());
-				std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
+				_stopped = true;
 				BaseLib::Output::printError("Error: " + ex.what());
-				std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
         	if(receivedBytes == 0) continue;

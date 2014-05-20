@@ -92,6 +92,7 @@ class HM_CFG_LAN  : public BaseLib::Systems::PhysicalDevice
         void openSSLPrintError();
         //End AES stuff
 
+        void reconnect();
         void createInitCommandQueue();
         void processData(std::vector<uint8_t>& data);
         void processInit(std::string& packet);
