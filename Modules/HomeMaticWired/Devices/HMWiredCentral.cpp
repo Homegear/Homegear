@@ -81,6 +81,7 @@ bool HMWiredCentral::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> 
 		if(!hmWiredPacket) return false;
 		std::shared_ptr<HMWiredPeer> peer(getPeer(hmWiredPacket->senderAddress()));
 		if(peer) peer->packetReceived(hmWiredPacket);
+		else if(hmWiredPacket->messageType() == 0x41) handleAnnounce(hmWiredPacket);
 	}
 	catch(const std::exception& ex)
     {
@@ -954,6 +955,159 @@ bool HMWiredCentral::knowsDevice(uint64_t id)
 		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_peersMutex.unlock();
+	return false;
+}
+
+void HMWiredCentral::handleAnnounce(std::shared_ptr<HMWiredPacket> packet)
+{
+	try
+	{
+		_peerInitMutex.lock();
+		if(getPeer(packet->senderAddress()))
+		{
+			_peerInitMutex.unlock();
+			return;
+		}
+		BaseLib::Output::printInfo("Info: New device detected on bus.");
+		if(packet->payload()->size() != 16)
+		{
+			BaseLib::Output::printWarning("Warning: Could not interpret announce packet: Packet has unknown size (payload size has to be 16).");
+			_peerInitMutex.unlock();
+			return;
+		}
+		int32_t deviceType = (packet->payload()->at(2) << 8) + packet->payload()->at(3);
+		int32_t firmwareVersion = (packet->payload()->at(4) << 8) + packet->payload()->at(5);
+		std::string serialNumber(&packet->payload()->at(6), &packet->payload()->at(6) + 10);
+
+		std::shared_ptr<HMWiredPeer> peer = createPeer(packet->senderAddress(), firmwareVersion, BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticWired, deviceType), serialNumber, true);
+		if(!peer)
+		{
+			BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 8) + ". No matching XML file was found.");
+			_peerInitMutex.unlock();
+			return;
+		}
+
+		if(peerInit(peer))
+		{
+			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			peer->restoreLinks();
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = peer->getDeviceDescription();
+			if(!descriptions)
+			{
+				_peerInitMutex.unlock();
+				return;
+			}
+			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
+			{
+				deviceDescriptions->arrayValue->push_back(*j);
+			}
+			raiseRPCNewDevices(deviceDescriptions);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_peerInitMutex.unlock();
+}
+
+bool HMWiredCentral::peerInit(std::shared_ptr<HMWiredPeer> peer)
+{
+	try
+	{
+		peer->initializeCentralConfig();
+
+		int32_t address = peer->getAddress();
+
+		peer->binaryConfig[0].data = readEEPROM(address, 0);
+		peer->saveParameter(peer->binaryConfig[0].databaseID, 0, peer->binaryConfig[0].data);
+		if(peer->binaryConfig[0].data.size() != 0x10)
+		{
+			BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8) + ". Could not read master config from EEPROM.");
+			return false;
+		}
+
+		for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = peer->rpcDevice->parameterSet->parameters.begin(); j != peer->rpcDevice->parameterSet->parameters.end(); ++j)
+		{
+			if((*j)->logicalParameter->enforce)
+			{
+				std::vector<uint8_t> enforceValue = (*j)->convertToPacket((*j)->logicalParameter->getEnforceValue());
+				peer->setConfigParameter((*j)->physicalParameter->address.index, (*j)->physicalParameter->size, enforceValue);
+			}
+		}
+
+		writeEEPROM(address, 0, peer->binaryConfig[0].data);
+
+		//Read all config
+		std::vector<uint8_t> command({0x45, 0, 0, 0x10, 0x40}); //Request used EEPROM blocks; start address 0x0000, block size 0x10, blocks 0x40
+		std::shared_ptr<HMWiredPacket> response = getResponse(command, address);
+		if(!response || response->payload()->empty() || response->payload()->size() != 12 || response->payload()->at(0) != 0x65 || response->payload()->at(1) != 0 || response->payload()->at(2) != 0 || response->payload()->at(3) != 0x10)
+		{
+			BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8) + ". Could not determine EEPROM blocks to read.");
+			return false;
+		}
+
+		int32_t configIndex = 0;
+		for(int32_t j = 0; j < 8; j++)
+		{
+			for(int32_t k = 0; k < 8; k++)
+			{
+				if(response->payload()->at(j + 4) & (1 << k))
+				{
+					if(peer->binaryConfig.find(configIndex) == peer->binaryConfig.end())
+					{
+						peer->binaryConfig[configIndex].data = readEEPROM(peer->getAddress(), configIndex);
+						peer->saveParameter(peer->binaryConfig[configIndex].databaseID, configIndex, peer->binaryConfig[configIndex].data);
+						if(peer->binaryConfig[configIndex].data.size() != 0x10) BaseLib::Output::printError("Error: HomeMatic Wired Central: Error reading config from device with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8) + ". Size is not 16 bytes.");
+					}
+				}
+				configIndex += 0x10;
+			}
+		}
+		_peersMutex.lock();
+		try
+		{
+			_peers[address] = peer;
+			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+			_peersByID[peer->getID()] = peer;
+			peer->setMessageCounter(_messageCounter[address]);
+			_messageCounter.erase(address);
+		}
+		catch(const std::exception& ex)
+		{
+			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_peersMutex.unlock();
+		return true;
+	}
+	catch(const std::exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 	return false;
 }
 
@@ -2010,130 +2164,79 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::searchDevices()
 
 		BaseLib::Output::printInfo("Info: Search completed. Found " + std::to_string(newDevices.size()) + " devices.");
 		std::vector<std::shared_ptr<HMWiredPeer>> newPeers;
-		for(std::vector<int32_t>::iterator i = newDevices.begin(); i != newDevices.end(); ++i)
+		_peerInitMutex.lock();
+		try
 		{
-			if(getPeer(*i)) continue;
-
-			//Get device type:
-			std::shared_ptr<HMWiredPacket> response = getResponse(0x68, *i, true);
-			if(!response || response->payload()->size() != 2)
+			for(std::vector<int32_t>::iterator i = newDevices.begin(); i != newDevices.end(); ++i)
 			{
-				BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Device type request failed.");
-				continue;
-			}
-			int32_t deviceType = (response->payload()->at(0) << 8) + response->payload()->at(1);
+				if(getPeer(*i)) continue;
 
-			//Get firmware version:
-			response = getResponse(0x76, *i);
-			if(!response || response->payload()->size() != 2)
-			{
-				BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Firmware version request failed.");
-				continue;
-			}
-			int32_t firmwareVersion = (response->payload()->at(0) << 8) + response->payload()->at(1);
-
-			//Get serial number:
-			response = getResponse(0x6E, *i);
-			if(!response || response->payload()->empty())
-			{
-				BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Serial number request failed.");
-				continue;
-			}
-			std::string serialNumber(&response->payload()->at(0), &response->payload()->at(0) + response->payload()->size());
-
-			std::shared_ptr<HMWiredPeer> peer = createPeer(*i, firmwareVersion, BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticWired, deviceType), serialNumber, true);
-			if(!peer)
-			{
-				BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". No matching XML file was found.");
-				continue;
-			}
-			peer->initializeCentralConfig();
-
-			peer->binaryConfig[0].data = readEEPROM(*i, 0);
-			peer->saveParameter(peer->binaryConfig[0].databaseID, 0, peer->binaryConfig[0].data);
-			if(peer->binaryConfig[0].data.size() != 0x10)
-			{
-				BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Could not read master config from EEPROM.");
-				continue;
-			}
-
-			for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = peer->rpcDevice->parameterSet->parameters.begin(); j != peer->rpcDevice->parameterSet->parameters.end(); ++j)
-			{
-				if((*j)->logicalParameter->enforce)
+				//Get device type:
+				std::shared_ptr<HMWiredPacket> response = getResponse(0x68, *i, true);
+				if(!response || response->payload()->size() != 2)
 				{
-					std::vector<uint8_t> enforceValue = (*j)->convertToPacket((*j)->logicalParameter->getEnforceValue());
-					peer->setConfigParameter((*j)->physicalParameter->address.index, (*j)->physicalParameter->size, enforceValue);
+					BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Device type request failed.");
+					continue;
 				}
-			}
+				int32_t deviceType = (response->payload()->at(0) << 8) + response->payload()->at(1);
 
-			writeEEPROM(*i, 0, peer->binaryConfig[0].data);
-
-			//Read all config
-			std::vector<uint8_t> command({0x45, 0, 0, 0x10, 0x40}); //Request used EEPROM blocks; start address 0x0000, block size 0x10, blocks 0x40
-			response = getResponse(command, *i);
-			if(!response || response->payload()->empty() || response->payload()->size() != 12 || response->payload()->at(0) != 0x65 || response->payload()->at(1) != 0 || response->payload()->at(2) != 0 || response->payload()->at(3) != 0x10)
-			{
-				BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Could not determine EEPROM blocks to read.");
-				continue;
-			}
-
-			int32_t configIndex = 0;
-			for(int32_t j = 0; j < 8; j++)
-			{
-				for(int32_t k = 0; k < 8; k++)
+				//Get firmware version:
+				response = getResponse(0x76, *i);
+				if(!response || response->payload()->size() != 2)
 				{
-					if(response->payload()->at(j + 4) & (1 << k))
+					BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Firmware version request failed.");
+					continue;
+				}
+				int32_t firmwareVersion = (response->payload()->at(0) << 8) + response->payload()->at(1);
+
+				//Get serial number:
+				response = getResponse(0x6E, *i);
+				if(!response || response->payload()->empty())
+				{
+					BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Serial number request failed.");
+					continue;
+				}
+				std::string serialNumber(&response->payload()->at(0), &response->payload()->at(0) + response->payload()->size());
+
+				std::shared_ptr<HMWiredPeer> peer = createPeer(*i, firmwareVersion, BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticWired, deviceType), serialNumber, true);
+				if(!peer)
+				{
+					BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". No matching XML file was found.");
+					continue;
+				}
+
+				if(peerInit(peer)) newPeers.push_back(peer);;
+			}
+
+			if(newPeers.size() > 0)
+			{
+				std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+				for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = newPeers.begin(); i != newPeers.end(); ++i)
+				{
+					(*i)->restoreLinks();
+					std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
+					if(!descriptions) continue;
+					for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 					{
-						if(peer->binaryConfig.find(configIndex) == peer->binaryConfig.end())
-						{
-							peer->binaryConfig[configIndex].data = readEEPROM(peer->getAddress(), configIndex);
-							peer->saveParameter(peer->binaryConfig[configIndex].databaseID, configIndex, peer->binaryConfig[configIndex].data);
-							if(peer->binaryConfig[configIndex].data.size() != 0x10) BaseLib::Output::printError("Error: HomeMatic Wired Central: Error reading config from device with address 0x" + BaseLib::HelperFunctions::getHexString(*i, 8) + ". Size is not 16 bytes.");
-						}
+						deviceDescriptions->arrayValue->push_back(*j);
 					}
-					configIndex += 0x10;
 				}
+				raiseRPCNewDevices(deviceDescriptions);
 			}
-			newPeers.push_back(peer);
-			_peersMutex.lock();
-			try
-			{
-				_peers[*i] = peer;
-				if(!serialNumber.empty()) _peersBySerial[serialNumber] = peer;
-				_peersByID[peer->getID()] = peer;
-				peer->setMessageCounter(_messageCounter[*i]);
-				_messageCounter.erase(*i);
-			}
-			catch(const std::exception& ex)
-			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			_peersMutex.unlock();
 		}
-
-		if(newPeers.size() > 0)
+		catch(const std::exception& ex)
 		{
-			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-			for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = newPeers.begin(); i != newPeers.end(); ++i)
-			{
-				(*i)->restoreLinks();
-				std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
-				if(!descriptions) continue;
-				for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
-				{
-					deviceDescriptions->arrayValue->push_back(*j);
-				}
-			}
-			raiseRPCNewDevices(deviceDescriptions);
+			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
+		catch(BaseLib::Exception& ex)
+		{
+			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_peerInitMutex.unlock();
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)newPeers.size()));
 	}
 	catch(const std::exception& ex)

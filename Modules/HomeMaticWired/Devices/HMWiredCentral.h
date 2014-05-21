@@ -53,6 +53,8 @@ public:
 	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<HMWiredPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 	void updateFirmwares(std::vector<uint64_t> ids);
 	void updateFirmware(uint64_t id);
+	void handleAnnounce(std::shared_ptr<HMWiredPacket> packet);
+	bool peerInit(std::shared_ptr<HMWiredPeer> peer);
 
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);
@@ -96,6 +98,8 @@ protected:
 	std::shared_ptr<HMWiredPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);
 private:
+	std::mutex _peerInitMutex;
+
 	//Updates:
 	bool _updateMode = false;
 	std::mutex _updateMutex;
