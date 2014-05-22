@@ -32,6 +32,34 @@
 namespace BidCoS
 {
 
+std::vector<char> BidCoSDevice::PeerInfo::getAESChannelMap()
+{
+	std::vector<char> map;
+	try
+	{
+		for(std::map<int32_t, bool>::iterator i = aesChannels.begin(); i != aesChannels.end(); ++i)
+		{
+			int32_t byte = i->first / 8;
+			if(map.size() < (byte + 1)) map.resize(byte + 1, 0);
+			map.at(byte) |= 1 << (i->first % 8);
+		}
+		std::reverse(map.begin(), map.end());
+	}
+    catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return map;
+}
+
 BidCoSDevice::BidCoSDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
 {
 

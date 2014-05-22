@@ -37,8 +37,28 @@ namespace BidCoS {
 class BidCoSDevice : public BaseLib::Systems::PhysicalDevice
 {
 public:
+	class PeerInfo
+	{
+	public:
+		PeerInfo() {}
+		virtual ~PeerInfo() {}
+		std::vector<char> getAESChannelMap();
+
+		int32_t address = 0;
+		int32_t keyIndex = 0;
+		std::map<int32_t, bool> aesChannels;
+	};
+
 	BidCoSDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
 	virtual ~BidCoSDevice();
+
+	virtual void addPeer(PeerInfo peerInfo) {}
+	virtual void addPeers(std::vector<PeerInfo> peerInfos) {}
+	virtual void removePeer(int32_t address) {}
+
+	virtual bool aesSupported() { return false; }
+	virtual bool autoResend() { return false; }
+	virtual bool needsPeers() { return false; }
 };
 
 }

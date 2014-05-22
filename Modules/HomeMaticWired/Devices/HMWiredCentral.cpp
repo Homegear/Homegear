@@ -120,16 +120,6 @@ void HMWiredCentral::deletePeer(uint64_t id)
 			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
 		}
 		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
-		BaseLib::Metadata::deleteMetadata(peer->getSerialNumber());
-		BaseLib::Metadata::deleteMetadata(std::to_string(id));
-		if(peer->rpcDevice)
-		{
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
-			{
-				BaseLib::Metadata::deleteMetadata(peer->getSerialNumber() + ':' + std::to_string(i->first));
-				BaseLib::Metadata::deleteMetadata(std::to_string(id) + ':' + std::to_string(i->first));
-			}
-		}
 		peer->deleteFromDatabase();
 		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
@@ -1031,6 +1021,7 @@ bool HMWiredCentral::peerInit(std::shared_ptr<HMWiredPeer> peer)
 		peer->saveParameter(peer->binaryConfig[0].databaseID, 0, peer->binaryConfig[0].data);
 		if(peer->binaryConfig[0].data.size() != 0x10)
 		{
+			peer->deleteFromDatabase();
 			BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8) + ". Could not read master config from EEPROM.");
 			return false;
 		}
@@ -1052,6 +1043,7 @@ bool HMWiredCentral::peerInit(std::shared_ptr<HMWiredPeer> peer)
 		if(!response || response->payload()->empty() || response->payload()->size() != 12 || response->payload()->at(0) != 0x65 || response->payload()->at(1) != 0 || response->payload()->at(2) != 0 || response->payload()->at(3) != 0x10)
 		{
 			BaseLib::Output::printError("Error: HomeMatic Wired Central: Could not pair device with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8) + ". Could not determine EEPROM blocks to read.");
+			peer->deleteFromDatabase();
 			return false;
 		}
 
@@ -1108,6 +1100,7 @@ bool HMWiredCentral::peerInit(std::shared_ptr<HMWiredPeer> peer)
 	{
 		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	peer->deleteFromDatabase();
 	return false;
 }
 
@@ -2061,8 +2054,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::searchDevices()
 		std::vector<int32_t> newDevices;
 		int32_t addressMask = 0;
 		bool backwards = false;
-		int32_t address = 0;
-		int32_t address2 = 0;
+		uint32_t address = 0;
+		uint32_t address2 = 0;
 		int64_t time = 0;
 		std::shared_ptr<HMWired::HMWiredPacket> receivedPacket;
 		int32_t retries = 0;
@@ -2089,39 +2082,40 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::searchDevices()
 			time = BaseLib::HelperFunctions::getTime();
 			sendPacket(packet.second, false);
 
-			int32_t i = 0;
-			for(i = 0; i < 2; i++)
+			int32_t j = 0;
+			while(j * 3 < responseDelay)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(responseDelay));
+				std::this_thread::sleep_for(std::chrono::milliseconds(3));
 				receivedPacket = _receivedPackets.get(0);
-				if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->type() == HMWiredPacketType::discoveryResponse)
+				if(receivedPacket && receivedPacket->timeReceived() >= time) break;
+				j++;
+			}
+			if(receivedPacket && receivedPacket->timeReceived() >= time && receivedPacket->type() == HMWiredPacketType::discoveryResponse)
+			{
+				retries = 0;
+				if(addressMask < 31)
 				{
-					retries = 0;
-					if(addressMask < 31)
+					backwards = false;
+					addressMask++;
+				}
+				else
+				{
+					BaseLib::Output::printMessage("Peer found with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8));
+					if(address > 0) newDevices.push_back(address);
+					backwards = true;
+					address++;
+					address2 = address;
+					int32_t shifts = 0;
+					while(!(address2 & 1))
 					{
-						backwards = false;
-						addressMask++;
+						address2 >>= 1;
+						addressMask--;
+						shifts++;
 					}
-					else
-					{
-						BaseLib::Output::printMessage("Peer found with address 0x" + BaseLib::HelperFunctions::getHexString(address, 8));
-						newDevices.push_back(address);
-						backwards = true;
-						address++;
-						address2 = address;
-						int32_t shifts = 0;
-						while(!(address2 & 1))
-						{
-							address2 >>= 1;
-							addressMask--;
-							shifts++;
-						}
-						address = address2 << shifts;
-					}
-					break;
+					address = address2 << shifts;
 				}
 			}
-			if(i == 2)
+			else
 			{
 				if(retries < 2) retries++;
 				else

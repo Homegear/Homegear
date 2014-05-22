@@ -81,11 +81,11 @@ HMWiredPacket::HMWiredPacket(std::string packet, int64_t timeReceived)
 	import(packet);
 }
 
-HMWiredPacket::HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived)
+HMWiredPacket::HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived, bool removeEscapes)
 {
 	init();
 	_timeReceived = timeReceived;
-	import(packet);
+	import(packet, removeEscapes);
 }
 
 HMWiredPacket::HMWiredPacket(HMWiredPacketType type, int32_t senderAddress, int32_t destinationAddress, bool synchronizationBit, uint8_t senderMessageCounter, uint8_t receiverMessageCounter, uint8_t addressMask, std::vector<uint8_t>& payload)
@@ -127,19 +127,55 @@ void HMWiredPacket::reset()
 	_synchronizationBit = false;
 }
 
+std::vector<uint8_t> HMWiredPacket::unescapePacket(std::vector<uint8_t>& packet)
+{
+	std::vector<uint8_t> unescapedPacket;
+	try
+	{
+		bool escapeByte = false;
+		for(std::vector<uint8_t>::iterator i = packet.begin(); i != packet.end(); ++i)
+		{
+			if(*i == 0xFC) escapeByte = true;
+			else
+			{
+				if(escapeByte)
+				{
+					unescapedPacket.push_back(*i | 0x80);
+					escapeByte = false;
+				}
+				else unescapedPacket.push_back(*i);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return unescapedPacket;
+}
+
 //Import expects non escaped packet with CRC16
-void HMWiredPacket::import(std::vector<uint8_t>& packet)
+void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 {
 	try
 	{
 		reset();
 
-		if(packet.empty()) return;
 		if(packet.size() > 512)
 		{
 			BaseLib::Output::printWarning("Warning: Tried to import HomeMatic Wired packet larger than 256 bytes.");
 			return;
 		}
+		if(removeEscapes) packet = unescapePacket(packet);
+		if(packet.empty()) return;
 		_packet = packet;
 		if(packet.at(0) == 0xFD)
 		{

@@ -36,6 +36,7 @@
 #include <ctime>
 #include <map>
 #include <fstream>
+#include <sstream>
 
 #include <dirent.h>
 #include <sys/types.h>
@@ -109,6 +110,7 @@ public:
 	}
 
 	static std::pair<std::string, std::string> split(std::string string, char delimiter);
+	static std::vector<std::string> splitAll(std::string, char delimiter);
 
 	static inline double getDouble(std::string &s)
 	{
@@ -179,6 +181,7 @@ public:
 	static char getHexChar(int32_t nibble);
 	static std::vector<char> getBinary(std::string hexString);
 	static std::vector<uint8_t> getUBinary(std::string hexString);
+	static std::vector<uint8_t>& getUBinary(std::string hexString, uint32_t size, std::vector<uint8_t>& binary);
 	static std::vector<uint8_t> getUBinary(std::vector<uint8_t>& hexData);
 	static std::string getSSLError(int32_t errorNumber);
 	static std::string getSSLCertVerificationError(int32_t errorNumber);

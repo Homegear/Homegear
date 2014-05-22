@@ -51,6 +51,7 @@
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/md5.h>
 
 namespace BidCoS
 {
@@ -65,7 +66,17 @@ class HM_CFG_LAN  : public BidCoSDevice
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
         int64_t lastAction() { return _lastAction; }
         virtual bool isOpen() { return _socket.connected(); }
+        virtual bool aesSupported() { return true; }
+        virtual bool autoResend() { return true; }
+        virtual bool needsPeers() { return true; }
+
+        virtual void addPeer(PeerInfo peerInfo);
+        virtual void addPeers(std::vector<PeerInfo> peerInfos);
+        virtual void removePeer(int32_t address);
     protected:
+        std::mutex _peersMutex;
+        std::map<int32_t, PeerInfo> peers;
+        bool isGateway = false;
         int64_t _lastAction = 0;
         std::string _hostname;
         std::string _port;
@@ -75,6 +86,8 @@ class HM_CFG_LAN  : public BidCoSDevice
         int32_t _lastKeepAlive = 0;
         int32_t _lastKeepAliveResponse = 0;
         std::vector<char> _keepAlivePacket = { 'K', '\r', '\n' };
+        int64_t _startUpTime = 0;
+        int32_t _myAddress = 0x1C6940;
 
         //AES stuff
         bool _aesInitialized = false;
@@ -99,7 +112,8 @@ class HM_CFG_LAN  : public BidCoSDevice
         void processData(std::vector<uint8_t>& data);
         void processInit(std::string& packet);
         void parsePacket(std::string& packet);
-        void send(std::vector<char>& data, bool raw, bool printData);
+        void send(std::string hexString, bool raw = false);
+        void send(std::vector<char>& data, bool raw);
         void sendKeepAlive();
         void listen();
         void getFileDescriptor(bool& timedout);

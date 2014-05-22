@@ -243,8 +243,15 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 			if(unlink(GD::socketPath.c_str()) == -1 && errno != ENOENT) throw(BaseLib::Exception("Couldn't delete existing socket: " + GD::socketPath + ". Error: " + strerror(errno)));
 		}
 		else if(stat(GD::socketPath.c_str(), &sb) == 0) return;
+
 		_serverFileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0));
 		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
+		int32_t reuseAddress = 1;
+		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
+		{
+			BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+			throw(BaseLib::Exception("Couldn't set socket options: " + GD::socketPath + ". Error: " + strerror(errno)));
+		}
 		sockaddr_un serverAddress;
 		serverAddress.sun_family = AF_UNIX;
 		strcpy(serverAddress.sun_path, GD::socketPath.c_str());
@@ -255,6 +262,7 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 			throw BaseLib::Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
 		}
 		chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
+		return;
     }
     catch(const std::exception& ex)
     {
@@ -268,6 +276,7 @@ void Server::getFileDescriptor(bool deleteOldSocket)
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
 }
 
 void Server::readClient(std::shared_ptr<ClientData> clientData)
@@ -299,8 +308,8 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 				removeClientData(clientData->id);
 				BaseLib::Output::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
 				BaseLib::Obj::ins->fileDescriptorManager.close(clientData->fileDescriptor);
-				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
-				BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+				//If we close the socket, the socket file gets deleted. We don't want that
+				//BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 
@@ -310,8 +319,8 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 				removeClientData(clientData->id);
 				BaseLib::Output::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
 				BaseLib::Obj::ins->fileDescriptorManager.close(clientData->fileDescriptor);
-				//For some reason the server socket is deleted when client connection is closed, so we close the server socket
-				BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+				//If we close the socket, the socket file gets deleted. We don't want that
+				//BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 

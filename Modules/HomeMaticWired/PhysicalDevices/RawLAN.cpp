@@ -207,9 +207,9 @@ void RawLAN::listen()
 					if(data.size() == 1 && data.at(0) != 0xF8)
 					{
 						BaseLib::Output::printDebug("Debug: Correcting wrong response to 0xF8: " + BaseLib::HelperFunctions::getHexString(data));
-						data.at(0) == 0xF8;
+						data.at(0) = 0xF8;
 					}
-					std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime()));
+					std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime(), true));
 					raisePacketReceived(packet);
 					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 					data.clear();
@@ -241,9 +241,9 @@ void RawLAN::listen()
         		if(data.size() == 1 && data.at(0) != 0xF8)
 				{
 					BaseLib::Output::printDebug("Debug: Correcting wrong response to 0xF8: " + BaseLib::HelperFunctions::getHexString(data));
-					data.at(0) == 0xF8;
+					data.at(0) = 0xF8;
 				}
-        		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime()));
+        		std::shared_ptr<HMWiredPacket> packet(new HMWiredPacket(data, BaseLib::HelperFunctions::getTime(), true));
         		raisePacketReceived(packet);
         		_lastPacketReceived = BaseLib::HelperFunctions::getTime();
         		data.clear();

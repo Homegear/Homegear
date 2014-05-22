@@ -806,7 +806,7 @@ void BidCoSQueue::startResendThread(bool force)
 		else throw BaseLib::Exception("Packet or message pointer of BidCoS queue is empty.");
 
 		_queueMutex.unlock();
-		if((!(controlByte & 0x02) && (controlByte & 0x20)) || force) //Resend when no response?
+		if(!GD::physicalDevice->autoResend() && ((!(controlByte & 0x02) && (controlByte & 0x20)) || force)) //Resend when no response?
 		{
 			stopResendThread();
 			bool burst = controlByte & 0x10;

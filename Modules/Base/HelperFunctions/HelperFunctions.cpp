@@ -352,6 +352,34 @@ std::pair<std::string, std::string> HelperFunctions::split(std::string string, c
     return std::pair<std::string, std::string>();
 }
 
+std::vector<std::string> HelperFunctions::splitAll(std::string string, char delimiter)
+{
+	try
+	{
+		std::vector<std::string> elements;
+		std::stringstream stringStream(string);
+		std::string element;
+		while (std::getline(stringStream, element, delimiter))
+		{
+			elements.push_back(element);
+		}
+		return elements;
+	}
+    catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<std::string>();
+}
+
 char HelperFunctions::getHexChar(int32_t nibble)
 {
 	try
@@ -464,6 +492,22 @@ std::vector<uint8_t> HelperFunctions::getUBinary(std::string hexString)
         uint8_t byte = 0;
         if(isxdigit(*i)) byte = (_asciiToBinaryTable[std::toupper(*i) - '0'] << 4);
         if(i + 1 != hexString.end() && isxdigit(*(i + 1))) byte += _asciiToBinaryTable[std::toupper(*(i + 1)) - '0'];
+        binary.push_back(byte);
+    }
+    return binary;
+}
+
+std::vector<uint8_t>& HelperFunctions::getUBinary(std::string hexString, uint32_t size, std::vector<uint8_t>& binary)
+{
+    if(hexString.empty()) return binary;
+	if(size > hexString.size()) size = hexString.size();
+	if(size % 2 != 0) size -= 1;
+	if(size < 1) return binary;
+    for (int32_t i = 0; i < size; i += 2)
+    {
+        uint8_t byte = 0;
+        if(isxdigit(hexString[i])) byte = (_asciiToBinaryTable[std::toupper(hexString[i]) - '0'] << 4);
+        if(isxdigit(hexString[i + 1])) byte += _asciiToBinaryTable[std::toupper(hexString[i + 1]) - '0'];
         binary.push_back(byte);
     }
     return binary;

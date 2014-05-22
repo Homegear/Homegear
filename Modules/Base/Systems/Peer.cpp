@@ -314,8 +314,17 @@ void Peer::deleteFromDatabase()
 {
 	try
 	{
+		deleting = true;
 		Metadata::deleteMetadata(_serialNumber);
 		Metadata::deleteMetadata(std::to_string(_peerID));
+		if(rpcDevice)
+		{
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			{
+				BaseLib::Metadata::deleteMetadata(_serialNumber + ':' + std::to_string(i->first));
+				BaseLib::Metadata::deleteMetadata(std::to_string(_peerID) + ':' + std::to_string(i->first));
+			}
+		}
 		_databaseMutex.lock();
 		DataColumnVector data({std::shared_ptr<DataColumn>(new DataColumn(_peerID))});
 		Obj::ins->db.executeCommand("DELETE FROM parameters WHERE peerID=?", data);

@@ -72,6 +72,88 @@ HM_CFG_LAN::~HM_CFG_LAN()
     }
 }
 
+void HM_CFG_LAN::addPeer(PeerInfo peerInfo)
+{
+	try
+	{
+		if(peerInfo.address == 0) return;
+		if(peers.find(peerInfo.address) != peers.end()) removePeer(peerInfo.address);
+		_peersMutex.lock();
+		peers[peerInfo.address] = peerInfo;
+		std::string packetHex = std::string("+") + BaseLib::HelperFunctions::getHexString(peerInfo.address, 6) + ",";
+		if(!peerInfo.aesChannels.empty())
+		{
+			packetHex += "01,";
+			packetHex += BaseLib::HelperFunctions::getHexString(peerInfo.keyIndex, 2) + ",";
+			packetHex += BaseLib::HelperFunctions::getHexString(peerInfo.getAESChannelMap()) + ",";
+		}
+		else packetHex += "00,00,";
+		packetHex += "\r\n";
+
+		send(packetHex);
+	}
+    catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+}
+
+void HM_CFG_LAN::addPeers(std::vector<PeerInfo> peerInfos)
+{
+	try
+	{
+		for(std::vector<PeerInfo>::iterator i = peerInfos.begin(); i != peerInfos.end(); ++i)
+		{
+			addPeer(*i);
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_CFG_LAN::removePeer(int32_t address)
+{
+	try
+	{
+		_peersMutex.lock();
+		if(peers.find(address) != peers.end()) peers.erase(address);
+		std::string packetHex = std::string("-") + BaseLib::HelperFunctions::getHexString(address, 6) + "\r\n";
+		send(packetHex);
+	}
+    catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
+}
+
 void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
@@ -85,8 +167,19 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 
 		std::shared_ptr<BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoSPacket>(packet));
 		if(!bidCoSPacket) return;
-		std::vector<char> data = bidCoSPacket->byteArraySigned();
-		send(data, false, true);
+		if(bidCoSPacket->messageType() == 0x02 && packet->senderAddress() == _myAddress && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)
+		{
+			BaseLib::Output::printDebug("Debug: HM-CFG-LAN: Ignoring ACK packet.", 6);
+			_lastPacketSent = BaseLib::HelperFunctions::getTime();
+			return;
+		}
+
+		int64_t currentTimeMilliseconds = BaseLib::HelperFunctions::getTime();
+		uint32_t currentTime = currentTimeMilliseconds & 0xFFFFFFFF;
+		std::string packetString = packet->hexString();
+		if(BaseLib::Obj::ins->debugLevel >= 4) BaseLib::Output::printInfo("Info: Sending: " + packetString);
+		std::string hexString = "S" + BaseLib::HelperFunctions::getHexString(currentTime, 8) + ",00,00000000,01," + BaseLib::HelperFunctions::getHexString(currentTimeMilliseconds - _startUpTime, 8) + "," + packetString.substr(2) + "\r\n";
+		send(hexString, false);
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
@@ -103,7 +196,29 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
     }
 }
 
-void HM_CFG_LAN::send(std::vector<char>& data, bool raw, bool printData)
+void HM_CFG_LAN::send(std::string hexString, bool raw)
+{
+	try
+    {
+		if(hexString.empty()) return;
+		std::vector<char> data(&hexString.at(0), &hexString.at(0) + hexString.size());
+		send(data, raw);
+	}
+	catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_CFG_LAN::send(std::vector<char>& data, bool raw)
 {
     try
     {
@@ -117,9 +232,9 @@ void HM_CFG_LAN::send(std::vector<char>& data, bool raw, bool printData)
     		_sendMutex.unlock();
     		return;
     	}
-    	if(BaseLib::Obj::ins->debugLevel > 3 && printData)
+    	if(BaseLib::Obj::ins->debugLevel >= 5)
         {
-            BaseLib::Output::printInfo(std::string("Info: Sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+            BaseLib::Output::printInfo(std::string("Debug: Sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
         }
     	(_useAES && !raw) ? _socket.proofwrite(encryptedData) : _socket.proofwrite(data);
     	 _sendMutex.unlock();
@@ -250,7 +365,8 @@ void HM_CFG_LAN::createInitCommandQueue()
 		}
 
 		std::vector<char> packet = {'A'};
-		std::string hexString = BaseLib::HelperFunctions::getHexString(BaseLib::Obj::family->getCentral()->physicalAddress(), 6) + "\r\n";
+		_myAddress = BaseLib::Obj::family->getCentral()->physicalAddress();
+		std::string hexString = BaseLib::HelperFunctions::getHexString(_myAddress, 6) + "\r\n";
 		packet.insert(packet.end(), hexString.begin(), hexString.end());
 		_initCommandQueue.push_back(packet);
 
@@ -306,14 +422,18 @@ bool HM_CFG_LAN::openSSLInit()
 
 	if(_settings->key.size() != 32)
 	{
-		BaseLib::Output::printError("Error: The AES key specified in physicaldevices.conf for communication with your HM-CFG-LAN has the wrong size.");
-		return false;
+		_key.resize(16);
+		MD5((uint8_t*)_settings->key.c_str(), _settings->key.size(), &_key.at(0));
+		isGateway = true;
 	}
-	_key = BaseLib::HelperFunctions::getUBinary(_settings->key);
-	if(_key.size() != 16)
+	else
 	{
-		BaseLib::Output::printError("Error: The AES key specified in physicaldevices.conf for communication with your HM-CFG-LAN is not a valid hexadecimal string.");
-		return false;
+		_key = BaseLib::HelperFunctions::getUBinary(_settings->key);
+		if(_key.size() != 16)
+		{
+			BaseLib::Output::printError("Error: The AES key specified in physicaldevices.conf for communication with your HM-CFG-LAN is not a valid hexadecimal string.");
+			return false;
+		}
 	}
 
 	ERR_load_crypto_strings();
@@ -397,7 +517,7 @@ void HM_CFG_LAN::sendKeepAlive()
 			}
 
 			_lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
-			send(_keepAlivePacket, false, true);
+			send(_keepAlivePacket, false);
 		}
 	}
     catch(const std::exception& ex)
@@ -575,7 +695,7 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 				return false;
 			}
 
-			send(response, true, true);
+			send(response, true);
 			_aesExchangeComplete = true;
 			return true;
 		}
@@ -646,21 +766,22 @@ void HM_CFG_LAN::processInit(std::string& packet)
 	if(_initCommandQueue.empty() || packet.length() < 10) return;
 	if(_initCommandQueue.front().at(0) == 'A') //No init packet has been sent yet
 	{
-		std::string hexString(&packet.at(0), & packet.at(0) + 10);
-		if(hexString != "HHM-LAN-IF")
+		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packet, ',');
+		if(parts.size() != 7 || parts.at(0) != "HHM-LAN-IF")
 		{
 			_stopCallbackThread = true;
-			BaseLib::Output::printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\". Please check your AES key in physicaldevices.conf. Stopping listening.");
+			BaseLib::Output::printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicaldevices.conf. Stopping listening.");
 			return;
 		}
-		send(_initCommandQueue.front(), false, true);
+		_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::HelperFunctions::getNumber(parts.at(5), true);
+		send(_initCommandQueue.front(), false);
 		_initCommandQueue.pop_front();
-		send(_initCommandQueue.front(), false, true);
+		send(_initCommandQueue.front(), false);
 	}
 	else if((_initCommandQueue.front().at(0) == 'C' || _initCommandQueue.front().at(0) == 'Y') && packet.at(0) == 'I')
 	{
 		_initCommandQueue.pop_front();
-		send(_initCommandQueue.front(), false, true);
+		send(_initCommandQueue.front(), false);
 		if(_initCommandQueue.front().at(0) == 'T') _initCommandQueue.pop_front();
 	}
 }
@@ -671,11 +792,76 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 	{
 		if(packet.empty()) return;
 		if(BaseLib::Obj::ins->debugLevel >= 5) BaseLib::Output::printDebug(std::string("Debug: Packet received from HM-CFG-LAN") + (_useAES ? + " (encrypted)" : "") + ": " + packet);
+		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packet, ',');
+		if(packet.at(0) == 'H' && parts.size() == 7)
+		{
+			/*
+			Index	Meaning
+			0		"HM-LAN-IF"
+			1		Firmware version
+			2		Serial number
+			3		Default address?
+			4		Address
+			5		Time since boot in milliseconds
+			6		Number of registered peers
+			*/
 
-		if(packet.at(0) == 'H') _lastKeepAliveResponse = BaseLib::HelperFunctions::getTimeSeconds();
+			_lastKeepAliveResponse = BaseLib::HelperFunctions::getTimeSeconds();
+			_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::HelperFunctions::getNumber(parts.at(5), true);
+		}
 		else if(packet.at(0) == 'E' || packet.at(0) == 'R')
 		{
+			if(parts.size() != 6)
+			{
+				BaseLib::Output::printWarning("Warning: Invalid packet received from HM-CFG-LAN: " + packet);
+				return;
+			}
+			/*
+			Index	Meaning
+			0		Sender address
+			1		Control and status byte
+			2		Time received
+			3		AES key index?
+			4		BidCoS packet
+			*/
 
+			int32_t tempNumber = BaseLib::HelperFunctions::getNumber(parts.at(1), true);
+
+			/*
+			00: Not set
+			01: Packet received, wait for AES handshake
+			02: High load
+			04: Overload
+			*/
+			uint8_t status = tempNumber >> 8;
+			if(status & 4) BaseLib::Output::printError("Error: HM-CFG-LAN reached 1% rule.");
+			else if(status & 2) BaseLib::Output::printWarning("Warning: HM-CFG-LAN nearly reached 1% rule.");
+
+
+			/*
+			00: Not set
+			01: ACK was sent in response to this packet
+			02: Message without BIDI bit was sent
+			08: No response after three tries
+			21: ?
+			2*: ?
+			30: AES handshake not successful
+			4*: AES handshake successful
+			50: ?
+			8*: ?
+			*/
+			uint8_t controlByte = tempNumber & 0xFF;
+
+			if(parts.at(5).size() > 18) //18 is minimal packet length
+        	{
+				std::vector<uint8_t> binaryPacket({ (uint8_t)(parts.at(5).size() / 2) });
+				BaseLib::HelperFunctions::getUBinary(parts.at(5), parts.at(5).size() - 1, binaryPacket);
+				binaryPacket.push_back(BaseLib::HelperFunctions::getNumber(parts.at(4), true) - 65536);
+
+				std::shared_ptr<BidCoS::BidCoSPacket> packet(new BidCoS::BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
+				raisePacketReceived(packet);
+        	}
+        	else if(!parts.at(5).empty()) BaseLib::Output::printWarning("Warning: Too short packet received: " + parts.at(5));
 		}
 	}
     catch(const std::exception& ex)

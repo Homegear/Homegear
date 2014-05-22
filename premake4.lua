@@ -112,9 +112,9 @@ solution "homegear"
       kind "SharedLib"
       language "C++"
       files { "./Modules/HomeMaticWired/*.h", "./Modules/HomeMaticWired/*.cpp" }
-	  files { "./Modules/HomeMaticWired/Devices/*.h", "./Modules/HomeMaticWired/Devices/*.cpp" }
-	  files { "./Modules/HomeMaticWired/PhysicalDevices/*.h", "./Modules/HomeMaticWired/PhysicalDevices/*.cpp" }
-	  linkoptions { "-l base" }
+      files { "./Modules/HomeMaticWired/Devices/*.h", "./Modules/HomeMaticWired/Devices/*.cpp" }
+      files { "./Modules/HomeMaticWired/PhysicalDevices/*.h", "./Modules/HomeMaticWired/PhysicalDevices/*.cpp" }
+      linkoptions { "-l base" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -136,61 +136,61 @@ solution "homegear"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
    
-   project "fs20"
-      kind "SharedLib"
-      language "C++"
-      files { "./Modules/FS20/*.h", "./Modules/FS20/*.cpp" }
-	  files { "./Modules/FS20/Devices/*.h", "./Modules/FS20/Devices/*.cpp" }
-	  files { "./Modules/FS20/PhysicalDevices/*.h", "./Modules/FS20/PhysicalDevices/*.cpp" }
-	  linkoptions { "-l base" }
+   --project "fs20"
+   --   kind "SharedLib"
+   --   language "C++"
+   --   files { "./Modules/FS20/*.h", "./Modules/FS20/*.cpp" }
+   --   files { "./Modules/FS20/Devices/*.h", "./Modules/FS20/Devices/*.cpp" }
+   --   files { "./Modules/FS20/PhysicalDevices/*.h", "./Modules/FS20/PhysicalDevices/*.cpp" }
+   --   linkoptions { "-l base" }
 	   
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         libdirs { "./lib/Debug" }
-         targetdir "./lib/Modules/Debug"
+   --   configuration "Debug"
+   --      defines { "DEBUG" }
+   --      flags { "Symbols" }
+   --      libdirs { "./lib/Debug" }
+   --      targetdir "./lib/Modules/Debug"
  
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         libdirs { "./lib/Release" }
-         targetdir "./lib/Modules/Release"
+   --   configuration "Release"
+   --      defines { "NDEBUG" }
+   --      flags { "Optimize" }
+   --      libdirs { "./lib/Release" }
+   --      targetdir "./lib/Modules/Release"
 
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         libdirs { "./lib/Profiling" }
-         targetdir "./lib/Modules/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
-         linkoptions { "-pg" }
+   --   configuration "Profiling"
+   --      defines { "NDEBUG" }
+   --      flags { "Optimize", "Symbols" }
+   --      libdirs { "./lib/Profiling" }
+   --      targetdir "./lib/Modules/Profiling"
+   --      buildoptions { "-std=c++11", "-pg" }
+   --      linkoptions { "-pg" }
          
-   project "insteon"
-      kind "SharedLib"
-      language "C++"
-      files { "./Modules/Insteon/*.h", "./Modules/Insteon/*.cpp" }
-	  files { "./Modules/Insteon/Devices/*.h", "./Modules/Insteon/Devices/*.cpp" }
-	  files { "./Modules/Insteon/PhysicalDevices/*.h", "./Modules/Insteon/PhysicalDevices/*.cpp" }
-	  linkoptions { "-l base" }
+   --project "insteon"
+   --   kind "SharedLib"
+   --   language "C++"
+   --   files { "./Modules/Insteon/*.h", "./Modules/Insteon/*.cpp" }
+   --   files { "./Modules/Insteon/Devices/*.h", "./Modules/Insteon/Devices/*.cpp" }
+   --   files { "./Modules/Insteon/PhysicalDevices/*.h", "./Modules/Insteon/PhysicalDevices/*.cpp" }
+   --   linkoptions { "-l base" }
 	   
-      configuration "Debug"
-         defines { "DEBUG" }
-         flags { "Symbols" }
-         libdirs { "./lib/Debug" }
-         targetdir "./lib/Modules/Debug"
+   --   configuration "Debug"
+   --      defines { "DEBUG" }
+   --      flags { "Symbols" }
+   --      libdirs { "./lib/Debug" }
+   --      targetdir "./lib/Modules/Debug"
  
-      configuration "Release"
-         defines { "NDEBUG" }
-         flags { "Optimize" }
-         libdirs { "./lib/Release" }
-         targetdir "./lib/Modules/Release"
+   --   configuration "Release"
+   --      defines { "NDEBUG" }
+   --      flags { "Optimize" }
+   --      libdirs { "./lib/Release" }
+   --      targetdir "./lib/Modules/Release"
 
-      configuration "Profiling"
-         defines { "NDEBUG" }
-         flags { "Optimize", "Symbols" }
-         libdirs { "./lib/Profiling" }
-         targetdir "./lib/Modules/Profiling"
-         buildoptions { "-std=c++11", "-pg" }
-         linkoptions { "-pg" }
+   --   configuration "Profiling"
+   --      defines { "NDEBUG" }
+   --      flags { "Optimize", "Symbols" }
+   --      libdirs { "./lib/Profiling" }
+   --      targetdir "./lib/Modules/Profiling"
+   --      buildoptions { "-std=c++11", "-pg" }
+   --      linkoptions { "-pg" }
 		 
    project "user"
       kind "StaticLib"

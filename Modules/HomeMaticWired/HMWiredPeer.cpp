@@ -1603,6 +1603,11 @@ void HMWiredPeer::restoreLinks()
 				peerAddress |= result.at(1) << 16;
 				peerAddress |= result.at(2) << 8;
 				peerAddress |= result.at(3);
+				if(peerAddress == 0)
+				{
+					BaseLib::Output::printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + ". The remote peer address is invalid (0x00000000).");
+					continue;
+				}
 				result = getConfigParameter(currentAddress + parameterSet->peerChannelOffset, 1.0, -1, true);
 				if(result.size() != 1) continue;
 				int32_t tempPeerChannel = result.at(0);

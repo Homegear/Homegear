@@ -57,7 +57,7 @@ class HMWiredPacket : public BaseLib::Systems::Packet
         //Properties
         HMWiredPacket();
         HMWiredPacket(std::string packet, int64_t timeReceived = 0);
-        HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived = 0);
+        HMWiredPacket(std::vector<uint8_t>& packet, int64_t timeReceived = 0, bool removeEscapes = false);
         HMWiredPacket(HMWiredPacketType type, int32_t senderAddress, int32_t destinationAddress, bool synchronizationBit, uint8_t senderMessageCounter, uint8_t receiverMessageCounter, uint8_t addressMask, std::vector<uint8_t>& payload);
         virtual ~HMWiredPacket();
 
@@ -72,7 +72,7 @@ class HMWiredPacket : public BaseLib::Systems::Packet
         virtual std::vector<uint8_t> byteArray();
         virtual std::vector<char> byteArraySigned();
 
-        void import(std::vector<uint8_t>& packet);
+        void import(std::vector<uint8_t>& packet, bool removeEscapes = false);
         void import(std::string packetHex);
         virtual std::vector<uint8_t> getPosition(double index, double size, int32_t mask);
         virtual void setPosition(double index, double size, std::vector<uint8_t>& value);
@@ -92,6 +92,7 @@ class HMWiredPacket : public BaseLib::Systems::Packet
         void init();
         void reset();
         void escapePacket();
+        std::vector<uint8_t> unescapePacket(std::vector<uint8_t>& packet);
         void generateControlByte();
 };
 

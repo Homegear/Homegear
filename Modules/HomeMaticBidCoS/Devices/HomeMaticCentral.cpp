@@ -1951,6 +1951,13 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			return;
 		}
 
+		if(!peer && GD::physicalDevice->needsPeers())
+		{
+			BidCoSDevice::PeerInfo peerInfo;
+			peerInfo.address = packet->senderAddress();
+			GD::physicalDevice->addPeer(peerInfo);
+		}
+
 		if((packet->controlByte() & 0x20) && packet->destinationAddress() == _address) sendOK(packet->messageCounter(), packet->senderAddress());
 
 		std::vector<uint8_t> payload;

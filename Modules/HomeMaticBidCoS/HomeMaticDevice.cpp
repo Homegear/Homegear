@@ -572,6 +572,12 @@ void HomeMaticDevice::loadPeers()
 			_peers[peer->getAddress()] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			_peersByID[peerID] = peer;
+			if(GD::physicalDevice->needsPeers())
+			{
+				BidCoSDevice::PeerInfo peerInfo;
+				peerInfo.address = peer->getAddress();
+				GD::physicalDevice->addPeer(peerInfo);
+			}
 			if(!peer->getTeamRemoteSerialNumber().empty())
 			{
 				if(_peersBySerial.find(peer->getTeamRemoteSerialNumber()) == _peersBySerial.end())
@@ -1471,6 +1477,7 @@ void HomeMaticDevice::sendStealthyOK(int32_t messageCounter, int32_t destination
 {
 	try
 	{
+		if(isCentral() && GD::physicalDevice->autoResend()) return;
 		//As there is no action in the queue when sending stealthy ok's, we need to manually keep it alive
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(destinationAddress);
 		if(queue) queue->keepAlive();

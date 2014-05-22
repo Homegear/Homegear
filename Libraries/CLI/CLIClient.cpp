@@ -100,21 +100,36 @@ void Client::start()
 {
 	try
 	{
-		int32_t fileDescriptor = socket(AF_UNIX, SOCK_STREAM, 0);
-		if(fileDescriptor == -1)
+		for(int32_t i = 0; i < 2; i++)
 		{
-			BaseLib::Output::printError("Could not create socket.");
-			return;
-		}
-		_fileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(fileDescriptor);
-		if(BaseLib::Obj::ins->debugLevel >= 4) std::cout << "Info: Trying to connect..." << std::endl;
-		sockaddr_un remoteAddress;
-		remoteAddress.sun_family = AF_UNIX;
-		strcpy(remoteAddress.sun_path, GD::socketPath.c_str());
-		if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
-		{
-			BaseLib::Output::printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
-			return;
+			_fileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM, 0));
+			if(!_fileDescriptor || _fileDescriptor->descriptor == -1)
+			{
+				BaseLib::Output::printError("Could not create socket.");
+				return;
+			}
+
+			if(BaseLib::Obj::ins->debugLevel >= 4 && i == 0) std::cout << "Info: Trying to connect..." << std::endl;
+			sockaddr_un remoteAddress;
+			remoteAddress.sun_family = AF_UNIX;
+			strcpy(remoteAddress.sun_path, GD::socketPath.c_str());
+			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
+			{
+				BaseLib::Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+				if(i == 0)
+				{
+					BaseLib::Output::printDebug("Debug: Socket closed. Trying again...");
+					//When socket was not properly closed, we sometimes need to reconnect
+					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+					continue;
+				}
+				else
+				{
+					BaseLib::Output::printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
+					return;
+				}
+			}
+			else break;
 		}
 		if(BaseLib::Obj::ins->debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
 
@@ -135,7 +150,8 @@ void Client::start()
 			if(strcmp(sendBuffer, "quit") == 0 || strcmp(sendBuffer, "exit") == 0)
 			{
 				_closed = true;
-				BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
+				//If we close the socket, the socket file gets deleted. We don't want that
+				//BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -145,7 +161,8 @@ void Client::start()
 			{
 				_sendMutex.unlock();
 				BaseLib::Output::printError("Error sending to socket.");
-				BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
+				//If we close the socket, the socket file gets deleted. We don't want that
+				//BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -174,7 +191,8 @@ void Client::start()
 					_sendMutex.unlock();
 					if(bytes < 0) std::cerr << "Error receiving data from socket." << std::endl;
 					else std::cout << "Connection closed." << std::endl;
-					BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
+					//If we close the socket, the socket file gets deleted. We don't want that
+					//BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
 					return;
 				}
 			}

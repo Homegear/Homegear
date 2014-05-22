@@ -388,15 +388,21 @@ void COC::startListening()
 		stopListening();
 		openDevice();
 		if(_fileDescriptor->descriptor == -1) return;
-		openGPIO(2, false);
-		setGPIO(2, true);
-		closeGPIO(2);
-		openGPIO(1, false);
-		setGPIO(1, false);
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		setGPIO(1, true);
-		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-		closeGPIO(1);
+		if(gpioDefined(2))
+		{
+			openGPIO(2, false);
+			setGPIO(2, true);
+			closeGPIO(2);
+		}
+		if(gpioDefined(1))
+		{
+			openGPIO(1, false);
+			setGPIO(1, false);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			setGPIO(1, true);
+			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+			closeGPIO(1);
+		}
 		_stopped = false;
 		writeToDevice("X21\nAr\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
