@@ -491,7 +491,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCDeleteMetadata::invoke(std::shared
 		std::string dataID;
 		if(parameters->size() > 1) dataID = parameters->at(1)->stringValue;
 
-		return BaseLib::Metadata::deleteMetadata(parameters->at(0)->stringValue, dataID);
+		return GD::db.deleteMetadata(parameters->at(0)->stringValue, dataID);
 	}
 	catch(const std::exception& ex)
     {
@@ -539,7 +539,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllMetadata::invoke(std::shared
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return BaseLib::Metadata::getAllMetadata(parameters->at(0)->stringValue);
+		return GD::db.getAllMetadata(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -897,7 +897,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetMetadata::invoke(std::shared_pt
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return BaseLib::Metadata::getMetadata(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
+		return GD::db.getMetadata(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -2112,7 +2112,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetMetadata::invoke(std::shared_pt
 		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcVariant }));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return BaseLib::Metadata::setMetadata(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+		return GD::db.setMetadata(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {

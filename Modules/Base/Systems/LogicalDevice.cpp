@@ -52,6 +52,435 @@ LogicalDevice::~LogicalDevice()
 }
 
 //Event handling
+void LogicalDevice::raiseCreateSavepoint(std::string name)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onCreateSavepoint(name);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void LogicalDevice::raiseReleaseSavepoint(std::string name)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onReleaseSavepoint(name);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void LogicalDevice::raiseDeleteMetadata(std::string objectID, std::string dataID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onDeleteMetadata(objectID, dataID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void LogicalDevice::raiseDeletePeer(uint64_t id)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onDeletePeer(id);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+uint64_t LogicalDevice::raiseSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IDeviceEventSink*)*i)->onSavePeer(id, parentID, address, serialNumber);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+uint64_t LogicalDevice::raiseSavePeerParameter(uint64_t peerID, Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IDeviceEventSink*)*i)->onSavePeerParameter(peerID, data);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+uint64_t LogicalDevice::raiseSavePeerVariable(uint64_t peerID, Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IDeviceEventSink*)*i)->onSavePeerVariable(peerID, data);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+Database::DataTable LogicalDevice::raiseGetPeerParameters(uint64_t peerID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IDeviceEventSink*)*i)->onGetPeerParameters(peerID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
+Database::DataTable LogicalDevice::raiseGetPeerVariables(uint64_t peerID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IDeviceEventSink*)*i)->onGetPeerVariables(peerID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
+void LogicalDevice::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onDeletePeerParameter(peerID, data);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+uint64_t LogicalDevice::raiseSaveDevice()
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IDeviceEventSink*)*i)->onSaveDevice(_deviceID, _address, _serialNumber, _deviceType, (uint32_t)Obj::family->getFamily());
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+uint64_t LogicalDevice::raiseSaveDeviceVariable(Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				int32_t result = ((IDeviceEventSink*)*i)->onSaveDeviceVariable(data);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+void LogicalDevice::raiseDeletePeers(int32_t deviceID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IDeviceEventSink*)*i)->onDeletePeers(deviceID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+Database::DataTable LogicalDevice::raiseGetPeers()
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IDeviceEventSink*)*i)->onGetPeers(_deviceID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
+Database::DataTable LogicalDevice::raiseGetDeviceVariables()
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IDeviceEventSink*)*i)->onGetDeviceVariables(_deviceID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
 void LogicalDevice::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	try
@@ -179,64 +608,69 @@ void LogicalDevice::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 //End event handling
 
 //Peer event handling
+void LogicalDevice::onCreateSavepoint(std::string name)
+{
+	raiseCreateSavepoint(name);
+}
+
+void LogicalDevice::onReleaseSavepoint(std::string name)
+{
+	raiseReleaseSavepoint(name);
+}
+
+void LogicalDevice::onDeleteMetadata(std::string objectID, std::string dataID)
+{
+	raiseDeleteMetadata(objectID, dataID);
+}
+
+void LogicalDevice::onDeletePeer(uint64_t id)
+{
+	raiseDeletePeer(id);
+}
+
+uint64_t LogicalDevice::onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
+{
+	return raiseSavePeer(id, parentID, address, serialNumber);
+}
+
+uint64_t LogicalDevice::onSavePeerParameter(uint64_t peerID, Database::DataRow data)
+{
+	return raiseSavePeerParameter(peerID, data);
+}
+
+uint64_t LogicalDevice::onSavePeerVariable(uint64_t peerID, Database::DataRow data)
+{
+	return raiseSavePeerVariable(peerID, data);
+}
+
+Database::DataTable LogicalDevice::onGetPeerParameters(uint64_t peerID)
+{
+	return raiseGetPeerParameters(peerID);
+}
+
+Database::DataTable LogicalDevice::onGetPeerVariables(uint64_t peerID)
+{
+	return raiseGetPeerVariables(peerID);
+}
+
+void LogicalDevice::onDeletePeerParameter(uint64_t peerID, Database::DataRow data)
+{
+	raiseDeletePeerParameter(peerID, data);
+}
+
 void LogicalDevice::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
-	try
-	{
-		raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
 
 void LogicalDevice::onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint)
 {
-	try
-	{
-		raiseRPCUpdateDevice(id, channel, address, hint);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	raiseRPCUpdateDevice(id, channel, address, hint);
 }
 
 void LogicalDevice::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
 {
-	try
-	{
-		raiseEvent(peerID, channel, variables, values);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	raiseEvent(peerID, channel, variables, values);
 }
 //End Peer event handling
 
@@ -271,33 +705,21 @@ void LogicalDevice::save(bool saveDevice)
 	{
 		if(saveDevice)
 		{
-			_databaseMutex.lock();
-			DataColumnVector data;
-			if(_deviceID > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
-			else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_address)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceType)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn((uint32_t)Obj::family->getFamily())));
-			int32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?, ?)", data);
+			uint64_t result = raiseSaveDevice();
 			if(_deviceID == 0) _deviceID = result;
-			_databaseMutex.unlock();
 		}
 		saveVariables();
 	}
     catch(const std::exception& ex)
     {
-    	_databaseMutex.unlock();
         BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_databaseMutex.unlock();
         BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_databaseMutex.unlock();
         BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -306,30 +728,25 @@ void LogicalDevice::saveVariable(uint32_t index, int64_t intValue)
 {
 	try
 	{
-		_databaseMutex.lock();
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
+		Database::DataRow data;
 		if(idIsKnown)
 		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET integerValue=? WHERE variableID=?", data);
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(intValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_variableDatabaseIDs[index])));
+			raiseSaveDeviceVariable(data);
 		}
 		else
 		{
-			if(_deviceID == 0)
-			{
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
+			if(_deviceID == 0) return;
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_deviceID)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(intValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			uint64_t result = raiseSaveDeviceVariable(data);
+			if(result) _variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
@@ -344,37 +761,31 @@ void LogicalDevice::saveVariable(uint32_t index, int64_t intValue)
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
 }
 
 void LogicalDevice::saveVariable(uint32_t index, std::string& stringValue)
 {
 	try
 	{
-		_databaseMutex.lock();
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
+		Database::DataRow data;
 		if(idIsKnown)
 		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET stringValue=? WHERE variableID=?", data);
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(stringValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_variableDatabaseIDs[index])));
+			raiseSaveDeviceVariable(data);
 		}
 		else
 		{
-			if(_deviceID == 0)
-			{
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
+			if(_deviceID == 0) return;
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_deviceID)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(stringValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			uint64_t result = raiseSaveDeviceVariable(data);
+			if(result) _variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
@@ -389,37 +800,31 @@ void LogicalDevice::saveVariable(uint32_t index, std::string& stringValue)
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
 }
 
 void LogicalDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
 {
 	try
 	{
-		_databaseMutex.lock();
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
+		Database::DataRow data;
 		if(idIsKnown)
 		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			Obj::ins->db.executeWriteCommand("UPDATE deviceVariables SET binaryValue=? WHERE variableID=?", data);
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(binaryValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_variableDatabaseIDs[index])));
+			raiseSaveDeviceVariable(data);
 		}
 		else
 		{
-			if(_deviceID == 0)
-			{
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_deviceID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
-			int32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
+			if(_deviceID == 0) return;
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_deviceID)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(binaryValue)));
+			uint64_t result = raiseSaveDeviceVariable(data);
+			if(result) _variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
@@ -434,17 +839,13 @@ void LogicalDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryVal
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
 }
 
 void LogicalDevice::deletePeersFromDatabase()
 {
 	try
 	{
-		_databaseMutex.lock();
-		std::ostringstream command;
-		command << "DELETE FROM peers WHERE parent=" << std::dec << _deviceID;
-		Obj::ins->db.executeCommand(command.str());
+		raiseDeletePeers(_deviceID);
 	}
 	catch(const std::exception& ex)
     {
@@ -458,7 +859,6 @@ void LogicalDevice::deletePeersFromDatabase()
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
 }
 
 }

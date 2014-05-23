@@ -321,9 +321,8 @@ void HM_CC_TC::loadVariables()
 	try
 	{
 		HomeMaticDevice::loadVariables();
-		_databaseMutex.lock();
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
-		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		BaseLib::Database::DataTable rows = raiseGetDeviceVariables();
+		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)
@@ -365,7 +364,6 @@ void HM_CC_TC::loadVariables()
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_databaseMutex.unlock();
 }
 
 std::string HM_CC_TC::handleCLICommand(std::string command)

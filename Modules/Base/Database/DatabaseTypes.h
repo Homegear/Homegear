@@ -27,23 +27,19 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef DATABASE_H
-#define DATABASE_H
+#ifndef DATABASETYPES_H
+#define DATABASETYPES_H
 
-#include "../HelperFunctions/HelperFunctions.h"
-
-#include <iostream>
-#include <mutex>
 #include <string>
 #include <vector>
-#include <algorithm>
 #include <map>
 #include <memory>
 
-#include <sqlite3.h>
-
 namespace BaseLib
 {
+namespace Database
+{
+
 class DataColumn
 {
     public:
@@ -71,7 +67,7 @@ class DataColumn
         {
         	dataType = DataType::Enum::BLOB;
         	binaryValue.reset(new std::vector<char>());
-        	*binaryValue = value;
+        	binaryValue->insert(binaryValue->begin(), value.begin(), value.end());
         }
         DataColumn(std::vector<uint8_t>& value) : DataColumn()
         {
@@ -83,32 +79,8 @@ class DataColumn
 };
 
 typedef std::map<uint32_t, std::map<uint32_t, std::shared_ptr<DataColumn>>> DataTable;
-typedef std::vector<std::shared_ptr<DataColumn>> DataColumnVector;
+typedef std::vector<std::shared_ptr<DataColumn>> DataRow;
 
-class Database
-{
-    public:
-		Database();
-        Database(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);
-        virtual ~Database();
-        void init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath = "");
-        uint32_t executeWriteCommand(std::string command, DataColumnVector& dataToEscape);
-        DataTable executeCommand(std::string command);
-        DataTable executeCommand(std::string command, DataColumnVector& dataToEscape);
-        bool isOpen() { return _database != nullptr; }
-        void benchmark1();
-        void benchmark2();
-        void benchmark3();
-        void benchmark4();
-    protected:
-    private:
-        sqlite3* _database;
-        std::mutex _databaseMutex;
-
-        void openDatabase(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);
-        void closeDatabase();
-        void getDataRows(sqlite3_stmt* statement, DataTable& dataRows);
-        void bindData(sqlite3_stmt* statement, DataColumnVector& dataToEscape);
-};
 }
-#endif // DATABASE_H
+}
+#endif

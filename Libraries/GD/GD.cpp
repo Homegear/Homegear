@@ -29,6 +29,7 @@
 
 #include "GD.h"
 
+DatabaseController GD::db;
 std::string GD::configPath = "/etc/homegear/";
 std::string GD::pidfilePath = "";
 std::string GD::runDir = "/var/run/homegear/";

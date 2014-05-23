@@ -55,7 +55,8 @@ public:
 	virtual ~BidCoSQueueData() {}
 };
 
-class BidCoSQueueManager {
+class BidCoSQueueManager
+{
 public:
 	BidCoSQueueManager();
 	virtual ~BidCoSQueueManager();

@@ -389,11 +389,11 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID, name FROM users");
+			BaseLib::Database::DataTable rows = GD::db.getUsers();
 			if(rows.size() == 0) return "No users exist.\n";
 
 			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
-			for(BaseLib::DataTable::const_iterator i = rows.begin(); i != rows.end(); ++i)
+			for(BaseLib::Database::DataTable::const_iterator i = rows.begin(); i != rows.end(); ++i)
 			{
 				if(!i->second.size() == 2 || !i->second.at(0) || !i->second.at(1)) continue;
 				stringStream << std::setw(6) << i->second.at(0)->intValue << std::setw(30) << i->second.at(1)->textValue << std::endl;
@@ -461,22 +461,12 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			BaseLib::DataColumnVector dataSelect;
-			dataSelect.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
-			BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE name=?", dataSelect);
-			if(rows.size() > 0) return "A user with that name already exists.\n";
+			if(GD::db.userNameExists(userName)) return "A user with that name already exists.\n";
 
-			std::vector<unsigned char> salt;
-			std::vector<unsigned char> passwordHash = User::generatePBKDF2(password, salt);
+			std::vector<uint8_t> salt;
+			std::vector<uint8_t> passwordHash = User::generatePBKDF2(password, salt);
 
-			BaseLib::DataColumnVector dataInsert;
-			dataInsert.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
-			dataInsert.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(passwordHash)));
-			dataInsert.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(salt)));
-			BaseLib::Obj::ins->db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?)", dataInsert);
-
-			rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE name=?", dataSelect);
-			if(rows.size() > 0) stringStream << "User successfully created." << std::endl;
+			if(GD::db.createUser(userName, passwordHash, salt)) stringStream << "User successfully created." << std::endl;
 			else stringStream << "Error creating user. See log for more details." << std::endl;
 
 			return stringStream.str();
@@ -539,23 +529,13 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			BaseLib::DataColumnVector data;
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
-			BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE name=?", data);
-			if(rows.size() == 0 || rows.at(0).size() == 0) return "The user doesn't exist.\n";
-			uint32_t userID = rows.at(0).at(0)->intValue;
+			uint64_t userID = GD::db.getUserID(userName);
+			if(userID == 0) return "The user doesn't exist.\n";
 
-			std::vector<unsigned char> salt;
-			std::vector<unsigned char> passwordHash = User::generatePBKDF2(password, salt);
+			std::vector<uint8_t> salt;
+			std::vector<uint8_t> passwordHash = User::generatePBKDF2(password, salt);
 
-			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(passwordHash)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(salt)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userID)));
-			BaseLib::Obj::ins->db.executeCommand("UPDATE users SET password=?, salt=? WHERE userID=?", data);
-
-			rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
-			if(rows.size() > 0) stringStream << "User successfully updated." << std::endl;
+			if(GD::db.updateUser(userID, passwordHash, salt)) stringStream << "User successfully updated." << std::endl;
 			else stringStream << "Error updating user. See log for more details." << std::endl;
 
 			return stringStream.str();
@@ -598,18 +578,10 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			BaseLib::DataColumnVector data;
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
-			BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE name=?", data);
-			if(rows.size() == 0 || rows.at(0).size() == 0) return "The user doesn't exist.\n";
-			uint32_t userID = rows.at(0).at(0)->intValue;
+			uint64_t userID = GD::db.getUserID(userName);
+			if(userID == 0) return "The user doesn't exist.\n";
 
-			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userID)));
-			BaseLib::Obj::ins->db.executeCommand("DELETE FROM users WHERE userID=?", data);
-
-			rows = BaseLib::Obj::ins->db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
-			if(rows.size() == 0) stringStream << "User successfully deleted." << std::endl;
+			if(GD::db.deleteUser(userID)) stringStream << "User successfully deleted." << std::endl;
 			else stringStream << "Error deleting user. See log for more details." << std::endl;
 
 			return stringStream.str();

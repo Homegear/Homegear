@@ -57,7 +57,6 @@ solution "homegear"
         "./Modules/Base/FileDescriptorManager/*.h", "./Modules/Base/FileDescriptorManager/*.cpp",
         "./Modules/Base/Encoding/*.h", "./Modules/Base/Encoding/*.cpp",
         "./Modules/Base/Database/*.h", "./Modules/Base/Database/*.cpp",
-        "./Modules/Base/Metadata/*.h", "./Modules/Base/Metadata/*.cpp",
         "./Modules/Base/Sockets/*.h", "./Modules/Base/Sockets/*.cpp",
         "./Modules/Base/Threads/*.h", "./Modules/Base/Threads/*.cpp",
         "./Modules/Base/Settings/*.h", "./Modules/Base/Settings/*.cpp"

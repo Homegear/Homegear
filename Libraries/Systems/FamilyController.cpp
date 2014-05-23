@@ -111,6 +111,91 @@ FamilyController::~FamilyController()
 }
 
 //Device event handling
+void FamilyController::onCreateSavepoint(std::string name)
+{
+	GD::db.createSavepoint(name);
+}
+
+void FamilyController::onReleaseSavepoint(std::string name)
+{
+	GD::db.releaseSavepoint(name);
+}
+
+void FamilyController::onDeleteMetadata(std::string objectID, std::string dataID)
+{
+	GD::db.deleteMetadata(objectID, dataID);
+}
+
+void FamilyController::onDeletePeer(uint64_t id)
+{
+	GD::db.deletePeer(id);
+}
+
+uint64_t FamilyController::onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
+{
+	return GD::db.savePeer(id, parentID, address, serialNumber);
+}
+
+uint64_t FamilyController::onSavePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data)
+{
+	return GD::db.savePeerParameter(peerID, data);
+}
+
+uint64_t FamilyController::onSavePeerVariable(uint64_t peerID, BaseLib::Database::DataRow data)
+{
+	return GD::db.savePeerVariable(peerID, data);
+}
+
+BaseLib::Database::DataTable FamilyController::onGetPeerParameters(uint64_t peerID)
+{
+	return GD::db.getPeerParameters(peerID);
+}
+
+BaseLib::Database::DataTable FamilyController::onGetPeerVariables(uint64_t peerID)
+{
+	return GD::db.getPeerVariables(peerID);
+}
+
+void FamilyController::onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data)
+{
+	GD::db.deletePeerParameter(peerID, data);
+}
+
+BaseLib::Database::DataTable FamilyController::onGetDevices(uint32_t family)
+{
+	return GD::db.getDevices(family);
+}
+
+void FamilyController::onDeleteDevice(uint64_t deviceID)
+{
+	GD::db.deleteDevice(deviceID);
+}
+
+uint64_t FamilyController::onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family)
+{
+	return GD::db.saveDevice(id, address, serialNumber, type, family);
+}
+
+uint64_t FamilyController::onSaveDeviceVariable(BaseLib::Database::DataRow data)
+{
+	return GD::db.saveDeviceVariable(data);
+}
+
+void FamilyController::onDeletePeers(int32_t deviceID)
+{
+	GD::db.deletePeers(deviceID);
+}
+
+BaseLib::Database::DataTable FamilyController::onGetPeers(uint64_t deviceID)
+{
+	return GD::db.getPeers(deviceID);
+}
+
+BaseLib::Database::DataTable FamilyController::onGetDeviceVariables(uint64_t deviceID)
+{
+	return GD::db.getDeviceVariables(deviceID);
+}
+
 void FamilyController::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
 {
 	try
@@ -264,162 +349,7 @@ void FamilyController::loadModules()
     }
 }
 
-void FamilyController::convertDatabase()
-{
-	try
-	{
-		BaseLib::DataColumnVector data;
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(std::string("table"))));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(std::string("homegearVariables"))));
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT 1 FROM sqlite_master WHERE type=? AND name=?", data);
-		//Cannot proceed, because table homegearVariables does not exist
-		if(rows.empty()) return;
-		data.clear();
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(0)));
-		BaseLib::DataTable result = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
-		if(result.empty()) return; //Handled in initializeDatabase
-		std::string version = result.at(0).at(3)->textValue;
-		if(version == "0.4.3") return; //Up to date
-		if(version != "0.3.1")
-		{
-			BaseLib::Output::printCritical("Unknown database version: " + version);
-			exit(1); //Don't know, what to do
-		}
-		/*if(version == "0.0.7")
-		{
-			BaseLib::Output::printMessage("Converting database from version " + version + " to version 0.3.0...");
-			BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".old");
-
-			BaseLib::Obj::ins->db.executeCommand("ALTER TABLE events ADD COLUMN enabled INTEGER");
-			BaseLib::Obj::ins->db.executeCommand("UPDATE events SET enabled=1");
-
-			loadDevicesFromDatabase(true);
-			save(true);
-
-			data.clear();
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(result.at(0).at(0)->intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			//Don't forget to set new version in initializeDatabase!!!
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn("0.3.0")));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
-
-			BaseLib::Output::printMessage("Exiting Homegear after database conversion...");
-			exit(0);
-		}*/
-		/*if(version == "0.3.0")
-		{
-			BaseLib::Output::printMessage("Converting database from version " + version + " to version 0.3.1...");
-			BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".old");
-
-			BaseLib::Obj::ins->db.executeCommand("ALTER TABLE devices ADD COLUMN deviceFamily INTEGER DEFAULT 0 NOT NULL");
-			BaseLib::Obj::ins->db.executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190077");
-			BaseLib::Obj::ins->db.executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190078");
-			BaseLib::Obj::ins->db.executeCommand("DROP TABLE events");
-
-			loadDevicesFromDatabase(true);
-			save(true);
-
-			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(result.at(0).at(0)->intValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(0)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			//Don't forget to set new version in initializeDatabase!!!
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn("0.3.1")));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
-
-			BaseLib::Output::printMessage("Exiting Homegear after database conversion...");
-			exit(0);
-		}
-		else*/
-		if(version == "0.3.1")
-		{
-			BaseLib::Output::printMessage("Converting database from version " + version + " to version 0.4.3...");
-			BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".old");
-
-			BaseLib::Obj::ins->db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
-
-			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(result.at(0).at(0)->intValue)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(0)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			//Don't forget to set new version in initializeDatabase!!!
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn("0.4.3")));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
-
-			BaseLib::Output::printMessage("Exiting Homegear after database conversion...");
-			exit(0);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void FamilyController::initializeDatabase()
-{
-	try
-	{
-		BaseLib::Obj::ins->db.executeCommand("CREATE TABLE IF NOT EXISTS homegearVariables (variableID INTEGER PRIMARY KEY UNIQUE, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE INDEX IF NOT EXISTS homegearVariablesIndex ON homegearVariables (variableID, variableIndex)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE TABLE IF NOT EXISTS peers (peerID INTEGER PRIMARY KEY UNIQUE, parent INTEGER NOT NULL, address INTEGER NOT NULL, serialNumber TEXT NOT NULL)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE TABLE IF NOT EXISTS devices (deviceID INTEGER PRIMARY KEY UNIQUE, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, deviceType INTEGER NOT NULL, deviceFamily INTEGER NOT NULL)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType, deviceFamily)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE TABLE IF NOT EXISTS deviceVariables (variableID INTEGER PRIMARY KEY UNIQUE, deviceID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE INDEX IF NOT EXISTS deviceVariablesIndex ON deviceVariables (variableID, deviceID, variableIndex)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE TABLE IF NOT EXISTS users (userID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, password BLOB NOT NULL, salt BLOB NOT NULL)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE INDEX IF NOT EXISTS usersIndex ON users (userID, name)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY UNIQUE, name TEXT NOT NULL, type INTEGER NOT NULL, peerID INTEGER, peerChannel INTEGER, variable TEXT, trigger INTEGER, triggerValue BLOB, eventMethod TEXT, eventMethodParameters BLOB, resetAfter INTEGER, initialTime INTEGER, timeOperation INTEGER, timeFactor REAL, timeLimit INTEGER, resetMethod TEXT, resetMethodParameters BLOB, eventTime INTEGER, endTime INTEGER, recurEvery INTEGER, lastValue BLOB, lastRaised INTEGER, lastReset INTEGER, currentTime INTEGER, enabled INTEGER)");
-		BaseLib::Obj::ins->db.executeCommand("CREATE INDEX IF NOT EXISTS eventsIndex ON events (eventID, name, type, peerID, peerChannel)");
-
-		BaseLib::DataColumnVector data;
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(0)));
-		BaseLib::DataTable result = BaseLib::Obj::ins->db.executeCommand("SELECT 1 FROM homegearVariables WHERE variableIndex=?", data);
-		if(result.empty())
-		{
-			data.clear();
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(0)));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn("0.4.3")));
-			data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-			BaseLib::Obj::ins->db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void FamilyController::loadDevicesFromDatabase()
+void FamilyController::load()
 {
 	try
 	{
@@ -427,27 +357,6 @@ void FamilyController::loadDevicesFromDatabase()
 		{
 			if(familyAvailable(i->first)) i->second->load();
 		}
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void FamilyController::load()
-{
-	try
-	{
-		initializeDatabase();
-		loadDevicesFromDatabase();
 	}
 	catch(const std::exception& ex)
     {

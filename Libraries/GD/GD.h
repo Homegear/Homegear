@@ -34,6 +34,7 @@
 #include "../CLI/CLIClient.h"
 #include "../Systems/FamilyController.h"
 #include "../Systems/PhysicalDevices.h"
+#include "../Systems/DatabaseController.h"
 #include "../../Modules/Base/BaseLib.h"
 #include "../RPC/Server.h"
 #include "../RPC/Client.h"
@@ -46,6 +47,7 @@
 class GD
 {
 public:
+	static DatabaseController db;
 	static std::string configPath;
 	static std::string runDir;
 	static std::string pidfilePath;

@@ -55,6 +55,34 @@ class FamilyController : public BaseLib::Systems::DeviceFamily::IFamilyEventSink
 {
 public:
 	//Family event handling
+
+	//Database
+		//General
+		virtual void onCreateSavepoint(std::string name);
+		virtual void onReleaseSavepoint(std::string name);
+
+		//Metadata
+		virtual void onDeleteMetadata(std::string objectID, std::string dataID = "");
+
+		//Device
+		virtual BaseLib::Database::DataTable onGetDevices(uint32_t family);
+		virtual void onDeleteDevice(uint64_t deviceID);
+		virtual uint64_t onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family);
+		virtual uint64_t onSaveDeviceVariable(BaseLib::Database::DataRow data);
+		virtual void onDeletePeers(int32_t deviceID);
+		virtual BaseLib::Database::DataTable onGetPeers(uint64_t deviceID);
+		virtual BaseLib::Database::DataTable onGetDeviceVariables(uint64_t deviceID);
+
+		//Peer
+		virtual void onDeletePeer(uint64_t id);
+		virtual uint64_t onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber);
+		virtual uint64_t onSavePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
+		virtual uint64_t onSavePeerVariable(uint64_t peerID, BaseLib::Database::DataRow data);
+		virtual BaseLib::Database::DataTable onGetPeerParameters(uint64_t peerID);
+		virtual BaseLib::Database::DataTable onGetPeerVariables(uint64_t peerID);
+		virtual void onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
+	//End database
+
 	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
 	virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
 	virtual void onRPCNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions);
@@ -64,7 +92,6 @@ public:
 
 	FamilyController();
 	virtual ~FamilyController();
-	void convertDatabase();
 	void loadModules();
 	void load();
 	void save(bool full, bool crash = false);
@@ -75,9 +102,6 @@ public:
 private:
 	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;
 	BaseLib::Systems::DeviceFamily* _currentFamily;
-
-	void initializeDatabase();
-	void loadDevicesFromDatabase();
 };
 
 #endif

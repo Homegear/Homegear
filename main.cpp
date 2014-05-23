@@ -28,7 +28,6 @@
  */
 
 #include "Version.h"
-#include "Modules/Base/Database/Database.h"
 #include "Libraries/GD/GD.h"
 #include "Modules/Base/BaseLib.h"
 #include "Modules/Base/HelperFunctions/HelperFunctions.h"
@@ -148,8 +147,8 @@ void terminate(int32_t signalNumber)
 				_dbDumpFailed = true;
 				BaseLib::Output::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
 				BaseLib::Output::printCritical("Critical: Trying to save data to " + BaseLib::Obj::ins->settings.databasePath() + ".crash");
-				BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".crash");
-				if(BaseLib::Obj::ins->db.isOpen()) GD::devices.save(false, true);
+				GD::db.open(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".crash");
+				if(GD::db.isOpen()) GD::devices.save(false, true);
 			}
 			else
 			{
@@ -464,8 +463,8 @@ int main(int argc, char* argv[])
 
 		GD::devices.loadModules();
 
-    	BaseLib::Obj::ins->db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".bak");
-    	if(!BaseLib::Obj::ins->db.isOpen())
+    	GD::db.open(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".bak");
+    	if(!GD::db.isOpen())
     	{
     		exit(1);
     	}
@@ -479,7 +478,9 @@ int main(int argc, char* argv[])
         }
         BaseLib::Output::printInfo("Loading XML RPC devices...");
         BaseLib::Obj::ins->rpcDevices.load(GD::configPath + "Device types");
-        GD::devices.convertDatabase();
+        BaseLib::Output::printInfo("Initializing database...");
+        GD::db.convertDatabase();
+        GD::db.initializeDatabase();
         BaseLib::Output::printInfo("Start listening for packets...");
         GD::physicalDevices.startListening();
         if(!GD::physicalDevices.isOpen())

@@ -82,12 +82,15 @@ class HM_CFG_LAN  : public BidCoSDevice
         std::string _port;
         BaseLib::SocketOperations _socket;
         std::mutex _sendMutex;
+        bool _initComplete = false;
         std::list<std::vector<char>> _initCommandQueue;
         int32_t _lastKeepAlive = 0;
         int32_t _lastKeepAliveResponse = 0;
         std::vector<char> _keepAlivePacket = { 'K', '\r', '\n' };
         int64_t _startUpTime = 0;
         int32_t _myAddress = 0x1C6940;
+        std::mutex _packetBufferMutex;
+        std::vector<std::string> _packetBuffer;
 
         //AES stuff
         bool _aesInitialized = false;

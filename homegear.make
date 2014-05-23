@@ -97,6 +97,7 @@ OBJECTS := \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/FamilyController.o \
 	$(OBJDIR)/PhysicalDevices.o \
+	$(OBJDIR)/DatabaseController.o \
 
 RESOURCES := \
 
@@ -168,6 +169,9 @@ $(OBJDIR)/FamilyController.o: Libraries/Systems/FamilyController.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/PhysicalDevices.o: Libraries/Systems/PhysicalDevices.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/DatabaseController.o: Libraries/Systems/DatabaseController.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

@@ -96,9 +96,8 @@ void HMWired_SD::loadVariables()
 	try
 	{
 		HMWiredDevice::loadVariables();
-		_databaseMutex.lock();
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
-		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		BaseLib::Database::DataTable rows = raiseGetDeviceVariables();
+		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)
@@ -124,7 +123,6 @@ void HMWired_SD::loadVariables()
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_databaseMutex.unlock();
 }
 
 void HMWired_SD::saveFilters()

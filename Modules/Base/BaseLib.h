@@ -1,9 +1,11 @@
 #ifndef BASELIB_H_
 #define BASELIB_H_
 
-#include "Database/Database.h"
+#include "Database/DatabaseTypes.h"
 #include "Encoding/XMLRPCDecoder.h"
 #include "Encoding/XMLRPCEncoder.h"
+#include "Encoding/RPCDecoder.h"
+#include "Encoding/RPCEncoder.h"
 #include "FileDescriptorManager/FileDescriptorManager.h"
 #include "HelperFunctions/HelperFunctions.h"
 #include "Output/Output.h"
@@ -29,7 +31,6 @@ public:
 	std::string executablePath;
 	FileDescriptorManager fileDescriptorManager;
 	Settings settings;
-	Database db;
 	RPC::Devices rpcDevices;
 	Systems::UpdateInfo deviceUpdateInfo;
 

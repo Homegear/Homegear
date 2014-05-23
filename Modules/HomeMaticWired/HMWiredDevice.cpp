@@ -131,9 +131,8 @@ void HMWiredDevice::loadPeers()
 		//Check for GD::devices for non unique access
 		//Change peers identifier for device to id
 		_peersMutex.lock();
-		_databaseMutex.lock();
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM peers WHERE parent=" + std::to_string(_deviceID));
-		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		BaseLib::Database::DataTable rows = raiseGetPeers();
+		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			int32_t peerID = row->second.at(0)->intValue;
 			BaseLib::Output::printMessage("Loading HomeMatic Wired peer " + std::to_string(peerID));
@@ -158,7 +157,6 @@ void HMWiredDevice::loadPeers()
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
     _peersMutex.unlock();
 }
 
@@ -166,9 +164,8 @@ void HMWiredDevice::loadVariables()
 {
 	try
 	{
-		_databaseMutex.lock();
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
-		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		BaseLib::Database::DataTable rows = raiseGetDeviceVariables();
+		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)
@@ -197,7 +194,6 @@ void HMWiredDevice::loadVariables()
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_databaseMutex.unlock();
 }
 
 void HMWiredDevice::saveVariables()
@@ -568,7 +564,6 @@ void HMWiredDevice::savePeers(bool full)
 	try
 	{
 		_peersMutex.lock();
-		_databaseMutex.lock();
 		for(std::unordered_map<int32_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			//Necessary, because peers can be assigned to multiple virtual devices
@@ -590,7 +585,6 @@ void HMWiredDevice::savePeers(bool full)
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
 	_peersMutex.unlock();
 }
 

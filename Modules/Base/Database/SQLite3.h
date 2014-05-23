@@ -27,23 +27,47 @@
  * files in the program, then also delete it here.
  */
 
-#include "BaseLib.h"
+#ifndef SQLITE3_H_
+#define SQLITE3_H_
+
+#include "DatabaseTypes.h"
+
+#include <mutex>
+
+#include <sqlite3.h>
 
 namespace BaseLib
 {
-
-Obj* Obj::ins;
-Systems::DeviceFamily* Obj::family = nullptr;
-
-Obj::Obj(std::string exePath)
+namespace Database
 {
-	Obj::ins = this;
-	executablePath = exePath;
-	HelperFunctions::init();
-}
 
-Obj::~Obj()
+class SQLite3
 {
-}
+    public:
+		SQLite3();
+        SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);
+        virtual ~SQLite3();
+        void init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath = "");
+        uint32_t executeWriteCommand(std::string command, DataRow& dataToEscape);
+        DataTable executeCommand(std::string command);
+        DataTable executeCommand(std::string command, DataRow& dataToEscape);
+        bool isOpen() { return _database != nullptr; }
+        void benchmark1();
+        void benchmark2();
+        void benchmark3();
+        void benchmark4();
+    protected:
+    private:
+        sqlite3* _database;
+        std::mutex _databaseMutex;
+
+        void openDatabase(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);
+        void closeDatabase();
+        void getDataRows(sqlite3_stmt* statement, DataTable& dataRows);
+        void bindData(sqlite3_stmt* statement, DataRow& dataToEscape);
+};
 
 }
+}
+
+#endif /* SQLITE3_H_ */

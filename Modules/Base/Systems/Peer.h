@@ -30,9 +30,8 @@
 #ifndef PEER_H_
 #define PEER_H_
 
-#include "../Metadata/Metadata.h"
 #include "../RPC/Device.h"
-#include "../Database/Database.h"
+#include "../Database/DatabaseTypes.h"
 #include "ServiceMessages.h"
 
 #include <string>
@@ -75,14 +74,28 @@ public:
 	class IPeerEventSink : public IEventSinkBase
 	{
 	public:
+		//Database
+			//General
+			virtual void onCreateSavepoint(std::string name) = 0;
+			virtual void onReleaseSavepoint(std::string name) = 0;
+
+			//Metadata
+			virtual void onDeleteMetadata(std::string objectID, std::string dataID = "") = 0;
+
+			//Peer
+			virtual void onDeletePeer(uint64_t id) = 0;
+			virtual uint64_t onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber) = 0;
+			virtual uint64_t onSavePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
+			virtual uint64_t onSavePeerVariable(uint64_t peerID, Database::DataRow data) = 0;
+			virtual Database::DataTable onGetPeerParameters(uint64_t peerID) = 0;
+			virtual Database::DataTable onGetPeerVariables(uint64_t peerID) = 0;
+			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
+		//End database
+
 		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
 		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint) = 0;
 		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values) = 0;
 	};
-
-	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
-	virtual void raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
-	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
 	//End event handling
 
 	//ServiceMessages event handling
@@ -154,6 +167,30 @@ protected:
 	bool _centralFeatures = false;
 	uint32_t _lastPacketReceived = 0;
 	std::mutex _databaseMutex;
+
+	//Event handling
+	//Database
+		//General
+		virtual void raiseCreateSavepoint(std::string name);
+		virtual void raiseReleaseSavepoint(std::string name);
+
+		//Metadata
+		virtual void raiseDeleteMetadata(std::string objectID, std::string dataID = "");
+
+		//Peer
+		virtual void raiseDeletePeer();
+		virtual uint64_t raiseSavePeer();
+		virtual uint64_t raiseSavePeerParameter(Database::DataRow data);
+		virtual uint64_t raiseSavePeerVariable(Database::DataRow data);
+		virtual Database::DataTable raiseGetPeerParameters();
+		virtual Database::DataTable raiseGetPeerVariables();
+		virtual void raiseDeletePeerParameter(Database::DataRow data);
+	//End database
+
+	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
+	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
+	//End event handling
 };
 
 }

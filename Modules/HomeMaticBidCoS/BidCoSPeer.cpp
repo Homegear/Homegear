@@ -91,7 +91,7 @@ void BidCoSPeer::initializeCentralConfig()
 			BaseLib::Output::printWarning("Warning: Tried to initialize HomeMatic BidCoS peer's central config without xmlrpcDevice being set.");
 			return;
 		}
-		BaseLib::Obj::ins->db.executeCommand("SAVEPOINT bidCoSPeerConfig" + std::to_string(_address));
+		raiseCreateSavepoint("bidCoSPeerConfig" + std::to_string(_peerID));
 		BaseLib::Systems::RPCConfigurationParameter parameter;
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
@@ -139,14 +139,14 @@ void BidCoSPeer::initializeCentralConfig()
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    BaseLib::Obj::ins->db.executeCommand("RELEASE bidCoSPeerConfig" + std::to_string(_address));
+    raiseReleaseSavepoint("bidCoSPeerConfig" + std::to_string(_peerID));
 }
 
 void BidCoSPeer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, int32_t remoteChannel, bool useConfigFunction)
 {
 	try
 	{
-		BaseLib::Obj::ins->db.executeCommand("SAVEPOINT bidCoSPeerConfig" + std::to_string(_address));
+		raiseCreateSavepoint("bidCoSPeerLinkConfig" + std::to_string(_peerID));
 		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return;
 		if(rpcDevice->channels[channel]->parameterSets.find(BaseLib::RPC::ParameterSet::Type::link) == rpcDevice->channels[channel]->parameterSets.end()) return;
 		std::shared_ptr<BaseLib::RPC::ParameterSet> linkSet = rpcDevice->channels[channel]->parameterSets[BaseLib::RPC::ParameterSet::Type::link];
@@ -178,7 +178,7 @@ void BidCoSPeer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, in
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    BaseLib::Obj::ins->db.executeCommand("RELEASE bidCoSPeerConfig" + std::to_string(_address));
+    raiseReleaseSavepoint("bidCoSPeerLinkConfig" + std::to_string(_peerID));
 }
 
 void BidCoSPeer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32_t remoteChannel)
@@ -757,13 +757,13 @@ void BidCoSPeer::removePeer(int32_t channel, int32_t address, int32_t remoteChan
 				_peers[channel].erase(i);
 				if(linksCentral[channel].find(address) != linksCentral[channel].end() && linksCentral[channel][address].find(remoteChannel) != linksCentral[channel][address].end()) linksCentral[channel][address].erase(linksCentral[channel][address].find(remoteChannel));
 				_databaseMutex.lock();
-				BaseLib::DataColumnVector data;
-				data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_peerID)));
-				data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn((int32_t)BaseLib::RPC::ParameterSet::Type::Enum::link)));
-				data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(channel)));
-				data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(address)));
-				data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(remoteChannel)));
-				BaseLib::Obj::ins->db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND remotePeer=? AND remoteChannel=?", data);
+				BaseLib::Database::DataRow data;
+				data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(_peerID)));
+				data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t)BaseLib::RPC::ParameterSet::Type::Enum::link)));
+				data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(channel)));
+				data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(address)));
+				data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(remoteChannel)));
+				raiseDeletePeerParameter(data);
 				_databaseMutex.unlock();
 				savePeers();
 				return;
@@ -1254,10 +1254,8 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 	try
 	{
 		_databaseMutex.lock();
-		BaseLib::DataColumnVector data;
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_peerID)));
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
-		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		BaseLib::Database::DataTable rows = raiseGetPeerVariables();
+		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)
@@ -1272,15 +1270,10 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 				_localChannel = row->second.at(3)->intValue;
 				break;
 			case 3:
-				//Deprecated => Compatibility
-				if(((uint64_t)row->second.at(3)->intValue) > 0xFFFFFFFF) _deviceType = BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, (row->second.at(3)->intValue >> 32));
-				else
+				_deviceType = BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, row->second.at(3)->intValue);
+				if(_deviceType.type() == (uint32_t)DeviceType::none)
 				{
-					_deviceType = BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, row->second.at(3)->intValue);
-					if(_deviceType.type() == (uint32_t)DeviceType::none)
-					{
-						BaseLib::Output::printError("Error loading HomeMatic BidCoS peer " + std::to_string(_peerID) + ": Device type unknown: 0x" + BaseLib::HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
-					}
+					BaseLib::Output::printError("Error loading HomeMatic BidCoS peer " + std::to_string(_peerID) + ": Device type unknown: 0x" + BaseLib::HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
 				}
 				break;
 			case 4:

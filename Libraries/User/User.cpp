@@ -55,9 +55,7 @@ bool User::verify(const std::string& userName, const std::string& password)
 {
 	try
 	{
-		BaseLib::DataColumnVector dataSelect;
-		dataSelect.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(userName)));
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
+		BaseLib::Database::DataTable rows = GD::db.getPassword(userName);
 		if(rows.empty() || rows.at(0).empty() || rows.at(0).size() != 2) return false;
 		std::vector<unsigned char> salt;
 		salt.insert(salt.begin(), rows.at(0).at(1)->binaryValue->begin(), rows.at(0).at(1)->binaryValue->end());

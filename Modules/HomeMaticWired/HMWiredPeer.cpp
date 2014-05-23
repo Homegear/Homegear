@@ -77,7 +77,7 @@ void HMWiredPeer::initializeCentralConfig()
 			BaseLib::Output::printWarning("Warning: Tried to initialize HomeMatic Wired peer's central config without rpcDevice being set.");
 			return;
 		}
-		BaseLib::Obj::ins->db.executeCommand("SAVEPOINT hmWiredPeerConfig" + std::to_string(_address));
+		raiseCreateSavepoint("hmWiredPeerConfig" + std::to_string(_peerID));
 		BaseLib::Systems::RPCConfigurationParameter parameter;
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
@@ -109,7 +109,7 @@ void HMWiredPeer::initializeCentralConfig()
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    BaseLib::Obj::ins->db.executeCommand("RELEASE hmWiredPeerConfig" + std::to_string(_address));
+    raiseReleaseSavepoint("hmWiredPeerConfig" + std::to_string(_peerID));
 }
 
 void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPeer> peer)
@@ -1303,10 +1303,8 @@ void HMWiredPeer::loadVariables(HMWiredDevice* device)
 	try
 	{
 		_databaseMutex.lock();
-		BaseLib::DataColumnVector data;
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(_peerID)));
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
-		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		BaseLib::Database::DataTable rows = raiseGetPeerVariables();
+		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)

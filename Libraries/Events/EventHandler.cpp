@@ -444,11 +444,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::remove(std::string name
 		}
 
 		_databaseMutex.lock();
-		BaseLib::Obj::ins->db.executeCommand("SAVEPOINT eventREMOVE");
-		BaseLib::DataColumnVector data;
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(name)));
-		BaseLib::Obj::ins->db.executeCommand("DELETE FROM events WHERE name=?", data);
-		BaseLib::Obj::ins->db.executeCommand("RELEASE eventREMOVE");
+		GD::db.deleteEvent(name);
 		_databaseMutex.unlock();
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
@@ -1253,9 +1249,9 @@ void EventHandler::load()
 	try
 	{
 		_databaseMutex.lock();
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM events");
+		BaseLib::Database::DataTable rows = GD::db.getEvents();
 		_databaseMutex.unlock();
-		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			std::shared_ptr<Event> event(new Event());
 			event->id = row->second.at(0)->intValue;
@@ -1345,39 +1341,38 @@ void EventHandler::save(std::shared_ptr<Event> event)
 			_databaseMutex.unlock();
 			return;
 		}
-		BaseLib::Obj::ins->db.executeCommand("SAVEPOINT event" + eventID);
-		BaseLib::DataColumnVector data;
-		if(event->id > 0) data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->id)));
-		else data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn()));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->name)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn((int32_t)event->type)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->peerID)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->peerChannel)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->variable)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn((int32_t)event->trigger)));
+		BaseLib::Database::DataRow data;
+		if(event->id > 0) data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->id)));
+		else data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->name)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t)event->type)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->peerID)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->peerChannel)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->variable)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t)event->trigger)));
 		std::shared_ptr<std::vector<char>> value = _rpcEncoder.encodeResponse(event->triggerValue);
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(value)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->eventMethod)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->eventMethod)));
 		value = _rpcEncoder.encodeResponse(event->eventMethodParameters);
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(value)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->resetAfter)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->initialTime)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn((int32_t)event->operation)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->factor)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->limit)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->resetMethod)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->resetAfter)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->initialTime)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn((int32_t)event->operation)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->factor)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->limit)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->resetMethod)));
 		value = _rpcEncoder.encodeResponse(event->resetMethodParameters);
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(value)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->eventTime)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->endTime)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->recurEvery)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->eventTime)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->endTime)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->recurEvery)));
 		value = _rpcEncoder.encodeResponse(event->lastValue);
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(value)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->lastRaised)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->lastReset)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->currentTime)));
-		data.push_back(std::shared_ptr<BaseLib::DataColumn>(new BaseLib::DataColumn(event->enabled)));
-		uint32_t result = BaseLib::Obj::ins->db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", data);
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->lastRaised)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->lastReset)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->currentTime)));
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(event->enabled)));
+		uint64_t result = GD::db.saveEvent(data);
 		if(event->id == 0) event->id = result;
 	}
 	catch(const std::exception& ex)
@@ -1392,6 +1387,5 @@ void EventHandler::save(std::shared_ptr<Event> event)
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    BaseLib::Obj::ins->db.executeCommand("RELEASE event" + eventID);
     _databaseMutex.unlock();
 }

@@ -90,7 +90,28 @@ void HM_CFG_LAN::addPeer(PeerInfo peerInfo)
 		else packetHex += "00,00,";
 		packetHex += "\r\n";
 
-		send(packetHex);
+		if(_initComplete) send(packetHex);
+		else
+		{
+			_packetBufferMutex.lock();
+			try
+			{
+				_packetBuffer.push_back(packetHex);
+			}
+			catch(const std::exception& ex)
+			{
+				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_packetBufferMutex.unlock();
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -348,6 +369,7 @@ void HM_CFG_LAN::createInitCommandQueue()
 {
 	try
 	{
+		_initComplete = false;
 		_initCommandQueue.clear();
 
 		int32_t i = 0;
@@ -605,7 +627,31 @@ void HM_CFG_LAN::listen()
 
         	processData(data);
 
-			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+        	_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+
+        	if(_packetBuffer.empty() || !_initComplete) continue;
+        	_packetBufferMutex.lock();
+			try
+			{
+				for(std::vector<std::string>::iterator i = _packetBuffer.begin(); i != _packetBuffer.end(); ++i)
+				{
+					send(*i, false);
+				}
+				_packetBuffer.clear();
+			}
+			catch(const std::exception& ex)
+			{
+				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+			_packetBufferMutex.unlock();
         }
     }
     catch(const std::exception& ex)
@@ -782,7 +828,11 @@ void HM_CFG_LAN::processInit(std::string& packet)
 	{
 		_initCommandQueue.pop_front();
 		send(_initCommandQueue.front(), false);
-		if(_initCommandQueue.front().at(0) == 'T') _initCommandQueue.pop_front();
+		if(_initCommandQueue.front().at(0) == 'T')
+		{
+			_initCommandQueue.pop_front();
+			_initComplete = true;
+		}
 	}
 }
 
@@ -840,7 +890,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 
 			/*
 			00: Not set
-			01: ACK was sent in response to this packet
+			01: ACK or ACK was sent in response to this packet
 			02: Message without BIDI bit was sent
 			08: No response after three tries
 			21: ?
@@ -858,8 +908,13 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 				BaseLib::HelperFunctions::getUBinary(parts.at(5), parts.at(5).size() - 1, binaryPacket);
 				binaryPacket.push_back(BaseLib::HelperFunctions::getNumber(parts.at(4), true) - 65536);
 
-				std::shared_ptr<BidCoS::BidCoSPacket> packet(new BidCoS::BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
-				raisePacketReceived(packet);
+				std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(new BidCoS::BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
+				if(packet.at(0) == 'R' && (controlByte & 1) && (bidCoSPacket->controlByte() & 0x20))
+				{
+					_lastPacketSent = BaseLib::HelperFunctions::getTime();
+					return;
+				}
+				else raisePacketReceived(bidCoSPacket);
         	}
         	else if(!parts.at(5).empty()) BaseLib::Output::printWarning("Warning: Too short packet received: " + parts.at(5));
 		}

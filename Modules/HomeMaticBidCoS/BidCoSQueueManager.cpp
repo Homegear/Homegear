@@ -189,8 +189,6 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		_queueMutex.lock();
 		_queues.insert(std::pair<int32_t, std::shared_ptr<BidCoSQueueData>>(address, queueData));
 		_queueMutex.unlock();
-		BaseLib::Output::printDebug("Creating SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
-		BaseLib::Obj::ins->db.executeCommand("SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
 		return queueData->queue;
 	}
 	catch(const std::exception& ex)
@@ -262,8 +260,6 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
     	_queueMutex.unlock();
         BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    BaseLib::Output::printDebug("Releasing SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(id));
-    BaseLib::Obj::ins->db.executeCommand("RELEASE BidCoSQueue" + std::to_string(address) + "_" + std::to_string(id));
 }
 
 std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)

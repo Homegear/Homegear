@@ -27,23 +27,26 @@
  * files in the program, then also delete it here.
  */
 
-#include "Database.h"
+#include "SQLite3.h"
 #include "../BaseLib.h"
 
 namespace BaseLib
 {
 
-Database::Database()
+namespace Database
+{
+
+SQLite3::SQLite3()
 {
 }
 
-Database::Database(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal) : Database()
+SQLite3::SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal) : SQLite3()
 {
 	if(databasePath.size() == 0) return;
     openDatabase(databasePath, databaseSynchronous, databaseMemoryJournal);
 }
 
-void Database::init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath)
+void SQLite3::init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath)
 {
 	if(_database) closeDatabase();
 	if(!backupPath.empty()) HelperFunctions::copyFile(databasePath, backupPath);
@@ -51,12 +54,12 @@ void Database::init(std::string databasePath, bool databaseSynchronous, bool dat
     openDatabase(databasePath, databaseSynchronous, databaseMemoryJournal);
 }
 
-Database::~Database()
+SQLite3::~SQLite3()
 {
     closeDatabase();
 }
 
-void Database::openDatabase(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal)
+void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal)
 {
 	try
 	{
@@ -104,7 +107,7 @@ void Database::openDatabase(std::string databasePath, bool databaseSynchronous, 
     }
 }
 
-void Database::closeDatabase()
+void SQLite3::closeDatabase()
 {
 	try
 	{
@@ -127,7 +130,7 @@ void Database::closeDatabase()
     }
 }
 
-void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
+void SQLite3::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
 {
 	int32_t result;
 	int32_t row = 0;
@@ -174,7 +177,7 @@ void Database::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
 	}
 }
 
-void Database::bindData(sqlite3_stmt* statement, DataColumnVector& dataToEscape)
+void SQLite3::bindData(sqlite3_stmt* statement, DataRow& dataToEscape)
 {
 	//There is no try/catch block on purpose!
 	int32_t result;
@@ -208,11 +211,15 @@ void Database::bindData(sqlite3_stmt* statement, DataColumnVector& dataToEscape)
 	});
 }
 
-uint32_t Database::executeWriteCommand(std::string command, DataColumnVector& dataToEscape)
+uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape)
 {
 	try
 	{
-		if(!_database) return 0;
+		if(!_database)
+		{
+			BaseLib::Output::printError("Error: Could not write to database. No database handle.");
+			return 0;
+		}
 		_databaseMutex.lock();
 		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
@@ -252,12 +259,16 @@ uint32_t Database::executeWriteCommand(std::string command, DataColumnVector& da
 	return 0;
 }
 
-DataTable Database::executeCommand(std::string command, DataColumnVector& dataToEscape)
+DataTable SQLite3::executeCommand(std::string command, DataRow& dataToEscape)
 {
 	DataTable dataRows;
 	try
 	{
-		if(!_database) return dataRows;
+		if(!_database)
+		{
+			BaseLib::Output::printError("Error: Could not write to database. No database handle.");
+			return dataRows;
+		}
 		_databaseMutex.lock();
 		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
@@ -304,12 +315,16 @@ DataTable Database::executeCommand(std::string command, DataColumnVector& dataTo
 	return dataRows;
 }
 
-DataTable Database::executeCommand(std::string command)
+DataTable SQLite3::executeCommand(std::string command)
 {
     DataTable dataRows;
     try
     {
-    	if(!_database) return dataRows;
+    	if(!_database)
+		{
+			BaseLib::Output::printError("Error: Could not write to database. No database handle.");
+			return dataRows;
+		}
     	_databaseMutex.lock();
 		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
@@ -357,7 +372,7 @@ DataTable Database::executeCommand(std::string command)
     return dataRows;
 }
 
-void Database::benchmark1()
+void SQLite3::benchmark1()
 {
 	//Duration for REPLACE in ms: 17836
 	//Duration for UPDATE in ms: 14973
@@ -366,7 +381,7 @@ void Database::benchmark1()
 	std::map<uint32_t, uint32_t> ids;
 	for(uint32_t i = 0; i < 10000; ++i)
 	{
-		DataColumnVector data;
+		DataRow data;
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(10000000)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(1)));
@@ -383,7 +398,7 @@ void Database::benchmark1()
 	startTime = HelperFunctions::getTime();
 	for(uint32_t i = 0; i < 10000; ++i)
 	{
-		DataColumnVector data;
+		DataRow data;
 		value[0] = (i % 256);
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(ids[i])));
@@ -394,7 +409,7 @@ void Database::benchmark1()
 	executeCommand("DELETE FROM parameters WHERE peerID=10000000");
 }
 
-void Database::benchmark2()
+void SQLite3::benchmark2()
 {
 	try
 	{
@@ -411,7 +426,7 @@ void Database::benchmark2()
 		std::map<uint32_t, uint32_t> ids;
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
-			DataColumnVector data;
+			DataRow data;
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(10000000)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(1)));
@@ -434,7 +449,7 @@ void Database::benchmark2()
 		startTime = HelperFunctions::getTime();
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
-			DataColumnVector data;
+			DataRow data;
 			value[0] = (i % 256);
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(ids[i])));
@@ -462,7 +477,7 @@ void Database::benchmark2()
     }
 }
 
-void Database::benchmark3()
+void SQLite3::benchmark3()
 {
 	try
 	{
@@ -478,7 +493,7 @@ void Database::benchmark3()
 		std::map<uint32_t, uint32_t> ids;
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
-			DataColumnVector data;
+			DataRow data;
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(10000000)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(1)));
@@ -503,7 +518,7 @@ void Database::benchmark3()
 		startTime = HelperFunctions::getTime();
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
-			DataColumnVector data;
+			DataRow data;
 			value[0] = (i % 256);
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(ids[i])));
@@ -532,7 +547,7 @@ void Database::benchmark3()
     }
 }
 
-void Database::benchmark4()
+void SQLite3::benchmark4()
 {
 	try
 	{
@@ -548,7 +563,7 @@ void Database::benchmark4()
 		std::map<uint32_t, uint32_t> ids;
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
-			DataColumnVector data;
+			DataRow data;
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(10000000)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(1)));
@@ -573,7 +588,7 @@ void Database::benchmark4()
 		startTime = HelperFunctions::getTime();
 		for(uint32_t i = 0; i < 10000; ++i)
 		{
-			DataColumnVector data;
+			DataRow data;
 			value[0] = (i % 256);
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
 			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(ids[i])));
@@ -602,4 +617,5 @@ void Database::benchmark4()
     }
 }
 
+}
 }

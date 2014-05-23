@@ -97,6 +97,286 @@ Peer::~Peer()
 }
 
 //Event handling
+void Peer::raiseCreateSavepoint(std::string name)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IPeerEventSink*)*i)->onCreateSavepoint(name);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void Peer::raiseReleaseSavepoint(std::string name)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IPeerEventSink*)*i)->onReleaseSavepoint(name);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void Peer::raiseDeleteMetadata(std::string objectID, std::string dataID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IPeerEventSink*)*i)->onDeleteMetadata(objectID, dataID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void Peer::raiseDeletePeer()
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IPeerEventSink*)*i)->onDeletePeer(_peerID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+uint64_t Peer::raiseSavePeer()
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IPeerEventSink*)*i)->onSavePeer(_peerID, _parentID, _address, _serialNumber);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+uint64_t Peer::raiseSavePeerParameter(Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IPeerEventSink*)*i)->onSavePeerParameter(_peerID, data);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+uint64_t Peer::raiseSavePeerVariable(Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IPeerEventSink*)*i)->onSavePeerVariable(_peerID, data);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+Database::DataTable Peer::raiseGetPeerParameters()
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IPeerEventSink*)*i)->onGetPeerParameters(_peerID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
+Database::DataTable Peer::raiseGetPeerVariables()
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IPeerEventSink*)*i)->onGetPeerVariables(_peerID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
+void Peer::raiseDeletePeerParameter(Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IPeerEventSink*)*i)->onDeletePeerParameter(_peerID, data);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
 void Peer::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	try
@@ -176,22 +456,7 @@ void Peer::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vec
 //ServiceMessages event handling
 void Peer::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
-	try
-	{
-		raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
 
 void Peer::onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data)
@@ -315,21 +580,17 @@ void Peer::deleteFromDatabase()
 	try
 	{
 		deleting = true;
-		Metadata::deleteMetadata(_serialNumber);
-		Metadata::deleteMetadata(std::to_string(_peerID));
+		raiseDeleteMetadata(_serialNumber);
+		raiseDeleteMetadata(std::to_string(_peerID));
 		if(rpcDevice)
 		{
 			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 			{
-				BaseLib::Metadata::deleteMetadata(_serialNumber + ':' + std::to_string(i->first));
-				BaseLib::Metadata::deleteMetadata(std::to_string(_peerID) + ':' + std::to_string(i->first));
+				raiseDeleteMetadata(_serialNumber + ':' + std::to_string(i->first));
+				raiseDeleteMetadata(std::to_string(_peerID) + ':' + std::to_string(i->first));
 			}
 		}
-		_databaseMutex.lock();
-		DataColumnVector data({std::shared_ptr<DataColumn>(new DataColumn(_peerID))});
-		Obj::ins->db.executeCommand("DELETE FROM parameters WHERE peerID=?", data);
-		Obj::ins->db.executeCommand("DELETE FROM peerVariables WHERE peerID=?", data);
-		Obj::ins->db.executeCommand("DELETE FROM peers WHERE peerID=?", data);
+		raiseDeletePeer();
 	}
 	catch(const std::exception& ex)
     {
@@ -343,7 +604,6 @@ void Peer::deleteFromDatabase()
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
 }
 
 void Peer::save(bool savePeer, bool variables, bool centralConfig)
@@ -351,17 +611,11 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 	try
 	{
 		if(deleting || isTeam()) return;
-		Obj::ins->db.executeCommand("SAVEPOINT peer" + std::to_string(_address));
+		raiseCreateSavepoint("peer" + std::to_string(_parentID) + std::to_string(_address));
 		if(savePeer)
 		{
 			_databaseMutex.lock();
-			DataColumnVector data;
-			if(_peerID > 0) data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			else data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_parentID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_address)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_serialNumber)));
-			int32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);
+			uint64_t result = raiseSavePeer();
 			if(_peerID == 0) _peerID = result;
 			_databaseMutex.unlock();
 		}
@@ -387,7 +641,7 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
     	_databaseMutex.unlock();
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    Obj::ins->db.executeCommand("RELEASE peer" + std::to_string(_address));
+    raiseReleaseSavepoint("peer" + std::to_string(_parentID) + std::to_string(_address));
 }
 
 void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
@@ -400,11 +654,10 @@ void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
 			return;
 		}
 		_databaseMutex.lock();
-		Obj::ins->db.executeCommand("SAVEPOINT peerParameter" + std::to_string(_address));
-		DataColumnVector data;
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameterID)));
-		Obj::ins->db.executeWriteCommand("UPDATE parameters SET value=? WHERE parameterID=?", data);
+		Database::DataRow data;
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(value)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(parameterID)));
+		raiseSavePeerParameter(data);
 	}
 	catch(const std::exception& ex)
     {
@@ -418,7 +671,6 @@ void Peer::saveParameter(uint32_t parameterID, std::vector<uint8_t>& value)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    Obj::ins->db.executeCommand("RELEASE peerParameter" + std::to_string(_address));
     _databaseMutex.unlock();
 }
 
@@ -434,16 +686,16 @@ void Peer::saveParameter(uint32_t parameterID, uint32_t address, std::vector<uin
 		if(_peerID == 0 || isTeam()) return;
 		//Creates a new entry for parameter in database
 		_databaseMutex.lock();
-		DataColumnVector data;
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(address)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(0)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string(""))));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
-		uint32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+		Database::DataRow data;
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(0)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(address)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(0)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(0)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(std::string(""))));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(value)));
+		uint64_t result = raiseSavePeerParameter(data);
 
 		binaryConfig[address].databaseID = result;
 	}
@@ -474,16 +726,16 @@ void Peer::saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum par
 		if(_peerID == 0 || isTeam()) return;
 		//Creates a new entry for parameter in database
 		_databaseMutex.lock();
-		DataColumnVector data;
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn((uint32_t)parameterSetType)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(channel)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteAddress)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteChannel)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(parameterName)));
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(value)));
-		uint32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
+		Database::DataRow data;
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn((uint32_t)parameterSetType)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(channel)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(remoteAddress)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(remoteChannel)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(parameterName)));
+		data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(value)));
+		uint64_t result = raiseSavePeerParameter(data);
 
 		if(parameterSetType == RPC::ParameterSet::Type::Enum::master) configCentral[channel][parameterName].databaseID = result;
 		else if(parameterSetType == RPC::ParameterSet::Type::Enum::values) valuesCentral[channel][parameterName].databaseID = result;
@@ -511,31 +763,29 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		Obj::ins->db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
+		Database::DataRow data;
 		if(idIsKnown)
 		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			Obj::ins->db.executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(intValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_variableDatabaseIDs[index])));
+			raiseSavePeerVariable(data);
 		}
 		else
 		{
 			if(_peerID == 0)
 			{
-				Obj::ins->db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(intValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			uint64_t result = raiseSavePeerVariable(data);
+			if(result) _variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
@@ -550,7 +800,6 @@ void Peer::saveVariable(uint32_t index, int32_t intValue)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    Obj::ins->db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 
@@ -560,31 +809,29 @@ void Peer::saveVariable(uint32_t index, int64_t intValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		Obj::ins->db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
+		Database::DataRow data;
 		if(idIsKnown)
 		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			Obj::ins->db.executeWriteCommand("UPDATE peerVariables SET integerValue=? WHERE variableID=?", data);
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(intValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_variableDatabaseIDs[index])));
+			raiseSavePeerVariable(data);
 		}
 		else
 		{
 			if(_peerID == 0)
 			{
-				Obj::ins->db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(intValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(intValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			uint64_t result = raiseSavePeerVariable(data);
+			if(result) _variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
@@ -599,7 +846,6 @@ void Peer::saveVariable(uint32_t index, int64_t intValue)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    Obj::ins->db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
     _databaseMutex.unlock();
 }
 
@@ -609,31 +855,29 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
 	{
 		if(isTeam()) return;
 		_databaseMutex.lock();
-		Obj::ins->db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
 		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
+		Database::DataRow data;
 		if(idIsKnown)
 		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			Obj::ins->db.executeWriteCommand("UPDATE peerVariables SET stringValue=? WHERE variableID=?", data);
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(stringValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_variableDatabaseIDs[index])));
+			raiseSavePeerVariable(data);
 		}
 		else
 		{
 			if(_peerID == 0)
 			{
-				Obj::ins->db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
 				_databaseMutex.unlock();
 				return;
 			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(stringValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			int32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(stringValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			uint64_t result = raiseSavePeerVariable(data);
+			if(result) _variableDatabaseIDs[index] = result;
 		}
 	}
 	catch(const std::exception& ex)
@@ -648,7 +892,52 @@ void Peer::saveVariable(uint32_t index, std::string& stringValue)
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    Obj::ins->db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
+    _databaseMutex.unlock();
+}
+
+void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
+{
+	try
+	{
+		if(isTeam()) return;
+		_databaseMutex.lock();
+		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
+		Database::DataRow data;
+		if(idIsKnown)
+		{
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(binaryValue)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_variableDatabaseIDs[index])));
+			raiseSavePeerVariable(data);
+		}
+		else
+		{
+			if(_peerID == 0)
+			{
+				_databaseMutex.unlock();
+				return;
+			}
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+			data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(binaryValue)));
+			uint64_t result = raiseSavePeerVariable(data);
+			if(result) _variableDatabaseIDs[index] = result;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
     _databaseMutex.unlock();
 }
 
@@ -673,55 +962,6 @@ void Peer::saveServiceMessages()
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-}
-
-void Peer::saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue)
-{
-	try
-	{
-		if(isTeam()) return;
-		_databaseMutex.lock();
-		Obj::ins->db.executeCommand("SAVEPOINT peerVariable" + std::to_string(index) + std::to_string(_peerID));
-		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
-		DataColumnVector data;
-		if(idIsKnown)
-		{
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_variableDatabaseIDs[index])));
-			Obj::ins->db.executeWriteCommand("UPDATE peerVariables SET binaryValue=? WHERE variableID=?", data);
-		}
-		else
-		{
-			if(_peerID == 0)
-			{
-				Obj::ins->db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
-				_databaseMutex.unlock();
-				return;
-			}
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(index)));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn()));
-			data.push_back(std::shared_ptr<DataColumn>(new DataColumn(binaryValue)));
-			int32_t result = Obj::ins->db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
-			_variableDatabaseIDs[index] = result;
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    Obj::ins->db.executeCommand("RELEASE peerVariable" + std::to_string(index) + std::to_string(_peerID));
-    _databaseMutex.unlock();
 }
 
 void Peer::saveConfig()
@@ -800,10 +1040,9 @@ void Peer::loadConfig()
 	try
 	{
 		_databaseMutex.lock();
-		DataColumnVector data;
-		data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-		DataTable rows = Obj::ins->db.executeCommand("SELECT * FROM parameters WHERE peerID=?", data);
-		for(DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		Database::DataRow data;
+		Database::DataTable rows = raiseGetPeerParameters();
+		for(Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
 		{
 			uint32_t databaseID = row->second.at(0)->intValue;
 			RPC::ParameterSet::Type::Enum parameterSetType = (RPC::ParameterSet::Type::Enum)row->second.at(2)->intValue;
@@ -826,9 +1065,9 @@ void Peer::loadConfig()
 					Output::printCritical("Critical: Added central config parameter without id. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(channel));
 					_databaseMutex.lock();
 					data.clear();
-					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(std::string(""))));
-					Obj::ins->db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
+					data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+					data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(std::string(""))));
+					raiseDeletePeerParameter(data);
 					_databaseMutex.unlock();
 					continue;
 				}
@@ -844,32 +1083,33 @@ void Peer::loadConfig()
 					Output::printError("Critical: No xml rpc device found for peer " + std::to_string(_peerID) + ".");
 					continue;
 				}
-				parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(*parameterName);
+				if(rpcDevice->channels.find(channel) != rpcDevice->channels.end() && rpcDevice->channels[channel] && rpcDevice->channels[channel]->parameterSets.find(parameterSetType) != rpcDevice->channels[channel]->parameterSets.end() && rpcDevice->channels[channel]->parameterSets[parameterSetType])
+				{
+					parameter->rpcParameter = rpcDevice->channels[channel]->parameterSets[parameterSetType]->getParameter(*parameterName);
+				}
 				if(!parameter->rpcParameter)
 				{
-					Output::printError("Error: Deleting parameter " + *parameterName + ", because no corresponding RPC parameter was found. Device: " + std::to_string(_peerID) + " Channel: " + std::to_string(channel));
-					DataColumnVector data;
-					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(_peerID)));
-					data.push_back(std::shared_ptr<DataColumn>(new DataColumn((int32_t)parameterSetType)));
-					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(channel)));
-					data.push_back(std::shared_ptr<DataColumn>(new DataColumn(*parameterName)));
+					Output::printError("Error: Deleting parameter " + *parameterName + ", because no corresponding RPC parameter was found. Peer: " + std::to_string(_peerID) + " Channel: " + std::to_string(channel) + " Parameter set type: " + std::to_string((uint32_t)parameterSetType));
+					Database::DataRow data;
+					data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+					data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn((int32_t)parameterSetType)));
+					data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(channel)));
+					data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(*parameterName)));
 					if(parameterSetType == RPC::ParameterSet::Type::Enum::master)
 					{
 						configCentral[channel].erase(*parameterName);
-						Obj::ins->db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
 					}
 					else if(parameterSetType == RPC::ParameterSet::Type::Enum::values)
 					{
 						valuesCentral[channel].erase(*parameterName);
-						Obj::ins->db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=?", data);
 					}
 					else if(parameterSetType == RPC::ParameterSet::Type::Enum::link)
 					{
 						linksCentral[channel][remoteAddress][remoteChannel].erase(*parameterName);
-						data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteAddress)));
-						data.push_back(std::shared_ptr<DataColumn>(new DataColumn(remoteChannel)));
-						Obj::ins->db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterSetType=? AND peerChannel=? AND parameterName=? AND remotePeer=? AND remoteChannel=?", data);
+						data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(remoteAddress)));
+						data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(remoteChannel)));
 					}
+					raiseDeletePeerParameter(data);
 				}
 			}
 		}

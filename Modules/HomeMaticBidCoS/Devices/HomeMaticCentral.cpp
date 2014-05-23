@@ -510,7 +510,9 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 					_peersMutex.unlock();
 					peer->save(true, true, false);
 					peer->initializeCentralConfig();
+					_peersMutex.lock();
 					_peersByID[peer->getID()] = peer;
+					_peersMutex.unlock();
 				}
 				catch(const std::exception& ex)
 				{
@@ -1703,14 +1705,14 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
 		}
 		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
-		BaseLib::Metadata::deleteMetadata(peer->getSerialNumber());
-		BaseLib::Metadata::deleteMetadata(std::to_string(id));
+		raiseDeleteMetadata(peer->getSerialNumber());
+		raiseDeleteMetadata(std::to_string(id));
 		if(peer->rpcDevice)
 		{
 			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 			{
-				BaseLib::Metadata::deleteMetadata(peer->getSerialNumber() + ':' + std::to_string(i->first));
-				BaseLib::Metadata::deleteMetadata(std::to_string(id) + ':' + std::to_string(i->first));
+				raiseDeleteMetadata(peer->getSerialNumber() + ':' + std::to_string(i->first));
+				raiseDeleteMetadata(std::to_string(id) + ':' + std::to_string(i->first));
 			}
 		}
 		_peersMutex.lock();
@@ -1951,14 +1953,14 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 			return;
 		}
 
+		if((packet->controlByte() & 0x20) && packet->destinationAddress() == _address) sendOK(packet->messageCounter(), packet->senderAddress());
+
 		if(!peer && GD::physicalDevice->needsPeers())
 		{
 			BidCoSDevice::PeerInfo peerInfo;
 			peerInfo.address = packet->senderAddress();
 			GD::physicalDevice->addPeer(peerInfo);
 		}
-
-		if((packet->controlByte() & 0x20) && packet->destinationAddress() == _address) sendOK(packet->messageCounter(), packet->senderAddress());
 
 		std::vector<uint8_t> payload;
 
@@ -2699,7 +2701,9 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						_peersMutex.unlock();
 						queue->peer->save(true, true, false);
 						queue->peer->initializeCentralConfig();
+						_peersMutex.lock();
 						_peersByID[queue->peer->getID()] = queue->peer;
+						_peersMutex.unlock();
 					}
 					catch(const std::exception& ex)
 					{

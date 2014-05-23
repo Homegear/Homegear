@@ -70,6 +70,491 @@ void DeviceFamily::setDebugLevel(int32_t debugLevel)
 }
 
 //Event handling
+void DeviceFamily::raiseCreateSavepoint(std::string name)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IFamilyEventSink*)*i)->onCreateSavepoint(name);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void DeviceFamily::raiseReleaseSavepoint(std::string name)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IFamilyEventSink*)*i)->onReleaseSavepoint(name);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void DeviceFamily::raiseDeleteMetadata(std::string objectID, std::string dataID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IFamilyEventSink*)*i)->onDeleteMetadata(objectID, dataID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void DeviceFamily::raiseDeletePeer(uint64_t id)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IFamilyEventSink*)*i)->onDeletePeer(id);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+uint64_t DeviceFamily::raiseSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IFamilyEventSink*)*i)->onSavePeer(id, parentID, address, serialNumber);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+uint64_t DeviceFamily::raiseSavePeerParameter(uint64_t peerID, Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IFamilyEventSink*)*i)->onSavePeerParameter(peerID, data);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+uint64_t DeviceFamily::raiseSavePeerVariable(uint64_t peerID, Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IFamilyEventSink*)*i)->onSavePeerVariable(peerID, data);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+Database::DataTable DeviceFamily::raiseGetPeerParameters(uint64_t peerID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IFamilyEventSink*)*i)->onGetPeerParameters(peerID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
+Database::DataTable DeviceFamily::raiseGetPeerVariables(uint64_t peerID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IFamilyEventSink*)*i)->onGetPeerVariables(peerID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
+void DeviceFamily::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IFamilyEventSink*)*i)->onDeletePeerParameter(peerID, data);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+Database::DataTable DeviceFamily::raiseGetDevices()
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result =((IFamilyEventSink*)*i)->onGetDevices((uint32_t)_family);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
+void DeviceFamily::raiseDeleteDevice(uint64_t deviceID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IFamilyEventSink*)*i)->onDeleteDevice(deviceID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+uint64_t DeviceFamily::raiseSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				int32_t result = ((IFamilyEventSink*)*i)->onSaveDevice(id, address, serialNumber, type, family);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+uint64_t DeviceFamily::raiseSaveDeviceVariable(Database::DataRow data)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				uint64_t result = ((IFamilyEventSink*)*i)->onSaveDeviceVariable(data);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return 0;
+}
+
+void DeviceFamily::raiseDeletePeers(int32_t deviceID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IFamilyEventSink*)*i)->onDeletePeers(deviceID);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+Database::DataTable DeviceFamily::raiseGetPeers(uint64_t deviceID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IFamilyEventSink*)*i)->onGetPeers(deviceID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
+Database::DataTable DeviceFamily::raiseGetDeviceVariables(uint64_t deviceID)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i)
+			{
+				Database::DataTable result = ((IFamilyEventSink*)*i)->onGetDeviceVariables(deviceID);
+				_eventHandlerMutex.unlock();
+				return result;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+    return Database::DataTable();
+}
+
 void DeviceFamily::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	try
@@ -197,104 +682,104 @@ void DeviceFamily::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<
 //End event handling
 
 //Device event handling
+void DeviceFamily::onCreateSavepoint(std::string name)
+{
+	raiseCreateSavepoint(name);
+}
+
+void DeviceFamily::onReleaseSavepoint(std::string name)
+{
+	raiseReleaseSavepoint(name);
+}
+
+void DeviceFamily::onDeleteMetadata(std::string objectID, std::string dataID)
+{
+	raiseDeleteMetadata(objectID, dataID);
+}
+
+void DeviceFamily::onDeletePeer(uint64_t id)
+{
+	raiseDeletePeer(id);
+}
+
+uint64_t DeviceFamily::onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
+{
+	return raiseSavePeer(id, parentID, address, serialNumber);
+}
+
+uint64_t DeviceFamily::onSavePeerParameter(uint64_t peerID, Database::DataRow data)
+{
+	return raiseSavePeerParameter(peerID, data);
+}
+
+uint64_t DeviceFamily::onSavePeerVariable(uint64_t peerID, Database::DataRow data)
+{
+	return raiseSavePeerVariable(peerID, data);
+}
+
+Database::DataTable DeviceFamily::onGetPeerParameters(uint64_t peerID)
+{
+	return raiseGetPeerParameters(peerID);
+}
+
+Database::DataTable DeviceFamily::onGetPeerVariables(uint64_t peerID)
+{
+	return raiseGetPeerVariables(peerID);
+}
+
+void DeviceFamily::onDeletePeerParameter(uint64_t peerID, Database::DataRow data)
+{
+	raiseDeletePeerParameter(peerID, data);
+}
+
+uint64_t DeviceFamily::onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family)
+{
+	return raiseSaveDevice(id, address, serialNumber, type, family);
+}
+
+uint64_t DeviceFamily::onSaveDeviceVariable(Database::DataRow data)
+{
+	return raiseSaveDeviceVariable(data);
+}
+
+void DeviceFamily::onDeletePeers(int32_t deviceID)
+{
+	raiseDeletePeers(deviceID);
+}
+
+Database::DataTable DeviceFamily::onGetPeers(uint64_t deviceID)
+{
+	return raiseGetPeers(deviceID);
+}
+
+Database::DataTable DeviceFamily::onGetDeviceVariables(uint64_t deviceID)
+{
+	return raiseGetDeviceVariables(deviceID);
+}
+
 void DeviceFamily::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
-	try
-	{
-		raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
-	}
-	catch(const std::exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+	raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
 
 void DeviceFamily::onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint)
 {
-	try
-	{
-		raiseRPCUpdateDevice(id, channel, address, hint);
-	}
-	catch(const std::exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+	raiseRPCUpdateDevice(id, channel, address, hint);
 }
 
 void DeviceFamily::onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions)
 {
-	try
-	{
-		raiseRPCNewDevices(deviceDescriptions);
-	}
-	catch(const std::exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+	raiseRPCNewDevices(deviceDescriptions);
 }
 
 void DeviceFamily::onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo)
 {
-	try
-	{
-		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
-	}
-	catch(const std::exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+	raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 }
 
 void DeviceFamily::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
 {
-	try
-	{
-		raiseEvent(peerID, channel, variables, values);
-	}
-	catch(const std::exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
+	raiseEvent(peerID, channel, variables, values);
 }
 //End Device event handling
 
@@ -508,9 +993,7 @@ void DeviceFamily::removeThread(uint64_t id)
 				Output::printDebug("Deleting peers from database...");
 				device->deletePeersFromDatabase();
 				Output::printDebug("Deleting database entry...");
-				DataColumnVector data;
-				data.push_back(std::shared_ptr<DataColumn>(new DataColumn(id)));
-				Obj::ins->db.executeCommand("DELETE FROM devices WHERE deviceID=?", data);
+				raiseDeleteDevice(id);
 				return;
 			}
 		}
