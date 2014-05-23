@@ -41,6 +41,7 @@ enum class BidCoSQueueType;
 #include "BidCoSMessages.h"
 #include "BidCoSQueueManager.h"
 #include "BidCoSPacketManager.h"
+#include "PhysicalDevices/BidCoSDevice.h"
 
 #include <string>
 #include <unordered_map>
@@ -171,6 +172,7 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice
 
         bool _lowBattery = false;
 
+        virtual BidCoSDevice::PeerInfo getPeerInfo(std::shared_ptr<BidCoSPeer> peer);
         virtual std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
         virtual std::shared_ptr<BidCoSPeer> createTeam(int32_t address, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber);
         virtual std::shared_ptr<HomeMaticCentral> getCentral();

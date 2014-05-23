@@ -316,7 +316,6 @@ void HM_CFG_LAN::reconnect()
 		_socket.close();
 		if(_useAES) openSSLInit();
 		createInitCommandQueue();
-		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
 		BaseLib::Output::printDebug("Connecting to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket.open();
 		BaseLib::Output::printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
@@ -883,10 +882,9 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 			02: High load
 			04: Overload
 			*/
-			uint8_t status = tempNumber >> 8;
-			if(status & 4) BaseLib::Output::printError("Error: HM-CFG-LAN reached 1% rule.");
-			else if(status & 2) BaseLib::Output::printWarning("Warning: HM-CFG-LAN nearly reached 1% rule.");
-
+			uint8_t statusByte = tempNumber >> 8;
+			if(statusByte & 4) BaseLib::Output::printError("Error: HM-CFG-LAN reached 1% rule.");
+			else if(statusByte & 2) BaseLib::Output::printWarning("Warning: HM-CFG-LAN nearly reached 1% rule.");
 
 			/*
 			00: Not set
@@ -909,7 +907,20 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 				binaryPacket.push_back(BaseLib::HelperFunctions::getNumber(parts.at(4), true) - 65536);
 
 				std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(new BidCoS::BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
-				if(packet.at(0) == 'R' && (controlByte & 1) && (bidCoSPacket->controlByte() & 0x20))
+				if(packet.at(0) == 'E' && (statusByte & 1))
+				{
+					BaseLib::Output::printDebug("Debug: Waiting for AES handshake.");
+					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+					_lastPacketSent = BaseLib::HelperFunctions::getTime();
+					return;
+				}
+				if((controlByte & 0x30) == 0x30)
+				{
+					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+					BaseLib::Output::printWarning("Warning: AES handshake was not successful: " + bidCoSPacket->hexString());
+					return;
+				}
+				if(packet.at(0) == 'R' && !(controlByte & 0x40) && (controlByte & 1) && (bidCoSPacket->controlByte() & 0x20))
 				{
 					_lastPacketSent = BaseLib::HelperFunctions::getTime();
 					return;

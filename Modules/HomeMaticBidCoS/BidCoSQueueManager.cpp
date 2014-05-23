@@ -214,7 +214,7 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 	{
 		if(_disposing) return;
 		_queueMutex.lock();
-		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->queue && !_queues.at(address)->queue->isEmpty() && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 1000)
+		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->queue && !_queues.at(address)->queue->isEmpty() && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 2000)
 		{
 			if(_queues.empty()) _stopWorkerThread = true;
 			_queueMutex.unlock();

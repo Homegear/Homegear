@@ -418,10 +418,10 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					if(i->second->getFirmwareVersion() == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << "?" << bar;
 					else if(i->second->firmwareUpdateAvailable())
 					{
-						stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0xFF, 2)) << bar;
+						stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + std::to_string(i->second->getFirmwareVersion() & 0xFF)) << bar;
 						firmwareUpdates = true;
 					}
-					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << (BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0xFF, 2)) << bar;
+					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << (BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + std::to_string(i->second->getFirmwareVersion() & 0xFF)) << bar;
 					if(i->second->serviceMessages)
 					{
 						std::string unreachable(i->second->serviceMessages->getUnreach() ? "Yes" : "No");

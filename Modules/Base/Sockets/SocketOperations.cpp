@@ -293,6 +293,27 @@ void SocketOperations::getConnection()
 			Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
+		optValue = 30;
+		if(setsockopt(_fileDescriptor->descriptor, SOL_TCP, TCP_KEEPIDLE, (void*)&optValue, sizeof(int32_t)) == -1)
+		{
+			freeaddrinfo(serverInfo);
+			Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
+		}
+		optValue = 4;
+		if(setsockopt(_fileDescriptor->descriptor, SOL_TCP, TCP_KEEPCNT, (void*)&optValue, sizeof(int32_t)) == -1)
+		{
+			freeaddrinfo(serverInfo);
+			Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
+		}
+		optValue = 15;
+		if(setsockopt(_fileDescriptor->descriptor, SOL_TCP, TCP_KEEPINTVL, (void*)&optValue, sizeof(int32_t)) == -1)
+		{
+			freeaddrinfo(serverInfo);
+			Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
+		}
 
 		if(!(fcntl(_fileDescriptor->descriptor, F_GETFL) & O_NONBLOCK))
 		{

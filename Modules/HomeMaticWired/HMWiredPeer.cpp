@@ -2061,11 +2061,11 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int
 				variable2->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
 			}
 
-			if(_firmwareVersion != 0) description->structValue->insert(BaseLib::RPC::RPCStructElement("FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::HelperFunctions::getHexString(_firmwareVersion >> 8) + "." + BaseLib::HelperFunctions::getHexString(_firmwareVersion & 0xFF, 2)))));
+			if(_firmwareVersion != 0) description->structValue->insert(BaseLib::RPC::RPCStructElement("FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::HelperFunctions::getHexString(_firmwareVersion >> 8) + "." + std::to_string(_firmwareVersion & 0xFF)))));
 			else description->structValue->insert(BaseLib::RPC::RPCStructElement("FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("?")))));
 
 			int32_t newFirmwareVersion = getNewFirmwareVersion();
-			if(newFirmwareVersion > _firmwareVersion) description->structValue->insert(BaseLib::RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::HelperFunctions::getHexString(newFirmwareVersion >> 8) + "." + BaseLib::HelperFunctions::getHexString(newFirmwareVersion & 0xFF, 2)))));
+			if(newFirmwareVersion > _firmwareVersion) description->structValue->insert(BaseLib::RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::HelperFunctions::getHexString(newFirmwareVersion >> 8) + "." + std::to_string(newFirmwareVersion & 0xFF)))));
 
 			int32_t uiFlags = (int32_t)rpcDevice->uiFlags;
 			if(isTeam()) uiFlags |= BaseLib::RPC::Device::UIFlags::dontdelete;

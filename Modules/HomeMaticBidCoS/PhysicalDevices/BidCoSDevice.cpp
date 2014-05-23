@@ -41,7 +41,7 @@ std::vector<char> BidCoSDevice::PeerInfo::getAESChannelMap()
 		{
 			int32_t byte = i->first / 8;
 			if(map.size() < (byte + 1)) map.resize(byte + 1, 0);
-			map.at(byte) |= 1 << (i->first % 8);
+			if(i->second) map.at(byte) |= (1 << (i->first % 8));
 		}
 		std::reverse(map.begin(), map.end());
 	}

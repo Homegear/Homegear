@@ -52,6 +52,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <errno.h>

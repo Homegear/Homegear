@@ -187,7 +187,7 @@ void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)
 	{
 		if(_disposing) return;
 		_packetMutex.lock();
-		if(_packets.find(address) != _packets.end() && _packets.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _packets.at(address)->time + 1000)
+		if(_packets.find(address) != _packets.end() && _packets.at(address) && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= _packets.at(address)->time + 2000)
 		{
 			_packetMutex.unlock();
 			return;

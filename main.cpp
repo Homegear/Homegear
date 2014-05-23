@@ -491,13 +491,14 @@ int main(int argc, char* argv[])
         }
         BaseLib::Output::printInfo("Loading devices...");
         GD::devices.load(); //Don't load before database is open!
+
+        startRPCServers();
+
         if(_startAsDaemon)
         {
         	BaseLib::Output::printInfo("Starting CLI server...");
         	GD::cliServer.start();
         }
-
-        startRPCServers();
 
         BaseLib::Output::printInfo("Loading events...");
         GD::eventHandler.load();

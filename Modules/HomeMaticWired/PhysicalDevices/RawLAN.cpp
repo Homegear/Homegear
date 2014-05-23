@@ -220,13 +220,13 @@ void RawLAN::listen()
 			catch(BaseLib::SocketClosedException& ex)
 			{
 				BaseLib::Output::printWarning("Warning: " + ex.what());
-				std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
 				BaseLib::Output::printError("Error: " + ex.what());
-				std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
         	if(receivedBytes == 0) continue;

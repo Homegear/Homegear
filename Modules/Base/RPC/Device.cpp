@@ -1550,10 +1550,36 @@ Device::Device(std::string xmlFilename) : Device()
 		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
 		parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::internal;
 		parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
-		parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_1";
+		parameter->physicalParameter->valueID = "CENTRAL_ADDRESS_BYTE_3";
 		parameter->physicalParameter->list = 0;
 		parameter->physicalParameter->index = 12;
 		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+
+		if(!supportsAES) return;
+		for(std::map<uint32_t, std::shared_ptr<DeviceChannel>>::iterator i = channels.begin(); i != channels.end(); ++i)
+		{
+			if(!i->second || i->second->parameterSets.find(ParameterSet::Type::Enum::master) == i->second->parameterSets.end() || !i->second->parameterSets.at(ParameterSet::Type::Enum::master) || i->first == 0) continue;
+			parameter = i->second->parameterSets[ParameterSet::Type::Enum::master]->getParameter("AES_ACTIVE");
+			if(!parameter)
+			{
+				parameter.reset(new Parameter());
+				i->second->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
+			}
+			parameter->id = "AES_ACTIVE";
+			parameter->uiFlags = Parameter::UIFlags::Enum::internal;
+			parameter->conversion.clear();
+			parameter->conversion.push_back(std::shared_ptr<ParameterConversion>(new ParameterConversion));
+			parameter->conversion.back()->type = ParameterConversion::Type::Enum::booleanInteger;
+			std::shared_ptr<LogicalParameterBoolean> logicalParameter(new LogicalParameterBoolean());
+			logicalParameter->defaultValueExists = true;
+			logicalParameter->defaultValue = i->second->aesDefault;
+			parameter->logicalParameter = logicalParameter;
+			parameter->physicalParameter->interface = PhysicalParameter::Interface::Enum::config;
+			parameter->physicalParameter->type = PhysicalParameter::Type::Enum::typeInteger;
+			parameter->physicalParameter->valueID = "AES_ACTIVE";
+			parameter->physicalParameter->list = 1;
+			parameter->physicalParameter->index = 8;
+		}
 	}
 	catch(const std::exception& ex)
     {
