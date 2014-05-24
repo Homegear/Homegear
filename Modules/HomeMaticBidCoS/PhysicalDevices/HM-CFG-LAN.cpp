@@ -72,14 +72,10 @@ HM_CFG_LAN::~HM_CFG_LAN()
     }
 }
 
-void HM_CFG_LAN::addPeer(PeerInfo peerInfo)
+std::string HM_CFG_LAN::getPeerInfoPacket(PeerInfo& peerInfo)
 {
 	try
 	{
-		if(peerInfo.address == 0) return;
-		if(peers.find(peerInfo.address) != peers.end()) removePeer(peerInfo.address);
-		_peersMutex.lock();
-		peers[peerInfo.address] = peerInfo;
 		std::string packetHex = std::string("+") + BaseLib::HelperFunctions::getHexString(peerInfo.address, 6) + ",";
 		if(!peerInfo.aesChannels.empty())
 		{
@@ -89,29 +85,39 @@ void HM_CFG_LAN::addPeer(PeerInfo peerInfo)
 		}
 		else packetHex += "00,00,";
 		packetHex += "\r\n";
+		return packetHex;
+	}
+    catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return "";
+}
 
-		if(_initComplete) send(packetHex);
-		else
+void HM_CFG_LAN::addPeer(PeerInfo peerInfo)
+{
+	try
+	{
+		if(peerInfo.address == 0) return;
+		_peersMutex.lock();
+		//Remove old peer first. removePeer() is not called, so we don't need to unlock _peersMutex
+		if(_peers.find(peerInfo.address) != _peers.end()) _peers.erase(peerInfo.address);
+		if(_initComplete)
 		{
-			_packetBufferMutex.lock();
-			try
-			{
-				_packetBuffer.push_back(packetHex);
-			}
-			catch(const std::exception& ex)
-			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-			_packetBufferMutex.unlock();
+			std::string packetHex = std::string("-") + BaseLib::HelperFunctions::getHexString(peerInfo.address, 6) + "\r\n";
+			send(packetHex);
 		}
+		_peers[peerInfo.address] = peerInfo;
+		std::string packetHex = getPeerInfoPacket(peerInfo);
+		if(_initComplete) send(packetHex);
 	}
     catch(const std::exception& ex)
     {
@@ -128,10 +134,11 @@ void HM_CFG_LAN::addPeer(PeerInfo peerInfo)
     _peersMutex.unlock();
 }
 
-void HM_CFG_LAN::addPeers(std::vector<PeerInfo> peerInfos)
+void HM_CFG_LAN::addPeers(std::vector<PeerInfo>& peerInfos)
 {
 	try
 	{
+		_peersMutex.lock();
 		for(std::vector<PeerInfo>::iterator i = peerInfos.begin(); i != peerInfos.end(); ++i)
 		{
 			addPeer(*i);
@@ -149,6 +156,33 @@ void HM_CFG_LAN::addPeers(std::vector<PeerInfo> peerInfos)
     {
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
+}
+
+void HM_CFG_LAN::sendPeers()
+{
+	try
+	{
+		_peersMutex.lock();
+		for(std::map<int32_t, PeerInfo>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		{
+			send(getPeerInfoPacket(i->second));
+		}
+		_initComplete = true; //Init complete is set here within _peersMutex, so there is no conflict with addPeer() and peers are not sent twice
+	}
+    catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _peersMutex.unlock();
 }
 
 void HM_CFG_LAN::removePeer(int32_t address)
@@ -156,9 +190,12 @@ void HM_CFG_LAN::removePeer(int32_t address)
 	try
 	{
 		_peersMutex.lock();
-		if(peers.find(address) != peers.end()) peers.erase(address);
-		std::string packetHex = std::string("-") + BaseLib::HelperFunctions::getHexString(address, 6) + "\r\n";
-		send(packetHex);
+		if(_peers.find(address) != _peers.end()) _peers.erase(address);
+		if(_initComplete)
+		{
+			std::string packetHex = std::string("-") + BaseLib::HelperFunctions::getHexString(address, 6) + "\r\n";
+			send(packetHex);
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -830,7 +867,7 @@ void HM_CFG_LAN::processInit(std::string& packet)
 		if(_initCommandQueue.front().at(0) == 'T')
 		{
 			_initCommandQueue.pop_front();
-			_initComplete = true;
+			sendPeers();
 		}
 	}
 }

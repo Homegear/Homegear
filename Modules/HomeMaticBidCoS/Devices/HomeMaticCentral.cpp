@@ -732,19 +732,6 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			else stringStream << "Started firmware update(s)... This might take a long time. Use the RPC function \"getUpdateProgress\" or see the log for details." << std::endl;
 			return stringStream.str();
 		}
-		else if(command == "enable aes")
-		{
-			std::string input;
-			stringStream << "Please enter the devices address: ";
-			int32_t address = getHexInput();
-			if(!peerExists(address)) stringStream << "This device is not paired to this central." << std::endl;
-			else
-			{
-				stringStream << "Enabling AES for device device 0x" << std::hex << address << std::dec << std::endl;
-				sendEnableAES(address, 1);
-			}
-			return stringStream.str();
-		}
 		else if(command.compare(0, 10, "peers list") == 0)
 		{
 			try
@@ -1694,16 +1681,6 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
 		}
 		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
-		raiseDeleteMetadata(peer->getSerialNumber());
-		raiseDeleteMetadata(std::to_string(id));
-		if(peer->rpcDevice)
-		{
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
-			{
-				raiseDeleteMetadata(peer->getSerialNumber() + ':' + std::to_string(i->first));
-				raiseDeleteMetadata(std::to_string(id) + ':' + std::to_string(i->first));
-			}
-		}
 		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
 		if(_peersByID.find(id) != _peersByID.end()) _peersByID.erase(id);
@@ -1851,74 +1828,6 @@ void HomeMaticCentral::unpair(uint64_t id, bool defer)
     catch(...)
     {
         BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void HomeMaticCentral::sendEnableAES(int32_t address, int32_t channel)
-{
-	try
-	{
-		std::shared_ptr<BidCoSPeer> peer(getPeer(address));
-		if(!peer) return;
-
-		std::vector<uint8_t> payload;
-
-		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(BidCoSQueueType::DEFAULT));
-		pendingQueue->noSending = true;
-
-		//CONFIG_START
-		payload.push_back((uint8_t)channel);
-		payload.push_back(0x05);
-		payload.push_back(0);
-		payload.push_back(0);
-		payload.push_back(0);
-		payload.push_back(0);
-		payload.push_back(0x01);
-		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
-		pendingQueue->push(configPacket);
-		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		payload.clear();
-		_messageCounter[0]++;
-
-		//CONFIG_WRITE_INDEX
-		payload.push_back((uint8_t)channel);
-		payload.push_back(0x08);
-		payload.push_back(0x08);
-		payload.push_back(0x01);
-		configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
-		pendingQueue->push(configPacket);
-		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		payload.clear();
-		_messageCounter[0]++;
-
-		//END_CONFIG
-		payload.push_back((uint8_t)channel);
-		payload.push_back(0x06);
-		configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, address, payload));
-		pendingQueue->push(configPacket);
-		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		payload.clear();
-		_messageCounter[0]++;
-
-		peer->pendingBidCoSQueues->push(pendingQueue);
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(address);
-		if(!queue)
-		{
-			_bidCoSQueueManager.createQueue(this, BidCoSQueueType::DEFAULT, address);
-			queue->push(peer->pendingBidCoSQueues);
-		}
-	}
-    catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

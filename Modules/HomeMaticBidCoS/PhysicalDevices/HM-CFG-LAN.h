@@ -71,11 +71,13 @@ class HM_CFG_LAN  : public BidCoSDevice
         virtual bool needsPeers() { return true; }
 
         virtual void addPeer(PeerInfo peerInfo);
-        virtual void addPeers(std::vector<PeerInfo> peerInfos);
+        virtual void addPeers(std::vector<PeerInfo>& peerInfos);
         virtual void removePeer(int32_t address);
+        virtual void sendPeers();
+        virtual std::string getPeerInfoPacket(PeerInfo& peerInfo);
     protected:
         std::mutex _peersMutex;
-        std::map<int32_t, PeerInfo> peers;
+        std::map<int32_t, PeerInfo> _peers;
         bool isGateway = false;
         int64_t _lastAction = 0;
         std::string _hostname;

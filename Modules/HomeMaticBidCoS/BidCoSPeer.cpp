@@ -816,7 +816,7 @@ void BidCoSPeer::deletePairedVirtualDevice(int32_t address)
 	try
 	{
 		std::shared_ptr<HomeMaticDevice> device(getDevice(address));
-		if(device)
+		if(device && !device->isCentral())
 		{
 			BaseLib::Obj::family->remove(device->getID());
 			device->reset();
@@ -850,7 +850,7 @@ void BidCoSPeer::deletePairedVirtualDevices()
 				if((*j)->hidden && deleted.find((*j)->address) == deleted.end())
 				{
 					device = getDevice((*j)->address);
-					if(device)
+					if(device && !device->isCentral())
 					{
 						BaseLib::Obj::family->remove(device->getID());
 						deleted[(*j)->address] = true;

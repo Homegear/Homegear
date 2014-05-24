@@ -53,7 +53,7 @@ public:
 	virtual ~BidCoSDevice();
 
 	virtual void addPeer(PeerInfo peerInfo) {}
-	virtual void addPeers(std::vector<PeerInfo> peerInfos) {}
+	virtual void addPeers(std::vector<PeerInfo>& peerInfos) {}
 	virtual void removePeer(int32_t address) {}
 
 	virtual bool aesSupported() { return false; }

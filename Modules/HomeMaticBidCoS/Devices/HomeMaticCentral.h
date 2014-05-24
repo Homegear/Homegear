@@ -80,7 +80,6 @@ public:
 	void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleConfigParamResponse(int32_t messageCounter, std::shared_ptr<BidCoSPacket>);
 	void handleReset(int32_t messageCounter, std::shared_ptr<BidCoSPacket>) {}
-	void sendEnableAES(int32_t address, int32_t channel);
 	void sendRequestConfig(int32_t address, uint8_t localChannel, uint8_t list = 0, int32_t remoteAddress = 0, uint8_t remoteChannel = 0);
 
 	virtual bool knowsDevice(std::string serialNumber);
