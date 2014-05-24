@@ -44,7 +44,7 @@ public:
 		virtual ~PeerInfo() {}
 		std::vector<char> getAESChannelMap();
 
-		bool configPending = 0;
+		bool wakeUp = 0;
 		int32_t address = 0;
 		int32_t keyIndex = 0;
 		std::map<int32_t, bool> aesChannels;

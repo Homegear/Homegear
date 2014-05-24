@@ -79,13 +79,13 @@ std::string HM_CFG_LAN::getPeerInfoPacket(PeerInfo& peerInfo)
 		std::string packetHex = std::string("+") + BaseLib::HelperFunctions::getHexString(peerInfo.address, 6) + ",";
 		if(!peerInfo.aesChannels.empty())
 		{
-			packetHex += peerInfo.configPending ? "03," : "01,";
+			packetHex += peerInfo.wakeUp ? "03," : "01,";
 			packetHex += BaseLib::HelperFunctions::getHexString(peerInfo.keyIndex, 2) + ",";
 			packetHex += BaseLib::HelperFunctions::getHexString(peerInfo.getAESChannelMap()) + ",";
 		}
 		else
 		{
-			//When no AES is used, configPending is handled by Homegear
+			//When no AES is used, wakeUp is handled by Homegear
 			packetHex += "00,00,";
 		}
 		packetHex += "\r\n";
@@ -961,12 +961,24 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 					BaseLib::Output::printWarning("Warning: AES handshake was not successful: " + bidCoSPacket->hexString());
 					return;
 				}
-				if(packet.at(0) == 'R' && !(controlByte & 0x40) && (controlByte & 1) && (bidCoSPacket->controlByte() & 0x20))
+				if(packet.at(0) == 'R')
 				{
-					_lastPacketSent = BaseLib::HelperFunctions::getTime();
-					return;
+					if(controlByte & 8)
+					{
+						BaseLib::Output::printWarning("Info: No response to packet after 3 tries: " + bidCoSPacket->hexString());
+						return;
+					}
+					else if(controlByte & 2)
+					{
+						return;
+					}
+					else if(!(controlByte & 0x40) && !(controlByte & 0x20) && (controlByte & 1) && (bidCoSPacket->controlByte() & 0x20))
+					{
+						_lastPacketSent = BaseLib::HelperFunctions::getTime();
+						return;
+					}
 				}
-				else raisePacketReceived(bidCoSPacket);
+				raisePacketReceived(bidCoSPacket);
         	}
         	else if(!parts.at(5).empty()) BaseLib::Output::printWarning("Warning: Too short packet received: " + parts.at(5));
 		}

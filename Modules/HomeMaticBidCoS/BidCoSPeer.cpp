@@ -354,9 +354,10 @@ void BidCoSPeer::worker()
 		if(serviceMessages->getConfigPending() && (!pendingBidCoSQueues || pendingBidCoSQueues->empty()))
 		{
 			serviceMessages->setConfigPending(false);
-			if(GD::physicalDevice->autoResend() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::lazyConfig))
+			if(GD::physicalDevice->autoResend() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp))
 			{
 				//Remove configPending flag
+				BaseLib::Output::printDebug("Debug: Removing physical device's config pending flag.");
 				GD::physicalDevice->addPeer(getPeerInfo());
 			}
 		}
@@ -1497,9 +1498,9 @@ BidCoSDevice::PeerInfo BidCoSPeer::getPeerInfo()
 		BidCoSDevice::PeerInfo peerInfo;
 		peerInfo.address = _address;
 		if(!rpcDevice) return peerInfo;
-		if(serviceMessages->getConfigPending() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::lazyConfig))
+		if(serviceMessages->getConfigPending() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp))
 		{
-			peerInfo.configPending = true;
+			peerInfo.wakeUp = true;
 		}
 		if(GD::physicalDevice->aesSupported() && rpcDevice->supportsAES)
 		{
@@ -2402,8 +2403,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			}
 			else
 			{
-				if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::lazyConfig) && GD::physicalDevice->autoResend())
+				if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && GD::physicalDevice->autoResend())
 				{
+					BaseLib::Output::printDebug("Debug: Setting physical device's config pending flag.");
 					GD::physicalDevice->addPeer(getPeerInfo());
 				}
 				BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
@@ -2541,8 +2543,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			}
 			else
 			{
-				if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::lazyConfig) && GD::physicalDevice->autoResend())
+				if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && GD::physicalDevice->autoResend())
 				{
+					BaseLib::Output::printDebug("Debug: Setting physical device's config pending flag.");
 					GD::physicalDevice->addPeer(getPeerInfo());
 				}
 				BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
