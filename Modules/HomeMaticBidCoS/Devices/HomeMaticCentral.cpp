@@ -1874,7 +1874,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 					return;
 				}
 				peer = queue->peer;
-				if(GD::physicalDevice->needsPeers()) GD::physicalDevice->addPeer(getPeerInfo(peer));
+				if(GD::physicalDevice->needsPeers()) GD::physicalDevice->addPeer(peer->getPeerInfo());
 			}
 
 			if(!peer->rpcDevice)

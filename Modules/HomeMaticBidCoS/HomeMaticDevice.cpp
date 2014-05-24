@@ -571,7 +571,7 @@ void HomeMaticDevice::loadPeers()
 			_peers[peer->getAddress()] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			_peersByID[peerID] = peer;
-			if(GD::physicalDevice->needsPeers()) GD::physicalDevice->addPeer(getPeerInfo(peer));
+			if(GD::physicalDevice->needsPeers()) GD::physicalDevice->addPeer(peer->getPeerInfo());
 			if(!peer->getTeamRemoteSerialNumber().empty())
 			{
 				if(_peersBySerial.find(peer->getTeamRemoteSerialNumber()) == _peersBySerial.end())
@@ -1115,46 +1115,6 @@ void HomeMaticDevice::handlePairingRequest(int32_t messageCounter, std::shared_p
 void HomeMaticDevice::handleWakeUp(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
 {
 	sendOK(messageCounter, packet->senderAddress());
-}
-
-BidCoSDevice::PeerInfo HomeMaticDevice::getPeerInfo(std::shared_ptr<BidCoSPeer> peer)
-{
-	try
-	{
-		BidCoSDevice::PeerInfo peerInfo;
-		peerInfo.address = peer->getAddress();
-		if(!peer->rpcDevice) return peerInfo;
-		if(GD::physicalDevice->aesSupported() && peer->rpcDevice->supportsAES)
-		{
-			peerInfo.keyIndex = 0;
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
-			{
-				if(!i->second) continue;
-				if(peer->configCentral.find(i->first) == peer->configCentral.end() || peer->configCentral.at(i->first).find("AES_ACTIVE") == peer->configCentral.at(i->first).end())
-				{
-					peerInfo.aesChannels[i->first] = i->second->aesDefault;
-				}
-				else
-				{
-					peerInfo.aesChannels[i->first] = (bool)peer->configCentral.at(i->first).at("AES_ACTIVE").data.at(0);
-				}
-			}
-		}
-		return peerInfo;
-	}
-	catch(const std::exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BidCoSDevice::PeerInfo();
 }
 
 std::shared_ptr<BidCoSPeer> HomeMaticDevice::createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet, bool save)
@@ -1932,5 +1892,17 @@ int32_t HomeMaticDevice::calculateCycleLength(uint8_t messageCounter)
 	int32_t result = (((_address << 8) | messageCounter) * 1103515245 + 12345) >> 16;
 	return (result & 0xFF) + 480;
 }
+
+//BidCoSQueueManager event handling
+void HomeMaticDevice::onQueueCreateSavepoint(std::string name)
+{
+	raiseCreateSavepoint(name);
+}
+
+void HomeMaticDevice::onQueueReleaseSavepoint(std::string name)
+{
+	raiseReleaseSavepoint(name);
+}
+//End BidCoSQueueManager event handling
 
 }

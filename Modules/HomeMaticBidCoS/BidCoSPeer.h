@@ -34,6 +34,7 @@
 #include "BidCoSDeviceTypes.h"
 #include "delegate.hpp"
 #include "BidCoSPacket.h"
+#include "PhysicalDevices/BidCoSDevice.h"
 
 #include <iomanip>
 #include <string>
@@ -187,6 +188,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         int32_t getNewFirmwareVersion();
         bool firmwareUpdateAvailable();
         std::string printConfig();
+        virtual BidCoSDevice::PeerInfo getPeerInfo();
 
         //RPC methods
         std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription();

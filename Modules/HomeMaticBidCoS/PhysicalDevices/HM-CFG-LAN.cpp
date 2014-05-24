@@ -79,11 +79,15 @@ std::string HM_CFG_LAN::getPeerInfoPacket(PeerInfo& peerInfo)
 		std::string packetHex = std::string("+") + BaseLib::HelperFunctions::getHexString(peerInfo.address, 6) + ",";
 		if(!peerInfo.aesChannels.empty())
 		{
-			packetHex += "01,";
+			packetHex += peerInfo.configPending ? "03," : "01,";
 			packetHex += BaseLib::HelperFunctions::getHexString(peerInfo.keyIndex, 2) + ",";
 			packetHex += BaseLib::HelperFunctions::getHexString(peerInfo.getAESChannelMap()) + ",";
 		}
-		else packetHex += "00,00,";
+		else
+		{
+			//When no AES is used, configPending is handled by Homegear
+			packetHex += "00,00,";
+		}
 		packetHex += "\r\n";
 		return packetHex;
 	}

@@ -34,6 +34,7 @@ class CallbackFunctionParameter;
 #include "PendingBidCoSQueues.h"
 #include "Devices/HomeMaticCentral.h"
 #include "../Base/BaseLib.h"
+#include "GD.h"
 
 namespace BidCoS
 {
@@ -353,6 +354,11 @@ void BidCoSPeer::worker()
 		if(serviceMessages->getConfigPending() && (!pendingBidCoSQueues || pendingBidCoSQueues->empty()))
 		{
 			serviceMessages->setConfigPending(false);
+			if(GD::physicalDevice->autoResend() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::lazyConfig))
+			{
+				//Remove configPending flag
+				GD::physicalDevice->addPeer(getPeerInfo());
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -1484,6 +1490,50 @@ std::string BidCoSPeer::printConfig()
     return "";
 }
 
+BidCoSDevice::PeerInfo BidCoSPeer::getPeerInfo()
+{
+	try
+	{
+		BidCoSDevice::PeerInfo peerInfo;
+		peerInfo.address = _address;
+		if(!rpcDevice) return peerInfo;
+		if(serviceMessages->getConfigPending() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::lazyConfig))
+		{
+			peerInfo.configPending = true;
+		}
+		if(GD::physicalDevice->aesSupported() && rpcDevice->supportsAES)
+		{
+			peerInfo.keyIndex = 0;
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			{
+				if(!i->second) continue;
+				if(configCentral.find(i->first) == configCentral.end() || configCentral.at(i->first).find("AES_ACTIVE") == configCentral.at(i->first).end())
+				{
+					peerInfo.aesChannels[i->first] = i->second->aesDefault;
+				}
+				else
+				{
+					peerInfo.aesChannels[i->first] = (bool)configCentral.at(i->first).at("AES_ACTIVE").data.at(0);
+				}
+			}
+		}
+		return peerInfo;
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BidCoSDevice::PeerInfo();
+}
+
 int32_t BidCoSPeer::getChannelGroupedWith(int32_t channel)
 {
 	try
@@ -2350,7 +2400,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			{
 				if(!onlyPushing) getCentral()->enqueuePendingQueues(_address);
 			}
-			else BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			else
+			{
+				if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::lazyConfig) && GD::physicalDevice->autoResend())
+				{
+					GD::physicalDevice->addPeer(getPeerInfo());
+				}
+				BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			}
 			raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
 		else if(type == BaseLib::RPC::ParameterSet::Type::Enum::values)
@@ -2482,7 +2539,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			{
 				if(!onlyPushing) getCentral()->enqueuePendingQueues(_address);
 			}
-			else BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			else
+			{
+				if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::lazyConfig) && GD::physicalDevice->autoResend())
+				{
+					GD::physicalDevice->addPeer(getPeerInfo());
+				}
+				BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			}
 			raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));

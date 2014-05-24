@@ -189,6 +189,8 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		_queueMutex.lock();
 		_queues.insert(std::pair<int32_t, std::shared_ptr<BidCoSQueueData>>(address, queueData));
 		_queueMutex.unlock();
+		BaseLib::Output::printDebug("Creating SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
+		raiseCreateSavepoint("BidCoSQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));
 		return queueData->queue;
 	}
 	catch(const std::exception& ex)
@@ -260,6 +262,8 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
     	_queueMutex.unlock();
         BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    BaseLib::Output::printDebug("Releasing SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(id));
+    raiseReleaseSavepoint("BidCoSQueue" + std::to_string(address) + "_" + std::to_string(id));
 }
 
 std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)
@@ -289,4 +293,56 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)
     _queueMutex.unlock();
     return std::shared_ptr<BidCoSQueue>();
 }
+
+//Event handling
+void BidCoSQueueManager::raiseCreateSavepoint(std::string name)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<BaseLib::IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IBidCoSQueueManagerEventSink*)*i)->onQueueCreateSavepoint(name);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
+void BidCoSQueueManager::raiseReleaseSavepoint(std::string name)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<BaseLib::IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IBidCoSQueueManagerEventSink*)*i)->onQueueReleaseSavepoint(name);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+//End event hantlind
 }
