@@ -453,11 +453,11 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		{
 			if(packet->timeSending() > 0)
 			{
-				BaseLib::Output::printInfo("Info: Sending: " + packet->hexString() + " Planned sending time: " + BaseLib::HelperFunctions::getTimeString(packet->timeSending()));
+				BaseLib::Output::printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString() + " Planned sending time: " + BaseLib::HelperFunctions::getTimeString(packet->timeSending()));
 			}
 			else
 			{
-				BaseLib::Output::printInfo("Info: Sending: " + packet->hexString());
+				BaseLib::Output::printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString());
 			}
 		}
 

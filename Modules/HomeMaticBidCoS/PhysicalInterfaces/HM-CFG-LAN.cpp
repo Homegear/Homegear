@@ -292,7 +292,7 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		int64_t currentTimeMilliseconds = BaseLib::HelperFunctions::getTime();
 		uint32_t currentTime = currentTimeMilliseconds & 0xFFFFFFFF;
 		std::string packetString = packet->hexString();
-		if(BaseLib::Obj::ins->debugLevel >= 4) BaseLib::Output::printInfo("Info: Sending: " + packetString);
+		if(BaseLib::Obj::ins->debugLevel >= 4) BaseLib::Output::printInfo("Info: Sending (" + _settings->id + "): " + packetString);
 		std::string hexString = "S" + BaseLib::HelperFunctions::getHexString(currentTime, 8) + ",00,00000000,01," + BaseLib::HelperFunctions::getHexString(currentTimeMilliseconds - _startUpTime, 8) + "," + packetString.substr(2) + "\r\n";
 		send(hexString, false);
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();

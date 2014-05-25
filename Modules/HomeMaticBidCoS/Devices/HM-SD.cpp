@@ -55,6 +55,11 @@ void HM_SD::init()
 		HomeMaticDevice::init();
 
 		_deviceType = (uint32_t)DeviceType::HMSD;
+
+		for(std::map<std::string, std::shared_ptr<IBidCoSInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
+		{
+			i->second->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -314,7 +319,7 @@ bool HM_SD::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Sys
 			}
 		}
 		if(_filters.size() == 0) printPacket = true;
-		if(_hack)
+		if(_hack && senderID == _physicalInterface->getID())
 		{
 			int32_t addressMotionDetector = 0x1A4EFE;
 			int32_t addressKeyMatic = 0x1F454D;
@@ -359,7 +364,8 @@ bool HM_SD::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Sys
 				}
 			}
 		}
-		if(printPacket) std::cout << BaseLib::HelperFunctions::getTimeString(bidCoSPacket->timeReceived()) << " HomeMatic BidCoS packet received: " + bidCoSPacket->hexString() << std::endl;
+		if(printPacket) std::cout << BaseLib::HelperFunctions::getTimeString(bidCoSPacket->timeReceived()) << " HomeMatic BidCoS packet received (" + senderID + "): " + bidCoSPacket->hexString() << std::endl;
+		if(senderID != _physicalInterface->getID()) return true;
 		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
 		{
 			std::string packetHex = bidCoSPacket->hexString();

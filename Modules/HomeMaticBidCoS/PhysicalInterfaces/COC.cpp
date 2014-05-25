@@ -351,7 +351,7 @@ void COC::writeToDevice(std::string data, bool printSending)
         int32_t i;
         if(BaseLib::Obj::ins->debugLevel > 3 && printSending)
         {
-            BaseLib::Output::printInfo("Info: Sending: " + data.substr(2, data.size() - 6));
+            BaseLib::Output::printInfo("Info: Sending (" + _settings->id + "): " + data.substr(2, data.size() - 6));
         }
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
