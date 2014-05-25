@@ -33,6 +33,7 @@
 #include "PhysicalInterfaces/CUL.h"
 #include "PhysicalInterfaces/TICC1100.h"
 #include "PhysicalInterfaces/HM-CFG-LAN.h"
+#include "PhysicalInterfaces/RTLSDR-LAN.h"
 #include "Devices/HomeMaticCentral.h"
 #include "BidCoSDeviceTypes.h"
 #include "Devices/HM-CC-TC.h"
@@ -97,6 +98,7 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> BidCoS::createPhysicalDevi
 		else if(settings->type == "coc") device.reset(new COC(settings));
 		else if(settings->type == "cc1100") device.reset(new TICC1100(settings));
 		else if(settings->type == "hmcfglan") device.reset(new HM_CFG_LAN(settings));
+		else if(settings->type == "rtlsdrlan") device.reset(new RTLSDR_LAN(settings));
 		else BaseLib::Output::printError("Error: Unsupported physical device type for family HomeMatic BidCoS: " + settings->type);
 		if(device)
 		{
