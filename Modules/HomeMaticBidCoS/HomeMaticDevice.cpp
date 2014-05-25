@@ -940,6 +940,11 @@ bool HomeMaticDevice::onPacketReceived(std::string& senderID, std::shared_ptr<Ba
 		if(_disposing) return false;
 		std::shared_ptr<BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoSPacket>(packet));
 		if(!bidCoSPacket) return false;
+		if(bidCoSPacket->senderAddress() == _address && GD::physicalInterfaces.size() > 1)
+		{
+			//Packet we sent was received by another interface
+			return true;
+		}
 		_receivedPackets.set(bidCoSPacket->senderAddress(), bidCoSPacket, bidCoSPacket->timeReceived());
 		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, bidCoSPacket);
 		if(message && message->checkAccess(bidCoSPacket, _bidCoSQueueManager.get(bidCoSPacket->senderAddress())))

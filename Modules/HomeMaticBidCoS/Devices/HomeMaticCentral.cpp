@@ -212,6 +212,7 @@ bool HomeMaticCentral::onPacketReceived(std::string& senderID, std::shared_ptr<B
 		if(!bidCoSPacket) return false;
 		if(bidCoSPacket->senderAddress() == _address) //Packet spoofed
 		{
+			if(GD::physicalInterfaces.size() > 1) return true; //Packet we sent was received by another interface
 			std::shared_ptr<BidCoSPeer> peer(getPeer(bidCoSPacket->destinationAddress()));
 			if(peer)
 			{

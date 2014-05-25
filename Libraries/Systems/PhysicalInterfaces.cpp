@@ -73,7 +73,7 @@ void PhysicalInterfaces::load(std::string filename)
 					if (input[ptr] == ']')
 					{
 						input[ptr] = '\0';
-						if((!settings->device.empty() || (!settings->host.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
+						if((!settings->device.empty() || (!settings->host.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none)
 						{
 							if(settings->id.empty()) settings->id = settings->type;
 							std::shared_ptr<BaseLib::Systems::IPhysicalInterface> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
@@ -239,7 +239,7 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 			}
 		}
-		if((!settings->device.empty() || (!settings->host.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none && GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end())
+		if((!settings->device.empty() || (!settings->host.empty() && !settings->port.empty())) && !settings->type.empty() && settings->family != BaseLib::Systems::DeviceFamilies::none)
 		{
 			if(settings->id.empty()) settings->id = settings->type;
 			std::shared_ptr<BaseLib::Systems::IPhysicalInterface> device = GD::deviceFamilies.at(settings->family)->createPhysicalDevice(settings);
