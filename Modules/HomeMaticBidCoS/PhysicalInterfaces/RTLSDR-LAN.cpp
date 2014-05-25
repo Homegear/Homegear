@@ -73,8 +73,8 @@ void RTLSDR_LAN::startListening()
 		stopListening();
 		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
 		BaseLib::Output::printDebug("Connecting to RTLSDR-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
-		_socket.open();
-		BaseLib::Output::printInfo("Connected to RTLSDR-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		//_socket.open();
+		//BaseLib::Output::printInfo("Connected to RTLSDR-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&RTLSDR_LAN::listen, this);
 		BaseLib::Threads::setThreadPriority(_listenThread.native_handle(), 45);
@@ -160,14 +160,12 @@ void RTLSDR_LAN::listen()
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
-				_stopped = true;
 				BaseLib::Output::printWarning("Warning: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
-				_stopped = true;
 				BaseLib::Output::printError("Error: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
@@ -181,7 +179,7 @@ void RTLSDR_LAN::listen()
         	}
 
         	std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(new BidCoS::BidCoSPacket(data, true, BaseLib::HelperFunctions::getTime()));
-			raisePacketReceived(packet);
+			raisePacketReceived(bidCoSPacket);
 			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 			data.clear();
         }

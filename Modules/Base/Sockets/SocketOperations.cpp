@@ -254,6 +254,8 @@ void SocketOperations::getConnection()
 	if(_hostname.empty()) throw SocketInvalidParametersException("Hostname is empty");
 	if(_port.empty()) throw SocketInvalidParametersException("Port is empty");
 
+	BaseLib::Output::printInfo("Info: Connecting to host " + _hostname + " on port " + _port + "...");
+
 	//Retry for two minutes
 	for(uint32_t i = 0; i < 6; ++i)
 	{
@@ -397,5 +399,6 @@ void SocketOperations::getConnection()
 			}
 		}
 	}
+	BaseLib::Output::printInfo("Info: Connected to host " + _hostname + " on port " + _port + ".");
 }
 } /* namespace RPC */

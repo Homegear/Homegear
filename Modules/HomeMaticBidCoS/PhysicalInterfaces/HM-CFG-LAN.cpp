@@ -383,8 +383,8 @@ void HM_CFG_LAN::startListening()
 		if(_useAES) openSSLInit();
 		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
 		BaseLib::Output::printDebug("Connecting to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
-		_socket.open();
-		BaseLib::Output::printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		//_socket.open();
+		//BaseLib::Output::printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&HM_CFG_LAN::listen, this);
 		BaseLib::Threads::setThreadPriority(_listenThread.native_handle(), 45);
