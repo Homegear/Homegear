@@ -517,8 +517,8 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 {
 	try
 	{
+		if(!message || !packet) return;
 		if(message->getDirection() != DIRECTIONOUT) BaseLib::Output::printWarning("Warning: Wrong push method used. Packet is not necessary for incoming messages");
-		if(message == nullptr) return;
 		BidCoSQueueEntry entry;
 		entry.setMessage(message, true);
 		entry.setPacket(packet, false);
@@ -569,8 +569,8 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
 {
 	try
 	{
+		if(!message) return;
 		if(message->getDirection() == DIRECTIONOUT) BaseLib::Output::printCritical("Critical: Wrong push method used. Please provide the received packet for outgoing messages");
-		if(message == nullptr) return;
 		BidCoSQueueEntry entry;
 		entry.setMessage(message, true);
 		entry.forceResend = forceResend;
