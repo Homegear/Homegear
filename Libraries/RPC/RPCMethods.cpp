@@ -1688,9 +1688,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCLogLevel::invoke(std::shared_ptr<s
 		{
 			ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger }));
 			if(error != ParameterError::Enum::noError) return getError(error);
-			GD::rpcLogLevel = parameters->at(0)->integerValue;
+			int32_t debugLevel = parameters->at(0)->integerValue;
+			if(debugLevel < 0) debugLevel = 2;
+			if(debugLevel > 5) debugLevel = 5;
+			BaseLib::Obj::ins->debugLevel = debugLevel;
+			BaseLib::Output::setDebugLevel(debugLevel);
+			for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+			{
+				i->second->setDebugLevel(debugLevel);
+			}
 		}
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(GD::rpcLogLevel));
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::ins->debugLevel));
 	}
 	catch(const std::exception& ex)
     {

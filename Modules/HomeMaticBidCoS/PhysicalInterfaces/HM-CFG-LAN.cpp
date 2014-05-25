@@ -32,7 +32,7 @@
 namespace BidCoS
 {
 
-HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BidCoSDevice(settings)
+HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
 	signal(SIGPIPE, SIG_IGN);
 	if(!settings)

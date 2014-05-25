@@ -111,6 +111,12 @@ OBJECTS := \
 	$(OBJDIR)/HomeMaticCentral.o \
 	$(OBJDIR)/HM-SD.o \
 	$(OBJDIR)/HM-CC-TC.o \
+	$(OBJDIR)/IBidCoSInterface.o \
+	$(OBJDIR)/HM-CFG-USB.o \
+	$(OBJDIR)/TICC1100.o \
+	$(OBJDIR)/COC.o \
+	$(OBJDIR)/HM-CFG-LAN.o \
+	$(OBJDIR)/CUL.o \
 
 RESOURCES := \
 
@@ -224,6 +230,24 @@ $(OBJDIR)/HM-SD.o: Modules/HomeMaticBidCoS/Devices/HM-SD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HM-CC-TC.o: Modules/HomeMaticBidCoS/Devices/HM-CC-TC.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/IBidCoSInterface.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/IBidCoSInterface.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HM-CFG-USB.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/HM-CFG-USB.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/TICC1100.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/TICC1100.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/COC.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/COC.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HM-CFG-LAN.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/HM-CFG-LAN.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/CUL.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/CUL.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

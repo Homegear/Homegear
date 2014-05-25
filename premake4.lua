@@ -84,7 +84,7 @@ solution "homegear"
       language "C++"
       files { "./Modules/HomeMaticBidCoS/*.h", "./Modules/HomeMaticBidCoS/*.cpp" }
 	  files { "./Modules/HomeMaticBidCoS/Devices/*.h", "./Modules/HomeMaticBidCoS/Devices/*.cpp" }
-	  files { "./Modules/HomeMaticBidCoS/PhysicalDevices/*.h", "./Modules/HomeMaticBidCoS/PhysicalDevices/*.cpp" }
+	  files { "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.h", "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.cpp" }
 	  linkoptions { "-l base" }
 	   
       configuration "Debug"
@@ -112,7 +112,7 @@ solution "homegear"
       language "C++"
       files { "./Modules/HomeMaticWired/*.h", "./Modules/HomeMaticWired/*.cpp" }
       files { "./Modules/HomeMaticWired/Devices/*.h", "./Modules/HomeMaticWired/Devices/*.cpp" }
-      files { "./Modules/HomeMaticWired/PhysicalDevices/*.h", "./Modules/HomeMaticWired/PhysicalDevices/*.cpp" }
+      files { "./Modules/HomeMaticWired/PhysicalInterfaces/*.h", "./Modules/HomeMaticWired/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l base" }
 	   
       configuration "Debug"

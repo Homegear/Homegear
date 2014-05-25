@@ -103,6 +103,8 @@ OBJECTS := \
 	$(OBJDIR)/HMWired.o \
 	$(OBJDIR)/HMWired-SD.o \
 	$(OBJDIR)/HMWiredCentral.o \
+	$(OBJDIR)/RS485.o \
+	$(OBJDIR)/RawLAN.o \
 
 RESOURCES := \
 
@@ -192,6 +194,12 @@ $(OBJDIR)/HMWired-SD.o: Modules/HomeMaticWired/Devices/HMWired-SD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HMWiredCentral.o: Modules/HomeMaticWired/Devices/HMWiredCentral.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RS485.o: Modules/HomeMaticWired/PhysicalInterfaces/RS485.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/RawLAN.o: Modules/HomeMaticWired/PhysicalInterfaces/RawLAN.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 

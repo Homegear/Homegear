@@ -34,7 +34,7 @@
 namespace BidCoS
 {
 
-HM_CFG_USB::HM_CFG_USB(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BidCoSDevice(settings)
+HM_CFG_USB::HM_CFG_USB(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
 }
 
