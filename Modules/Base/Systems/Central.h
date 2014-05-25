@@ -90,6 +90,7 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> setValue(uint64_t id, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> updateFirmware(std::vector<uint64_t> ids, bool manual) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
+	virtual std::shared_ptr<RPC::RPCVariable> setInterface(uint64_t peerID, std::string interfaceID) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 protected:
 	int32_t _physicalAddress;
 private:

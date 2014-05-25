@@ -95,6 +95,7 @@ public:
 	virtual void setup(int32_t userID, int32_t groupID) {}
 	virtual std::string getType() { return _settings->type; }
 	virtual std::string getID() { return _settings->id; }
+	virtual bool isDefault() { return _settings->isDefault; }
 	virtual bool isNetworkDevice() { return _settings->device.empty() && !_settings->host.empty() && !_settings->port.empty(); }
 protected:
 	std::shared_ptr<PhysicalInterfaceSettings> _settings;

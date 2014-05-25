@@ -271,12 +271,13 @@ void BidCoSPeer::dispose()
 
 void BidCoSPeer::setPhysicalInterfaceID(std::string id)
 {
-	if(GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id))
+	if(id.empty() || (GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id)))
 	{
 		_physicalInterfaceID = id;
-		_physicalInterface = GD::physicalInterfaces.at(_physicalInterfaceID);
+		_physicalInterface = id.empty() ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(_physicalInterfaceID);
 		std::shared_ptr<HomeMaticDevice> virtualDevice = getHiddenPeerDevice();
 		if(virtualDevice) virtualDevice->setPhysicalInterfaceID(id);
+		saveVariable(19, _physicalInterfaceID);
 	}
 }
 
@@ -1351,7 +1352,7 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 				break;
 			case 19:
 				_physicalInterfaceID = row->second.at(4)->textValue;
-				if(GD::physicalInterfaces.find(_physicalInterfaceID) != GD::physicalInterfaces.end()) _physicalInterface = GD::physicalInterfaces.at(_physicalInterfaceID);
+				if(!_physicalInterfaceID.empty() && GD::physicalInterfaces.find(_physicalInterfaceID) != GD::physicalInterfaces.end()) _physicalInterface = GD::physicalInterfaces.at(_physicalInterfaceID);
 				break;
 			}
 		}

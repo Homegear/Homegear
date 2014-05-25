@@ -85,6 +85,7 @@ void Server::registerMethods()
 		_server->registerMethod("runScript", std::shared_ptr<RPCMethod>(new RPCRunScript()));
 		_server->registerMethod("searchDevices", std::shared_ptr<RPCMethod>(new RPCSearchDevices()));
 		_server->registerMethod("setInstallMode", std::shared_ptr<RPCMethod>(new RPCSetInstallMode()));
+		_server->registerMethod("setInterface", std::shared_ptr<RPCMethod>(new RPCSetInterface()));
 		_server->registerMethod("setLinkInfo", std::shared_ptr<RPCMethod>(new RPCSetLinkInfo()));
 		_server->registerMethod("setMetadata", std::shared_ptr<RPCMethod>(new RPCSetMetadata()));
 		_server->registerMethod("setTeam", std::shared_ptr<RPCMethod>(new RPCSetTeam()));

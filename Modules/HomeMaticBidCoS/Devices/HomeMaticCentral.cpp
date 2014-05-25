@@ -4527,4 +4527,32 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::updateFirmware(std:
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInterface(uint64_t peerID, std::string interfaceID)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(!interfaceID.empty() && GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end())
+		{
+			return BaseLib::RPC::RPCVariable::createError(-5, "Unknown physical interface.");
+		}
+		peer->setPhysicalInterfaceID(interfaceID);
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
 }

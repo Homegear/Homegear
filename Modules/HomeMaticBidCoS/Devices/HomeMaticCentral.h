@@ -125,6 +125,7 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint64_t id, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> updateFirmware(std::vector<uint64_t> ids, bool manual);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(uint64_t peerID, std::string interfaceID);
 protected:
 	std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
 	virtual void worker();

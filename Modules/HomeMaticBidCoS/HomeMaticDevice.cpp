@@ -169,12 +169,13 @@ void HomeMaticDevice::setUpBidCoSMessages()
 
 void HomeMaticDevice::setPhysicalInterfaceID(std::string id)
 {
-	if(GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id))
+	if(id.empty() || (GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id)))
 	{
 		if(_physicalInterface) _physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		_physicalInterfaceID = id;
-		_physicalInterface = GD::physicalInterfaces.at(_physicalInterfaceID);
+		_physicalInterface = id.empty() ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(_physicalInterfaceID);
 		_physicalInterface->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
+		saveVariable(4, _physicalInterfaceID);
 	}
 }
 
@@ -675,7 +676,7 @@ void HomeMaticDevice::loadVariables()
 				break;
 			case 4:
 				_physicalInterfaceID = row->second.at(4)->textValue;
-				if(GD::physicalInterfaces.find(_physicalInterfaceID) != GD::physicalInterfaces.end()) _physicalInterface = GD::physicalInterfaces.at(_physicalInterfaceID);
+				if(!_physicalInterfaceID.empty() && GD::physicalInterfaces.find(_physicalInterfaceID) != GD::physicalInterfaces.end()) _physicalInterface = GD::physicalInterfaces.at(_physicalInterfaceID);
 				break;
 			}
 		}
