@@ -30,7 +30,7 @@
 #ifndef GD_H_
 #define GD_H_
 
-#include "PhysicalDevices/BidCoSDevice.h"
+#include "PhysicalInterfaces/IBidCoSInterface.h"
 
 namespace BidCoS
 {
@@ -40,7 +40,8 @@ class GD
 public:
 	virtual ~GD();
 
-	static std::shared_ptr<BidCoSDevice> physicalDevice;
+	static std::map<std::string, std::shared_ptr<IBidCoSInterface>> physicalInterfaces;
+	static std::shared_ptr<IBidCoSInterface> defaultPhysicalInterface;
 private:
 	GD();
 };

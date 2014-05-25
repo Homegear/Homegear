@@ -33,8 +33,8 @@
 #include "../Database/DatabaseTypes.h"
 #include "Central.h"
 #include "LogicalDevice.h"
-#include "PhysicalDeviceSettings.h"
-#include "PhysicalDevice.h"
+#include "PhysicalInterfaceSettings.h"
+#include "IPhysicalInterface.h"
 #include "DeviceFamilies.h"
 #include "../RPC/RPCVariable.h"
 
@@ -97,7 +97,7 @@ public:
 	virtual void setDebugLevel(int32_t debugLevel);
 	virtual DeviceFamilies getFamily() { return _family; }
 	virtual std::shared_ptr<RPC::RPCVariable> listBidcosInterfaces() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid)); }
-	virtual std::shared_ptr<Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<Systems::PhysicalDeviceSettings> settings) { return std::shared_ptr<Systems::PhysicalDevice>(); }
+	virtual std::shared_ptr<Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<Systems::PhysicalInterfaceSettings> settings) { return std::shared_ptr<Systems::IPhysicalInterface>(); }
 	virtual void load() = 0;
 	virtual void save(bool full);
 	virtual void add(std::shared_ptr<LogicalDevice> device);

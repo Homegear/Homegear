@@ -33,7 +33,7 @@
 namespace HMWired
 {
 
-RS485::RS485(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BaseLib::Systems::PhysicalDevice(settings)
+RS485::RS485(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BaseLib::Systems::IPhysicalInterface(settings)
 {
 }
 

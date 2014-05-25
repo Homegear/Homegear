@@ -42,7 +42,7 @@ public:
 	FS20(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler);
 	virtual ~FS20();
 
-	virtual std::shared_ptr<BaseLib::Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+	virtual std::shared_ptr<BaseLib::Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual void load();
 	virtual std::shared_ptr<FS20Device> getDevice(uint32_t address);
 	virtual std::shared_ptr<FS20Device> getDevice(std::string serialNumber);

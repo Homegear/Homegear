@@ -31,5 +31,6 @@
 
 namespace BidCoS
 {
-	std::shared_ptr<BidCoSDevice> GD::physicalDevice;
+	std::map<std::string, std::shared_ptr<IBidCoSInterface>> GD::physicalInterfaces;
+	std::shared_ptr<IBidCoSInterface> GD::defaultPhysicalInterface;
 } /* namespace BidCoS */

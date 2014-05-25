@@ -79,15 +79,15 @@ case $1 in
 
 		insserv homegear
 		service homegear start
-		echo "#################################################################"
-		echo "#################################################################"
-		echo "### Please modify the file /etc/homegear/physicaldevices.conf ###"
-		echo "### according to your needs. By default the \"CUL\" stick is    ###"
-		echo "### enabled. When you're not using a \"CUL\" stick, Homegear    ###"
-		echo "### will not work, until you added the hardware you use to    ###"
-		echo "### communicate with your home automation devices.            ###"
-		echo "#################################################################"
-		echo "#################################################################"
+		echo "####################################################################"
+		echo "####################################################################"
+		echo "### Please modify the file /etc/homegear/physicalinterfaces.conf ###"
+		echo "### according to your needs. By default the \"CUL\" stick is       ###"
+		echo "### enabled. When you're not using a \"CUL\" stick, Homegear       ###"
+		echo "### will not work, until you added the hardware you use to       ###"
+		echo "### communicate with your home automation devices.               ###"
+		echo "####################################################################"
+		echo "####################################################################"
 		;;
 
 	# Back out of an attempt to upgrade this package FROM THIS VERSION

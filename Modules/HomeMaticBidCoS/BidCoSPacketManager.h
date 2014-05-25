@@ -31,6 +31,7 @@
 #define BIDCOSPACKETMANAGER_H_
 
 #include "../Base/BaseLib.h"
+#include "BidCoSPacket.h"
 
 #include <iostream>
 #include <string>
@@ -42,8 +43,6 @@
 
 namespace BidCoS
 {
-class BidCoSPacket;
-
 class BidCoSPacketInfo
 {
 public:

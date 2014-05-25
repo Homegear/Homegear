@@ -59,7 +59,7 @@ class HMWired_SD : public HMWiredDevice
         HMWired_SD(IDeviceEventSink* eventHandler);
         HMWired_SD(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~HMWired_SD();
-        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
         void addFilter(FilterType, int32_t);
         void removeFilter(FilterType, int32_t);
         std::string handleCLICommand(std::string command);

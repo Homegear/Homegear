@@ -71,12 +71,12 @@ void HMWiredCentral::init()
 	}
 }
 
-bool HMWiredCentral::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool HMWiredCentral::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
 		if(_disposing) return false;
-		HMWiredDevice::onPacketReceived(packet);
+		HMWiredDevice::onPacketReceived(senderID, packet);
 		std::shared_ptr<HMWiredPacket> hmWiredPacket(std::dynamic_pointer_cast<HMWiredPacket>(packet));
 		if(!hmWiredPacket) return false;
 		std::shared_ptr<HMWiredPeer> peer(getPeer(hmWiredPacket->senderAddress()));
@@ -2059,7 +2059,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::searchDevices()
 		int64_t time = 0;
 		std::shared_ptr<HMWired::HMWiredPacket> receivedPacket;
 		int32_t retries = 0;
-		int32_t responseDelay = GD::physicalDevice->responseDelay();
+		int32_t responseDelay = GD::physicalInterface->responseDelay();
 		std::pair<uint32_t, std::shared_ptr<HMWiredPacket>> packet;
 		while(true)
 		{

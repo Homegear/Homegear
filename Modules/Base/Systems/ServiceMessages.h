@@ -54,14 +54,12 @@ public:
 	class IServiceEventSink : public IEventSinkBase
 	{
 	public:
+		virtual void onConfigPending(bool configPending) = 0;
+
 		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
 		virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data) = 0;
 		virtual void onEnqueuePendingQueues() = 0;
 	};
-
-	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
-	virtual void raiseSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
-	virtual void raiseEnqueuePendingQueues();
 	//End event handling
 
 	ServiceMessages(uint64_t peerID, std::string peerSerial, IServiceEventSink* eventHandler);
@@ -95,6 +93,14 @@ protected:
 
 	std::mutex _errorMutex;
 	std::map<uint32_t, std::map<std::string, uint8_t>> _errors;
+
+	//Event handling
+	virtual void raiseConfigPending(bool configPending);
+
+	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void raiseSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
+	virtual void raiseEnqueuePendingQueues();
+	//End event handling
 };
 
 }

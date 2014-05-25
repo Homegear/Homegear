@@ -27,9 +27,10 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef RS485_H
-#define RS485_H
+#ifndef RAWLAN_H
+#define RAWLAN_H
 
+#include "../HMWiredPacket.h"
 #include "../../Base/BaseLib.h"
 
 #include <thread>
@@ -50,32 +51,29 @@
 namespace HMWired
 {
 
-class RS485  : public BaseLib::Systems::PhysicalDevice
+class RawLAN  : public BaseLib::Systems::IPhysicalInterface
 {
     public:
-        RS485(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
-        virtual ~RS485();
+        RawLAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+        virtual ~RawLAN();
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
         int64_t lastAction() { return _lastAction; }
-        virtual void setup(int32_t userID, int32_t groupID);
+        virtual bool isOpen() { return _socket.connected(); }
     protected:
-        uint8_t _firstByte = 0;
         int64_t _lastAction = 0;
-        bool _sending = false;
-        bool _receivingSending = false;
-        std::vector<uint8_t> _receivedSentPacket;
-        std::timed_mutex _sendingMutex;
+        std::string _hostname;
+        std::string _port;
+        BaseLib::SocketOperations _socket;
+        std::mutex _sendMutex;
 
-        void openDevice();
-        void closeDevice();
-        void setupDevice();
-        void writeToDevice(std::vector<uint8_t>& packet, bool printPacket);
-        std::vector<uint8_t> readFromDevice();
+        void send(std::vector<char>& packet, bool printPacket);
         void listen();
+        void getFileDescriptor(bool& timedout);
+        std::shared_ptr<BaseLib::FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
     private:
 };
 
 }
-#endif // RS485_H
+#endif

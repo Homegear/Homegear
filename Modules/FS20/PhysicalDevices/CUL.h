@@ -50,10 +50,10 @@
 namespace FS20
 {
 
-class CUL : public BaseLib::Systems::PhysicalDevice
+class CUL : public BaseLib::Systems::IPhysicalInterface
 {
     public:
-		CUL(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+		CUL(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
         virtual ~CUL();
         void startListening();
         void stopListening();

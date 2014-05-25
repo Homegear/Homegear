@@ -31,5 +31,5 @@
 
 namespace Insteon
 {
-	std::shared_ptr<BaseLib::Systems::PhysicalDevice> GD::physicalDevice;
+	std::shared_ptr<BaseLib::Systems::IPhysicalInterface> GD::physicalDevice;
 }

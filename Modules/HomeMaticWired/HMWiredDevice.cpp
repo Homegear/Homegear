@@ -71,7 +71,7 @@ void HMWiredDevice::dispose(bool wait)
 		if(_disposing) return;
 		_disposing = true;
 		BaseLib::Output::printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
-		if(GD::physicalDevice) GD::physicalDevice->removeEventHandler((BaseLib::Systems::PhysicalDevice::IPhysicalDeviceEventSink*)this);
+		if(GD::physicalInterface) GD::physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		int64_t startTime = BaseLib::HelperFunctions::getTime();
 		//stopThreads();
 		int64_t timeDifference = BaseLib::HelperFunctions::getTime() - startTime;
@@ -101,7 +101,7 @@ void HMWiredDevice::init()
 		if(_initialized) return; //Prevent running init two times
 		_initialized = true;
 
-		if(GD::physicalDevice) GD::physicalDevice->addEventHandler((BaseLib::Systems::PhysicalDevice::IPhysicalDeviceEventSink*)this);
+		if(GD::physicalInterface) GD::physicalInterface->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
 	}
@@ -397,12 +397,12 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			if(!rxPacketInfo || rxTimeDifference > 50)
 			{
 				//Communication might be in progress. Wait a little
-				if(BaseLib::Obj::ins->debugLevel > 4 && (time - GD::physicalDevice->lastPacketSent() < 210 || time - GD::physicalDevice->lastPacketReceived() < 210)) BaseLib::Output::printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free... (Packet: " + packet->hexString() + ")");
-				while(time - GD::physicalDevice->lastPacketSent() < 210 || time - GD::physicalDevice->lastPacketReceived() < 210)
+				if(BaseLib::Obj::ins->debugLevel > 4 && (time - GD::physicalInterface->lastPacketSent() < 210 || time - GD::physicalInterface->lastPacketReceived() < 210)) BaseLib::Output::printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free... (Packet: " + packet->hexString() + ")");
+				while(time - GD::physicalInterface->lastPacketSent() < 210 || time - GD::physicalInterface->lastPacketReceived() < 210)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(50));
 					time = BaseLib::HelperFunctions::getTime();
-					if(time - GD::physicalDevice->lastPacketSent() >= 210 && time - GD::physicalDevice->lastPacketReceived() >= 210)
+					if(time - GD::physicalInterface->lastPacketSent() >= 210 && time - GD::physicalInterface->lastPacketReceived() >= 210)
 					{
 						int32_t sleepingTime = BaseLib::HelperFunctions::getRandomNumber(0, 100);
 						if(BaseLib::Obj::ins->debugLevel > 4) BaseLib::Output::printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
@@ -415,7 +415,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			}
 		}
 		//RS485 bus should be free
-		uint32_t responseDelay = GD::physicalDevice->responseDelay();
+		uint32_t responseDelay = GD::physicalInterface->responseDelay();
 		_sentPackets.set(packet->destinationAddress(), packet);
 		if(txPacketInfo)
 		{
@@ -452,7 +452,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 				int64_t time = BaseLib::HelperFunctions::getTime();
 				std::chrono::milliseconds sleepingTime(5);
 				if(retries > 0) _sentPackets.keepAlive(packet->destinationAddress());
-				GD::physicalDevice->sendPacket(packet);
+				GD::physicalInterface->sendPacket(packet);
 				for(int32_t i = 0; i < 12; i++)
 				{
 					if(i == 5) sleepingTime = std::chrono::milliseconds(25);
@@ -467,7 +467,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			std::shared_ptr<HMWiredPeer> peer = getPeer(packet->destinationAddress());
 			if(peer) peer->serviceMessages->setUnreach(true);
 		}
-		else GD::physicalDevice->sendPacket(packet);
+		else GD::physicalInterface->sendPacket(packet);
 	}
 	catch(const std::exception& ex)
     {
@@ -588,7 +588,7 @@ void HMWiredDevice::savePeers(bool full)
 	_peersMutex.unlock();
 }
 
-bool HMWiredDevice::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool HMWiredDevice::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{

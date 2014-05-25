@@ -51,10 +51,10 @@
 namespace Insteon
 {
 
-class InsteonHubX10  : public BaseLib::Systems::PhysicalDevice
+class InsteonHubX10  : public BaseLib::Systems::IPhysicalInterface
 {
     public:
-        InsteonHubX10(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+        InsteonHubX10(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
         virtual ~InsteonHubX10();
         void startListening();
         void stopListening();

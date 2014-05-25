@@ -31,7 +31,7 @@
 #define HM_CFG_LAN_H
 
 #include "../BidCoSPacket.h"
-#include "BidCoSDevice.h"
+#include "IBidCoSInterface.h"
 
 #include <thread>
 #include <iostream>
@@ -56,10 +56,10 @@
 namespace BidCoS
 {
 
-class HM_CFG_LAN  : public BidCoSDevice
+class HM_CFG_LAN  : public IBidCoSInterface
 {
     public:
-        HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+        HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
         virtual ~HM_CFG_LAN();
         void startListening();
         void stopListening();
@@ -69,6 +69,7 @@ class HM_CFG_LAN  : public BidCoSDevice
         virtual bool aesSupported() { return true; }
         virtual bool autoResend() { return true; }
         virtual bool needsPeers() { return true; }
+        virtual bool firmwareUpdatesSupported() { return false; }
 
         virtual void addPeer(PeerInfo peerInfo);
         virtual void addPeers(std::vector<PeerInfo>& peerInfos);
@@ -98,6 +99,8 @@ class HM_CFG_LAN  : public BidCoSDevice
         bool _aesInitialized = false;
         bool _aesExchangeComplete = false;
         bool _useAES = false;
+        std::vector<uint8_t> _rfKey;
+        std::vector<uint8_t> _oldRFKey;
         std::vector<uint8_t> _key;
 		std::vector<uint8_t> _remoteIV;
 		std::vector<uint8_t> _myIV;

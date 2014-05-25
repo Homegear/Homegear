@@ -63,6 +63,8 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
         int32_t getCentralAddress() { return _centralAddress; }
         void setCentralAddress(int32_t value) { _centralAddress = value; saveVariable(1, value); }
+        std::string getPhysicalInterfaceID() { return _physicalInterfaceID; }
+		void setPhysicalInterfaceID(std::string);
         //End
 
         std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
@@ -77,7 +79,7 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~HomeMaticDevice();
         virtual void dispose(bool wait = true);
-        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 
         virtual void addPeer(std::shared_ptr<BidCoSPeer> peer);
         virtual bool peerSelected() { return (bool)_currentPeer; }
@@ -104,8 +106,8 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         virtual int32_t getHexInput();
         virtual std::shared_ptr<BidCoSMessages> getMessages() { return _messages; }
         virtual std::string handleCLICommand(std::string command);
-        virtual void sendPacket(std::shared_ptr<BidCoSPacket> packet, bool stealthy = false);
-        virtual void sendPacketMultipleTimes(std::shared_ptr<BidCoSPacket> packet, int32_t peerAddress, int32_t count, int32_t delay, bool useCentralMessageCounter = false, bool isThread = false);
+        virtual void sendPacket(std::shared_ptr<IBidCoSInterface> physicalInterface, std::shared_ptr<BidCoSPacket> packet, bool stealthy = false);
+        virtual void sendPacketMultipleTimes(std::shared_ptr<IBidCoSInterface> physicalInterface, std::shared_ptr<BidCoSPacket> packet, int32_t peerAddress, int32_t count, int32_t delay, bool useCentralMessageCounter = false, bool isThread = false);
         std::shared_ptr<BidCoSPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }
 
         virtual void handleAck(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet) {}
@@ -145,6 +147,7 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         int32_t _centralAddress = 0;
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         std::unordered_map<int32_t, std::unordered_map<int32_t, std::map<int32_t, int32_t>>> _config;
+        std::string _physicalInterfaceID;
         //End
 
         bool _stopWorkerThread = false;
@@ -168,6 +171,7 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         BidCoSPacketManager _sentPackets;
         std::shared_ptr<BidCoSMessages> _messages;
         std::shared_ptr<HomeMaticCentral> _central;
+        std::shared_ptr<IBidCoSInterface> _physicalInterface;
 
         bool _lowBattery = false;
 
@@ -175,6 +179,7 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         virtual std::shared_ptr<BidCoSPeer> createTeam(int32_t address, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber);
         virtual std::shared_ptr<HomeMaticCentral> getCentral();
         virtual std::shared_ptr<HomeMaticDevice> getDevice(int32_t address);
+        virtual std::shared_ptr<IBidCoSInterface> getPhysicalInterface(int32_t peerAddress);
         virtual void worker();
 
         virtual void init();
@@ -185,7 +190,6 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
 		virtual void onQueueCreateSavepoint(std::string name);
 		virtual void onQueueReleaseSavepoint(std::string name);
 		//End BidCoSQueueManager
-    private:
 };
 
 }

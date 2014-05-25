@@ -33,6 +33,7 @@
 #include "delegate.hpp"
 #include "../Base/BaseLib.h"
 #include "BidCoSPacket.h"
+#include "PhysicalInterfaces/IBidCoSInterface.h"
 
 #include <iostream>
 #include <string>
@@ -79,7 +80,7 @@ public:
 	void setMessage(std::shared_ptr<BidCoSMessage> message, bool setQueueEntryType) { _message = message; if(setQueueEntryType) _type = QueueEntryType::MESSAGE; }
 };
 
-enum class BidCoSQueueType { EMPTY, DEFAULT, CONFIG, PAIRING, PAIRINGCENTRAL, UNPAIRING, PEER };
+enum class BidCoSQueueType { EMPTY, DEFAULT, CONFIG, PAIRING, PAIRINGCENTRAL, UNPAIRING, PEER, SETAESKEY };
 
 class BidCoSQueue
 {
@@ -87,6 +88,7 @@ class BidCoSQueue
 		bool _disposing = false;
 		//I'm using list, so iterators are not invalidated
         std::list<BidCoSQueueEntry> _queue;
+        std::shared_ptr<IBidCoSInterface> _physicalInterface;
         std::shared_ptr<PendingBidCoSQueues> _pendingQueues;
         std::mutex _queueMutex;
         std::mutex _sendThreadMutex;
@@ -125,6 +127,7 @@ class BidCoSQueue
         BidCoSQueueType getQueueType() { return _queueType; }
         std::list<BidCoSQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
+        std::shared_ptr<IBidCoSInterface> getPhysicalInterface() { return _physicalInterface; }
         std::string parameterName;
         int32_t channel = -1;
 
@@ -148,7 +151,8 @@ class BidCoSQueue
         void unserialize(std::shared_ptr<std::vector<char>> serializedData, HomeMaticDevice* device, uint32_t position = 0);
 
         BidCoSQueue();
-        BidCoSQueue(BidCoSQueueType queueType);
+        BidCoSQueue(std::shared_ptr<IBidCoSInterface> physicalDevice);
+        BidCoSQueue(std::shared_ptr<IBidCoSInterface> physicalDevice, BidCoSQueueType queueType);
         virtual ~BidCoSQueue();
 };
 }

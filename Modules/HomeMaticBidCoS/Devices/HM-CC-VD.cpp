@@ -287,7 +287,7 @@ void HM_CC_VD::sendConfigParamsType2(int32_t messageCounter, int32_t destination
 		payload.push_back(0x00);
 		payload.push_back(0x00);
 		std::shared_ptr<BidCoSPacket> config(new BidCoSPacket(messageCounter, 0x80, 0x10, _address, destinationAddress, payload));
-		sendPacket(config);
+		sendPacket(_physicalInterface, config);
 	}
     catch(const std::exception& ex)
     {

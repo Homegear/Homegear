@@ -66,6 +66,8 @@ class BidCoSPacket : public BaseLib::Systems::Packet
         void import(std::vector<uint8_t>&, bool rssiByte);
         virtual std::vector<uint8_t> getPosition(double index, double size, int32_t mask);
         virtual void setPosition(double index, double size, std::vector<uint8_t>& value);
+
+        bool equals(std::shared_ptr<BidCoSPacket>& rhs);
     protected:
     private:
         uint8_t _messageCounter = 0;

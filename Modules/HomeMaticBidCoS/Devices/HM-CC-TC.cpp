@@ -598,7 +598,7 @@ void HM_CC_TC::sendDutyCycleBroadcast()
 		payload.push_back(_temperature & 0xFF);
 		payload.push_back(_humidity);
 		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter[1], 0x86, 0x70, _address, 0, payload));
-		sendPacket(packet);
+		sendPacket(_physicalInterface, packet);
 	}
     catch(const std::exception& ex)
     {
@@ -662,7 +662,7 @@ void HM_CC_TC::sendDutyCyclePacket(uint8_t messageCounter, int64_t sendingTime)
 
 		int64_t timePoint = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
-		GD::physicalDevice->sendPacket(packet);
+		_physicalInterface->sendPacket(packet);
 		_valveState = _newValveState;
 		int64_t timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() - timePoint;
 		BaseLib::Output::printDebug("Debug: HomeMatic BidCoS device " + std::to_string(_deviceID) + ": Sending took " + std::to_string(timePassed) + "ms.");
@@ -882,7 +882,7 @@ void HM_CC_TC::handleSetPoint(int32_t messageCounter, std::shared_ptr<BidCoSPack
 			payload.push_back(0);
 			payload.push_back(0x4D); //RSSI
 			std::shared_ptr<BidCoSPacket> response(new BidCoSPacket(packet->messageCounter(), 0x80, 0x02, _address, packet->senderAddress(), payload));
-			sendPacket(response);
+			sendPacket(_physicalInterface, response);
 		}
 	}
     catch(const std::exception& ex)
@@ -911,7 +911,7 @@ void HM_CC_TC::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidC
 		}
 		BaseLib::Systems::LogicalDeviceType deviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, (packet->payload()->at(1) << 8) + packet->payload()->at(2));
 		std::shared_ptr<BidCoSPeer> peer = createPeer(packet->senderAddress(), (int32_t)packet->payload()->at(0), deviceType, std::string(), (int32_t)packet->payload()->at(15), 0, packet);
-		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, BidCoSQueueType::PAIRING, packet->senderAddress());
+		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, _physicalInterface, BidCoSQueueType::PAIRING, packet->senderAddress());
 		queue->peer = peer;
 		queue->push(_messages->find(DIRECTIONOUT, 0x00, std::vector<std::pair<uint32_t, int32_t>>()), packet);
 		queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
@@ -978,7 +978,7 @@ void HM_CC_TC::sendRequestConfig(int32_t messageCounter, int32_t controlByte, st
 		payload.push_back(0);
 		payload.push_back(0x05);
 		std::shared_ptr<BidCoSPacket> requestConfig(new BidCoSPacket(messageCounter, 0xA0, 0x01, _address, packet->senderAddress(), payload));
-		sendPacket(requestConfig);
+		sendPacket(_physicalInterface, requestConfig);
 	}
     catch(const std::exception& ex)
     {

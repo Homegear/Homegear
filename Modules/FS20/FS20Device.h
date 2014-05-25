@@ -53,7 +53,7 @@ class FS20Device : public BaseLib::Systems::LogicalDevice
         FS20Device(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~FS20Device();
         virtual void dispose(bool wait = true);
-        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 
         int32_t getHouseCode() { return _houseCode; }
 

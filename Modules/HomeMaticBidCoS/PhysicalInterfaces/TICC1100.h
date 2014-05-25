@@ -30,7 +30,7 @@
 #ifndef TICC1100_H_
 #define TICC1100_H_
 
-#include "BidCoSDevice.h"
+#include "IBidCoSInterface.h"
 
 #include <thread>
 #include <iostream>
@@ -53,7 +53,7 @@
 
 namespace BidCoS
 {
-class TICC1100 : public BidCoSDevice
+class TICC1100 : public IBidCoSInterface
 {
 public:
 	struct CommandStrobes
@@ -186,7 +186,7 @@ public:
 		};
 	};
 
-	TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+	TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual ~TICC1100();
 
 	void startListening();

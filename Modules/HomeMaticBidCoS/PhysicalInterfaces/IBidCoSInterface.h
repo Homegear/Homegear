@@ -27,14 +27,14 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef BIDCOSDEVICE_H_
-#define BIDCOSDEVICE_H_
+#ifndef IBIDCOSINTERFACE_H_
+#define IBIDCOSINTERFACE_H_
 
 #include "../../Base/BaseLib.h"
 
 namespace BidCoS {
 
-class BidCoSDevice : public BaseLib::Systems::PhysicalDevice
+class IBidCoSInterface : public BaseLib::Systems::IPhysicalInterface
 {
 public:
 	class PeerInfo
@@ -50,8 +50,8 @@ public:
 		std::map<int32_t, bool> aesChannels;
 	};
 
-	BidCoSDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
-	virtual ~BidCoSDevice();
+	IBidCoSInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+	virtual ~IBidCoSInterface();
 
 	virtual void addPeer(PeerInfo peerInfo) {}
 	virtual void addPeers(std::vector<PeerInfo>& peerInfos) {}
@@ -60,8 +60,11 @@ public:
 	virtual bool aesSupported() { return false; }
 	virtual bool autoResend() { return false; }
 	virtual bool needsPeers() { return false; }
+	virtual bool firmwareUpdatesSupported() { return true; }
+
+	virtual uint32_t getCurrentRFKeyIndex() { return _settings->currentRFKeyIndex; }
 };
 
 }
 
-#endif /* BIDCOSDEVICE_H_ */
+#endif

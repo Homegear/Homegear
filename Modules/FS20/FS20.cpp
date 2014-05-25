@@ -48,12 +48,12 @@ FS20::~FS20()
 
 }
 
-std::shared_ptr<BaseLib::Systems::PhysicalDevice> FS20::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings)
+std::shared_ptr<BaseLib::Systems::IPhysicalInterface> FS20::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings)
 {
 	try
 	{
-		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicaldevices.conf is: " + settings->type);
-		GD::physicalDevice = std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
+		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
+		GD::physicalDevice = std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
 		if(!settings) return GD::physicalDevice;
 		if(settings->type == "cul") GD::physicalDevice.reset(new CUL(settings));
 		else BaseLib::Output::printError("Error: Unsupported physical device type for family FS20: " + settings->type);
@@ -71,7 +71,7 @@ std::shared_ptr<BaseLib::Systems::PhysicalDevice> FS20::createPhysicalDevice(std
 	{
 		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
+	return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
 }
 
 std::shared_ptr<FS20Device> FS20::getDevice(uint32_t address)

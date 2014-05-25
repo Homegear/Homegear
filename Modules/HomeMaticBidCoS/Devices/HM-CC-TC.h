@@ -99,4 +99,4 @@ class HM_CC_TC : public HomeMaticDevice
         void setUpConfig();
 };
 }
-#endif // HM_CC_TC_H
+#endif

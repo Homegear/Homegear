@@ -32,7 +32,7 @@
 namespace Insteon
 {
 
-InsteonHubX10::InsteonHubX10(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BaseLib::Systems::PhysicalDevice(settings)
+InsteonHubX10::InsteonHubX10(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BaseLib::Systems::IPhysicalInterface(settings)
 {
 	signal(SIGPIPE, SIG_IGN);
 }

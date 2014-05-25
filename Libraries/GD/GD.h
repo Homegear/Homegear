@@ -33,7 +33,7 @@
 #include "../CLI/CLIServer.h"
 #include "../CLI/CLIClient.h"
 #include "../Systems/FamilyController.h"
-#include "../Systems/PhysicalDevices.h"
+#include "../Systems/PhysicalInterfaces.h"
 #include "../Systems/DatabaseController.h"
 #include "../../Modules/Base/BaseLib.h"
 #include "../RPC/Server.h"
@@ -63,7 +63,7 @@ public:
 	static RPC::ClientSettings clientSettings;
 	static int32_t rpcLogLevel;
 	static EventHandler eventHandler;
-	static PhysicalDevices physicalDevices;
+	static PhysicalInterfaces physicalInterfaces;
 	static std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>> deviceFamilies;
 
 	virtual ~GD() {}

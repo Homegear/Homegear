@@ -318,7 +318,7 @@ void HM_LC_SWX_FM::sendStateChangeResponse(std::shared_ptr<BidCoSPacket> receive
 		payload.push_back(0x00); //STATE_FLAGS / WORKING
 		payload.push_back(0xD3); //RSSI?
 		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(receivedPacket->messageCounter(), 0x80, 0x02, _address, receivedPacket->senderAddress(), payload));
-		sendPacket(packet);
+		sendPacket(_physicalInterface, packet);
 	}
     catch(const std::exception& ex)
     {

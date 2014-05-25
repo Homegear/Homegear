@@ -32,10 +32,15 @@
 namespace BidCoS
 {
 
-HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BidCoSDevice(settings)
+HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BidCoSDevice(settings)
 {
 	signal(SIGPIPE, SIG_IGN);
-	if(!settings->key.empty())
+	if(!settings)
+	{
+		BaseLib::Output::printCritical("Critical: Error initializing HM-CFG-LAN. Settings pointer is empty.");
+		return;
+	}
+	if(!settings->lanKey.empty())
 	{
 		_useAES = true;
 		BaseLib::Output::printInfo("Info: Enabling AES encryption for communication with HM-CFG-LAN.");
@@ -44,6 +49,54 @@ HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings>
 	{
 		_useAES = false;
 		BaseLib::Output::printInfo("Info: Disabling AES encryption for communication with HM-CFG-LAN.");
+	}
+
+	if(!settings->rfKey.empty())
+	{
+		_rfKey = BaseLib::HelperFunctions::getUBinary(settings->rfKey);
+		if(_rfKey.size() != 16)
+		{
+			BaseLib::Output::printError("Error: The RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
+			_rfKey.clear();
+		}
+	}
+
+	if(!settings->oldRFKey.empty())
+	{
+		_oldRFKey = BaseLib::HelperFunctions::getUBinary(settings->oldRFKey);
+		if(_oldRFKey.size() != 16)
+		{
+			BaseLib::Output::printError("Error: The old RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
+			_oldRFKey.clear();
+		}
+	}
+
+	if(!_rfKey.empty() && settings->currentRFKeyIndex == 0)
+	{
+		BaseLib::Output::printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"0\". That means, the default AES key will be used (not yours!).");
+		_rfKey.clear();
+	}
+
+	if(!_oldRFKey.empty() && settings->currentRFKeyIndex == 1)
+	{
+		BaseLib::Output::printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"1\" but \"OldRFKey\" is specified. That is not possible. Increase the key index to \"2\".");
+		_oldRFKey.clear();
+	}
+
+	if(!_oldRFKey.empty() && _rfKey.empty())
+	{
+		_oldRFKey.clear();
+		if(settings->currentRFKeyIndex > 0)
+		{
+			BaseLib::Output::printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"0\" but no AES key is specified. Setting it to \"0\".");
+			settings->currentRFKeyIndex = 0;
+		}
+	}
+
+	if(settings->currentRFKeyIndex > 253)
+	{
+		BaseLib::Output::printError("Error: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"253\". That is not allowed.");
+		settings->currentRFKeyIndex = 253;
 	}
 }
 
@@ -433,12 +486,21 @@ void HM_CFG_LAN::createInitCommandQueue()
 		_initCommandQueue.push_back(packet);
 
 		packet.clear();
-		hexString = "C\r\nY01,00,\r\n";
+		hexString = "C\r\n";
+		if(!_rfKey.empty())
+		{
+			hexString += "Y01," + BaseLib::HelperFunctions::getHexString(_settings->currentRFKeyIndex, 2) + "," + BaseLib::HelperFunctions::getHexString(_rfKey) + "\r\n";
+		}
+		else hexString += "Y01,00,\r\n";
 		packet.insert(packet.end(), hexString.begin(), hexString.end());
 		_initCommandQueue.push_back(packet);
 
 		packet.clear();
-		hexString = "Y02,00,\r\n";
+		if(!_oldRFKey.empty())
+		{
+			hexString = "Y02," + BaseLib::HelperFunctions::getHexString(_settings->currentRFKeyIndex - 1, 2) + "," + BaseLib::HelperFunctions::getHexString(_oldRFKey) + "\r\n";
+		}
+		else hexString = "Y02,00,\r\n";
 		packet.insert(packet.end(), hexString.begin(), hexString.end());
 		_initCommandQueue.push_back(packet);
 
@@ -482,18 +544,18 @@ bool HM_CFG_LAN::openSSLInit()
 {
 	openSSLCleanup();
 
-	if(_settings->key.size() != 32)
+	if(_settings->lanKey.size() != 32)
 	{
 		_key.resize(16);
-		MD5((uint8_t*)_settings->key.c_str(), _settings->key.size(), &_key.at(0));
+		MD5((uint8_t*)_settings->lanKey.c_str(), _settings->lanKey.size(), &_key.at(0));
 		isGateway = true;
 	}
 	else
 	{
-		_key = BaseLib::HelperFunctions::getUBinary(_settings->key);
+		_key = BaseLib::HelperFunctions::getUBinary(_settings->lanKey);
 		if(_key.size() != 16)
 		{
-			BaseLib::Output::printError("Error: The AES key specified in physicaldevices.conf for communication with your HM-CFG-LAN is not a valid hexadecimal string.");
+			BaseLib::Output::printError("Error: The AES key specified in physicalinterfaces.conf for communication with your HM-CFG-LAN is not a valid hexadecimal string.");
 			return false;
 		}
 	}
@@ -717,7 +779,7 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 			if(!_useAES)
 			{
 				_stopCallbackThread = true;
-				BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. Device requires AES, but no AES key was specified in physicaldevices.conf.");
+				BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. Device requires AES, but no AES key was specified in physicalinterfaces.conf.");
 				return false;
 			}
 			if(data.size() != 35)
@@ -856,7 +918,7 @@ void HM_CFG_LAN::processInit(std::string& packet)
 		if(parts.size() != 7 || parts.at(0) != "HHM-LAN-IF")
 		{
 			_stopCallbackThread = true;
-			BaseLib::Output::printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicaldevices.conf. Stopping listening.");
+			BaseLib::Output::printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
 			return;
 		}
 		_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::HelperFunctions::getNumber(parts.at(5), true);
@@ -936,7 +998,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 			2*: ?
 			30: AES handshake not successful
 			4*: AES handshake successful
-			50: ?
+			50: AES handshake not successful
 			8*: ?
 			*/
 			uint8_t controlByte = tempNumber & 0xFF;
@@ -955,7 +1017,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 					_lastPacketSent = BaseLib::HelperFunctions::getTime();
 					return;
 				}
-				if((controlByte & 0x30) == 0x30)
+				if((controlByte & 0x30) == 0x30 || (controlByte & 0x50) == 0x50)
 				{
 					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 					BaseLib::Output::printWarning("Warning: AES handshake was not successful: " + bidCoSPacket->hexString());

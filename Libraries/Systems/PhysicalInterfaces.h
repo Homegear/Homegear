@@ -27,8 +27,8 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef PHYSICALDEVICES_H_
-#define PHYSICALDEVICES_H_
+#ifndef PHYSICALINTERFACES_H_
+#define PHYSICALINTERFACES_H_
 
 #include "../../Modules/Base/BaseLib.h"
 
@@ -40,23 +40,24 @@
 #include <cstring>
 #include <vector>
 
-class PhysicalDevices
+class PhysicalInterfaces
 {
 public:
-	PhysicalDevices();
-	virtual ~PhysicalDevices() {}
+	PhysicalInterfaces();
+	virtual ~PhysicalInterfaces() {}
 	void load(std::string filename);
 
 	uint32_t count();
-	std::shared_ptr<BaseLib::Systems::PhysicalDevice> get(BaseLib::Systems::DeviceFamilies family);
+	uint32_t count(BaseLib::Systems::DeviceFamilies family);
+	std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> get(BaseLib::Systems::DeviceFamilies family);
 	void stopListening();
 	void startListening();
 	bool isOpen();
 	void setup(int32_t userID, int32_t groupID);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> listInterfaces();
 private:
-	std::mutex _physicalDevicesMutex;
-	std::map<BaseLib::Systems::DeviceFamilies, std::shared_ptr<BaseLib::Systems::PhysicalDevice>> _physicalDevices;
+	std::mutex _physicalInterfacesMutex;
+	std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> _physicalInterfaces;
 
 	void reset();
 };

@@ -27,11 +27,11 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef PHYSICALDEVICE_H_
-#define PHYSICALDEVICE_H_
+#ifndef IPHYSICALINTERFACE_H_
+#define IPHYSICALINTERFACE_H_
 
 #include "../IEvents.h"
-#include "PhysicalDeviceSettings.h"
+#include "PhysicalInterfaceSettings.h"
 #include "../FileDescriptorManager/FileDescriptorManager.h"
 
 #include <list>
@@ -48,7 +48,7 @@ namespace Systems
 
 class Packet;
 
-class PhysicalDevice : public IEvents
+class IPhysicalInterface : public IEvents
 {
 public:
 	struct GPIODirection
@@ -71,17 +71,17 @@ public:
 	};
 
 	//Event handling
-	class IPhysicalDeviceEventSink : public IEventSinkBase
+	class IPhysicalInterfaceEventSink : public IEventSinkBase
 	{
 	public:
-		virtual bool onPacketReceived(std::shared_ptr<Packet> packet) = 0;
+		virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<Packet> packet) = 0;
 	};
 	//End event handling
 
-	PhysicalDevice();
-	PhysicalDevice(std::shared_ptr<PhysicalDeviceSettings> settings);
+	IPhysicalInterface();
+	IPhysicalInterface(std::shared_ptr<PhysicalInterfaceSettings> settings);
 
-	virtual ~PhysicalDevice();
+	virtual ~IPhysicalInterface();
 
 	virtual void startListening() {}
 	virtual void stopListening() {}
@@ -94,8 +94,10 @@ public:
 	virtual int64_t lastPacketReceived() { return _lastPacketReceived; }
 	virtual void setup(int32_t userID, int32_t groupID) {}
 	virtual std::string getType() { return _settings->type; }
+	virtual std::string getID() { return _settings->id; }
+	virtual bool isNetworkDevice() { return _settings->device.empty() && !_settings->host.empty() && !_settings->port.empty(); }
 protected:
-	std::shared_ptr<PhysicalDeviceSettings> _settings;
+	std::shared_ptr<PhysicalInterfaceSettings> _settings;
 	std::thread _listenThread;
 	std::thread _callbackThread;
 	bool _stopCallbackThread;
@@ -127,4 +129,4 @@ protected:
 
 }
 }
-#endif /* PHYSICALDEVICE_H_ */
+#endif

@@ -71,7 +71,7 @@ void FS20Device::dispose(bool wait)
 		if(_disposing) return;
 		_disposing = true;
 		BaseLib::Output::printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
-		if(GD::physicalDevice) GD::physicalDevice->removeEventHandler((BaseLib::Systems::PhysicalDevice::IPhysicalDeviceEventSink*)this);
+		if(GD::physicalDevice) GD::physicalDevice->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalDeviceEventSink*)this);
 		int64_t startTime = BaseLib::HelperFunctions::getTime();
 		//stopThreads();
 		int64_t timeDifference = BaseLib::HelperFunctions::getTime() - startTime;
@@ -100,7 +100,7 @@ void FS20Device::init()
 	{
 		if(_initialized) return; //Prevent running init two times
 
-		if(GD::physicalDevice) GD::physicalDevice->addEventHandler((BaseLib::Systems::PhysicalDevice::IPhysicalDeviceEventSink*)this);
+		if(GD::physicalDevice) GD::physicalDevice->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalDeviceEventSink*)this);
 
 		_initialized = true;
 	}
@@ -185,7 +185,7 @@ void FS20Device::sendPacket(std::shared_ptr<FS20Packet> packet)
     }
 }
 
-bool FS20Device::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool FS20Device::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{

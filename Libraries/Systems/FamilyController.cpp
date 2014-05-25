@@ -299,8 +299,7 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 
 bool FamilyController::familyAvailable(BaseLib::Systems::DeviceFamilies family)
 {
-	if(!GD::physicalDevices.get(family)) return false;
-	return GD::physicalDevices.get(family)->isOpen();
+	return GD::physicalInterfaces.count(family) > 0;
 }
 
 void FamilyController::loadModules()

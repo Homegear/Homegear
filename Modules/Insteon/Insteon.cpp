@@ -51,13 +51,13 @@ Insteon::~Insteon()
 
 std::shared_ptr<BaseLib::Systems::Central> Insteon::getCentral() { return std::shared_ptr<BaseLib::Systems::Central>(); /*return _central;*/ }
 
-std::shared_ptr<BaseLib::Systems::PhysicalDevice> Insteon::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings)
+std::shared_ptr<BaseLib::Systems::IPhysicalInterface> Insteon::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings)
 {
 	try
 	{
-		if(!settings) return std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
-		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicaldevices.conf is: " + settings->type);
-		GD::physicalDevice = std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
+		if(!settings) return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
+		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
+		GD::physicalDevice = std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
 		if(!settings) return GD::physicalDevice;
 		if(settings->type == "insteonhubx10") GD::physicalDevice.reset(new InsteonHubX10(settings));
 		else BaseLib::Output::printError("Error: Unsupported physical device type for family Insteon: " + settings->type);
@@ -75,7 +75,7 @@ std::shared_ptr<BaseLib::Systems::PhysicalDevice> Insteon::createPhysicalDevice(
 	{
 		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
+	return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
 }
 
 uint32_t Insteon::getUniqueAddress(uint32_t seed)

@@ -33,7 +33,7 @@
 namespace FS20
 {
 
-CUL::CUL(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BaseLib::Systems::PhysicalDevice(settings)
+CUL::CUL(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BaseLib::Systems::IPhysicalInterface(settings)
 {
 }
 

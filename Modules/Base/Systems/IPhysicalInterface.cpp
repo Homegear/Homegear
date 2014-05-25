@@ -27,7 +27,7 @@
  * files in the program, then also delete it here.
  */
 
-#include "PhysicalDevice.h"
+#include "IPhysicalInterface.h"
 #include "../BaseLib.h"
 
 namespace BaseLib
@@ -35,40 +35,40 @@ namespace BaseLib
 namespace Systems
 {
 
-PhysicalDevice::PhysicalDevice()
+IPhysicalInterface::IPhysicalInterface()
 {
-	_settings.reset(new PhysicalDeviceSettings());
+	_settings.reset(new PhysicalInterfaceSettings());
 	_fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor());
 	_gpioDescriptors[1] = std::shared_ptr<FileDescriptor>(new FileDescriptor());
 	_gpioDescriptors[2] = std::shared_ptr<FileDescriptor>(new FileDescriptor());
 	_gpioDescriptors[3] = std::shared_ptr<FileDescriptor>(new FileDescriptor());
 }
 
-PhysicalDevice::PhysicalDevice(std::shared_ptr<PhysicalDeviceSettings> settings) : PhysicalDevice()
+IPhysicalInterface::IPhysicalInterface(std::shared_ptr<PhysicalInterfaceSettings> settings) : IPhysicalInterface()
 {
 	if(settings) _settings = settings;
 }
 
-PhysicalDevice::~PhysicalDevice()
+IPhysicalInterface::~IPhysicalInterface()
 {
 
 }
 
-void PhysicalDevice::enableUpdateMode()
+void IPhysicalInterface::enableUpdateMode()
 {
 	throw Exception("Error: Method enableUpdateMode is not implemented.");
 }
 
-void PhysicalDevice::disableUpdateMode()
+void IPhysicalInterface::disableUpdateMode()
 {
 	throw Exception("Error: Method disableUpdateMode is not implemented.");
 }
 
-void PhysicalDevice::raisePacketReceived(std::shared_ptr<Packet> packet)
+void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet)
 {
 	try
 	{
-		std::thread t(&PhysicalDevice::raisePacketReceivedThread, this, packet);
+		std::thread t(&IPhysicalInterface::raisePacketReceivedThread, this, packet);
 		BaseLib::Threads::setThreadPriority(t.native_handle(), 45);
 		t.detach();
 	}
@@ -86,22 +86,22 @@ void PhysicalDevice::raisePacketReceived(std::shared_ptr<Packet> packet)
     }
 }
 
-void PhysicalDevice::raisePacketReceivedThread(std::shared_ptr<Packet> packet)
+void IPhysicalInterface::raisePacketReceivedThread(std::shared_ptr<Packet> packet)
 {
 	try
 	{
-		std::vector<IPhysicalDeviceEventSink*> eventHandlers;
+		std::vector<IPhysicalInterfaceEventSink*> eventHandlers;
 		_eventHandlerMutex.lock();
 		//We need to copy all elements. In packetReceived so much can happen, that _homeMaticDevicesMutex might deadlock
 		for(std::forward_list<IEventSinkBase*>::const_iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 		{
-			if(*i) eventHandlers.push_back((IPhysicalDeviceEventSink*)(*i));
+			if(*i) eventHandlers.push_back((IPhysicalInterfaceEventSink*)(*i));
 		}
 		_eventHandlerMutex.unlock();
 		_lastPacketReceived = HelperFunctions::getTime();
-		for(std::vector<IPhysicalDeviceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
+		for(std::vector<IPhysicalInterfaceEventSink*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
 		{
-			(*i)->onPacketReceived(packet);
+			(*i)->onPacketReceived(_settings->id, packet);
 		}
 	}
     catch(const std::exception& ex)
@@ -122,7 +122,7 @@ void PhysicalDevice::raisePacketReceivedThread(std::shared_ptr<Packet> packet)
 
 }
 
-void PhysicalDevice::setDevicePermission(int32_t userID, int32_t groupID)
+void IPhysicalInterface::setDevicePermission(int32_t userID, int32_t groupID)
 {
 	try
 	{
@@ -156,7 +156,7 @@ void PhysicalDevice::setDevicePermission(int32_t userID, int32_t groupID)
     }
 }
 
-void PhysicalDevice::openGPIO(uint32_t index, bool readOnly)
+void IPhysicalInterface::openGPIO(uint32_t index, bool readOnly)
 {
 	try
 	{
@@ -184,7 +184,7 @@ void PhysicalDevice::openGPIO(uint32_t index, bool readOnly)
     }
 }
 
-void PhysicalDevice::getGPIOPath(uint32_t index)
+void IPhysicalInterface::getGPIOPath(uint32_t index)
 {
 	try
 	{
@@ -258,7 +258,7 @@ void PhysicalDevice::getGPIOPath(uint32_t index)
     }
 }
 
-void PhysicalDevice::closeGPIO(uint32_t index)
+void IPhysicalInterface::closeGPIO(uint32_t index)
 {
 	try
 	{
@@ -281,7 +281,7 @@ void PhysicalDevice::closeGPIO(uint32_t index)
     }
 }
 
-void PhysicalDevice::setGPIO(uint32_t index, bool value)
+void IPhysicalInterface::setGPIO(uint32_t index, bool value)
 {
 	try
 	{
@@ -311,7 +311,7 @@ void PhysicalDevice::setGPIO(uint32_t index, bool value)
     }
 }
 
-void PhysicalDevice::setGPIOPermission(uint32_t index, int32_t userID, int32_t groupID, bool readOnly)
+void IPhysicalInterface::setGPIOPermission(uint32_t index, int32_t userID, int32_t groupID, bool readOnly)
 {
 	try
 	{
@@ -348,7 +348,7 @@ void PhysicalDevice::setGPIOPermission(uint32_t index, int32_t userID, int32_t g
     }
 }
 
-bool PhysicalDevice::gpioDefined(uint32_t index)
+bool IPhysicalInterface::gpioDefined(uint32_t index)
 {
 	try
 	{
@@ -369,7 +369,7 @@ bool PhysicalDevice::gpioDefined(uint32_t index)
     return true;
 }
 
-bool PhysicalDevice::gpioOpen(uint32_t index)
+bool IPhysicalInterface::gpioOpen(uint32_t index)
 {
 	try
 	{
@@ -390,7 +390,7 @@ bool PhysicalDevice::gpioOpen(uint32_t index)
     return true;
 }
 
-void PhysicalDevice::exportGPIO(uint32_t index)
+void IPhysicalInterface::exportGPIO(uint32_t index)
 {
 	try
 	{
@@ -441,7 +441,7 @@ void PhysicalDevice::exportGPIO(uint32_t index)
     }
 }
 
-void PhysicalDevice::setGPIODirection(uint32_t index, GPIODirection::Enum direction)
+void IPhysicalInterface::setGPIODirection(uint32_t index, GPIODirection::Enum direction)
 {
 	try
 	{
@@ -476,7 +476,7 @@ void PhysicalDevice::setGPIODirection(uint32_t index, GPIODirection::Enum direct
     }
 }
 
-void PhysicalDevice::setGPIOEdge(uint32_t index, GPIOEdge::Enum edge)
+void IPhysicalInterface::setGPIOEdge(uint32_t index, GPIOEdge::Enum edge)
 {
 	try
 	{

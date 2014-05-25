@@ -40,7 +40,7 @@ class GD
 public:
 	virtual ~GD();
 
-	static std::shared_ptr<BaseLib::Systems::PhysicalDevice> physicalDevice;
+	static std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface;
 private:
 	GD();
 };

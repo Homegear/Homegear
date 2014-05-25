@@ -58,6 +58,7 @@ public:
 	std::shared_ptr<BidCoSQueue> front();
 	void clear();
 	void removeQueue(std::string value, int32_t channel);
+	bool find(BidCoSQueueType queueType);
 private:
 	uint32_t _currentID = 0;
 	std::mutex _queuesMutex;

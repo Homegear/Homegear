@@ -28,6 +28,7 @@
  */
 
 #include "PendingBidCoSQueues.h"
+#include "GD.h"
 
 namespace BidCoS
 {
@@ -315,5 +316,35 @@ void PendingBidCoSQueues::removeQueue(std::string parameterName, int32_t channel
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _queuesMutex.unlock();
+}
+
+bool PendingBidCoSQueues::find(BidCoSQueueType queueType)
+{
+	try
+	{
+		_queuesMutex.lock();
+		for(std::deque<std::shared_ptr<BidCoSQueue>>::iterator i = _queues.begin(); i != _queues.end(); ++i)
+		{
+			if(*i && (*i)->getQueueType() == queueType)
+			{
+				_queuesMutex.unlock();
+				return true;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_queuesMutex.unlock();
+	return false;
 }
 }

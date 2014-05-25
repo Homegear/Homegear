@@ -454,6 +454,11 @@ void Peer::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vec
 //End event handling
 
 //ServiceMessages event handling
+void Peer::onConfigPending(bool configPending)
+{
+
+}
+
 void Peer::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	raiseRPCEvent(id, channel, deviceAddress, valueKeys, values);

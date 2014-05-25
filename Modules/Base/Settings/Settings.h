@@ -58,7 +58,7 @@ public:
 	uint32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
 	std::string clientSettingsPath() { return _clientSettingsPath; }
 	std::string serverSettingsPath() { return _serverSettingsPath; }
-	std::string physicalDeviceSettingsPath() { return _physicalDeviceSettingsPath; }
+	std::string physicalInterfaceSettingsPath() { return _physicalInterfaceSettingsPath; }
 	std::string modulePath() { return _modulePath; }
 	std::string scriptPath() { return _scriptPath; }
 	std::string firmwarePath() { return _firmwarePath; }
@@ -79,7 +79,7 @@ private:
 	uint32_t _rpcServerThreadPriority = 0;
 	std::string _clientSettingsPath;
 	std::string _serverSettingsPath;
-	std::string _physicalDeviceSettingsPath;
+	std::string _physicalInterfaceSettingsPath;
 	std::string _modulePath;
 	std::string _scriptPath;
 	std::string _firmwarePath;

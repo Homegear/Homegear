@@ -44,7 +44,7 @@ public:
 	virtual ~BidCoS();
 
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listBidcosInterfaces();
-	virtual std::shared_ptr<BaseLib::Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+	virtual std::shared_ptr<BaseLib::Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual void load();
 	virtual std::shared_ptr<HomeMaticDevice> getDevice(int32_t address);
 	virtual std::shared_ptr<HomeMaticDevice> getDevice(std::string serialNumber);

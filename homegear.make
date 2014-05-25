@@ -96,7 +96,7 @@ endif
 OBJECTS := \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/FamilyController.o \
-	$(OBJDIR)/PhysicalDevices.o \
+	$(OBJDIR)/PhysicalInterfaces.o \
 	$(OBJDIR)/DatabaseController.o \
 
 RESOURCES := \
@@ -168,7 +168,7 @@ $(OBJDIR)/main.o: main.cpp
 $(OBJDIR)/FamilyController.o: Libraries/Systems/FamilyController.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhysicalDevices.o: Libraries/Systems/PhysicalDevices.cpp
+$(OBJDIR)/PhysicalInterfaces.o: Libraries/Systems/PhysicalInterfaces.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/DatabaseController.o: Libraries/Systems/DatabaseController.cpp

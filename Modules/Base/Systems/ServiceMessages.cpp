@@ -48,6 +48,31 @@ ServiceMessages::~ServiceMessages()
 }
 
 //Event handling
+void ServiceMessages::raiseConfigPending(bool configPending)
+{
+	try
+	{
+		_eventHandlerMutex.lock();
+		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		{
+			if(*i) ((IServiceEventSink*)*i)->onConfigPending(configPending);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventHandlerMutex.unlock();
+}
+
 void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	try
@@ -472,6 +497,7 @@ void ServiceMessages::setConfigPending(bool value)
 			rpcValues->push_back(std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(value)));
 
 			raiseRPCEvent(_peerID, 0, _peerSerial + ":0", valueKeys, rpcValues);
+			raiseConfigPending(value);
 		}
 	}
 	catch(const std::exception& ex)

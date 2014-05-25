@@ -489,4 +489,16 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
     result.push_back(0);
     return result;
 }
+
+bool BidCoSPacket::equals(std::shared_ptr<BidCoSPacket>& rhs)
+{
+	if(_messageCounter != rhs->messageCounter()) return false;
+	if(_messageType != rhs->messageType()) return false;
+	if(_controlByte != rhs->controlByte()) return false;
+	if(_payload.size() != rhs->payload()->size()) return false;
+	if(_senderAddress != rhs->senderAddress()) return false;
+	if(_destinationAddress != rhs->destinationAddress()) return false;
+	if(_payload == (*rhs->payload())) return true;
+	return false;
+}
 }

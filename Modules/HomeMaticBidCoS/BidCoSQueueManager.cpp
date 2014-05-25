@@ -29,12 +29,14 @@
 
 #include "BidCoSQueueManager.h"
 #include "../Base/BaseLib.h"
+#include "GD.h"
 
 namespace BidCoS
 {
-BidCoSQueueData::BidCoSQueueData()
+BidCoSQueueData::BidCoSQueueData(std::shared_ptr<IBidCoSInterface> physicalInterface)
 {
-	queue = std::shared_ptr<BidCoSQueue>(new BidCoSQueue());
+	if(!physicalInterface) physicalInterface = GD::defaultPhysicalInterface;
+	queue = std::shared_ptr<BidCoSQueue>(new BidCoSQueue(physicalInterface));
 	lastAction.reset(new int64_t);
 	*lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
@@ -143,11 +145,12 @@ void BidCoSQueueManager::worker()
     }
 }
 
-std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* device, BidCoSQueueType queueType, int32_t address)
+std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* device, std::shared_ptr<IBidCoSInterface> physicalInterface, BidCoSQueueType queueType, int32_t address)
 {
 	try
 	{
 		if(_disposing) return std::shared_ptr<BidCoSQueue>();
+		if(!physicalInterface) physicalInterface = GD::defaultPhysicalInterface;
 		_queueMutex.lock();
 		if(_stopWorkerThread)
 		{
@@ -180,7 +183,7 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		}
 		else _queueMutex.unlock();
 
-		std::shared_ptr<BidCoSQueueData> queueData(new BidCoSQueueData());
+		std::shared_ptr<BidCoSQueueData> queueData(new BidCoSQueueData(physicalInterface));
 		queueData->queue->setQueueType(queueType);
 		queueData->queue->device = device;
 		queueData->queue->lastAction = queueData->lastAction;

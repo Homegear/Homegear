@@ -105,11 +105,11 @@ OBJECTS := \
 	$(OBJDIR)/Device.o \
 	$(OBJDIR)/ServiceMessages.o \
 	$(OBJDIR)/LogicalDevice.o \
-	$(OBJDIR)/PhysicalDevice.o \
 	$(OBJDIR)/UpdateInfo.o \
 	$(OBJDIR)/DeviceTypes.o \
 	$(OBJDIR)/SystemFactory.o \
 	$(OBJDIR)/DeviceFamily.o \
+	$(OBJDIR)/IPhysicalInterface.o \
 	$(OBJDIR)/Packet.o \
 	$(OBJDIR)/Central.o \
 	$(OBJDIR)/Peer.o \
@@ -222,9 +222,6 @@ $(OBJDIR)/ServiceMessages.o: Modules/Base/Systems/ServiceMessages.cpp
 $(OBJDIR)/LogicalDevice.o: Modules/Base/Systems/LogicalDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/PhysicalDevice.o: Modules/Base/Systems/PhysicalDevice.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/UpdateInfo.o: Modules/Base/Systems/UpdateInfo.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -235,6 +232,9 @@ $(OBJDIR)/SystemFactory.o: Modules/Base/Systems/SystemFactory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/DeviceFamily.o: Modules/Base/Systems/DeviceFamily.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/IPhysicalInterface.o: Modules/Base/Systems/IPhysicalInterface.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Packet.o: Modules/Base/Systems/Packet.cpp

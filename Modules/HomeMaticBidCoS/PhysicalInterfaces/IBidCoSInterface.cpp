@@ -27,12 +27,12 @@
  * files in the program, then also delete it here.
  */
 
-#include "BidCoSDevice.h"
+#include "IBidCoSInterface.h"
 
 namespace BidCoS
 {
 
-std::vector<char> BidCoSDevice::PeerInfo::getAESChannelMap()
+std::vector<char> IBidCoSInterface::PeerInfo::getAESChannelMap()
 {
 	std::vector<char> map;
 	try
@@ -60,12 +60,12 @@ std::vector<char> BidCoSDevice::PeerInfo::getAESChannelMap()
     return map;
 }
 
-BidCoSDevice::BidCoSDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : PhysicalDevice(settings)
+IBidCoSInterface::IBidCoSInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(settings)
 {
 
 }
 
-BidCoSDevice::~BidCoSDevice()
+IBidCoSInterface::~IBidCoSInterface()
 {
 
 }

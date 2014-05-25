@@ -1630,7 +1630,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListInterfaces::invoke(std::shared
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		return GD::physicalDevices.listInterfaces();
+		return GD::physicalInterfaces.listInterfaces();
 	}
 	catch(const std::exception& ex)
     {

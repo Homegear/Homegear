@@ -28,8 +28,8 @@
  */
 
 #include "HMWired.h"
-#include "PhysicalDevices/RS485.h"
-#include "PhysicalDevices/RawLAN.h"
+#include "PhysicalInterfaces/RS485.h"
+#include "PhysicalInterfaces/RawLAN.h"
 #include "HMWiredDeviceTypes.h"
 #include "Devices/HMWiredCentral.h"
 #include "Devices/HMWired-SD.h"
@@ -52,18 +52,18 @@ HMWired::~HMWired()
 
 std::shared_ptr<BaseLib::Systems::Central> HMWired::getCentral() { return _central; }
 
-std::shared_ptr<BaseLib::Systems::PhysicalDevice> HMWired::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings)
+std::shared_ptr<BaseLib::Systems::IPhysicalInterface> HMWired::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings)
 {
 	try
 	{
-		if(!settings) return std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
-		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicaldevices.conf is: " + settings->type);
-		GD::physicalDevice = std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
-		if(!settings) return GD::physicalDevice;
-		if(settings->type == "rs485") GD::physicalDevice.reset(new RS485(settings));
-		else if(settings->type == "rawlan") GD::physicalDevice.reset(new RawLAN(settings));
+		if(!settings) return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
+		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
+		GD::physicalInterface = std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
+		if(!settings) return GD::physicalInterface;
+		if(settings->type == "rs485") GD::physicalInterface.reset(new RS485(settings));
+		else if(settings->type == "rawlan") GD::physicalInterface.reset(new RawLAN(settings));
 		else BaseLib::Output::printError("Error: Unsupported physical device type for family HomeMatic Wired: " + settings->type);
-		return GD::physicalDevice;
+		return GD::physicalInterface;
 	}
 	catch(const std::exception& ex)
 	{
@@ -77,7 +77,7 @@ std::shared_ptr<BaseLib::Systems::PhysicalDevice> HMWired::createPhysicalDevice(
 	{
 		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
+	return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
 }
 
 uint32_t HMWired::getUniqueAddress(uint32_t seed)
@@ -216,7 +216,7 @@ void HMWired::load()
 				_devicesMutex.unlock();
 			}
 		}
-		if(GD::physicalDevice->isOpen())
+		if(GD::physicalInterface)
 		{
 			if(!_central) createCentral();
 			if(!spyDeviceExists) createSpyDevice();

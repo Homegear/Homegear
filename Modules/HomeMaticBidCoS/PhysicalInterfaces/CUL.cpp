@@ -27,18 +27,18 @@
  * files in the program, then also delete it here.
  */
 
-#include "HM-CFG-USB.h"
+#include "CUL.h"
 #include "../BidCoSPacket.h"
 #include "../../Base/BaseLib.h"
 
 namespace BidCoS
 {
 
-HM_CFG_USB::HM_CFG_USB(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BidCoSDevice(settings)
+CUL::CUL(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BidCoSDevice(settings)
 {
 }
 
-HM_CFG_USB::~HM_CFG_USB()
+CUL::~CUL()
 {
 	try
 	{
@@ -63,7 +63,7 @@ HM_CFG_USB::~HM_CFG_USB()
     }
 }
 
-void HM_CFG_USB::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
+void CUL::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
@@ -105,7 +105,7 @@ void HM_CFG_USB::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
     }
 }
 
-void HM_CFG_USB::enableUpdateMode()
+void CUL::enableUpdateMode()
 {
 	try
 	{
@@ -126,7 +126,7 @@ void HM_CFG_USB::enableUpdateMode()
     }
 }
 
-void HM_CFG_USB::disableUpdateMode()
+void CUL::disableUpdateMode()
 {
 	try
 	{
@@ -149,7 +149,7 @@ void HM_CFG_USB::disableUpdateMode()
     }
 }
 
-void HM_CFG_USB::openDevice()
+void CUL::openDevice()
 {
 	try
 	{
@@ -192,6 +192,8 @@ void HM_CFG_USB::openDevice()
 			BaseLib::Output::printCritical("Couldn't open CUL device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
+
+		setupDevice();
 	}
 	catch(const std::exception& ex)
     {
@@ -207,7 +209,7 @@ void HM_CFG_USB::openDevice()
     }
 }
 
-void HM_CFG_USB::closeDevice()
+void CUL::closeDevice()
 {
 	try
 	{
@@ -228,7 +230,47 @@ void HM_CFG_USB::closeDevice()
     }
 }
 
-std::string HM_CFG_USB::readFromDevice()
+void CUL::setupDevice()
+{
+	try
+	{
+		if(_fileDescriptor->descriptor == -1) return;
+		struct termios term;
+		term.c_cflag = B9600 | CS8 | CREAD;
+		term.c_iflag = 0;
+		term.c_oflag = 0;
+		term.c_lflag = 0;
+		term.c_cc[VMIN] = 1;
+		term.c_cc[VTIME] = 0;
+		cfsetispeed(&term, B9600);
+		cfsetospeed(&term, B9600);
+		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(BaseLib::Exception("Couldn't flush CUL device " + _settings->device));
+		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(BaseLib::Exception("Couldn't set CUL device settings: " + _settings->device));
+
+		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
+		if(!(flags & O_NONBLOCK))
+		{
+			if(fcntl(_fileDescriptor->descriptor, F_SETFL, flags | O_NONBLOCK) == -1)
+			{
+				throw(BaseLib::Exception("Couldn't set CUL device to non blocking mode: " + _settings->device));
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+std::string CUL::readFromDevice()
 {
 	try
 	{
@@ -300,7 +342,7 @@ std::string HM_CFG_USB::readFromDevice()
 	return "";
 }
 
-void HM_CFG_USB::writeToDevice(std::string data, bool printSending)
+void CUL::writeToDevice(std::string data, bool printSending)
 {
     try
     {
@@ -340,7 +382,7 @@ void HM_CFG_USB::writeToDevice(std::string data, bool printSending)
     _lastPacketSent = BaseLib::HelperFunctions::getTime();
 }
 
-void HM_CFG_USB::startListening()
+void CUL::startListening()
 {
 	try
 	{
@@ -350,7 +392,7 @@ void HM_CFG_USB::startListening()
 		_stopped = false;
 		writeToDevice("X21\nAr\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
-		_listenThread = std::thread(&HM_CFG_USB::listen, this);
+		_listenThread = std::thread(&CUL::listen, this);
 		BaseLib::Threads::setThreadPriority(_listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
@@ -367,7 +409,7 @@ void HM_CFG_USB::startListening()
     }
 }
 
-void HM_CFG_USB::stopListening()
+void CUL::stopListening()
 {
 	try
 	{
@@ -400,7 +442,7 @@ void HM_CFG_USB::stopListening()
     }
 }
 
-void HM_CFG_USB::listen()
+void CUL::listen()
 {
     try
     {
@@ -435,7 +477,7 @@ void HM_CFG_USB::listen()
     }
 }
 
-void HM_CFG_USB::setup(int32_t userID, int32_t groupID)
+void CUL::setup(int32_t userID, int32_t groupID)
 {
     try
     {

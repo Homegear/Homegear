@@ -52,7 +52,7 @@ void Settings::reset()
 	_rpcServerThreadPriority = 0;
 	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
 	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
-	_physicalDeviceSettingsPath = "/etc/homegear/physicaldevices.conf";
+	_physicalInterfaceSettingsPath = "/etc/homegear/physicalinterfaces.conf";
 	_modulePath = "/var/lib/homegear/modules/";
 	_scriptPath = "/var/lib/homegear/scripts/";
 	_firmwarePath = "/var/lib/homegear/firmware/";
@@ -186,11 +186,11 @@ void Settings::load(std::string filename)
 					if(_clientSettingsPath.empty()) _clientSettingsPath = "/etc/homegear/rpcclients.conf";
 					Output::printDebug("Debug: clientSettingsPath set to " + _clientSettingsPath);
 				}
-				else if(name == "physicaldevicesettingspath")
+				else if(name == "physicalinterfacesettingspath")
 				{
-					_physicalDeviceSettingsPath = value;
-					if(_physicalDeviceSettingsPath.empty()) _physicalDeviceSettingsPath = "/etc/homegear/physicaldevices.conf";
-					Output::printDebug("Debug: physicalDeviceSettingsPath set to " + _physicalDeviceSettingsPath);
+					_physicalInterfaceSettingsPath = value;
+					if(_physicalInterfaceSettingsPath.empty()) _physicalInterfaceSettingsPath = "/etc/homegear/physicalinterfaces.conf";
+					Output::printDebug("Debug: physicalDeviceSettingsPath set to " + _physicalInterfaceSettingsPath);
 				}
 				else if(name == "modulepath")
 				{

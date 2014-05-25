@@ -28,11 +28,11 @@
  */
 
 #include "BidCoS.h"
-#include "PhysicalDevices/BidCoSDevice.h"
-#include "PhysicalDevices/COC.h"
-#include "PhysicalDevices/CUL.h"
-#include "PhysicalDevices/TICC1100.h"
-#include "PhysicalDevices/HM-CFG-LAN.h"
+#include "PhysicalInterfaces/IBidCoSInterface.h"
+#include "PhysicalInterfaces/COC.h"
+#include "PhysicalInterfaces/CUL.h"
+#include "PhysicalInterfaces/TICC1100.h"
+#include "PhysicalInterfaces/HM-CFG-LAN.h"
 #include "Devices/HomeMaticCentral.h"
 #include "BidCoSDeviceTypes.h"
 #include "Devices/HM-CC-TC.h"
@@ -61,13 +61,13 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoS::listBidcosInterfaces()
 {
 	try
 	{
-		if(!_central || !GD::physicalDevice) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		if(!_central || !GD::defaultPhysicalInterface) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 		std::shared_ptr<BaseLib::RPC::RPCVariable> interface(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 		array->arrayValue->push_back(interface);
 		interface->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_central->getSerialNumber()))));
 		interface->structValue->insert(BaseLib::RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("Homegear default BidCoS interface")))));
-		interface->structValue->insert(BaseLib::RPC::RPCStructElement("CONNECTED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(GD::physicalDevice->isOpen()))));
+		interface->structValue->insert(BaseLib::RPC::RPCStructElement("CONNECTED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(GD::defaultPhysicalInterface->isOpen()))));
 		interface->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(true))));
 		return array;
 	}
@@ -86,19 +86,24 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoS::listBidcosInterfaces()
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::Systems::PhysicalDevice> BidCoS::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings)
+std::shared_ptr<BaseLib::Systems::IPhysicalInterface> BidCoS::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings)
 {
 	try
 	{
-		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicaldevices.conf is: " + settings->type);
-		GD::physicalDevice = std::shared_ptr<BidCoSDevice>();
-		if(!settings) return GD::physicalDevice;
-		if(settings->type == "cul") GD::physicalDevice.reset(new CUL(settings));
-		else if(settings->type == "coc") GD::physicalDevice.reset(new COC(settings));
-		else if(settings->type == "cc1100") GD::physicalDevice.reset(new TICC1100(settings));
-		else if(settings->type == "hmcfglan") GD::physicalDevice.reset(new HM_CFG_LAN(settings));
+		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
+		std::shared_ptr<IBidCoSInterface> device;
+		if(!settings) return device;
+		if(settings->type == "cul") device.reset(new CUL(settings));
+		else if(settings->type == "coc") device.reset(new COC(settings));
+		else if(settings->type == "cc1100") device.reset(new TICC1100(settings));
+		else if(settings->type == "hmcfglan") device.reset(new HM_CFG_LAN(settings));
 		else BaseLib::Output::printError("Error: Unsupported physical device type for family HomeMatic BidCoS: " + settings->type);
-		return GD::physicalDevice;
+		if(device)
+		{
+			GD::physicalInterfaces[settings->id] = device;
+			if(settings->isDefault || !GD::defaultPhysicalInterface) GD::defaultPhysicalInterface = device;
+		}
+		return device;
 	}
 	catch(const std::exception& ex)
 	{
@@ -112,7 +117,7 @@ std::shared_ptr<BaseLib::Systems::PhysicalDevice> BidCoS::createPhysicalDevice(s
 	{
 		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return std::shared_ptr<BaseLib::Systems::PhysicalDevice>();
+	return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
 }
 
 int32_t BidCoS::getUniqueAddress(uint8_t firstByte)
@@ -316,7 +321,7 @@ void BidCoS::load()
 				_devicesMutex.unlock();
 			}
 		}
-		if(GD::physicalDevice && GD::physicalDevice->isOpen())
+		if(!GD::physicalInterfaces.empty())
 		{
 			if(!_central) createCentral();
 			if(!spyDeviceExists) createSpyDevice();

@@ -27,35 +27,55 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef HM_CFG_USB_H
-#define HM_CFG_USB_H
+#ifndef RS485_H
+#define RS485_H
 
-#include "BidCoSDevice.h"
+#include "../../Base/BaseLib.h"
 
-//#include <libusb-1.0/libusb.h>
+#include <thread>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <list>
+#include <mutex>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 
-namespace BidCoS
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <signal.h>
+
+namespace HMWired
 {
 
-class HM_CFG_USB  : public BidCoSDevice
+class RS485  : public BaseLib::Systems::IPhysicalInterface
 {
     public:
-		HM_CFG_USB(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
-        virtual ~HM_CFG_USB();
+        RS485(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+        virtual ~RS485();
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        int64_t lastAction() { return _lastAction; }
         virtual void setup(int32_t userID, int32_t groupID);
-        void enableUpdateMode();
-        void disableUpdateMode();
     protected:
+        uint8_t _firstByte = 0;
+        int64_t _lastAction = 0;
+        bool _sending = false;
+        bool _receivingSending = false;
+        std::vector<uint8_t> _receivedSentPacket;
+        std::timed_mutex _sendingMutex;
+
         void openDevice();
         void closeDevice();
-        void writeToDevice(std::string, bool);
-        std::string readFromDevice();
+        void setupDevice();
+        void writeToDevice(std::vector<uint8_t>& packet, bool printPacket);
+        std::vector<uint8_t> readFromDevice();
         void listen();
     private:
 };
 
 }
-#endif // CUL_H
+#endif

@@ -30,7 +30,7 @@
 #ifndef CUL_H
 #define CUL_H
 
-#include "BidCoSDevice.h"
+#include "IBidCoSInterface.h"
 
 #include <thread>
 #include <iostream>
@@ -50,10 +50,10 @@
 namespace BidCoS
 {
 
-class CUL  : public BidCoSDevice
+class CUL  : public IBidCoSInterface
 {
     public:
-		CUL(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+		CUL(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
         virtual ~CUL();
         void startListening();
         void stopListening();

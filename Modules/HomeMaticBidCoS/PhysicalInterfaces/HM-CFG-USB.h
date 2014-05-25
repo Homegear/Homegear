@@ -27,34 +27,21 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef COC_H
-#define COC_H
+#ifndef HM_CFG_USB_H
+#define HM_CFG_USB_H
 
-#include "BidCoSDevice.h"
+#include "IBidCoSInterface.h"
 
-#include <thread>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <list>
-#include <mutex>
-#include <chrono>
-#include <ctime>
-#include <iomanip>
-
-#include <unistd.h>
-#include <fcntl.h>
-#include <termios.h>
-#include <signal.h>
+//#include <libusb-1.0/libusb.h>
 
 namespace BidCoS
 {
 
-class COC : public BidCoSDevice
+class HM_CFG_USB  : public IBidCoSInterface
 {
     public:
-		COC(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
-        virtual ~COC();
+		HM_CFG_USB(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+        virtual ~HM_CFG_USB();
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
@@ -64,7 +51,6 @@ class COC : public BidCoSDevice
     protected:
         void openDevice();
         void closeDevice();
-        void setupDevice();
         void writeToDevice(std::string, bool);
         std::string readFromDevice();
         void listen();
@@ -72,4 +58,4 @@ class COC : public BidCoSDevice
 };
 
 }
-#endif // COC_H
+#endif // CUL_H

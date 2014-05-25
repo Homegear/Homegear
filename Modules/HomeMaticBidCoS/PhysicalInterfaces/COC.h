@@ -27,11 +27,10 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef RAWLAN_H
-#define RAWLAN_H
+#ifndef COC_H
+#define COC_H
 
-#include "../HMWiredPacket.h"
-#include "../../Base/BaseLib.h"
+#include "IBidCoSInterface.h"
 
 #include <thread>
 #include <iostream>
@@ -48,32 +47,29 @@
 #include <termios.h>
 #include <signal.h>
 
-namespace HMWired
+namespace BidCoS
 {
 
-class RawLAN  : public BaseLib::Systems::PhysicalDevice
+class COC : public IBidCoSInterface
 {
     public:
-        RawLAN(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
-        virtual ~RawLAN();
+		COC(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+        virtual ~COC();
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
-        int64_t lastAction() { return _lastAction; }
-        virtual bool isOpen() { return _socket.connected(); }
+        virtual void setup(int32_t userID, int32_t groupID);
+        void enableUpdateMode();
+        void disableUpdateMode();
     protected:
-        int64_t _lastAction = 0;
-        std::string _hostname;
-        std::string _port;
-        BaseLib::SocketOperations _socket;
-        std::mutex _sendMutex;
-
-        void send(std::vector<char>& packet, bool printPacket);
+        void openDevice();
+        void closeDevice();
+        void setupDevice();
+        void writeToDevice(std::string, bool);
+        std::string readFromDevice();
         void listen();
-        void getFileDescriptor(bool& timedout);
-        std::shared_ptr<BaseLib::FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
     private:
 };
 
 }
-#endif // TCPSOCKETDEVICE_H
+#endif // COC_H

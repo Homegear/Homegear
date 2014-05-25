@@ -31,7 +31,7 @@
 #define LOGICALDEVICE_H_
 
 #include "../HelperFunctions/HelperFunctions.h"
-#include "PhysicalDevice.h"
+#include "IPhysicalInterface.h"
 #include "DeviceFamilies.h"
 #include "Packet.h"
 #include "../RPC/RPCVariable.h"
@@ -44,7 +44,7 @@ namespace BaseLib
 {
 namespace Systems
 {
-class LogicalDevice : public Peer::IPeerEventSink, public PhysicalDevice::IPhysicalDeviceEventSink, public IEvents
+class LogicalDevice : public Peer::IPeerEventSink, public IPhysicalInterface::IPhysicalInterfaceEventSink, public IEvents
 {
 public:
 	//Event handling
@@ -151,7 +151,7 @@ protected:
 	//End event handling
 
 	//Physical device event handling
-	virtual bool onPacketReceived(std::shared_ptr<Packet> packet) = 0;
+	virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<Packet> packet) = 0;
 	//End physical device event handling
 
 	//Peer event handling

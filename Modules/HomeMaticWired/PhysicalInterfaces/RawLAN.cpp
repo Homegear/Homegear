@@ -32,7 +32,7 @@
 namespace HMWired
 {
 
-RawLAN::RawLAN(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings) : BaseLib::Systems::PhysicalDevice(settings)
+RawLAN::RawLAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BaseLib::Systems::IPhysicalInterface(settings)
 {
 	signal(SIGPIPE, SIG_IGN);
 }

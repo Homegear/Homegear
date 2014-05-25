@@ -156,7 +156,16 @@ void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& pa
 	{
 		if(_disposing) return;
 		_packetMutex.lock();
-		if(_packets.find(address) != _packets.end()) _packets.erase(_packets.find(address));
+		if(_packets.find(address) != _packets.end())
+		{
+			std::shared_ptr<BidCoSPacket> oldPacket = _packets.at(address)->packet;
+			if(oldPacket->equals(packet))
+			{
+				_packetMutex.unlock();
+				return;
+			}
+			_packets.erase(_packets.find(address));
+		}
 		_packetMutex.unlock();
 
 		std::shared_ptr<BidCoSPacketInfo> info(new BidCoSPacketInfo());

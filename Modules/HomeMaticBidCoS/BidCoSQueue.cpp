@@ -38,9 +38,16 @@ namespace BidCoS
 BidCoSQueue::BidCoSQueue() : _queueType(BidCoSQueueType::EMPTY)
 {
 	_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	_physicalInterface = GD::defaultPhysicalInterface;
 }
 
-BidCoSQueue::BidCoSQueue(BidCoSQueueType queueType) : BidCoSQueue()
+BidCoSQueue::BidCoSQueue(std::shared_ptr<IBidCoSInterface> physicalInterface)
+{
+	if(physicalInterface) _physicalInterface = physicalInterface;
+	else _physicalInterface = GD::defaultPhysicalInterface;
+}
+
+BidCoSQueue::BidCoSQueue(std::shared_ptr<IBidCoSInterface> physicalInterface, BidCoSQueueType queueType) : BidCoSQueue(physicalInterface)
 {
 	_queueType = queueType;
 }
@@ -108,6 +115,8 @@ void BidCoSQueue::serialize(std::vector<uint8_t>& encodedData)
 			}
 			encoder.encodeString(encodedData, parameterName);
 			encoder.encodeInteger(encodedData, channel);
+			std::string id = _physicalInterface->getID();
+			encoder.encodeString(encodedData, id);
 		}
 	}
 	catch(const std::exception& ex)
@@ -165,6 +174,9 @@ void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 			}
 			parameterName = decoder.decodeString(serializedData, position);
 			channel = decoder.decodeInteger(serializedData, position);
+			std::string physicalInterfaceID = decoder.decodeString(serializedData, position);
+			if(GD::physicalInterfaces.find(physicalInterfaceID) != GD::physicalInterfaces.end()) _physicalInterface = GD::physicalInterfaces.at(physicalInterfaceID);
+			else _physicalInterface = GD::defaultPhysicalInterface;
 		}
 	}
 	catch(const std::exception& ex)
@@ -185,6 +197,7 @@ void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
     	clear();
     	_pendingQueues.reset();
     }
+    if(!_physicalInterface) _physicalInterface = GD::defaultPhysicalInterface;
     _queueMutex.unlock();
 }
 
@@ -236,7 +249,7 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 		int64_t timeSinceLastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - _lastPop;
 		int32_t i = 0;
 		std::chrono::milliseconds sleepingTime;
-		uint32_t responseDelay = GD::physicalDevice->responseDelay();
+		uint32_t responseDelay = _physicalInterface->responseDelay();
 		if(timeSinceLastPop < responseDelay)
 		{
 			sleepingTime = std::chrono::milliseconds((responseDelay - timeSinceLastPop) / 3);
@@ -744,7 +757,7 @@ void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet, bool stealthy)
 	try
 	{
 		if(noSending || _disposing) return;
-		if(device) device->sendPacket(packet, stealthy);
+		if(device) device->sendPacket(_physicalInterface, packet, stealthy);
 		else BaseLib::Output::printError("Error: Device pointer of queue " + std::to_string(id) + " is null.");
 	}
 	catch(const std::exception& ex)
@@ -806,7 +819,7 @@ void BidCoSQueue::startResendThread(bool force)
 		else throw BaseLib::Exception("Packet or message pointer of BidCoS queue is empty.");
 
 		_queueMutex.unlock();
-		if(!GD::physicalDevice->autoResend() && ((!(controlByte & 0x02) && (controlByte & 0x20)) || force)) //Resend when no response?
+		if(!_physicalInterface->autoResend() && ((!(controlByte & 0x02) && (controlByte & 0x20)) || force)) //Resend when no response?
 		{
 			stopResendThread();
 			bool burst = controlByte & 0x10;
@@ -859,7 +872,7 @@ void BidCoSQueue::sleepAndPushPendingQueue()
 {
 	try
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(GD::physicalDevice->responseDelay()));
+		std::this_thread::sleep_for(std::chrono::milliseconds(_physicalInterface->responseDelay()));
 		pushPendingQueue();
 	}
 	catch(const std::exception& ex)

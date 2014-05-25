@@ -43,7 +43,7 @@ public:
 	HMWired(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler);
 	virtual ~HMWired();
 
-	virtual std::shared_ptr<BaseLib::Systems::PhysicalDevice> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalDeviceSettings> settings);
+	virtual std::shared_ptr<BaseLib::Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual void load();
 	virtual std::shared_ptr<HMWiredDevice> getDevice(uint32_t address);
 	virtual std::shared_ptr<HMWiredDevice> getDevice(std::string serialNumber);

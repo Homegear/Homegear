@@ -287,7 +287,7 @@ void HM_SD::unserializeResponsesToOverwrite(std::shared_ptr<std::vector<char>> s
     }
 }
 
-bool HM_SD::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool HM_SD::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
@@ -331,14 +331,14 @@ bool HM_SD::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 					payload.push_back(_messageCounter[1]);
 					std::shared_ptr<BidCoSPacket> packet1(new BidCoSPacket(bidCoSPacket->messageCounter(), 0xA4, 0x40, addressRemote, addressKeyMatic, payload));
 					packet1->setTimeSending(BaseLib::HelperFunctions::getTime());
-					GD::physicalDevice->sendPacket(packet1);
+					_physicalInterface->sendPacket(packet1);
 				}
 				else if(bidCoSPacket->messageType() == 0x03 && bidCoSPacket->controlByte() == 0xA0)
 				{
 					std::vector<uint8_t> payload = *bidCoSPacket->payload();
 					std::shared_ptr<BidCoSPacket> packet3(new BidCoSPacket(bidCoSPacket->messageCounter(), 0xA0, 0x03, addressRemote, addressKeyMatic, payload));
 					packet3->setTimeSending(BaseLib::HelperFunctions::getTime());
-					GD::physicalDevice->sendPacket(packet3);
+					_physicalInterface->sendPacket(packet3);
 				}
 			}
 			else if(bidCoSPacket->senderAddress() == addressKeyMatic)
@@ -348,14 +348,14 @@ bool HM_SD::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 					std::vector<uint8_t> payload = *bidCoSPacket->payload();
 					std::shared_ptr<BidCoSPacket> packet2(new BidCoSPacket(bidCoSPacket->messageCounter(), 0xA0, 0x02, addressCentral, addressMotionDetector, payload));
 					packet2->setTimeSending(BaseLib::HelperFunctions::getTime());
-					GD::physicalDevice->sendPacket(packet2);
+					_physicalInterface->sendPacket(packet2);
 				}
 				else if(bidCoSPacket->messageType() == 0x02 && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 5)
 				{
 					std::vector<uint8_t> payload = *bidCoSPacket->payload();
 					std::shared_ptr<BidCoSPacket> packet4(new BidCoSPacket(bidCoSPacket->messageCounter(), 0x80, 0x02, addressCentral, addressMotionDetector, payload));
 					packet4->setTimeSending(BaseLib::HelperFunctions::getTime());
-					GD::physicalDevice->sendPacket(packet4);
+					_physicalInterface->sendPacket(packet4);
 				}
 			}
 		}
@@ -375,7 +375,7 @@ bool HM_SD::onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
 				packet->import(packetString, false);
 				std::chrono::time_point<std::chrono::system_clock> timepoint = std::chrono::system_clock::now();
 				BaseLib::Output::printMessage("Captured: " + packetHex + " Responding with: " + packet->hexString());
-				GD::physicalDevice->sendPacket(packet);
+				_physicalInterface->sendPacket(packet);
 			}
 		}
 	}
@@ -845,7 +845,7 @@ std::string HM_SD::handleCLICommand(std::string command)
 			if(packetHex.size() < 18) return "Packet is too short. Please provide at least 9 bytes.\n";
 			std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket());
 			packet->import(packetHex, false);
-			sendPacket(packet);
+			sendPacket(_physicalInterface, packet);
 			stringStream << "Packet sent: " << packet->hexString() << std::endl;
 			return stringStream.str();
 		}

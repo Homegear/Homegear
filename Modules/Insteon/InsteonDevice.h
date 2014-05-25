@@ -55,7 +55,7 @@ class InsteonDevice : public BaseLib::Systems::LogicalDevice
         InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~InsteonDevice();
         virtual void dispose(bool wait = true);
-        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 
         virtual void loadVariables();
         virtual void saveVariables();

@@ -98,12 +98,6 @@ public:
 	};
 	//End event handling
 
-	//ServiceMessages event handling
-	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
-	virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
-	virtual void onEnqueuePendingQueues();
-	//End ServiceMessages event handling
-
 	bool deleting = false; //Needed, so the peer gets not saved in central's worker thread while being deleted
 
 	std::unordered_map<uint32_t, ConfigDataBlock> binaryConfig;
@@ -191,6 +185,14 @@ protected:
 	virtual void raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint);
 	virtual void raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
 	//End event handling
+
+	//ServiceMessages event handling
+	virtual void onConfigPending(bool configPending);
+
+	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
+	virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
+	virtual void onEnqueuePendingQueues();
+	//End ServiceMessages event handling
 };
 
 }

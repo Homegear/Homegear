@@ -27,8 +27,8 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef PHYSICALDEVICESETTINGS_H_
-#define PHYSICALDEVICESETTINGS_H_
+#ifndef PHYSICALINTERFACESETTINGS_H_
+#define PHYSICALINTERFACESETTINGS_H_
 
 #include "../Systems/DeviceFamilies.h"
 
@@ -51,11 +51,13 @@ public:
 	std::string path;
 };
 
-class PhysicalDeviceSettings
+class PhysicalInterfaceSettings
 {
 public:
-	PhysicalDeviceSettings() {}
-	virtual ~PhysicalDeviceSettings() {}
+	PhysicalInterfaceSettings() {}
+	virtual ~PhysicalInterfaceSettings() {}
+	std::string id;
+	bool isDefault = false;
 	DeviceFamilies family = DeviceFamilies::none;
 	std::string device;
 	std::string type;
@@ -63,7 +65,10 @@ public:
 	std::map<uint32_t, GPIOSetting> gpio;
 	std::string host;
 	std::string port;
-	std::string key;
+	std::string oldRFKey;
+	std::string rfKey;
+	std::string lanKey;
+	uint32_t currentRFKeyIndex = 0;
 	bool ssl = false;
 	bool verifyCertificate = true;
 	bool oneWay = false;
@@ -73,4 +78,4 @@ public:
 
 }
 }
-#endif /* PHYSICALDEVICESETTINGS_H_ */
+#endif

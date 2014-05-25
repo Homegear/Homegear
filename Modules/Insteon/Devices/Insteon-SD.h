@@ -42,7 +42,7 @@ class Insteon_SD : public InsteonDevice
         Insteon_SD(IDeviceEventSink* eventHandler);
         Insteon_SD(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~Insteon_SD();
-        virtual bool onPacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
         std::string handleCLICommand(std::string command);
         void loadVariables();
         void saveVariables();
