@@ -79,7 +79,6 @@ class HM_CFG_LAN  : public IBidCoSInterface
     protected:
         std::mutex _peersMutex;
         std::map<int32_t, PeerInfo> _peers;
-        bool isGateway = false;
         int64_t _lastAction = 0;
         std::string _hostname;
         std::string _port;

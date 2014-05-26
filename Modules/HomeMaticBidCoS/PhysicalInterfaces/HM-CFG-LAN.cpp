@@ -546,9 +546,10 @@ bool HM_CFG_LAN::openSSLInit()
 
 	if(_settings->lanKey.size() != 32)
 	{
-		_key.resize(16);
-		MD5((uint8_t*)_settings->lanKey.c_str(), _settings->lanKey.size(), &_key.at(0));
-		isGateway = true;
+		BaseLib::Output::printError("Error: The AES key specified in physicalinterfaces.conf for communication with your HM-CFG-LAN has the wrong size.");
+		return false;
+		//_key.resize(16);
+		//MD5((uint8_t*)_settings->lanKey.c_str(), _settings->lanKey.size(), &_key.at(0));
 	}
 	else
 	{
@@ -598,6 +599,7 @@ void HM_CFG_LAN::openSSLCleanup()
 std::vector<char> HM_CFG_LAN::encrypt(std::vector<char>& data)
 {
 	std::vector<char> encryptedData(data.size());
+	if(!_ctxEncrypt) return encryptedData;
 
 	int length = 0;
 	if(EVP_EncryptUpdate(_ctxEncrypt, (uint8_t*)&encryptedData.at(0), &length, (uint8_t*)&data.at(0), data.size()) != 1)
@@ -614,6 +616,7 @@ std::vector<char> HM_CFG_LAN::encrypt(std::vector<char>& data)
 std::vector<uint8_t> HM_CFG_LAN::decrypt(std::vector<uint8_t>& data)
 {
 	std::vector<uint8_t> decryptedData(data.size());
+	if(!_ctxDecrypt) return decryptedData;
 
 	int length = 0;
 	if(EVP_DecryptUpdate(_ctxDecrypt, &decryptedData.at(0), &length, &data.at(0), data.size()) != 1)
@@ -727,8 +730,11 @@ void HM_CFG_LAN::listen()
 			{
 				if(data.empty()) //When receivedBytes is exactly 2048 bytes long, proofread will be called again, time out and the packet is received with a delay of 5 seconds. It doesn't matter as packets this big are only received at start up.
 				{
-					if(BaseLib::HelperFunctions::getTimeSeconds() - _lastTimePacket > 1800) sendTimePacket();
-					sendKeepAlive();
+					if(_socket.connected())
+					{
+						if(BaseLib::HelperFunctions::getTimeSeconds() - _lastTimePacket > 1800) sendTimePacket();
+						sendKeepAlive();
+					}
 					continue;
 				}
 			}

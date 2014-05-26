@@ -1732,6 +1732,7 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
 		}
 		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
+		if(peer->getPhysicalInterface()->needsPeers()) peer->getPhysicalInterface()->removePeer(peer->getAddress());
 		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
 		if(_peersByID.find(id) != _peersByID.end()) _peersByID.erase(id);

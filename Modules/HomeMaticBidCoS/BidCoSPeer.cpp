@@ -2486,6 +2486,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 
 		if(type == BaseLib::RPC::ParameterSet::Type::Enum::master)
 		{
+			bool aesActivated = false;
 			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> changedParameters;
 			//allParameters is necessary to temporarily store all values. It is used to set changedParameters.
 			//This is necessary when there are multiple variables per index and not all of them are changed.
@@ -2493,10 +2494,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
-				if(i->first == "AES_ACTIVE" && !_physicalInterface->aesSupported())
+				if(i->first == "AES_ACTIVE" && i->second->booleanValue)
 				{
-					BaseLib::Output::printWarning("Warning: Tried to set AES_ACTIVE on peer " + std::to_string(_peerID) + ", but AES is not supported by peer's physical interface.");
-					continue;
+					if(!_physicalInterface->aesSupported())
+					{
+						BaseLib::Output::printWarning("Warning: Tried to set AES_ACTIVE on peer " + std::to_string(_peerID) + ", but AES is not supported by peer's physical interface.");
+						continue;
+					}
+					if(!aesEnabled()) aesActivated = true;
 				}
 				std::vector<uint8_t> value;
 				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
@@ -2599,6 +2604,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			}
 
 			pendingBidCoSQueues->push(queue);
+			if(aesActivated) checkAESKey();
 			serviceMessages->setConfigPending(true);
 			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
 			{

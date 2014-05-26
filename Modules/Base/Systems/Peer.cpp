@@ -468,6 +468,7 @@ void Peer::onSaveParameter(std::string name, uint32_t channel, std::vector<uint8
 {
 	try
 	{
+		if(_peerID == 0) return; //Peer not saved yet
 		if(valuesCentral.find(channel) == valuesCentral.end())
 		{
 			Output::printWarning("Warning: Could not set parameter " + name + " on channel " + std::to_string(channel) + " for peer " + std::to_string(_peerID) + ". Channel does not exist.");
