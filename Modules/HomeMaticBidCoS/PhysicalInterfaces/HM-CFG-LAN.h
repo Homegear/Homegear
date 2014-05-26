@@ -89,6 +89,7 @@ class HM_CFG_LAN  : public IBidCoSInterface
         std::list<std::vector<char>> _initCommandQueue;
         int32_t _lastKeepAlive = 0;
         int32_t _lastKeepAliveResponse = 0;
+        int32_t _lastTimePacket = 0;
         std::vector<char> _keepAlivePacket = { 'K', '\r', '\n' };
         int64_t _startUpTime = 0;
         int32_t _myAddress = 0x1C6940;
@@ -123,6 +124,7 @@ class HM_CFG_LAN  : public IBidCoSInterface
         void send(std::string hexString, bool raw = false);
         void send(std::vector<char>& data, bool raw);
         void sendKeepAlive();
+        void sendTimePacket();
         void listen();
         void getFileDescriptor(bool& timedout);
         std::shared_ptr<BaseLib::FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);

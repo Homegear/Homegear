@@ -105,7 +105,14 @@ void BidCoSPeer::initializeCentralConfig()
 					{
 						parameter = BaseLib::Systems::RPCConfigurationParameter();
 						parameter.rpcParameter = *j;
-						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+						if((*j)->id == "AES_ACTIVE" && !_physicalInterface->aesSupported())
+						{
+							parameter.data.push_back(0);
+						}
+						else
+						{
+							parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+						}
 						configCentral[i->first][(*j)->id] = parameter;
 						saveParameter(0, BaseLib::RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
 					}
@@ -269,15 +276,45 @@ void BidCoSPeer::dispose()
     }
 }
 
+void BidCoSPeer::setAESKeyIndex(int32_t value)
+{
+	try
+	{
+		_aesKeyIndex = value;
+		saveVariable(17, value);
+		if(valuesCentral.find(0) != valuesCentral.end() && valuesCentral.at(0).find("AES_KEY") != valuesCentral.at(0).end())
+		{
+			BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[0]["AES_KEY"];
+			parameter->data.clear();
+			parameter->data.push_back(_aesKeyIndex);
+			saveParameter(parameter->databaseID, parameter->data);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void BidCoSPeer::setPhysicalInterfaceID(std::string id)
 {
 	if(id.empty() || (GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id)))
 	{
 		_physicalInterfaceID = id;
+		if(_physicalInterface->needsPeers()) _physicalInterface->removePeer(_address);
 		_physicalInterface = id.empty() ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(_physicalInterfaceID);
 		std::shared_ptr<HomeMaticDevice> virtualDevice = getHiddenPeerDevice();
 		if(virtualDevice) virtualDevice->setPhysicalInterfaceID(id);
 		saveVariable(19, _physicalInterfaceID);
+		if(_physicalInterface->needsPeers()) _physicalInterface->addPeer(getPeerInfo());
 	}
 }
 
@@ -1425,21 +1462,39 @@ bool BidCoSPeer::load(BaseLib::Systems::LogicalDevice* device)
     return false;
 }
 
+bool BidCoSPeer::aesEnabled()
+{
+	try
+	{
+		for(std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::const_iterator i = configCentral.begin(); i != configCentral.end(); ++i)
+		{
+			if(i->second.find("AES_ACTIVE") != i->second.end() && !i->second.at("AES_ACTIVE").data.empty() && (bool)i->second.at("AES_ACTIVE").data.at(0))
+			{
+				return true;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 void BidCoSPeer::checkAESKey(bool onlyPushing)
 {
 	try
 	{
 		if(!rpcDevice || !rpcDevice->supportsAES || !_centralFeatures) return;
-		bool aesEnabled = false;
-		for(std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::const_iterator i = configCentral.begin(); i != configCentral.end(); ++i)
-		{
-			if(i->second.find("AES_ACTIVE") != i->second.end() && !i->second.at("AES_ACTIVE").data.empty() && (bool)i->second.at("AES_ACTIVE").data.at(0))
-			{
-				aesEnabled = true;
-				break;
-			}
-		}
-		if(!aesEnabled) return;
+		if(!aesEnabled()) return;
 		if(_aesKeyIndex == _physicalInterface->getCurrentRFKeyIndex())
 		{
 			BaseLib::Output::printDebug("Debug: AES key of peer " + std::to_string(_peerID) + " is current.");
@@ -1518,7 +1573,7 @@ std::string BidCoSPeer::printConfig()
 			for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
 				stringStream << "\t\t[" << j->first << "]: ";
-				if(!j->second.rpcParameter) stringStream << "No RPC parameter";
+				if(!j->second.rpcParameter) stringStream << "(No RPC parameter) ";
 				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
 				{
 					stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
@@ -1538,7 +1593,7 @@ std::string BidCoSPeer::printConfig()
 			for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
 				stringStream << "\t\t[" << j->first << "]: ";
-				if(!j->second.rpcParameter) stringStream << "No RPC parameter";
+				if(!j->second.rpcParameter) stringStream << "(No RPC parameter) ";
 				for(std::vector<uint8_t>::const_iterator k = j->second.data.begin(); k != j->second.data.end(); ++k)
 				{
 					stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*k << " ";
@@ -1566,7 +1621,7 @@ std::string BidCoSPeer::printConfig()
 					for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::const_iterator l = k->second.begin(); l != k->second.end(); ++l)
 					{
 						stringStream << "\t\t\t\t[" << l->first << "]: ";
-						if(!l->second.rpcParameter) stringStream << "No RPC parameter";
+						if(!l->second.rpcParameter) stringStream << "(No RPC parameter) ";
 						for(std::vector<uint8_t>::const_iterator m = l->second.data.begin(); m != l->second.data.end(); ++m)
 						{
 							stringStream << std::hex << std::setfill('0') << std::setw(2) << (int32_t)*m << " ";
@@ -1608,7 +1663,7 @@ IBidCoSInterface::PeerInfo BidCoSPeer::getPeerInfo()
 		{
 			peerInfo.wakeUp = true;
 		}
-		if(_physicalInterface->aesSupported() && rpcDevice->supportsAES)
+		if(_physicalInterface->aesSupported() && aesEnabled())
 		{
 			peerInfo.keyIndex = _aesKeyIndex;
 			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
@@ -2215,7 +2270,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int3
 			if(isTeam()) uiFlags |= BaseLib::RPC::Device::UIFlags::dontdelete;
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(uiFlags))));
 
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(getCentral()->getSerialNumber()))));
+			description->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_physicalInterface->getID()))));
 
 			variable = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("PARAMSETS", variable));
@@ -2438,6 +2493,11 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
+				if(i->first == "AES_ACTIVE" && !_physicalInterface->aesSupported())
+				{
+					BaseLib::Output::printWarning("Warning: Tried to set AES_ACTIVE on peer " + std::to_string(_peerID) + ", but AES is not supported by peer's physical interface.");
+					continue;
+				}
 				std::vector<uint8_t> value;
 				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
@@ -3158,7 +3218,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamsetDescription(in
 				description->structValue->insert(BaseLib::RPC::RPCStructElement("MIN", element));
 
 				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->operations;
+				element->integerValue = ((*i)->id == "AES_ACTIVE" && !_physicalInterface->aesSupported()) ? BaseLib::RPC::Parameter::Operations::read : (*i)->operations;
 				description->structValue->insert(BaseLib::RPC::RPCStructElement("OPERATIONS", element));
 
 				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
@@ -3630,6 +3690,36 @@ void BidCoSPeer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionPara
     {
         BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setInterface(std::string interfaceID)
+{
+	try
+	{
+		if(!interfaceID.empty() && GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end())
+		{
+			return BaseLib::RPC::RPCVariable::createError(-5, "Unknown physical interface.");
+		}
+		if(aesEnabled() && !GD::physicalInterfaces.at(interfaceID)->aesSupported())
+		{
+			return BaseLib::RPC::RPCVariable::createError(-100, "Can't set physical interface, because AES is enabled for this peer and the new physical interface doesn't support AES. Please disable AES first.");
+		}
+		setPhysicalInterfaceID(interfaceID);
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value)

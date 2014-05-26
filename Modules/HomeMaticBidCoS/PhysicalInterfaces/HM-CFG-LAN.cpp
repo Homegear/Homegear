@@ -382,7 +382,7 @@ void HM_CFG_LAN::startListening()
 		stopListening();
 		if(_useAES) openSSLInit();
 		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
-		BaseLib::Output::printDebug("Connecting to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		BaseLib::Output::printDebug("Connecting to HM-CFG-LAN with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		//_socket.open();
 		//BaseLib::Output::printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
@@ -658,6 +658,32 @@ void HM_CFG_LAN::sendKeepAlive()
     }
 }
 
+void HM_CFG_LAN::sendTimePacket()
+{
+	try
+    {
+		const auto timePoint = std::chrono::system_clock::now();
+		time_t t = std::chrono::system_clock::to_time_t(timePoint);
+		tm* localTime = std::localtime(&t);
+		uint32_t time = (uint32_t)(t - 946684800);
+		std::string hexString = "T" + BaseLib::HelperFunctions::getHexString(time, 8) + ',' + BaseLib::HelperFunctions::getHexString(localTime->tm_gmtoff / 1800, 2) + ",00,00000000\r\n";
+		send(hexString, false);
+		_lastTimePacket = BaseLib::HelperFunctions::getTimeSeconds();
+	}
+    catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HM_CFG_LAN::listen()
 {
     try
@@ -699,8 +725,9 @@ void HM_CFG_LAN::listen()
 			}
 			catch(BaseLib::SocketTimeOutException& ex)
 			{
-				if(data.empty()) //When receivedBytes is exactly 2048 bytes long, proofread will be called again and time out.
+				if(data.empty()) //When receivedBytes is exactly 2048 bytes long, proofread will be called again, time out and the packet is received with a delay of 5 seconds. It doesn't matter as packets this big are only received at start up.
 				{
+					if(BaseLib::HelperFunctions::getTimeSeconds() - _lastTimePacket > 1800) sendTimePacket();
 					sendKeepAlive();
 					continue;
 				}

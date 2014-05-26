@@ -2670,7 +2670,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 					BaseLib::Output::printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(queue->peer->getAddress()) + ".");
 					for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = queue->peer->rpcDevice->channels.begin(); i != queue->peer->rpcDevice->channels.end(); ++i)
 					{
-						if(i->second->aesDefault)
+						if(queue->peer->getPhysicalInterface()->aesSupported() && i->second->aesDefault)
 						{
 							std::shared_ptr<BaseLib::RPC::RPCVariable> variables(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 							variables->structValue->insert(BaseLib::RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(true))));
@@ -4535,12 +4535,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setInterface(uint64
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		if(!interfaceID.empty() && GD::physicalInterfaces.find(interfaceID) == GD::physicalInterfaces.end())
-		{
-			return BaseLib::RPC::RPCVariable::createError(-5, "Unknown physical interface.");
-		}
-		peer->setPhysicalInterfaceID(interfaceID);
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return peer->setInterface(interfaceID);
 	}
 	catch(const std::exception& ex)
     {

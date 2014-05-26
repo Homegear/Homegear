@@ -29,6 +29,7 @@
 
 #include "HMWiredPeer.h"
 #include "Devices/HMWiredCentral.h"
+#include "GD.h"
 
 namespace HMWired
 {
@@ -2072,7 +2073,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(uiFlags))));
 
 			//Compatibility
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(getCentral()->getSerialNumber()))));
+			description->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(GD::physicalInterface->getID()))));
 
 			variable = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 			description->structValue->insert(BaseLib::RPC::RPCStructElement("PARAMSETS", variable));

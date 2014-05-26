@@ -134,7 +134,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		void setTeamRemoteSerialNumber(std::string value) { _team.serialNumber = value; saveVariable(10, value); }
 		std::vector<uint8_t>& getTeamData() { return _team.data; }
 		int32_t getAESKeyIndex() { return _aesKeyIndex; }
-		void setAESKeyIndex(int32_t value) { _aesKeyIndex = value; saveVariable(17, value); }
+		void setAESKeyIndex(int32_t value);
 		int32_t getAESKeySendIndex() { return _aesKeySendIndex; }
 		void setAESKeySendIndex(int32_t value) { _aesKeySendIndex = value; saveVariable(18, value); }
 		std::string getPhysicalInterfaceID() { return _physicalInterfaceID; }
@@ -169,6 +169,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         void saveNonCentralConfig();
         void saveVariablesToReset();
         void savePendingQueues();
+        bool aesEnabled();
         void checkAESKey(bool onlyPushing = false);
         void deletePairedVirtualDevice(int32_t address);
         void deletePairedVirtualDevices();
@@ -210,6 +211,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
         std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false);
+        std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(std::string interfaceID);
         std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
         //End RPC methods
     protected:
