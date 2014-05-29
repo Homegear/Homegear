@@ -36,7 +36,7 @@ ifeq ($(config),debug)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l user -l cli -l events -l gd -l base
+  LDFLAGS   += -Llib/Debug -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l user -l cli -l events -l gd -l database -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -58,7 +58,7 @@ ifeq ($(config),release)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l user -l cli -l events -l gd -l base
+  LDFLAGS   += -Llib/Release -s -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l user -l cli -l events -l gd -l database -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -80,7 +80,7 @@ ifeq ($(config),profiling)
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l user -l cli -l events -l gd -l base -pg
+  LDFLAGS   += -Llib/Profiling -l rpc -l dl -l pthread -l sqlite3 -l readline -l ssl -l user -l cli -l events -l gd -l database -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -94,6 +94,7 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/AESTest.o \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/FamilyController.o \
 	$(OBJDIR)/PhysicalInterfaces.o \
@@ -162,6 +163,9 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
+$(OBJDIR)/AESTest.o: AESTest.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/main.o: main.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"

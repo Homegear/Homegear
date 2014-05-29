@@ -85,7 +85,7 @@ solution "homegear"
       files { "./Modules/HomeMaticBidCoS/*.h", "./Modules/HomeMaticBidCoS/*.cpp" }
 	  files { "./Modules/HomeMaticBidCoS/Devices/*.h", "./Modules/HomeMaticBidCoS/Devices/*.cpp" }
 	  files { "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.h", "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.cpp" }
-	  linkoptions { "-l base" }
+	  linkoptions { "-l pthread", "-l base" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -113,7 +113,7 @@ solution "homegear"
       files { "./Modules/HomeMaticWired/*.h", "./Modules/HomeMaticWired/*.cpp" }
       files { "./Modules/HomeMaticWired/Devices/*.h", "./Modules/HomeMaticWired/Devices/*.cpp" }
       files { "./Modules/HomeMaticWired/PhysicalInterfaces/*.h", "./Modules/HomeMaticWired/PhysicalInterfaces/*.cpp" }
-      linkoptions { "-l base" }
+      linkoptions { "-l pthread", "-l base" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -278,6 +278,28 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
+   
+   project "database"
+      kind "StaticLib"
+      language "C++"
+      files { "./Libraries/Database/*.h", "./Libraries/Database/*.cpp" }
+ 
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         targetdir "./lib/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         targetdir "./lib/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         targetdir "./lib/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
 		 
    project "gd"
       kind "StaticLib"
@@ -306,7 +328,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
 	  files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l user", "-l cli", "-l events", "-l gd", "-l base" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l base" }
  
       configuration "Debug"
          defines { "DEBUG" }

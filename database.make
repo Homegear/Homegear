@@ -94,6 +94,7 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/SQLite3.o \
 
 RESOURCES := \
 
@@ -158,5 +159,8 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
+$(OBJDIR)/SQLite3.o: Libraries/Database/SQLite3.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 
 -include $(OBJECTS:%.o=%.d)

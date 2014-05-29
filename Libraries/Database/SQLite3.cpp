@@ -28,7 +28,7 @@
  */
 
 #include "SQLite3.h"
-#include "../BaseLib.h"
+#include "../../Modules/Base/BaseLib.h"
 
 namespace BaseLib
 {
@@ -63,12 +63,14 @@ void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, b
 {
 	try
 	{
+		_databaseMutex.lock();
 		int result = sqlite3_open(databasePath.c_str(), &_database);
 		if(result)
 		{
 			Output::printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
 			sqlite3_close(_database);
 			_database = nullptr;
+			_databaseMutex.unlock();
 			return;
 		}
 		sqlite3_extended_result_codes(_database, 1);
@@ -105,16 +107,18 @@ void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, b
     {
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _databaseMutex.unlock();
 }
 
 void SQLite3::closeDatabase()
 {
 	try
 	{
-
+		_databaseMutex.lock();
 		sqlite3_exec(_database, "COMMIT", 0, 0, 0); //Release all savepoints
 		sqlite3_close(_database);
 		_database = nullptr;
+		_databaseMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -215,12 +219,13 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
 {
 	try
 	{
+		_databaseMutex.lock();
 		if(!_database)
 		{
 			BaseLib::Output::printError("Error: Could not write to database. No database handle.");
+			_databaseMutex.unlock();
 			return 0;
 		}
-		_databaseMutex.lock();
 		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
@@ -264,12 +269,13 @@ DataTable SQLite3::executeCommand(std::string command, DataRow& dataToEscape)
 	DataTable dataRows;
 	try
 	{
+		_databaseMutex.lock();
 		if(!_database)
 		{
 			BaseLib::Output::printError("Error: Could not write to database. No database handle.");
+			_databaseMutex.unlock();
 			return dataRows;
 		}
-		_databaseMutex.lock();
 		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
@@ -320,12 +326,13 @@ DataTable SQLite3::executeCommand(std::string command)
     DataTable dataRows;
     try
     {
+    	_databaseMutex.lock();
     	if(!_database)
 		{
 			BaseLib::Output::printError("Error: Could not write to database. No database handle.");
+			_databaseMutex.unlock();
 			return dataRows;
 		}
-    	_databaseMutex.lock();
 		sqlite3_stmt* statement = nullptr;
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)

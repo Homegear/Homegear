@@ -32,7 +32,7 @@
 
 #include "../../Modules/Base/Encoding/RPCEncoder.h"
 #include "../../Modules/Base/Encoding/RPCDecoder.h"
-#include "../../Modules/Base/Database/SQLite3.h"
+#include "../Database/SQLite3.h"
 
 class DatabaseController
 {

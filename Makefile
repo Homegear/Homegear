@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base homematicbidcos homematicwired user rpc cli events gd homegear
+PROJECTS := base homematicbidcos homematicwired user rpc cli events database gd homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -40,6 +40,10 @@ events:
 	@echo "==== Building events ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f events.make
 
+database: 
+	@echo "==== Building database ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f database.make
+
 gd: 
 	@echo "==== Building gd ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f gd.make
@@ -56,6 +60,7 @@ clean:
 	@${MAKE} --no-print-directory -C . -f rpc.make clean
 	@${MAKE} --no-print-directory -C . -f cli.make clean
 	@${MAKE} --no-print-directory -C . -f events.make clean
+	@${MAKE} --no-print-directory -C . -f database.make clean
 	@${MAKE} --no-print-directory -C . -f gd.make clean
 	@${MAKE} --no-print-directory -C . -f homegear.make clean
 
@@ -77,6 +82,7 @@ help:
 	@echo "   rpc"
 	@echo "   cli"
 	@echo "   events"
+	@echo "   database"
 	@echo "   gd"
 	@echo "   homegear"
 	@echo ""

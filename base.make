@@ -121,7 +121,6 @@ OBJECTS := \
 	$(OBJDIR)/BinaryDecoder.o \
 	$(OBJDIR)/XMLRPCDecoder.o \
 	$(OBJDIR)/BinaryEncoder.o \
-	$(OBJDIR)/SQLite3.o \
 	$(OBJDIR)/SocketOperations.o \
 	$(OBJDIR)/Threads.o \
 	$(OBJDIR)/Settings.o \
@@ -268,9 +267,6 @@ $(OBJDIR)/XMLRPCDecoder.o: Modules/Base/Encoding/XMLRPCDecoder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/BinaryEncoder.o: Modules/Base/Encoding/BinaryEncoder.cpp
-	@echo $(notdir $<)
-	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
-$(OBJDIR)/SQLite3.o: Modules/Base/Database/SQLite3.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/SocketOperations.o: Modules/Base/Sockets/SocketOperations.cpp

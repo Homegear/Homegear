@@ -30,7 +30,7 @@
 #ifndef SQLITE3_H_
 #define SQLITE3_H_
 
-#include "DatabaseTypes.h"
+#include "../../Modules/Base/Database/DatabaseTypes.h"
 
 #include <mutex>
 
