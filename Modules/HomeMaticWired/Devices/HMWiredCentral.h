@@ -82,8 +82,8 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getServiceMessages(bool returnID);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(uint64_t id, uint32_t channel, std::string valueKey);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listDevices();
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listDevices(std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> removeLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);

@@ -112,8 +112,8 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getServiceMessages(bool returnID);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(uint64_t id, uint32_t channel, std::string valueKey);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listDevices();
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listDevices(std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listTeams();
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> removeLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> removeLink(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);

@@ -200,8 +200,8 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         virtual IBidCoSInterface::PeerInfo getPeerInfo();
 
         //RPC methods
-        std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription();
-        std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel);
+        std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription(bool channels, std::map<std::string, bool> fields);
+        std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
         std::shared_ptr<BaseLib::RPC::RPCVariable> setLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkPeers(int32_t channel, bool returnID);

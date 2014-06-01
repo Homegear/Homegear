@@ -403,6 +403,7 @@ public:
 	RPCListDevices()
 	{
 		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>({BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcArray}));
 	}
 	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };

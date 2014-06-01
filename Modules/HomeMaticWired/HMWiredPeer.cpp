@@ -2027,7 +2027,7 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
     }
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t channel)
+std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int32_t channel, std::map<std::string, bool> fields)
 {
 	try
 	{
@@ -2045,53 +2045,67 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int
 
 		if(channel == -1) //Base device
 		{
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber))));
+			if(fields.empty() || fields.find("FAMILY") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired))));
+			if(fields.empty() || fields.find("FAMILY_STRING") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
+			if(fields.empty() || fields.find("ID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
+			if(fields.empty() || fields.find("ADDRESS") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber))));
 
 			std::shared_ptr<BaseLib::RPC::RPCVariable> variable = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 			std::shared_ptr<BaseLib::RPC::RPCVariable> variable2 = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("CHILDREN", variable));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", variable2));
+			if(fields.empty() || fields.find("CHILDREN") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("CHILDREN", variable));
+			if(fields.empty() || fields.find("CHANNELS") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", variable2));
 
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			if(fields.empty() || fields.find("CHILDREN") != fields.end() || fields.find("CHANNELS") != fields.end())
 			{
-				if(i->second->hidden) continue;
-				variable->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(i->first))));
-				variable2->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
+				for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+				{
+					if(i->second->hidden) continue;
+					if(fields.empty() || fields.find("CHILDREN") != fields.end()) variable->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(i->first))));
+					if(fields.empty() || fields.find("CHANNELS") != fields.end()) variable2->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
+				}
 			}
 
-			if(_firmwareVersion != 0) description->structValue->insert(BaseLib::RPC::RPCStructElement("FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::HelperFunctions::getHexString(_firmwareVersion >> 8) + "." + std::to_string(_firmwareVersion & 0xFF)))));
-			else description->structValue->insert(BaseLib::RPC::RPCStructElement("FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("?")))));
+			if(fields.empty() || fields.find("FIRMWARE") != fields.end())
+			{
+				if(_firmwareVersion != 0) description->structValue->insert(BaseLib::RPC::RPCStructElement("FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::HelperFunctions::getHexString(_firmwareVersion >> 8) + "." + std::to_string(_firmwareVersion & 0xFF)))));
+				else description->structValue->insert(BaseLib::RPC::RPCStructElement("FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("?")))));
+			}
 
-			int32_t newFirmwareVersion = getNewFirmwareVersion();
-			if(newFirmwareVersion > _firmwareVersion) description->structValue->insert(BaseLib::RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::HelperFunctions::getHexString(newFirmwareVersion >> 8) + "." + std::to_string(newFirmwareVersion & 0xFF)))));
+			if(fields.empty() || fields.find("AVAILABLE_FIRMWARE") != fields.end())
+			{
+				int32_t newFirmwareVersion = getNewFirmwareVersion();
+				if(newFirmwareVersion > _firmwareVersion) description->structValue->insert(BaseLib::RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::HelperFunctions::getHexString(newFirmwareVersion >> 8) + "." + std::to_string(newFirmwareVersion & 0xFF)))));
+			}
 
-			int32_t uiFlags = (int32_t)rpcDevice->uiFlags;
-			if(isTeam()) uiFlags |= BaseLib::RPC::Device::UIFlags::dontdelete;
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(uiFlags))));
+			if(fields.empty() || fields.find("FLAGS") != fields.end())
+			{
+				int32_t uiFlags = (int32_t)rpcDevice->uiFlags;
+				if(isTeam()) uiFlags |= BaseLib::RPC::Device::UIFlags::dontdelete;
+				description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(uiFlags))));
+			}
+
+			if(fields.empty() || fields.find("INTERFACE") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(GD::physicalInterface->getID()))));
+
+			if(fields.empty() || fields.find("PARAMSETS") != fields.end())
+			{
+				variable = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+				description->structValue->insert(BaseLib::RPC::RPCStructElement("PARAMSETS", variable));
+				variable->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("MASTER")))); //Always MASTER
+			}
+
+			if(fields.empty() || fields.find("PARENT") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("PARENT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("")))));
+
+			if(fields.empty() || fields.find("PHYSICAL_ADDRESS") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("PHYSICAL_ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::to_string(_address)))));
 
 			//Compatibility
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(GD::physicalInterface->getID()))));
-
-			variable = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("PARAMSETS", variable));
-			variable->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("MASTER")))); //Always MASTER
-
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("PARENT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("")))));
-
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("PHYSICAL_ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::to_string(_address)))));
+			if(fields.empty() || fields.find("RF_ADDRESS") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("RF_ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::to_string(_address)))));
 
 			//Compatibility
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("RF_ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::to_string(_address)))));
+			if(fields.empty() || fields.find("ROAMING") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ROAMING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(0))));
 
-			//Compatibility
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("ROAMING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(0))));
+			if(!type.empty() && (fields.empty() || fields.find("TYPE") != fields.end())) if(!type.empty()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(type))));
 
-			if(!type.empty()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(type))));
-
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("VERSION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(rpcDevice->version))));
+			if(fields.empty() || fields.find("VERSION") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("VERSION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(rpcDevice->version))));
 		}
 		else
 		{
@@ -2099,69 +2113,76 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int
 			std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
 			if(rpcChannel->hidden) return description;
 
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
+			if(fields.empty() || fields.find("FAMILY") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired))));
+			if(fields.empty() || fields.find("FAMILY_STRING") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
+			if(fields.empty() || fields.find("ID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
+			if(fields.empty() || fields.find("ADDRESS") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 
 			//Compatibility
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(0))));
+			if(fields.empty() || fields.find("AES_ACTIVE") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(0))));
 
-			int32_t direction = 0;
-			std::ostringstream linkSourceRoles;
-			std::ostringstream linkTargetRoles;
-			if(rpcChannel->linkRoles)
+			if(fields.empty() || fields.find("DIRECTION") != fields.end() || fields.find("LINK_SOURCE_ROLES") != fields.end() || fields.find("LINK_TARGET_ROLES") != fields.end())
 			{
-				for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->sourceNames.begin(); k != rpcChannel->linkRoles->sourceNames.end(); ++k)
+				int32_t direction = 0;
+				std::ostringstream linkSourceRoles;
+				std::ostringstream linkTargetRoles;
+				if(rpcChannel->linkRoles)
 				{
-					//Probably only one direction is supported, but just in case I use the "or"
-					if(!k->empty())
+					for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->sourceNames.begin(); k != rpcChannel->linkRoles->sourceNames.end(); ++k)
 					{
-						if(direction & 1) linkSourceRoles << " ";
-						linkSourceRoles << *k;
-						direction |= 1;
+						//Probably only one direction is supported, but just in case I use the "or"
+						if(!k->empty())
+						{
+							if(direction & 1) linkSourceRoles << " ";
+							linkSourceRoles << *k;
+							direction |= 1;
+						}
+					}
+					for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->targetNames.begin(); k != rpcChannel->linkRoles->targetNames.end(); ++k)
+					{
+						//Probably only one direction is supported, but just in case I use the "or"
+						if(!k->empty())
+						{
+							if(direction & 2) linkTargetRoles << " ";
+							linkTargetRoles << *k;
+							direction |= 2;
+						}
 					}
 				}
-				for(std::vector<std::string>::iterator k = rpcChannel->linkRoles->targetNames.begin(); k != rpcChannel->linkRoles->targetNames.end(); ++k)
+
+				//Overwrite direction when manually set
+				if(rpcChannel->direction != BaseLib::RPC::DeviceChannel::Direction::Enum::none) direction = (int32_t)rpcChannel->direction;
+				if(fields.empty() || fields.find("DIRECTION") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("DIRECTION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(direction))));
+				if(fields.empty() || fields.find("LINK_SOURCE_ROLES") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("LINK_SOURCE_ROLES", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(linkSourceRoles.str()))));
+				if(fields.empty() || fields.find("LINK_TARGET_ROLES") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("LINK_TARGET_ROLES", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(linkTargetRoles.str()))));
+			}
+
+			if(fields.empty() || fields.find("FLAGS") != fields.end())
+			{
+				int32_t uiFlags = (int32_t)rpcChannel->uiFlags;
+				if(isTeam()) uiFlags |= BaseLib::RPC::DeviceChannel::UIFlags::dontdelete;
+				description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(uiFlags))));
+			}
+
+			if(fields.empty() || fields.find("INDEX") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("INDEX", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel))));
+
+			if(fields.empty() || fields.find("PARAMSETS") != fields.end())
+			{
+				std::shared_ptr<BaseLib::RPC::RPCVariable> variable = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+				description->structValue->insert(BaseLib::RPC::RPCStructElement("PARAMSETS", variable));
+				for(std::map<BaseLib::RPC::ParameterSet::Type::Enum, std::shared_ptr<BaseLib::RPC::ParameterSet>>::iterator j = rpcChannel->parameterSets.begin(); j != rpcChannel->parameterSets.end(); ++j)
 				{
-					//Probably only one direction is supported, but just in case I use the "or"
-					if(!k->empty())
-					{
-						if(direction & 2) linkTargetRoles << " ";
-						linkTargetRoles << *k;
-						direction |= 2;
-					}
+					variable->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second->typeString())));
 				}
 			}
 
-			//Overwrite direction when manually set
-			if(rpcChannel->direction != BaseLib::RPC::DeviceChannel::Direction::Enum::none) direction = (int32_t)rpcChannel->direction;
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("DIRECTION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(direction))));
+			if(fields.empty() || fields.find("PARENT") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("PARENT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber))));
 
-			int32_t uiFlags = (int32_t)rpcChannel->uiFlags;
-			if(isTeam()) uiFlags |= BaseLib::RPC::DeviceChannel::UIFlags::dontdelete;
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(uiFlags))));
+			if(!type.empty() && (fields.empty() || fields.find("PARENT_TYPE") != fields.end())) description->structValue->insert(BaseLib::RPC::RPCStructElement("PARENT_TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(type))));
 
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("INDEX", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel))));
+			if(fields.empty() || fields.find("TYPE") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(rpcChannel->type))));
 
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("LINK_SOURCE_ROLES", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(linkSourceRoles.str()))));
-
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("LINK_TARGET_ROLES", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(linkTargetRoles.str()))));
-
-			std::shared_ptr<BaseLib::RPC::RPCVariable> variable = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("PARAMSETS", variable));
-			for(std::map<BaseLib::RPC::ParameterSet::Type::Enum, std::shared_ptr<BaseLib::RPC::ParameterSet>>::iterator j = rpcChannel->parameterSets.begin(); j != rpcChannel->parameterSets.end(); ++j)
-			{
-				variable->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second->typeString())));
-			}
-
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("PARENT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber))));
-
-			if(!type.empty()) description->structValue->insert(BaseLib::RPC::RPCStructElement("PARENT_TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(type))));
-
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(rpcChannel->type))));
-
-			description->structValue->insert(BaseLib::RPC::RPCStructElement("VERSION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(rpcDevice->version))));
+			if(fields.empty() || fields.find("VERSION") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("VERSION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(rpcDevice->version))));
 		}
 		return description;
 	}
@@ -2180,17 +2201,20 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> HMWiredPeer::getDeviceDescription()
+std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> HMWiredPeer::getDeviceDescription(bool channels, std::map<std::string, bool> fields)
 {
 	try
 	{
 		std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
-		descriptions->push_back(getDeviceDescription(-1));
+		descriptions->push_back(getDeviceDescription(-1, std::map<std::string, bool>()));
 
-		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+		if(channels)
 		{
-			std::shared_ptr<BaseLib::RPC::RPCVariable> description = getDeviceDescription(i->first);
-			if(!description->structValue->empty()) descriptions->push_back(description);
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			{
+				std::shared_ptr<BaseLib::RPC::RPCVariable> description = getDeviceDescription((int32_t)i->first, fields);
+				if(!description->structValue->empty()) descriptions->push_back(description);
+			}
 		}
 
 		return descriptions;
@@ -2689,7 +2713,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLink(int32_t channel,
 					if(flags & 16)
 					{
 						std::shared_ptr<BaseLib::RPC::RPCVariable> description;
-						if(!(brokenFlags & 2) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel);
+						if(!(brokenFlags & 2) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel, std::map<std::string, bool>());
 						else description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 						if(description->errorStruct) description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 						element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_DESCRIPTION", description));
@@ -2708,7 +2732,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLink(int32_t channel,
 					if(flags & 8)
 					{
 						std::shared_ptr<BaseLib::RPC::RPCVariable> description;
-						if(!(brokenFlags & 1)) description = getDeviceDescription(channel);
+						if(!(brokenFlags & 1)) description = getDeviceDescription(channel, std::map<std::string, bool>());
 						else description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 						if(description->errorStruct) description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 						element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_DESCRIPTION", description));
@@ -2730,7 +2754,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLink(int32_t channel,
 					if(flags & 16)
 					{
 						std::shared_ptr<BaseLib::RPC::RPCVariable> description;
-						if(!(brokenFlags & 2)) description = getDeviceDescription(channel);
+						if(!(brokenFlags & 2)) description = getDeviceDescription(channel, std::map<std::string, bool>());
 						else description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 						if(description->errorStruct) description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 						element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_DESCRIPTION", description));
@@ -2749,7 +2773,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLink(int32_t channel,
 					if(flags & 8)
 					{
 						std::shared_ptr<BaseLib::RPC::RPCVariable> description;
-						if(!(brokenFlags & 1) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel);
+						if(!(brokenFlags & 1) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel, std::map<std::string, bool>());
 						else description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 						if(description->errorStruct) description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 						element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_DESCRIPTION", description));

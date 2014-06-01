@@ -76,8 +76,8 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> getValue(uint64_t id, uint32_t channel, std::string valueKey) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> listDevices() { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> listDevices(std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
+	virtual std::shared_ptr<RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields) = 0;
+	virtual std::shared_ptr<RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices) = 0;
 	virtual std::shared_ptr<RPC::RPCVariable> listTeams() { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel, bool force = false, bool burst = true) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> setTeam(uint64_t peerID, int32_t channel, uint64_t teamID, int32_t teamChannel, bool force = false, bool burst = true) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }

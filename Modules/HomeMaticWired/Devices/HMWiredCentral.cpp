@@ -981,7 +981,7 @@ void HMWiredCentral::handleAnnounce(std::shared_ptr<HMWiredPacket> packet)
 		{
 			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 			peer->restoreLinks();
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = peer->getDeviceDescription();
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = peer->getDeviceDescription(true, std::map<std::string, bool>());
 			if(!descriptions)
 			{
 				_peerInitMutex.unlock();
@@ -1277,7 +1277,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getDeviceDescription(
 		std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
 
-		return peer->getDeviceDescription(channel);
+		return peer->getDeviceDescription(channel, std::map<std::string, bool>());
 	}
 	catch(const std::exception& ex)
     {
@@ -1301,7 +1301,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getDeviceDescription(
 		std::shared_ptr<HMWiredPeer> peer(getPeer(id));
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
 
-		return peer->getDeviceDescription(channel);
+		return peer->getDeviceDescription(channel, std::map<std::string, bool>());
 	}
 	catch(const std::exception& ex)
     {
@@ -1874,12 +1874,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getValue(uint64_t id,
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::listDevices()
+std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::listDevices(bool channels, std::map<std::string, bool> fields)
 {
-	return listDevices(std::shared_ptr<std::map<uint64_t, int32_t>>());
+	return listDevices(channels, fields, std::shared_ptr<std::map<uint64_t, int32_t>>());
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::listDevices(std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
+std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
 {
 	try
 	{
@@ -1899,7 +1899,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::listDevices(std::shar
 		{
 			//listDevices really needs a lot of resources, so wait a little bit after each device
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription(channels, fields);
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{
@@ -2208,7 +2208,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::searchDevices()
 				for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = newPeers.begin(); i != newPeers.end(); ++i)
 				{
 					(*i)->restoreLinks();
-					std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
+					std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription(true, std::map<std::string, bool>());
 					if(!descriptions) continue;
 					for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 					{

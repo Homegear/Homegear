@@ -89,7 +89,7 @@ public:
 private:
 	void print(std::shared_ptr<RPCVariable>, std::string indent);
 	void printStruct(std::shared_ptr<std::map<std::string, std::shared_ptr<RPCVariable>>> rpcStruct, std::string indent);
-	void printArray(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> rpcStruct, std::string indent);
+	void printArray(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> rpcArray, std::string indent);
 };
 
 typedef std::pair<std::string, std::shared_ptr<RPCVariable>> RPCStructElement;

@@ -464,6 +464,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			std::stringstream stream(command);
 			std::string element;
 			int32_t index = 0;
+			std::shared_ptr<BidCoSPacket> packet;
 			while(std::getline(stream, element, ' '))
 			{
 				if(index < 2)
@@ -474,9 +475,23 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					int32_t temp = BaseLib::HelperFunctions::getNumber(element, true);
-					if(temp == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
-					deviceType = temp;
+					if(element.size() == 54)
+					{
+						index = 6;
+						packet.reset(new BidCoSPacket());
+						packet->import(element, false);
+						peerAddress = packet->senderAddress();
+						deviceType = (packet->payload()->at(1) << 8) + packet->payload()->at(2);
+						firmwareVersion = packet->payload()->at(0);
+						serialNumber.insert(serialNumber.end(), &packet->payload()->at(3), &packet->payload()->at(3) + 10);
+						break;
+					}
+					else
+					{
+						int32_t temp = BaseLib::HelperFunctions::getNumber(element, true);
+						if(temp == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
+						deviceType = temp;
+					}
 				}
 				else if(index == 3)
 				{
@@ -498,20 +513,21 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			if(index < 6)
 			{
 				stringStream << "Description: This command manually adds a peer without pairing. Please only use this command for testing." << std::endl;
-				stringStream << "Usage: peers add DEVICETYPE ADDRESS SERIALNUMBER FIRMWAREVERSION" << std::endl << std::endl;
+				stringStream << "Usage: peers add DEVICETYPE ADDRESS SERIALNUMBER FIRMWAREVERSION" << std::endl;
+				stringStream << "       peers add PAIRINGPACKET" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  DEVICETYPE:\t\tThe 2 byte device type of the peer to add in hexadecimal format. Example: 0039" << std::endl;
 				stringStream << "  ADDRESS:\t\tThe 3 byte address of the peer to add in hexadecimal format. Example: 1A03FC" << std::endl;
 				stringStream << "  SERIALNUMBER:\t\tThe 10 character long serial number of the peer to add. Example: JEQ0123456" << std::endl;
 				stringStream << "  FIRMWAREVERSION:\tThe 1 byte firmware version of the peer to add in hexadecimal format. Example: 1F" << std::endl;
+				stringStream << "  PAIRINGPACKET:\tThe 27 byte hex of a pairing packet. Example: 1A0080001F454D1D01231900044B45513030323236393510010100" << std::endl;
 				return stringStream.str();
 			}
 			if(peerExists(peerAddress)) stringStream << "This peer is already paired to this central." << std::endl;
 			else
 			{
-				std::shared_ptr<BidCoSPeer> peer = createPeer(peerAddress, firmwareVersion, BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, deviceType), serialNumber, 0, 0, std::shared_ptr<BidCoSPacket>(), false);
+				std::shared_ptr<BidCoSPeer> peer = createPeer(peerAddress, firmwareVersion, BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, deviceType), serialNumber, 0, 0, packet, false);
 				if(!peer || !peer->rpcDevice) return "Device type not supported.\n";
-
 				try
 				{
 					_peersMutex.lock();
@@ -2754,7 +2770,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 				addHomegearFeatures(peer, -1, true);
 				peer->setPairingComplete(true);
 				std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-				deviceDescriptions->arrayValue = peer->getDeviceDescription();
+				deviceDescriptions->arrayValue = peer->getDeviceDescription(true, std::map<std::string, bool>());
 				raiseRPCNewDevices(deviceDescriptions);
 			}
 		}
@@ -2865,7 +2881,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::addDevice(std::stri
 		}
 		else
 		{
-			return peer->getDeviceDescription(-1);
+			return peer->getDeviceDescription(-1, std::map<std::string, bool>());
 		}
 	}
 	catch(const std::exception& ex)
@@ -3379,12 +3395,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::deleteDevice(uint64
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listDevices()
+std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listDevices(bool channels, std::map<std::string, bool> fields)
 {
-	return listDevices(std::shared_ptr<std::map<std::uint64_t, int32_t>>());
+	return listDevices(channels, fields, std::shared_ptr<std::map<std::uint64_t, int32_t>>());
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listDevices(std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
+std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
 {
 	try
 	{
@@ -3404,7 +3420,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listDevices(std::sh
 		{
 			//listDevices really needs a lot of resources, so wait a little bit after each device
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription(channels, fields);
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{
@@ -3451,7 +3467,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listTeams()
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			std::string serialNumber = (*i)->getSerialNumber();
 			if(serialNumber.empty() || serialNumber.at(0) != '*') continue;
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription();
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription(true, std::map<std::string, bool>());
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{
@@ -3672,7 +3688,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getDeviceDescriptio
 		std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
 
-		return peer->getDeviceDescription(channel);
+		return peer->getDeviceDescription(channel, std::map<std::string, bool>());
 	}
 	catch(const std::exception& ex)
     {
@@ -3696,7 +3712,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getDeviceDescriptio
 		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
 
-		return peer->getDeviceDescription(channel);
+		return peer->getDeviceDescription(channel, std::map<std::string, bool>());
 	}
 	catch(const std::exception& ex)
     {

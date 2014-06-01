@@ -141,7 +141,11 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
 			{
 				if((*j)->matches(deviceType, firmwareVersion))
 				{
-					if((*i)->countFromSysinfoIndex > -1 && countFromSysinfo < 0) continue; //Ignore device, because countFromSysinfo is mandatory
+					if((*i)->countFromSysinfoIndex > -1 && countFromSysinfo < 0)
+					{
+						Output::printDebug("Skipping device, because countFromSysinfo is mandatory.");
+						continue; //Ignore device, because countFromSysinfo is mandatory
+					}
 					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo)
 					{
 						if((*i)->getCountFromSysinfo() == -1) partialMatch = *i;

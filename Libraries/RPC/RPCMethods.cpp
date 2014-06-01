@@ -276,7 +276,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCAddDevice::invoke(std::shared_ptr<
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
-			if(central && central->knowsDevice(serialNumber)) return central->addDevice(serialNumber);
+			if(central) return central->addDevice(serialNumber);
 		}
 
 		return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
@@ -1542,9 +1542,21 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListDevices::invoke(std::shared_pt
 		{
 			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
 					std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean }),
-					std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString })
+					std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }),
+					std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcArray }),
 			}));
 			if(error != ParameterError::Enum::noError) return getError(error);
+		}
+		bool channels = true;
+		std::map<std::string, bool> fields;
+		if(parameters->size() == 2)
+		{
+			channels = parameters->at(0)->booleanValue;
+			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->at(1)->arrayValue->begin(); i != parameters->at(1)->arrayValue->end(); ++i)
+			{
+				if((*i)->stringValue.empty()) continue;
+				fields[(*i)->stringValue] = true;
+			}
 		}
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> devices(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
@@ -1553,7 +1565,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListDevices::invoke(std::shared_pt
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->listDevices();
+			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->listDevices(channels, fields);
 			if(result->errorStruct)
 			{
 				BaseLib::Output::printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);

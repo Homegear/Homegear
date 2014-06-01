@@ -83,9 +83,9 @@ solution "homegear"
       kind "SharedLib"
       language "C++"
       files { "./Modules/HomeMaticBidCoS/*.h", "./Modules/HomeMaticBidCoS/*.cpp" }
-	  files { "./Modules/HomeMaticBidCoS/Devices/*.h", "./Modules/HomeMaticBidCoS/Devices/*.cpp" }
-	  files { "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.h", "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.cpp" }
-	  linkoptions { "-l pthread", "-l base" }
+      files { "./Modules/HomeMaticBidCoS/Devices/*.h", "./Modules/HomeMaticBidCoS/Devices/*.cpp" }
+      files { "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.h", "./Modules/HomeMaticBidCoS/PhysicalInterfaces/*.cpp" }
+      linkoptions { "-l pthread", "-l base" }
 	   
       configuration "Debug"
          defines { "DEBUG" }
@@ -113,6 +113,34 @@ solution "homegear"
       files { "./Modules/HomeMaticWired/*.h", "./Modules/HomeMaticWired/*.cpp" }
       files { "./Modules/HomeMaticWired/Devices/*.h", "./Modules/HomeMaticWired/Devices/*.cpp" }
       files { "./Modules/HomeMaticWired/PhysicalInterfaces/*.h", "./Modules/HomeMaticWired/PhysicalInterfaces/*.cpp" }
+      linkoptions { "-l pthread", "-l base" }
+	   
+      configuration "Debug"
+         defines { "DEBUG" }
+         flags { "Symbols" }
+         libdirs { "./lib/Debug" }
+         targetdir "./lib/Modules/Debug"
+ 
+      configuration "Release"
+         defines { "NDEBUG" }
+         flags { "Optimize" }
+         libdirs { "./lib/Release" }
+         targetdir "./lib/Modules/Release"
+
+      configuration "Profiling"
+         defines { "NDEBUG" }
+         flags { "Optimize", "Symbols" }
+         libdirs { "./lib/Profiling" }
+         targetdir "./lib/Modules/Profiling"
+         buildoptions { "-std=c++11", "-pg" }
+         linkoptions { "-pg" }
+
+   project "max"
+      kind "SharedLib"
+      language "C++"
+      files { "./Modules/MAX/*.h", "./Modules/MAX/*.cpp" }
+      files { "./Modules/MAX/LogicalDevices/*.h", "./Modules/MAX/LogicalDevices/*.cpp" }
+      files { "./Modules/MAX/PhysicalInterfaces/*.h", "./Modules/MAX/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l pthread", "-l base" }
 	   
       configuration "Debug"

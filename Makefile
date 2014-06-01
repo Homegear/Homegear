@@ -6,7 +6,7 @@ ifndef config
 endif
 export config
 
-PROJECTS := base homematicbidcos homematicwired user rpc cli events database gd homegear
+PROJECTS := base homematicbidcos homematicwired max user rpc cli events database gd homegear
 
 .PHONY: all clean help $(PROJECTS)
 
@@ -23,6 +23,10 @@ homematicbidcos:
 homematicwired: 
 	@echo "==== Building homematicwired ($(config)) ===="
 	@${MAKE} --no-print-directory -C . -f homematicwired.make
+
+max: 
+	@echo "==== Building max ($(config)) ===="
+	@${MAKE} --no-print-directory -C . -f max.make
 
 user: 
 	@echo "==== Building user ($(config)) ===="
@@ -56,6 +60,7 @@ clean:
 	@${MAKE} --no-print-directory -C . -f base.make clean
 	@${MAKE} --no-print-directory -C . -f homematicbidcos.make clean
 	@${MAKE} --no-print-directory -C . -f homematicwired.make clean
+	@${MAKE} --no-print-directory -C . -f max.make clean
 	@${MAKE} --no-print-directory -C . -f user.make clean
 	@${MAKE} --no-print-directory -C . -f rpc.make clean
 	@${MAKE} --no-print-directory -C . -f cli.make clean
@@ -78,6 +83,7 @@ help:
 	@echo "   base"
 	@echo "   homematicbidcos"
 	@echo "   homematicwired"
+	@echo "   max"
 	@echo "   user"
 	@echo "   rpc"
 	@echo "   cli"
