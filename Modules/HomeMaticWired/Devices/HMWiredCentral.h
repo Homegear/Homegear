@@ -65,6 +65,7 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteDevice(uint64_t peerID, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(uint64_t id, int32_t channel);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkPeers(std::string serialNumber, int32_t channel);
@@ -91,6 +92,7 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> searchDevices();
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setName(uint64_t id, std::string name);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint64_t id, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> updateFirmware(std::vector<uint64_t> ids, bool manual);

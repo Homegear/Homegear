@@ -614,6 +614,83 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetDeviceDescription::invoke(std::
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetDeviceInfo::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		if(!parameters->empty())
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcArray }),
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger }),
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcArray })
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
+		}
+
+		uint32_t peerID = 0;
+		int32_t fieldsIndex = -1;
+		if(parameters->size() == 1 && parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcArray)
+		{
+			fieldsIndex = 0;
+		}
+		else if(parameters->size() == 2 || (parameters->size() == 1 && parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcInteger))
+		{
+			if(parameters->size() == 2) fieldsIndex = 1;
+			peerID = parameters->at(0)->integerValue;
+		}
+
+
+		std::map<std::string, bool> fields;
+		if(fieldsIndex > -1)
+		{
+			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->at(fieldsIndex)->arrayValue->begin(); i != parameters->at(fieldsIndex)->arrayValue->end(); ++i)
+			{
+				if((*i)->stringValue.empty()) continue;
+				fields[(*i)->stringValue] = true;
+			}
+		}
+
+		std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(!central) continue;
+			if(peerID > 0)
+			{
+				if(central->knowsDevice(peerID)) return central->getDeviceInfo(peerID, fields);
+			}
+			else
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(3));
+				std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->getDeviceInfo(peerID, fields);
+				if(result->errorStruct)
+				{
+					BaseLib::Output::printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);
+					continue;
+				}
+				if(result && !result->arrayValue->empty()) deviceInfo->arrayValue->insert(deviceInfo->arrayValue->end(), result->arrayValue->begin(), result->arrayValue->end());
+			}
+		}
+
+		if(peerID == 0) return deviceInfo;
+		return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
 {
 	try
@@ -1640,9 +1717,18 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListInterfaces::invoke(std::shared
 {
 	try
 	{
-		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+		int32_t familyID = -1;
+		if(parameters->size() > 0)
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+					std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger })
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::physicalInterfaces.listInterfaces();
+			familyID = parameters->at(0)->integerValue;
+		}
+
+		return GD::physicalInterfaces.listInterfaces(familyID);
 	}
 	catch(const std::exception& ex)
     {
@@ -2168,6 +2254,41 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetMetadata::invoke(std::shared_pt
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		return GD::db.setMetadata(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetName::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(central && central->knowsDevice(parameters->at(0)->integerValue))
+			{
+				return central->setName(parameters->at(0)->integerValue, parameters->at(1)->stringValue);
+			}
+		}
+
+		return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 	}
 	catch(const std::exception& ex)
     {

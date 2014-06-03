@@ -54,7 +54,7 @@ public:
 	void startListening();
 	bool isOpen();
 	void setup(int32_t userID, int32_t groupID);
-	std::shared_ptr<BaseLib::RPC::RPCVariable> listInterfaces();
+	std::shared_ptr<BaseLib::RPC::RPCVariable> listInterfaces(int32_t familyID);
 private:
 	std::mutex _physicalInterfacesMutex;
 	std::map<BaseLib::Systems::DeviceFamilies, std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> _physicalInterfaces;

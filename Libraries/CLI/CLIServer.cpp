@@ -389,11 +389,11 @@ std::string Server::handleUserCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			BaseLib::Database::DataTable rows = GD::db.getUsers();
-			if(rows.size() == 0) return "No users exist.\n";
+			std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db.getUsers();
+			if(rows->size() == 0) return "No users exist.\n";
 
 			stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Name" << std::endl;
-			for(BaseLib::Database::DataTable::const_iterator i = rows.begin(); i != rows.end(); ++i)
+			for(BaseLib::Database::DataTable::const_iterator i = rows->begin(); i != rows->end(); ++i)
 			{
 				if(!i->second.size() == 2 || !i->second.at(0) || !i->second.at(1)) continue;
 				stringStream << std::setw(6) << i->second.at(0)->intValue << std::setw(30) << i->second.at(1)->textValue << std::endl;

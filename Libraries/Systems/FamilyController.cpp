@@ -146,12 +146,12 @@ uint64_t FamilyController::onSavePeerVariable(uint64_t peerID, BaseLib::Database
 	return GD::db.savePeerVariable(peerID, data);
 }
 
-BaseLib::Database::DataTable FamilyController::onGetPeerParameters(uint64_t peerID)
+std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeerParameters(uint64_t peerID)
 {
 	return GD::db.getPeerParameters(peerID);
 }
 
-BaseLib::Database::DataTable FamilyController::onGetPeerVariables(uint64_t peerID)
+std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeerVariables(uint64_t peerID)
 {
 	return GD::db.getPeerVariables(peerID);
 }
@@ -161,7 +161,7 @@ void FamilyController::onDeletePeerParameter(uint64_t peerID, BaseLib::Database:
 	GD::db.deletePeerParameter(peerID, data);
 }
 
-BaseLib::Database::DataTable FamilyController::onGetDevices(uint32_t family)
+std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetDevices(uint32_t family)
 {
 	return GD::db.getDevices(family);
 }
@@ -186,12 +186,12 @@ void FamilyController::onDeletePeers(int32_t deviceID)
 	GD::db.deletePeers(deviceID);
 }
 
-BaseLib::Database::DataTable FamilyController::onGetPeers(uint64_t deviceID)
+std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetPeers(uint64_t deviceID)
 {
 	return GD::db.getPeers(deviceID);
 }
 
-BaseLib::Database::DataTable FamilyController::onGetDeviceVariables(uint64_t deviceID)
+std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetDeviceVariables(uint64_t deviceID)
 {
 	return GD::db.getDeviceVariables(deviceID);
 }

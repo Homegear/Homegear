@@ -57,29 +57,29 @@ public:
 	//End metadata
 
 	//Users
-	virtual BaseLib::Database::DataTable getUsers();
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getUsers();
 	virtual bool userNameExists(std::string name);
 	virtual uint64_t getUserID(std::string name);
 	virtual bool createUser(std::string name, std::vector<uint8_t>& passwordHash, std::vector<uint8_t>& salt);
 	virtual bool updateUser(uint64_t id, std::vector<uint8_t>& passwordHash, std::vector<uint8_t>& salt);
 	virtual bool deleteUser(uint64_t id);
-	virtual BaseLib::Database::DataTable getPassword(std::string name);
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getPassword(std::string name);
 	//End users
 
 	//Events
-	virtual BaseLib::Database::DataTable getEvents();
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getEvents();
 	virtual uint64_t saveEvent(BaseLib::Database::DataRow event);
 	virtual void deleteEvent(std::string name);
 	//End events
 
 	//Device
-	virtual BaseLib::Database::DataTable getDevices(uint32_t family);
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getDevices(uint32_t family);
 	virtual void deleteDevice(uint64_t id);
 	virtual uint64_t saveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family);
 	virtual uint64_t saveDeviceVariable(BaseLib::Database::DataRow data);
 	virtual void deletePeers(int32_t deviceID);
-	virtual BaseLib::Database::DataTable getPeers(uint64_t deviceID);
-	virtual BaseLib::Database::DataTable getDeviceVariables(uint64_t deviceID);
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getPeers(uint64_t deviceID);
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getDeviceVariables(uint64_t deviceID);
 	//End device
 
 	//Peer
@@ -87,8 +87,8 @@ public:
 	virtual uint64_t savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber);
 	virtual uint64_t savePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
 	virtual uint64_t savePeerVariable(uint64_t peerID, BaseLib::Database::DataRow data);
-	virtual BaseLib::Database::DataTable getPeerParameters(uint64_t peerID);
-	virtual BaseLib::Database::DataTable getPeerVariables(uint64_t peerID);
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerParameters(uint64_t peerID);
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerVariables(uint64_t peerID);
 	virtual void deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
 	//End Peer
 protected:

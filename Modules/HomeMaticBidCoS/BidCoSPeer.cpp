@@ -1149,6 +1149,7 @@ void BidCoSPeer::saveVariables()
 	try
 	{
 		if(_peerID == 0 || isTeam()) return;
+		Peer::saveVariables();
 		saveVariable(0, _firmwareVersion);
 		saveVariable(1, _remoteChannel);
 		saveVariable(2, _localChannel);
@@ -1307,13 +1308,14 @@ void BidCoSPeer::enqueuePendingQueues()
 	}
 }
 
-void BidCoSPeer::loadVariables(HomeMaticDevice* device)
+void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared_ptr<BaseLib::Database::DataTable> rows)
 {
 	try
 	{
+		if(!rows) rows = raiseGetPeerVariables();
+		Peer::loadVariables(device, rows);
 		_databaseMutex.lock();
-		BaseLib::Database::DataTable rows = raiseGetPeerVariables();
-		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)
@@ -1378,7 +1380,7 @@ void BidCoSPeer::loadVariables(HomeMaticDevice* device)
 				if(_centralFeatures && device)
 				{
 					pendingBidCoSQueues.reset(new PendingBidCoSQueues());
-					pendingBidCoSQueues->unserialize(row->second.at(5)->binaryValue, this, device);
+					pendingBidCoSQueues->unserialize(row->second.at(5)->binaryValue, this, (HomeMaticDevice*)device);
 				}
 				break;
 			case 17:
@@ -2228,8 +2230,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int3
 
 		if(channel == -1) //Base device
 		{
-			if(fields.empty() || fields.find("FAMILY") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS))));
-			if(fields.empty() || fields.find("FAMILY_STRING") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
+			if(fields.empty() || fields.find("FAMILYID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS))));
 			if(fields.empty() || fields.find("ID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
 			if(fields.empty() || fields.find("ADDRESS") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber))));
 
@@ -2282,8 +2283,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int3
 				if(isTeam()) uiFlags |= BaseLib::RPC::Device::UIFlags::dontdelete;
 				description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(uiFlags))));
 			}
-
-			if(fields.empty() || fields.find("INTERFACE") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_physicalInterface->getID()))));
 
 			if(fields.empty() || fields.find("PARAMSETS") != fields.end())
 			{
@@ -2475,6 +2474,42 @@ std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> BidCoSP
     	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>>();
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceInfo(std::map<std::string, bool> fields)
+{
+	try
+	{
+		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		std::shared_ptr<BaseLib::RPC::RPCVariable> info(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+
+		if(fields.empty() || fields.find("NAME") != fields.end()) info->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_name))));
+
+		if(fields.empty() || fields.find("RSSI") != fields.end())
+		{
+			if(valuesCentral.find(0) != valuesCentral.end() && valuesCentral.at(0).find("RSSI_DEVICE") != valuesCentral.at(0).end() && valuesCentral.at(0).at("RSSI_DEVICE").rpcParameter)
+			{
+				info->structValue->insert(BaseLib::RPC::RPCStructElement("RSSI", valuesCentral.at(0).at("RSSI_DEVICE").rpcParameter->convertFromPacket(valuesCentral.at(0).at("RSSI_DEVICE").data)));
+			}
+		}
+
+		if(fields.empty() || fields.find("INTERFACE") != fields.end()) info->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_physicalInterface->getID()))));
+
+		return info;
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<BaseLib::RPC::RPCVariable>();
 }
 
 std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamsetId(uint32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)

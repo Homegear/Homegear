@@ -280,9 +280,9 @@ void BidCoS::load()
 	try
 	{
 		_devices.clear();
-		BaseLib::Database::DataTable rows = raiseGetDevices();
+		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetDevices();
 		bool spyDeviceExists = false;
-		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;
 			BaseLib::Output::printMessage("Loading HomeMatic BidCoS device " + std::to_string(deviceID));

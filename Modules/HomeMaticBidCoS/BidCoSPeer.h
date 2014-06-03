@@ -163,7 +163,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         void unserializeNonCentralConfig(std::shared_ptr<std::vector<char>> serializedData);
         void serializeVariablesToReset(std::vector<uint8_t>& encodedData);
         void unserializeVariablesToReset(std::shared_ptr<std::vector<char>> serializedData);
-        void loadVariables(HomeMaticDevice* device = nullptr);
+        void loadVariables(BaseLib::Systems::LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
         void saveVariables();
         void savePeers();
         void saveNonCentralConfig();
@@ -202,6 +202,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         //RPC methods
         std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription(bool channels, std::map<std::string, bool> fields);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
+        std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
         std::shared_ptr<BaseLib::RPC::RPCVariable> setLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkPeers(int32_t channel, bool returnID);

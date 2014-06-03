@@ -29,11 +29,11 @@ case $1 in
 			[ $? -ne 0 ] && exit 1
 			mkdir /tmp/HomegearScriptsDir
 			[ $? -ne 0 ] && exit 1
-			wget -P /tmp/HomegearScriptsDir/ http://homegear.eu/downloads/HM-XMLRPC-Client.zip
+			wget -P /tmp/HomegearScriptsDir/ http://homegear.eu/downloads/Homegear_PHP_XMLRPC_Client.zip
 			[ $? -ne 0 ] && exit 1
-			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/HM-XMLRPC-Client.zip
+			unzip -d /tmp/HomegearScriptsDir /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
 			[ $? -ne 0 ] && exit 1
-			rm /tmp/HomegearScriptsDir/HM-XMLRPC-Client.zip
+			rm /tmp/HomegearScriptsDir/Homegear_PHP_XMLRPC_Client.zip
 			mkdir /var/lib/homegear/scripts
 			[ $? -ne 0 ] && exit 1
 			mv /tmp/HomegearScriptsDir/* /var/lib/homegear/scripts

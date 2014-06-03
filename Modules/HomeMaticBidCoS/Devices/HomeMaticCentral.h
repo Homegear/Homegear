@@ -92,6 +92,7 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteDevice(uint64_t peerID, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(uint64_t id, int32_t channel);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getInstallMode();
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
@@ -117,6 +118,7 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> listTeams();
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> removeLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> removeLink(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setName(uint64_t id, std::string name);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel, bool force = false, bool burst = true);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setTeam(uint64_t peerID, int32_t channel, uint64_t teamID, int32_t teamChannel, bool force = false, bool burst = true);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset);

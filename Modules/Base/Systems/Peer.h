@@ -87,8 +87,8 @@ public:
 			virtual uint64_t onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber) = 0;
 			virtual uint64_t onSavePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
 			virtual uint64_t onSavePeerVariable(uint64_t peerID, Database::DataRow data) = 0;
-			virtual Database::DataTable onGetPeerParameters(uint64_t peerID) = 0;
-			virtual Database::DataTable onGetPeerVariables(uint64_t peerID) = 0;
+			virtual std::shared_ptr<Database::DataTable> onGetPeerParameters(uint64_t peerID) = 0;
+			virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID) = 0;
 			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
 		//End database
 
@@ -121,6 +121,11 @@ public:
 	virtual void setSerialNumber(std::string serialNumber);
 	//End
 
+	//In table variables:
+    virtual std::string getName() { return _name; }
+	virtual void setName(std::string value) { _name = value; saveVariable(1000, _name); }
+    //End
+
 	virtual RPC::Device::RXModes::Enum getRXModes();
 	virtual bool isTeam() { return false; }
 	virtual void setLastPacketReceived();
@@ -135,7 +140,8 @@ public:
 	virtual void saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum parameterSetType, uint32_t channel, std::string parameterName, std::vector<uint8_t>& value, int32_t remoteAddress = 0, uint32_t remoteChannel = 0);
 	virtual void saveParameter(uint32_t parameterID, uint32_t address, std::vector<uint8_t>& value);
 	virtual void saveParameter(uint32_t parameterID, std::vector<uint8_t>& value);
-	virtual void saveVariables() {}
+	virtual void loadVariables(LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
+	virtual void saveVariables();
 	virtual void saveVariable(uint32_t index, int32_t intValue);
     virtual void saveVariable(uint32_t index, int64_t intValue);
     virtual void saveVariable(uint32_t index, std::string& stringValue);
@@ -155,6 +161,11 @@ protected:
 	int32_t _address = 0;
 	std::string _serialNumber;
 	//End
+
+	//In table variables:
+	std::string _name;
+	//End
+
 	RPC::Device::RXModes::Enum _rxModes = RPC::Device::RXModes::Enum::none;
 
 	bool _disposing = false;
@@ -176,8 +187,8 @@ protected:
 		virtual uint64_t raiseSavePeer();
 		virtual uint64_t raiseSavePeerParameter(Database::DataRow data);
 		virtual uint64_t raiseSavePeerVariable(Database::DataRow data);
-		virtual Database::DataTable raiseGetPeerParameters();
-		virtual Database::DataTable raiseGetPeerVariables();
+		virtual std::shared_ptr<Database::DataTable> raiseGetPeerParameters();
+		virtual std::shared_ptr<Database::DataTable> raiseGetPeerVariables();
 		virtual void raiseDeletePeerParameter(Database::DataRow data);
 	//End database
 

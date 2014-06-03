@@ -134,7 +134,7 @@ void SQLite3::closeDatabase()
     }
 }
 
-void SQLite3::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
+void SQLite3::getDataRows(sqlite3_stmt* statement, std::shared_ptr<DataTable>& dataRows)
 {
 	int32_t result;
 	int32_t row = 0;
@@ -171,7 +171,8 @@ void SQLite3::getDataRows(sqlite3_stmt* statement, DataTable& dataRows)
 				col->dataType = DataColumn::DataType::Enum::TEXT;
 				col->textValue = std::string((const char*)sqlite3_column_text(statement, i));
 			}
-			dataRows[row][i] = col;
+			if(i == 0) dataRows->insert(std::pair<uint32_t, std::map<uint32_t, std::shared_ptr<DataColumn>>>(row, std::map<uint32_t, std::shared_ptr<DataColumn>>()));
+			dataRows->at(row)[i] = col;
 		}
 		row++;
 	}
@@ -264,9 +265,9 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
 	return 0;
 }
 
-DataTable SQLite3::executeCommand(std::string command, DataRow& dataToEscape)
+std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow& dataToEscape)
 {
-	DataTable dataRows;
+	std::shared_ptr<DataTable> dataRows(new DataTable());
 	try
 	{
 		_databaseMutex.lock();
@@ -321,9 +322,9 @@ DataTable SQLite3::executeCommand(std::string command, DataRow& dataToEscape)
 	return dataRows;
 }
 
-DataTable SQLite3::executeCommand(std::string command)
+std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
 {
-    DataTable dataRows;
+    std::shared_ptr<DataTable> dataRows(new DataTable());
     try
     {
     	_databaseMutex.lock();

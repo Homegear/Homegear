@@ -65,21 +65,21 @@ public:
 		virtual void onDeleteMetadata(std::string objectID, std::string dataID = "");
 
 		//Device
-		virtual BaseLib::Database::DataTable onGetDevices(uint32_t family);
+		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetDevices(uint32_t family);
 		virtual void onDeleteDevice(uint64_t deviceID);
 		virtual uint64_t onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family);
 		virtual uint64_t onSaveDeviceVariable(BaseLib::Database::DataRow data);
 		virtual void onDeletePeers(int32_t deviceID);
-		virtual BaseLib::Database::DataTable onGetPeers(uint64_t deviceID);
-		virtual BaseLib::Database::DataTable onGetDeviceVariables(uint64_t deviceID);
+		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeers(uint64_t deviceID);
+		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetDeviceVariables(uint64_t deviceID);
 
 		//Peer
 		virtual void onDeletePeer(uint64_t id);
 		virtual uint64_t onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber);
 		virtual uint64_t onSavePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
 		virtual uint64_t onSavePeerVariable(uint64_t peerID, BaseLib::Database::DataRow data);
-		virtual BaseLib::Database::DataTable onGetPeerParameters(uint64_t peerID);
-		virtual BaseLib::Database::DataTable onGetPeerVariables(uint64_t peerID);
+		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerParameters(uint64_t peerID);
+		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerVariables(uint64_t peerID);
 		virtual void onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
 	//End database
 

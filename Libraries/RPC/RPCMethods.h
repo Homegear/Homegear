@@ -215,6 +215,19 @@ public:
 	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
+class RPCGetDeviceInfo : public RPCMethod
+{
+public:
+	RPCGetDeviceInfo()
+	{
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcArray});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger});
+		addSignature(BaseLib::RPC::RPCVariableType::rpcStruct, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcArray});
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
+};
+
 class RPCGetInstallMode : public RPCMethod
 {
 public:
@@ -437,6 +450,7 @@ public:
 	RPCListInterfaces()
 	{
 		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>());
+		addSignature(BaseLib::RPC::RPCVariableType::rpcArray, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger});
 	}
 	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
@@ -555,6 +569,16 @@ class RPCSetInterface : public RPCMethod
 {
 public:
 	RPCSetInterface()
+	{
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString});
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
+};
+
+class RPCSetName : public RPCMethod
+{
+public:
+	RPCSetName()
 	{
 		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString});
 	}

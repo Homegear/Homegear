@@ -465,7 +465,7 @@ void PhysicalInterfaces::setup(int32_t userID, int32_t groupID)
     }
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> PhysicalInterfaces::listInterfaces()
+std::shared_ptr<BaseLib::RPC::RPCVariable> PhysicalInterfaces::listInterfaces(int32_t familyID)
 {
 	try
 	{
@@ -476,6 +476,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhysicalInterfaces::listInterfaces()
 			for(std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>::iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
 				if(GD::deviceFamilies.find(i->first) == GD::deviceFamilies.end()) continue;
+				if(familyID > -1 && ((int32_t)i->first) != familyID) continue;
 				std::shared_ptr<BaseLib::Systems::Central> central = GD::deviceFamilies.at(i->first)->getCentral();
 				if(!central) continue;
 				std::shared_ptr<BaseLib::RPC::RPCVariable> interface(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));

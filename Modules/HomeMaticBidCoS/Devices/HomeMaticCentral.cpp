@@ -2469,7 +2469,7 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<BidCoSPeer> peer, uint32_t chan
 			_peersMutex.unlock();
 			team = createTeam(peer->getAddress(), peer->getDeviceType(), serialNumber);
 			team->rpcDevice = peer->rpcDevice->team;
-			team->setID(peer->getID() | (1 << 31));
+			team->setID(peer->getID() | (1 << 30));
 			team->initializeCentralConfig();
 			_peersMutex.lock();
 			_peersBySerial[team->getSerialNumber()] = team;
@@ -3729,6 +3729,57 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getDeviceDescriptio
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
+{
+	try
+	{
+		if(id > 0)
+		{
+			std::shared_ptr<BidCoSPeer> peer(getPeer(id));
+			if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+
+			return peer->getDeviceInfo(fields);
+		}
+		else
+		{
+			std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+
+			std::vector<std::shared_ptr<BidCoSPeer>> peers;
+			//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
+			_peersMutex.lock();
+			for(std::map<uint64_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+			{
+				peers.push_back(i->second);
+			}
+			_peersMutex.unlock();
+
+			for(std::vector<std::shared_ptr<BidCoSPeer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				//listDevices really needs a lot of resources, so wait a little bit after each device
+				std::this_thread::sleep_for(std::chrono::milliseconds(3));
+				std::shared_ptr<BaseLib::RPC::RPCVariable> info = (*i)->getDeviceInfo(fields);
+				if(!info) continue;
+				array->arrayValue->push_back(info);
+			}
+
+			return array;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getInstallMode()
 {
 	try
@@ -4396,6 +4447,33 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getValue(uint64_t i
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
 		if(peer) return peer->getValue(channel, valueKey);
+		return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+	}
+	catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setName(uint64_t id, std::string name)
+{
+	try
+	{
+		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
+		if(peer)
+		{
+			peer->setName(name);
+			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		}
 		return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)

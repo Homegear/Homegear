@@ -245,7 +245,7 @@ uint64_t LogicalDevice::raiseSavePeerVariable(uint64_t peerID, Database::DataRow
     return 0;
 }
 
-Database::DataTable LogicalDevice::raiseGetPeerParameters(uint64_t peerID)
+std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeerParameters(uint64_t peerID)
 {
 	try
 	{
@@ -254,7 +254,7 @@ Database::DataTable LogicalDevice::raiseGetPeerParameters(uint64_t peerID)
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IDeviceEventSink*)*i)->onGetPeerParameters(peerID);
+				std::shared_ptr<Database::DataTable> result = ((IDeviceEventSink*)*i)->onGetPeerParameters(peerID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -273,10 +273,10 @@ Database::DataTable LogicalDevice::raiseGetPeerParameters(uint64_t peerID)
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
-Database::DataTable LogicalDevice::raiseGetPeerVariables(uint64_t peerID)
+std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeerVariables(uint64_t peerID)
 {
 	try
 	{
@@ -285,7 +285,7 @@ Database::DataTable LogicalDevice::raiseGetPeerVariables(uint64_t peerID)
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IDeviceEventSink*)*i)->onGetPeerVariables(peerID);
+				std::shared_ptr<Database::DataTable> result = ((IDeviceEventSink*)*i)->onGetPeerVariables(peerID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -304,7 +304,7 @@ Database::DataTable LogicalDevice::raiseGetPeerVariables(uint64_t peerID)
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
 void LogicalDevice::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow data)
@@ -419,7 +419,7 @@ void LogicalDevice::raiseDeletePeers(int32_t deviceID)
     _eventHandlerMutex.unlock();
 }
 
-Database::DataTable LogicalDevice::raiseGetPeers()
+std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeers()
 {
 	try
 	{
@@ -428,7 +428,7 @@ Database::DataTable LogicalDevice::raiseGetPeers()
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IDeviceEventSink*)*i)->onGetPeers(_deviceID);
+				std::shared_ptr<Database::DataTable> result = ((IDeviceEventSink*)*i)->onGetPeers(_deviceID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -447,10 +447,10 @@ Database::DataTable LogicalDevice::raiseGetPeers()
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
-Database::DataTable LogicalDevice::raiseGetDeviceVariables()
+std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetDeviceVariables()
 {
 	try
 	{
@@ -459,7 +459,7 @@ Database::DataTable LogicalDevice::raiseGetDeviceVariables()
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IDeviceEventSink*)*i)->onGetDeviceVariables(_deviceID);
+				std::shared_ptr<Database::DataTable> result = ((IDeviceEventSink*)*i)->onGetDeviceVariables(_deviceID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -478,7 +478,7 @@ Database::DataTable LogicalDevice::raiseGetDeviceVariables()
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
 void LogicalDevice::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
@@ -643,12 +643,12 @@ uint64_t LogicalDevice::onSavePeerVariable(uint64_t peerID, Database::DataRow da
 	return raiseSavePeerVariable(peerID, data);
 }
 
-Database::DataTable LogicalDevice::onGetPeerParameters(uint64_t peerID)
+std::shared_ptr<BaseLib::Database::DataTable> LogicalDevice::onGetPeerParameters(uint64_t peerID)
 {
 	return raiseGetPeerParameters(peerID);
 }
 
-Database::DataTable LogicalDevice::onGetPeerVariables(uint64_t peerID)
+std::shared_ptr<BaseLib::Database::DataTable> LogicalDevice::onGetPeerVariables(uint64_t peerID)
 {
 	return raiseGetPeerVariables(peerID);
 }

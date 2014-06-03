@@ -1369,6 +1369,57 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getDeviceDescription(
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }*/
 
+std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
+{
+	try
+	{
+		if(id > 0)
+		{
+			std::shared_ptr<HMWiredPeer> peer(getPeer(id));
+			if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+
+			return peer->getDeviceInfo(fields);
+		}
+		else
+		{
+			std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+
+			std::vector<std::shared_ptr<HMWiredPeer>> peers;
+			//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
+			_peersMutex.lock();
+			for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+			{
+				peers.push_back(i->second);
+			}
+			_peersMutex.unlock();
+
+			for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				//listDevices really needs a lot of resources, so wait a little bit after each device
+				std::this_thread::sleep_for(std::chrono::milliseconds(3));
+				std::shared_ptr<BaseLib::RPC::RPCVariable> info = (*i)->getDeviceInfo(fields);
+				if(!info) continue;
+				array->arrayValue->push_back(info);
+			}
+
+			return array;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel)
 {
 	try
@@ -2310,6 +2361,33 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::setLinkInfo(uint64_t 
 		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::setName(uint64_t id, std::string name)
+{
+	try
+	{
+		std::shared_ptr<HMWiredPeer> peer(getPeer(id));
+		if(peer)
+		{
+			peer->setName(name);
+			return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		}
+		return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+	}
+	catch(const std::exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value)

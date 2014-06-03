@@ -124,7 +124,7 @@ public:
 	void save(bool savePeer, bool variables, bool centralConfig);
     void serializePeers(std::vector<uint8_t>& encodedData);
     void unserializePeers(std::shared_ptr<std::vector<char>> serializedData);
-    void loadVariables(HMWiredDevice* device = nullptr);
+    void loadVariables(BaseLib::Systems::LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
     void saveVariables();
 	void savePeers();
 	bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
@@ -148,6 +148,7 @@ public:
 	//RPC methods
 	std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription(bool channels, std::map<std::string, bool> fields);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> setLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkPeers(int32_t channel, bool returnID);

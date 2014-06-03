@@ -57,6 +57,7 @@ void Server::registerMethods()
 		_server->registerMethod("enableEvent", std::shared_ptr<RPCMethod>(new RPCEnableEvent()));
 		_server->registerMethod("getAllMetadata", std::shared_ptr<RPCMethod>(new RPCGetAllMetadata()));
 		_server->registerMethod("getDeviceDescription", std::shared_ptr<RPCMethod>(new RPCGetDeviceDescription()));
+		_server->registerMethod("getDeviceInfo", std::shared_ptr<RPCMethod>(new RPCGetDeviceInfo()));
 		_server->registerMethod("getInstallMode", std::shared_ptr<RPCMethod>(new RPCGetInstallMode()));
 		_server->registerMethod("getKeyMismatchDevice", std::shared_ptr<RPCMethod>(new RPCGetKeyMismatchDevice()));
 		_server->registerMethod("getLinkInfo", std::shared_ptr<RPCMethod>(new RPCGetLinkInfo()));
@@ -88,6 +89,7 @@ void Server::registerMethods()
 		_server->registerMethod("setInterface", std::shared_ptr<RPCMethod>(new RPCSetInterface()));
 		_server->registerMethod("setLinkInfo", std::shared_ptr<RPCMethod>(new RPCSetLinkInfo()));
 		_server->registerMethod("setMetadata", std::shared_ptr<RPCMethod>(new RPCSetMetadata()));
+		_server->registerMethod("setName", std::shared_ptr<RPCMethod>(new RPCSetName()));
 		_server->registerMethod("setTeam", std::shared_ptr<RPCMethod>(new RPCSetTeam()));
 		_server->registerMethod("setValue", std::shared_ptr<RPCMethod>(new RPCSetValue()));
 		_server->registerMethod("triggerEvent", std::shared_ptr<RPCMethod>(new RPCTriggerEvent()));

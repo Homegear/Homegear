@@ -290,7 +290,7 @@ uint64_t Peer::raiseSavePeerVariable(Database::DataRow data)
     return 0;
 }
 
-Database::DataTable Peer::raiseGetPeerParameters()
+std::shared_ptr<Database::DataTable> Peer::raiseGetPeerParameters()
 {
 	try
 	{
@@ -299,7 +299,7 @@ Database::DataTable Peer::raiseGetPeerParameters()
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IPeerEventSink*)*i)->onGetPeerParameters(_peerID);
+				std::shared_ptr<Database::DataTable> result = ((IPeerEventSink*)*i)->onGetPeerParameters(_peerID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -318,10 +318,10 @@ Database::DataTable Peer::raiseGetPeerParameters()
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
-Database::DataTable Peer::raiseGetPeerVariables()
+std::shared_ptr<Database::DataTable> Peer::raiseGetPeerVariables()
 {
 	try
 	{
@@ -330,7 +330,7 @@ Database::DataTable Peer::raiseGetPeerVariables()
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IPeerEventSink*)*i)->onGetPeerVariables(_peerID);
+				std::shared_ptr<Database::DataTable> result = ((IPeerEventSink*)*i)->onGetPeerVariables(_peerID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -349,7 +349,7 @@ Database::DataTable Peer::raiseGetPeerVariables()
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
 void Peer::raiseDeletePeerParameter(Database::DataRow data)
@@ -763,6 +763,59 @@ void Peer::saveParameter(uint32_t parameterID, RPC::ParameterSet::Type::Enum par
     _databaseMutex.unlock();
 }
 
+void Peer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared_ptr<BaseLib::Database::DataTable> rows)
+{
+	try
+	{
+		if(!rows) return;
+		_databaseMutex.lock();
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
+		{
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			switch(row->second.at(2)->intValue)
+			{
+			case 1000:
+				_name = row->second.at(4)->textValue;
+				break;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_databaseMutex.unlock();
+}
+
+void Peer::saveVariables()
+{
+	try
+	{
+		if(_peerID == 0 || isTeam()) return;
+		saveVariable(1000, _name);
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void Peer::saveVariable(uint32_t index, int32_t intValue)
 {
 	try
@@ -1047,8 +1100,8 @@ void Peer::loadConfig()
 	{
 		_databaseMutex.lock();
 		Database::DataRow data;
-		Database::DataTable rows = raiseGetPeerParameters();
-		for(Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetPeerParameters();
+		for(Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			uint32_t databaseID = row->second.at(0)->intValue;
 			RPC::ParameterSet::Type::Enum parameterSetType = (RPC::ParameterSet::Type::Enum)row->second.at(2)->intValue;

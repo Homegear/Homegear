@@ -125,8 +125,8 @@ void HM_LC_SWX_FM::loadVariables()
 	try
 	{
 		HomeMaticDevice::loadVariables();
-		BaseLib::Database::DataTable rows = raiseGetDeviceVariables();
-		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetDeviceVariables();
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)

@@ -263,7 +263,7 @@ uint64_t DeviceFamily::raiseSavePeerVariable(uint64_t peerID, Database::DataRow 
     return 0;
 }
 
-Database::DataTable DeviceFamily::raiseGetPeerParameters(uint64_t peerID)
+std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetPeerParameters(uint64_t peerID)
 {
 	try
 	{
@@ -272,7 +272,7 @@ Database::DataTable DeviceFamily::raiseGetPeerParameters(uint64_t peerID)
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IFamilyEventSink*)*i)->onGetPeerParameters(peerID);
+				std::shared_ptr<Database::DataTable> result = ((IFamilyEventSink*)*i)->onGetPeerParameters(peerID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -291,10 +291,10 @@ Database::DataTable DeviceFamily::raiseGetPeerParameters(uint64_t peerID)
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
-Database::DataTable DeviceFamily::raiseGetPeerVariables(uint64_t peerID)
+std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetPeerVariables(uint64_t peerID)
 {
 	try
 	{
@@ -303,7 +303,7 @@ Database::DataTable DeviceFamily::raiseGetPeerVariables(uint64_t peerID)
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IFamilyEventSink*)*i)->onGetPeerVariables(peerID);
+				std::shared_ptr<Database::DataTable> result = ((IFamilyEventSink*)*i)->onGetPeerVariables(peerID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -322,7 +322,7 @@ Database::DataTable DeviceFamily::raiseGetPeerVariables(uint64_t peerID)
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
 void DeviceFamily::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow data)
@@ -350,7 +350,7 @@ void DeviceFamily::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow d
     _eventHandlerMutex.unlock();
 }
 
-Database::DataTable DeviceFamily::raiseGetDevices()
+std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetDevices()
 {
 	try
 	{
@@ -359,7 +359,7 @@ Database::DataTable DeviceFamily::raiseGetDevices()
 		{
 			if(*i)
 			{
-				Database::DataTable result =((IFamilyEventSink*)*i)->onGetDevices((uint32_t)_family);
+				std::shared_ptr<Database::DataTable> result =((IFamilyEventSink*)*i)->onGetDevices((uint32_t)_family);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -378,7 +378,7 @@ Database::DataTable DeviceFamily::raiseGetDevices()
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
 void DeviceFamily::raiseDeleteDevice(uint64_t deviceID)
@@ -493,7 +493,7 @@ void DeviceFamily::raiseDeletePeers(int32_t deviceID)
     _eventHandlerMutex.unlock();
 }
 
-Database::DataTable DeviceFamily::raiseGetPeers(uint64_t deviceID)
+std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetPeers(uint64_t deviceID)
 {
 	try
 	{
@@ -502,7 +502,7 @@ Database::DataTable DeviceFamily::raiseGetPeers(uint64_t deviceID)
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IFamilyEventSink*)*i)->onGetPeers(deviceID);
+				std::shared_ptr<Database::DataTable> result = ((IFamilyEventSink*)*i)->onGetPeers(deviceID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -521,10 +521,10 @@ Database::DataTable DeviceFamily::raiseGetPeers(uint64_t deviceID)
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
-Database::DataTable DeviceFamily::raiseGetDeviceVariables(uint64_t deviceID)
+std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetDeviceVariables(uint64_t deviceID)
 {
 	try
 	{
@@ -533,7 +533,7 @@ Database::DataTable DeviceFamily::raiseGetDeviceVariables(uint64_t deviceID)
 		{
 			if(*i)
 			{
-				Database::DataTable result = ((IFamilyEventSink*)*i)->onGetDeviceVariables(deviceID);
+				std::shared_ptr<Database::DataTable> result = ((IFamilyEventSink*)*i)->onGetDeviceVariables(deviceID);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -552,7 +552,7 @@ Database::DataTable DeviceFamily::raiseGetDeviceVariables(uint64_t deviceID)
     	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
-    return Database::DataTable();
+    return std::shared_ptr<Database::DataTable>();
 }
 
 void DeviceFamily::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
@@ -717,12 +717,12 @@ uint64_t DeviceFamily::onSavePeerVariable(uint64_t peerID, Database::DataRow dat
 	return raiseSavePeerVariable(peerID, data);
 }
 
-Database::DataTable DeviceFamily::onGetPeerParameters(uint64_t peerID)
+std::shared_ptr<BaseLib::Database::DataTable> DeviceFamily::onGetPeerParameters(uint64_t peerID)
 {
 	return raiseGetPeerParameters(peerID);
 }
 
-Database::DataTable DeviceFamily::onGetPeerVariables(uint64_t peerID)
+std::shared_ptr<BaseLib::Database::DataTable> DeviceFamily::onGetPeerVariables(uint64_t peerID)
 {
 	return raiseGetPeerVariables(peerID);
 }
@@ -747,12 +747,12 @@ void DeviceFamily::onDeletePeers(int32_t deviceID)
 	raiseDeletePeers(deviceID);
 }
 
-Database::DataTable DeviceFamily::onGetPeers(uint64_t deviceID)
+std::shared_ptr<BaseLib::Database::DataTable> DeviceFamily::onGetPeers(uint64_t deviceID)
 {
 	return raiseGetPeers(deviceID);
 }
 
-Database::DataTable DeviceFamily::onGetDeviceVariables(uint64_t deviceID)
+std::shared_ptr<BaseLib::Database::DataTable> DeviceFamily::onGetDeviceVariables(uint64_t deviceID)
 {
 	return raiseGetDeviceVariables(deviceID);
 }

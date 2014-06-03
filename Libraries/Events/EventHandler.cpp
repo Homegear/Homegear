@@ -1249,9 +1249,9 @@ void EventHandler::load()
 	try
 	{
 		_databaseMutex.lock();
-		BaseLib::Database::DataTable rows = GD::db.getEvents();
+		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db.getEvents();
 		_databaseMutex.unlock();
-		for(BaseLib::Database::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			std::shared_ptr<Event> event(new Event());
 			event->id = row->second.at(0)->intValue;
