@@ -54,7 +54,7 @@ public:
 	static std::string socketPath;
 	static std::string workingDirectory;
 	static std::string executablePath;
-	static FamilyController devices;
+	static FamilyController familyController;
 	static std::map<int32_t, RPC::Server> rpcServers;
 	static RPC::Client rpcClient;
 	static CLI::Server cliServer;

@@ -546,3 +546,40 @@ std::string FamilyController::handleCLICommand(std::string& command)
     }
     return "Error executing command. See log file for more details.\n";
 }
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> FamilyController::listFamilies()
+{
+	try
+	{
+		if(_rpcCache) return _rpcCache;
+
+		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = GD::deviceFamilies.at(i->first)->getCentral();
+			if(!central) continue;
+
+			std::shared_ptr<BaseLib::RPC::RPCVariable> familyDescription(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+
+			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)i->first))));
+			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->second->getName()))));
+			array->arrayValue->push_back(familyDescription);
+		}
+		_rpcCache = array;
+		return array;
+	}
+	catch(const std::exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}

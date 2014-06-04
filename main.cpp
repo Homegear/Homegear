@@ -99,7 +99,7 @@ void terminate(int32_t signalNumber)
 			GD::rpcClient.reset();
 			BaseLib::Output::printInfo( "(Shutdown) => Closing physical devices");
 			GD::physicalInterfaces.stopListening();
-			GD::devices.save(false);
+			GD::familyController.save(false);
 			BaseLib::Output::printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{
@@ -148,7 +148,7 @@ void terminate(int32_t signalNumber)
 				BaseLib::Output::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
 				BaseLib::Output::printCritical("Critical: Trying to save data to " + BaseLib::Obj::ins->settings.databasePath() + ".crash");
 				GD::db.open(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".crash");
-				if(GD::db.isOpen()) GD::devices.save(false, true);
+				if(GD::db.isOpen()) GD::familyController.save(false, true);
 			}
 			else
 			{
@@ -312,7 +312,7 @@ int main(int argc, char* argv[])
     					exit(1);
     				}
     				BaseLib::Obj::ins->settings.load(GD::configPath + "main.conf");
-    				GD::devices.loadModules();
+    				GD::familyController.loadModules();
     				GD::physicalInterfaces.load(BaseLib::Obj::ins->settings.physicalInterfaceSettingsPath());
     				int32_t userID = BaseLib::HelperFunctions::userID(std::string(argv[i + 1]));
     				int32_t groupID = BaseLib::HelperFunctions::groupID(std::string(argv[i + 2]));
@@ -461,7 +461,7 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-		GD::devices.loadModules();
+		GD::familyController.loadModules();
 
     	GD::db.open(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".bak");
     	if(!GD::db.isOpen())
@@ -490,7 +490,7 @@ int main(int argc, char* argv[])
         	return 1;
         }
         BaseLib::Output::printInfo("Loading devices...");
-        GD::devices.load(); //Don't load before database is open!
+        GD::familyController.load(); //Don't load before database is open!
 
         startRPCServers();
 
@@ -533,7 +533,7 @@ int main(int argc, char* argv[])
 					//std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(0x2F, 0xA0, 0x11, 0x212000, 0x1F454D, payload));
 					//GD::physicalInterfaces.get(DeviceFamily::HomeMaticBidCoS)->sendPacket(packet);
 				//}
-				std::cout << GD::devices.handleCLICommand(input);
+				std::cout << GD::familyController.handleCLICommand(input);
 			}
         }
 

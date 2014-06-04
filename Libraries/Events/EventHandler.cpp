@@ -203,13 +203,13 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::add(std::shared_ptr<Bas
 
 				if(eventDescription->structValue->at("RESETAFTER")->type == BaseLib::RPC::RPCVariableType::rpcInteger)
 				{
-					event->resetAfter = eventDescription->structValue->at("RESETAFTER")->integerValue * 1000;
+					event->resetAfter = ((uint64_t)eventDescription->structValue->at("RESETAFTER")->integerValue) * 1000;
 				}
 				else if(eventDescription->structValue->at("RESETAFTER")->type == BaseLib::RPC::RPCVariableType::rpcStruct)
 				{
 					std::shared_ptr<BaseLib::RPC::RPCVariable> resetStruct = eventDescription->structValue->at("RESETAFTER");
 					if(resetStruct->structValue->find("INITIALTIME") == resetStruct->structValue->end() || resetStruct->structValue->at("INITIALTIME")->integerValue == 0) return BaseLib::RPC::RPCVariable::createError(-5, "Initial time in reset struct not specified.");
-					event->initialTime = resetStruct->structValue->at("INITIALTIME")->integerValue * 1000;
+					event->initialTime = ((uint64_t)resetStruct->structValue->at("INITIALTIME")->integerValue) * 1000;
 					if(resetStruct->structValue->find("OPERATION") != resetStruct->structValue->end())
 						event->operation = (Event::Operation::Enum)resetStruct->structValue->at("OPERATION")->integerValue;
 					if(resetStruct->structValue->find("FACTOR") != resetStruct->structValue->end())
@@ -220,10 +220,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::add(std::shared_ptr<Bas
 					if(resetStruct->structValue->find("LIMIT") != resetStruct->structValue->end())
 					{
 						if(resetStruct->structValue->at("LIMIT")->integerValue < 0) return BaseLib::RPC::RPCVariable::createError(-5, "Limit is negative. Please provide a positive value");
-						event->limit = resetStruct->structValue->at("LIMIT")->integerValue * 1000;
+						event->limit = ((uint64_t)resetStruct->structValue->at("LIMIT")->integerValue) * 1000;
 					}
 					if(resetStruct->structValue->find("RESETAFTER") != resetStruct->structValue->end())
-						event->resetAfter = resetStruct->structValue->at("RESETAFTER")->integerValue * 1000;
+						event->resetAfter = ((uint64_t)resetStruct->structValue->at("RESETAFTER")->integerValue) * 1000;
 					if(event->resetAfter == 0) return BaseLib::RPC::RPCVariable::createError(-5, "RESETAFTER is not specified or 0.");
 				}
 			}
@@ -234,12 +234,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::add(std::shared_ptr<Bas
 		else
 		{
 			if(eventDescription->structValue->find("EVENTTIME") != eventDescription->structValue->end())
-				event->eventTime = eventDescription->structValue->at("EVENTTIME")->integerValue * 1000;
+				event->eventTime = ((uint64_t)eventDescription->structValue->at("EVENTTIME")->integerValue) * 1000;
 			if(event->eventTime == 0) event->eventTime = BaseLib::HelperFunctions::getTimeSeconds();
 			if(eventDescription->structValue->find("ENDTIME") != eventDescription->structValue->end())
-				event->endTime = eventDescription->structValue->at("ENDTIME")->integerValue * 1000;
+				event->endTime = ((uint64_t)eventDescription->structValue->at("ENDTIME")->integerValue) * 1000;
 			if(eventDescription->structValue->find("RECUREVERY") != eventDescription->structValue->end())
-				event->recurEvery = eventDescription->structValue->at("RECUREVERY")->integerValue * 1000;
+				event->recurEvery = ((uint64_t)eventDescription->structValue->at("RECUREVERY")->integerValue) * 1000;
 			uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
 			_eventsMutex.lock();
 			while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;

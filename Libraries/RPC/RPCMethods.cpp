@@ -261,17 +261,31 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCAddDevice::invoke(std::shared_ptr<
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString }),
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		std::string serialNumber;
+		int32_t serialNumberIndex = (parameters->size() == 2) ? 1 : 0;
+		int32_t familyID = (parameters->size() == 2) ? parameters->at(0)->integerValue : -1;
 
-		int32_t pos = parameters->at(0)->stringValue.find(':');
+		std::string serialNumber;
+		int32_t pos = parameters->at(serialNumberIndex)->stringValue.find(':');
 		if(pos > -1)
 		{
-			serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			serialNumber = parameters->at(serialNumberIndex)->stringValue.substr(0, pos);
 		}
-		else serialNumber = parameters->at(0)->stringValue;
+		else serialNumber = parameters->at(serialNumberIndex)->stringValue;
+
+		if(familyID > -1)
+		{
+			if(GD::deviceFamilies.find((BaseLib::Systems::DeviceFamilies)familyID) == GD::deviceFamilies.end())
+			{
+				return BaseLib::RPC::RPCVariable::createError(-2, "Device family is unknown.");
+			}
+			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->addDevice(serialNumber);
+		}
 
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
@@ -695,8 +709,25 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetInstallMode::invoke(std::shared
 {
 	try
 	{
-		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+		int32_t familyID = -1;
+		if(parameters->empty())
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger })
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
 
+			familyID = parameters->at(0)->integerValue;
+		}
+
+		if(familyID > -1)
+		{
+			if(GD::deviceFamilies.find((BaseLib::Systems::DeviceFamilies)familyID) == GD::deviceFamilies.end())
+			{
+				return BaseLib::RPC::RPCVariable::createError(-2, "Device family is unknown.");
+			}
+			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->getInstallMode();
+		}
 
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
@@ -1713,6 +1744,29 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListEvents::invoke(std::shared_ptr
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListFamilies::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
+
+		return GD::familyController.listFamilies();
+	}
+	catch(const std::exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListInterfaces::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
 {
 	try
@@ -1749,7 +1803,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListTeams::invoke(std::shared_ptr<
 {
 	try
 	{
-		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+		if(!parameters->empty()) return getError(ParameterError::Enum::wrongCount);
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> teams(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -2061,7 +2115,25 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSearchDevices::invoke(std::shared_
 {
 	try
 	{
-		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+		int32_t familyID = -1;
+		if(!parameters->empty())
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger })
+			}));
+			if(error != ParameterError::Enum::noError) return getError(error);
+
+			familyID = parameters->at(0)->integerValue;
+		}
+
+		if(familyID > -1)
+		{
+			if(GD::deviceFamilies.find((BaseLib::Systems::DeviceFamilies)familyID) == GD::deviceFamilies.end())
+			{
+				return BaseLib::RPC::RPCVariable::createError(-2, "Device family is unknown.");
+			}
+			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->searchDevices();
+		}
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> result(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -2093,17 +2165,37 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetInstallMode::invoke(std::shared
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
 			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean }),
-			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcInteger })
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcInteger }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcBoolean }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcBoolean, BaseLib::RPC::RPCVariableType::rpcInteger })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		uint32_t time = (parameters->size() > 1) ? parameters->at(1)->integerValue : 60;
+		int32_t enableIndex = (parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcBoolean) ? 0 : 1;
+		int32_t familyIDIndex = (parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcInteger) ? 0 : -1;
+		int32_t timeIndex = -1;
+		if(parameters->size() == 2 && parameters->at(1)->type == BaseLib::RPC::RPCVariableType::rpcInteger) timeIndex = 1;
+		else if(parameters->size() == 3) timeIndex = 2;
+
+		int32_t familyID = (familyIDIndex > -1) ? parameters->at(familyIDIndex)->integerValue : -1;
+
+		uint32_t time = (timeIndex > -1) ? parameters->at(timeIndex)->integerValue : 60;
 		if(time < 5) time = 60;
 		if(time > 3600) time = 3600;
+
+		if(familyID > -1)
+		{
+			if(GD::deviceFamilies.find((BaseLib::Systems::DeviceFamilies)familyID) == GD::deviceFamilies.end())
+			{
+				return BaseLib::RPC::RPCVariable::createError(-2, "Device family is unknown.");
+			}
+			return GD::deviceFamilies.at((BaseLib::Systems::DeviceFamilies)familyID)->getCentral()->setInstallMode(parameters->at(enableIndex)->booleanValue, time);
+		}
+
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
-			if(central) central->setInstallMode(parameters->at(0)->booleanValue, time);
+			if(central) central->setInstallMode(parameters->at(enableIndex)->booleanValue, time);
 		}
 
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));

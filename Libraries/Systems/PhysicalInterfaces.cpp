@@ -481,7 +481,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhysicalInterfaces::listInterfaces(in
 				if(!central) continue;
 				std::shared_ptr<BaseLib::RPC::RPCVariable> interface(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 
-				interface->structValue->insert(BaseLib::RPC::RPCStructElement("DEVICEFAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(GD::deviceFamilies.at(i->first)->getName()))));
+				interface->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILYID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)i->first))));
 				interface->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second->getID()))));
 				interface->structValue->insert(BaseLib::RPC::RPCStructElement("PHYSICALADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(central->physicalAddress()))));
 				interface->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second->getType()))));

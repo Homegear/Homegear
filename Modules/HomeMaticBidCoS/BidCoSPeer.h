@@ -221,6 +221,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
         std::shared_ptr<HomeMaticCentral> _central;
         std::shared_ptr<IBidCoSInterface> _physicalInterface;
+        std::map<std::string, std::shared_ptr<BaseLib::RPC::RPCVariable>> _rpcCache;
 
         //In table variables:
         int32_t _firmwareVersion = 0;

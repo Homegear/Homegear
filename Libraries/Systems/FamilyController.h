@@ -99,7 +99,11 @@ public:
 	bool familySelected() { return (bool)_currentFamily; }
 	std::string handleCLICommand(std::string& command);
 	bool familyAvailable(BaseLib::Systems::DeviceFamilies family);
+
+	std::shared_ptr<BaseLib::RPC::RPCVariable> listFamilies();
 private:
+	std::shared_ptr<BaseLib::RPC::RPCVariable> _rpcCache;
+
 	std::map<std::string, std::unique_ptr<ModuleLoader>> moduleLoaders;
 	BaseLib::Systems::DeviceFamily* _currentFamily;
 };

@@ -608,7 +608,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 	try
 	{
 		std::ostringstream stringStream;
-		if(command == "help" && !GD::devices.familySelected())
+		if(command == "help" && !GD::familyController.familySelected())
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
@@ -683,7 +683,7 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		if(response.empty())
 		{
 			if(command.compare(0, 5, "users") == 0) response = handleUserCommand(command);
-			else response = GD::devices.handleCLICommand(command);
+			else response = GD::familyController.handleCLICommand(command);
 		}
 		response.push_back(0);
 		if(send(clientData->fileDescriptor->descriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
