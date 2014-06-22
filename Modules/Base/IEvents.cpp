@@ -45,99 +45,54 @@ IEvents::~IEvents()
 
 void IEvents::addEventHandler(IEventSinkBase* eventHandler)
 {
-	try
+	if(!eventHandler) return;
+	_eventHandlerMutex.lock();
+	for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
 	{
-		if(!eventHandler) return;
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
+		if(*i == eventHandler)
 		{
-			if(*i == eventHandler)
-			{
-				_eventHandlerMutex.unlock();
-				return;
-			}
+			_eventHandlerMutex.unlock();
+			return;
 		}
-		_eventHandlers.push_front(eventHandler);
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	_eventHandlers.push_front(eventHandler);
     _eventHandlerMutex.unlock();
 }
 
 void IEvents::addEventHandlers(std::forward_list<IEventSinkBase*> eventHandlers)
 {
-	try
+	if(eventHandlers.empty()) return;
+	_eventHandlerMutex.lock();
+	for(std::forward_list<IEventSinkBase*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
 	{
-		if(eventHandlers.empty()) return;
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i)
+		bool exists = false;
+		for(std::forward_list<IEventSinkBase*>::iterator j = _eventHandlers.begin(); j != _eventHandlers.end(); ++j)
 		{
-			bool exists = false;
-			for(std::forward_list<IEventSinkBase*>::iterator j = _eventHandlers.begin(); j != _eventHandlers.end(); ++j)
+			if(*j == *i)
 			{
-				if(*j == *i)
-				{
-					exists = true;
-					break;
-				}
+				exists = true;
+				break;
 			}
-			if(exists) continue;
-			_eventHandlers.push_front(*i);
 		}
+		if(exists) continue;
+		_eventHandlers.push_front(*i);
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     _eventHandlerMutex.unlock();
 }
 
 void IEvents::removeEventHandler(IEventSinkBase* eventHandler)
 {
-	try
-	{
-		if(!eventHandler) return;
-		_eventHandlerMutex.lock();
-		_eventHandlers.remove(eventHandler);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	if(!eventHandler) return;
+	_eventHandlerMutex.lock();
+	_eventHandlers.remove(eventHandler);
     _eventHandlerMutex.unlock();
 }
 
 std::forward_list<IEventSinkBase*> IEvents::getEventHandlers()
 {
 	std::forward_list<IEventSinkBase*> eventHandlers;
-	try
-	{
-
-		_eventHandlerMutex.lock();
-		eventHandlers = _eventHandlers;
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	_eventHandlerMutex.lock();
+	eventHandlers = _eventHandlers;
     _eventHandlerMutex.unlock();
     return eventHandlers;
 }

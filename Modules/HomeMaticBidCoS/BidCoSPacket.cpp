@@ -28,7 +28,7 @@
  */
 
 #include "BidCoSPacket.h"
-#include "../Base/Output/Output.h"
+#include "GD.h"
 
 namespace BidCoS
 {
@@ -51,15 +51,15 @@ std::string BidCoSPacket::hexString()
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return "";
 }
@@ -85,15 +85,15 @@ std::vector<uint8_t> BidCoSPacket::byteArray()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -119,15 +119,15 @@ std::vector<char> BidCoSPacket::byteArraySigned()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<char>();
 }
@@ -172,7 +172,7 @@ void BidCoSPacket::import(std::vector<uint8_t>& packet, bool rssiByte)
 		if(packet.size() < 10) return;
 		if(packet.size() > 200)
 		{
-			BaseLib::Output::printWarning("Warning: Tried to import BidCoS packet larger than 200 bytes.");
+			GD::out.printWarning("Warning: Tried to import BidCoS packet larger than 200 bytes.");
 			return;
 		}
 		_messageCounter = packet[1];
@@ -197,21 +197,21 @@ void BidCoSPacket::import(std::vector<uint8_t>& packet, bool rssiByte)
 		}
 		if(_length != packet[0])
 		{
-			BaseLib::Output::printWarning("Warning: Packet with wrong length byte received.");
+			GD::out.printWarning("Warning: Packet with wrong length byte received.");
 			return;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -223,12 +223,12 @@ void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 		uint32_t startIndex = removeFirstCharacter ? 1 : 0;
 		if(packet.size() < startIndex + 20)
 		{
-			BaseLib::Output::printError("Error: Packet is too short: " + packet);
+			GD::out.printError("Error: Packet is too short: " + packet);
 			return;
 		}
 		if(packet.size() > 400)
 		{
-			BaseLib::Output::printWarning("Warning: Tried to import BidCoS packet larger than 200 bytes.");
+			GD::out.printWarning("Warning: Tried to import BidCoS packet larger than 200 bytes.");
 			return;
 		}
 		_length = getByte(packet.substr(startIndex, 2));
@@ -243,7 +243,7 @@ void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 		uint32_t endIndex = startIndex + 2 + (_length * 2) - 1;
 		if(endIndex >= packet.size())
 		{
-			BaseLib::Output::printWarning("Warning: Packet is shorter than value of packet length byte: " + packet);
+			GD::out.printWarning("Warning: Packet is shorter than value of packet length byte: " + packet);
 			endIndex = packet.size() - 1;
 		}
 		_payload.clear();
@@ -256,15 +256,15 @@ void BidCoSPacket::import(std::string& packet, bool removeFirstCharacter)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -278,15 +278,15 @@ uint8_t BidCoSPacket::getByte(std::string hexString)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return 0;
 }
@@ -301,15 +301,15 @@ int32_t BidCoSPacket::getInt(std::string hexString)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return 0;
 }
@@ -320,12 +320,12 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 	{
 		if(size < 0)
 		{
-			BaseLib::Output::printError("Error: Negative size not allowed.");
+			GD::out.printError("Error: Negative size not allowed.");
 			return;
 		}
 		if(index < 9)
 		{
-			BaseLib::Output::printError("Error: Packet index < 9 requested.");
+			GD::out.printError("Error: Packet index < 9 requested.");
 			return;
 		}
 		index -= 9;
@@ -336,7 +336,7 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 			int32_t intByteIndex = byteIndex;
 			if(size > 1.0)
 			{
-				BaseLib::Output::printError("Error: Can't set partial byte index > 1.");
+				GD::out.printError("Error: Can't set partial byte index > 1.");
 				return;
 			}
 			while((signed)_payload.size() - 1 < intByteIndex)
@@ -378,15 +378,15 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _length = 9 + _payload.size();
 }
@@ -398,13 +398,13 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 	{
 		if(size < 0)
 		{
-			BaseLib::Output::printError("Error: Negative size not allowed.");
+			GD::out.printError("Error: Negative size not allowed.");
 			result.push_back(0);
 			return result;
 		}
 		if(index < 0)
 		{
-			BaseLib::Output::printError("Error: Packet index < 0 requested.");
+			GD::out.printError("Error: Packet index < 0 requested.");
 			result.push_back(0);
 			return result;
 		}
@@ -412,7 +412,7 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 		{
 			if(size > 0.8)
 			{
-				BaseLib::Output::printError("Error: Packet index < 9 and size > 1 requested.");
+				GD::out.printError("Error: Packet index < 9 and size > 1 requested.");
 				result.push_back(0);
 				return result;
 			}
@@ -442,7 +442,7 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 		{
 			if(size > 1)
 			{
-				BaseLib::Output::printError("Error: Partial byte index > 1 requested.");
+				GD::out.printError("Error: Partial byte index > 1 requested.");
 				result.push_back(0);
 				return result;
 			}
@@ -476,15 +476,15 @@ std::vector<uint8_t> BidCoSPacket::getPosition(double index, double size, int32_
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     result.push_back(0);
     return result;

@@ -33,11 +33,11 @@
 namespace HMWired
 {
 
-HMWiredDevice::HMWiredDevice(IDeviceEventSink* eventHandler) : LogicalDevice(eventHandler)
+HMWiredDevice::HMWiredDevice(IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::HomeMaticWired, GD::bl, eventHandler)
 {
 }
 
-HMWiredDevice::HMWiredDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(deviceID, serialNumber, address, eventHandler)
+HMWiredDevice::HMWiredDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::HomeMaticWired, GD::bl, deviceID, serialNumber, address, eventHandler)
 {
 }
 
@@ -51,15 +51,15 @@ HMWiredDevice::~HMWiredDevice()
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 
 }
@@ -70,7 +70,7 @@ void HMWiredDevice::dispose(bool wait)
 	{
 		if(_disposing) return;
 		_disposing = true;
-		BaseLib::Output::printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
+		GD::out.printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
 		if(GD::physicalInterface) GD::physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		int64_t startTime = BaseLib::HelperFunctions::getTime();
 		//stopThreads();
@@ -81,15 +81,15 @@ void HMWiredDevice::dispose(bool wait)
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_disposed = true;
 }
@@ -107,15 +107,15 @@ void HMWiredDevice::init()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -135,7 +135,7 @@ void HMWiredDevice::loadPeers()
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			int32_t peerID = row->second.at(0)->intValue;
-			BaseLib::Output::printMessage("Loading HomeMatic Wired peer " + std::to_string(peerID));
+			GD::out.printMessage("Loading HomeMatic Wired peer " + std::to_string(peerID));
 			int32_t address = row->second.at(2)->intValue;
 			std::shared_ptr<HMWiredPeer> peer(new HMWiredPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
@@ -147,15 +147,15 @@ void HMWiredDevice::loadPeers()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -184,15 +184,15 @@ void HMWiredDevice::loadVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -207,15 +207,15 @@ void HMWiredDevice::saveVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -228,15 +228,15 @@ void HMWiredDevice::addPeer(std::shared_ptr<HMWiredPeer> peer)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -254,15 +254,15 @@ bool HMWiredDevice::peerExists(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
     return false;
@@ -281,15 +281,15 @@ bool HMWiredDevice::peerExists(uint64_t id)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
     return false;
@@ -309,15 +309,15 @@ std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
     return std::shared_ptr<HMWiredPeer>();
@@ -337,15 +337,15 @@ std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(uint64_t id)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
     return std::shared_ptr<HMWiredPeer>();
@@ -365,15 +365,15 @@ std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(std::string serialNumber)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
     return std::shared_ptr<HMWiredPeer>();
@@ -397,7 +397,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			if(!rxPacketInfo || rxTimeDifference > 50)
 			{
 				//Communication might be in progress. Wait a little
-				if(BaseLib::Obj::ins->debugLevel > 4 && (time - GD::physicalInterface->lastPacketSent() < 210 || time - GD::physicalInterface->lastPacketReceived() < 210)) BaseLib::Output::printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free... (Packet: " + packet->hexString() + ")");
+				if(_bl->debugLevel > 4 && (time - GD::physicalInterface->lastPacketSent() < 210 || time - GD::physicalInterface->lastPacketReceived() < 210)) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": Waiting for RS485 bus to become free... (Packet: " + packet->hexString() + ")");
 				while(time - GD::physicalInterface->lastPacketSent() < 210 || time - GD::physicalInterface->lastPacketReceived() < 210)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -405,13 +405,13 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 					if(time - GD::physicalInterface->lastPacketSent() >= 210 && time - GD::physicalInterface->lastPacketReceived() >= 210)
 					{
 						int32_t sleepingTime = BaseLib::HelperFunctions::getRandomNumber(0, 100);
-						if(BaseLib::Obj::ins->debugLevel > 4) BaseLib::Output::printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
+						if(_bl->debugLevel > 4) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is free now. Waiting randomly for " + std::to_string(sleepingTime) + "ms... (Packet: " + packet->hexString() + ")");
 						//Sleep random time
 						std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
 						time = BaseLib::HelperFunctions::getTime();
 					}
 				}
-				if(BaseLib::Obj::ins->debugLevel > 4) BaseLib::Output::printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is still free... sending... (Packet: " + packet->hexString() + ")");
+				if(_bl->debugLevel > 4) GD::out.printDebug("Debug: HomeMatic Wired Device 0x" + BaseLib::HelperFunctions::getHexString(_deviceID) + ": RS485 bus is still free... sending... (Packet: " + packet->hexString() + ")");
 			}
 		}
 		//RS485 bus should be free
@@ -442,7 +442,7 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 			//Set time to now. This is necessary if two packets are sent after each other without a response in between
 			rxPacketInfo->time = time;
 		}
-		else if(BaseLib::Obj::ins->debugLevel > 4) BaseLib::Output::printDebug("Debug: Sending HomeMatic Wired packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
+		else if(_bl->debugLevel > 4) GD::out.printDebug("Debug: Sending HomeMatic Wired packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
 
 		if(resend)
 		{
@@ -471,15 +471,15 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::sendPacket(std::shared_ptr<HMWired
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<HMWiredPacket>();
 }
@@ -494,15 +494,15 @@ void HMWiredDevice::saveMessageCounters()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -510,7 +510,7 @@ void HMWiredDevice::serializeMessageCounters(std::vector<uint8_t>& encodedData)
 {
 	try
 	{
-		BaseLib::BinaryEncoder encoder;
+		BaseLib::BinaryEncoder encoder(_bl);
 		encoder.encodeInteger(encodedData, _messageCounter.size());
 		for(std::unordered_map<int32_t, uint8_t>::const_iterator i = _messageCounter.begin(); i != _messageCounter.end(); ++i)
 		{
@@ -520,15 +520,15 @@ void HMWiredDevice::serializeMessageCounters(std::vector<uint8_t>& encodedData)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -536,7 +536,7 @@ void HMWiredDevice::unserializeMessageCounters(std::shared_ptr<std::vector<char>
 {
 	try
 	{
-		BaseLib::BinaryDecoder decoder;
+		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
 		uint32_t messageCounterSize = decoder.decodeInteger(serializedData, position);
 		for(uint32_t i = 0; i < messageCounterSize; i++)
@@ -547,15 +547,15 @@ void HMWiredDevice::unserializeMessageCounters(std::shared_ptr<std::vector<char>
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -569,21 +569,21 @@ void HMWiredDevice::savePeers(bool full)
 			//Necessary, because peers can be assigned to multiple virtual devices
 			if(i->second->getParentID() != _deviceID) continue;
 			//We are always printing this, because the init script needs it
-			BaseLib::Output::printMessage("(Shutdown) => Saving HomeMatic Wired peer " + std::to_string(i->second->getID()));
+			GD::out.printMessage("(Shutdown) => Saving HomeMatic Wired peer " + std::to_string(i->second->getID()));
 			i->second->save(full, full, full);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_peersMutex.unlock();
 }
@@ -599,15 +599,15 @@ bool HMWiredDevice::onPacketReceived(std::string& senderID, std::shared_ptr<Base
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -626,15 +626,15 @@ void HMWiredDevice::lockBus()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -653,15 +653,15 @@ void HMWiredDevice::unlockBus()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -681,15 +681,15 @@ uint8_t HMWiredDevice::getMessageCounter(int32_t destinationAddress)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return 0;
 }
@@ -703,15 +703,15 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(uint8_t command, int32
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<HMWiredPacket>();
 }
@@ -731,15 +731,15 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::vector<uint8_t>& 
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	if(peer) peer->ignorePackets = false;
 	return std::shared_ptr<HMWiredPacket>();
@@ -759,15 +759,15 @@ std::shared_ptr<HMWiredPacket> HMWiredDevice::getResponse(std::shared_ptr<HMWire
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	if(peer) peer->ignorePackets = false;
 	return std::shared_ptr<HMWiredPacket>();
@@ -795,15 +795,15 @@ std::vector<uint8_t> HMWiredDevice::readEEPROM(int32_t deviceAddress, int32_t ee
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	if(peer) peer->ignorePackets = false;
 	return std::vector<uint8_t>();
@@ -816,7 +816,7 @@ bool HMWiredDevice::writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, st
 	{
 		if(data.size() > 32)
 		{
-			BaseLib::Output::printError("Error: HomeMatic Wired Device " + std::to_string(_deviceID) + ": Could not write data to EEPROM. Data size is larger than 32 bytes.");
+			GD::out.printError("Error: HomeMatic Wired Device " + std::to_string(_deviceID) + ": Could not write data to EEPROM. Data size is larger than 32 bytes.");
 			return false;
 		}
 		if(peer) peer->ignorePackets = true;
@@ -836,15 +836,15 @@ bool HMWiredDevice::writeEEPROM(int32_t deviceAddress, int32_t eepromAddress, st
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	if(peer) peer->ignorePackets = false;
 	return false;
@@ -860,15 +860,15 @@ void HMWiredDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 

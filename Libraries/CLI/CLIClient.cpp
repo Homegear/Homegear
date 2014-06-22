@@ -47,15 +47,15 @@ Client::~Client()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -82,17 +82,17 @@ void Client::ping()
     catch(const std::exception& ex)
     {
     	_sendMutex.unlock();
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_sendMutex.unlock();
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_sendMutex.unlock();
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -102,36 +102,36 @@ void Client::start()
 	{
 		for(int32_t i = 0; i < 2; i++)
 		{
-			_fileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM, 0));
+			_fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM, 0));
 			if(!_fileDescriptor || _fileDescriptor->descriptor == -1)
 			{
-				BaseLib::Output::printError("Could not create socket.");
+				GD::out.printError("Could not create socket.");
 				return;
 			}
 
-			if(BaseLib::Obj::ins->debugLevel >= 4 && i == 0) std::cout << "Info: Trying to connect..." << std::endl;
+			if(GD::bl->debugLevel >= 4 && i == 0) std::cout << "Info: Trying to connect..." << std::endl;
 			sockaddr_un remoteAddress;
 			remoteAddress.sun_family = AF_UNIX;
 			strcpy(remoteAddress.sun_path, GD::socketPath.c_str());
 			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
 			{
-				BaseLib::Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+				GD::bl->fileDescriptorManager.shutdown(_fileDescriptor);
 				if(i == 0)
 				{
-					BaseLib::Output::printDebug("Debug: Socket closed. Trying again...");
+					GD::out.printDebug("Debug: Socket closed. Trying again...");
 					//When socket was not properly closed, we sometimes need to reconnect
 					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 					continue;
 				}
 				else
 				{
-					BaseLib::Output::printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
+					GD::out.printError("Could not connect to socket. Error: " + std::string(strerror(errno)));
 					return;
 				}
 			}
 			else break;
 		}
-		if(BaseLib::Obj::ins->debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
+		if(GD::bl->debugLevel >= 4) std::cout << "Info: Connected." << std::endl;
 
 		_pingThread = std::thread(&CLI::Client::ping, this);
 
@@ -151,7 +151,7 @@ void Client::start()
 			{
 				_closed = true;
 				//If we close the socket, the socket file gets deleted. We don't want that
-				//BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
+				//GD::bl->fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -160,9 +160,9 @@ void Client::start()
 			if(send(_fileDescriptor->descriptor, sendBuffer, bytes, MSG_NOSIGNAL) == -1)
 			{
 				_sendMutex.unlock();
-				BaseLib::Output::printError("Error sending to socket.");
+				GD::out.printError("Error sending to socket.");
 				//If we close the socket, the socket file gets deleted. We don't want that
-				//BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
+				//GD::bl->fileDescriptorManager.close(_fileDescriptor);
 				free(sendBuffer);
 				return;
 			}
@@ -192,7 +192,7 @@ void Client::start()
 					if(bytes < 0) std::cerr << "Error receiving data from socket." << std::endl;
 					else std::cout << "Connection closed." << std::endl;
 					//If we close the socket, the socket file gets deleted. We don't want that
-					//BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
+					//GD::bl->fileDescriptorManager.close(_fileDescriptor);
 					return;
 				}
 			}
@@ -201,15 +201,15 @@ void Client::start()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());;
+    	GD::out.printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());;
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

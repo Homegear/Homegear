@@ -28,6 +28,7 @@
  */
 
 #include "Insteon-SD.h"
+#include "../GD.h"
 
 namespace Insteon
 {
@@ -56,15 +57,15 @@ void Insteon_SD::init()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -78,15 +79,15 @@ void Insteon_SD::saveVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -95,9 +96,8 @@ void Insteon_SD::loadVariables()
 	try
 	{
 		InsteonDevice::loadVariables();
-		_databaseMutex.lock();
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
-		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetDeviceVariables();
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)
@@ -110,17 +110,16 @@ void Insteon_SD::loadVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_databaseMutex.unlock();
 }
 
 bool Insteon_SD::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet)
@@ -134,15 +133,15 @@ bool Insteon_SD::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return false;
 }
@@ -271,15 +270,15 @@ std::string Insteon_SD::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }

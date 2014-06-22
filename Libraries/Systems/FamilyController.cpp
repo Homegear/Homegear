@@ -36,12 +36,12 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 	try
 	{
 		_name = name;
-		BaseLib::Output::printInfo("Info: Loading family module " + _name);
+		GD::out.printInfo("Info: Loading family module " + _name);
 
 		void* moduleHandle = dlopen(path.c_str(), RTLD_NOW);
 		if(!moduleHandle)
 		{
-			BaseLib::Output::printCritical("Critical: Could not open module \"" + path + "\": " + std::string(dlerror()));
+			GD::out.printCritical("Critical: Could not open module \"" + path + "\": " + std::string(dlerror()));
 			return;
 		}
 
@@ -49,8 +49,8 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 		getFactory = (BaseLib::Systems::SystemFactory* (*)())dlsym(moduleHandle, "getFactory");
 		if(!getFactory)
 		{
-			BaseLib::Output::printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getFactory\" not found.");
-			exit(4);
+			GD::out.printCritical("Critical: Could not open module \"" + path + "\". Symbol \"getFactory\" not found.");
+			return;
 		}
 
 		_handle = moduleHandle;
@@ -58,15 +58,15 @@ ModuleLoader::ModuleLoader(std::string name, std::string path)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -74,32 +74,32 @@ ModuleLoader::~ModuleLoader()
 {
 	try
 	{
-		BaseLib::Output::printInfo("Info: Disposing family module " + _name);
-		BaseLib::Output::printDebug("Debug: Deleting factory pointer of module " + _name);
+		GD::out.printInfo("Info: Disposing family module " + _name);
+		GD::out.printDebug("Debug: Deleting factory pointer of module " + _name);
 		if(_factory) delete _factory.release();
-		BaseLib::Output::printDebug("Debug: Closing dynamic library module " + _name);
+		GD::out.printDebug("Debug: Closing dynamic library module " + _name);
 		if(_handle) dlclose(_handle);
 		_handle = nullptr;
-		BaseLib::Output::printDebug("Debug: Dynamic library " + _name + " disposed");
+		GD::out.printDebug("Debug: Dynamic library " + _name + " disposed");
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
 std::unique_ptr<BaseLib::Systems::DeviceFamily> ModuleLoader::createModule(BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
 	if(!_factory) return std::unique_ptr<BaseLib::Systems::DeviceFamily>();
-	return std::unique_ptr<BaseLib::Systems::DeviceFamily>(_factory->createDeviceFamily(BaseLib::Obj::ins, eventHandler));
+	return std::unique_ptr<BaseLib::Systems::DeviceFamily>(_factory->createDeviceFamily(GD::bl.get(), eventHandler));
 }
 
 FamilyController::FamilyController()
@@ -204,15 +204,15 @@ void FamilyController::onRPCEvent(uint64_t id, int32_t channel, std::string devi
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -224,15 +224,15 @@ void FamilyController::onRPCUpdateDevice(uint64_t id, int32_t channel, std::stri
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -244,15 +244,15 @@ void FamilyController::onRPCNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -264,15 +264,15 @@ void FamilyController::onRPCDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVaria
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -284,15 +284,15 @@ void FamilyController::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 //End Device event handling
@@ -306,13 +306,13 @@ void FamilyController::loadModules()
 {
 	try
 	{
-		BaseLib::Output::printDebug("Debug: Loading family modules");
+		GD::out.printDebug("Debug: Loading family modules");
 
-		std::vector<std::string> files = BaseLib::HelperFunctions::getFiles(BaseLib::Obj::ins->settings.modulePath());
+		std::vector<std::string> files = GD::bl->hf.getFiles(GD::bl->settings.modulePath());
 		if(files.empty())
 		{
-			BaseLib::Output::printCritical("Critical: No family modules found in \"" + BaseLib::Obj::ins->settings.modulePath() + "\".");
-			exit(3);
+			GD::out.printCritical("Critical: No family modules found in \"" + GD::bl->settings.modulePath() + "\".");
+			return;
 		}
 		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
 		{
@@ -320,7 +320,7 @@ void FamilyController::loadModules()
 			std::string prefix = i->substr(0, 4);
 			std::string extension = i->substr(i->size() - 3, 3);
 			if(extension != ".so" || prefix != "mod_") continue;
-			std::string path(BaseLib::Obj::ins->settings.modulePath() + *i);
+			std::string path(GD::bl->settings.modulePath() + *i);
 
 			moduleLoaders.insert(std::pair<std::string, std::unique_ptr<ModuleLoader>>(*i, std::unique_ptr<ModuleLoader>(new ModuleLoader(*i, path))));
 
@@ -330,21 +330,55 @@ void FamilyController::loadModules()
 		}
 		if(GD::deviceFamilies.empty())
 		{
-			BaseLib::Output::printCritical("Critical: Could not load any family modules from \"" + BaseLib::Obj::ins->settings.modulePath() + "\".");
-			exit(3);
+			GD::out.printCritical("Critical: Could not load any family modules from \"" + GD::bl->settings.modulePath() + "\".");
+			return;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void FamilyController::init()
+{
+	try
+	{
+		std::vector<BaseLib::Systems::DeviceFamilies> familiesToRemove;
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			if(!familyAvailable(i->first) || !i->second->init())
+			{
+				GD::physicalInterfaces.clear(i->first);
+				familiesToRemove.push_back(i->first);
+				if(familyAvailable(i->first)) GD::out.printError("Error: Could not initialize device family " + i->second->getName() + ".");
+				else GD::out.printInfo("Info: Not initializing device family " + i->second->getName() + ", bacause no physical interface was found.");
+			}
+		}
+		for(std::vector<BaseLib::Systems::DeviceFamilies>::iterator i = familiesToRemove.begin(); i != familiesToRemove.end(); ++i)
+		{
+			GD::deviceFamilies.erase(*i);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -354,20 +388,23 @@ void FamilyController::load()
 	{
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
-			if(familyAvailable(i->first)) i->second->load();
+			if(familyAvailable(i->first))
+			{
+				i->second->load();
+			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -379,54 +416,54 @@ void FamilyController::dispose()
 		{
 			if(!i->second)
 			{
-				BaseLib::Output::printError("Error: Disposing of device family with index " + std::to_string((int32_t)i->first) + " failed, because the pointer was empty.");
+				GD::out.printError("Error: Disposing of device family with index " + std::to_string((int32_t)i->first) + " failed, because the pointer was empty.");
 				continue;
 			}
 			i->second->dispose();
 		}
+		GD::deviceFamilies.clear();
+		moduleLoaders.clear();
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void FamilyController::save(bool full, bool crash)
+void FamilyController::saveAndDispose(bool full, bool crash)
 {
 	try
 	{
-		if(!crash)
-		{
-			BaseLib::Output::printMessage("(Shutdown) => Waiting for threads");
-			//The disposing is necessary, because there is a small time gap between setting "_lastDutyCycleEvent" and the duty cycle message counter.
-			//If saving takes place within this gap, the paired duty cycle devices are out of sync after restart of the program.
-			dispose();
-		}
-		BaseLib::Output::printMessage("(Shutdown) => Saving devices");
+		GD::out.printMessage("(Shutdown) => Saving devices");
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			i->second->save(full);
 		}
+		if(!crash)
+		{
+			GD::out.printMessage("(Shutdown) => Waiting for threads");
+			dispose();
+		}
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -534,15 +571,15 @@ std::string FamilyController::handleCLICommand(std::string& command)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -571,15 +608,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> FamilyController::listFamilies()
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }

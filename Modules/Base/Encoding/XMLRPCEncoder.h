@@ -42,19 +42,24 @@ using namespace rapidxml;
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace RPC
 {
 
 class XMLRPCEncoder
 {
 public:
-	XMLRPCEncoder();
+	XMLRPCEncoder(BaseLib::Obj* baseLib);
 	virtual ~XMLRPCEncoder() {}
 
 	virtual std::shared_ptr<std::vector<char>> encodeResponse(std::shared_ptr<RPCVariable> variable);
 	virtual std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters);
 	virtual std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters);
 private:
+	BaseLib::Obj* _bl = nullptr;
+
 	void encodeVariable(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
 	void encodeStruct(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);
 	void encodeArray(xml_document<>* doc, xml_node<>* node, std::shared_ptr<RPCVariable> variable);

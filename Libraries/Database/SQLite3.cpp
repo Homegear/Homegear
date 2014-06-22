@@ -28,7 +28,7 @@
  */
 
 #include "SQLite3.h"
-#include "../../Modules/Base/BaseLib.h"
+#include "../GD/GD.h"
 
 namespace BaseLib
 {
@@ -49,7 +49,7 @@ SQLite3::SQLite3(std::string databasePath, bool databaseSynchronous, bool databa
 void SQLite3::init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath)
 {
 	if(_database) closeDatabase();
-	if(!backupPath.empty()) HelperFunctions::copyFile(databasePath, backupPath);
+	if(!backupPath.empty()) GD::bl->hf.copyFile(databasePath, backupPath);
 	if(databasePath.size() == 0) return;
     openDatabase(databasePath, databaseSynchronous, databaseMemoryJournal);
 }
@@ -67,7 +67,7 @@ void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, b
 		int result = sqlite3_open(databasePath.c_str(), &_database);
 		if(result)
 		{
-			Output::printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
+			GD::out.printCritical("Can't open database: " + std::string(sqlite3_errmsg(_database)));
 			sqlite3_close(_database);
 			_database = nullptr;
 			_databaseMutex.unlock();
@@ -80,7 +80,7 @@ void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, b
 			sqlite3_exec(_database, "PRAGMA synchronous = OFF", 0, 0, &errorMessage);
 			if(errorMessage)
 			{
-				Output::printError("Can't execute \"PRAGMA synchronous = OFF\": " + std::string(errorMessage));
+				GD::out.printError("Can't execute \"PRAGMA synchronous = OFF\": " + std::string(errorMessage));
 				sqlite3_free(errorMessage);
 			}
 		}
@@ -90,22 +90,22 @@ void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, b
 			sqlite3_exec(_database, "PRAGMA journal_mode = MEMORY", 0, 0, &errorMessage);
 			if(errorMessage)
 			{
-				Output::printError("Can't execute \"PRAGMA journal_mode = MEMORY\": " + std::string(errorMessage));
+				GD::out.printError("Can't execute \"PRAGMA journal_mode = MEMORY\": " + std::string(errorMessage));
 				sqlite3_free(errorMessage);
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
 }
@@ -122,15 +122,15 @@ void SQLite3::closeDatabase()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -223,7 +223,7 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
 		_databaseMutex.lock();
 		if(!_database)
 		{
-			BaseLib::Output::printError("Error: Could not write to database. No database handle.");
+			GD::out.printError("Error: Could not write to database. No database handle.");
 			_databaseMutex.unlock();
 			return 0;
 		}
@@ -251,15 +251,15 @@ uint32_t SQLite3::executeWriteCommand(std::string command, DataRow& dataToEscape
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 	return 0;
@@ -273,7 +273,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 		_databaseMutex.lock();
 		if(!_database)
 		{
-			BaseLib::Output::printError("Error: Could not write to database. No database handle.");
+			GD::out.printError("Error: Could not write to database. No database handle.");
 			_databaseMutex.unlock();
 			return dataRows;
 		}
@@ -292,12 +292,12 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
-				Output::printInfo("Info: " + ex.what());
+				GD::out.printInfo("Info: " + ex.what());
 				sqlite3_clear_bindings(statement);
 				_databaseMutex.unlock();
 				return dataRows;
 			}
-			else Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			else GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
@@ -308,15 +308,15 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command, DataRow&
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 	return dataRows;
@@ -330,7 +330,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
     	_databaseMutex.lock();
     	if(!_database)
 		{
-			BaseLib::Output::printError("Error: Could not write to database. No database handle.");
+			GD::out.printError("Error: Could not write to database. No database handle.");
 			_databaseMutex.unlock();
 			return dataRows;
 		}
@@ -338,7 +338,7 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
 		int32_t result = sqlite3_prepare_v2(_database, command.c_str(), -1, &statement, NULL);
 		if(result)
 		{
-			Output::printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
+			GD::out.printError("Can't execute command \"" + command + "\": " + std::string(sqlite3_errmsg(_database)));
 			_databaseMutex.unlock();
 			return dataRows;
 		}
@@ -350,31 +350,31 @@ std::shared_ptr<DataTable> SQLite3::executeCommand(std::string command)
 		{
 			if(command.compare(0, 7, "RELEASE") == 0)
 			{
-				Output::printInfo("Info: " + ex.what());
+				GD::out.printInfo("Info: " + ex.what());
 				sqlite3_clear_bindings(statement);
 				_databaseMutex.unlock();
 				return dataRows;
 			}
-			else Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			else GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		sqlite3_clear_bindings(statement);
 		result = sqlite3_finalize(statement);
 		if(result)
 		{
-			Output::printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
+			GD::out.printError("Can't execute command \"" + command + "\" (Error-no.: " + std::to_string(result) + "): " + std::string(sqlite3_errmsg(_database)));
 		}
     }
     catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
     return dataRows;
@@ -473,15 +473,15 @@ void SQLite3::benchmark2()
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -543,15 +543,15 @@ void SQLite3::benchmark3()
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -613,15 +613,15 @@ void SQLite3::benchmark4()
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

@@ -35,12 +35,14 @@ namespace BaseLib
 namespace Systems
 {
 
-LogicalDevice::LogicalDevice(IDeviceEventSink* eventHandler)
+LogicalDevice::LogicalDevice(DeviceFamilies deviceFamily, BaseLib::Obj* baseLib, IDeviceEventSink* eventHandler)
 {
+	_bl = baseLib;
+	_deviceFamily = deviceFamily;
 	addEventHandler(eventHandler);
 }
 
-LogicalDevice::LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(eventHandler)
+LogicalDevice::LogicalDevice(DeviceFamilies deviceFamily, BaseLib::Obj* baseLib, uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(deviceFamily, baseLib, eventHandler)
 {
 	_deviceID = deviceID;
 	_serialNumber = serialNumber;
@@ -64,15 +66,15 @@ void LogicalDevice::raiseCreateSavepoint(std::string name)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -89,15 +91,15 @@ void LogicalDevice::raiseReleaseSavepoint(std::string name)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -114,15 +116,15 @@ void LogicalDevice::raiseDeleteMetadata(std::string objectID, std::string dataID
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -139,15 +141,15 @@ void LogicalDevice::raiseDeletePeer(uint64_t id)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -169,15 +171,15 @@ uint64_t LogicalDevice::raiseSavePeer(uint64_t id, uint32_t parentID, int32_t ad
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -200,15 +202,15 @@ uint64_t LogicalDevice::raiseSavePeerParameter(uint64_t peerID, Database::DataRo
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -231,15 +233,15 @@ uint64_t LogicalDevice::raiseSavePeerVariable(uint64_t peerID, Database::DataRow
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -262,15 +264,15 @@ std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeerParameters(uint6
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return std::shared_ptr<Database::DataTable>();
@@ -293,15 +295,15 @@ std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeerVariables(uint64
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return std::shared_ptr<Database::DataTable>();
@@ -319,15 +321,15 @@ void LogicalDevice::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow 
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -341,7 +343,7 @@ uint64_t LogicalDevice::raiseSaveDevice()
 		{
 			if(*i)
 			{
-				uint64_t result = ((IDeviceEventSink*)*i)->onSaveDevice(_deviceID, _address, _serialNumber, _deviceType, (uint32_t)Obj::family->getFamily());
+				uint64_t result = ((IDeviceEventSink*)*i)->onSaveDevice(_deviceID, _address, _serialNumber, _deviceType, (uint32_t)_deviceFamily);
 				_eventHandlerMutex.unlock();
 				return result;
 			}
@@ -349,15 +351,15 @@ uint64_t LogicalDevice::raiseSaveDevice()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -380,15 +382,15 @@ uint64_t LogicalDevice::raiseSaveDeviceVariable(Database::DataRow data)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -406,15 +408,15 @@ void LogicalDevice::raiseDeletePeers(int32_t deviceID)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -436,15 +438,15 @@ std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeers()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return std::shared_ptr<Database::DataTable>();
@@ -467,15 +469,15 @@ std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetDeviceVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return std::shared_ptr<Database::DataTable>();
@@ -493,15 +495,15 @@ void LogicalDevice::raiseRPCEvent(uint64_t id, int32_t channel, std::string devi
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -518,15 +520,15 @@ void LogicalDevice::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::stri
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -543,15 +545,15 @@ void LogicalDevice::raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceD
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -568,15 +570,15 @@ void LogicalDevice::raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> devi
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -593,15 +595,15 @@ void LogicalDevice::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -676,7 +678,7 @@ void LogicalDevice::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<st
 
 DeviceFamilies LogicalDevice::deviceFamily()
 {
-	return Obj::family->getFamily();
+	return _deviceFamily;
 }
 
 void LogicalDevice::load()
@@ -687,15 +689,15 @@ void LogicalDevice::load()
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -712,15 +714,15 @@ void LogicalDevice::save(bool saveDevice)
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -751,15 +753,15 @@ void LogicalDevice::saveVariable(uint32_t index, int64_t intValue)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -790,15 +792,15 @@ void LogicalDevice::saveVariable(uint32_t index, std::string& stringValue)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -829,15 +831,15 @@ void LogicalDevice::saveVariable(uint32_t index, std::vector<uint8_t>& binaryVal
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -849,15 +851,15 @@ void LogicalDevice::deletePeersFromDatabase()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

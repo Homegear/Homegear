@@ -37,11 +37,11 @@ Threads::~Threads() {
 
 }
 
-void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t policy)
+void Threads::setThreadPriority(BaseLib::Obj* baseLib, pthread_t thread, int32_t priority, int32_t policy)
 {
 	try
 	{
-		if(!Obj::ins->settings.prioritizeThreads()) return;
+		if(!baseLib->settings.prioritizeThreads()) return;
 		if(policy != SCHED_FIFO && policy != SCHED_RR) priority = 0;
 		if((policy == SCHED_FIFO || policy == SCHED_RR) && (priority < 1 || priority > 99)) throw Exception("Invalid thread priority: " + std::to_string(priority));
 		sched_param schedParam;
@@ -52,26 +52,26 @@ void Threads::setThreadPriority(pthread_t thread, int32_t priority, int32_t poli
 		{
 			if(error == EPERM)
 			{
-				Output::printError("Could not set thread priority. The executing user does not have enough privileges. Please run \"ulimit -r 100\" before executing Homegear.");
+				baseLib->out.printError("Could not set thread priority. The executing user does not have enough privileges. Please run \"ulimit -r 100\" before executing Homegear.");
 			}
-			else if(error == ESRCH) Output::printError("Could not set thread priority. Thread could not be found.");
-			else if(error == EINVAL) Output::printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
-			else Output::printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
-			Obj::ins->settings.setPrioritizeThreads(false);
+			else if(error == ESRCH) baseLib->out.printError("Could not set thread priority. Thread could not be found.");
+			else if(error == EINVAL) baseLib->out.printError("Could not set thread priority: policy is not a recognized policy, or param does not make sense for the policy.");
+			else baseLib->out.printError("Error: Could not set thread priority to " + std::to_string(priority) + " Error: " + std::to_string(error));
+			baseLib->settings.setPrioritizeThreads(false);
 		}
-		else Output::printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
+		else baseLib->out.printDebug("Debug: Thread priority successfully set to: " + std::to_string(priority), 7);
 	}
 	catch(const std::exception& ex)
     {
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

@@ -35,8 +35,9 @@ namespace BaseLib
 namespace Systems
 {
 
-IPhysicalInterface::IPhysicalInterface()
+IPhysicalInterface::IPhysicalInterface(BaseLib::Obj* baseLib)
 {
+	_bl = baseLib;
 	_settings.reset(new PhysicalInterfaceSettings());
 	_fileDescriptor = std::shared_ptr<FileDescriptor>(new FileDescriptor());
 	_gpioDescriptors[1] = std::shared_ptr<FileDescriptor>(new FileDescriptor());
@@ -44,7 +45,7 @@ IPhysicalInterface::IPhysicalInterface()
 	_gpioDescriptors[3] = std::shared_ptr<FileDescriptor>(new FileDescriptor());
 }
 
-IPhysicalInterface::IPhysicalInterface(std::shared_ptr<PhysicalInterfaceSettings> settings) : IPhysicalInterface()
+IPhysicalInterface::IPhysicalInterface(BaseLib::Obj* baseLib, std::shared_ptr<PhysicalInterfaceSettings> settings) : IPhysicalInterface(baseLib)
 {
 	if(settings) _settings = settings;
 }
@@ -69,20 +70,20 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet)
 	try
 	{
 		std::thread t(&IPhysicalInterface::raisePacketReceivedThread, this, packet);
-		BaseLib::Threads::setThreadPriority(t.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, t.native_handle(), 45);
 		t.detach();
 	}
     catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -107,17 +108,17 @@ void IPhysicalInterface::raisePacketReceivedThread(std::shared_ptr<Packet> packe
     catch(const std::exception& ex)
     {
     	_eventHandlerMutex.unlock();
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_eventHandlerMutex.unlock();
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_eventHandlerMutex.unlock();
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 
 }
@@ -128,31 +129,31 @@ void IPhysicalInterface::setDevicePermission(int32_t userID, int32_t groupID)
 	{
 		if(_settings->device.empty())
     	{
-    		Output::printError("Could not setup device " + _settings->type + " the device path is empty.");
+    		_bl->out.printError("Could not setup device " + _settings->type + " the device path is empty.");
     		return;
     	}
     	int32_t result = chown(_settings->device.c_str(), userID, groupID);
     	if(result == -1)
     	{
-    		Output::printError("Could not set owner for device " + _settings->device + ": " + std::string(strerror(errno)));
+    		_bl->out.printError("Could not set owner for device " + _settings->device + ": " + std::string(strerror(errno)));
     	}
     	result = chmod(_settings->device.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
     	if(result == -1)
     	{
-    		Output::printError("Could not set permissions for device " + _settings->device + ": " + std::string(strerror(errno)));
+    		_bl->out.printError("Could not set permissions for device " + _settings->device + ": " + std::string(strerror(errno)));
     	}
     }
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -167,20 +168,20 @@ void IPhysicalInterface::openGPIO(uint32_t index, bool readOnly)
 		if(_settings->gpio.at(index).path.empty()) getGPIOPath(index);
 		if(_settings->gpio[index].path.empty()) throw(Exception("Failed to open value file for GPIO with index " + std::to_string(index) + " and device \"" + _settings->type + "\": Unable to retrieve path."));
 		std::string path = _settings->gpio[index].path + "value";
-		_gpioDescriptors[index] = Obj::ins->fileDescriptorManager.add(open(path.c_str(), readOnly ? O_RDONLY : O_RDWR));
+		_gpioDescriptors[index] = _bl->fileDescriptorManager.add(open(path.c_str(), readOnly ? O_RDONLY : O_RDWR));
 		if (_gpioDescriptors[index]->descriptor == -1) throw(Exception("Failed to open GPIO value file \"" + path + "\": " + std::string(strerror(errno))));
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -195,7 +196,7 @@ void IPhysicalInterface::getGPIOPath(uint32_t index)
 		if(!_settings->gpio.at(index).path.empty()) return;
 		DIR* directory;
 		struct dirent* entry;
-		std::string gpioDir(Obj::ins->settings.gpioPath());
+		std::string gpioDir(_bl->settings.gpioPath());
 		if((directory = opendir(gpioDir.c_str())) != 0)
 		{
 			while((entry = readdir(directory)) != 0)
@@ -204,7 +205,7 @@ void IPhysicalInterface::getGPIOPath(uint32_t index)
 				std::string dirName(gpioDir + std::string(entry->d_name));
 				if(stat(dirName.c_str(), &dirStat) == -1)
 				{
-					Output::printError("Error executing \"stat\" on entry \"" + dirName + "\": " + std::string(strerror(errno)));
+					_bl->out.printError("Error executing \"stat\" on entry \"" + dirName + "\": " + std::string(strerror(errno)));
 					continue;
 				}
 				if(S_ISDIR(dirStat.st_mode))
@@ -221,7 +222,7 @@ void IPhysicalInterface::getGPIOPath(uint32_t index)
 						std::string number2(subdirName.substr(4, number.length()));
 						if(number2 == number)
 						{
-							Output::printDebug("Debug: GPIO path for GPIO with index " + std::to_string(index) + " and device " + _settings->type + " set to \"" + dirName + "\".");
+							_bl->out.printDebug("Debug: GPIO path for GPIO with index " + std::to_string(index) + " and device " + _settings->type + " set to \"" + dirName + "\".");
 							if(dirName.back() != '/') dirName.push_back('/');
 							_settings->gpio[index].path = dirName;
 							return;
@@ -229,32 +230,32 @@ void IPhysicalInterface::getGPIOPath(uint32_t index)
 					}
 					catch(const std::exception& ex)
 					{
-						Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+						_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 					}
 					catch(Exception& ex)
 					{
-						Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+						_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 					}
 					catch(...)
 					{
-						Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+						_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 					}
 				}
 			}
 		}
-		else throw(Exception("Could not open directory \"" + Obj::ins->settings.gpioPath() + "\"."));
+		else throw(Exception("Could not open directory \"" + _bl->settings.gpioPath() + "\"."));
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -264,20 +265,20 @@ void IPhysicalInterface::closeGPIO(uint32_t index)
 	{
 		if(_gpioDescriptors.find(index) != _gpioDescriptors.end())
 		{
-			Obj::ins->fileDescriptorManager.close(_gpioDescriptors.at(index));
+			_bl->fileDescriptorManager.close(_gpioDescriptors.at(index));
 		}
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -287,27 +288,27 @@ void IPhysicalInterface::setGPIO(uint32_t index, bool value)
 	{
 		if(!gpioOpen(index))
 		{
-			Output::printError("Failed to set GPIO with index \"" + std::to_string(index) + "\": Device not open.");
+			_bl->out.printError("Failed to set GPIO with index \"" + std::to_string(index) + "\": Device not open.");
 			return;
 		}
 		std::string temp(std::to_string((int32_t)value));
 		if(write(_gpioDescriptors[index]->descriptor, temp.c_str(), temp.size()) <= 0)
 		{
-			Output::printError("Could not write GPIO with index " + std::to_string(index) + ".");
+			_bl->out.printError("Could not write GPIO with index " + std::to_string(index) + ".");
 		}
-		Output::printDebug("Debug: GPIO " + std::to_string(_settings->gpio.at(index).number) + " set to " + std::to_string(value) + ".");
+		_bl->out.printDebug("Debug: GPIO " + std::to_string(_settings->gpio.at(index).number) + " set to " + std::to_string(value) + ".");
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -317,7 +318,7 @@ void IPhysicalInterface::setGPIOPermission(uint32_t index, int32_t userID, int32
 	{
 		if(!gpioDefined(index))
     	{
-    		Output::printError("Error: Could not setup GPIO for device " + _settings->type + ": GPIO path for index " + std::to_string(index) + " is not set.");
+    		_bl->out.printError("Error: Could not setup GPIO for device " + _settings->type + ": GPIO path for index " + std::to_string(index) + " is not set.");
     		return;
     	}
 		if(_settings->gpio[index].path.empty()) getGPIOPath(index);
@@ -326,25 +327,25 @@ void IPhysicalInterface::setGPIOPermission(uint32_t index, int32_t userID, int32
     	int32_t result = chown(path.c_str(), userID, groupID);
     	if(result == -1)
     	{
-    		Output::printError("Error: Could not set owner for GPIO value file " + path + ": " + std::string(strerror(errno)));
+    		_bl->out.printError("Error: Could not set owner for GPIO value file " + path + ": " + std::string(strerror(errno)));
     	}
     	result = chmod(path.c_str(), readOnly ? (S_IRUSR | S_IRGRP) : (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP));
     	if(result == -1)
     	{
-    		Output::printError("Error: Could not set permissions for GPIO value file " + path + ": " + std::string(strerror(errno)));
+    		_bl->out.printError("Error: Could not set permissions for GPIO value file " + path + ": " + std::string(strerror(errno)));
     	}
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -356,15 +357,15 @@ bool IPhysicalInterface::gpioDefined(uint32_t index)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return true;
 }
@@ -377,15 +378,15 @@ bool IPhysicalInterface::gpioOpen(uint32_t index)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return true;
 }
@@ -396,7 +397,7 @@ void IPhysicalInterface::exportGPIO(uint32_t index)
 	{
 		if(!gpioDefined(index))
 		{
-			Output::printError("Error: Failed to export GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + ": GPIO not defined in physicel devices' settings.");
+			_bl->out.printError("Error: Failed to export GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + ": GPIO not defined in physicel devices' settings.");
 			return;
 		}
 		if(_settings->gpio[index].path.empty()) getGPIOPath(index);
@@ -405,39 +406,39 @@ void IPhysicalInterface::exportGPIO(uint32_t index)
 		std::string temp(std::to_string(_settings->gpio[index].number));
 		if(!_settings->gpio[index].path.empty())
 		{
-			Output::printDebug("Debug: Unexporting GPIO with index " + std::to_string(index) + " and number " + std::to_string(_settings->gpio[index].number) + " for device \"" + _settings->type + "\".");
-			path = Obj::ins->settings.gpioPath() + "unexport";
-			fileDescriptor = Obj::ins->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
+			_bl->out.printDebug("Debug: Unexporting GPIO with index " + std::to_string(index) + " and number " + std::to_string(_settings->gpio[index].number) + " for device \"" + _settings->type + "\".");
+			path = _bl->settings.gpioPath() + "unexport";
+			fileDescriptor = _bl->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
 			if (fileDescriptor->descriptor == -1) throw(Exception("Could not unexport GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + "\". Failed to write to unexport file: " + std::string(strerror(errno))));
 			if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) == -1)
 			{
-				Output::printError("Error: Could not unexport GPIO with index " + std::to_string(index) + " and number " + temp + " for device \"" + _settings->type + "\": " + std::string(strerror(errno)));
+				_bl->out.printError("Error: Could not unexport GPIO with index " + std::to_string(index) + " and number " + temp + " for device \"" + _settings->type + "\": " + std::string(strerror(errno)));
 			}
-			Obj::ins->fileDescriptorManager.close(fileDescriptor);
+			_bl->fileDescriptorManager.close(fileDescriptor);
 			_settings->gpio[index].path.clear();
 		}
 
-		Output::printDebug("Debug: Exporting GPIO with index " + std::to_string(index) + " and number " + std::to_string(_settings->gpio[index].number) + " for device \"" + _settings->type + "\".");
-		path = Obj::ins->settings.gpioPath() + "export";
-		fileDescriptor = Obj::ins->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
+		_bl->out.printDebug("Debug: Exporting GPIO with index " + std::to_string(index) + " and number " + std::to_string(_settings->gpio[index].number) + " for device \"" + _settings->type + "\".");
+		path = _bl->settings.gpioPath() + "export";
+		fileDescriptor = _bl->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
 		if (fileDescriptor->descriptor == -1) throw(Exception("Error: Could not export GPIO with index " + std::to_string(index) + " for device \"" + _settings->type + "\". Failed to write to export file: " + std::string(strerror(errno))));
 		if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) == -1)
 		{
-			Output::printError("Error: Could not export GPIO with index " + std::to_string(index) + " and number " + temp + " for device \"" + _settings->type + "\": " + std::string(strerror(errno)));
+			_bl->out.printError("Error: Could not export GPIO with index " + std::to_string(index) + " and number " + temp + " for device \"" + _settings->type + "\": " + std::string(strerror(errno)));
 		}
-		Obj::ins->fileDescriptorManager.close(fileDescriptor);
+		_bl->fileDescriptorManager.close(fileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -447,32 +448,32 @@ void IPhysicalInterface::setGPIODirection(uint32_t index, GPIODirection::Enum di
 	{
 		if(!gpioDefined(index))
 		{
-			Output::printError("Failed to set direction for GPIO with index \"" + std::to_string(index) + "\": GPIO not defined in physicel devices' settings.");
+			_bl->out.printError("Failed to set direction for GPIO with index \"" + std::to_string(index) + "\": GPIO not defined in physicel devices' settings.");
 			return;
 		}
 		if(_settings->gpio[index].path.empty()) getGPIOPath(index);
 		if(_settings->gpio[index].path.empty()) throw(Exception("Failed to open direction file for GPIO with index " + std::to_string(index) + " and device \"" + _settings->type + "\": Unable to retrieve path."));
 		std::string path(_settings->gpio[index].path + "direction");
-		std::shared_ptr<FileDescriptor> fileDescriptor = Obj::ins->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
+		std::shared_ptr<FileDescriptor> fileDescriptor = _bl->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
 		if (fileDescriptor->descriptor == -1) throw(Exception("Could not write to direction file (" + path + ") of GPIO with index " + std::to_string(index) + ": " + std::string(strerror(errno))));
 		std::string temp((direction == GPIODirection::OUT) ? "out" : "in");
 		if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) <= 0)
 		{
-			Output::printError("Could not write to direction file \"" + path + "\": " + std::string(strerror(errno)));
+			_bl->out.printError("Could not write to direction file \"" + path + "\": " + std::string(strerror(errno)));
 		}
-		Obj::ins->fileDescriptorManager.close(fileDescriptor);
+		_bl->fileDescriptorManager.close(fileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -482,32 +483,32 @@ void IPhysicalInterface::setGPIOEdge(uint32_t index, GPIOEdge::Enum edge)
 	{
 		if(!gpioDefined(index))
 		{
-			Output::printError("Failed to set edge for GPIO with index \"" + std::to_string(index) + "\": GPIO not defined in physicel devices' settings.");
+			_bl->out.printError("Failed to set edge for GPIO with index \"" + std::to_string(index) + "\": GPIO not defined in physicel devices' settings.");
 			return;
 		}
 		if(_settings->gpio[index].path.empty()) getGPIOPath(index);
 		if(_settings->gpio[index].path.empty()) throw(Exception("Failed to open edge file for GPIO with index " + std::to_string(index) + " and device \"" + _settings->type + "\": Unable to retrieve path."));
 		std::string path(_settings->gpio[index].path + "edge");
-		std::shared_ptr<FileDescriptor> fileDescriptor = Obj::ins->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
+		std::shared_ptr<FileDescriptor> fileDescriptor = _bl->fileDescriptorManager.add(open(path.c_str(), O_WRONLY));
 		if (fileDescriptor->descriptor == -1) throw(Exception("Could not write to edge file (" + path + ") of GPIO with index " + std::to_string(index) + ": " + std::string(strerror(errno))));
 		std::string temp((edge == GPIOEdge::RISING) ? "rising" : ((edge == GPIOEdge::FALLING) ? "falling" : "both"));
 		if(write(fileDescriptor->descriptor, temp.c_str(), temp.size()) <= 0)
 		{
-			Output::printError("Could not write to edge file \"" + path + "\": " + std::string(strerror(errno)));
+			_bl->out.printError("Could not write to edge file \"" + path + "\": " + std::string(strerror(errno)));
 		}
-		Obj::ins->fileDescriptorManager.close(fileDescriptor);
+		_bl->fileDescriptorManager.close(fileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

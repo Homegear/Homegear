@@ -34,39 +34,16 @@ namespace BaseLib
 {
 namespace Systems
 {
-
-DeviceFamily::DeviceFamily(Obj* baseLib, IFamilyEventSink* eventHandler)
+DeviceFamily::DeviceFamily(BaseLib::Obj* bl, IFamilyEventSink* eventHandler)
 {
-	Obj::family = this;
-	Obj::ins = baseLib;
-	Output::setDebugLevel(baseLib->debugLevel);
-	HelperFunctions::init();
-	addEventHandler(eventHandler);
+	_bl = bl;
+	_eventHandler = eventHandler;
+	if(_eventHandler) addEventHandler(_eventHandler);
 }
 
 DeviceFamily::~DeviceFamily()
 {
-	try
-	{
-		if(_removeThread.joinable()) _removeThread.join();
-	}
-	catch(const std::exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-}
-
-void DeviceFamily::setDebugLevel(int32_t debugLevel)
-{
-	BaseLib::Output::setDebugLevel(debugLevel);
+	dispose();
 }
 
 //Event handling
@@ -82,15 +59,15 @@ void DeviceFamily::raiseCreateSavepoint(std::string name)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -107,15 +84,15 @@ void DeviceFamily::raiseReleaseSavepoint(std::string name)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -132,15 +109,15 @@ void DeviceFamily::raiseDeleteMetadata(std::string objectID, std::string dataID)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -157,15 +134,15 @@ void DeviceFamily::raiseDeletePeer(uint64_t id)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -187,15 +164,15 @@ uint64_t DeviceFamily::raiseSavePeer(uint64_t id, uint32_t parentID, int32_t add
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -218,15 +195,15 @@ uint64_t DeviceFamily::raiseSavePeerParameter(uint64_t peerID, Database::DataRow
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -249,15 +226,15 @@ uint64_t DeviceFamily::raiseSavePeerVariable(uint64_t peerID, Database::DataRow 
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -280,15 +257,15 @@ std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetPeerParameters(uint64
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return std::shared_ptr<Database::DataTable>();
@@ -311,15 +288,15 @@ std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetPeerVariables(uint64_
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return std::shared_ptr<Database::DataTable>();
@@ -337,15 +314,15 @@ void DeviceFamily::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow d
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -367,15 +344,15 @@ std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetDevices()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return std::shared_ptr<Database::DataTable>();
@@ -393,15 +370,15 @@ void DeviceFamily::raiseDeleteDevice(uint64_t deviceID)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -423,15 +400,15 @@ uint64_t DeviceFamily::raiseSaveDevice(uint64_t id, int32_t address, std::string
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -454,15 +431,15 @@ uint64_t DeviceFamily::raiseSaveDeviceVariable(Database::DataRow data)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return 0;
@@ -480,15 +457,15 @@ void DeviceFamily::raiseDeletePeers(int32_t deviceID)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -510,15 +487,15 @@ std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetPeers(uint64_t device
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return std::shared_ptr<Database::DataTable>();
@@ -541,15 +518,15 @@ std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetDeviceVariables(uint6
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
     return std::shared_ptr<Database::DataTable>();
@@ -567,15 +544,15 @@ void DeviceFamily::raiseRPCEvent(uint64_t id, int32_t channel, std::string devic
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -592,15 +569,15 @@ void DeviceFamily::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::strin
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -617,15 +594,15 @@ void DeviceFamily::raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDe
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -642,15 +619,15 @@ void DeviceFamily::raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> devic
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -667,15 +644,15 @@ void DeviceFamily::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -787,26 +764,26 @@ void DeviceFamily::save(bool full)
 {
 	try
 	{
-		Output::printMessage("(Shutdown) => Saving devices");
+		_bl->out.printMessage("(Shutdown) => Saving devices");
 		_devicesMutex.lock();
 		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 		{
-			Output::printMessage("(Shutdown) => Saving " + getName() + " device " + std::to_string((*i)->getID()));
+			_bl->out.printMessage("(Shutdown) => Saving " + getName() + " device " + std::to_string((*i)->getID()));
 			(*i)->save(full);
 			(*i)->savePeers(full);
 		}
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 }
@@ -822,15 +799,15 @@ void DeviceFamily::add(std::shared_ptr<LogicalDevice> device)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 }
@@ -850,15 +827,15 @@ std::vector<std::shared_ptr<LogicalDevice>> DeviceFamily::getDevices()
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::vector<std::shared_ptr<LogicalDevice>>();
@@ -880,15 +857,15 @@ std::shared_ptr<LogicalDevice> DeviceFamily::get(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<LogicalDevice>();
@@ -910,15 +887,15 @@ std::shared_ptr<LogicalDevice> DeviceFamily::get(uint64_t id)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<LogicalDevice>();
@@ -940,15 +917,15 @@ std::shared_ptr<LogicalDevice> DeviceFamily::get(std::string serialNumber)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<LogicalDevice>();
@@ -963,15 +940,15 @@ void DeviceFamily::remove(uint64_t id)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -984,15 +961,15 @@ void DeviceFamily::removeThread(uint64_t id)
 		{
 			if((*i)->getID() == id)
 			{
-				Output::printDebug("Removing device pointer from device array...");
+				_bl->out.printDebug("Removing device pointer from device array...");
 				std::shared_ptr<LogicalDevice> device = *i;
 				_devices.erase(i);
 				_devicesMutex.unlock();
-				Output::printDebug("Disposing device...");
+				_bl->out.printDebug("Disposing device...");
 				device->dispose(true);
-				Output::printDebug("Deleting peers from database...");
+				_bl->out.printDebug("Deleting peers from database...");
 				device->deletePeersFromDatabase();
-				Output::printDebug("Deleting database entry...");
+				_bl->out.printDebug("Deleting database entry...");
 				raiseDeleteDevice(id);
 				return;
 			}
@@ -1000,15 +977,15 @@ void DeviceFamily::removeThread(uint64_t id)
 	}
 	catch(const std::exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 }
@@ -1017,36 +994,40 @@ void DeviceFamily::dispose()
 {
 	try
 	{
-		if(_devices.empty()) return;
-		std::vector<std::shared_ptr<LogicalDevice>> devices;
-		_devicesMutex.lock();
-		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+		if(_disposed) return;
+		_disposed = true;
+		if(!_devices.empty())
 		{
-			devices.push_back(*i);
+			std::vector<std::shared_ptr<LogicalDevice>> devices;
+			_devicesMutex.lock();
+			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
+			{
+				devices.push_back(*i);
+			}
+			_devicesMutex.unlock();
+			for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = devices.begin(); i != devices.end(); ++i)
+			{
+				_bl->out.printDebug("Debug: Disposing device " + std::to_string((*i)->getID()));
+				(*i)->dispose(false);
+			}
 		}
-		_devicesMutex.unlock();
-		for(std::vector<std::shared_ptr<LogicalDevice>>::iterator i = devices.begin(); i != devices.end(); ++i)
-		{
-			Output::printDebug("Debug: Disposing device " + std::to_string((*i)->getID()));
-			(*i)->dispose(false);
-		}
+		if(_removeThread.joinable()) _removeThread.join();
 	}
 	catch(const std::exception& ex)
     {
 		_devicesMutex.unlock();
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_devicesMutex.unlock();
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_devicesMutex.unlock();
-        Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 }
 
 }

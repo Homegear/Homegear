@@ -43,7 +43,7 @@ DescriptionField::DescriptionField(xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "value") value = attributeValue;
-		else Output::printWarning("Warning: Unknown attribute for \"field\": " + attributeName);
+		else std::cout << "Warning: Unknown attribute for \"field\": " << attributeName << std::endl;
 	}
 }
 
@@ -57,11 +57,16 @@ ParameterDescription::ParameterDescription(xml_node<>* node)
 			DescriptionField field(descriptionNode);
 			fields.push_back(field);
 		}
-		else Output::printWarning("Warning: Unknown subnode for \"description\": " + nodeName);
+		else std::cout << "Warning: Unknown subnode for \"description\": " << nodeName << std::endl;
 	}
 }
 
-DeviceFrame::DeviceFrame(xml_node<>* node)
+DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib)
+{
+	_bl = baseLib;
+}
+
+DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(baseLib)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -71,7 +76,7 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 		{
 			if(attributeValue == "from_device") direction = Direction::Enum::fromDevice;
 			else if(attributeValue == "to_device") direction = Direction::Enum::toDevice;
-			else Output::printWarning("Warning: Unknown direction for \"frame\": " + attributeValue);
+			else _bl->out.printWarning("Warning: Unknown direction for \"frame\": " + attributeValue);
 		}
 		else if(attributeName == "allowed_receivers")
 		{
@@ -114,11 +119,11 @@ DeviceFrame::DeviceFrame(xml_node<>* node)
 			if(attributeValue == "*") fixedChannel = -2;
 			else fixedChannel = HelperFunctions::getNumber(attributeValue);
 		}
-		else Output::printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
+		else _bl->out.printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))
 	{
-		Parameter parameter(frameNode);
+		Parameter parameter(_bl, frameNode);
 		parameters.push_back(parameter);
 	}
 }
@@ -226,15 +231,15 @@ void ParameterConversion::fromPacket(std::shared_ptr<RPC::RPCVariable> value)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -333,23 +338,24 @@ void ParameterConversion::toPacket(std::shared_ptr<RPC::RPCVariable> value)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-ParameterConversion::ParameterConversion()
+ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib)
 {
+	_bl = baseLib;
 }
 
-ParameterConversion::ParameterConversion(xml_node<>* node) : ParameterConversion()
+ParameterConversion::ParameterConversion(BaseLib::Obj* baseLib, xml_node<>* node) : ParameterConversion(baseLib)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -371,7 +377,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node) : ParameterConversion
 			else if(attributeValue == "rc19display") type = Type::Enum::none; //ignore, no conversion necessary
 			else if(attributeValue == "blind_test") type = Type::Enum::blindTest;
 			else if(attributeValue == "cfm") type = Type::Enum::cfm; //Used in "SUBMIT" of HM-OU-CFM-Pl
-			else Output::printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
+			else _bl->out.printWarning("Warning: Unknown type for \"conversion\": " + attributeValue);
 		}
 		else if(attributeName == "factor") factor = HelperFunctions::getDouble(attributeValue);
 		else if(attributeName == "factors")
@@ -398,7 +404,7 @@ ParameterConversion::ParameterConversion(xml_node<>* node) : ParameterConversion
 		else if(attributeName == "on") on = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "off") off = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "invert") { if(attributeValue == "true") invert = true; }
-		else Output::printWarning("Warning: Unknown attribute for \"conversion\": " + attributeName);
+		else _bl->out.printWarning("Warning: Unknown attribute for \"conversion\": " + attributeName);
 	}
 	for(xml_node<>* conversionNode = node->first_node(); conversionNode; conversionNode = conversionNode->next_sibling())
 	{
@@ -416,12 +422,12 @@ ParameterConversion::ParameterConversion(xml_node<>* node) : ParameterConversion
 				else if(valueMapAttributeName == "from_device") { if(valueMapAttributeValue == "false") fromDevice = false; }
 				else if(valueMapAttributeName == "to_device") { if(valueMapAttributeValue == "false") toDevice = false; }
 				else if(valueMapAttributeName == "mask") {} //ignore, not needed
-				else Output::printWarning("Warning: Unknown attribute for \"value_map\": " + valueMapAttributeName);
+				else _bl->out.printWarning("Warning: Unknown attribute for \"value_map\": " + valueMapAttributeName);
 			}
 			integerValueMapDevice[deviceValue] = parameterValue;
 			integerValueMapParameter[parameterValue] = deviceValue;
 		}
-		else Output::printWarning( "Warning: Unknown subnode for \"conversion\": " + nodeName);
+		else _bl->out.printWarning( "Warning: Unknown subnode for \"conversion\": " + nodeName);
 	}
 }
 
@@ -447,21 +453,21 @@ bool Parameter::checkCondition(int32_t value)
 			return value <= constValue;
 			break;
 		default:
-			Output::printWarning("Warning: Boolean operator is none.");
+			_bl->out.printWarning("Warning: Boolean operator is none.");
 			break;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return false;
 }
@@ -483,15 +489,15 @@ std::vector<uint8_t> Parameter::reverseData(const std::vector<uint8_t>& data)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return reversedData;
 }
@@ -506,11 +512,15 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 		{
-			return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger, value));
+			int32_t integerValue;
+			_bl->hf.memcpyBigEndian(integerValue, value);
+			return std::shared_ptr<RPCVariable>(new RPCVariable(integerValue));
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.empty())
 		{
-			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcBoolean, value));
+			int32_t integerValue;
+			_bl->hf.memcpyBigEndian(integerValue, value);
+			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable((bool)integerValue));
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString && conversion.empty())
 		{
@@ -537,14 +547,18 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 			//(RSSI_dec - 256)/2 – RSSI_offset
 			//4) Else if RSSI_dec < 128 then RSSI_dBm =
 			//(RSSI_dec)/2 – RSSI_offset
-			std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcInteger, value));
+			int32_t integerValue;
+			_bl->hf.memcpyBigEndian(integerValue, value);
+			std::shared_ptr<RPCVariable> variable(new RPCVariable(integerValue));
 			if(variable->integerValue >= 128) variable->integerValue = ((variable->integerValue - 256) / 2) - 74;
 			else variable->integerValue = (variable->integerValue / 2) - 74;
 			return variable;
 		}
 		else
 		{
-			std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcInteger, value));
+			int32_t integerValue;
+			_bl->hf.memcpyBigEndian(integerValue, value);
+			std::shared_ptr<RPCVariable> variable(new RPCVariable(integerValue));
 			if(isSigned && value.size() <= 4)
 			{
 				int32_t byteIndex = value.size() - std::lround(std::ceil(physicalParameter->size));
@@ -564,19 +578,21 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 			}
 			return variable;
 		}
-		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger, value));
+		int32_t integerValue;
+		_bl->hf.memcpyBigEndian(integerValue, value);
+		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(integerValue));
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(RPCVariableType::rpcInteger));
 }
@@ -613,22 +629,22 @@ std::vector<uint8_t> Parameter::convertToPacket(std::string value)
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeString) convertedValue.reset(new RPCVariable(value));
 		if(!convertedValue)
 		{
-			Output::printWarning("Warning: Could not convert parameter " + id + " from String.");
+			_bl->out.printWarning("Warning: Could not convert parameter " + id + " from String.");
 			return std::vector<uint8_t>();
 		}
 		return convertToPacket(convertedValue);
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -680,11 +696,11 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 				else if(i == 2)
 				{
 					variable->integerValue = std::lround(HelperFunctions::getDouble(element) * 10);
-					ParameterConversion conversion;
+					ParameterConversion conversion(_bl);
 					conversion.type = ParameterConversion::Type::integerTinyFloat;
 					conversion.toPacket(variable);
 					std::vector<uint8_t> time;
-					HelperFunctions::memcpyBigEndian(time, variable->integerValue);
+					_bl->hf.memcpyBigEndian(time, variable->integerValue);
 					if(time.size() == 1) data.at(13) = time.at(0);
 					else
 					{
@@ -771,33 +787,34 @@ std::vector<uint8_t> Parameter::convertToPacket(std::shared_ptr<RPCVariable> val
 				int32_t valueMask = 0xFFFFFFFF >> (((4 - byteSize) * 8) - bitSize);
 				value->integerValue &= valueMask;
 			}
-			HelperFunctions::memcpyBigEndian(data, value->integerValue);
+			_bl->hf.memcpyBigEndian(data, value->integerValue);
 		}
 
 		if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little) data = reverseData(data);
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return data;
 }
 
-Parameter::Parameter()
+Parameter::Parameter(BaseLib::Obj* baseLib)
 {
-	logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger());
+	_bl = baseLib;
+	logicalParameter = std::shared_ptr<LogicalParameter>(new LogicalParameterInteger(baseLib));
 	physicalParameter = std::shared_ptr<PhysicalParameter>(new PhysicalParameter());
 }
 
-Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
+Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) : Parameter(baseLib)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -814,7 +831,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 			else if(attributeValue == "l") booleanOperator = BooleanOperator::Enum::l;
 			else if(attributeValue == "ge") booleanOperator = BooleanOperator::Enum::ge;
 			else if(attributeValue == "le") booleanOperator = BooleanOperator::Enum::le;
-			else Output::printWarning("Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " + attributeValue);
+			else _bl->out.printWarning("Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " + attributeValue);
 		}
 		else if(attributeName == "const_value") constValue = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "id") id = attributeValue;
@@ -826,7 +843,7 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		else if(attributeName == "default") {} //Not necessary and not used
 		else if(attributeName == "burst_suppression")
 		{
-			if(attributeValue != "0") Output::printWarning("Warning: Unknown value for \"burst_suppression\" in node \"parameter\": " + attributeValue);
+			if(attributeValue != "0") _bl->out.printWarning("Warning: Unknown value for \"burst_suppression\" in node \"parameter\": " + attributeValue);
 		}
 		else if(attributeName == "type")
 		{
@@ -834,13 +851,13 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 			else if(attributeValue == "boolean") type = PhysicalParameter::Type::Enum::typeBoolean;
 			else if(attributeValue == "string") type = PhysicalParameter::Type::Enum::typeString;
 			else if(attributeValue == "option") type = PhysicalParameter::Type::Enum::typeOption;
-			else Output::printWarning("Warning: Unknown attribute value for \"type\" in node \"parameter\": " + attributeValue);
+			else _bl->out.printWarning("Warning: Unknown attribute value for \"type\" in node \"parameter\": " + attributeValue);
 		}
 		else if(attributeName == "omit_if")
 		{
 			if(type != PhysicalParameter::Type::Enum::typeInteger)
 			{
-				Output::printWarning("Warning: \"omit_if\" is only supported for type \"integer\" in node \"parameter\".");
+				_bl->out.printWarning("Warning: \"omit_if\" is only supported for type \"integer\" in node \"parameter\".");
 				continue;
 			}
 			omitIfSet = true;
@@ -873,23 +890,23 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 				else if(element == "service") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::service);
 				else if(element == "sticky") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::sticky);
 				else if(element == "invisible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::invisible);
-				else Output::printWarning("Warning: Unknown ui flag for \"parameter\": " + attributeValue);
+				else _bl->out.printWarning("Warning: Unknown ui flag for \"parameter\": " + attributeValue);
 			}
 		}
-		else Output::printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
+		else _bl->out.printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
 	}
-	if(checkForID && id.empty()) Output::printError("Error: Parameter has no id. Index: " + std::to_string(index));
+	if(checkForID && id.empty()) _bl->out.printError("Error: Parameter has no id. Index: " + std::to_string(index));
 	for(xml_node<>* parameterNode = node->first_node(); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
 		std::string nodeName(parameterNode->name());
 		if(nodeName == "logical")
 		{
-			std::shared_ptr<LogicalParameter> parameter = LogicalParameter::fromXML(parameterNode);
+			std::shared_ptr<LogicalParameter> parameter = LogicalParameter::fromXML(baseLib, parameterNode);
 			if(parameter) logicalParameter = parameter;
 		}
 		else if(nodeName == "physical")
 		{
-			physicalParameter.reset(new PhysicalParameter(parameterNode));
+			physicalParameter.reset(new PhysicalParameter(baseLib, parameterNode));
 			for(std::vector<std::shared_ptr<PhysicalParameterEvent>>::iterator i = physicalParameter->eventFrames.begin(); i != physicalParameter->eventFrames.end(); ++i)
 			{
 				if((*i)->dominoEvent)
@@ -901,14 +918,14 @@ Parameter::Parameter(xml_node<>* node, bool checkForID) : Parameter()
 		}
 		else if(nodeName == "conversion")
 		{
-			std::shared_ptr<ParameterConversion> parameterConversion(new ParameterConversion(parameterNode));
+			std::shared_ptr<ParameterConversion> parameterConversion(new ParameterConversion(baseLib, parameterNode));
 			if(parameterConversion && parameterConversion->type != ParameterConversion::Type::Enum::none) conversion.push_back(parameterConversion);
 		}
 		else if(nodeName == "description")
 		{
 			description = ParameterDescription(parameterNode);
 		}
-		else Output::printWarning("Warning: Unknown subnode for \"parameter\": " + nodeName);
+		else _bl->out.printWarning("Warning: Unknown subnode for \"parameter\": " + nodeName);
 	}
 	if(logicalParameter->type == LogicalParameter::Type::Enum::typeFloat)
 	{
@@ -928,10 +945,10 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 	{
 		if(data.size() > 4 || data.empty()) return;
 		int32_t value = 0;
-		HelperFunctions::memcpyBigEndian(value, data);
+		_bl->hf.memcpyBigEndian(value, data);
 		if(physicalParameter->size < 0)
 		{
-			Output::printError("Error: Negative size not allowed.");
+			_bl->out.printError("Error: Negative size not allowed.");
 			return;
 		}
 		double i = physicalParameter->index;
@@ -941,7 +958,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 		{
 			if(physicalParameter->size > 1)
 			{
-				Output::printError("Error: Can't set partial byte index > 1.");
+				_bl->out.printError("Error: Can't set partial byte index > 1.");
 				return;
 			}
 			data.clear();
@@ -959,15 +976,15 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -992,15 +1009,15 @@ bool DeviceType::matches(Systems::LogicalDeviceType deviceType, uint32_t firmwar
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
     return false;
 }
@@ -1014,15 +1031,15 @@ bool DeviceType::matches(Systems::DeviceFamilies family, std::string typeID)
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
     return false;
 }
@@ -1036,31 +1053,32 @@ bool DeviceType::matches(Systems::DeviceFamilies family, std::shared_ptr<Systems
 		{
 			int32_t intValue = 0;
 			std::vector<uint8_t> data = packet->getPosition(i->index, i->size, -1);
-			HelperFunctions::memcpyBigEndian(intValue, data);
+			_bl->hf.memcpyBigEndian(intValue, data);
 			if(!i->checkCondition(intValue)) return false;
 		}
 		return true;
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
     return false;
 }
 
-DeviceType::DeviceType()
+DeviceType::DeviceType(BaseLib::Obj* baseLib)
 {
+	_bl = baseLib;
 }
 
-DeviceType::DeviceType(xml_node<>* typeNode) : DeviceType()
+DeviceType::DeviceType(BaseLib::Obj* baseLib, xml_node<>* typeNode) : DeviceType(baseLib)
 {
 	for(xml_attribute<>* attr = typeNode->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -1070,20 +1088,21 @@ DeviceType::DeviceType(xml_node<>* typeNode) : DeviceType()
 		else if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "priority") priority = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "updatable") { if(attributeValue == "true") updatable = true; }
-		else Output::printWarning("Warning: Unknown attribute for \"type\": " + attributeName);
+		else _bl->out.printWarning("Warning: Unknown attribute for \"type\": " + attributeName);
 	}
 	for(xml_node<>* parameterNode = typeNode->first_node("parameter"); parameterNode; parameterNode = parameterNode->next_sibling())
 	{
-		Parameter parameter(parameterNode);
+		Parameter parameter(baseLib, parameterNode);
 		parameters.push_back(parameter);
 	}
 }
 
-ParameterSet::ParameterSet()
+ParameterSet::ParameterSet(BaseLib::Obj* baseLib)
 {
+	_bl = baseLib;
 }
 
-ParameterSet::ParameterSet(xml_node<>* parameterSetNode) : ParameterSet()
+ParameterSet::ParameterSet(BaseLib::Obj* baseLib, xml_node<>* parameterSetNode) : ParameterSet(baseLib)
 {
 	init(parameterSetNode);
 }
@@ -1103,15 +1122,15 @@ std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(uint32_t startI
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return filteredParameters;
 }
@@ -1127,15 +1146,15 @@ std::shared_ptr<Parameter> ParameterSet::getIndex(double index)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<Parameter>();
 }
@@ -1176,15 +1195,15 @@ std::shared_ptr<Parameter> ParameterSet::getParameter(std::string id)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<Parameter>();
 }
@@ -1200,7 +1219,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		{
 			std::stringstream stream(attributeValue);
 			type = typeFromString(attributeValue);
-			if(type == Type::Enum::none) Output::printWarning("Warning: Unknown parameter set type: " + attributeValue);
+			if(type == Type::Enum::none) _bl->out.printWarning("Warning: Unknown parameter set type: " + attributeValue);
 		}
 		else if(attributeName == "address_start") addressStart = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "address_step") addressStep = HelperFunctions::getNumber(attributeValue);
@@ -1209,7 +1228,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		else if(attributeName == "peer_address_offset") peerAddressOffset = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "peer_channel_offset") peerChannelOffset = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "link") {} //Ignored
-		else Output::printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
+		else _bl->out.printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
 	}
 	std::vector<std::pair<std::string, std::string>> enforce;
 	for(xml_node<>* parameterNode = parameterSetNode->first_node(); parameterNode; parameterNode = parameterNode->next_sibling())
@@ -1217,7 +1236,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 		std::string nodeName(parameterNode->name());
 		if(nodeName == "parameter")
 		{
-			std::shared_ptr<Parameter> parameter(new Parameter(parameterNode, true));
+			std::shared_ptr<Parameter> parameter(new Parameter(_bl, parameterNode, true));
 			parameters.push_back(parameter);
 			parameter->parentParameterSet = this;
 			if(parameter->physicalParameter->list < 9999) lists[parameter->physicalParameter->list] = 1;
@@ -1228,7 +1247,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr2 = parameterNode->first_attribute("value");
 			if(!attr1 || !attr2)
 			{
-				Output::printWarning("Warning: Could not parse \"enforce\". Attribute id or value not set.");
+				_bl->out.printWarning("Warning: Could not parse \"enforce\". Attribute id or value not set.");
 				continue;
 			}
 			enforce.push_back(std::pair<std::string, std::string>(std::string(attr1->value()), std::string(attr2->value())));
@@ -1238,7 +1257,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr = parameterNode->first_attribute("ref");
 			if(!attr)
 			{
-				Output::printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
+				_bl->out.printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
 				continue;
 			}
 			subsetReference = std::string(attr->value());
@@ -1248,7 +1267,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 			xml_attribute<>* attr = parameterNode->first_attribute("function");
 			if(!attr)
 			{
-				Output::printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
+				_bl->out.printWarning("Warning: Could not parse \"subset\". Attribute ref not set.");
 				continue;
 			}
 			std::string function = std::string(attr->value());
@@ -1262,15 +1281,15 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 					xml_attribute<>* attr2 = defaultValueNode->first_attribute("value");
 					if(!attr1 || !attr2)
 					{
-						Output::printWarning("Warning: Could not parse \"value\" (in default_values). Attribute id or value not set.");
+						_bl->out.printWarning("Warning: Could not parse \"value\" (in default_values). Attribute id or value not set.");
 						continue;
 					}
 					defaultValues[function].push_back(std::pair<std::string, std::string>(std::string(attr1->value()), std::string(attr2->value())));
 				}
-				else Output::printWarning("Warning: Unknown node name for \"default_values\": " + nodeName);
+				else _bl->out.printWarning("Warning: Unknown node name for \"default_values\": " + nodeName);
 			}
 		}
-		else Output::printWarning("Warning: Unknown node name for \"paramset\": " + nodeName);
+		else _bl->out.printWarning("Warning: Unknown node name for \"paramset\": " + nodeName);
 	}
 	for(std::vector<std::pair<std::string, std::string>>::iterator i = enforce.begin(); i != enforce.end(); ++i)
 	{
@@ -1311,7 +1330,7 @@ void ParameterSet::init(xml_node<>* parameterSetNode)
 	}
 }
 
-LinkRole::LinkRole(xml_node<>* node)
+LinkRole::LinkRole(BaseLib::Obj* baseLib, xml_node<>* node)
 {
 	for(xml_node<>* linkRoleNode = node->first_node(); linkRoleNode; linkRoleNode = linkRoleNode->next_sibling())
 	{
@@ -1326,15 +1345,16 @@ LinkRole::LinkRole(xml_node<>* node)
 			xml_attribute<>* attr = linkRoleNode->first_attribute("name");
 			if(attr != nullptr) sourceNames.push_back(attr->value());
 		}
-		else Output::printWarning("Warning: Unknown node name for \"link_roles\": " + nodeName);
+		else baseLib->out.printWarning("Warning: Unknown node name for \"link_roles\": " + nodeName);
 	}
 }
 
-EnforceLink::EnforceLink()
+EnforceLink::EnforceLink(BaseLib::Obj* baseLib)
 {
+	_bl = baseLib;
 }
 
-EnforceLink::EnforceLink(xml_node<>* node) : EnforceLink()
+EnforceLink::EnforceLink(BaseLib::Obj* baseLib, xml_node<>* node) : EnforceLink(baseLib)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -1342,7 +1362,7 @@ EnforceLink::EnforceLink(xml_node<>* node) : EnforceLink()
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "value") value = attributeValue;
-		else Output::printWarning("Warning: Unknown attribute for \"enforce_link - value\": " + attributeName);
+		else baseLib->out.printWarning("Warning: Unknown attribute for \"enforce_link - value\": " + attributeName);
 	}
 }
 
@@ -1357,24 +1377,25 @@ std::shared_ptr<RPCVariable> EnforceLink::getValue(LogicalParameter::Type::Enum 
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RPCVariable>();
 }
 
-DeviceChannel::DeviceChannel()
+DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib)
 {
+	_bl = baseLib;
 }
 
-DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel()
+DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& index) : DeviceChannel(baseLib)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -1391,13 +1412,13 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 			if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
 			else if(attributeValue == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
 			else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
-			else Output::printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
+			else _bl->out.printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
 		}
 		else if(attributeName == "direction")
 		{
 			if(attributeValue == "sender") direction = (Direction::Enum)(direction | Direction::Enum::sender);
 			else if(attributeValue == "receiver") direction = (Direction::Enum)(direction | Direction::Enum::receiver);
-			else Output::printWarning("Warning: Unknown direction for \"channel\": " + attributeValue);
+			else _bl->out.printWarning("Warning: Unknown direction for \"channel\": " + attributeValue);
 		}
 		else if(attributeName == "class") channelClass = attributeValue;
 		else if(attributeName == "type") type = attributeValue;
@@ -1415,7 +1436,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 		{
 			if(attributeValue.size() != 2)
 			{
-				Output::printWarning("Warning: pair_function does not consist of two functions.");
+				_bl->out.printWarning("Warning: pair_function does not consist of two functions.");
 				continue;
 			}
 			pairFunction1 = attributeValue.substr(0, 1);
@@ -1429,7 +1450,7 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 				countFromSysinfo = HelperFunctions::getDouble(splitValue.first);
 				if(countFromSysinfo < 9)
 				{
-					Output::printError("Error: count_from_sysinfo has to be >= 9.");
+					_bl->out.printError("Error: count_from_sysinfo has to be >= 9.");
 					countFromSysinfo = -1;
 				}
 			}
@@ -1438,21 +1459,21 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 				countFromSysinfoSize = HelperFunctions::getDouble(splitValue.second);
 				if(countFromSysinfoSize > 1)
 				{
-					Output::printError("Error: The size of count_from_sysinfo has to be <= 1.");
+					_bl->out.printError("Error: The size of count_from_sysinfo has to be <= 1.");
 					countFromSysinfoSize = 1;
 				}
 			}
 		}
-		else Output::printWarning("Warning: Unknown attribute for \"channel\": " + attributeName);
+		else _bl->out.printWarning("Warning: Unknown attribute for \"channel\": " + attributeName);
 	}
 	for(xml_node<>* channelNode = node->first_node(); channelNode; channelNode = channelNode->next_sibling())
 	{
 		std::string nodeName(channelNode->name());
 		if(nodeName == "paramset")
 		{
-			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(channelNode));
+			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(baseLib, channelNode));
 			if(parameterSets.find(parameterSet->type) == parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
-			else Output::printError("Error: Tried to add same parameter set type twice.");
+			else _bl->out.printError("Error: Tried to add same parameter set type twice.");
 			//Set physical settings of special_parameter
 			if(specialParameter && parameterSet->type == ParameterSet::Type::master)
 			{
@@ -1467,21 +1488,21 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 		}
 		else if(nodeName == "link_roles")
 		{
-			if(linkRoles) Output::printWarning("Warning: Multiple link roles are defined for channel " + std::to_string(index) + ".");
-			linkRoles.reset(new LinkRole(channelNode));
+			if(linkRoles) _bl->out.printWarning("Warning: Multiple link roles are defined for channel " + std::to_string(index) + ".");
+			linkRoles.reset(new LinkRole(baseLib, channelNode));
 		}
 		else if(nodeName == "enforce_link")
 		{
 			for(xml_node<>* enforceLinkNode = channelNode->first_node("value"); enforceLinkNode; enforceLinkNode = enforceLinkNode->next_sibling("value"))
 			{
-				enforceLinks.push_back(std::shared_ptr<EnforceLink>(new EnforceLink(enforceLinkNode)));
+				enforceLinks.push_back(std::shared_ptr<EnforceLink>(new EnforceLink(baseLib, enforceLinkNode)));
 			}
 		}
-		else if(nodeName == "special_parameter") specialParameter.reset(new Parameter(channelNode, true));
+		else if(nodeName == "special_parameter") specialParameter.reset(new Parameter(baseLib, channelNode, true));
 		else if(nodeName == "subconfig")
 		{
 			uint32_t index = 0;
-			subconfig.reset(new DeviceChannel(channelNode, index));
+			subconfig.reset(new DeviceChannel(baseLib, channelNode, index));
 			//Set physical settings of special_parameter
 			if(specialParameter && subconfig->parameterSets.find(ParameterSet::Type::Enum::master) != subconfig->parameterSets.end())
 			{
@@ -1494,16 +1515,17 @@ DeviceChannel::DeviceChannel(xml_node<>* node, uint32_t& index) : DeviceChannel(
 				}
 			}
 		}
-		else Output::printWarning("Warning: Unknown node name for \"device\": " + nodeName);
+		else _bl->out.printWarning("Warning: Unknown node name for \"device\": " + nodeName);
 	}
 }
 
-Device::Device()
+Device::Device(BaseLib::Obj* baseLib)
 {
-	parameterSet.reset(new ParameterSet());
+	_bl = baseLib;
+	parameterSet.reset(new ParameterSet(baseLib));
 }
 
-Device::Device(std::string xmlFilename) : Device()
+Device::Device(BaseLib::Obj* baseLib, std::string xmlFilename) : Device(baseLib)
 {
 	try
 	{
@@ -1511,7 +1533,7 @@ Device::Device(std::string xmlFilename) : Device()
 
 		if(!_loaded || channels.empty()) return; //Happens when file couldn't be read
 
-		std::shared_ptr<Parameter> parameter(new Parameter());
+		std::shared_ptr<Parameter> parameter(new Parameter(baseLib));
 		parameter->id = "PAIRED_TO_CENTRAL";
 		parameter->uiFlags = Parameter::UIFlags::Enum::invisible;
 		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeBoolean;
@@ -1522,7 +1544,7 @@ Device::Device(std::string xmlFilename) : Device()
 		parameter->physicalParameter->index = 2;
 		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
-		parameter.reset(new Parameter());
+		parameter.reset(new Parameter(baseLib));
 		parameter->id = "CENTRAL_ADDRESS_BYTE_1";
 		parameter->uiFlags = Parameter::UIFlags::Enum::invisible;
 		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
@@ -1533,7 +1555,7 @@ Device::Device(std::string xmlFilename) : Device()
 		parameter->physicalParameter->index = 10;
 		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
-		parameter.reset(new Parameter());
+		parameter.reset(new Parameter(baseLib));
 		parameter->id = "CENTRAL_ADDRESS_BYTE_2";
 		parameter->uiFlags = Parameter::UIFlags::Enum::invisible;
 		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
@@ -1544,7 +1566,7 @@ Device::Device(std::string xmlFilename) : Device()
 		parameter->physicalParameter->index = 11;
 		channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 
-		parameter.reset(new Parameter());
+		parameter.reset(new Parameter(baseLib));
 		parameter->id = "CENTRAL_ADDRESS_BYTE_3";
 		parameter->uiFlags = Parameter::UIFlags::Enum::invisible;
 		parameter->logicalParameter->type = LogicalParameter::Type::Enum::typeInteger;
@@ -1562,15 +1584,15 @@ Device::Device(std::string xmlFilename) : Device()
 			parameter = i->second->parameterSets[ParameterSet::Type::Enum::master]->getParameter("AES_ACTIVE");
 			if(!parameter)
 			{
-				parameter.reset(new Parameter());
+				parameter.reset(new Parameter(baseLib));
 				i->second->parameterSets[ParameterSet::Type::Enum::master]->parameters.push_back(parameter);
 			}
 			parameter->id = "AES_ACTIVE";
 			parameter->uiFlags = Parameter::UIFlags::Enum::internal;
 			parameter->conversion.clear();
-			parameter->conversion.push_back(std::shared_ptr<ParameterConversion>(new ParameterConversion));
+			parameter->conversion.push_back(std::shared_ptr<ParameterConversion>(new ParameterConversion(baseLib)));
 			parameter->conversion.back()->type = ParameterConversion::Type::Enum::booleanInteger;
-			std::shared_ptr<LogicalParameterBoolean> logicalParameter(new LogicalParameterBoolean());
+			std::shared_ptr<LogicalParameterBoolean> logicalParameter(new LogicalParameterBoolean(baseLib));
 			logicalParameter->defaultValueExists = true;
 			logicalParameter->defaultValue = i->second->aesDefault;
 			parameter->logicalParameter = logicalParameter;
@@ -1583,15 +1605,15 @@ Device::Device(std::string xmlFilename) : Device()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1618,20 +1640,20 @@ void Device::load(std::string xmlFilename)
 			doc.parse<parse_no_entity_translation | parse_validate_closing_tags>(buffer);
 			parseXML(doc.first_node("device"));
 		}
-		else Output::printError("Error reading file " + xmlFilename + ": " + strerror(errno));
+		else _bl->out.printError("Error reading file " + xmlFilename + ": " + strerror(errno));
 		_loaded = true;
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     doc.clear();
 }
@@ -1664,7 +1686,7 @@ void Device::parseXML(xml_node<>* node)
 					else if(element == "burst") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::burst);
 					else if(element == "always") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::always);
 					else if(element == "lazy_config") rxModes = (RXModes::Enum)(rxModes | RXModes::Enum::lazyConfig);
-					else Output::printWarning("Warning: Unknown rx mode for \"device\": " + element);
+					else _bl->out.printWarning("Warning: Unknown rx mode for \"device\": " + element);
 				}
 				if(rxModes == RXModes::Enum::none) rxModes = RXModes::Enum::always;
 				if(rxModes != RXModes::Enum::always) hasBattery = true;
@@ -1683,12 +1705,12 @@ void Device::parseXML(xml_node<>* node)
 				if(attributeValue == "visible") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::visible);
 				else if(attributeValue == "internal") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::internal);
 				else if(attributeValue == "dontdelete") uiFlags = (UIFlags::Enum)(uiFlags | UIFlags::Enum::dontdelete);
-				else Output::printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
+				else _bl->out.printWarning("Warning: Unknown ui flag for \"channel\": " + attributeValue);
 			}
 			else if(attributeName == "cyclic_timeout") cyclicTimeout = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "supports_aes") { if(attributeValue == "true") supportsAES = true; }
 			else if(attributeName == "peering_sysinfo_expect_channel") { if(attributeValue == "false") peeringSysinfoExpectChannel = false; }
-			else Output::printWarning("Warning: Unknown attribute for \"device\": " + attributeName);
+			else _bl->out.printWarning("Warning: Unknown attribute for \"device\": " + attributeName);
 		}
 
 		std::map<std::string, std::shared_ptr<ParameterSet>> parameterSetDefinitions;
@@ -1699,7 +1721,7 @@ void Device::parseXML(xml_node<>* node)
 			{
 				for(xml_node<>* typeNode = node->first_node("type"); typeNode; typeNode = typeNode->next_sibling())
 				{
-					std::shared_ptr<DeviceType> deviceType(new DeviceType(typeNode));
+					std::shared_ptr<DeviceType> deviceType(new DeviceType(_bl, typeNode));
 					deviceType->device = this;
 					supportedTypes.push_back(deviceType);
 				}
@@ -1715,9 +1737,9 @@ void Device::parseXML(xml_node<>* node)
 					else if(attributeName == "type")
 					{
 						if(attributeValue == "master") parameterSet->type = ParameterSet::Type::Enum::master;
-						else Output::printError("Error: Tried to add parameter set of type \"" + attributeValue + "\" to device. That is not allowed.");
+						else _bl->out.printError("Error: Tried to add parameter set of type \"" + attributeValue + "\" to device. That is not allowed.");
 					}
-					else Output::printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
+					else _bl->out.printWarning("Warning: Unknown attribute for \"paramset\": " + attributeName);
 				}
 				parameterSet->init(node);
 			}
@@ -1729,7 +1751,7 @@ void Device::parseXML(xml_node<>* node)
 					std::string attributeValue(attr->value());
 					HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
 					if(attributeName == "id") parameterSet->id = attributeValue;
-					else Output::printWarning("Warning: Unknown attribute for \"paramset_defs\": " + attributeName);
+					else _bl->out.printWarning("Warning: Unknown attribute for \"paramset_defs\": " + attributeName);
 				}
 
 				for(xml_node<>* paramsetNode = node->first_node(); paramsetNode; paramsetNode = paramsetNode->next_sibling())
@@ -1737,10 +1759,10 @@ void Device::parseXML(xml_node<>* node)
 					std::string nodeName(paramsetNode->name());
 					if(nodeName == "paramset")
 					{
-						std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(paramsetNode));
+						std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(_bl, paramsetNode));
 						parameterSetDefinitions[parameterSet->id] = parameterSet;
 					}
-					else Output::printWarning("Warning: Unknown node name for \"paramset_defs\": " + nodeName);
+					else _bl->out.printWarning("Warning: Unknown node name for \"paramset_defs\": " + nodeName);
 				}
 			}
 			else if(nodeName == "channels")
@@ -1748,19 +1770,19 @@ void Device::parseXML(xml_node<>* node)
 				for(xml_node<>* channelNode = node->first_node("channel"); channelNode; channelNode = channelNode->next_sibling())
 				{
 					uint32_t index = 0;
-					std::shared_ptr<DeviceChannel> channel(new DeviceChannel(channelNode, index));
+					std::shared_ptr<DeviceChannel> channel(new DeviceChannel(_bl, channelNode, index));
 					channel->parentDevice = this;
 					for(uint32_t i = index; i < index + channel->count; i++)
 					{
 						if(channels.find(i) == channels.end()) channels[i] = channel;
-						else Output::printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
+						else _bl->out.printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
 					}
 					if(channel->countFromSysinfo)
 					{
-						if(countFromSysinfoIndex > -1) Output::printError("Error: count_from_sysinfo is defined for two channels. That is not allowed.");
+						if(countFromSysinfoIndex > -1) _bl->out.printError("Error: count_from_sysinfo is defined for two channels. That is not allowed.");
 						if(std::floor(channel->countFromSysinfo) != channel->countFromSysinfo)
 						{
-							Output::printError("Error: count_from_sysinfo has to start with index 0 of a byte.");
+							_bl->out.printError("Error: count_from_sysinfo has to start with index 0 of a byte.");
 							continue;
 						}
 						countFromSysinfoIndex = (int32_t)channel->countFromSysinfo;
@@ -1774,17 +1796,17 @@ void Device::parseXML(xml_node<>* node)
 			{
 				for(xml_node<>* frameNode = node->first_node("frame"); frameNode; frameNode = frameNode->next_sibling("frame"))
 				{
-					std::shared_ptr<DeviceFrame> frame(new DeviceFrame(frameNode));
+					std::shared_ptr<DeviceFrame> frame(new DeviceFrame(_bl, frameNode));
 					framesByMessageType.insert(std::pair<uint32_t, std::shared_ptr<DeviceFrame>>(frame->type, frame));
 					framesByID[frame->id] = frame;
 				}
 			}
 			else if(nodeName == "team")
 			{
-				team.reset(new Device());
+				team.reset(new Device(_bl));
 				team->parseXML(node);
 			}
-			else Output::printWarning("Warning: Unknown node name for \"device\": " + nodeName);
+			else _bl->out.printWarning("Warning: Unknown node name for \"device\": " + nodeName);
 		}
 
 		if(!parameterSetDefinitions.empty())
@@ -1795,7 +1817,7 @@ void Device::parseXML(xml_node<>* node)
 				for(std::map<ParameterSet::Type::Enum, std::shared_ptr<ParameterSet>>::iterator j = i->second->parameterSets.begin(); j != i->second->parameterSets.end(); ++j)
 				{
 					if(j->second->subsetReference.empty() || parameterSetDefinitions.find(j->second->subsetReference) == parameterSetDefinitions.end()) continue;
-					std::shared_ptr<ParameterSet> parameterSet(new ParameterSet());
+					std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(_bl));
 					*parameterSet = *parameterSetDefinitions.at(j->second->subsetReference);
 					parameterSet->type = j->second->type;
 					parameterSet->id = j->second->id;
@@ -1816,13 +1838,13 @@ void Device::parseXML(xml_node<>* node)
 			}
 		}
 
-		if(!channels[0]) channels[0] = std::shared_ptr<DeviceChannel>(new DeviceChannel());
-		if(!channels[0]->parameterSets[ParameterSet::Type::Enum::master]) channels[0]->parameterSets[ParameterSet::Type::Enum::master] = std::shared_ptr<ParameterSet>(new ParameterSet());
+		if(!channels[0]) channels[0] = std::shared_ptr<DeviceChannel>(new DeviceChannel(_bl));
+		if(!channels[0]->parameterSets[ParameterSet::Type::Enum::master]) channels[0]->parameterSets[ParameterSet::Type::Enum::master] = std::shared_ptr<ParameterSet>(new ParameterSet(_bl));
 		if(parameterSet->type == ParameterSet::Type::Enum::master && !parameterSet->parameters.empty())
 		{
 			if(channels[0]->parameterSets[ParameterSet::Type::Enum::master]->parameters.size() > 0)
 			{
-				Output::printError("Error: Master parameter set of channnel 0 has to be empty.");
+				_bl->out.printError("Error: Master parameter set of channnel 0 has to be empty.");
 			}
 			channels[0]->parameterSets[ParameterSet::Type::Enum::master] = parameterSet;
 		}
@@ -1858,15 +1880,15 @@ void Device::parseXML(xml_node<>* node)
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1884,15 +1906,15 @@ int32_t Device::getCountFromSysinfo(std::shared_ptr<Systems::Packet> packet)
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -1916,20 +1938,20 @@ void Device::setCountFromSysinfo(int32_t countFromSysinfo)
 		for(uint32_t i = index + 1; i < index + countFromSysinfo; i++)
 		{
 			if(channels.find(i) == channels.end()) channels[i] = channel;
-			else Output::printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
+			else _bl->out.printError("Error: Tried to add channel with the same index twice. Index: " + std::to_string(i));
 		}
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1944,15 +1966,15 @@ std::shared_ptr<DeviceType> Device::getType(Systems::LogicalDeviceType deviceTyp
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<DeviceType>();
 }

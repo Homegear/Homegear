@@ -35,8 +35,9 @@ namespace BaseLib
 namespace Systems
 {
 
-ServiceMessages::ServiceMessages(uint64_t peerID, std::string peerSerial, IServiceEventSink* eventHandler)
+ServiceMessages::ServiceMessages(BaseLib::Obj* baseLib, uint64_t peerID, std::string peerSerial, IServiceEventSink* eventHandler)
 {
+	_bl = baseLib;
 	_peerID = peerID;
 	_peerSerial = peerSerial;
 	addEventHandler(eventHandler);
@@ -60,15 +61,15 @@ void ServiceMessages::raiseConfigPending(bool configPending)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -85,15 +86,15 @@ void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string de
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -110,15 +111,15 @@ void ServiceMessages::raiseSaveParameter(std::string name, uint32_t channel, std
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -135,15 +136,15 @@ void ServiceMessages::raiseEnqueuePendingQueues()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventHandlerMutex.unlock();
 }
@@ -153,7 +154,7 @@ void ServiceMessages::serialize(std::vector<uint8_t>& encodedData)
 {
 	try
 	{
-		BinaryEncoder encoder;
+		BinaryEncoder encoder(_bl);
 		encoder.encodeBoolean(encodedData, _unreach);
 		encoder.encodeBoolean(encodedData, _stickyUnreach);
 		encoder.encodeBoolean(encodedData, _configPending);
@@ -175,15 +176,15 @@ void ServiceMessages::serialize(std::vector<uint8_t>& encodedData)
 	}
 	catch(const std::exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(Exception& ex)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_errorMutex.unlock();
 }
@@ -192,7 +193,7 @@ void ServiceMessages::unserialize(std::shared_ptr<std::vector<char>> serializedD
 {
 	try
 	{
-		BinaryDecoder decoder;
+		BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
 		_unreach = decoder.decodeBoolean(serializedData, position);
 		_stickyUnreach = decoder.decodeBoolean(serializedData, position);
@@ -214,15 +215,15 @@ void ServiceMessages::unserialize(std::shared_ptr<std::vector<char>> serializedD
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _errorMutex.unlock();
 }
@@ -270,17 +271,17 @@ bool ServiceMessages::set(std::string id, bool value)
 	catch(const std::exception& ex)
     {
 		_errorMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_errorMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_errorMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return true;
 }
@@ -304,17 +305,17 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
 	catch(const std::exception& ex)
     {
 		_errorMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
     	_errorMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_errorMutex.unlock();
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -399,15 +400,15 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get(bool returnID)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _errorMutex.unlock();
     return RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -437,15 +438,15 @@ void ServiceMessages::checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketRec
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -470,15 +471,15 @@ void ServiceMessages::endUnreach()
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -502,15 +503,15 @@ void ServiceMessages::setConfigPending(bool value)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -529,7 +530,7 @@ void ServiceMessages::setUnreach(bool value)
 			_unreachResendCounter = 0;
 			_unreach = value;
 
-			if(value) Output::printInfo("Info: Peer " + std::to_string(_peerID) + " is unreachable.");
+			if(value) _bl->out.printInfo("Info: Peer " + std::to_string(_peerID) + " is unreachable.");
 			std::vector<uint8_t> data = { (uint8_t)value };
 			raiseSaveParameter("UNREACH", 0, data);
 
@@ -550,15 +551,15 @@ void ServiceMessages::setUnreach(bool value)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

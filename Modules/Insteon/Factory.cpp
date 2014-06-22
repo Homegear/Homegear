@@ -29,9 +29,9 @@
 
 #include "Factory.h"
 
-BaseLib::Systems::DeviceFamily* InsteonFactory::createDeviceFamily(BaseLib::Obj* baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* InsteonFactory::createDeviceFamily(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
-	return new Insteon::Insteon(baseLib, eventHandler);
+	return new Insteon::Insteon(bl, eventHandler);
 }
 
 BaseLib::Systems::SystemFactory* getFactory()

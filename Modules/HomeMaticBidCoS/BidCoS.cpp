@@ -44,16 +44,36 @@
 
 namespace BidCoS
 {
-BidCoS::BidCoS(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(baseLib, eventHandler)
+BidCoS::BidCoS(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler)
 {
-	BaseLib::Output::setPrefix("Module HomeMatic BidCoS: ");
-	BaseLib::Output::printDebug("Debug: Loading module...");
+	GD::bl = bl;
+	GD::family = this;
+	GD::out.setPrefix("Module HomeMatic BidCoS: ");
+	GD::out.printDebug("Debug: Loading module...");
 	_family = BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS;
+	GD::rpcDevices.init(_bl);
 }
 
 BidCoS::~BidCoS()
 {
 
+}
+
+bool BidCoS::init()
+{
+	GD::out.printInfo("Loading XML RPC devices...");
+	GD::rpcDevices.load(_bl->settings.deviceDescriptionPath() + std::to_string((int32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS));
+	if(GD::rpcDevices.empty()) return false;
+	return true;
+}
+
+void BidCoS::dispose()
+{
+	if(_disposed) return;
+	DeviceFamily::dispose();
+
+	GD::physicalInterfaces.clear();
+	GD::defaultPhysicalInterface.reset();
 }
 
 std::shared_ptr<BaseLib::Systems::Central> BidCoS::getCentral() { return _central; }
@@ -74,15 +94,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoS::listBidcosInterfaces()
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -91,7 +111,7 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> BidCoS::createPhysicalDevi
 {
 	try
 	{
-		BaseLib::Output::printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
+		GD::out.printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
 		std::shared_ptr<IBidCoSInterface> device;
 		if(!settings) return device;
 		if(settings->type == "cul") device.reset(new CUL(settings));
@@ -99,7 +119,7 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> BidCoS::createPhysicalDevi
 		else if(settings->type == "cc1100") device.reset(new TICC1100(settings));
 		else if(settings->type == "hmcfglan") device.reset(new HM_CFG_LAN(settings));
 		else if(settings->type == "rtlsdrlan") device.reset(new RTLSDR_LAN(settings));
-		else BaseLib::Output::printError("Error: Unsupported physical device type for family HomeMatic BidCoS: " + settings->type);
+		else GD::out.printError("Error: Unsupported physical device type for family HomeMatic BidCoS: " + settings->type);
 		if(device)
 		{
 			GD::physicalInterfaces[settings->id] = device;
@@ -109,15 +129,15 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> BidCoS::createPhysicalDevi
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
 }
@@ -166,19 +186,19 @@ void BidCoS::createCentral()
 
 		_central.reset(new HomeMaticCentral(0, serialNumber, address, this));
 		add(_central);
-		BaseLib::Output::printMessage("Created HomeMatic BidCoS central with id " + std::to_string(_central->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
+		GD::out.printMessage("Created HomeMatic BidCoS central with id " + std::to_string(_central->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -195,19 +215,19 @@ void BidCoS::createSpyDevice()
 
 		std::shared_ptr<BaseLib::Systems::LogicalDevice> device(new HM_SD(0, serialNumber, address, this));
 		add(device);
-		BaseLib::Output::printMessage("Created HomeMatic BidCoS spy device with id " + std::to_string(device->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
+		GD::out.printMessage("Created HomeMatic BidCoS spy device with id " + std::to_string(device->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -229,15 +249,15 @@ std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(int32_t address)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<HomeMaticDevice>();
@@ -261,15 +281,15 @@ std::shared_ptr<HomeMaticDevice> BidCoS::getDevice(std::string serialNumber)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _devicesMutex.unlock();
 	return std::shared_ptr<HomeMaticDevice>();
@@ -285,7 +305,7 @@ void BidCoS::load()
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			uint32_t deviceID = row->second.at(0)->intValue;
-			BaseLib::Output::printMessage("Loading HomeMatic BidCoS device " + std::to_string(deviceID));
+			GD::out.printMessage("Loading HomeMatic BidCoS device " + std::to_string(deviceID));
 			int32_t address = row->second.at(1)->intValue;
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
@@ -332,15 +352,15 @@ void BidCoS::load()
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -563,15 +583,15 @@ std::string BidCoS::handleCLICommand(std::string& command)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }

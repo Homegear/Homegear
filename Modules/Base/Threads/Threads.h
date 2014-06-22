@@ -36,12 +36,14 @@
 namespace BaseLib
 {
 
+class Obj;
+
 class Threads
 {
 public:
 	virtual ~Threads();
 
-	static void setThreadPriority(pthread_t thread, int32_t priority, int32_t policy = SCHED_FIFO);
+	static void setThreadPriority(BaseLib::Obj* baseLib, pthread_t thread, int32_t priority, int32_t policy = SCHED_FIFO);
 private:
 	//Non public constructor
 	Threads() {}

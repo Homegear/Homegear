@@ -32,22 +32,25 @@
 
 namespace BaseLib
 {
-SocketOperations::SocketOperations()
+SocketOperations::SocketOperations(BaseLib::Obj* baseLib)
 {
+	_bl = baseLib;
 	_autoConnect = false;
 	_fileDescriptor.reset(new FileDescriptor);
 }
 
-SocketOperations::SocketOperations(std::shared_ptr<FileDescriptor> fileDescriptor, SSL* ssl)
+SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> fileDescriptor, SSL* ssl)
 {
+	_bl = baseLib;
 	_autoConnect = false;
 	if(fileDescriptor) _fileDescriptor = fileDescriptor;
 	else _fileDescriptor.reset(new FileDescriptor);
 	_ssl = ssl;
 }
 
-SocketOperations::SocketOperations(std::string hostname, std::string port)
+SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port)
 {
+	_bl = baseLib;
 	signal(SIGPIPE, SIG_IGN);
 
 	_fileDescriptor.reset(new FileDescriptor);
@@ -55,10 +58,8 @@ SocketOperations::SocketOperations(std::string hostname, std::string port)
 	_port = port;
 }
 
-SocketOperations::SocketOperations(std::string hostname, std::string port, bool useSSL, bool verifyCertificate) : SocketOperations(hostname, port)
+SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port, bool useSSL, bool verifyCertificate) : SocketOperations(baseLib, hostname, port)
 {
-	signal(SIGPIPE, SIG_IGN);
-
 	_useSSL = useSSL;
 	_verifyCertificate = verifyCertificate;
 
@@ -122,12 +123,12 @@ void SocketOperations::close()
 {
 	if(_ssl) SSL_free(_ssl);
 	_ssl = nullptr;
-	Obj::ins->fileDescriptorManager.close(_fileDescriptor);
+	_bl->fileDescriptorManager.close(_fileDescriptor);
 }
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 {
-	Output::printDebug("Debug: Calling proofread...", 6);
+	_bl->out.printDebug("Debug: Calling proofread...", 6);
 	if(!connected()) autoConnect();
 	//Timeout needs to be set every time, so don't put it outside of the while loop
 	timeval timeout;
@@ -158,11 +159,11 @@ int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>> data)
 
 int32_t SocketOperations::proofwrite(std::vector<char>& data)
 {
-	Output::printDebug("Debug: Calling proofwrite ...", 6);
+	_bl->out.printDebug("Debug: Calling proofwrite ...", 6);
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
 	if(data.size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
-	Output::printDebug("Debug: ... data size is " + std::to_string(data.size()), 6);
+	_bl->out.printDebug("Debug: ... data size is " + std::to_string(data.size()), 6);
 
 	int32_t bytesSentSoFar = 0;
 	while (bytesSentSoFar < (signed)data.size())
@@ -181,13 +182,13 @@ int32_t SocketOperations::proofwrite(std::vector<char>& data)
 		int32_t bytesSentInStep = _ssl ? SSL_write(_ssl, &data.at(bytesSentSoFar), bytesToSend) : send(_fileDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
 		if(bytesSentInStep <= 0)
 		{
-			Output::printDebug("Debug: ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
+			_bl->out.printDebug("Debug: ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
 			close();
 			throw SocketOperationException(strerror(errno));
 		}
 		bytesSentSoFar += bytesSentInStep;
 	}
-	Output::printDebug("Debug: ... sent " + std::to_string(bytesSentSoFar), 6);
+	_bl->out.printDebug("Debug: ... sent " + std::to_string(bytesSentSoFar), 6);
 	return bytesSentSoFar;
 }
 
@@ -202,8 +203,8 @@ bool SocketOperations::connected()
 
 void SocketOperations::getFileDescriptor()
 {
-	Output::printDebug("Debug: Calling getFileDescriptor...");
-	Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+	_bl->out.printDebug("Debug: Calling getFileDescriptor...");
+	_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 
 	getConnection();
 	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) throw SocketOperationException("Could not connect to server.");
@@ -216,7 +217,7 @@ void SocketOperations::getSSL()
 	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) throw SocketSSLException("Could not connect to server using SSL. File descriptor is invalid.");
 	if(!_sslCTX)
 	{
-		Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		throw SocketSSLException("Could not connect to server using SSL. SSL is not initialized. Look for previous error messages.");
 	}
 	_ssl = SSL_new(_sslCTX);
@@ -226,7 +227,7 @@ void SocketOperations::getSSL()
 	{
 		SSL_free(_ssl);
 		_ssl = nullptr;
-		Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, result)));
 	}
 
@@ -235,7 +236,7 @@ void SocketOperations::getSSL()
 	{
 		SSL_free(_ssl);
 		_ssl = nullptr;
-		Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		throw SocketSSLException("Could not get server certificate.");
 	}
 
@@ -244,7 +245,7 @@ void SocketOperations::getSSL()
 	{
 		SSL_free(_ssl);
 		_ssl = nullptr;
-		Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
 	}
 }
@@ -254,7 +255,7 @@ void SocketOperations::getConnection()
 	if(_hostname.empty()) throw SocketInvalidParametersException("Hostname is empty");
 	if(_port.empty()) throw SocketInvalidParametersException("Port is empty");
 
-	BaseLib::Output::printInfo("Info: Connecting to host " + _hostname + " on port " + _port + "...");
+	_bl->out.printInfo("Info: Connecting to host " + _hostname + " on port " + _port + "...");
 
 	//Retry for two minutes
 	for(uint32_t i = 0; i < 6; ++i)
@@ -282,7 +283,7 @@ void SocketOperations::getConnection()
 		}
 		std::string ipAddress = std::string(&ipStringBuffer[0]);
 
-		_fileDescriptor = Obj::ins->fileDescriptorManager.add(socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol));
+		_fileDescriptor = _bl->fileDescriptorManager.add(socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol));
 		if(_fileDescriptor->descriptor == -1)
 		{
 			freeaddrinfo(serverInfo);
@@ -292,28 +293,28 @@ void SocketOperations::getConnection()
 		if(setsockopt(_fileDescriptor->descriptor, SOL_SOCKET, SO_KEEPALIVE, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
-			Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		optValue = 30;
 		if(setsockopt(_fileDescriptor->descriptor, SOL_TCP, TCP_KEEPIDLE, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
-			Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		optValue = 4;
 		if(setsockopt(_fileDescriptor->descriptor, SOL_TCP, TCP_KEEPCNT, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
-			Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		optValue = 15;
 		if(setsockopt(_fileDescriptor->descriptor, SOL_TCP, TCP_KEEPINTVL, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
-			Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 
@@ -322,7 +323,7 @@ void SocketOperations::getConnection()
 			if(fcntl(_fileDescriptor->descriptor, F_SETFL, fcntl(_fileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
 			{
 				freeaddrinfo(serverInfo);
-				Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+				_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 				throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 			}
 		}
@@ -333,14 +334,14 @@ void SocketOperations::getConnection()
 			if(i < 5)
 			{
 				freeaddrinfo(serverInfo);
-				Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+				_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 				std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 				continue;
 			}
 			else
 			{
 				freeaddrinfo(serverInfo);
-				Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+				_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 				throw SocketTimeOutException("Connecting to server " + ipAddress + " on port " + _port + " timed out: " + strerror(errno));
 			}
 		}
@@ -364,13 +365,13 @@ void SocketOperations::getConnection()
 			{
 				if(i < 5)
 				{
-					Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 					std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 					continue;
 				}
 				else
 				{
-					Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 					throw SocketTimeOutException("Could not connect to server " + ipAddress + " on port " + _port + ". Poll failed with error code: " + std::to_string(pollResult) + ".");
 				}
 			}
@@ -379,7 +380,7 @@ void SocketOperations::getConnection()
 				socklen_t resultLength = sizeof(connectResult);
 				if(getsockopt(_fileDescriptor->descriptor, SOL_SOCKET, SO_ERROR, &connectResult, &resultLength) < 0)
 				{
-					Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 					throw SocketOperationException("Could not connect to server " + ipAddress + " on port " + _port + ": " + strerror(errno) + ".");
 				}
 				break;
@@ -388,17 +389,17 @@ void SocketOperations::getConnection()
 			{
 				if(i < 5)
 				{
-					Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 					continue;
 				}
 				else
 				{
-					Obj::ins->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 					throw SocketTimeOutException("Connecting to server " + ipAddress + " on port " + _port + " timed out.");
 				}
 			}
 		}
 	}
-	BaseLib::Output::printInfo("Info: Connected to host " + _hostname + " on port " + _port + ".");
+	_bl->out.printInfo("Info: Connected to host " + _hostname + " on port " + _port + ".");
 }
 } /* namespace RPC */

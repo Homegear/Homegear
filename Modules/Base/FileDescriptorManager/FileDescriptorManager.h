@@ -40,6 +40,9 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 class FileDescriptor
 {
 public:
@@ -55,6 +58,7 @@ class FileDescriptorManager
 public:
 	FileDescriptorManager();
 	virtual ~FileDescriptorManager() {}
+	void init(BaseLib::Obj* baseLib);
 
 	virtual std::shared_ptr<FileDescriptor> add(int32_t fileDescriptor);
 	virtual void remove(std::shared_ptr<FileDescriptor> descriptor);
@@ -64,6 +68,7 @@ public:
 	virtual bool isValid(int32_t fileDescriptor, int32_t id);
 	virtual bool isValid(std::shared_ptr<FileDescriptor> descriptor);
 private:
+	BaseLib::Obj* _bl = nullptr;
 	uint32_t _currentID = 0;
 	std::mutex _descriptorsMutex;
 	std::map<int32_t, std::shared_ptr<FileDescriptor>> _descriptors;

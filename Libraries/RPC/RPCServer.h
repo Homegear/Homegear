@@ -76,10 +76,10 @@ namespace RPC
 				std::thread readThread;
 				std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 				SSL* ssl = nullptr;
-				BaseLib::SocketOperations socket;
+				std::shared_ptr<BaseLib::SocketOperations> socket;
 				Auth auth;
 
-				Client() { fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor()); }
+				Client();
 				virtual ~Client() { if(ssl) SSL_free(ssl); };
 			};
 
@@ -112,10 +112,10 @@ namespace RPC
 			std::mutex _stateMutex;
 			std::map<int32_t, std::shared_ptr<Client>> _clients;
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;
-			BaseLib::RPC::RPCDecoder _rpcDecoder;
-			BaseLib::RPC::RPCEncoder _rpcEncoder;
-			BaseLib::RPC::XMLRPCDecoder _xmlRpcDecoder;
-			BaseLib::RPC::XMLRPCEncoder _xmlRpcEncoder;
+			std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
+			std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
+			std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
+			std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
 
 			void getFileDescriptor();
 			std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();

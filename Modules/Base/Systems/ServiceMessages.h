@@ -45,6 +45,9 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace Systems
 {
 class ServiceMessages : public IEvents
@@ -62,7 +65,7 @@ public:
 	};
 	//End event handling
 
-	ServiceMessages(uint64_t peerID, std::string peerSerial, IServiceEventSink* eventHandler);
+	ServiceMessages(BaseLib::Obj* baseLib, uint64_t peerID, std::string peerSerial, IServiceEventSink* eventHandler);
 	virtual ~ServiceMessages();
 
 	virtual void setPeerID(uint64_t peerID) { _peerID = peerID; }
@@ -82,6 +85,7 @@ public:
 	virtual void checkUnreach(int32_t cyclicTimeout, uint32_t lastPacketReceived);
     virtual void endUnreach();
 protected:
+    BaseLib::Obj* _bl = nullptr;
     uint64_t _peerID = 0;
     std::string _peerSerial;
     bool _disposing = false;

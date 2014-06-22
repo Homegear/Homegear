@@ -31,6 +31,7 @@
 #define GD_H_
 
 #include "../Base/BaseLib.h"
+#include "HMWired.h"
 
 namespace HMWired
 {
@@ -40,7 +41,11 @@ class GD
 public:
 	virtual ~GD();
 
+	static BaseLib::Obj* bl;
+	static HMWired* family;
 	static std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface;
+	static BaseLib::RPC::Devices rpcDevices;
+	static BaseLib::Output out;
 private:
 	GD();
 };

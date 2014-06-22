@@ -114,8 +114,8 @@ protected:
 	std::thread _mainThread;
 	std::mutex _mainThreadMutex;
 	std::mutex _databaseMutex;
-	BaseLib::RPC::RPCEncoder _rpcEncoder;
-	BaseLib::RPC::RPCDecoder _rpcDecoder;
+	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
+	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 
 	void triggerThreadMultipleVariables(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
 	void triggerThread(uint64_t peerID, int32_t channel, std::string variable, std::shared_ptr<BaseLib::RPC::RPCVariable> value);

@@ -33,11 +33,11 @@
 namespace Insteon
 {
 
-InsteonDevice::InsteonDevice(IDeviceEventSink* eventHandler) : LogicalDevice(eventHandler)
+InsteonDevice::InsteonDevice(IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Insteon, GD::bl, eventHandler)
 {
 }
 
-InsteonDevice::InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(deviceID, serialNumber, address, eventHandler)
+InsteonDevice::InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::Insteon, GD::bl, deviceID, serialNumber, address, eventHandler)
 {
 }
 
@@ -51,15 +51,15 @@ InsteonDevice::~InsteonDevice()
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -69,8 +69,8 @@ void InsteonDevice::dispose(bool wait)
 	{
 		if(_disposing) return;
 		_disposing = true;
-		BaseLib::Output::printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
-		if(GD::physicalDevice) GD::physicalDevice->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalDeviceEventSink*)this);
+		GD::out.printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
+		if(GD::physicalInterface) GD::physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		int64_t startTime = BaseLib::HelperFunctions::getTime();
 		//stopThreads();
 		int64_t timeDifference = BaseLib::HelperFunctions::getTime() - startTime;
@@ -80,15 +80,15 @@ void InsteonDevice::dispose(bool wait)
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_disposed = true;
 }
@@ -99,21 +99,21 @@ void InsteonDevice::init()
 	{
 		if(_initialized) return; //Prevent running init two times
 
-		if(GD::physicalDevice) GD::physicalDevice->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalDeviceEventSink*)this);
+		if(GD::physicalInterface) GD::physicalInterface->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 
 		_initialized = true;
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -126,15 +126,15 @@ bool InsteonDevice::onPacketReceived(std::string& senderID, std::shared_ptr<Base
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -148,9 +148,8 @@ void InsteonDevice::loadVariables()
 {
 	try
 	{
-		_databaseMutex.lock();
-		BaseLib::DataTable rows = BaseLib::Obj::ins->db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=" + std::to_string(_deviceID));
-		for(BaseLib::DataTable::iterator row = rows.begin(); row != rows.end(); ++row)
+		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetDeviceVariables();
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			/*switch(row->second.at(2)->intValue)
@@ -169,17 +168,16 @@ void InsteonDevice::loadVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_databaseMutex.unlock();
 }
 
 void InsteonDevice::saveVariables()
@@ -193,15 +191,15 @@ void InsteonDevice::saveVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -209,19 +207,19 @@ void InsteonDevice::sendPacket(std::shared_ptr<InsteonPacket> packet)
 {
 	try
 	{
-		GD::physicalDevice->sendPacket(packet);
+		GD::physicalInterface->sendPacket(packet);
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

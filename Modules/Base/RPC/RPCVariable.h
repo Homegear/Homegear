@@ -68,7 +68,7 @@ public:
 
 	RPCVariable() { type = RPCVariableType::rpcVoid; arrayValue = std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>()); structValue = std::shared_ptr<std::map<std::string, std::shared_ptr<RPCVariable>>>(new std::map<std::string, std::shared_ptr<RPCVariable>>()); }
 	RPCVariable(RPCVariableType variableType) : RPCVariable() { type = variableType; }
-	RPCVariable(RPCVariableType variableType, std::vector<uint8_t> data);
+	//RPCVariable(RPCVariableType variableType, std::vector<uint8_t> data);
 	RPCVariable(uint8_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; integerValue = (int32_t)integer; }
 	RPCVariable(int32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; integerValue = integer; }
 	RPCVariable(uint32_t integer) : RPCVariable() { type = RPCVariableType::rpcInteger; integerValue = (int32_t)integer; }

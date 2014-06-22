@@ -38,6 +38,9 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace RPC
 {
 
@@ -46,12 +49,15 @@ class Devices
 public:
 	Devices();
 	virtual ~Devices() {}
+	bool empty() { return _devices.empty(); }
+	void init(BaseLib::Obj* baseLib);
 	virtual void load(std::string path);
 	virtual std::shared_ptr<Device> find(Systems::DeviceFamilies family, std::shared_ptr<Systems::Packet> packet);
 	virtual std::shared_ptr<Device> find(Systems::DeviceFamilies family, std::string typeID, std::shared_ptr<Systems::Packet> packet = std::shared_ptr<Systems::Packet>());
 	virtual std::shared_ptr<Device> find(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion, std::shared_ptr<Systems::Packet> packet = std::shared_ptr<Systems::Packet>());
 	virtual std::shared_ptr<Device> find(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion, int32_t countFromSysinfo);
 protected:
+	BaseLib::Obj* _bl = nullptr;
 	std::vector<std::shared_ptr<Device>> _devices;
 };
 

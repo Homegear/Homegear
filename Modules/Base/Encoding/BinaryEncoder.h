@@ -38,10 +38,13 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 class BinaryEncoder
 {
 public:
-	BinaryEncoder();
+	BinaryEncoder(BaseLib::Obj* baseLib);
 	virtual ~BinaryEncoder() {}
 
 	virtual void encodeInteger(std::shared_ptr<std::vector<char>>& encodedData, int32_t integer);
@@ -54,6 +57,8 @@ public:
 	virtual void encodeBoolean(std::vector<uint8_t>& encodedData, bool boolean);
 	virtual void encodeFloat(std::shared_ptr<std::vector<char>>& encodedData, double floatValue);
 	virtual void encodeFloat(std::vector<uint8_t>& encodedData, double floatValue);
+protected:
+	BaseLib::Obj* _bl = nullptr;
 };
 }
 #endif /* BINARYENCODER_H_ */

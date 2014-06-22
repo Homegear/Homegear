@@ -52,16 +52,19 @@
 
 namespace BaseLib
 {
+class Obj;
+
 class HelperFunctions
 {
 public:
+	HelperFunctions();
 	virtual ~HelperFunctions();
 
-	static void init();
+	void init(Obj* baseLib);
 
 	static bool fileExists(std::string filename);
 	static std::string getFileContent(std::string filename);
-	static std::vector<std::string> getFiles(std::string path);
+	std::vector<std::string> getFiles(std::string path);
 
 	static int64_t getTime();
 	static int32_t getTimeSeconds();
@@ -151,7 +154,7 @@ public:
 		return number;
 	}
 
-	static int32_t getNumber(char hexChar)
+	int32_t getNumber(char hexChar)
 	{
 		if(_hexMap.find(hexChar) == _hexMap.end()) return 0;
 		return _hexMap.at(hexChar);
@@ -166,37 +169,36 @@ public:
 		return number;
 	}
 
-	static bool getBigEndian() { return _isBigEndian; }
+	bool getBigEndian() { return _isBigEndian; }
 
-	static void copyFile(std::string source, std::string dest);
+	void copyFile(std::string source, std::string dest);
 	static int32_t getRandomNumber(int32_t min, int32_t max);
 
-	static void memcpyBigEndian(char* to, char* from, const uint32_t& length);
-	static void memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length);
-	static void memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from);
-	static void memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from);
+	void memcpyBigEndian(char* to, char* from, const uint32_t& length);
+	void memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t& length);
+	void memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from);
+	void memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from);
 	static std::string getHexString(const std::vector<char>& data);
 	static std::string getHexString(const std::vector<uint8_t>& data);
 	static std::string getHexString(int32_t number, int32_t width = -1);
-	static char getHexChar(int32_t nibble);
-	static std::vector<char> getBinary(std::string hexString);
-	static std::vector<uint8_t> getUBinary(std::string hexString);
-	static std::vector<uint8_t>& getUBinary(std::string hexString, uint32_t size, std::vector<uint8_t>& binary);
-	static std::vector<uint8_t> getUBinary(std::vector<uint8_t>& hexData);
+	char getHexChar(int32_t nibble);
+	std::vector<char> getBinary(std::string hexString);
+	std::vector<uint8_t> getUBinary(std::string hexString);
+	std::vector<uint8_t>& getUBinary(std::string hexString, uint32_t size, std::vector<uint8_t>& binary);
+	std::vector<uint8_t> getUBinary(std::vector<uint8_t>& hexData);
 	static std::string getSSLError(int32_t errorNumber);
 	static std::string getSSLCertVerificationError(int32_t errorNumber);
-	static int32_t userID(std::string username);
-	static int32_t groupID(std::string groupname);
+	int32_t userID(std::string username);
+	int32_t groupID(std::string groupname);
 
 private:
-	static bool _isBigEndian;
-	static std::map<char, int32_t> _hexMap;
-	static int32_t _asciiToBinaryTable[];
-	static char _binaryToASCIITable[];
+	BaseLib::Obj* _bl = nullptr;
+	bool _isBigEndian;
+	std::map<char, int32_t> _hexMap;
+	int32_t _asciiToBinaryTable[23];
+	char _binaryToASCIITable[16];
 
-	//Non public constructor
-	HelperFunctions() {}
-	static void checkEndianness();
+	void checkEndianness();
 };
 }
 #endif /* HELPERFUNCTIONS_H_ */

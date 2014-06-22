@@ -35,43 +35,27 @@ namespace BaseLib
 namespace RPC
 {
 
-RPCVariable::RPCVariable(RPCVariableType variableType, std::vector<uint8_t> data) : RPCVariable()
+/*RPCVariable::RPCVariable(RPCVariableType variableType, std::vector<uint8_t> data) : RPCVariable()
 {
-	try
+	type = variableType;
+	if(data.empty()) return;
+	if(variableType == RPCVariableType::rpcBoolean)
 	{
-		type = variableType;
-		if(data.empty()) return;
-		if(variableType == RPCVariableType::rpcBoolean)
+		booleanValue = false;
+		for(std::vector<uint8_t>::iterator i = data.begin(); i != data.end(); ++i)
 		{
-			booleanValue = false;
-			for(std::vector<uint8_t>::iterator i = data.begin(); i != data.end(); ++i)
+			if(*i != 0)
 			{
-				if(*i != 0)
-				{
-					booleanValue = true;
-					break;
-				}
+				booleanValue = true;
+				break;
 			}
 		}
-		else if(variableType == RPCVariableType::rpcInteger)
-		{
-			HelperFunctions::memcpyBigEndian(integerValue, data);
-		}
-		else Output::printError("Error: Could not create RPCVariable. Type cannot be converted automatically.");
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
+	else if(variableType == RPCVariableType::rpcInteger)
+	{
+		HelperFunctions::memcpyBigEndian(integerValue, data);
+	}
+}*/
 
 std::shared_ptr<RPCVariable> RPCVariable::createError(int32_t faultCode, std::string faultString)
 {
@@ -183,207 +167,132 @@ bool RPCVariable::operator!=(const RPCVariable& rhs)
 
 void RPCVariable::print()
 {
-	try
+	if(type == RPCVariableType::rpcVoid)
 	{
-		if(type == RPCVariableType::rpcVoid)
-		{
-			std::cout << "(void)" << std::endl;
-		}
-		else if(type == RPCVariableType::rpcBoolean)
-		{
-			std::cout << "(Boolean) " << booleanValue << std::endl;
-		}
-		else if(type == RPCVariableType::rpcInteger)
-		{
-			std::cout << "(Integer) " << integerValue << std::endl;
-		}
-		else if(type == RPCVariableType::rpcFloat)
-		{
-			std::cout << "(Float) " << floatValue << std::endl;
-		}
-		else if(type == RPCVariableType::rpcString)
-		{
-			std::cout << "(String) " << stringValue << std::endl;
-		}
-		else if(type == RPCVariableType::rpcBase64)
-		{
-			std::cout << "(Base64) " << stringValue << std::endl;
-		}
-		else if(type == RPCVariableType::rpcArray)
-		{
-			std::string indent("");
-			printArray(arrayValue, indent);
-		}
-		else if(type == RPCVariableType::rpcStruct)
-		{
-			std::string indent("");
-			printStruct(structValue, indent);
-		}
-		else
-		{
-			std::cout << "(unknown)" << std::endl;
-		}
+		std::cout << "(void)" << std::endl;
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	else if(type == RPCVariableType::rpcBoolean)
+	{
+		std::cout << "(Boolean) " << booleanValue << std::endl;
+	}
+	else if(type == RPCVariableType::rpcInteger)
+	{
+		std::cout << "(Integer) " << integerValue << std::endl;
+	}
+	else if(type == RPCVariableType::rpcFloat)
+	{
+		std::cout << "(Float) " << floatValue << std::endl;
+	}
+	else if(type == RPCVariableType::rpcString)
+	{
+		std::cout << "(String) " << stringValue << std::endl;
+	}
+	else if(type == RPCVariableType::rpcBase64)
+	{
+		std::cout << "(Base64) " << stringValue << std::endl;
+	}
+	else if(type == RPCVariableType::rpcArray)
+	{
+		std::string indent("");
+		printArray(arrayValue, indent);
+	}
+	else if(type == RPCVariableType::rpcStruct)
+	{
+		std::string indent("");
+		printStruct(structValue, indent);
+	}
+	else
+	{
+		std::cout << "(unknown)" << std::endl;
+	}
 }
 
 void RPCVariable::print(std::shared_ptr<RPCVariable> variable, std::string indent)
 {
-	try
+	if(variable->type == RPCVariableType::rpcVoid)
 	{
-		if(variable->type == RPCVariableType::rpcVoid)
-		{
-			std::cout << indent << "(void)" << std::endl;
-		}
-		else if(variable->type == RPCVariableType::rpcInteger)
-		{
-			std::cout << indent << "(Integer) " << variable->integerValue << std::endl;
-		}
-		else if(variable->type == RPCVariableType::rpcFloat)
-		{
-			std::cout << indent << "(Float) " << variable->floatValue << std::endl;
-		}
-		else if(variable->type == RPCVariableType::rpcBoolean)
-		{
-			std::cout << indent << "(Boolean) " << variable->booleanValue << std::endl;
-		}
-		else if(variable->type == RPCVariableType::rpcString)
-		{
-			std::cout << indent << "(String) " << variable->stringValue << std::endl;
-		}
-		else if(type == RPCVariableType::rpcBase64)
-		{
-			std::cout << indent << "(Base64) " << variable->stringValue << std::endl;
-		}
-		else if(variable->type == RPCVariableType::rpcArray)
-		{
-			printArray(variable->arrayValue, indent);
-		}
-		else if(variable->type == RPCVariableType::rpcStruct)
-		{
-			printStruct(variable->structValue, indent);
-		}
-		else
-		{
-			std::cout << indent << "(Unknown)" << std::endl;
-		}
+		std::cout << indent << "(void)" << std::endl;
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	else if(variable->type == RPCVariableType::rpcInteger)
+	{
+		std::cout << indent << "(Integer) " << variable->integerValue << std::endl;
+	}
+	else if(variable->type == RPCVariableType::rpcFloat)
+	{
+		std::cout << indent << "(Float) " << variable->floatValue << std::endl;
+	}
+	else if(variable->type == RPCVariableType::rpcBoolean)
+	{
+		std::cout << indent << "(Boolean) " << variable->booleanValue << std::endl;
+	}
+	else if(variable->type == RPCVariableType::rpcString)
+	{
+		std::cout << indent << "(String) " << variable->stringValue << std::endl;
+	}
+	else if(type == RPCVariableType::rpcBase64)
+	{
+		std::cout << indent << "(Base64) " << variable->stringValue << std::endl;
+	}
+	else if(variable->type == RPCVariableType::rpcArray)
+	{
+		printArray(variable->arrayValue, indent);
+	}
+	else if(variable->type == RPCVariableType::rpcStruct)
+	{
+		printStruct(variable->structValue, indent);
+	}
+	else
+	{
+		std::cout << indent << "(Unknown)" << std::endl;
+	}
 }
 
 void RPCVariable::printArray(std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> array, std::string indent)
 {
-	try
+	std::cout << indent << "(Array length=" << array->size() << ")" << std::endl << indent << "{" << std::endl;
+	std::string currentIndent = indent;
+	currentIndent.push_back(' ');
+	currentIndent.push_back(' ');
+	for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = array->begin(); i != array->end(); ++i)
 	{
-		std::cout << indent << "(Array length=" << array->size() << ")" << std::endl << indent << "{" << std::endl;
-		std::string currentIndent = indent;
-		currentIndent.push_back(' ');
-		currentIndent.push_back(' ');
-		for(std::vector<std::shared_ptr<RPCVariable>>::iterator i = array->begin(); i != array->end(); ++i)
-		{
-			print(*i, currentIndent);
-		}
-		std::cout << indent << "}" << std::endl;
+		print(*i, currentIndent);
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	std::cout << indent << "}" << std::endl;
 }
 
 void RPCVariable::printStruct(std::shared_ptr<std::map<std::string, std::shared_ptr<RPCVariable>>> rpcStruct, std::string indent)
 {
-	try
+	std::cout << indent << "(Struct length=" << rpcStruct->size() << ")" << std::endl << indent << "{" << std::endl;
+	std::string currentIndent = indent;
+	currentIndent.push_back(' ');
+	currentIndent.push_back(' ');
+	for(std::map<std::string, std::shared_ptr<RPCVariable>>::iterator i = rpcStruct->begin(); i != rpcStruct->end(); ++i)
 	{
-		std::cout << indent << "(Struct length=" << rpcStruct->size() << ")" << std::endl << indent << "{" << std::endl;
-		std::string currentIndent = indent;
-		currentIndent.push_back(' ');
-		currentIndent.push_back(' ');
-		for(std::map<std::string, std::shared_ptr<RPCVariable>>::iterator i = rpcStruct->begin(); i != rpcStruct->end(); ++i)
-		{
-			std::cout << currentIndent << "[" << i->first << "]" << std::endl << currentIndent << "{" << std::endl;
-			print(i->second, currentIndent + "  ");
-			std::cout << currentIndent << "}" << std::endl;
-		}
-		std::cout << indent << "}" << std::endl;
+		std::cout << currentIndent << "[" << i->first << "]" << std::endl << currentIndent << "{" << std::endl;
+		print(i->second, currentIndent + "  ");
+		std::cout << currentIndent << "}" << std::endl;
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	std::cout << indent << "}" << std::endl;
 }
 
 std::shared_ptr<RPCVariable> RPCVariable::fromString(std::string value, RPCVariableType type)
 {
-	try
+	if(type == RPCVariableType::rpcBoolean)
 	{
-		if(type == RPCVariableType::rpcBoolean)
-		{
-			HelperFunctions::toLower(value);
-			if(value == "1" || value == "true") return std::shared_ptr<RPCVariable>(new RPCVariable(true));
-			else return std::shared_ptr<RPCVariable>(new RPCVariable(false));
-		}
-		else if(type == RPCVariableType::rpcString) return std::shared_ptr<RPCVariable>(new RPCVariable(value));
-		else if(type == RPCVariableType::rpcInteger) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getNumber(value)));
-		else if(type == RPCVariableType::rpcFloat) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getDouble(value)));
-		else if(type == RPCVariableType::rpcBase64)
-		{
-			std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcBase64));
-			variable->stringValue = value;
-			return variable;
-		}
-		else return createError(-1, "Type not supported.");
+		HelperFunctions::toLower(value);
+		if(value == "1" || value == "true") return std::shared_ptr<RPCVariable>(new RPCVariable(true));
+		else return std::shared_ptr<RPCVariable>(new RPCVariable(false));
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	else if(type == RPCVariableType::rpcString) return std::shared_ptr<RPCVariable>(new RPCVariable(value));
+	else if(type == RPCVariableType::rpcInteger) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getNumber(value)));
+	else if(type == RPCVariableType::rpcFloat) return std::shared_ptr<RPCVariable>(new RPCVariable(HelperFunctions::getDouble(value)));
+	else if(type == RPCVariableType::rpcBase64)
+	{
+		std::shared_ptr<RPCVariable> variable(new RPCVariable(RPCVariableType::rpcBase64));
+		variable->stringValue = value;
+		return variable;
+	}
+	else return createError(-1, "Type not supported.");
     return std::shared_ptr<RPCVariable>();
 }
 

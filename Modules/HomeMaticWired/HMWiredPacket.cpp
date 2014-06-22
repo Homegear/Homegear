@@ -28,6 +28,7 @@
  */
 
 #include "HMWiredPacket.h"
+#include "GD.h"
 
 namespace HMWired
 {
@@ -149,15 +150,15 @@ std::vector<uint8_t> HMWiredPacket::unescapePacket(std::vector<uint8_t>& packet)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return unescapedPacket;
 }
@@ -171,7 +172,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 
 		if(packet.size() > 512)
 		{
-			BaseLib::Output::printWarning("Warning: Tried to import HomeMatic Wired packet larger than 256 bytes.");
+			GD::out.printWarning("Warning: Tried to import HomeMatic Wired packet larger than 256 bytes.");
 			return;
 		}
 		if(removeEscapes) packet = unescapePacket(packet);
@@ -185,7 +186,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 				if(packet.size() != _length + 11 && packet.size() != _length + 9)
 				{
 					reset();
-					BaseLib::Output::printError("HomeMatic Wired packet has invalid length: " + BaseLib::HelperFunctions::getHexString(packet));
+					GD::out.printError("HomeMatic Wired packet has invalid length: " + BaseLib::HelperFunctions::getHexString(packet));
 					return;
 				}
 				_controlByte = packet[5];
@@ -209,7 +210,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 						if(CRC16::calculate(packet) != _checksum)
 						{
 							reset();
-							BaseLib::Output::printError("CRC for HomeMatic Wired packet failed: " + BaseLib::HelperFunctions::getHexString(packet) + BaseLib::HelperFunctions::getHexString(_checksum, 4));
+							GD::out.printError("CRC for HomeMatic Wired packet failed: " + BaseLib::HelperFunctions::getHexString(packet) + BaseLib::HelperFunctions::getHexString(_checksum, 4));
 							return;
 						}
 					}
@@ -228,7 +229,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 				if(!(_controlByte & 3))
 				{
 					reset();
-					BaseLib::Output::printError("HomeMatic Wired packet has invalid length: " + BaseLib::HelperFunctions::getHexString(packet));
+					GD::out.printError("HomeMatic Wired packet has invalid length: " + BaseLib::HelperFunctions::getHexString(packet));
 					return;
 				}
 				_destinationAddress = (packet[1] << 24) + (packet[2] << 16) + (packet[3] << 8) + packet[4];
@@ -243,7 +244,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 						if(CRC16::calculate(packet) != _checksum)
 						{
 							reset();
-							BaseLib::Output::printError("CRC for HomeMatic Wired packet failed: " + BaseLib::HelperFunctions::getHexString(packet) + BaseLib::HelperFunctions::getHexString(_checksum, 4));
+							GD::out.printError("CRC for HomeMatic Wired packet failed: " + BaseLib::HelperFunctions::getHexString(packet) + BaseLib::HelperFunctions::getHexString(_checksum, 4));
 							return;
 						}
 					}
@@ -258,7 +259,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 			else
 			{
 				reset();
-				BaseLib::Output::printError("HomeMatic Wired packet has invalid length: " + BaseLib::HelperFunctions::getHexString(packet));
+				GD::out.printError("HomeMatic Wired packet has invalid length: " + BaseLib::HelperFunctions::getHexString(packet));
 				return;
 			}
 		}
@@ -279,7 +280,7 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 					if(CRC16::calculate(packet) != _checksum)
 					{
 						reset();
-						BaseLib::Output::printError("CRC for HomeMatic Wired packet failed: " + BaseLib::HelperFunctions::getHexString(packet) + BaseLib::HelperFunctions::getHexString(_checksum, 4));
+						GD::out.printError("CRC for HomeMatic Wired packet failed: " + BaseLib::HelperFunctions::getHexString(packet) + BaseLib::HelperFunctions::getHexString(_checksum, 4));
 						return;
 					}
 				}
@@ -295,21 +296,21 @@ void HMWiredPacket::import(std::vector<uint8_t>& packet, bool removeEscapes)
 		else
 		{
 			reset();
-			BaseLib::Output::printError("HomeMatic Wired packet has unknown type: " + BaseLib::HelperFunctions::getHexString(packet));
+			GD::out.printError("HomeMatic Wired packet has unknown type: " + BaseLib::HelperFunctions::getHexString(packet));
 			return;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -319,28 +320,28 @@ void HMWiredPacket::import(std::string packetHex)
 	{
 		if(packetHex.size() % 2 != 0)
 		{
-			BaseLib::Output::printWarning("Warning: Packet has invalid size.");
+			GD::out.printWarning("Warning: Packet has invalid size.");
 			return;
 		}
 		if(packetHex.size() > 1024)
 		{
-			BaseLib::Output::printWarning("Warning: Tried to import HomeMatic Wired packet larger than 512 bytes.");
+			GD::out.printWarning("Warning: Tried to import HomeMatic Wired packet larger than 512 bytes.");
 			return;
 		}
-		std::vector<uint8_t> packet(BaseLib::HelperFunctions::getUBinary(packetHex));
+		std::vector<uint8_t> packet(GD::bl->hf.getUBinary(packetHex));
 		import(packet);
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -363,15 +364,15 @@ void HMWiredPacket::escapePacket()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -409,15 +410,15 @@ void HMWiredPacket::generateControlByte()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -436,7 +437,7 @@ std::vector<uint8_t> HMWiredPacket::byteArray()
 
 		if(_payload.size() > 132)
 		{
-			BaseLib::Output::printError("Cannot create HomeMatic Wired packet with a payload size larger than 128 bytes.");
+			GD::out.printError("Cannot create HomeMatic Wired packet with a payload size larger than 128 bytes.");
 			return _escapedPacket;
 		}
 
@@ -495,15 +496,15 @@ std::vector<uint8_t> HMWiredPacket::byteArray()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return _escapedPacket;
 }
@@ -518,15 +519,15 @@ std::vector<char> HMWiredPacket::byteArraySigned()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return packet;
 }
@@ -539,15 +540,15 @@ std::string HMWiredPacket::hexString()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }
@@ -558,12 +559,12 @@ void HMWiredPacket::setPosition(double index, double size, std::vector<uint8_t>&
 	{
 		if(size < 0)
 		{
-			BaseLib::Output::printError("Error: Negative size not allowed.");
+			GD::out.printError("Error: Negative size not allowed.");
 			return;
 		}
 		if(index < 9)
 		{
-			BaseLib::Output::printError("Error: Packet index < 9 requested.");
+			GD::out.printError("Error: Packet index < 9 requested.");
 			return;
 		}
 		index -= 9;
@@ -574,7 +575,7 @@ void HMWiredPacket::setPosition(double index, double size, std::vector<uint8_t>&
 			int32_t intByteIndex = byteIndex;
 			if(size > 1.0)
 			{
-				BaseLib::Output::printError("Error: Can't set partial byte index > 1.");
+				GD::out.printError("Error: Can't set partial byte index > 1.");
 				return;
 			}
 			while((signed)_payload.size() - 1 < intByteIndex)
@@ -616,15 +617,15 @@ void HMWiredPacket::setPosition(double index, double size, std::vector<uint8_t>&
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _length = 9 + _payload.size();
 }
@@ -636,13 +637,13 @@ std::vector<uint8_t> HMWiredPacket::getPosition(double index, double size, int32
 	{
 		if(size < 0)
 		{
-			BaseLib::Output::printError("Error: Negative size not allowed.");
+			GD::out.printError("Error: Negative size not allowed.");
 			result.push_back(0);
 			return result;
 		}
 		if(index < 0)
 		{
-			BaseLib::Output::printError("Error: Packet index < 0 requested.");
+			GD::out.printError("Error: Packet index < 0 requested.");
 			result.push_back(0);
 			return result;
 		}
@@ -650,7 +651,7 @@ std::vector<uint8_t> HMWiredPacket::getPosition(double index, double size, int32
 		{
 			if(size > 0.8)
 			{
-				BaseLib::Output::printError("Error: Packet index < 9 and size > 1 requested.");
+				GD::out.printError("Error: Packet index < 9 and size > 1 requested.");
 				result.push_back(0);
 				return result;
 			}
@@ -679,7 +680,7 @@ std::vector<uint8_t> HMWiredPacket::getPosition(double index, double size, int32
 		{
 			if(size > 1)
 			{
-				BaseLib::Output::printError("Error: Partial byte index > 1 requested.");
+				GD::out.printError("Error: Partial byte index > 1 requested.");
 				result.push_back(0);
 				return result;
 			}
@@ -712,15 +713,15 @@ std::vector<uint8_t> HMWiredPacket::getPosition(double index, double size, int32
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     result.push_back(0);
     return result;

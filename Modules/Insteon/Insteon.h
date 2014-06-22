@@ -40,8 +40,10 @@ class InsteonDevice;
 class Insteon : public BaseLib::Systems::DeviceFamily
 {
 public:
-	Insteon(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler);
+	Insteon(BaseLib::Obj* bl, IFamilyEventSink* eventHandler);
 	virtual ~Insteon();
+	virtual bool init();
+	virtual void dispose();
 
 	virtual std::shared_ptr<BaseLib::Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual void load();

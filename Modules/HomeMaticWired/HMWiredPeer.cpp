@@ -38,29 +38,29 @@ std::shared_ptr<HMWiredCentral> HMWiredPeer::getCentral()
 	try
 	{
 		if(_central) return _central;
-		_central = std::dynamic_pointer_cast<HMWiredCentral>(BaseLib::Obj::family->getCentral());
+		_central = std::dynamic_pointer_cast<HMWiredCentral>(GD::family->getCentral());
 		return _central;
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<HMWiredCentral>();
 }
 
-HMWiredPeer::HMWiredPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(parentID, centralFeatures, eventHandler)
+HMWiredPeer::HMWiredPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, parentID, centralFeatures, eventHandler)
 {
 }
 
-HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(id, address, serialNumber, parentID, centralFeatures, eventHandler)
+HMWiredPeer::HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
 }
 
@@ -75,7 +75,7 @@ void HMWiredPeer::initializeCentralConfig()
 	{
 		if(!rpcDevice)
 		{
-			BaseLib::Output::printWarning("Warning: Tried to initialize HomeMatic Wired peer's central config without rpcDevice being set.");
+			GD::out.printWarning("Warning: Tried to initialize HomeMatic Wired peer's central config without rpcDevice being set.");
 			return;
 		}
 		raiseCreateSavepoint("hmWiredPeerConfig" + std::to_string(_peerID));
@@ -100,15 +100,15 @@ void HMWiredPeer::initializeCentralConfig()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     raiseReleaseSavepoint("hmWiredPeerConfig" + std::to_string(_peerID));
 }
@@ -120,7 +120,7 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPee
 		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(channel, BaseLib::RPC::ParameterSet::Type::Enum::link);
 		if(!parameterSet)
 		{
-			BaseLib::Output::printError("Error: No link parameter set found.");
+			GD::out.printError("Error: No link parameter set found.");
 			return;
 		}
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
@@ -133,7 +133,7 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPee
 		if(parameterSet->channelOffset > max) max = parameterSet->channelOffset;
 		if(max - min != 5)
 		{
-			BaseLib::Output::printError("Error: Address format of parameter set is not supported.");
+			GD::out.printError("Error: Address format of parameter set is not supported.");
 			return;
 		}
 
@@ -146,14 +146,14 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPee
 		data.at(parameterSet->peerChannelOffset) = peer->channel + peer->physicalIndexOffset;
 		if(peer->configEEPROMAddress == -1)
 		{
-			BaseLib::Output::printError("Error: Link config's EEPROM address is invalid.");
+			GD::out.printError("Error: Link config's EEPROM address is invalid.");
 			return;
 		}
 		std::vector<int32_t> configBlocks = setConfigParameter((double)peer->configEEPROMAddress, 6.0, data);
 		for(std::vector<int32_t>::iterator i = configBlocks.begin(); i != configBlocks.end(); ++i)
 		{
 			std::vector<uint8_t> configBlock = binaryConfig.at(*i).data;
-			if(!getCentral()->writeEEPROM(_address, *i, configBlock)) BaseLib::Output::printError("Error: Could not write config to device's eeprom.");
+			if(!getCentral()->writeEEPROM(_address, *i, configBlock)) GD::out.printError("Error: Could not write config to device's eeprom.");
 		}
 
 		if(!peer->isSender) return; //Nothing more to do
@@ -164,19 +164,19 @@ void HMWiredPeer::initializeLinkConfig(int32_t channel, std::shared_ptr<BasicPee
 			variables->structValue->insert(BaseLib::RPC::RPCStructElement((*i)->id, (*i)->logicalParameter->getDefaultValue()));
 		}
 		std::shared_ptr<BaseLib::RPC::RPCVariable> result = putParamset(channel, BaseLib::RPC::ParameterSet::Type::Enum::link, peer->id, peer->channel, variables);
-		if(result->errorStruct) BaseLib::Output::printError("Error: " + result->structValue->at("faultString")->stringValue);
+		if(result->errorStruct) GD::out.printError("Error: " + result->structValue->at("faultString")->stringValue);
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -551,15 +551,15 @@ std::string HMWiredPeer::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -571,7 +571,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 	{
 		if(size < 0 || index < 0)
 		{
-			BaseLib::Output::printError("Error: Can't set configuration parameter. Index or size is negative.");
+			GD::out.printError("Error: Can't set configuration parameter. Index or size is negative.");
 			return changedBlocks;
 		}
 		if(size > 0.8 && size < 1.0) size = 1.0;
@@ -585,7 +585,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 			intByteIndex -= configBlockIndex;
 			if(size > 1.0)
 			{
-				BaseLib::Output::printError("Error: HomeMatic Wired peer " + std::to_string(_peerID) + ": Can't set partial byte index > 1.");
+				GD::out.printError("Error: HomeMatic Wired peer " + std::to_string(_peerID) + ": Can't set partial byte index > 1.");
 				return changedBlocks;
 			}
 			uint32_t bitSize = std::lround(size * 10);
@@ -599,7 +599,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 			BaseLib::Systems::ConfigDataBlock* configBlock = &binaryConfig[configBlockIndex];
 			if(configBlock->data.size() != 0x10)
 			{
-				BaseLib::Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+				GD::out.printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 				return changedBlocks;
 			}
 			if(bitSize == 8) configBlock->data.at(intByteIndex) = 0;
@@ -622,7 +622,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 					configBlock = &binaryConfig[configBlockIndex];
 					if(configBlock->data.size() != 0x10)
 					{
-						BaseLib::Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+						GD::out.printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 						return changedBlocks;
 					}
 					intByteIndex = 0;
@@ -669,7 +669,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 						configBlock = &binaryConfig[configBlockIndex];
 						if(configBlock->data.size() != 0x10)
 						{
-							BaseLib::Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+							GD::out.printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 							return changedBlocks;
 						}
 					}
@@ -698,7 +698,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 							configBlock = &binaryConfig[configBlockIndex];
 							if(configBlock->data.size() != 0x10)
 							{
-								BaseLib::Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+								GD::out.printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 								return changedBlocks;
 							}
 						}
@@ -721,7 +721,7 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 						configBlock = &binaryConfig[configBlockIndex];
 						if(configBlock->data.size() != 0x10)
 						{
-							BaseLib::Output::printError("Error: Can't set configuration parameter. Can't read EEPROM.");
+							GD::out.printError("Error: Can't set configuration parameter. Can't read EEPROM.");
 							return changedBlocks;
 						}
 					}
@@ -733,15 +733,15 @@ std::vector<int32_t> HMWiredPeer::setConfigParameter(double index, double size, 
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return changedBlocks;
 }
@@ -768,15 +768,15 @@ std::vector<int32_t> HMWiredPeer::setMasterConfigParameter(int32_t channelIndex,
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<int32_t>();
 }
@@ -790,15 +790,15 @@ std::vector<int32_t> HMWiredPeer::setMasterConfigParameter(int32_t channelIndex,
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<int32_t>();
 }
@@ -817,13 +817,13 @@ std::vector<int32_t> HMWiredPeer::setMasterConfigParameter(int32_t channel, std:
 		{
 			if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1)
 			{
-				BaseLib::Output::printError("Error: Can't get parameter set. address_start or address_step is not set.");
+				GD::out.printError("Error: Can't get parameter set. address_start or address_step is not set.");
 				return std::vector<int32_t>();
 			}
 			int32_t channelIndex = channel - rpcChannel->startIndex;
 			if(parameterSet->count > 0 && channelIndex >= parameterSet->count)
 			{
-				BaseLib::Output::printError("Error: Can't get parameter set. Out of bounds.");
+				GD::out.printError("Error: Can't get parameter set. Out of bounds.");
 				return std::vector<int32_t>();
 			}
 			return setMasterConfigParameter(channelIndex, parameterSet->addressStart, parameterSet->addressStep, parameter->physicalParameter->address.index, parameter->physicalParameter->size, binaryValue);
@@ -831,15 +831,15 @@ std::vector<int32_t> HMWiredPeer::setMasterConfigParameter(int32_t channel, std:
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<int32_t>();
 }
@@ -856,7 +856,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 		}
 		if(size < 0 || index < 0)
 		{
-			BaseLib::Output::printError("Error: Can't get configuration parameter. Index or size is negative.");
+			GD::out.printError("Error: Can't get configuration parameter. Index or size is negative.");
 			result.push_back(0);
 			return result;
 		}
@@ -865,14 +865,14 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 		int32_t configBlockIndex = (intByteIndex / 0x10) * 0x10;
 		if(configBlockIndex >= rpcDevice->eepSize)
 		{
-			BaseLib::Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+			GD::out.printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
 			result.push_back(0);
 			return result;
 		}
 		intByteIndex = intByteIndex - configBlockIndex;
 		if(configBlockIndex >= rpcDevice->eepSize)
 		{
-			BaseLib::Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+			GD::out.printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
 			result.clear();
 			result.push_back(0);
 			return result;
@@ -885,7 +885,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 		std::vector<uint8_t>* configBlock = &binaryConfig[configBlockIndex].data;
 		if(configBlock->size() != 0x10)
 		{
-			BaseLib::Output::printError("Error: Can't get configuration parameter. Can't read EEPROM.");
+			GD::out.printError("Error: Can't get configuration parameter. Can't read EEPROM.");
 			result.push_back(0);
 			return result;
 		}
@@ -893,7 +893,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 		{
 			if(size > 1)
 			{
-				BaseLib::Output::printError("Error: Can't get configuration parameter. Partial byte index > 1 requested.");
+				GD::out.printError("Error: Can't get configuration parameter. Partial byte index > 1 requested.");
 				result.push_back(0);
 				return result;
 			}
@@ -910,7 +910,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 					configBlockIndex += 0x10;
 					if(configBlockIndex >= rpcDevice->eepSize)
 					{
-						BaseLib::Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+						GD::out.printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
 						result.clear();
 						result.push_back(0);
 						return result;
@@ -923,7 +923,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 					configBlock = &binaryConfig[configBlockIndex].data;
 					if(configBlock->size() != 0x10)
 					{
-						BaseLib::Output::printError("Error: Can't get configuration parameter. Can't read EEPROM.");
+						GD::out.printError("Error: Can't get configuration parameter. Can't read EEPROM.");
 						result.clear();
 						result.push_back(0);
 						return result;
@@ -951,7 +951,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 					configBlockIndex += 0x10;
 					if(configBlockIndex >= rpcDevice->eepSize)
 					{
-						BaseLib::Output::printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
+						GD::out.printError("Error: Can't get configuration parameter. Index is larger than EEPROM.");
 						result.clear();
 						result.push_back(0);
 						return result;
@@ -964,7 +964,7 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 					configBlock = &binaryConfig[configBlockIndex].data;
 					if(configBlock->size() != 0x10)
 					{
-						BaseLib::Output::printError("Error: Can't get configuration parameter. Can't read EEPROM.");
+						GD::out.printError("Error: Can't get configuration parameter. Can't read EEPROM.");
 						result.clear();
 						result.push_back(0);
 						return result;
@@ -981,15 +981,15 @@ std::vector<uint8_t> HMWiredPeer::getConfigParameter(double index, double size, 
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::vector<uint8_t>();
 }
@@ -1016,15 +1016,15 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channelIndex,
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -1038,15 +1038,15 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channelIndex,
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -1066,13 +1066,13 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channel, std:
 		{
 			if(parameterSet->addressStart == -1 || parameterSet->addressStep == -1)
 			{
-				BaseLib::Output::printError("Error: Can't get parameter set. address_start or address_step is not set.");
+				GD::out.printError("Error: Can't get parameter set. address_start or address_step is not set.");
 				return std::vector<uint8_t>();
 			}
 			int32_t channelIndex = channel - rpcChannel->startIndex;
 			if(parameterSet->count > 0 && channelIndex >= parameterSet->count)
 			{
-				BaseLib::Output::printError("Error: Can't get parameter set. Out of bounds.");
+				GD::out.printError("Error: Can't get parameter set. Out of bounds.");
 				return std::vector<uint8_t>();
 			}
 			value = getMasterConfigParameter(channelIndex, parameterSet->addressStart, parameterSet->addressStep, parameter->physicalParameter->address.index, parameter->physicalParameter->size);
@@ -1081,15 +1081,15 @@ std::vector<uint8_t> HMWiredPeer::getMasterConfigParameter(int32_t channel, std:
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -1112,15 +1112,15 @@ void HMWiredPeer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1146,15 +1146,15 @@ std::shared_ptr<BasicPeer> HMWiredPeer::getPeer(int32_t channel, std::string ser
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -1172,15 +1172,15 @@ std::shared_ptr<BasicPeer> HMWiredPeer::getPeer(int32_t channel, int32_t address
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -1198,15 +1198,15 @@ std::shared_ptr<BasicPeer> HMWiredPeer::getPeer(int32_t channel, uint64_t id, in
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -1225,11 +1225,11 @@ void HMWiredPeer::removePeer(int32_t channel, uint64_t id, int32_t remoteChannel
 				if(parameterSet && (*i)->configEEPROMAddress != -1 && parameterSet->addressStart > -1 && parameterSet->addressStep > 0)
 				{
 					std::vector<uint8_t> data(parameterSet->addressStep, 0xFF);
-					BaseLib::Output::printDebug("Debug: Erasing " + std::to_string(data.size()) + " bytes in eeprom at address " + BaseLib::HelperFunctions::getHexString((*i)->configEEPROMAddress, 4));
+					GD::out.printDebug("Debug: Erasing " + std::to_string(data.size()) + " bytes in eeprom at address " + BaseLib::HelperFunctions::getHexString((*i)->configEEPROMAddress, 4));
 					std::vector<int32_t> configBlocks = setConfigParameter((*i)->configEEPROMAddress, parameterSet->addressStep, data);
 					for(std::vector<int32_t>::iterator j = configBlocks.begin(); j != configBlocks.end(); ++j)
 					{
-						if(!getCentral()->writeEEPROM(_address, *j, binaryConfig[*j].data)) BaseLib::Output::printError("Error: Could not write config to device's eeprom.");
+						if(!getCentral()->writeEEPROM(_address, *j, binaryConfig[*j].data)) GD::out.printError("Error: Could not write config to device's eeprom.");
 					}
 				}
 				_peers[channel].erase(i);
@@ -1240,15 +1240,15 @@ void HMWiredPeer::removePeer(int32_t channel, uint64_t id, int32_t remoteChannel
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
 }
@@ -1279,22 +1279,22 @@ int32_t HMWiredPeer::getFreeEEPROMAddress(int32_t channel, bool isSender)
 		}
 		if(currentAddress >= max)
 		{
-			BaseLib::Output::printError("Error: There are no free EEPROM addresses to store links.");
+			GD::out.printError("Error: There are no free EEPROM addresses to store links.");
 			return -1;
 		}
 		return currentAddress;
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -1318,7 +1318,7 @@ void HMWiredPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sh
 				_deviceType = BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticWired, row->second.at(3)->intValue);
 				if(_deviceType.type() == (uint32_t)DeviceType::none)
 				{
-					BaseLib::Output::printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device id unknown: 0x" + BaseLib::HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+					GD::out.printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device id unknown: 0x" + BaseLib::HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
 				}
 				break;
 			case 5:
@@ -1330,7 +1330,7 @@ void HMWiredPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sh
 			case 15:
 				if(_centralFeatures)
 				{
-					serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_peerID, _serialNumber, this));
+					serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
 					serviceMessages->unserialize(row->second.at(5)->binaryValue);
 				}
 				break;
@@ -1338,20 +1338,20 @@ void HMWiredPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sh
 		}
 		if(_centralFeatures && !serviceMessages)
 		{
-			serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_peerID, _serialNumber, this));
+			serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 }
@@ -1362,10 +1362,10 @@ bool HMWiredPeer::load(BaseLib::Systems::LogicalDevice* device)
 	{
 		loadVariables((HMWiredDevice*)device);
 
-		rpcDevice = BaseLib::Obj::ins->rpcDevices.find(_deviceType, _firmwareVersion, -1);
+		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, -1);
 		if(!rpcDevice)
 		{
-			BaseLib::Output::printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
+			GD::out.printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
 		std::string entry;
@@ -1377,15 +1377,15 @@ bool HMWiredPeer::load(BaseLib::Systems::LogicalDevice* device)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -1398,15 +1398,15 @@ void HMWiredPeer::save(bool savePeer, bool variables, bool centralConfig)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1424,15 +1424,15 @@ void HMWiredPeer::saveVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1446,15 +1446,15 @@ void HMWiredPeer::savePeers()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1462,7 +1462,7 @@ void HMWiredPeer::serializePeers(std::vector<uint8_t>& encodedData)
 {
 	try
 	{
-		BaseLib::BinaryEncoder encoder;
+		BaseLib::BinaryEncoder encoder(_bl);
 		encoder.encodeInteger(encodedData, _peers.size());
 		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
@@ -1488,15 +1488,15 @@ void HMWiredPeer::serializePeers(std::vector<uint8_t>& encodedData)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1504,7 +1504,7 @@ void HMWiredPeer::unserializePeers(std::shared_ptr<std::vector<char>> serialized
 {
 	try
 	{
-		BaseLib::BinaryDecoder decoder;
+		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
 		uint32_t peersSize = decoder.decodeInteger(serializedData, position);
 		for(uint32_t i = 0; i < peersSize; i++)
@@ -1533,15 +1533,15 @@ void HMWiredPeer::unserializePeers(std::shared_ptr<std::vector<char>> serialized
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1555,15 +1555,15 @@ int32_t HMWiredPeer::getPhysicalIndexOffset(int32_t channel)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
@@ -1585,7 +1585,7 @@ void HMWiredPeer::restoreLinks()
 			{
 				if(!i->second->linkRoles->targetNames.empty())
 				{
-					BaseLib::Output::printWarning("Warning: Channel " + std::to_string(i->first) + " of peer " + std::to_string(_peerID) + " is defined as source and target of a link. I don't know what to do. Not adding link.");
+					GD::out.printWarning("Warning: Channel " + std::to_string(i->first) + " of peer " + std::to_string(_peerID) + " is defined as source and target of a link. I don't know what to do. Not adding link.");
 					continue;
 				}
 				isSender = true;
@@ -1606,7 +1606,7 @@ void HMWiredPeer::restoreLinks()
 				peerAddress |= result.at(3);
 				if(peerAddress == 0)
 				{
-					BaseLib::Output::printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + ". The remote peer address is invalid (0x00000000).");
+					GD::out.printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + ". The remote peer address is invalid (0x00000000).");
 					continue;
 				}
 				result = getConfigParameter(currentAddress + parameterSet->peerChannelOffset, 1.0, -1, true);
@@ -1619,7 +1619,7 @@ void HMWiredPeer::restoreLinks()
 				std::shared_ptr<HMWiredPeer> remotePeer = central->getPeer(peerAddress);
 				if(!remotePeer || !remotePeer->rpcDevice)
 				{
-					BaseLib::Output::printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + " to peer with address 0x" + BaseLib::HelperFunctions::getHexString(peerAddress, 8) + ". The remote peer is not paired to Homegear.");
+					GD::out.printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + " to peer with address 0x" + BaseLib::HelperFunctions::getHexString(peerAddress, 8) + ". The remote peer is not paired to Homegear.");
 					continue;
 				}
 
@@ -1636,7 +1636,7 @@ void HMWiredPeer::restoreLinks()
 				}
 				if(!channelFound)
 				{
-					BaseLib::Output::printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + " to peer with id " + std::to_string(remotePeer->getID()) + ". The remote channel does not exists.");
+					GD::out.printWarning("Warning: Could not add link for peer " + std::to_string(_peerID) + " to peer with id " + std::to_string(remotePeer->getID()) + ". The remote channel does not exists.");
 					continue;
 				}
 				basicPeer->isSender = !isSender;
@@ -1646,21 +1646,21 @@ void HMWiredPeer::restoreLinks()
 				basicPeer->configEEPROMAddress = currentAddress;
 
 				addPeer(channel, basicPeer);
-				BaseLib::Output::printInfo("Info: Found link between peer " + std::to_string(_peerID) + " (channel " + std::to_string(channel) + ") and peer " + std::to_string(basicPeer->id) + " (channel " + std::to_string(basicPeer->channel) + ").");
+				GD::out.printInfo("Info: Found link between peer " + std::to_string(_peerID) + " (channel " + std::to_string(channel) + ") and peer " + std::to_string(basicPeer->id) + " (channel " + std::to_string(basicPeer->channel) + ").");
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1676,7 +1676,7 @@ void HMWiredPeer::reset()
 		{
 			if(!central->writeEEPROM(_address, i, data))
 			{
-				BaseLib::Output::printError("Error: Error resetting HomeMatic Wired peer " + std::to_string(_peerID) + ". Could not write EEPROM.");
+				GD::out.printError("Error: Error resetting HomeMatic Wired peer " + std::to_string(_peerID) + ". Could not write EEPROM.");
 				return;
 			}
 		}
@@ -1685,15 +1685,15 @@ void HMWiredPeer::reset()
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -1702,22 +1702,22 @@ int32_t HMWiredPeer::getNewFirmwareVersion()
 	try
 	{
 		std::string filenamePrefix = BaseLib::HelperFunctions::getHexString((int32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired, 4) + "." + BaseLib::HelperFunctions::getHexString(_deviceType.type(), 8);
-		std::string versionFile(BaseLib::Obj::ins->settings.firmwarePath() + filenamePrefix + ".version");
+		std::string versionFile(_bl->settings.firmwarePath() + filenamePrefix + ".version");
 		if(!BaseLib::HelperFunctions::fileExists(versionFile)) return 0;
 		std::string versionHex = BaseLib::HelperFunctions::getFileContent(versionFile);
 		return BaseLib::HelperFunctions::getNumber(versionHex, true);
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return 0;
 }
@@ -1730,15 +1730,15 @@ bool HMWiredPeer::firmwareUpdateAvailable()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return false;
 }
@@ -1780,13 +1780,13 @@ void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std
 					if(j->constValue > -1)
 					{
 						int32_t intValue = 0;
-						BaseLib::HelperFunctions::memcpyBigEndian(intValue, data);
+						_bl->hf.memcpyBigEndian(intValue, data);
 						if(intValue != j->constValue) break; else continue;
 					}
 				}
 				else if(j->constValue > -1)
 				{
-					BaseLib::HelperFunctions::memcpyBigEndian(data, j->constValue);
+					_bl->hf.memcpyBigEndian(data, j->constValue);
 				}
 				else continue;
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
@@ -1836,15 +1836,15 @@ void HMWiredPeer::getValuesFromPacket(std::shared_ptr<HMWiredPacket> packet, std
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1859,15 +1859,15 @@ std::shared_ptr<HMWiredPacket> HMWiredPeer::getResponse(std::shared_ptr<HMWiredP
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<HMWiredPacket>();
 }
@@ -1885,7 +1885,7 @@ std::shared_ptr<BaseLib::RPC::ParameterSet> HMWiredPeer::getParameterSet(int32_t
 			{
 				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end())
 				{
-					BaseLib::Output::printWarning("Parameter set of type " + std::to_string(type) + " not found in subconfig for channel " + std::to_string(channel));
+					GD::out.printWarning("Parameter set of type " + std::to_string(type) + " not found in subconfig for channel " + std::to_string(channel));
 					return std::shared_ptr<BaseLib::RPC::ParameterSet>();
 				}
 				parameterSet = rpcChannel->subconfig->parameterSets[type];
@@ -1895,7 +1895,7 @@ std::shared_ptr<BaseLib::RPC::ParameterSet> HMWiredPeer::getParameterSet(int32_t
 		{
 			if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end())
 			{
-				BaseLib::Output::printWarning("Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
+				GD::out.printWarning("Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
 				return std::shared_ptr<BaseLib::RPC::ParameterSet>();
 			}
 			parameterSet = rpcChannel->parameterSets[type];
@@ -1904,15 +1904,15 @@ std::shared_ptr<BaseLib::RPC::ParameterSet> HMWiredPeer::getParameterSet(int32_t
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<BaseLib::RPC::ParameterSet>();
 }
@@ -1963,24 +1963,24 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					if(rpcDevice->channels.find(*j) == rpcDevice->channels.end())
 					{
-						BaseLib::Output::printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Channel not found.");
+						GD::out.printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Channel not found.");
 						continue;
 					}
 					std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(*j, a->parameterSetType);
 					if(!parameterSet)
 					{
-						BaseLib::Output::printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
+						GD::out.printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
 						continue;
 					}
 					std::shared_ptr<BaseLib::RPC::Parameter> currentParameter = parameterSet->getParameter(i->first);
 					if(!currentParameter)
 					{
-						BaseLib::Output::printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
+						GD::out.printWarning("Warning: Can't set value of parameter " + i->first + " for channel " + std::to_string(*j) + ". Value parameter set not found.");
 						continue;
 					}
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, a->parameterSetType, *j, i->first, parameter->data);
-					if(BaseLib::Obj::ins->debugLevel >= 4) BaseLib::Output::printInfo("Info: " + i->first + " of HomeMatic Wired peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
+					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of HomeMatic Wired peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
 					if((currentParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
@@ -2017,15 +2017,15 @@ void HMWiredPeer::packetReceived(std::shared_ptr<HMWiredPacket> packet)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -2112,8 +2112,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int
 			std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
 			if(rpcChannel->hidden) return description;
 
-			if(fields.empty() || fields.find("FAMILY") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired))));
-			if(fields.empty() || fields.find("FAMILY_STRING") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
+			if(fields.empty() || fields.find("FAMILYID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired))));
 			if(fields.empty() || fields.find("ID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
 			if(fields.empty() || fields.find("ADDRESS") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 
@@ -2187,15 +2186,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceDescription(int
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2220,15 +2219,15 @@ std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> HMWired
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>>();
 }
@@ -2248,15 +2247,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceInfo(std::map<s
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<BaseLib::RPC::RPCVariable>();
 }
@@ -2278,7 +2277,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamsetDescription(i
 		if(rpcChannel->specialParameter && rpcChannel->subconfig)
 		{
 			std::vector<uint8_t> value = getMasterConfigParameter(channel - rpcChannel->startIndex, rpcChannel->specialParameter->physicalParameter->address.index, rpcChannel->specialParameter->physicalParameter->address.step, rpcChannel->specialParameter->physicalParameter->size);
-			BaseLib::Output::printDebug("Debug: Special parameter is " + std::to_string(value.at(0)));
+			GD::out.printDebug("Debug: Special parameter is " + std::to_string(value.at(0)));
 			if(value.at(0))
 			{
 				if(rpcChannel->subconfig->parameterSets.find(type) == rpcChannel->subconfig->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set");
@@ -2295,7 +2294,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamsetDescription(i
 			if((*i)->id.empty() || (*i)->hidden) continue;
 			if(!((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::internal)  && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::transform))
 			{
-				BaseLib::Output::printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
+				GD::out.printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
 				continue;
 			}
 			if((*i)->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeBoolean)
@@ -2640,15 +2639,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamsetDescription(i
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2680,7 +2679,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLink(int32_t channel,
 				std::shared_ptr<HMWiredPeer> remotePeer(central->getPeer((*i)->address));
 				if(!remotePeer)
 				{
-					BaseLib::Output::printDebug("Debug: Can't return link description for peer with address 0x" + BaseLib::HelperFunctions::getHexString((*i)->address, 6) + ". The peer is not paired to Homegear.");
+					GD::out.printDebug("Debug: Can't return link description for peer with address 0x" + BaseLib::HelperFunctions::getHexString((*i)->address, 6) + ". The peer is not paired to Homegear.");
 					continue;
 				}
 				bool peerKnowsMe = false;
@@ -2823,15 +2822,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLink(int32_t channel,
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2851,15 +2850,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLinkInfo(int32_t send
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2925,15 +2924,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLinkPeers(int32_t cha
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2958,7 +2957,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamset(int32_t chan
 			if((*i)->id.empty() || (*i)->hidden) continue;
 			if(!((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::internal) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::transform))
 			{
-				BaseLib::Output::printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
+				GD::out.printDebug("Debug: Omitting parameter " + (*i)->id + " because of it's ui flag.");
 				continue;
 			}
 			std::shared_ptr<BaseLib::RPC::RPCVariable> element;
@@ -2995,15 +2994,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamset(int32_t chan
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3026,15 +3025,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamsetId(uint32_t c
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3057,15 +3056,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getValue(uint32_t channe
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3094,7 +3093,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
 				if(!currentParameter) continue;
 				std::vector<uint8_t> value = currentParameter->convertToPacket(i->second);
 				std::vector<int32_t> result = setMasterConfigParameter(channel, parameterSet, currentParameter, value);
-				BaseLib::Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(value) + ".");
+				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(value) + ".");
 				//Only send to device when parameter is of type eeprom
 				if(currentParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::eeprom) continue;
 				for(std::vector<int32_t>::iterator i = result.begin(); i != result.end(); ++i) changedBlocks[*i] = true;
@@ -3124,7 +3123,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
 				if(currentParameter->physicalParameter->address.operation == BaseLib::RPC::PhysicalParameterAddress::Operation::Enum::none) continue;
 				std::vector<uint8_t> value = currentParameter->convertToPacket(i->second);
 				std::vector<int32_t> result = setConfigParameter(remotePeer->configEEPROMAddress + currentParameter->physicalParameter->address.index, currentParameter->physicalParameter->size, value);
-				BaseLib::Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(value) + ".");
+				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(value) + ".");
 				//Only send to device when parameter is of type eeprom
 				if(currentParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::eeprom) continue;
 				for(std::vector<int32_t>::iterator i = result.begin(); i != result.end(); ++i) changedBlocks[*i] = true;
@@ -3138,7 +3137,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
 		{
 			if(!central->writeEEPROM(_address, i->first, binaryConfig[i->first].data))
 			{
-				BaseLib::Output::printError("Error: Could not write config to device's eeprom.");
+				GD::out.printError("Error: Could not write config to device's eeprom.");
 				return BaseLib::RPC::RPCVariable::createError(-32500, "Could not write config to device's eeprom.");
 			}
 		}
@@ -3148,15 +3147,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3175,15 +3174,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setLinkInfo(int32_t send
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3248,7 +3247,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
 		parameter->data = data;
 		saveParameter(parameter->databaseID, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, valueKey, data);
-		if(BaseLib::Obj::ins->debugLevel > 4) BaseLib::Output::printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(data) + ".");
+		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(data) + ".");
 
 		std::vector<uint8_t> payload({ (uint8_t)frame->type });
 		if(frame->subtype > -1 && frame->subtypeIndex >= 9)
@@ -3268,7 +3267,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 			if(i->constValue > -1)
 			{
 				std::vector<uint8_t> data;
-				BaseLib::HelperFunctions::memcpyBigEndian(data, i->constValue);
+				_bl->hf.memcpyBigEndian(data, i->constValue);
 				packet->setPosition(i->index, i->size, data);
 				continue;
 			}
@@ -3278,7 +3277,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 			{
 				additionalParameter = &valuesCentral[channel][i->additionalParameter];
 				int32_t intValue = 0;
-				BaseLib::HelperFunctions::memcpyBigEndian(intValue, additionalParameter->data);
+				_bl->hf.memcpyBigEndian(intValue, additionalParameter->data);
 				if(!i->omitIfSet || intValue != i->omitIf)
 				{
 					//Don't set ON_TIME when value is false
@@ -3301,7 +3300,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 						break;
 					}
 				}
-				if(!paramFound) BaseLib::Output::printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+				if(!paramFound) GD::out.printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 			}
 		}
 		if(!rpcParameter->physicalParameter->resetAfterSend.empty())
@@ -3318,7 +3317,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 					BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
 					tempParam->data = defaultValue;
 					saveParameter(tempParam->databaseID, BaseLib::RPC::ParameterSet::Type::Enum::values, channel, *j, tempParam->data);
-					BaseLib::Output::printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+					GD::out.printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					valueKeys->push_back(*j);
 					values->push_back(logicalDefaultValue);
 				}
@@ -3329,7 +3328,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 		std::shared_ptr<HMWiredPacket> response = getResponse(packet);
 		if(!response)
 		{
-			BaseLib::Output::printWarning("Error: Error sending packet to peer " + std::to_string(_peerID) + ". Peer did not respond.");
+			GD::out.printWarning("Error: Error sending packet to peer " + std::to_string(_peerID) + ". Peer did not respond.");
 			return BaseLib::RPC::RPCVariable::createError(-32500, "Error sending packet to peer. Peer did not respond.");
 		}
 		else
@@ -3340,15 +3339,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error. See error log for more details.");
 }

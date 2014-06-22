@@ -63,11 +63,7 @@ namespace RPC
 class RemoteRPCServer
 {
 public:
-	RemoteRPCServer()
-	{
-		knownDevices.reset(new std::map<uint64_t, int32_t>()); fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
-		path = "/RPC2";
-	}
+	RemoteRPCServer();
 	virtual ~RemoteRPCServer() {}
 
 	std::shared_ptr<ClientSettings::Settings> settings;
@@ -84,7 +80,7 @@ public:
 	std::string id;
 	std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
-	BaseLib::SocketOperations socket;
+	std::shared_ptr<BaseLib::SocketOperations> socket;
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	std::mutex sendMutex;
 	Auth auth;
@@ -101,10 +97,10 @@ public:
 
 	void reset();
 protected:
-	BaseLib::RPC::RPCDecoder _rpcDecoder;
-	BaseLib::RPC::RPCEncoder _rpcEncoder;
-	BaseLib::RPC::XMLRPCDecoder _xmlRpcDecoder;
-	BaseLib::RPC::XMLRPCEncoder _xmlRpcEncoder;
+	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
+	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
+	std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
+	std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
 	int32_t _sendCounter = 0;
 
 	std::shared_ptr<std::vector<char>> sendRequest(std::shared_ptr<RemoteRPCServer> server, std::shared_ptr<std::vector<char>> data, bool insertHeader, bool& timedout);

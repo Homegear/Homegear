@@ -29,9 +29,9 @@
 
 #include "Factory.h"
 
-BaseLib::Systems::DeviceFamily* BidCoSFactory::createDeviceFamily(BaseLib::Obj* baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* BidCoSFactory::createDeviceFamily(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
-	return new BidCoS::BidCoS(baseLib, eventHandler);
+	return new BidCoS::BidCoS(bl, eventHandler);
 }
 
 BaseLib::Systems::SystemFactory* getFactory()

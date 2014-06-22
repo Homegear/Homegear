@@ -38,10 +38,13 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 class BinaryDecoder
 {
 public:
-	BinaryDecoder();
+	BinaryDecoder(BaseLib::Obj* baseLib);
 	virtual ~BinaryDecoder() {}
 
 	virtual int32_t decodeInteger(std::shared_ptr<std::vector<char>>& encodedData, uint32_t& position);
@@ -49,6 +52,8 @@ public:
 	virtual std::string decodeString(std::shared_ptr<std::vector<char>>& encodedData, uint32_t& position);
 	virtual bool decodeBoolean(std::shared_ptr<std::vector<char>>& encodedData, uint32_t& position);
 	virtual double decodeFloat(std::shared_ptr<std::vector<char>>& encodedData, uint32_t& position);
+protected:
+	BaseLib::Obj* _bl = nullptr;
 };
 }
 #endif /* BINARYDECODER_H_ */

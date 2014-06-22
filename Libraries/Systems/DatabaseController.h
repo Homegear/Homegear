@@ -95,8 +95,8 @@ protected:
 	BaseLib::Database::SQLite3 db;
 	std::mutex _databaseMutex;
 
-	BaseLib::RPC::RPCEncoder _rpcEncoder;
-	BaseLib::RPC::RPCDecoder _rpcDecoder;
+	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
+	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 };
 
 #endif /* DATABASECONTROLLER_H_ */

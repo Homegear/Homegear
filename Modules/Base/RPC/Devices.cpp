@@ -39,16 +39,31 @@ Devices::Devices()
 {
 }
 
+void Devices::init(BaseLib::Obj* baseLib)
+{
+	_bl = baseLib;
+}
+
 void Devices::load(std::string path)
 {
 	try
 	{
+		_devices.clear();
 		std::string deviceDir(path);
-		std::vector<std::string> files = HelperFunctions::getFiles(deviceDir);
+		std::vector<std::string> files;
+		try
+		{
+			files = _bl->hf.getFiles(deviceDir);
+		}
+		catch(Exception& ex)
+		{
+			_bl->out.printError("Could not read device description files in directory: \"" + path + "\": " + ex.what());
+			return;
+		}
 		if(files.empty())
 		{
-			Output::printError("No xml files found in \"" + path + "\".");
-			exit(3);
+			_bl->out.printError("No xml files found in \"" + path + "\".");
+			return;
 		}
 		for(std::vector<std::string>::iterator i = files.begin(); i != files.end(); ++i)
 		{
@@ -56,28 +71,24 @@ void Devices::load(std::string path)
 			std::string extension = i->substr(i->size() - 4, 4);
 			HelperFunctions::toLower(extension);
 			if(extension != ".xml") continue;
-			Output::printDebug("Loading XML RPC device " + deviceDir + "/" + *i);
-			std::shared_ptr<Device> device(new Device(deviceDir + "/" + *i));
+			_bl->out.printDebug("Loading XML RPC device " + deviceDir + "/" + *i);
+			std::shared_ptr<Device> device(new Device(_bl, deviceDir + "/" + *i));
 			if(device && device->loaded()) _devices.push_back(device);
 		}
 
-		if(_devices.empty())
-		{
-			Output::printError("Could not load any devices from xml files in \"" + deviceDir + "\".");
-			exit(3);
-		}
+		if(_devices.empty()) _bl->out.printError("Could not load any devices from xml files in \"" + deviceDir + "\".");
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -108,7 +119,7 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(new Device());
+			std::shared_ptr<Device> newDevice(new Device(_bl));
 			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
@@ -117,15 +128,15 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return nullptr;
 }
@@ -143,7 +154,7 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
 				{
 					if((*i)->countFromSysinfoIndex > -1 && countFromSysinfo < 0)
 					{
-						Output::printDebug("Skipping device, because countFromSysinfo is mandatory.");
+						_bl->out.printDebug("Skipping device, because countFromSysinfo is mandatory.");
 						continue; //Ignore device, because countFromSysinfo is mandatory
 					}
 					if((*i)->countFromSysinfoIndex > -1 && (*i)->getCountFromSysinfo() != countFromSysinfo)
@@ -156,7 +167,7 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(new Device());
+			std::shared_ptr<Device> newDevice(new Device(_bl));
 			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
@@ -165,15 +176,15 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
 	}
 	catch(const std::exception& ex)
     {
-     Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+     _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-     Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+     _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-     Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+     _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return nullptr;
 }
@@ -201,7 +212,7 @@ std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::strin
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(new Device());
+			std::shared_ptr<Device> newDevice(new Device(_bl));
 			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
@@ -210,15 +221,15 @@ std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::strin
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return nullptr;
 }
@@ -246,7 +257,7 @@ std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::share
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(new Device());
+			std::shared_ptr<Device> newDevice(new Device(_bl));
 			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
@@ -255,15 +266,15 @@ std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::share
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return nullptr;
 }

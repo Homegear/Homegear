@@ -50,6 +50,9 @@ using namespace rapidxml;
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace RPC
 {
 
@@ -108,11 +111,13 @@ public:
 	bool fromDevice = true;
 	bool toDevice = true;
 
-	ParameterConversion();
-	ParameterConversion(xml_node<>* node);
+	ParameterConversion(BaseLib::Obj* baseLib);
+	ParameterConversion(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~ParameterConversion() {}
 	virtual void fromPacket(std::shared_ptr<RPCVariable> value);
 	virtual void toPacket(std::shared_ptr<RPCVariable> value);
+protected:
+	BaseLib::Obj* _bl = nullptr;
 };
 
 class Parameter
@@ -154,8 +159,8 @@ public:
 	bool loopback = false;
 	bool hasDominoEvents = false;
 
-	Parameter();
-	Parameter(xml_node<>* node, bool checkForID = false);
+	Parameter(BaseLib::Obj* baseLib);
+	Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID = false);
 	virtual ~Parameter() {}
 	virtual bool checkCondition(int32_t value);
 	virtual std::shared_ptr<RPC::RPCVariable> convertFromPacket(const std::vector<uint8_t>& data, bool isEvent = false);
@@ -163,6 +168,8 @@ public:
 	virtual std::vector<uint8_t> convertToPacket(std::string value);
 	virtual std::vector<uint8_t> reverseData(const std::vector<uint8_t>& data);
 	virtual void adjustBitPosition(std::vector<uint8_t>& data);
+protected:
+	BaseLib::Obj* _bl = nullptr;
 };
 
 class DeviceType
@@ -175,13 +182,15 @@ public:
 	int32_t priority = 0;
 	Device* device = nullptr;
 
-	DeviceType();
-	DeviceType(xml_node<>* typeNode);
+	DeviceType(BaseLib::Obj* baseLib);
+	DeviceType(BaseLib::Obj* baseLib, xml_node<>* typeNode);
 	virtual ~DeviceType() {}
 
 	virtual bool matches(Systems::DeviceFamilies family, std::shared_ptr<Systems::Packet> packet);
 	virtual bool matches(Systems::DeviceFamilies family, std::string typeID);
 	virtual bool matches(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion);
+protected:
+	BaseLib::Obj* _bl = nullptr;
 };
 
 typedef std::vector<std::pair<std::string, std::string>> DefaultValue;
@@ -205,8 +214,8 @@ public:
 	int32_t peerAddressOffset = -1;
 	int32_t peerChannelOffset = -1;
 
-	ParameterSet();
-	ParameterSet(xml_node<>* parameterSetNode);
+	ParameterSet(BaseLib::Obj* baseLib);
+	ParameterSet(BaseLib::Obj* baseLib, xml_node<>* parameterSetNode);
 	virtual ~ParameterSet() {}
 	virtual void init(xml_node<>* parameterSetNode);
 	virtual std::vector<std::shared_ptr<Parameter>> getIndices(uint32_t startIndex, uint32_t endIndex, int32_t list);
@@ -214,6 +223,8 @@ public:
 	virtual std::shared_ptr<Parameter> getParameter(std::string id);
 	virtual std::string typeString();
 	static ParameterSet::Type::Enum typeFromString(std::string type);
+protected:
+	BaseLib::Obj* _bl = nullptr;
 };
 
 class EnforceLink
@@ -222,10 +233,12 @@ public:
 	std::string id;
 	std::string value;
 
-	EnforceLink();
-	EnforceLink(xml_node<>* parameterSetNode);
+	EnforceLink(BaseLib::Obj* baseLib);
+	EnforceLink(BaseLib::Obj* baseLib, xml_node<>* parameterSetNode);
 	virtual ~EnforceLink() {}
 	virtual std::shared_ptr<RPCVariable> getValue(LogicalParameter::Type::Enum type);
+protected:
+	BaseLib::Obj* _bl = nullptr;
 };
 
 class LinkRole
@@ -235,7 +248,7 @@ public:
 	std::vector<std::string> targetNames;
 
 	LinkRole() {}
-	LinkRole(xml_node<>* parameterSetNode);
+	LinkRole(BaseLib::Obj* baseLib, xml_node<>* parameterSetNode);
 	virtual ~LinkRole() {}
 };
 
@@ -277,9 +290,11 @@ public:
 	std::shared_ptr<Parameter> specialParameter;
 	std::shared_ptr<DeviceChannel> subconfig;
 
-	DeviceChannel();
-	DeviceChannel(xml_node<>* node, uint32_t& index);
+	DeviceChannel(BaseLib::Obj* baseLib);
+	DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& index);
 	virtual ~DeviceChannel() {}
+protected:
+	BaseLib::Obj* _bl = nullptr;
 };
 
 class DeviceFrame
@@ -308,9 +323,11 @@ public:
 	std::vector<Parameter> parameters;
 	std::vector<std::shared_ptr<Parameter>> associatedValues;
 
-	DeviceFrame() {}
-	DeviceFrame(xml_node<>* node);
+	DeviceFrame(BaseLib::Obj* baseLib);
+	DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~DeviceFrame() {}
+protected:
+	BaseLib::Obj* _bl = nullptr;
 };
 
 class Device
@@ -345,14 +362,15 @@ public:
 	bool peeringSysinfoExpectChannel = true;
 	std::shared_ptr<Device> team;
 
-	Device();
-	Device(std::string xmlFilename);
+	Device(BaseLib::Obj* baseLib);
+	Device(BaseLib::Obj* baseLib, std::string xmlFilename);
 	virtual ~Device();
 	virtual std::shared_ptr<DeviceType> getType(Systems::LogicalDeviceType deviceType, int32_t firmwareVersion);
 	virtual int32_t getCountFromSysinfo() { return _countFromSysinfo; }
 	virtual int32_t getCountFromSysinfo(std::shared_ptr<Systems::Packet> packet);
 	virtual void setCountFromSysinfo(int32_t countFromSysinfo);
 protected:
+	BaseLib::Obj* _bl = nullptr;
 	bool _loaded = false;
 	int32_t _countFromSysinfo = -1;
 

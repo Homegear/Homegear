@@ -35,7 +35,7 @@ namespace BaseLib
 namespace RPC
 {
 
-ParameterOption::ParameterOption(xml_node<>* node)
+ParameterOption::ParameterOption(BaseLib::Obj* baseLib, xml_node<>* node)
 {
 	for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 	{
@@ -43,12 +43,12 @@ ParameterOption::ParameterOption(xml_node<>* node)
 		std::string attributeValue(attr->value());
 		if(attributeName == "id") id = attributeValue;
 		else if(attributeName == "default" && attributeValue == "true") isDefault = true;
-		else if(attributeName == "index") index = HelperFunctions::getNumber(attributeValue);
-		else Output::printWarning("Warning: Unknown attribute for \"option\": " + attributeName);
+		else if(attributeName == "index") index = baseLib->hf.getNumber(attributeValue);
+		else baseLib->out.printWarning("Warning: Unknown attribute for \"option\": " + attributeName);
 	}
 }
 
-std::shared_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
+std::shared_ptr<LogicalParameter> LogicalParameter::fromXML(BaseLib::Obj* baseLib, xml_node<>* node)
 {
 	std::shared_ptr<LogicalParameter> parameter;
 	try
@@ -57,37 +57,42 @@ std::shared_ptr<LogicalParameter> LogicalParameter::fromXML(xml_node<>* node)
 		if(attr != nullptr)
 		{
 			std::string attributeValue(attr->value());
-			if(attributeValue == "option") parameter.reset(new LogicalParameterEnum(node));
-			else if(attributeValue == "integer") parameter.reset(new LogicalParameterInteger(node));
-			else if(attributeValue == "float") parameter.reset(new LogicalParameterFloat(node));
-			else if(attributeValue == "boolean") parameter.reset(new LogicalParameterBoolean(node));
-			else if(attributeValue == "string") parameter.reset(new LogicalParameterString(node));
-			else if(attributeValue == "action") parameter.reset(new LogicalParameterAction(node));
-			else  parameter.reset(new LogicalParameterInteger(node));
+			if(attributeValue == "option") parameter.reset(new LogicalParameterEnum(baseLib, node));
+			else if(attributeValue == "integer") parameter.reset(new LogicalParameterInteger(baseLib, node));
+			else if(attributeValue == "float") parameter.reset(new LogicalParameterFloat(baseLib, node));
+			else if(attributeValue == "boolean") parameter.reset(new LogicalParameterBoolean(baseLib, node));
+			else if(attributeValue == "string") parameter.reset(new LogicalParameterString(baseLib, node));
+			else if(attributeValue == "action") parameter.reset(new LogicalParameterAction(baseLib, node));
+			else  parameter.reset(new LogicalParameterInteger(baseLib, node));
 		}
-		else parameter.reset(new LogicalParameterInteger(node));
+		else parameter.reset(new LogicalParameterInteger(baseLib, node));
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return parameter;
 }
 
-LogicalParameterEnum::LogicalParameterEnum() : LogicalParameter()
+LogicalParameter::LogicalParameter(BaseLib::Obj* baseLib)
+{
+	_bl = baseLib;
+}
+
+LogicalParameterEnum::LogicalParameterEnum(BaseLib::Obj* baseLib) : LogicalParameter(baseLib)
 {
 	type = Type::Enum::typeEnum;
 }
 
-LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node) : LogicalParameterEnum()
+LogicalParameterEnum::LogicalParameterEnum(BaseLib::Obj* baseLib, xml_node<>* node) : LogicalParameterEnum(baseLib)
 {
 	try
 	{
@@ -97,12 +102,12 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node) : LogicalParameterE
 			std::string attributeValue(attr->value());
 			if(attributeName == "type") {}
 			else if(attributeName == "unit") unit = attributeValue;
-			else Output::printWarning("Warning: Unknown attribute for \"logical\" with type enum: " + attributeName);
+			else _bl->out.printWarning("Warning: Unknown attribute for \"logical\" with type enum: " + attributeName);
 		}
 		int32_t index = 0;
 		for(xml_node<>* optionNode = node->first_node("option"); optionNode; optionNode = optionNode->next_sibling())
 		{
-			ParameterOption option(optionNode);
+			ParameterOption option(baseLib, optionNode);
 			if(option.index > -1)
 			{
 				while((unsigned)option.index > options.size()) options.push_back(ParameterOption());
@@ -121,24 +126,24 @@ LogicalParameterEnum::LogicalParameterEnum(xml_node<>* node) : LogicalParameterE
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-LogicalParameterInteger::LogicalParameterInteger() : LogicalParameter()
+LogicalParameterInteger::LogicalParameterInteger(BaseLib::Obj* baseLib) : LogicalParameter(baseLib)
 {
 	type = Type::Enum::typeInteger;
 }
 
-LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node) : LogicalParameterInteger()
+LogicalParameterInteger::LogicalParameterInteger(BaseLib::Obj* baseLib, xml_node<>* node) : LogicalParameterInteger(baseLib)
 {
 	try
 	{
@@ -147,15 +152,15 @@ LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node) : LogicalPara
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
 			if(attributeName == "type") {}
-			else if(attributeName == "min") min = HelperFunctions::getNumber(attributeValue);
-			else if(attributeName == "max") max = HelperFunctions::getNumber(attributeValue);
+			else if(attributeName == "min") min = _bl->hf.getNumber(attributeValue);
+			else if(attributeName == "max") max = _bl->hf.getNumber(attributeValue);
 			else if(attributeName == "default")
 			{
-				defaultValue = HelperFunctions::getNumber(attributeValue);
+				defaultValue = _bl->hf.getNumber(attributeValue);
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else Output::printWarning("Warning: Unknown attribute for \"logical\" with type integer: " + attributeName);
+			else _bl->out.printWarning("Warning: Unknown attribute for \"logical\" with type integer: " + attributeName);
 		}
 		for(xml_node<>* logicalNode = node->first_node(); logicalNode; logicalNode = logicalNode->next_sibling())
 		{
@@ -168,31 +173,31 @@ LogicalParameterInteger::LogicalParameterInteger(xml_node<>* node) : LogicalPara
 				attr2 = logicalNode->first_attribute("value");
 				if(!attr1 || !attr2) continue;
 				std::string valueString(attr2->value());
-				specialValues[attr1->value()] = HelperFunctions::getNumber(valueString);
+				specialValues[attr1->value()] = _bl->hf.getNumber(valueString);
 			}
-			else Output::printWarning("Warning: Unknown node in \"logical\" with type integer: " + nodeName);
+			else _bl->out.printWarning("Warning: Unknown node in \"logical\" with type integer: " + nodeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-LogicalParameterFloat::LogicalParameterFloat() : LogicalParameter()
+LogicalParameterFloat::LogicalParameterFloat(BaseLib::Obj* baseLib) : LogicalParameter(baseLib)
 {
 	type = Type::Enum::typeFloat;
 }
 
-LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node) : LogicalParameterFloat()
+LogicalParameterFloat::LogicalParameterFloat(BaseLib::Obj* baseLib, xml_node<>* node) : LogicalParameterFloat(baseLib)
 {
 	try
 	{
@@ -201,15 +206,15 @@ LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node) : LogicalParamete
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
 			if(attributeName == "type") {}
-			else if(attributeName == "min") min = HelperFunctions::getDouble(attributeValue);
-			else if(attributeName == "max") max = HelperFunctions::getDouble(attributeValue);
+			else if(attributeName == "min") min = _bl->hf.getDouble(attributeValue);
+			else if(attributeName == "max") max = _bl->hf.getDouble(attributeValue);
 			else if(attributeName == "default")
 			{
-				defaultValue = HelperFunctions::getDouble(attributeValue);
+				defaultValue = _bl->hf.getDouble(attributeValue);
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else Output::printWarning("Warning: Unknown attribute for \"logical\" with type float: " + attributeName);
+			else _bl->out.printWarning("Warning: Unknown attribute for \"logical\" with type float: " + attributeName);
 		}
 		for(xml_node<>* logicalNode = node->first_node(); logicalNode; logicalNode = logicalNode->next_sibling())
 		{
@@ -222,31 +227,31 @@ LogicalParameterFloat::LogicalParameterFloat(xml_node<>* node) : LogicalParamete
 				attr2 = logicalNode->first_attribute("value");
 				if(!attr1 || !attr2) continue;
 				std::string valueString(attr2->value());
-				specialValues[attr1->value()] = HelperFunctions::getDouble(valueString);
+				specialValues[attr1->value()] = _bl->hf.getDouble(valueString);
 			}
-			else Output::printWarning("Warning: Unknown node in \"logical\" with type float: " + nodeName);
+			else _bl->out.printWarning("Warning: Unknown node in \"logical\" with type float: " + nodeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-LogicalParameterBoolean::LogicalParameterBoolean() : LogicalParameter()
+LogicalParameterBoolean::LogicalParameterBoolean(BaseLib::Obj* baseLib) : LogicalParameter(baseLib)
 {
 	type = Type::Enum::typeBoolean;
 }
 
-LogicalParameterBoolean::LogicalParameterBoolean(xml_node<>* node) : LogicalParameterBoolean()
+LogicalParameterBoolean::LogicalParameterBoolean(BaseLib::Obj* baseLib, xml_node<>* node) : LogicalParameterBoolean(baseLib)
 {
 	try
 	{
@@ -261,29 +266,29 @@ LogicalParameterBoolean::LogicalParameterBoolean(xml_node<>* node) : LogicalPara
 				defaultValueExists = true;
 			}
 			else if(attributeName == "unit") unit = attributeValue;
-			else if(attributeName != "type") Output::printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
+			else if(attributeName != "type") _bl->out.printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-LogicalParameterString::LogicalParameterString() : LogicalParameter()
+LogicalParameterString::LogicalParameterString(BaseLib::Obj* baseLib) : LogicalParameter(baseLib)
 {
 	type = Type::Enum::typeString;
 }
 
-LogicalParameterString::LogicalParameterString(xml_node<>* node) : LogicalParameterString()
+LogicalParameterString::LogicalParameterString(BaseLib::Obj* baseLib, xml_node<>* node) : LogicalParameterString(baseLib)
 {
 	try
 	{
@@ -299,29 +304,29 @@ LogicalParameterString::LogicalParameterString(xml_node<>* node) : LogicalParame
 			}
 			else if(attributeName == "unit") unit = attributeValue;
 			else if(attributeName == "use_default_on_failure") {} //ignore, not necessary - all values are initialized
-			else if(attributeName != "type") Output::printWarning("Warning: Unknown attribute for \"logical\" with type string: " + attributeName);
+			else if(attributeName != "type") _bl->out.printWarning("Warning: Unknown attribute for \"logical\" with type string: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-LogicalParameterAction::LogicalParameterAction() : LogicalParameter()
+LogicalParameterAction::LogicalParameterAction(BaseLib::Obj* baseLib) : LogicalParameter(baseLib)
 {
 	type = Type::Enum::typeAction;
 }
 
-LogicalParameterAction::LogicalParameterAction(xml_node<>* node) : LogicalParameterAction()
+LogicalParameterAction::LogicalParameterAction(BaseLib::Obj* baseLib, xml_node<>* node) : LogicalParameterAction(baseLib)
 {
 	try
 	{
@@ -329,20 +334,20 @@ LogicalParameterAction::LogicalParameterAction(xml_node<>* node) : LogicalParame
 		for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 		{
 			std::string attributeName(attr->name());
-			if(attributeName != "type") Output::printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
+			if(attributeName != "type") _bl->out.printWarning("Warning: Unknown attribute for \"logical\" with type boolean: " + attributeName);
 		}
 	}
     catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

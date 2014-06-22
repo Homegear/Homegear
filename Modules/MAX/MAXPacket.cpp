@@ -28,6 +28,7 @@
  */
 
 #include "MAXPacket.h"
+#include "GD.h"
 
 namespace MAX
 {
@@ -53,12 +54,12 @@ void MAXPacket::import(std::string& packet, bool removeFirstCharacter)
 		uint32_t startIndex = removeFirstCharacter ? 1 : 0;
 		if(packet.size() < startIndex + 20)
 		{
-			BaseLib::Output::printError("Error: Packet is too short: " + packet);
+			GD::out.printError("Error: Packet is too short: " + packet);
 			return;
 		}
 		if(packet.size() > 400)
 		{
-			BaseLib::Output::printWarning("Warning: Tried to import BidCoS packet larger than 200 bytes.");
+			GD::out.printWarning("Warning: Tried to import BidCoS packet larger than 200 bytes.");
 			return;
 		}
 		_length = getByte(packet.substr(startIndex, 2));
@@ -73,7 +74,7 @@ void MAXPacket::import(std::string& packet, bool removeFirstCharacter)
 		uint32_t endIndex = startIndex + 2 + (_length * 2) - 1;
 		if(endIndex >= packet.size())
 		{
-			BaseLib::Output::printWarning("Warning: Packet is shorter than value of packet length byte: " + packet);
+			GD::out.printWarning("Warning: Packet is shorter than value of packet length byte: " + packet);
 			endIndex = packet.size() - 1;
 		}
 		_payload.clear();
@@ -86,15 +87,15 @@ void MAXPacket::import(std::string& packet, bool removeFirstCharacter)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -116,15 +117,15 @@ std::string MAXPacket::hexString()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }
@@ -139,15 +140,15 @@ uint8_t MAXPacket::getByte(std::string hexString)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return 0;
 }
@@ -162,15 +163,15 @@ int32_t MAXPacket::getInt(std::string hexString)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return 0;
 }

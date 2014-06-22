@@ -34,23 +34,36 @@
 
 namespace RPC
 {
+RemoteRPCServer::RemoteRPCServer()
+{
+	socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get()));
+	knownDevices.reset(new std::map<uint64_t, int32_t>());
+	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
+	path = "/RPC2";
+}
+
 RPCClient::RPCClient()
 {
 	try
 	{
 		signal(SIGPIPE, SIG_IGN);
+
+		_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
+		_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
+		_xmlRpcDecoder = std::unique_ptr<BaseLib::RPC::XMLRPCDecoder>(new BaseLib::RPC::XMLRPCDecoder(GD::bl.get()));
+		_xmlRpcEncoder = std::unique_ptr<BaseLib::RPC::XMLRPCEncoder>(new BaseLib::RPC::XMLRPCEncoder(GD::bl.get()));
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -62,15 +75,15 @@ RPCClient::~RPCClient()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -80,19 +93,19 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 	{
 		if(methodName.empty())
 		{
-			BaseLib::Output::printError("Error: Could not invoke XML RPC method for server " + server->address.first + ". methodName is empty.");
+			GD::out.printError("Error: Could not invoke XML RPC method for server " + server->address.first + ". methodName is empty.");
 			return;
 		}
 		if(!server)
 		{
-			BaseLib::Output::printError("RPC Client: Could not send packet. Pointer to server is nullptr.");
+			GD::out.printError("RPC Client: Could not send packet. Pointer to server is nullptr.");
 			return;
 		}
 		server->sendMutex.lock();
-		BaseLib::Output::printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
-		if(BaseLib::Obj::ins->debugLevel >= 5)
+		GD::out.printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
+		if(GD::bl->debugLevel >= 5)
 		{
-			BaseLib::Output::printDebug("Parameters:");
+			GD::out.printDebug("Parameters:");
 			for(std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				(*i)->print();
@@ -100,8 +113,8 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		}
 		bool timedout = false;
 		std::shared_ptr<std::vector<char>> requestData;
-		if(server->binary) requestData = _rpcEncoder.encodeRequest(methodName, parameters);
-		else requestData = _xmlRpcEncoder.encodeRequest(methodName, parameters);
+		if(server->binary) requestData = _rpcEncoder->encodeRequest(methodName, parameters);
+		else requestData = _xmlRpcEncoder->encodeRequest(methodName, parameters);
 		std::shared_ptr<std::vector<char>> result;
 		for(uint32_t i = 0; i < 5; ++i)
 		{
@@ -116,20 +129,20 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		}
 		if(!result || result->empty())
 		{
-			BaseLib::Output::printWarning("Warning: Response is empty. XML RPC method: " + methodName + " Server: " + server->address.first + " Port: " + server->address.second);
+			GD::out.printWarning("Warning: Response is empty. XML RPC method: " + methodName + " Server: " + server->address.first + " Port: " + server->address.second);
 			server->sendMutex.unlock();
 			return;
 		}
 		std::shared_ptr<BaseLib::RPC::RPCVariable> returnValue;
-		if(server->binary) returnValue = _rpcDecoder.decodeResponse(result);
-		else returnValue = _xmlRpcDecoder.decodeResponse(result);
+		if(server->binary) returnValue = _rpcDecoder->decodeResponse(result);
+		else returnValue = _xmlRpcDecoder->decodeResponse(result);
 
-		if(returnValue->errorStruct) BaseLib::Output::printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
+		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
 		else
 		{
-			if(BaseLib::Obj::ins->debugLevel >= 5)
+			if(GD::bl->debugLevel >= 5)
 			{
-				BaseLib::Output::printDebug("Response was:");
+				GD::out.printDebug("Response was:");
 				returnValue->print();
 			}
 			server->lastPacketSent = BaseLib::HelperFunctions::getTimeSeconds();
@@ -137,15 +150,15 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     server->sendMutex.unlock();
 }
@@ -157,10 +170,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 		if(methodName.empty()) return BaseLib::RPC::RPCVariable::createError(-32601, "Method name is empty");
 		if(!server) return BaseLib::RPC::RPCVariable::createError(-32500, "Could not send packet. Pointer to server is nullptr.");
 		server->sendMutex.lock();
-		BaseLib::Output::printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
-		if(BaseLib::Obj::ins->debugLevel >= 5)
+		GD::out.printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
+		if(GD::bl->debugLevel >= 5)
 		{
-			BaseLib::Output::printDebug("Parameters:");
+			GD::out.printDebug("Parameters:");
 			for(std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				(*i)->print();
@@ -168,8 +181,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 		}
 		bool timedout = false;
 		std::shared_ptr<std::vector<char>> requestData;
-		if(server->binary) requestData = _rpcEncoder.encodeRequest(methodName, parameters);
-		else requestData = _xmlRpcEncoder.encodeRequest(methodName, parameters);
+		if(server->binary) requestData = _rpcEncoder->encodeRequest(methodName, parameters);
+		else requestData = _xmlRpcEncoder->encodeRequest(methodName, parameters);
 		std::shared_ptr<std::vector<char>> result;
 		for(uint32_t i = 0; i < 5; ++i)
 		{
@@ -193,14 +206,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 			return BaseLib::RPC::RPCVariable::createError(-32700, "No response data.");
 		}
 		std::shared_ptr<BaseLib::RPC::RPCVariable> returnValue;
-		if(server->binary) returnValue = _rpcDecoder.decodeResponse(result);
-		else returnValue = _xmlRpcDecoder.decodeResponse(result);
-		if(returnValue->errorStruct) BaseLib::Output::printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
+		if(server->binary) returnValue = _rpcDecoder->decodeResponse(result);
+		else returnValue = _xmlRpcDecoder->decodeResponse(result);
+		if(returnValue->errorStruct) GD::out.printError("Error in RPC response from " + server->hostname + " on port " + server->address.second + ": faultCode: " + std::to_string(returnValue->structValue->at("faultCode")->integerValue) + " faultString: " + returnValue->structValue->at("faultString")->stringValue);
 		else
 		{
-			if(BaseLib::Obj::ins->debugLevel >= 5)
+			if(GD::bl->debugLevel >= 5)
 			{
-				BaseLib::Output::printDebug("Response was:");
+				GD::out.printDebug("Response was:");
 				returnValue->print();
 			}
 			server->lastPacketSent = BaseLib::HelperFunctions::getTimeSeconds();
@@ -211,15 +224,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     server->sendMutex.unlock();
     return BaseLib::RPC::RPCVariable::createError(-32700, "No response data.");
@@ -231,38 +244,38 @@ std::string RPCClient::getIPAddress(std::string address)
 	{
 		if(address.size() < 9)
 		{
-			BaseLib::Output::printError("Error: Server's address too short: " + address);
+			GD::out.printError("Error: Server's address too short: " + address);
 			return "";
 		}
 		if(address.substr(0, 7) == "http://") address = address.substr(7);
 		else if(address.substr(0, 8) == "https://") address = address.substr(8);
 		if(address.empty())
 		{
-			BaseLib::Output::printError("Error: Server's address is empty.");
+			GD::out.printError("Error: Server's address is empty.");
 			return "";
 		}
 		//Remove "[" and "]" of IPv6 address
 		if(address.front() == '[' && address.back() == ']') address = address.substr(1, address.size() - 2);
 		if(address.empty())
 		{
-			BaseLib::Output::printError("Error: Server's address is empty.");
+			GD::out.printError("Error: Server's address is empty.");
 			return "";
 		}
 
-		if(BaseLib::Obj::ins->settings.tunnelClients().find(address) != BaseLib::Obj::ins->settings.tunnelClients().end()) return "localhost";
+		if(GD::bl->settings.tunnelClients().find(address) != GD::bl->settings.tunnelClients().end()) return "localhost";
 		return address;
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }
@@ -273,7 +286,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 	{
 		if(!server || !data)
 		{
-			BaseLib::Output::printError("RPC Client: Could not send packet. Pointer to server or data is nullptr.");
+			GD::out.printError("RPC Client: Could not send packet. Pointer to server or data is nullptr.");
 			return std::shared_ptr<std::vector<char>>();
 		}
 		if(server->removed) return std::shared_ptr<std::vector<char>>();
@@ -285,7 +298,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		server->settings = GD::clientSettings.get(server->hostname);
 		if(!server->useSSL && server->settings && server->settings->forceSSL)
 		{
-			BaseLib::Output::printError("RPC Client: Tried to send unencrypted packet to " + server->hostname + " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again.");
+			GD::out.printError("RPC Client: Tried to send unencrypted packet to " + server->hostname + " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again.");
 			server->removed = true;
 			GD::rpcClient.removeServer(server->address);
 			return std::shared_ptr<std::vector<char>>();
@@ -294,25 +307,25 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		_sendCounter++;
 		if(_sendCounter > 50)
 		{
-			BaseLib::Output::printCritical("Critical: Could not execute XML RPC method on server " + server->address.first + " and port " + server->address.second + ", because there are more than 50 requests queued. Your server is either not reachable currently or your connection is too slow.");
+			GD::out.printCritical("Critical: Could not execute XML RPC method on server " + server->address.first + " and port " + server->address.second + ", because there are more than 50 requests queued. Your server is either not reachable currently or your connection is too slow.");
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
 
 		try
 		{
-			if(!server->socket.connected())
+			if(!server->socket->connected())
 			{
-				server->socket.setHostname(server->hostname);
-				server->socket.setPort(server->address.second);
-				server->socket.setUseSSL(server->useSSL);
-				if(server->settings) server->socket.setVerifyCertificate(server->settings->verifyCertificate);
-				server->socket.open();
+				server->socket->setHostname(server->hostname);
+				server->socket->setPort(server->address.second);
+				server->socket->setUseSSL(server->useSSL);
+				if(server->settings) server->socket->setVerifyCertificate(server->settings->verifyCertificate);
+				server->socket->open();
 			}
 		}
 		catch(BaseLib::SocketOperationException& ex)
 		{
-			BaseLib::Output::printError(ex.what() + " Removing server. Server has to send \"init\" again.");
+			GD::out.printError(ex.what() + " Removing server. Server has to send \"init\" again.");
 			server->removed = true;
 			GD::rpcClient.removeServer(server->address);
 			_sendCounter--;
@@ -324,8 +337,8 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		{
 			if(server->settings->userName.empty() || server->settings->password.empty())
 			{
-				BaseLib::Output::printError("Error: No user name or password specified in config file for XML RPC server " + server->hostname + " on port " + server->address.second + ". Closing connection.");
-				server->socket.close();
+				GD::out.printError("Error: No user name or password specified in config file for XML RPC server " + server->hostname + " on port " + server->address.second + ". Closing connection.");
+				server->socket->close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
@@ -339,18 +352,18 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				std::shared_ptr<BaseLib::RPC::RPCHeader> header(new BaseLib::RPC::RPCHeader());
 				if(server->settings && server->settings->authType == ClientSettings::Settings::AuthType::basic)
 				{
-					BaseLib::Output::printDebug("Using Basic Access Authentication.");
+					GD::out.printDebug("Using Basic Access Authentication.");
 					std::pair<std::string, std::string> authField = server->auth.basicClient();
 					header->authorization = authField.second;
 				}
-				_rpcEncoder.insertHeader(data, header);
+				_rpcEncoder->insertHeader(data, header);
 			}
 			else
 			{
 				std::string header = "POST " + server->path + " HTTP/1.1\r\nUser_Agent: Homegear " + std::string(VERSION) + "\r\nHost: " + server->hostname + ":" + server->address.second + "\r\nContent-Type: text/xml\r\nContent-Length: " + std::to_string(data->size()) + "\r\nConnection: " + (server->keepAlive ? "Keep-Alive" : "close") + "\r\nTE: chunked\r\n";
 				if(server->settings && server->settings->authType == ClientSettings::Settings::AuthType::basic)
 				{
-					BaseLib::Output::printDebug("Using Basic Access Authentication.");
+					GD::out.printDebug("Using Basic Access Authentication.");
 					std::pair<std::string, std::string> authField = server->auth.basicClient();
 					header += authField.first + ": " + authField.second + "\r\n";
 				}
@@ -361,22 +374,22 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 		}
 
-		if(BaseLib::Obj::ins->debugLevel >= 5) BaseLib::Output::printDebug("Sending packet: " + std::string(&data->at(0), data->size()));
+		if(GD::bl->debugLevel >= 5) GD::out.printDebug("Sending packet: " + std::string(&data->at(0), data->size()));
 		try
 		{
-			server->socket.proofwrite(data);
+			server->socket->proofwrite(data);
 		}
 		catch(BaseLib::SocketDataLimitException& ex)
 		{
-			BaseLib::Output::printWarning("Warning: " + ex.what());
-			server->socket.close();
+			GD::out.printWarning("Warning: " + ex.what());
+			server->socket->close();
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
 		catch(BaseLib::SocketOperationException& ex)
 		{
-			BaseLib::Output::printError("Error: Could not send data to XML RPC server " + server->hostname + " on port " + server->address.second + ": " + ex.what() + ". Giving up.");
-			server->socket.close();
+			GD::out.printError("Error: Could not send data to XML RPC server " + server->hostname + " on port " + server->address.second + ": " + ex.what() + ". Giving up.");
+			server->socket->close();
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
@@ -395,29 +408,29 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		{
 			try
 			{
-				receivedBytes = server->socket.proofread(buffer, bufferMax);
+				receivedBytes = server->socket->proofread(buffer, bufferMax);
 				//Some clients send only one byte in the first packet
-				if(packetLength == 0 && receivedBytes == 1) receivedBytes += server->socket.proofread(&buffer[1], bufferMax - 1);
+				if(packetLength == 0 && receivedBytes == 1) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
 			}
 			catch(BaseLib::SocketTimeOutException& ex)
 			{
-				BaseLib::Output::printInfo("Info: Reading from XML RPC server timed out. Server: " + server->hostname + " Port: " + server->address.second);
+				GD::out.printInfo("Info: Reading from XML RPC server timed out. Server: " + server->hostname + " Port: " + server->address.second);
 				timedout = true;
-				if(!server->keepAlive) server->socket.close();
+				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
-				BaseLib::Output::printWarning("Warning: " + ex.what());
-				if(!server->keepAlive) server->socket.close();
+				GD::out.printWarning("Warning: " + ex.what());
+				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
-				BaseLib::Output::printError(ex.what());
-				if(!server->keepAlive) server->socket.close();
+				GD::out.printError(ex.what());
+				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
@@ -426,8 +439,8 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			buffer[receivedBytes] = '\0';
 			if(!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
 			{
-				BaseLib::Output::printError("Error: Authentication failed. Server " + server->hostname + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
-				if(!server->keepAlive) server->socket.close();
+				GD::out.printError("Error: Authentication failed. Server " + server->hostname + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
+				if(!server->keepAlive) server->socket->close();
 				_sendCounter--;
 				return std::shared_ptr<std::vector<char>>();
 			}
@@ -438,31 +451,31 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				{
 					if(!(buffer[3] & 1) && buffer[3] != 0xFF)
 					{
-						BaseLib::Output::printError("Error: RPC client received binary request as response from server " + server->hostname + " on port " + server->address.second);
-						if(!server->keepAlive) server->socket.close();
+						GD::out.printError("Error: RPC client received binary request as response from server " + server->hostname + " on port " + server->address.second);
+						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
 					if(receivedBytes < 8)
 					{
-						BaseLib::Output::printError("Error: RPC client received binary packet smaller than 8 bytes from server " + server->hostname + " on port " + server->address.second);
-						if(!server->keepAlive) server->socket.close();
+						GD::out.printError("Error: RPC client received binary packet smaller than 8 bytes from server " + server->hostname + " on port " + server->address.second);
+						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
-					BaseLib::HelperFunctions::memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
-					BaseLib::Output::printDebug("RPC client receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
+					GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
+					GD::out.printDebug("RPC client receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
 					if(dataSize == 0)
 					{
-						BaseLib::Output::printError("Error: RPC client received binary packet without data from server " + server->hostname + " on port " + server->address.second);
-						if(!server->keepAlive) server->socket.close();
+						GD::out.printError("Error: RPC client received binary packet without data from server " + server->hostname + " on port " + server->address.second);
+						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
 					if(dataSize > 104857600)
 					{
-						BaseLib::Output::printError("Error: RPC client received packet with data larger than 100 MiB received.");
-						if(!server->keepAlive) server->socket.close();
+						GD::out.printError("Error: RPC client received packet with data larger than 100 MiB received.");
+						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
@@ -473,8 +486,8 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				{
 					if(packetLength + receivedBytes > dataSize)
 					{
-						BaseLib::Output::printError("Error: RPC client received response packet larger than the expected data size.");
-						if(!server->keepAlive) server->socket.close();
+						GD::out.printError("Error: RPC client received response packet larger than the expected data size.");
+						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
@@ -495,22 +508,22 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				}
 				catch(HTTPException& ex)
 				{
-					BaseLib::Output::printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
-					if(!server->keepAlive) server->socket.close();
+					GD::out.printError("XML RPC Client: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, receivedBytes));
+					if(!server->keepAlive) server->socket->close();
 					_sendCounter--;
 					return std::shared_ptr<std::vector<char>>();
 				}
 				if(http.getContentSize() > 104857600 || http.getHeader()->contentLength > 104857600)
 				{
-					BaseLib::Output::printError("Error: Packet with data larger than 100 MiB received.");
-					if(!server->keepAlive) server->socket.close();
+					GD::out.printError("Error: Packet with data larger than 100 MiB received.");
+					if(!server->keepAlive) server->socket->close();
 					_sendCounter--;
 					return std::shared_ptr<std::vector<char>>();
 				}
 			}
 		}
-		if(!server->keepAlive) server->socket.close();
-		BaseLib::Output::printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
+		if(!server->keepAlive) server->socket->close();
+		GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
 		_sendCounter--;
 		if(server->binary) return packet;
 		else if(http.isFinished()) return http.getContent();
@@ -518,17 +531,17 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
     }
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    BaseLib::Obj::ins->fileDescriptorManager.shutdown(server->fileDescriptor);
+    GD::bl->fileDescriptorManager.shutdown(server->fileDescriptor);
     _sendCounter--;
     return std::shared_ptr<std::vector<char>>();
 }

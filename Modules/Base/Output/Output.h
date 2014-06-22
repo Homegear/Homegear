@@ -38,39 +38,42 @@
 #include <sstream>
 #include <memory>
 #include <vector>
+#include <map>
 #include <chrono>
 #include <ctime>
 
 namespace BaseLib
 {
+class Obj;
+
 class Output
 {
 public:
-
+	Output() {}
 	virtual ~Output();
 
-	static void setDebugLevel(int32_t debugLevel) { _debugLevel = debugLevel; }
-	static void setPrefix(std::string prefix) { _prefix = prefix; }
+	void init(Obj* baseLib);
 
-	static void printThreadPriority();
+	void setPrefix(std::string prefix) { _prefix = prefix; }
 
-	static std::string getTimeString(int64_t time = 0);
+	void printThreadPriority();
 
-	static void printBinary(std::vector<unsigned char>& data);
-	static void printBinary(std::shared_ptr<std::vector<char>> data);
-	static void printBinary(std::vector<char>& data);
-	static void printEx(std::string file, uint32_t line, std::string function, std::string what = "");
-	static void printCritical(std::string errorString);
-	static void printError(std::string errorString);
-	static void printWarning(std::string errorString);
-	static void printInfo(std::string message);
-	static void printDebug(std::string message, int32_t minDebugLevel = 5);
-	static void printMessage(std::string message, int32_t minDebugLevel = 0);
+	std::string getTimeString(int64_t time = 0);
+
+	void printBinary(std::vector<unsigned char>& data);
+	void printBinary(std::shared_ptr<std::vector<char>> data);
+	void printBinary(std::vector<char>& data);
+	void printEx(std::string file, uint32_t line, std::string function, std::string what = "");
+	void printCritical(std::string errorString);
+	void printError(std::string errorString);
+	void printWarning(std::string errorString);
+	void printInfo(std::string message);
+	void printDebug(std::string message, int32_t minDebugLevel = 5);
+	void printMessage(std::string message, int32_t minDebugLevel = 0);
 private:
-	static int32_t _debugLevel;
-	static std::string _prefix;
-
-	Output() {}
+	BaseLib::Obj* _bl = nullptr;
+	const int32_t _defaultDebugLevel = 0;
+	std::string _prefix;
 };
 }
 #endif /* OUTPUT_H_ */

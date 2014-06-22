@@ -42,11 +42,13 @@
 #include <vector>
 #include <map>
 #include <string>
-#include <dlfcn.h>
+#include <memory>
 
 class GD
 {
 public:
+	static std::unique_ptr<BaseLib::Obj> bl;
+	static BaseLib::Output out;
 	static DatabaseController db;
 	static std::string configPath;
 	static std::string runDir;

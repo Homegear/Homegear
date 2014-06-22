@@ -38,6 +38,8 @@
 #include <memory>
 #include <mutex>
 
+#include <dlfcn.h>
+
 class ModuleLoader
 {
 public:
@@ -92,10 +94,14 @@ public:
 
 	FamilyController();
 	virtual ~FamilyController();
+	void init();
+	void dispose();
+
+	static void create();
+	static void destroy();
 	void loadModules();
 	void load();
-	void save(bool full, bool crash = false);
-	void dispose();
+	void saveAndDispose(bool full, bool crash = false);
 	bool familySelected() { return (bool)_currentFamily; }
 	std::string handleCLICommand(std::string& command);
 	bool familyAvailable(BaseLib::Systems::DeviceFamilies family);

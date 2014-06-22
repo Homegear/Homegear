@@ -40,18 +40,23 @@ using namespace rapidxml;
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace RPC
 {
 
 class XMLRPCDecoder {
 public:
-	XMLRPCDecoder();
+	XMLRPCDecoder(BaseLib::Obj* baseLib);
 	virtual ~XMLRPCDecoder() {}
 
 	virtual std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName);
 	virtual std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<std::vector<char>> packet);
 	virtual std::shared_ptr<RPCVariable> decodeResponse(std::string& packet);
 private:
+	BaseLib::Obj* _bl = nullptr;
+
 	std::shared_ptr<RPCVariable> decodeParameter(xml_node<>* valueNode);
 	std::shared_ptr<RPCVariable> decodeArray(xml_node<>* dataNode);
 	std::shared_ptr<RPCVariable> decodeStruct(xml_node<>* structNode);

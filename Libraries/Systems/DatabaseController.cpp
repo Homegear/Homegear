@@ -28,13 +28,13 @@
  */
 
 #include "DatabaseController.h"
-#include "../../Modules/Base/BaseLib.h"
 #include "../User/User.h"
+#include "../GD/GD.h"
 
 DatabaseController::DatabaseController()
 {
-
-
+	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
+	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 }
 
 DatabaseController::~DatabaseController()
@@ -92,15 +92,15 @@ void DatabaseController::initializeDatabase()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -122,13 +122,13 @@ void DatabaseController::convertDatabase()
 		if(version == "0.5.0") return; //Up to date
 		if(version != "0.3.1" && version != "0.4.3")
 		{
-			BaseLib::Output::printCritical("Unknown database version: " + version);
+			GD::out.printCritical("Unknown database version: " + version);
 			exit(1); //Don't know, what to do
 		}
 		/*if(version == "0.0.7")
 		{
-			BaseLib::Output::printMessage("Converting database from version " + version + " to version 0.3.0...");
-			db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".old");
+			GD::out.printMessage("Converting database from version " + version + " to version 0.3.0...");
+			db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
 
 			db.executeCommand("ALTER TABLE events ADD COLUMN enabled INTEGER");
 			db.executeCommand("UPDATE events SET enabled=1");
@@ -145,13 +145,13 @@ void DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-			BaseLib::Output::printMessage("Exiting Homegear after database conversion...");
+			GD::out.printMessage("Exiting Homegear after database conversion...");
 			exit(0);
 		}*/
 		/*if(version == "0.3.0")
 		{
-			BaseLib::Output::printMessage("Converting database from version " + version + " to version 0.3.1...");
-			db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".old");
+			GD::out.printMessage("Converting database from version " + version + " to version 0.3.1...");
+			db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
 
 			db.executeCommand("ALTER TABLE devices ADD COLUMN deviceFamily INTEGER DEFAULT 0 NOT NULL");
 			db.executeCommand("UPDATE devices SET deviceFamily=1 WHERE deviceType=4278190077");
@@ -170,14 +170,14 @@ void DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-			BaseLib::Output::printMessage("Exiting Homegear after database conversion...");
+			GD::out.printMessage("Exiting Homegear after database conversion...");
 			exit(0);
 		}
 		else*/
 		if(version == "0.3.1")
 		{
-			BaseLib::Output::printMessage("Converting database from version " + version + " to version 0.4.3...");
-			db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".old");
+			GD::out.printMessage("Converting database from version " + version + " to version 0.4.3...");
+			db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
 
 			db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
@@ -190,13 +190,13 @@ void DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-			BaseLib::Output::printMessage("Exiting Homegear after database conversion...");
+			GD::out.printMessage("Exiting Homegear after database conversion...");
 			exit(0);
 		}
 		else if(version == "0.4.3")
 		{
-			BaseLib::Output::printMessage("Converting database from version " + version + " to version 0.5.0...");
-			db.init(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".old");
+			GD::out.printMessage("Converting database from version " + version + " to version 0.5.0...");
+			db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
 
 			db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=16");
 
@@ -209,21 +209,21 @@ void DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
-			BaseLib::Output::printMessage("Exiting Homegear after database conversion...");
+			GD::out.printMessage("Exiting Homegear after database conversion...");
 			exit(0);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -261,7 +261,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllMetadata(st
 		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 2) continue;
-			std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder.decodeResponse(i->second.at(1)->binaryValue);
+			std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder->decodeResponse(i->second.at(1)->binaryValue);
 			metadataStruct->structValue->insert(BaseLib::RPC::RPCStructElement(i->second.at(0)->textValue, metadata));
 		}
 
@@ -273,15 +273,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllMetadata(st
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -307,21 +307,21 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getMetadata(std::
 			return BaseLib::RPC::RPCVariable::createError(-1, "No metadata found.");
 		}
 
-		std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder.decodeResponse(rows->at(0).at(0)->binaryValue);
+		std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder->decodeResponse(rows->at(0).at(0)->binaryValue);
 		_databaseMutex.unlock();
 		return metadata;
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -356,7 +356,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setMetadata(std::
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
 		db.executeCommand("DELETE FROM metadata WHERE objectID=? AND dataID=?", data);
 
-		std::shared_ptr<std::vector<char>> value = _rpcEncoder.encodeResponse(metadata);
+		std::shared_ptr<std::vector<char>> value = _rpcEncoder->encodeResponse(metadata);
 		if(!value)
 		{
 			_databaseMutex.unlock();
@@ -376,15 +376,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setMetadata(std::
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -410,15 +410,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteMetadata(st
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
@@ -437,15 +437,15 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
@@ -466,15 +466,15 @@ bool DatabaseController::createUser(std::string name, std::vector<uint8_t>& pass
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
 }
@@ -496,15 +496,15 @@ bool DatabaseController::updateUser(uint64_t id, std::vector<uint8_t>& passwordH
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return false;
@@ -525,15 +525,15 @@ bool DatabaseController::deleteUser(uint64_t id)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return false;
@@ -549,15 +549,15 @@ bool DatabaseController::userNameExists(std::string name)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return false;
 }
@@ -576,15 +576,15 @@ uint64_t DatabaseController::getUserID(std::string name)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return 0;
@@ -603,15 +603,15 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPassword(st
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
@@ -630,15 +630,15 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getEvents()
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
@@ -657,15 +657,15 @@ uint64_t DatabaseController::saveEvent(BaseLib::Database::DataRow event)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	releaseSavepoint("event");
 	_databaseMutex.unlock();
@@ -683,15 +683,15 @@ void DatabaseController::deleteEvent(std::string name)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	releaseSavepoint("eventREMOVE");
 	_databaseMutex.unlock();
@@ -712,15 +712,15 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDevices(uin
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
@@ -737,15 +737,15 @@ void DatabaseController::deleteDevice(uint64_t id)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 }
@@ -768,15 +768,15 @@ uint64_t DatabaseController::saveDevice(uint64_t id, int32_t address, std::strin
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return 0;
@@ -792,7 +792,7 @@ uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
 		{
 			if(data.at(1)->intValue == 0)
 			{
-				BaseLib::Output::printError("Error: Could not save device variable. Variable ID is \"0\".");
+				GD::out.printError("Error: Could not save device variable. Variable ID is \"0\".");
 				_databaseMutex.unlock();
 				return 0;
 			}
@@ -818,15 +818,15 @@ uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return 0;
@@ -843,15 +843,15 @@ void DatabaseController::deletePeers(int32_t deviceID)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 }
@@ -869,15 +869,15 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeers(uint6
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
@@ -896,15 +896,15 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDeviceVaria
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
@@ -924,15 +924,15 @@ void DatabaseController::deletePeer(uint64_t id)
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 }
@@ -954,15 +954,15 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return 0;
@@ -979,7 +979,7 @@ uint64_t DatabaseController::savePeerParameter(uint64_t peerID, BaseLib::Databas
 		{
 			if(data.at(1)->intValue == 0)
 			{
-				BaseLib::Output::printError("Error: Could not save peer parameter. Parameter ID is \"0\".");
+				GD::out.printError("Error: Could not save peer parameter. Parameter ID is \"0\".");
 				releaseSavepoint("peerParameter" + std::to_string(peerID));
 				_databaseMutex.unlock();
 				return 0;
@@ -996,15 +996,15 @@ uint64_t DatabaseController::savePeerParameter(uint64_t peerID, BaseLib::Databas
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	releaseSavepoint("peerParameter" + std::to_string(peerID));
 	_databaseMutex.unlock();
@@ -1022,7 +1022,7 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 		{
 			if(data.at(1)->intValue == 0)
 			{
-				BaseLib::Output::printError("Error: Could not save peer variable. Variable ID is \"0\".");
+				GD::out.printError("Error: Could not save peer variable. Variable ID is \"0\".");
 				releaseSavepoint("peerVariable" + std::to_string(peerID));
 				_databaseMutex.unlock();
 				return 0;
@@ -1050,15 +1050,15 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	releaseSavepoint("peerVariable" + std::to_string(peerID));
 	_databaseMutex.unlock();
@@ -1078,15 +1078,15 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerParamet
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
@@ -1105,15 +1105,15 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerVariabl
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
@@ -1128,7 +1128,7 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 		{
 			if(data.at(1)->intValue == 0)
 			{
-				BaseLib::Output::printError("Error: Could not delete parameter. Parameter ID is \"0\".");
+				GD::out.printError("Error: Could not delete parameter. Parameter ID is \"0\".");
 				_databaseMutex.unlock();
 				return;
 			}
@@ -1149,15 +1149,15 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	_databaseMutex.unlock();
 }

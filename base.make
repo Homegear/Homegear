@@ -34,7 +34,7 @@ ifeq ($(config),debug)
   DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11 -fPIC
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += 
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
@@ -56,7 +56,7 @@ ifeq ($(config),release)
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11 -fPIC
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -s
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
@@ -78,7 +78,7 @@ ifeq ($(config),profiling)
   DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
-  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
+  CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -fPIC -pg
   CXXFLAGS  += $(CFLAGS) 
   LDFLAGS   += -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 

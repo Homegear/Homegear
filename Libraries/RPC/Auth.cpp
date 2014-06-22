@@ -32,14 +32,20 @@
 
 namespace RPC
 {
-Auth::Auth(BaseLib::SocketOperations& socket, std::vector<std::string>& validUsers)
+Auth::Auth()
+{
+	_socket =  std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get()));
+}
+
+Auth::Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<std::string>& validUsers)
 {
 	_socket = socket;
 	_validUsers = validUsers;
 	_initialized = true;
+	_rpcEncoder = std::shared_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 }
 
-Auth::Auth(BaseLib::SocketOperations& socket, std::string userName, std::string password)
+Auth::Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::string userName, std::string password)
 {
 	_socket = socket;
 	_userName = userName;
@@ -66,11 +72,11 @@ void Auth::sendBasicUnauthorized(bool binary)
 		if(!_basicUnauthBinaryHeader || _basicUnauthBinaryHeader->empty())
 		{
 			std::shared_ptr<BaseLib::RPC::RPCVariable> error = BaseLib::RPC::RPCVariable::createError(-32603, "Unauthorized");
-			_basicUnauthBinaryHeader = _rpcEncoder.encodeResponse(error);
+			_basicUnauthBinaryHeader = _rpcEncoder->encodeResponse(error);
 		}
 		try
 		{
-			_socket.proofwrite(_basicUnauthBinaryHeader);
+			_socket->proofwrite(_basicUnauthBinaryHeader);
 		}
 		catch(BaseLib::SocketOperationException& ex)
 		{
@@ -92,7 +98,7 @@ void Auth::sendBasicUnauthorized(bool binary)
 		}
 		try
 		{
-			_socket.proofwrite(_basicUnauthHTTPHeader);
+			_socket->proofwrite(_basicUnauthHTTPHeader);
 		}
 		catch(BaseLib::SocketOperationException& ex)
 		{
@@ -150,10 +156,10 @@ bool Auth::basicServer(HTTP& httpPacket)
 		data->insert(data->begin(), _basicAuthHTTPHeader.begin(), _basicAuthHTTPHeader.end());
 		try
 		{
-			_socket.proofwrite(data);
-			int32_t bytesRead = _socket.proofread(buffer, bufferLength);
+			_socket->proofwrite(data);
+			int32_t bytesRead = _socket->proofread(buffer, bufferLength);
 			//Some clients send only one byte in the first packet
-			if(bytesRead == 1) bytesRead += _socket.proofread(&buffer[1], bufferLength - 1);
+			if(bytesRead == 1) bytesRead += _socket->proofread(&buffer[1], bufferLength - 1);
 			buffer[bytesRead] = '\0';
 			try
 			{

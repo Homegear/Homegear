@@ -29,6 +29,8 @@
 
 #include "GD.h"
 
+std::unique_ptr<BaseLib::Obj> GD::bl;
+BaseLib::Output GD::out;
 DatabaseController GD::db;
 std::string GD::configPath = "/etc/homegear/";
 std::string GD::pidfilePath = "";

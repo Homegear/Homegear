@@ -28,16 +28,18 @@
  */
 
 #include "Output.h"
+#include "../BaseLib.h"
 
 namespace BaseLib
 {
-
-int32_t Output::_debugLevel = 3;
-std::string Output::_prefix;
-
 Output::~Output()
 {
 
+}
+
+void Output::init(Obj* baseLib)
+{
+	_bl = baseLib;
 }
 
 std::string Output::getTimeString(int64_t time)
@@ -179,37 +181,37 @@ void Output::printEx(std::string file, uint32_t line, std::string function, std:
 
 void Output::printCritical(std::string errorString)
 {
-	if(_debugLevel < 1) return;
+	if(_bl && _bl->debugLevel < 1) return;
 	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
 }
 
 void Output::printError(std::string errorString)
 {
-	if(_debugLevel < 2) return;
+	if(_bl && _bl->debugLevel < 2) return;
 	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
 }
 
 void Output::printWarning(std::string errorString)
 {
-	if(_debugLevel < 3) return;
+	if(_bl && _bl->debugLevel < 3) return;
 	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
 }
 
 void Output::printInfo(std::string message)
 {
-	if(_debugLevel < 4) return;
+	if(_bl && _bl->debugLevel < 4) return;
 	std::cout << getTimeString() << " " << _prefix << message << std::endl;
 }
 
 void Output::printDebug(std::string message, int32_t minDebugLevel)
 {
-	if(_debugLevel < minDebugLevel) return;
+	if(_bl && _bl->debugLevel < minDebugLevel) return;
 	std::cout << getTimeString() << " " << _prefix << message << std::endl;
 }
 
 void Output::printMessage(std::string message, int32_t minDebugLevel)
 {
-	if(_debugLevel < minDebugLevel) return;
+	if(_bl && _bl->debugLevel < minDebugLevel) return;
 	std::cout << getTimeString() << " " << _prefix << message << std::endl;
 }
 

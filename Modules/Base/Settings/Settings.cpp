@@ -37,19 +37,25 @@ Settings::Settings()
 {
 }
 
+void Settings::init(BaseLib::Obj* baseLib)
+{
+	_bl = baseLib;
+}
+
 void Settings::reset()
 {
 	_certPath = "/etc/homegear/homegear.crt";
 	_keyPath = "/etc/homegear/homegear.key";
 	_dhParamPath = "/etc/homegear/dh2048.pem";
 	_debugLevel = 3;
-	_databasePath = Obj::ins->executablePath + "db.sql";
+	_databasePath = _bl->executablePath + "db.sql";
 	_databaseSynchronous = false;
 	_databaseMemoryJournal = true;
 	_logfilePath = "/var/log/homegear/";
 	_prioritizeThreads = true;
 	_workerThreadWindow = 3000;
 	_rpcServerThreadPriority = 0;
+	_deviceDescriptionPath = "/etc/homegear/devices/";
 	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
 	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
 	_physicalInterfaceSettingsPath = "/etc/homegear/physicalinterfaces.conf";
@@ -72,7 +78,7 @@ void Settings::load(std::string filename)
 
 		if (!(fin = fopen(filename.c_str(), "r")))
 		{
-			Output::printError("Unable to open config file: " + filename + ". " + strerror(errno));
+			_bl->out.printError("Unable to open config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
@@ -105,113 +111,119 @@ void Settings::load(std::string filename)
 				{
 					_certPath = value;
 					if(_certPath.empty()) _certPath = "/etc/homegear/homegear.crt";
-					Output::printDebug("Debug: certPath set to " + _certPath);
+					_bl->out.printDebug("Debug: certPath set to " + _certPath);
 				}
 				else if(name == "keypath")
 				{
 					_keyPath = value;
 					if(_keyPath.empty()) _keyPath = "/etc/homegear/homegear.key";
-					Output::printDebug("Debug: keyPath set to " + _keyPath);
+					_bl->out.printDebug("Debug: keyPath set to " + _keyPath);
 				}
 				else if(name == "loaddhparamsfromfile")
 				{
 					if(HelperFunctions::toLower(value) == "true") _loadDHParamsFromFile = true;
 					else if(HelperFunctions::toLower(value) == "false") _loadDHParamsFromFile = false;
-					Output::printDebug("Debug: loadDHParamsFromFile set to " + std::to_string(_loadDHParamsFromFile));
+					_bl->out.printDebug("Debug: loadDHParamsFromFile set to " + std::to_string(_loadDHParamsFromFile));
 				}
 				else if(name == "dhparampath")
 				{
 					_dhParamPath = value;
 					if(_dhParamPath.empty()) _dhParamPath = "/etc/homegear/dh2048.pem";
-					Output::printDebug("Debug: dhParamPath set to " + _dhParamPath);
+					_bl->out.printDebug("Debug: dhParamPath set to " + _dhParamPath);
 				}
 				else if(name == "debuglevel")
 				{
 					_debugLevel = HelperFunctions::getNumber(value);
 					if(_debugLevel < 0) _debugLevel = 3;
-					Obj::ins->debugLevel = _debugLevel;
-					Output::setDebugLevel(_debugLevel);
-					Output::printDebug("Debug: debugLevel set to " + std::to_string(_debugLevel));
+					_bl->debugLevel = _debugLevel;
+					_bl->out.printDebug("Debug: debugLevel set to " + std::to_string(_debugLevel));
 				}
 				else if(name == "databasepath")
 				{
 					_databasePath = value;
-					if(_databasePath.empty()) _databasePath = Obj::ins->executablePath + "db.sql";
-					Output::printDebug("Debug: databasePath set to " + _databasePath);
+					if(_databasePath.empty()) _databasePath = _bl->executablePath + "db.sql";
+					_bl->out.printDebug("Debug: databasePath set to " + _databasePath);
 				}
 				else if(name == "databasesynchronous")
 				{
 					if(HelperFunctions::toLower(value) == "true") _databaseSynchronous = true;
-					Output::printDebug("Debug: databaseSynchronous set to " + std::to_string(_databaseSynchronous));
+					_bl->out.printDebug("Debug: databaseSynchronous set to " + std::to_string(_databaseSynchronous));
 				}
 				else if(name == "databasememoryjournal")
 				{
 					if(HelperFunctions::toLower(value) == "false") _databaseMemoryJournal = false;
-					Output::printDebug("Debug: databaseMemoryJournal set to " + std::to_string(_databaseMemoryJournal));
+					_bl->out.printDebug("Debug: databaseMemoryJournal set to " + std::to_string(_databaseMemoryJournal));
 				}
 				else if(name == "logfilepath")
 				{
 					_logfilePath = value;
 					if(_logfilePath.empty()) _logfilePath = "/var/log/homegear/";
 					if(_logfilePath.back() != '/') _logfilePath.push_back('/');
-					Output::printDebug("Debug: logfilePath set to " + _logfilePath);
+					_bl->out.printDebug("Debug: logfilePath set to " + _logfilePath);
 				}
 				else if(name == "prioritizethreads")
 				{
 					if(HelperFunctions::toLower(value) == "false") _prioritizeThreads = false;
-					Output::printDebug("Debug: prioritizeThreads set to " + std::to_string(_prioritizeThreads));
+					_bl->out.printDebug("Debug: prioritizeThreads set to " + std::to_string(_prioritizeThreads));
 				}
 				else if(name == "workerthreadwindow")
 				{
 					_workerThreadWindow = HelperFunctions::getNumber(value);
 					if(_workerThreadWindow > 3600000) _workerThreadWindow = 3600000;
-					Output::printDebug("Debug: workerThreadWindow set to " + std::to_string(_workerThreadWindow));
+					_bl->out.printDebug("Debug: workerThreadWindow set to " + std::to_string(_workerThreadWindow));
 				}
 				else if(name == "rpcserverthreadpriority")
 				{
 					_rpcServerThreadPriority = HelperFunctions::getNumber(value);
 					if(_rpcServerThreadPriority > 99) _rpcServerThreadPriority = 99;
 					if(_rpcServerThreadPriority < 0) _rpcServerThreadPriority = 0;
-					Output::printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
+					_bl->out.printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
+				}
+				else if(name == "devicedescriptionpath")
+				{
+					_deviceDescriptionPath = value;
+					if(_deviceDescriptionPath.empty()) _deviceDescriptionPath = "/etc/homegear/devices";
+					if(_deviceDescriptionPath.back() != '/') _deviceDescriptionPath.push_back('/');
+					_bl->out.printDebug("Debug: deviceDescriptionPath set to " + _deviceDescriptionPath);
 				}
 				else if(name == "serversettingspath")
 				{
 					_serverSettingsPath = value;
 					if(_serverSettingsPath.empty()) _serverSettingsPath = "/etc/homegear/rpcservers.conf";
-					Output::printDebug("Debug: serverSettingsPath set to " + _serverSettingsPath);
+					_bl->out.printDebug("Debug: serverSettingsPath set to " + _serverSettingsPath);
 				}
 				else if(name == "clientsettingspath")
 				{
 					_clientSettingsPath = value;
 					if(_clientSettingsPath.empty()) _clientSettingsPath = "/etc/homegear/rpcclients.conf";
-					Output::printDebug("Debug: clientSettingsPath set to " + _clientSettingsPath);
+					_bl->out.printDebug("Debug: clientSettingsPath set to " + _clientSettingsPath);
 				}
 				else if(name == "physicalinterfacesettingspath")
 				{
 					_physicalInterfaceSettingsPath = value;
 					if(_physicalInterfaceSettingsPath.empty()) _physicalInterfaceSettingsPath = "/etc/homegear/physicalinterfaces.conf";
-					Output::printDebug("Debug: physicalDeviceSettingsPath set to " + _physicalInterfaceSettingsPath);
+					_bl->out.printDebug("Debug: physicalDeviceSettingsPath set to " + _physicalInterfaceSettingsPath);
 				}
 				else if(name == "modulepath")
 				{
 					_modulePath = value;
 					if(_modulePath.empty()) _modulePath = "/var/lib/homegear/modules/";
 					if(_modulePath.back() != '/') _modulePath.push_back('/');
-					Output::printDebug("Debug: libraryPath set to " + _modulePath);
+					_bl->out.printDebug("Debug: libraryPath set to " + _modulePath);
 				}
 				else if(name == "scriptpath")
 				{
 					_scriptPath = value;
 					if(_scriptPath.empty()) _scriptPath = "/var/lib/homegear/scripts/";
 					if(_scriptPath.back() != '/') _scriptPath.push_back('/');
-					Output::printDebug("Debug: scriptPath set to " + _scriptPath);
+					_bl->out.printDebug("Debug: scriptPath set to " + _scriptPath);
 				}
 				else if(name == "firmwarepath")
 				{
 					_firmwarePath = value;
 					if(_firmwarePath.empty()) _firmwarePath = "/var/lib/homegear/firmware/";
 					if(_firmwarePath.back() != '/') _firmwarePath.push_back('/');
-					Output::printDebug("Debug: firmwarePath set to " + _firmwarePath);
+					_bl->out.printDebug("Debug: firmwarePath set to " + _firmwarePath);
 				}
 				else if(name == "redirecttosshtunnel")
 				{
@@ -222,30 +234,28 @@ void Settings::load(std::string filename)
 					_gpioPath = value;
 					if(_gpioPath.empty()) _gpioPath = "/sys/class/gpio/";
 					if(_gpioPath.back() != '/') _gpioPath.push_back('/');
-					Output::printDebug("Debug: gpioPath set to " + _gpioPath);
+					_bl->out.printDebug("Debug: gpioPath set to " + _gpioPath);
 				}
 				else
 				{
-					Output::printWarning("Warning: Setting not found: " + std::string(input));
+					_bl->out.printWarning("Warning: Setting not found: " + std::string(input));
 				}
 			}
 		}
 
 		fclose(fin);
-
-		Output::setDebugLevel(_debugLevel);
 	}
 	catch(const std::exception& ex)
     {
-		Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

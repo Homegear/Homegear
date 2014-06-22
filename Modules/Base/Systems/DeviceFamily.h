@@ -58,43 +58,45 @@ public:
 	public:
 		//Database
 			//General
-			virtual void onCreateSavepoint(std::string name) = 0;
-			virtual void onReleaseSavepoint(std::string name) = 0;
+			virtual void onCreateSavepoint(std::string name) {}
+			virtual void onReleaseSavepoint(std::string name) {}
 
 			//Metadata
-			virtual void onDeleteMetadata(std::string objectID, std::string dataID = "") = 0;
+			virtual void onDeleteMetadata(std::string objectID, std::string dataID = "") {}
 
 			//Device
-			virtual std::shared_ptr<Database::DataTable> onGetDevices(uint32_t family) = 0;
-			virtual void onDeleteDevice(uint64_t id) = 0;
-			virtual uint64_t onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family) = 0;
-			virtual uint64_t onSaveDeviceVariable(Database::DataRow data) = 0;
-			virtual void onDeletePeers(int32_t deviceID) = 0;
-			virtual std::shared_ptr<Database::DataTable> onGetPeers(uint64_t deviceID) = 0;
-			virtual std::shared_ptr<Database::DataTable> onGetDeviceVariables(uint64_t deviceID) = 0;
+			virtual std::shared_ptr<Database::DataTable> onGetDevices(uint32_t family) { return std::shared_ptr<Database::DataTable>(); }
+			virtual void onDeleteDevice(uint64_t id) {};
+			virtual uint64_t onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family) { return 0; }
+			virtual uint64_t onSaveDeviceVariable(Database::DataRow data) { return 0; }
+			virtual void onDeletePeers(int32_t deviceID) {};
+			virtual std::shared_ptr<Database::DataTable> onGetPeers(uint64_t deviceID) { return std::shared_ptr<Database::DataTable>(); }
+			virtual std::shared_ptr<Database::DataTable> onGetDeviceVariables(uint64_t deviceID) { return std::shared_ptr<Database::DataTable>(); }
 
 			//Peer
-			virtual void onDeletePeer(uint64_t id) = 0;
-			virtual uint64_t onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber) = 0;
-			virtual uint64_t onSavePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
-			virtual uint64_t onSavePeerVariable(uint64_t peerID, Database::DataRow data) = 0;
-			virtual std::shared_ptr<Database::DataTable> onGetPeerParameters(uint64_t peerID) = 0;
-			virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID) = 0;
-			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
+			virtual void onDeletePeer(uint64_t id) {};
+			virtual uint64_t onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber) { return 0; }
+			virtual uint64_t onSavePeerParameter(uint64_t peerID, Database::DataRow data) { return 0; }
+			virtual uint64_t onSavePeerVariable(uint64_t peerID, Database::DataRow data) { return 0; }
+			virtual std::shared_ptr<Database::DataTable> onGetPeerParameters(uint64_t peerID) { return std::shared_ptr<Database::DataTable>(); }
+			virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID) { return std::shared_ptr<Database::DataTable>(); }
+			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) { }
 		//End database
 
-		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
-		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint) = 0;
-		virtual void onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions) = 0;
-		virtual void onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo) = 0;
-		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) {}
+		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint) {}
+		virtual void onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions) {}
+		virtual void onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo) {}
+		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values) {}
 	};
 	//End event handling
 
-	DeviceFamily(Obj* baseLib, IFamilyEventSink* eventHandler);
+	DeviceFamily(BaseLib::Obj* bl, IFamilyEventSink* eventHandler);
 	virtual ~DeviceFamily();
 
-	virtual void setDebugLevel(int32_t debugLevel);
+	virtual bool init() = 0;
+	virtual void dispose();
+
 	virtual DeviceFamilies getFamily() { return _family; }
 	virtual std::shared_ptr<RPC::RPCVariable> listBidcosInterfaces() { return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid)); }
 	virtual std::shared_ptr<Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<Systems::PhysicalInterfaceSettings> settings) { return std::shared_ptr<Systems::IPhysicalInterface>(); }
@@ -102,7 +104,6 @@ public:
 	virtual void save(bool full);
 	virtual void add(std::shared_ptr<LogicalDevice> device);
 	virtual void remove(uint64_t id);
-	virtual void dispose();
 	virtual std::shared_ptr<LogicalDevice> get(int32_t address);
 	virtual std::shared_ptr<LogicalDevice> get(uint64_t id);
 	virtual std::shared_ptr<LogicalDevice> get(std::string serialNumber);
@@ -112,11 +113,14 @@ public:
 	virtual std::string handleCLICommand(std::string& command) = 0;
 	virtual bool deviceSelected() { return (bool)_currentDevice; }
 protected:
+	BaseLib::Obj* _bl = nullptr;
+	IFamilyEventSink* _eventHandler;
 	DeviceFamilies _family = DeviceFamilies::none;
 	std::mutex _devicesMutex;
 	std::thread _removeThread;
 	std::vector<std::shared_ptr<LogicalDevice>> _devices;
 	std::shared_ptr<BaseLib::Systems::LogicalDevice> _currentDevice;
+	bool _disposed = false;
 
 	void removeThread(uint64_t id);
 

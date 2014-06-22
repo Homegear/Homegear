@@ -35,8 +35,9 @@ namespace BaseLib
 namespace RPC
 {
 
-XMLRPCDecoder::XMLRPCDecoder()
+XMLRPCDecoder::XMLRPCDecoder(BaseLib::Obj* baseLib)
 {
+	_bl = baseLib;
 }
 
 std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName)
@@ -84,19 +85,19 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> XMLRPCDecoder::decode
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
     	return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what()))});
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
     	return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what()))});
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	doc.clear();
     	return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>(new std::vector<std::shared_ptr<RPCVariable>>{RPCVariable::createError(-32700, "Parse error. Not well formed.")});
     }
@@ -115,19 +116,19 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::string& packet)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	doc.clear();
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
     }
@@ -146,19 +147,19 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(std::shared_ptr<std::
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	doc.clear();
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	doc.clear();
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
     }
@@ -208,17 +209,17 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeResponse(xml_document<>* doc)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed: " + std::string(ex.what())));
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     	return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
     }
     return std::shared_ptr<RPCVariable>(RPCVariable::createError(-32700, "Parse error. Not well formed."));
@@ -277,15 +278,15 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNod
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RPCVariable>(new RPCVariable(0));
 }
@@ -311,15 +312,15 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeStruct(xml_node<>* structNode)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return rpcStruct;
 }
@@ -341,15 +342,15 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeArray(xml_node<>* arrayNode)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return rpcArray;
 }

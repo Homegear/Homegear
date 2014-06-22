@@ -107,8 +107,8 @@ public:
 	std::shared_ptr<RPC::Device> rpcDevice;
 	std::shared_ptr<ServiceMessages> serviceMessages;
 
-	Peer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
-	Peer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
+	Peer(BaseLib::Obj* baseLib, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
+	Peer(BaseLib::Obj* baseLib, int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 	virtual ~Peer();
 
 	//In table peers:
@@ -153,7 +153,9 @@ public:
     virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
     //End RPC methods
 protected:
+    BaseLib::Obj* _bl = nullptr;
     std::map<uint32_t, uint32_t> _variableDatabaseIDs;
+    std::map<std::string, std::shared_ptr<BaseLib::RPC::RPCVariable>> _rpcCache;
 
 	//In table peers:
 	uint64_t _peerID = 0;
@@ -208,4 +210,4 @@ protected:
 
 }
 }
-#endif /* PEER_H_ */
+#endif

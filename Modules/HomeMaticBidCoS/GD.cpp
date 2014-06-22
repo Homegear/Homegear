@@ -31,6 +31,10 @@
 
 namespace BidCoS
 {
+	BaseLib::Obj* GD::bl = nullptr;
+	BidCoS* GD::family = nullptr;
+	BaseLib::Output GD::out;
 	std::map<std::string, std::shared_ptr<IBidCoSInterface>> GD::physicalInterfaces;
 	std::shared_ptr<IBidCoSInterface> GD::defaultPhysicalInterface;
+	BaseLib::RPC::Devices GD::rpcDevices;
 } /* namespace BidCoS */

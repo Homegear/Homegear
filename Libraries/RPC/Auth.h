@@ -51,9 +51,9 @@ public:
 class Auth
 {
 public:
-	Auth() {}
-	Auth(BaseLib::SocketOperations& socket, std::vector<std::string>& validUsers);
-	Auth(BaseLib::SocketOperations& socket, std::string userName, std::string password);
+	Auth();
+	Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::vector<std::string>& validUsers);
+	Auth(std::shared_ptr<BaseLib::SocketOperations>& socket, std::string userName, std::string password);
 	virtual ~Auth() {}
 
 	bool initialized() { return _initialized; }
@@ -63,7 +63,7 @@ public:
 protected:
 	bool _initialized = false;
 	std::string _hostname;
-	BaseLib::SocketOperations _socket;
+	std::shared_ptr<BaseLib::SocketOperations> _socket;
 	std::string _basicAuthHTTPHeader;
 	std::shared_ptr<std::vector<char>> _basicUnauthBinaryHeader;
 	std::shared_ptr<std::vector<char>> _basicUnauthHTTPHeader;
@@ -72,7 +72,7 @@ protected:
 	std::string _password;
 	std::pair<std::string, std::string> _basicAuthString;
 	HTTP _http;
-	BaseLib::RPC::RPCEncoder _rpcEncoder;
+	std::shared_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;
 
 	void sendBasicUnauthorized(bool binary);
 };

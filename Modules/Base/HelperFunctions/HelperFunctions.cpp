@@ -28,18 +28,18 @@
  */
 
 #include "HelperFunctions.h"
-#include "../Output/Output.h"
+#include "../BaseLib.h"
 
 namespace BaseLib
 {
 
-bool HelperFunctions::_isBigEndian;
-std::map<char, int32_t> HelperFunctions::_hexMap;
-int32_t HelperFunctions::_asciiToBinaryTable[23];
-char HelperFunctions::_binaryToASCIITable[16];
-
-void HelperFunctions::init()
+HelperFunctions::HelperFunctions()
 {
+}
+
+void HelperFunctions::init(Obj* baseLib)
+{
+	_bl = baseLib;
 	checkEndianness();
 
 	_hexMap['0'] = 0x0;
@@ -151,15 +151,15 @@ std::vector<std::string> HelperFunctions::getFiles(std::string path)
 				}
 				catch(const std::exception& ex)
 				{
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
 				catch(Exception& ex)
 				{
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
 				catch(...)
 				{
-					Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+					_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				}
 			}
 		}
@@ -205,25 +205,9 @@ std::string HelperFunctions::getTimeString(int64_t time)
 
 int32_t HelperFunctions::getRandomNumber(int32_t min, int32_t max)
 {
-	try
-	{
-		std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
-		std::uniform_int_distribution<int32_t> distribution(min, max);
-		return distribution(generator);
-	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return 0;
+	std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
+	std::uniform_int_distribution<int32_t> distribution(min, max);
+	return distribution(generator);
 }
 
 void HelperFunctions::memcpyBigEndian(char* to, char* from, const uint32_t& length)
@@ -242,15 +226,15 @@ void HelperFunctions::memcpyBigEndian(char* to, char* from, const uint32_t& leng
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -262,15 +246,15 @@ void HelperFunctions::memcpyBigEndian(uint8_t* to, uint8_t* from, const uint32_t
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -287,15 +271,15 @@ void HelperFunctions::memcpyBigEndian(int32_t& to, std::vector<uint8_t>& from)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -315,69 +299,36 @@ void HelperFunctions::memcpyBigEndian(std::vector<uint8_t>& to, int32_t& from)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
 std::pair<std::string, std::string> HelperFunctions::split(std::string string, char delimiter)
 {
-	try
-	{
-
-		int32_t pos = string.find_last_of(delimiter);
-		if(pos == -1) return std::pair<std::string, std::string>(string, "");
-		if((unsigned)pos + 1 >= string.size()) return std::pair<std::string, std::string>(string.substr(0, pos), "");
-		return std::pair<std::string, std::string>(string.substr(0, pos), string.substr(pos + 1));
-	}
-    catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return std::pair<std::string, std::string>();
+	int32_t pos = string.find_last_of(delimiter);
+	if(pos == -1) return std::pair<std::string, std::string>(string, "");
+	if((unsigned)pos + 1 >= string.size()) return std::pair<std::string, std::string>(string.substr(0, pos), "");
+	return std::pair<std::string, std::string>(string.substr(0, pos), string.substr(pos + 1));
 }
 
 std::vector<std::string> HelperFunctions::splitAll(std::string string, char delimiter)
 {
-	try
+	std::vector<std::string> elements;
+	std::stringstream stringStream(string);
+	std::string element;
+	while (std::getline(stringStream, element, delimiter))
 	{
-		std::vector<std::string> elements;
-		std::stringstream stringStream(string);
-		std::string element;
-		while (std::getline(stringStream, element, delimiter))
-		{
-			elements.push_back(element);
-		}
-		return elements;
+		elements.push_back(element);
 	}
-    catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return std::vector<std::string>();
+	return elements;
 }
 
 char HelperFunctions::getHexChar(int32_t nibble)
@@ -389,73 +340,41 @@ char HelperFunctions::getHexChar(int32_t nibble)
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
 
 std::string HelperFunctions::getHexString(const std::vector<uint8_t>& data)
 {
-	try
+	std::ostringstream stringstream;
+	stringstream << std::hex << std::setfill('0') << std::uppercase;
+	for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
 	{
-		std::ostringstream stringstream;
-		stringstream << std::hex << std::setfill('0') << std::uppercase;
-		for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
-		{
-			stringstream << std::setw(2) << (int32_t)(*i);
-		}
-		stringstream << std::dec;
-		return stringstream.str();
+		stringstream << std::setw(2) << (int32_t)(*i);
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
+	stringstream << std::dec;
+	return stringstream.str();
 }
 
 std::string HelperFunctions::getHexString(const std::vector<char>& data)
 {
-	try
+	std::ostringstream stringstream;
+	stringstream << std::hex << std::setfill('0') << std::uppercase;
+	for(std::vector<char>::const_iterator i = data.begin(); i != data.end(); ++i)
 	{
-		std::ostringstream stringstream;
-		stringstream << std::hex << std::setfill('0') << std::uppercase;
-		for(std::vector<char>::const_iterator i = data.begin(); i != data.end(); ++i)
-		{
-			stringstream << std::setw(2) << (int32_t)(*i);
-		}
-		stringstream << std::dec;
-		return stringstream.str();
+		stringstream << std::setw(2) << (int32_t)(*i);
 	}
-	catch(const std::exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
+	stringstream << std::dec;
+	return stringstream.str();
 }
 
 std::string HelperFunctions::getHexString(int32_t number, int32_t width)
@@ -534,13 +453,13 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
 		int in_fd = open(source.c_str(), O_RDONLY);
 		if(in_fd == -1)
 		{
-			Output::printError("Error copying file " + source + ": " + strerror(errno));
+			_bl->out.printError("Error copying file " + source + ": " + strerror(errno));
 			return;
 		}
 		int out_fd = open(dest.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP);
 		if(out_fd == -1)
 		{
-			Output::printError("Error copying file " + source + ": " + strerror(errno));
+			_bl->out.printError("Error copying file " + source + ": " + strerror(errno));
 			return;
 		}
 		char buf[8192];
@@ -550,27 +469,27 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
 			if (!result) break;
 			if(result == -1)
 			{
-				Output::printError("Error reading file " + source + ": " + strerror(errno));
+				_bl->out.printError("Error reading file " + source + ": " + strerror(errno));
 				return;
 			}
 			if(write(out_fd, &buf[0], result) != result)
 			{
-				Output::printError("Error writing file " + dest + ": " + strerror(errno));
+				_bl->out.printError("Error writing file " + dest + ": " + strerror(errno));
 				return;
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -682,8 +601,8 @@ int32_t HelperFunctions::userID(std::string username)
 	int32_t result = getpwnam_r(username.c_str(), &pwd, &buffer.at(0), buffer.size(), &pwdResult);
 	if(!pwdResult)
 	{
-		if(result == 0) Output::printError("User name " + username + " not found.");
-		else Output::printError("Error getting UID for user name " + username + ": " + std::string(strerror(result)));
+		if(result == 0) _bl->out.printError("User name " + username + " not found.");
+		else _bl->out.printError("Error getting UID for user name " + username + ": " + std::string(strerror(result)));
 		return -1;
 	}
 	return pwd.pw_uid;
@@ -699,8 +618,8 @@ int32_t HelperFunctions::groupID(std::string groupname)
 	int32_t result = getgrnam_r(groupname.c_str(), &grp, &buffer.at(0), buffer.size(), &grpResult);
 	if(!grpResult)
 	{
-		if(result == 0) Output::printError("User name " + groupname + " not found.");
-		else Output::printError("Error getting GID for group name " + groupname + ": " + std::string(strerror(result)));
+		if(result == 0) _bl->out.printError("User name " + groupname + " not found.");
+		else _bl->out.printError("Error getting GID for group name " + groupname + ": " + std::string(strerror(result)));
 		return -1;
 	}
 	return grp.gr_gid;

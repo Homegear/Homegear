@@ -39,7 +39,7 @@ PhysicalParameter::PhysicalParameter()
 {
 }
 
-PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
+PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : PhysicalParameter()
 {
 	try
 	{
@@ -51,7 +51,7 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 				if(attributeValue == "integer") type = Type::Enum::typeInteger;
 				else if(attributeValue == "boolean") type = Type::Enum::typeBoolean;
 				else if(attributeValue == "string") type = Type::Enum::typeString;
-				else Output::printWarning("Warning: Unknown physical type: " + attributeValue);
+				else baseLib->out.printWarning("Warning: Unknown physical type: " + attributeValue);
 			}
 			else if(attributeName == "interface")
 			{
@@ -62,50 +62,50 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 				else if(attributeValue == "config_string") interface = Interface::Enum::configString;
 				else if(attributeValue == "store") interface = Interface::Enum::store;
 				else if(attributeValue == "eeprom") interface = Interface::Enum::eeprom;
-				else Output::printWarning("Warning: Unknown interface for \"physical\": " + attributeValue);
+				else baseLib->out.printWarning("Warning: Unknown interface for \"physical\": " + attributeValue);
 			}
 			else if(attributeName == "endian")
 			{
 				if(attributeValue == "little") endian = Endian::Enum::little;
 				else if(attributeValue == "big") endian = Endian::Enum::big; //default
-				else Output::printWarning("Warning: Unknown endianess for \"physical\": " + attributeValue);
+				else baseLib->out.printWarning("Warning: Unknown endianess for \"physical\": " + attributeValue);
 			}
 			else if(attributeName == "value_id") valueID = attributeValue;
 			else if(attributeName == "no_init") { if(attributeValue == "true") noInit = true; }
-			else if(attributeName == "list") list = HelperFunctions::getNumber(attributeValue);
+			else if(attributeName == "list") list = baseLib->hf.getNumber(attributeValue);
 			else if(attributeName == "index")
 			{
-				std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, '.');
+				std::pair<std::string, std::string> splitValue = baseLib->hf.split(attributeValue, '.');
 				index = 0;
 				if(!splitValue.second.empty())
 				{
-					index += HelperFunctions::getNumber(splitValue.second);
+					index += baseLib->hf.getNumber(splitValue.second);
 					index /= 10;
 				}
-				index += HelperFunctions::getNumber(splitValue.first);
+				index += baseLib->hf.getNumber(splitValue.first);
 			}
 			else if(attributeName == "size")
 			{
-				std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, '.');
+				std::pair<std::string, std::string> splitValue = baseLib->hf.split(attributeValue, '.');
 				size = 0;
 				if(!splitValue.second.empty())
 				{
-					size += HelperFunctions::getNumber(splitValue.second);
+					size += baseLib->hf.getNumber(splitValue.second);
 					size /= 10;
 				}
-				size += HelperFunctions::getNumber(splitValue.first);
+				size += baseLib->hf.getNumber(splitValue.first);
 				sizeDefined = true;
 			}
-			else if(attributeName == "read_size") readSize = HelperFunctions::getNumber(attributeValue);
+			else if(attributeName == "read_size") readSize = baseLib->hf.getNumber(attributeValue);
 			else if(attributeName == "counter") counter = attributeValue;
 			else if(attributeName == "volatile") { if(attributeValue == "true") isVolatile = true; }
 			else if(attributeName == "id") { id = attributeValue; }
 			else if(attributeName == "save_on_change") {} //not necessary, all values are saved on change
-			else if(attributeName == "mask") mask = HelperFunctions::getNumber(attributeValue);
+			else if(attributeName == "mask") mask = baseLib->hf.getNumber(attributeValue);
 			else if(attributeName == "read_size") {} //not necessary, because size can be determined through index
-			else Output::printWarning("Warning: Unknown attribute for \"physical\": " + attributeName);
+			else baseLib->out.printWarning("Warning: Unknown attribute for \"physical\": " + attributeName);
 		}
-		if(mask != -1 && fmod(index, 1) != 0) Output::printWarning("Warning: mask combined with unaligned index not supported.");
+		if(mask != -1 && fmod(index, 1) != 0) baseLib->out.printWarning("Warning: mask combined with unaligned index not supported.");
 		startIndex = std::lround(std::floor(index));
 		int32_t intDiff = std::lround(std::floor(size)) - 1;
 		if(intDiff < 0) intDiff = 0;
@@ -143,13 +143,13 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 							if(!attr1 || !attr2) continue;
 							event->dominoEvent = true;
 							std::string eventValue = std::string(attr1->value());
-							event->dominoEventValue = HelperFunctions::getNumber(eventValue);
+							event->dominoEventValue = baseLib->hf.getNumber(eventValue);
 							event->dominoEventDelayID = std::string(attr2->value());
 						}
-						else Output::printWarning("Warning: Unknown node for \"physical\\event\": " + eventNodeName);
+						else baseLib->out.printWarning("Warning: Unknown node for \"physical\\event\": " + eventNodeName);
 					}
 				}
-				else Output::printWarning("Warning: domino_event is only supported for physical type integer.");
+				else baseLib->out.printWarning("Warning: domino_event is only supported for physical type integer.");
 				eventFrames.push_back(event);
 			}
 			else if(nodeName == "address")
@@ -170,22 +170,22 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 							address.operation = PhysicalParameterAddress::Operation::substraction;
 							attributeValue.erase(0, 1);
 						}
-						std::pair<std::string, std::string> splitValue = HelperFunctions::split(attributeValue, '.');
+						std::pair<std::string, std::string> splitValue = baseLib->hf.split(attributeValue, '.');
 						address.index = 0;
 						if(!splitValue.second.empty())
 						{
-							address.index += HelperFunctions::getNumber(splitValue.second);
+							address.index += baseLib->hf.getNumber(splitValue.second);
 							address.index /= 10;
 						}
-						address.index += HelperFunctions::getNumber(splitValue.first);
+						address.index += baseLib->hf.getNumber(splitValue.first);
 						if(std::lround(address.index * 10) % 10 >= 8) address.index += 0.2; //e. g. 15.9 => 16.1
 						index = address.index;
 					}
 					else if(attributeName == "step")
 					{
-						address.step = HelperFunctions::getDouble(attributeValue);
+						address.step = baseLib->hf.getDouble(attributeValue);
 					}
-					else Output::printWarning("Warning: Unknown attribute for \"address\": " + attributeName);
+					else baseLib->out.printWarning("Warning: Unknown attribute for \"address\": " + attributeName);
 				}
 			}
 			else if(nodeName == "reset_after_send")
@@ -193,20 +193,20 @@ PhysicalParameter::PhysicalParameter(xml_node<>* node) : PhysicalParameter()
 				attr = physicalNode->first_attribute("param");
 				if(attr) resetAfterSend.push_back(std::string(attr->value()));
 			}
-			else Output::printWarning("Warning: Unknown node for \"physical\": " + nodeName);
+			else baseLib->out.printWarning("Warning: Unknown node for \"physical\": " + nodeName);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

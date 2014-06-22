@@ -36,11 +36,15 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 class Settings
 {
 public:
 	Settings();
 	virtual ~Settings() {}
+	void init(BaseLib::Obj* baseLib);
 	void load(std::string filename);
 
 	std::string certPath() { return _certPath; }
@@ -56,6 +60,7 @@ public:
 	void setPrioritizeThreads(bool value) { _prioritizeThreads = value; }
 	uint32_t workerThreadWindow() { return _workerThreadWindow; }
 	uint32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
+	std::string deviceDescriptionPath() { return _deviceDescriptionPath; }
 	std::string clientSettingsPath() { return _clientSettingsPath; }
 	std::string serverSettingsPath() { return _serverSettingsPath; }
 	std::string physicalInterfaceSettingsPath() { return _physicalInterfaceSettingsPath; }
@@ -65,6 +70,7 @@ public:
 	std::map<std::string, bool>& tunnelClients() { return _tunnelClients; }
 	std::string gpioPath() { return _gpioPath; }
 private:
+	BaseLib::Obj* _bl = nullptr;
 	std::string _certPath;
 	std::string _keyPath;
 	bool _loadDHParamsFromFile = true;
@@ -77,6 +83,7 @@ private:
 	bool _prioritizeThreads = true;
 	uint32_t _workerThreadWindow = 3000;
 	uint32_t _rpcServerThreadPriority = 0;
+	std::string _deviceDescriptionPath;
 	std::string _clientSettingsPath;
 	std::string _serverSettingsPath;
 	std::string _physicalInterfaceSettingsPath;

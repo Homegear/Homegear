@@ -42,6 +42,9 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace Systems
 {
 class LogicalDevice : public Peer::IPeerEventSink, public IPhysicalInterface::IPhysicalInterfaceEventSink, public IEvents
@@ -84,8 +87,8 @@ public:
 	};
 	//End event handling
 
-	LogicalDevice(IDeviceEventSink* eventHandler);
-	LogicalDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
+	LogicalDevice(DeviceFamilies deviceFamily, BaseLib::Obj* baseLib, IDeviceEventSink* eventHandler);
+	LogicalDevice(DeviceFamilies deviceFamily, BaseLib::Obj* baseLib, uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
 	virtual ~LogicalDevice();
 
 	virtual DeviceFamilies deviceFamily();
@@ -108,6 +111,8 @@ public:
 	virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
 	virtual void savePeers(bool full) {}
 protected:
+	BaseLib::Obj* _bl = nullptr;
+	DeviceFamilies _deviceFamily = DeviceFamilies::none;
 	uint64_t _deviceID = 0;
 	int32_t _address = 0;
     std::string _serialNumber;

@@ -43,20 +43,20 @@ std::shared_ptr<HomeMaticCentral> BidCoSPeer::getCentral()
 	try
 	{
 		if(_central) return _central;
-		_central = std::dynamic_pointer_cast<HomeMaticCentral>(BaseLib::Obj::family->getCentral());
+		_central = std::dynamic_pointer_cast<HomeMaticCentral>(GD::family->getCentral());
 		return _central;
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<HomeMaticCentral>();
 }
@@ -65,20 +65,20 @@ std::shared_ptr<HomeMaticDevice> BidCoSPeer::getDevice(int32_t address)
 {
 	try
 	{
-		std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(BaseLib::Obj::family->get(address)));
+		std::shared_ptr<HomeMaticDevice> device(std::dynamic_pointer_cast<HomeMaticDevice>(GD::family->get(address)));
 		return device;
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return std::shared_ptr<HomeMaticDevice>();
 }
@@ -89,7 +89,7 @@ void BidCoSPeer::initializeCentralConfig()
 	{
 		if(!rpcDevice)
 		{
-			BaseLib::Output::printWarning("Warning: Tried to initialize HomeMatic BidCoS peer's central config without xmlrpcDevice being set.");
+			GD::out.printWarning("Warning: Tried to initialize HomeMatic BidCoS peer's central config without xmlrpcDevice being set.");
 			return;
 		}
 		raiseCreateSavepoint("bidCoSPeerConfig" + std::to_string(_peerID));
@@ -137,15 +137,15 @@ void BidCoSPeer::initializeCentralConfig()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     raiseReleaseSavepoint("bidCoSPeerConfig" + std::to_string(_peerID));
 }
@@ -176,15 +176,15 @@ void BidCoSPeer::initializeLinkConfig(int32_t channel, int32_t remoteAddress, in
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     raiseReleaseSavepoint("bidCoSPeerLinkConfig" + std::to_string(_peerID));
 }
@@ -212,7 +212,7 @@ void BidCoSPeer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32
 		}
 		if(function.empty()) return;
 		if(linkSet->defaultValues.find(function) == linkSet->defaultValues.end()) return;
-		BaseLib::Output::printInfo("Info: Peer " + std::to_string(_peerID) + ": Applying channel function " + function + ".");
+		GD::out.printInfo("Info: Peer " + std::to_string(_peerID) + ": Applying channel function " + function + ".");
 		for(BaseLib::RPC::DefaultValue::iterator j = linkSet->defaultValues.at(function).begin(); j != linkSet->defaultValues.at(function).end(); ++j)
 		{
 			BaseLib::Systems::RPCConfigurationParameter* parameter = &linksCentral[channel][peerAddress][remoteChannel][j->first];
@@ -223,15 +223,15 @@ void BidCoSPeer::applyConfigFunction(int32_t channel, int32_t peerAddress, int32
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -243,15 +243,15 @@ BidCoSPeer::~BidCoSPeer()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -264,15 +264,15 @@ void BidCoSPeer::dispose()
 	}
 	catch(const std::exception& ex)
     {
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -292,15 +292,15 @@ void BidCoSPeer::setAESKeyIndex(int32_t value)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -318,7 +318,7 @@ void BidCoSPeer::setPhysicalInterfaceID(std::string id)
 	}
 }
 
-BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(parentID, centralFeatures, eventHandler)
+BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, parentID, centralFeatures, eventHandler)
 {
 	try
 	{
@@ -331,19 +331,19 @@ BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* 
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-BidCoSPeer::BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(id, address, serialNumber, parentID, centralFeatures, eventHandler)
+BidCoSPeer::BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
 	_physicalInterface = GD::defaultPhysicalInterface;
 }
@@ -382,7 +382,7 @@ void BidCoSPeer::worker()
 					saveParameter(parameter->databaseID, parameter->data);
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> {(*i)->key});
 					std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>> { valuesCentral.at((*i)->channel).at((*i)->key).rpcParameter->convertFromPacket((*i)->data) });
-					BaseLib::Output::printInfo("Info: Domino event: " + (*i)->key + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
+					GD::out.printInfo("Info: Domino event: " + (*i)->key + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string((*i)->channel) + " was reset.");
 					raiseRPCEvent(_peerID, (*i)->channel, _serialNumber + ":" + std::to_string((*i)->channel), valueKeys, rpcValues);
 				}
 				else
@@ -409,17 +409,17 @@ void BidCoSPeer::worker()
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_variablesToResetMutex.unlock();
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_variablesToResetMutex.unlock();
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		_variablesToResetMutex.unlock();
 	}
 }
@@ -639,15 +639,15 @@ std::string BidCoSPeer::handleCLICommand(std::string command)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -671,15 +671,15 @@ void BidCoSPeer::addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -707,15 +707,15 @@ std::shared_ptr<BasicPeer> BidCoSPeer::getPeer(int32_t channel, std::string seri
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -735,15 +735,15 @@ std::shared_ptr<HomeMaticDevice> BidCoSPeer::getHiddenPeerDevice()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<HomeMaticDevice>();
 }
@@ -759,15 +759,15 @@ std::shared_ptr<BasicPeer> BidCoSPeer::getHiddenPeer(int32_t channel)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -785,15 +785,15 @@ std::shared_ptr<BasicPeer> BidCoSPeer::getPeer(int32_t channel, int32_t address,
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return std::shared_ptr<BasicPeer>();
 }
@@ -824,15 +824,15 @@ void BidCoSPeer::removePeer(int32_t channel, int32_t address, int32_t remoteChan
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _databaseMutex.unlock();
 }
@@ -851,15 +851,15 @@ void BidCoSPeer::save(bool savePeer, bool variables, bool centralConfig)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -870,21 +870,21 @@ void BidCoSPeer::deletePairedVirtualDevice(int32_t address)
 		std::shared_ptr<HomeMaticDevice> device(getDevice(address));
 		if(device && !device->isCentral())
 		{
-			BaseLib::Obj::family->remove(device->getID());
+			GD::family->remove(device->getID());
 			device->reset();
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -904,7 +904,7 @@ void BidCoSPeer::deletePairedVirtualDevices()
 					device = getDevice((*j)->address);
 					if(device && !device->isCentral())
 					{
-						BaseLib::Obj::family->remove(device->getID());
+						GD::family->remove(device->getID());
 						deleted[(*j)->address] = true;
 					}
 				}
@@ -913,15 +913,15 @@ void BidCoSPeer::deletePairedVirtualDevices()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -929,7 +929,7 @@ void BidCoSPeer::serializePeers(std::vector<uint8_t>& encodedData)
 {
 	try
 	{
-		BaseLib::BinaryEncoder encoder;
+		BaseLib::BinaryEncoder encoder(_bl);
 		encoder.encodeInteger(encodedData, _peers.size());
 		for(std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
@@ -951,15 +951,15 @@ void BidCoSPeer::serializePeers(std::vector<uint8_t>& encodedData)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -967,7 +967,7 @@ void BidCoSPeer::unserializePeers(std::shared_ptr<std::vector<char>> serializedD
 {
 	try
 	{
-		BaseLib::BinaryDecoder decoder;
+		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
 		uint32_t peersSize = decoder.decodeInteger(serializedData, position);
 		for(uint32_t i = 0; i < peersSize; i++)
@@ -992,15 +992,15 @@ void BidCoSPeer::unserializePeers(std::shared_ptr<std::vector<char>> serializedD
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1008,7 +1008,7 @@ void BidCoSPeer::serializeNonCentralConfig(std::vector<uint8_t>& encodedData)
 {
 	try
 	{
-		BaseLib::BinaryEncoder encoder;
+		BaseLib::BinaryEncoder encoder(_bl);
 		encoder.encodeInteger(encodedData, config.size());
 		for(std::unordered_map<int32_t, int32_t>::const_iterator i = config.begin(); i != config.end(); ++i)
 		{
@@ -1018,15 +1018,15 @@ void BidCoSPeer::serializeNonCentralConfig(std::vector<uint8_t>& encodedData)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1035,7 +1035,7 @@ void BidCoSPeer::unserializeNonCentralConfig(std::shared_ptr<std::vector<char>> 
 	try
 	{
 		config.clear();
-		BaseLib::BinaryDecoder decoder;
+		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
 		uint32_t configSize = decoder.decodeInteger(serializedData, position);
 		for(uint32_t i = 0; i < configSize; i++)
@@ -1046,15 +1046,15 @@ void BidCoSPeer::unserializeNonCentralConfig(std::shared_ptr<std::vector<char>> 
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1062,7 +1062,7 @@ void BidCoSPeer::serializeVariablesToReset(std::vector<uint8_t>& encodedData)
 {
 	try
 	{
-		BaseLib::BinaryEncoder encoder;
+		BaseLib::BinaryEncoder encoder(_bl);
 		_variablesToResetMutex.lock();
 		encoder.encodeInteger(encodedData, _variablesToReset.size());
 		for(std::vector<std::shared_ptr<VariableToReset>>::iterator i = _variablesToReset.begin(); i != _variablesToReset.end(); ++i)
@@ -1077,15 +1077,15 @@ void BidCoSPeer::serializeVariablesToReset(std::vector<uint8_t>& encodedData)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _variablesToResetMutex.unlock();
 }
@@ -1097,7 +1097,7 @@ void BidCoSPeer::unserializeVariablesToReset(std::shared_ptr<std::vector<char>> 
 		_variablesToResetMutex.lock();
 		_variablesToReset.clear();
 		_variablesToResetMutex.unlock();
-		BaseLib::BinaryDecoder decoder;
+		BaseLib::BinaryDecoder decoder(_bl);
 		uint32_t position = 0;
 		uint32_t variablesToResetSize = decoder.decodeInteger(serializedData, position);
 		for(uint32_t i = 0; i < variablesToResetSize; i++)
@@ -1117,30 +1117,30 @@ void BidCoSPeer::unserializeVariablesToReset(std::shared_ptr<std::vector<char>> 
 			}
 			catch(const std::exception& ex)
 			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(BaseLib::Exception& ex)
 			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 			_variablesToResetMutex.unlock();
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1176,15 +1176,15 @@ void BidCoSPeer::saveVariables()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1198,15 +1198,15 @@ void BidCoSPeer::savePeers()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1220,15 +1220,15 @@ void BidCoSPeer::saveNonCentralConfig()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1242,15 +1242,15 @@ void BidCoSPeer::saveVariablesToReset()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1265,15 +1265,15 @@ void BidCoSPeer::savePendingQueues()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1290,21 +1290,21 @@ void BidCoSPeer::enqueuePendingQueues()
 		std::shared_ptr<HomeMaticCentral> central = getCentral();
 		if(central)
 		{
-			BaseLib::Output::printInfo("Info: Queue is not finished (peer: " + std::to_string(_peerID) + "). Retrying...");
+			GD::out.printInfo("Info: Queue is not finished (peer: " + std::to_string(_peerID) + "). Retrying...");
 			central->enqueuePendingQueues(_address);
 		}
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -1333,7 +1333,7 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 				_deviceType = BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, row->second.at(3)->intValue);
 				if(_deviceType.type() == (uint32_t)DeviceType::none)
 				{
-					BaseLib::Output::printError("Error loading HomeMatic BidCoS peer " + std::to_string(_peerID) + ": Device type unknown: 0x" + BaseLib::HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
+					GD::out.printError("Error loading HomeMatic BidCoS peer " + std::to_string(_peerID) + ": Device type unknown: 0x" + BaseLib::HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
 				}
 				break;
 			case 4:
@@ -1372,7 +1372,7 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 			case 15:
 				if(_centralFeatures)
 				{
-					serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_peerID, _serialNumber, this));
+					serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
 					serviceMessages->unserialize(row->second.at(5)->binaryValue);
 				}
 				break;
@@ -1399,22 +1399,22 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 		{
 			if(!serviceMessages)
 			{
-				serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_peerID, _serialNumber, this));
+				serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
 			}
 			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	_databaseMutex.unlock();
 }
@@ -1425,10 +1425,10 @@ bool BidCoSPeer::load(BaseLib::Systems::LogicalDevice* device)
 	{
 		loadVariables((HomeMaticDevice*)device);
 
-		rpcDevice = BaseLib::Obj::ins->rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
+		rpcDevice = GD::rpcDevices.find(_deviceType, _firmwareVersion, _countFromSysinfo);
 		if(!rpcDevice)
 		{
-			BaseLib::Output::printError("Error loading HomeMatic BidCoS peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
+			GD::out.printError("Error loading HomeMatic BidCoS peer " + std::to_string(_peerID) + ": Device type not found: 0x" + BaseLib::HelperFunctions::getHexString((uint32_t)_deviceType.type()) + " Firmware version: " + std::to_string(_firmwareVersion));
 			return false;
 		}
 		std::string entry;
@@ -1451,15 +1451,15 @@ bool BidCoSPeer::load(BaseLib::Systems::LogicalDevice* device)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -1478,15 +1478,15 @@ bool BidCoSPeer::aesEnabled()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -1499,18 +1499,18 @@ void BidCoSPeer::checkAESKey(bool onlyPushing)
 		if(!aesEnabled()) return;
 		if(_aesKeyIndex == _physicalInterface->getCurrentRFKeyIndex())
 		{
-			BaseLib::Output::printDebug("Debug: AES key of peer " + std::to_string(_peerID) + " is current.");
+			GD::out.printDebug("Debug: AES key of peer " + std::to_string(_peerID) + " is current.");
 			return;
 		}
-		BaseLib::Output::printDebug("Info: Updating AES key of peer " + std::to_string(_peerID) + ".");
+		GD::out.printDebug("Info: Updating AES key of peer " + std::to_string(_peerID) + ".");
 		if(_aesKeyIndex > _physicalInterface->getCurrentRFKeyIndex())
 		{
-			BaseLib::Output::printError("Error: Can't update AES key of peer " + std::to_string(_peerID) + ". Peer's AES key index is larger than the key index defined in physicalinterfaces.conf.");
+			GD::out.printError("Error: Can't update AES key of peer " + std::to_string(_peerID) + ". Peer's AES key index is larger than the key index defined in physicalinterfaces.conf.");
 			return;
 		}
 		if(_aesKeyIndex > 0 && _physicalInterface->getCurrentRFKeyIndex() - _aesKeyIndex > 1)
 		{
-			BaseLib::Output::printError("Error: Can't update AES key of peer " + std::to_string(_peerID) + ". AES key seems to be updated more than once since this peer's config was last updated (key indexes differ by more than 1).");
+			GD::out.printError("Error: Can't update AES key of peer " + std::to_string(_peerID) + ". AES key seems to be updated more than once since this peer's config was last updated (key indexes differ by more than 1).");
 			return;
 		}
 		if(pendingBidCoSQueues->find(BidCoSQueueType::SETAESKEY)) return;
@@ -1544,20 +1544,20 @@ void BidCoSPeer::checkAESKey(bool onlyPushing)
 		}
 		else
 		{
-			BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1641,15 +1641,15 @@ std::string BidCoSPeer::printConfig()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }
@@ -1685,15 +1685,15 @@ IBidCoSInterface::PeerInfo BidCoSPeer::getPeerInfo()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return IBidCoSInterface::PeerInfo();
 }
@@ -1708,7 +1708,7 @@ void BidCoSPeer::onConfigPending(bool configPending)
 		{
 			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && _physicalInterface->autoResend())
 			{
-				BaseLib::Output::printDebug("Debug: Setting physical device's wake up flag.");
+				GD::out.printDebug("Debug: Setting physical device's wake up flag.");
 				_physicalInterface->addPeer(getPeerInfo());
 			}
 		}
@@ -1716,22 +1716,22 @@ void BidCoSPeer::onConfigPending(bool configPending)
 		{
 			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && _physicalInterface->autoResend())
 			{
-				BaseLib::Output::printDebug("Debug: Removing physical device's wake up flag.");
+				GD::out.printDebug("Debug: Removing physical device's wake up flag.");
 				_physicalInterface->addPeer(getPeerInfo());
 			}
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1763,15 +1763,15 @@ int32_t BidCoSPeer::getChannelGroupedWith(int32_t channel)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return -1;
 }
@@ -1781,22 +1781,22 @@ int32_t BidCoSPeer::getNewFirmwareVersion()
 	try
 	{
 		std::string filenamePrefix = BaseLib::HelperFunctions::getHexString((int32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, 4) + "." + BaseLib::HelperFunctions::getHexString(_deviceType.type(), 8);
-		std::string versionFile(BaseLib::Obj::ins->settings.firmwarePath() + filenamePrefix + ".version");
+		std::string versionFile(_bl->settings.firmwarePath() + filenamePrefix + ".version");
 		if(!BaseLib::HelperFunctions::fileExists(versionFile)) return 0;
 		std::string versionHex = BaseLib::HelperFunctions::getFileContent(versionFile);
 		return BaseLib::HelperFunctions::getNumber(versionHex, true);
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return 0;
 }
@@ -1809,15 +1809,15 @@ bool BidCoSPeer::firmwareUpdateAvailable()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return false;
 }
@@ -1859,13 +1859,13 @@ void BidCoSPeer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::
 					if(j->constValue > -1)
 					{
 						int32_t intValue = 0;
-						BaseLib::HelperFunctions::memcpyBigEndian(intValue, data);
+						_bl->hf.memcpyBigEndian(intValue, data);
 						if(intValue != j->constValue) break; else continue;
 					}
 				}
 				else if(j->constValue > -1)
 				{
-					BaseLib::HelperFunctions::memcpyBigEndian(data, j->constValue);
+					_bl->hf.memcpyBigEndian(data, j->constValue);
 				}
 				else continue;
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
@@ -1913,15 +1913,15 @@ void BidCoSPeer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1941,7 +1941,7 @@ void BidCoSPeer::handleDominoEvent(std::shared_ptr<BaseLib::RPC::Parameter> para
 				{
 					if((*k)->channel == channel && (*k)->key == parameter->id)
 					{
-						BaseLib::Output::printDebug("Debug: Deleting element " + parameter->id + " from _variablesToReset. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frameID);
+						GD::out.printDebug("Debug: Deleting element " + parameter->id + " from _variablesToReset. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frameID);
 						_variablesToReset.erase(k);
 						break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
 					}
@@ -1955,27 +1955,27 @@ void BidCoSPeer::handleDominoEvent(std::shared_ptr<BaseLib::RPC::Parameter> para
 			int64_t time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 			std::shared_ptr<VariableToReset> variable(new VariableToReset);
 			variable->channel = channel;
-			BaseLib::HelperFunctions::memcpyBigEndian(variable->data, (*j)->dominoEventValue);
+			_bl->hf.memcpyBigEndian(variable->data, (*j)->dominoEventValue);
 			variable->resetTime = time + (delay * 1000);
 			variable->key = parameter->id;
 			variable->isDominoEvent = true;
 			_variablesToResetMutex.lock();
 			_variablesToReset.push_back(variable);
 			_variablesToResetMutex.unlock();
-			BaseLib::Output::printDebug("Debug: " + parameter->id + " will be reset in " + std::to_string((variable->resetTime - time) / 1000) + "s.", 5);
+			GD::out.printDebug("Debug: " + parameter->id + " will be reset in " + std::to_string((variable->resetTime - time) / 1000) + "s.", 5);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -2000,15 +2000,15 @@ void BidCoSPeer::setRSSIDevice(uint8_t rssi)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -2032,15 +2032,15 @@ bool BidCoSPeer::hasLowbatBit(std::shared_ptr<BaseLib::RPC::DeviceFrame> frame)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -2101,7 +2101,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, parameter->data);
-					if(BaseLib::Obj::ins->debugLevel >= 4) BaseLib::Output::printInfo("Info: " + i->first + " of HomeMatic BidCoS peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
+					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of HomeMatic BidCoS peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
 					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
@@ -2200,15 +2200,15 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -2312,8 +2312,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int3
 			std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
 			if(rpcChannel->hidden) return description;
 
-			if(fields.empty() || fields.find("FAMILY") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS))));
-			if(fields.empty() || fields.find("FAMILY_STRING") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY_STRING", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::Obj::family->getName()))));
+			if(fields.empty() || fields.find("FAMILYID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("FAMILY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS))));
 			if(fields.empty() || fields.find("ID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)_peerID))));
 			if(fields.empty() || fields.find("ADDRESS") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("ADDRESS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
 
@@ -2430,15 +2429,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int3
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2463,15 +2462,15 @@ std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> BidCoSP
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>>();
 }
@@ -2499,15 +2498,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceInfo(std::map<st
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<BaseLib::RPC::RPCVariable>();
 }
@@ -2530,15 +2529,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamsetId(uint32_t ch
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2570,7 +2569,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 				{
 					if(!_physicalInterface->aesSupported())
 					{
-						BaseLib::Output::printWarning("Warning: Tried to set AES_ACTIVE on peer " + std::to_string(_peerID) + ", but AES is not supported by peer's physical interface.");
+						GD::out.printWarning("Warning: Tried to set AES_ACTIVE on peer " + std::to_string(_peerID) + ", but AES is not supported by peer's physical interface.");
 						continue;
 					}
 					if(!aesEnabled()) aesActivated = true;
@@ -2598,7 +2597,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 				}
 				parameter->data = value;
 				saveParameter(parameter->databaseID, parameter->data);
-				BaseLib::Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
+				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
@@ -2684,7 +2683,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			}
 			else
 			{
-				BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+				GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			}
 			raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
@@ -2734,7 +2733,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 				}
 				parameter->data = value;
 				saveParameter(parameter->databaseID, parameter->data);
-				BaseLib::Output::printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
+				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::configString) continue;
 				changedParameters[list][intIndex] = allParameters[list][intIndex];
@@ -2819,7 +2818,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			}
 			else
 			{
-				BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+				GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 			}
 			raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
@@ -2827,15 +2826,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2889,15 +2888,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamset(int32_t chann
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2917,15 +2916,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getLinkInfo(int32_t sende
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -2944,15 +2943,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setLinkInfo(int32_t sende
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3019,15 +3018,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getLinkPeers(int32_t chan
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3061,7 +3060,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getLink(int32_t channel, 
 				std::shared_ptr<BidCoSPeer> remotePeer(central->getPeer((*i)->address));
 				if(!remotePeer)
 				{
-					BaseLib::Output::printDebug("Debug: Can't return link description for peer with address 0x" + BaseLib::HelperFunctions::getHexString((*i)->address, 6) + ". The peer is not paired to Homegear.");
+					GD::out.printDebug("Debug: Can't return link description for peer with address 0x" + BaseLib::HelperFunctions::getHexString((*i)->address, 6) + ". The peer is not paired to Homegear.");
 					continue;
 				}
 				bool peerKnowsMe = false;
@@ -3227,15 +3226,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getLink(int32_t channel, 
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3603,15 +3602,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamsetDescription(in
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3627,15 +3626,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getValue(uint32_t channel
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3661,7 +3660,7 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
 				parameter->data = rpcParameter->convertToPacket(value);
 				saveParameter(parameter->databaseID, parameter->data);
-				BaseLib::Output::printInfo("Info: Setting valve state of HM-CC-VD with id " + std::to_string(_peerID) + " to " + std::to_string(value->integerValue / 2) + "%.");
+				GD::out.printInfo("Info: Setting valve state of HM-CC-VD with id " + std::to_string(_peerID) + " to " + std::to_string(value->integerValue / 2) + "%.");
 				return true;
 			}
 		}
@@ -3679,7 +3678,7 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				std::shared_ptr<BidCoSPeer> associatedPeer = central->getPeer(_address);
 				if(!associatedPeer)
 				{
-					BaseLib::Output::printError("Error: Could not handle \"STATE\", because the main team peer is not paired to this central.");
+					GD::out.printError("Error: Could not handle \"STATE\", because the main team peer is not paired to this central.");
 					return false;
 				}
 				if(associatedPeer->getTeamData().empty()) associatedPeer->getTeamData().push_back(0);
@@ -3707,7 +3706,7 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 				std::shared_ptr<BidCoSPeer> associatedPeer = central->getPeer(_address);
 				if(!associatedPeer)
 				{
-					BaseLib::Output::printError("Error: Could not handle \"INSTALL_TEST\", because the main team peer is not paired to this central.");
+					GD::out.printError("Error: Could not handle \"INSTALL_TEST\", because the main team peer is not paired to this central.");
 					return false;
 				}
 				if(associatedPeer->getTeamData().empty()) associatedPeer->getTeamData().push_back(0);
@@ -3725,15 +3724,15 @@ bool BidCoSPeer::setHomegearValue(uint32_t channel, std::string valueKey, std::s
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return false;
 }
@@ -3744,12 +3743,12 @@ void BidCoSPeer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionPara
 	{
 		if(parameters->integers.size() != 3) return;
 		if(parameters->strings.size() != 1) return;
-		BaseLib::Output::printMessage("addVariableToResetCallback invoked for parameter " + parameters->strings.at(0) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ".", 5);
-		BaseLib::Output::printInfo("Parameter " + parameters->strings.at(0) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " will be reset at " + BaseLib::HelperFunctions::getTimeString(parameters->integers.at(2)) + ".");
+		GD::out.printMessage("addVariableToResetCallback invoked for parameter " + parameters->strings.at(0) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ".", 5);
+		GD::out.printInfo("Parameter " + parameters->strings.at(0) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " will be reset at " + BaseLib::HelperFunctions::getTimeString(parameters->integers.at(2)) + ".");
 		std::shared_ptr<VariableToReset> variable(new VariableToReset);
 		variable->channel = parameters->integers.at(0);
 		int32_t integerValue = parameters->integers.at(1);
-		BaseLib::HelperFunctions::memcpyBigEndian(variable->data, integerValue);
+		_bl->hf.memcpyBigEndian(variable->data, integerValue);
 		variable->resetTime = parameters->integers.at(2);
 		variable->key = parameters->strings.at(0);
 		_variablesToResetMutex.lock();
@@ -3758,15 +3757,15 @@ void BidCoSPeer::addVariableToResetCallback(std::shared_ptr<CallbackFunctionPara
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -3787,15 +3786,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setInterface(std::string 
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
@@ -3857,7 +3856,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 		std::vector<uint8_t> data = rpcParameter->convertToPacket(value);
 		parameter->data = data;
 		saveParameter(parameter->databaseID, data);
-		if(BaseLib::Obj::ins->debugLevel > 4) BaseLib::Output::printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(data) + ".");
+		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(data) + ".");
 
 		std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue(_physicalInterface, BidCoSQueueType::PEER));
 		queue->noSending = true;
@@ -3882,7 +3881,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 			if(i->constValue > -1)
 			{
 				std::vector<uint8_t> data;
-				BaseLib::HelperFunctions::memcpyBigEndian(data, i->constValue);
+				_bl->hf.memcpyBigEndian(data, i->constValue);
 				packet->setPosition(i->index, i->size, data);
 				continue;
 			}
@@ -3892,7 +3891,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 			{
 				additionalParameter = &valuesCentral[channel][i->additionalParameter];
 				int32_t intValue = 0;
-				BaseLib::HelperFunctions::memcpyBigEndian(intValue, additionalParameter->data);
+				_bl->hf.memcpyBigEndian(intValue, additionalParameter->data);
 				if(!i->omitIfSet || intValue != i->omitIf)
 				{
 					//Don't set ON_TIME when value is false
@@ -3915,13 +3914,13 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 						break;
 					}
 				}
-				if(!paramFound) BaseLib::Output::printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+				if(!paramFound) GD::out.printError("Error constructing packet. param \"" + i->param + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 			}
 			if(i->additionalParameter == "ON_TIME" && additionalParameter)
 			{
 				if((rpcParameter->physicalParameter->valueID != "STATE" && rpcParameter->physicalParameter->valueID != "LEVEL") || (rpcParameter->physicalParameter->valueID == "STATE" && rpcParameter->logicalParameter->type != BaseLib::RPC::LogicalParameter::Type::Enum::typeBoolean) || (rpcParameter->physicalParameter->valueID == "LEVEL" && rpcParameter->logicalParameter->type != BaseLib::RPC::LogicalParameter::Type::Enum::typeFloat))
 				{
-					BaseLib::Output::printError("Error: Can't set \"ON_TIME\" for " + rpcParameter->physicalParameter->valueID + ". Currently \"ON_TIME\" is only supported for \"STATE\" of type \"boolean\" or \"LEVEL\" of type \"float\". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+					GD::out.printError("Error: Can't set \"ON_TIME\" for " + rpcParameter->physicalParameter->valueID + ". Currently \"ON_TIME\" is only supported for \"STATE\" of type \"boolean\" or \"LEVEL\" of type \"float\". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					continue;
 				}
 				if(!_variablesToReset.empty())
@@ -3931,7 +3930,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 					{
 						if((*i)->channel == channel && (*i)->key == rpcParameter->physicalParameter->valueID)
 						{
-							BaseLib::Output::printMessage("Debug: Deleting element from _variablesToReset. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id, 5);
+							GD::out.printMessage("Debug: Deleting element from _variablesToReset. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id, 5);
 							_variablesToReset.erase(i);
 							break; //The key should only be once in the vector, so breaking is ok and we can't continue as the iterator is invalidated.
 						}
@@ -3961,7 +3960,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 					BaseLib::Systems::RPCConfigurationParameter* tempParam = &valuesCentral.at(channel).at(*j);
 					tempParam->data = defaultValue;
 					saveParameter(tempParam->databaseID, tempParam->data);
-					BaseLib::Output::printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+					GD::out.printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 					valueKeys->push_back(*j);
 					values->push_back(logicalDefaultValue);
 				}
@@ -3979,7 +3978,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 			if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
 			getCentral()->enqueuePendingQueues(_address);
 		}
-		else BaseLib::Output::printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+		else GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
 
 		raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 
@@ -3987,17 +3986,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
         _variablesToResetMutex.unlock();
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
         _variablesToResetMutex.unlock();
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
         _variablesToResetMutex.unlock();
     }
     return BaseLib::RPC::RPCVariable::createError(-1, "unknown error");

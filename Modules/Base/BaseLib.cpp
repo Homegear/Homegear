@@ -32,14 +32,12 @@
 namespace BaseLib
 {
 
-Obj* Obj::ins;
-Systems::DeviceFamily* Obj::family = nullptr;
-
 Obj::Obj(std::string exePath)
 {
-	Obj::ins = this;
-	executablePath = exePath;
-	HelperFunctions::init();
+	fileDescriptorManager.init(this);
+	hf.init(this);
+	settings.init(this);
+	out.init(this);
 }
 
 Obj::~Obj()

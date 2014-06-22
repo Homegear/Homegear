@@ -34,6 +34,13 @@ PhysicalInterfaces::PhysicalInterfaces()
 {
 }
 
+void PhysicalInterfaces::dispose()
+{
+	_physicalInterfacesMutex.lock();
+	_physicalInterfaces.clear();
+	_physicalInterfacesMutex.unlock();
+}
+
 void PhysicalInterfaces::reset()
 {
 	_physicalInterfacesMutex.lock();
@@ -54,7 +61,7 @@ void PhysicalInterfaces::load(std::string filename)
 
 		if (!(fin = fopen(filename.c_str(), "r")))
 		{
-			BaseLib::Output::printError("Unable to open physical device config file: " + filename + ". " + strerror(errno));
+			GD::out.printError("Unable to open physical device config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
@@ -89,8 +96,8 @@ void PhysicalInterfaces::load(std::string filename)
 						else if(name == "insteon") settings->family = BaseLib::Systems::DeviceFamilies::Insteon;
 						else if(name == "fs20") settings->family = BaseLib::Systems::DeviceFamilies::FS20;
 						else if(name == "max") settings->family = BaseLib::Systems::DeviceFamilies::MAX;
-						if(GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end()) BaseLib::Output::printDebug("Debug: Reading config for physical device family " + GD::deviceFamilies.at(settings->family)->getName());
-						else BaseLib::Output::printError("Error in physicalinterfaces.conf: No module found for device family: " + name);
+						if(GD::deviceFamilies.find(settings->family) != GD::deviceFamilies.end()) GD::out.printDebug("Debug: Reading config for physical device family " + GD::deviceFamilies.at(settings->family)->getName());
+						else GD::out.printError("Error in physicalinterfaces.conf: No module found for device family: " + name);
 						break;
 					}
 					ptr++;
@@ -121,48 +128,48 @@ void PhysicalInterfaces::load(std::string filename)
 					if(!value.empty())
 					{
 						settings->id = value;
-						BaseLib::Output::printDebug("Debug: id of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->id);
+						GD::out.printDebug("Debug: id of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->id);
 					}
 				}
 				else if(name == "default")
 				{
 					if(value == "true") settings->isDefault = true;
-					BaseLib::Output::printDebug("Debug: default of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->isDefault));
+					GD::out.printDebug("Debug: default of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->isDefault));
 				}
 				else if(name == "devicetype")
 				{
 					BaseLib::HelperFunctions::toLower(value);
 					settings->type = value;
-					BaseLib::Output::printDebug("Debug: deviceType of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->type);
+					GD::out.printDebug("Debug: deviceType of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->type);
 				}
 				else if(name == "device")
 				{
 					settings->device = value;
-					BaseLib::Output::printDebug("Debug: device of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->device);
+					GD::out.printDebug("Debug: device of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->device);
 				}
 				else if(name == "responsedelay")
 				{
 					settings->responseDelay = BaseLib::HelperFunctions::getNumber(value);
 					if(settings->responseDelay > 10000) settings->responseDelay = 10000;
-					BaseLib::Output::printDebug("Debug: responseDelay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->responseDelay));
+					GD::out.printDebug("Debug: responseDelay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->responseDelay));
 				}
 				else if(name == "oneway")
 				{
 					BaseLib::HelperFunctions::toLower(value);
 					if(value == "true") settings->oneWay = true;
-					BaseLib::Output::printDebug("Debug: oneWay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->oneWay));
+					GD::out.printDebug("Debug: oneWay of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->oneWay));
 				}
 				else if(name == "enablerxvalue")
 				{
 					int32_t number = BaseLib::HelperFunctions::getNumber(value);
 					settings->enableRXValue = number;
-					BaseLib::Output::printDebug("Debug: enableRXValue of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->enableRXValue));
+					GD::out.printDebug("Debug: enableRXValue of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->enableRXValue));
 				}
 				else if(name == "enabletxvalue")
 				{
 					int32_t number = BaseLib::HelperFunctions::getNumber(value);
 					settings->enableTXValue = number;
-					BaseLib::Output::printDebug("Debug: enableTXValue of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->enableTXValue));
+					GD::out.printDebug("Debug: enableTXValue of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->enableTXValue));
 				}
 				else if(name == "gpio1")
 				{
@@ -170,7 +177,7 @@ void PhysicalInterfaces::load(std::string filename)
 					if(number > 0)
 					{
 						settings->gpio[1].number = number;
-						BaseLib::Output::printDebug("Debug: GPIO1 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[1].number));
+						GD::out.printDebug("Debug: GPIO1 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[1].number));
 					}
 				}
 				else if(name == "gpio2")
@@ -179,7 +186,7 @@ void PhysicalInterfaces::load(std::string filename)
 					if(number > 0)
 					{
 						settings->gpio[2].number = number;
-						BaseLib::Output::printDebug("Debug: GPIO2 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[2].number));
+						GD::out.printDebug("Debug: GPIO2 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[2].number));
 					}
 				}
 				else if(name == "gpio3")
@@ -188,54 +195,54 @@ void PhysicalInterfaces::load(std::string filename)
 					if(number > 0)
 					{
 						settings->gpio[3].number = number;
-						BaseLib::Output::printDebug("Debug: GPIO3 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[3].number));
+						GD::out.printDebug("Debug: GPIO3 of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->gpio[3].number));
 					}
 				}
 				else if(name == "host")
 				{
 					settings->host = value;
-					BaseLib::Output::printDebug("Debug: Host of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->host);
+					GD::out.printDebug("Debug: Host of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->host);
 				}
 				else if(name == "port")
 				{
 					settings->port = value;
-					BaseLib::Output::printDebug("Debug: Port of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->port);
+					GD::out.printDebug("Debug: Port of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->port);
 				}
 				else if(name == "oldrfkey")
 				{
 					settings->oldRFKey = value;
-					BaseLib::Output::printDebug("Debug: OldRFKey of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->oldRFKey);
+					GD::out.printDebug("Debug: OldRFKey of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->oldRFKey);
 				}
 				else if(name == "rfkey")
 				{
 					settings->rfKey = value;
-					BaseLib::Output::printDebug("Debug: RFKey of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->rfKey);
+					GD::out.printDebug("Debug: RFKey of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->rfKey);
 				}
 				else if(name == "currentrfkeyindex")
 				{
 					settings->currentRFKeyIndex = BaseLib::HelperFunctions::getNumber(value);
-					BaseLib::Output::printDebug("Debug: CurrentRFKeyIndex of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->currentRFKeyIndex));
+					GD::out.printDebug("Debug: CurrentRFKeyIndex of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->currentRFKeyIndex));
 				}
 				else if(name == "lankey")
 				{
 					settings->lanKey = value;
-					BaseLib::Output::printDebug("Debug: LANKey of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->lanKey);
+					GD::out.printDebug("Debug: LANKey of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->lanKey);
 				}
 				else if(name == "ssl")
 				{
 					BaseLib::HelperFunctions::toLower(value);
 					if(value == "true") settings->ssl = true;
-					BaseLib::Output::printDebug("Debug: SSL of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->ssl));
+					GD::out.printDebug("Debug: SSL of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->ssl));
 				}
 				else if(name == "verifycertificate")
 				{
 					BaseLib::HelperFunctions::toLower(value);
 					if(value == "false") settings->verifyCertificate = false;
-					BaseLib::Output::printDebug("Debug: VerifyCertificate of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->verifyCertificate));
+					GD::out.printDebug("Debug: VerifyCertificate of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->verifyCertificate));
 				}
 				else
 				{
-					BaseLib::Output::printWarning("Warning: Unknown physical device setting: " + std::string(input));
+					GD::out.printWarning("Warning: Unknown physical device setting: " + std::string(input));
 				}
 			}
 		}
@@ -253,17 +260,17 @@ void PhysicalInterfaces::load(std::string filename)
 	catch(const std::exception& ex)
     {
 		_physicalInterfacesMutex.unlock();
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_physicalInterfacesMutex.unlock();
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_physicalInterfacesMutex.unlock();
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -277,18 +284,40 @@ std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> Phy
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _physicalInterfacesMutex.unlock();
     return devices;
+}
+
+void PhysicalInterfaces::clear(BaseLib::Systems::DeviceFamilies family)
+{
+	try
+	{
+		_physicalInterfacesMutex.lock();
+		if(_physicalInterfaces.find(family) != _physicalInterfaces.end()) _physicalInterfaces.erase(family);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _physicalInterfacesMutex.unlock();
 }
 
 uint32_t PhysicalInterfaces::count()
@@ -301,15 +330,15 @@ uint32_t PhysicalInterfaces::count()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _physicalInterfacesMutex.unlock();
     return size;
@@ -325,15 +354,15 @@ uint32_t PhysicalInterfaces::count(BaseLib::Systems::DeviceFamilies family)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _physicalInterfacesMutex.unlock();
     return size;
@@ -361,15 +390,15 @@ bool PhysicalInterfaces::isOpen()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _physicalInterfacesMutex.unlock();
 	return false;
@@ -391,15 +420,15 @@ void PhysicalInterfaces::startListening()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -419,15 +448,15 @@ void PhysicalInterfaces::stopListening()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -442,10 +471,10 @@ void PhysicalInterfaces::setup(int32_t userID, int32_t groupID)
 			{
 				if(!j->second)
 				{
-					BaseLib::Output::printCritical("Critical: Could not setup device for device family with index " + std::to_string((int32_t)i->first) + " device pointer was empty.");
+					GD::out.printCritical("Critical: Could not setup device for device family with index " + std::to_string((int32_t)i->first) + " device pointer was empty.");
 					continue;
 				}
-				BaseLib::Output::printDebug("Debug: Setting up physical device for device family with index " + std::to_string((int32_t)i->first));
+				GD::out.printDebug("Debug: Setting up physical device for device family with index " + std::to_string((int32_t)i->first));
 				j->second->setup(userID, groupID);
 			}
 		}
@@ -453,15 +482,15 @@ void PhysicalInterfaces::setup(int32_t userID, int32_t groupID)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -496,15 +525,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> PhysicalInterfaces::listInterfaces(in
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }

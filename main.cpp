@@ -62,19 +62,19 @@ void startRPCServers()
 		if(settings->ssl) info += ", SSL enabled";
 		if(settings->authType != RPC::ServerSettings::Settings::AuthType::none) info += ", authentification enabled";
 		info += "...";
-		BaseLib::Output::printInfo(info);
+		GD::out.printInfo(info);
 		GD::rpcServers[i].start(settings);
 	}
 	if(GD::rpcServers.size() == 0)
 	{
-		BaseLib::Output::printCritical("Critical: No RPC servers are running. Terminating Homegear.");
+		GD::out.printCritical("Critical: No RPC servers are running. Terminating Homegear.");
 		exit(1);
 	}
 }
 
 void stopRPCServers()
 {
-	BaseLib::Output::printInfo( "(Shutdown) => Stopping RPC servers");
+	GD::out.printInfo( "(Shutdown) => Stopping RPC servers");
 	for(std::map<int32_t, RPC::Server>::iterator i = GD::rpcServers.begin(); i != GD::rpcServers.end(); ++i)
 	{
 		i->second.stop();
@@ -88,19 +88,20 @@ void terminate(int32_t signalNumber)
 	{
 		if(signalNumber == SIGTERM)
 		{
-			BaseLib::Output::printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
+			GD::out.printMessage("(Shutdown) => Stopping Homegear (Signal: " + std::to_string(signalNumber) + ")");
 			if(_startAsDaemon)
 			{
-				BaseLib::Output::printInfo("(Shutdown) => Stopping CLI server");
+				GD::out.printInfo("(Shutdown) => Stopping CLI server");
 				GD::cliServer.stop();
 			}
 			stopRPCServers();
-			BaseLib::Output::printInfo( "(Shutdown) => Stopping RPC client");
+			GD::out.printInfo( "(Shutdown) => Stopping RPC client");
 			GD::rpcClient.reset();
-			BaseLib::Output::printInfo( "(Shutdown) => Closing physical devices");
+			GD::out.printInfo( "(Shutdown) => Closing physical devices");
 			GD::physicalInterfaces.stopListening();
-			GD::familyController.save(false);
-			BaseLib::Output::printMessage("(Shutdown) => Shutdown complete.");
+			GD::physicalInterfaces.dispose();
+			GD::familyController.saveAndDispose(false);
+			GD::out.printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{
 				fclose(stdout);
@@ -112,7 +113,7 @@ void terminate(int32_t signalNumber)
 		{
 			if(!_startUpComplete)
 			{
-				BaseLib::Output::printError("Error: Cannot reload. Startup is not completed.");
+				GD::out.printError("Error: Cannot reload. Startup is not completed.");
 				return;
 			}
 			_startUpComplete = false;
@@ -120,22 +121,22 @@ void terminate(int32_t signalNumber)
 			GD::physicalInterfaces.stopListening();
 			//Binding fails sometimes with "address is already in use" without waiting.
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-			BaseLib::Output::printMessage("Reloading settings...");
-			BaseLib::Obj::ins->settings.load(GD::configPath + "main.conf");
-			GD::clientSettings.load(BaseLib::Obj::ins->settings.clientSettingsPath());
-			GD::serverSettings.load(BaseLib::Obj::ins->settings.serverSettingsPath());
+			GD::out.printMessage("Reloading settings...");
+			GD::bl->settings.load(GD::configPath + "main.conf");
+			GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
+			GD::serverSettings.load(GD::bl->settings.serverSettingsPath());
 			GD::physicalInterfaces.startListening();
 			startRPCServers();
 			//Reopen log files, important for logrotate
 			if(_startAsDaemon)
 			{
-				if(!std::freopen((BaseLib::Obj::ins->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 				{
-					BaseLib::Output::printError("Error: Could not redirect output to new log file.");
+					GD::out.printError("Error: Could not redirect output to new log file.");
 				}
-				if(!std::freopen((BaseLib::Obj::ins->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
+				if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
 				{
-					BaseLib::Output::printError("Error: Could not redirect errors to new log file.");
+					GD::out.printError("Error: Could not redirect errors to new log file.");
 				}
 			}
 			_startUpComplete = true;
@@ -145,14 +146,14 @@ void terminate(int32_t signalNumber)
 			if(!_dbDumpFailed)
 			{
 				_dbDumpFailed = true;
-				BaseLib::Output::printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
-				BaseLib::Output::printCritical("Critical: Trying to save data to " + BaseLib::Obj::ins->settings.databasePath() + ".crash");
-				GD::db.open(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".crash");
-				if(GD::db.isOpen()) GD::familyController.save(false, true);
+				GD::out.printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
+				GD::out.printCritical("Critical: Trying to save data to " + GD::bl->settings.databasePath() + ".crash");
+				GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".crash");
+				if(GD::db.isOpen()) GD::familyController.saveAndDispose(false, true);
 			}
 			else
 			{
-				BaseLib::Output::printCritical("Critical: Database dump failed. Stopping Homegear...");
+				GD::out.printCritical("Critical: Database dump failed. Stopping Homegear...");
 			}
 			signal(signalNumber, SIG_DFL); //Reset signal handler for the current signal to default
 			kill(getpid(), signalNumber); //Generate core dump
@@ -160,15 +161,15 @@ void terminate(int32_t signalNumber)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -238,9 +239,9 @@ void startDaemon()
 			exit(1);
 		}
 		//Set root directory as working directory (always available)
-		if((chdir(BaseLib::Obj::ins->settings.logfilePath().c_str())) < 0)
+		if((chdir(GD::bl->settings.logfilePath().c_str())) < 0)
 		{
-			BaseLib::Output::printError("Could not change working directory to " + BaseLib::Obj::ins->settings.logfilePath() + ".");
+			GD::out.printError("Could not change working directory to " + GD::bl->settings.logfilePath() + ".");
 			exit(1);
 		}
 
@@ -248,15 +249,15 @@ void startDaemon()
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -265,7 +266,7 @@ int main(int argc, char* argv[])
     try
     {
     	getExecutablePath();
-    	std::unique_ptr<BaseLib::Obj> baseLib(new BaseLib::Obj(GD::executablePath));
+    	GD::bl.reset(new BaseLib::Obj(GD::executablePath));
 
     	for(int32_t i = 1; i < argc; i++)
     	{
@@ -311,15 +312,15 @@ int main(int argc, char* argv[])
     					std::cout <<  "Please run Homegear as root to set the device permissions." << std::endl;
     					exit(1);
     				}
-    				BaseLib::Obj::ins->settings.load(GD::configPath + "main.conf");
+    				GD::bl->settings.load(GD::configPath + "main.conf");
     				GD::familyController.loadModules();
-    				GD::physicalInterfaces.load(BaseLib::Obj::ins->settings.physicalInterfaceSettingsPath());
-    				int32_t userID = BaseLib::HelperFunctions::userID(std::string(argv[i + 1]));
-    				int32_t groupID = BaseLib::HelperFunctions::groupID(std::string(argv[i + 2]));
-    				BaseLib::Output::printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
+    				GD::physicalInterfaces.load(GD::bl->settings.physicalInterfaceSettingsPath());
+    				int32_t userID = GD::bl->hf.userID(std::string(argv[i + 1]));
+    				int32_t groupID = GD::bl->hf.groupID(std::string(argv[i + 2]));
+    				GD::out.printDebug("Debug: User ID set to " + std::to_string(userID) + " group ID set to " + std::to_string(groupID));
     				if(userID == -1 || groupID == -1)
     				{
-    					BaseLib::Output::printCritical("Could not setup physical devices. Username or group name is not valid.");
+    					GD::out.printCritical("Could not setup physical devices. Username or group name is not valid.");
     					exit(1);
     				}
     				GD::physicalInterfaces.setup(userID, groupID);
@@ -355,7 +356,7 @@ int main(int argc, char* argv[])
 
         /*int row,col;
         WINDOW* mainWindow = initscr();
-        if(!mainWindow) BaseLib::Output::printError("Bla" << std::endl;
+        if(!mainWindow) GD::out.printError("Bla" << std::endl;
 
         getmaxyx(stdscr, row, col);
         WINDOW* left = newwin(row, col / 2, 0, 0);
@@ -374,12 +375,13 @@ int main(int argc, char* argv[])
         return 0;*/
 
 		if(GD::configPath.empty()) GD::configPath = "/etc/homegear/";
-		BaseLib::Output::printInfo("Loading settings from " + GD::configPath + "main.conf");
-		BaseLib::Obj::ins->settings.load(GD::configPath + "main.conf");
-		BaseLib::Output::printInfo("Loading RPC server settings from " + BaseLib::Obj::ins->settings.serverSettingsPath());
-		GD::serverSettings.load(BaseLib::Obj::ins->settings.serverSettingsPath());
-		BaseLib::Output::printInfo("Loading RPC client settings from " + BaseLib::Obj::ins->settings.clientSettingsPath());
-		GD::clientSettings.load(BaseLib::Obj::ins->settings.clientSettingsPath());
+		GD::out.printInfo("Loading settings from " + GD::configPath + "main.conf");
+		GD::bl->settings.load(GD::configPath + "main.conf");
+
+		GD::out.printInfo("Loading RPC server settings from " + GD::bl->settings.serverSettingsPath());
+		GD::serverSettings.load(GD::bl->settings.serverSettingsPath());
+		GD::out.printInfo("Loading RPC client settings from " + GD::bl->settings.clientSettingsPath());
+		GD::clientSettings.load(GD::bl->settings.clientSettingsPath());
 
     	if(_startAsDaemon) startDaemon();
 
@@ -412,36 +414,36 @@ int main(int argc, char* argv[])
 				int32_t rc = flock(pidfile, LOCK_EX | LOCK_NB);
 				if(rc && errno == EWOULDBLOCK)
 				{
-					BaseLib::Output::printError("Error: Homegear is already running - Can't lock PID file.");
+					GD::out.printError("Error: Homegear is already running - Can't lock PID file.");
 				}
 				std::string pid(std::to_string(getpid()));
 				int32_t bytesWritten = write(pidfile, pid.c_str(), pid.size());
-				if(bytesWritten <= 0) BaseLib::Output::printError("Error writing to PID file: " + std::string(strerror(errno)));
+				if(bytesWritten <= 0) GD::out.printError("Error writing to PID file: " + std::string(strerror(errno)));
 				close(pidfile);
 			}
 		}
 		catch(const std::exception& ex)
 		{
-			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(BaseLib::Exception& ex)
 		{
-			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
 		catch(...)
 		{
-			BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		}
 
 		if(_startAsDaemon)
 		{
-			if(!std::freopen((BaseLib::Obj::ins->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
+			if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.log").c_str(), "a", stdout))
 			{
-				BaseLib::Output::printError("Error: Could not redirect output to log file.");
+				GD::out.printError("Error: Could not redirect output to log file.");
 			}
-			if(!std::freopen((BaseLib::Obj::ins->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
+			if(!std::freopen((GD::bl->settings.logfilePath() + "homegear.err").c_str(), "a", stderr))
 			{
-				BaseLib::Output::printError("Error: Could not redirect errors to log file.");
+				GD::out.printError("Error: Could not redirect errors to log file.");
 			}
 		}
 
@@ -449,61 +451,57 @@ int main(int argc, char* argv[])
 		{
 			if(BaseLib::HelperFunctions::getTime() < 1000000000000)
 			{
-				BaseLib::Output::printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
+				GD::out.printWarning("Warning: Time is in the past. Waiting for ntp to set the time...");
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 			}
 			else break;
 		}
 		if(BaseLib::HelperFunctions::getTime() < 1000000000000)
 		{
-			BaseLib::Output::printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
-			terminate(SIGTERM);
-			return 1;
+			GD::out.printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
+			exit(1);
 		}
 
 		GD::familyController.loadModules();
+		if(GD::deviceFamilies.empty()) exit(1);
 
-    	GD::db.open(BaseLib::Obj::ins->settings.databasePath(), BaseLib::Obj::ins->settings.databaseSynchronous(), BaseLib::Obj::ins->settings.databaseMemoryJournal(), BaseLib::Obj::ins->settings.databasePath() + ".bak");
-    	if(!GD::db.isOpen())
-    	{
-    		exit(1);
-    	}
+    	GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".bak");
+    	if(!GD::db.isOpen()) exit(1);
 
-    	GD::physicalInterfaces.load(BaseLib::Obj::ins->settings.physicalInterfaceSettingsPath());
+    	GD::physicalInterfaces.load(GD::bl->settings.physicalInterfaceSettingsPath());
         if(GD::physicalInterfaces.count() == 0)
         {
-        	BaseLib::Output::printCritical("Critical: No physical device could be initialized... Exiting...");
-        	terminate(SIGTERM);
-        	return 1;
+        	GD::out.printCritical("Critical: No physical device could be initialized... Exiting...");
+        	exit(1);
         }
-        BaseLib::Output::printInfo("Loading XML RPC devices...");
-        BaseLib::Obj::ins->rpcDevices.load(GD::configPath + "Device types");
-        BaseLib::Output::printInfo("Initializing database...");
+        GD::out.printInfo("Initializing database...");
         GD::db.convertDatabase();
         GD::db.initializeDatabase();
-        BaseLib::Output::printInfo("Start listening for packets...");
+        GD::out.printInfo("Start listening for packets...");
         GD::physicalInterfaces.startListening();
         if(!GD::physicalInterfaces.isOpen())
         {
-        	BaseLib::Output::printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
-        	terminate(SIGTERM);
-        	return 1;
+        	GD::out.printCritical("Critical: At least one of the physical devices could not be opened... Exiting...");
+        	exit(1);
         }
-        BaseLib::Output::printInfo("Loading devices...");
+        GD::out.printInfo("Initializing family controller...");
+        GD::familyController.init();
+        if(GD::deviceFamilies.empty()) exit(1);
+        GD::out.printInfo("Loading devices...");
         GD::familyController.load(); //Don't load before database is open!
 
         startRPCServers();
 
         if(_startAsDaemon)
         {
-        	BaseLib::Output::printInfo("Starting CLI server...");
+        	GD::out.printInfo("Starting CLI server...");
         	GD::cliServer.start();
         }
 
-        BaseLib::Output::printInfo("Loading events...");
+        GD::out.printInfo("Loading events...");
         GD::eventHandler.load();
         _startUpComplete = true;
-        BaseLib::Output::printInfo("Startup complete.");
+        GD::out.printInfo("Startup complete.");
 
         rl_bind_key('\t', rl_abort); //no autocompletion
 
@@ -543,15 +541,15 @@ int main(int argc, char* argv[])
     }
     catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	terminate(SIGTERM);
 

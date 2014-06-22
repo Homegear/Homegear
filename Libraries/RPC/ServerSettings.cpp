@@ -55,7 +55,7 @@ void ServerSettings::load(std::string filename)
 
 		if (!(fin = fopen(filename.c_str(), "r")))
 		{
-			BaseLib::Output::printError("Unable to open RPC server config file: " + filename + ". " + strerror(errno));
+			GD::out.printError("Unable to open RPC server config file: " + filename + ". " + strerror(errno));
 			return;
 		}
 
@@ -109,25 +109,25 @@ void ServerSettings::load(std::string filename)
 				{
 					settings->interface = value;
 					if(settings->interface.empty()) settings->interface = "::";
-					BaseLib::Output::printDebug("Debug: interface of RPC server " + settings->name + " set to " + settings->interface);
+					GD::out.printDebug("Debug: interface of RPC server " + settings->name + " set to " + settings->interface);
 				}
 				else if(name == "port")
 				{
 					settings->port = BaseLib::HelperFunctions::getNumber(value);
-					BaseLib::Output::printDebug("Debug: port of RPC server " + settings->name + " set to " + std::to_string(settings->port));
+					GD::out.printDebug("Debug: port of RPC server " + settings->name + " set to " + std::to_string(settings->port));
 				}
 				else if(name == "ssl")
 				{
 					BaseLib::HelperFunctions::toLower(value);
 					if(value == "false") settings->ssl = false;
-					BaseLib::Output::printDebug("Debug: ssl of RPC server " + settings->name + " set to " + std::to_string(settings->ssl));
+					GD::out.printDebug("Debug: ssl of RPC server " + settings->name + " set to " + std::to_string(settings->ssl));
 				}
 				else if(name == "authtype")
 				{
 					BaseLib::HelperFunctions::toLower(value);
 					if(value == "none") settings->authType = Settings::AuthType::none;
 					else if(value == "basic") settings->authType = Settings::AuthType::basic;
-					BaseLib::Output::printDebug("Debug: authType of RPC server " + settings->name + " set to " + std::to_string(settings->authType));
+					GD::out.printDebug("Debug: authType of RPC server " + settings->name + " set to " + std::to_string(settings->authType));
 				}
 				else if(name == "validusers")
 				{
@@ -143,12 +143,12 @@ void ServerSettings::load(std::string filename)
 				{
 					settings->diffieHellmanKeySize = BaseLib::HelperFunctions::getNumber(value);
 					if(settings->diffieHellmanKeySize < 128) settings->diffieHellmanKeySize = 128;
-					if(settings->diffieHellmanKeySize < 1024) BaseLib::Output::printWarning("Diffie-Hellman key size of server " + settings->name + " is smaller than 1024 bit.");
-					BaseLib::Output::printDebug("Debug: diffieHellmanKeySize of RPC server " + settings->name + " set to " + std::to_string(settings->diffieHellmanKeySize));
+					if(settings->diffieHellmanKeySize < 1024) GD::out.printWarning("Diffie-Hellman key size of server " + settings->name + " is smaller than 1024 bit.");
+					GD::out.printDebug("Debug: diffieHellmanKeySize of RPC server " + settings->name + " set to " + std::to_string(settings->diffieHellmanKeySize));
 				}
 				else
 				{
-					BaseLib::Output::printWarning("Warning: RPC client setting not found: " + std::string(input));
+					GD::out.printWarning("Warning: RPC client setting not found: " + std::string(input));
 				}
 			}
 		}
@@ -162,15 +162,15 @@ void ServerSettings::load(std::string filename)
 	}
 	catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 } /* namespace RPC */

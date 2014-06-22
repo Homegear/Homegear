@@ -28,6 +28,7 @@
  */
 
 #include "RTLSDR-LAN.h"
+#include "../GD.h"
 
 namespace BidCoS
 {
@@ -35,6 +36,7 @@ namespace BidCoS
 RTLSDR_LAN::RTLSDR_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
 	signal(SIGPIPE, SIG_IGN);
+	_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl));
 }
 
 RTLSDR_LAN::~RTLSDR_LAN()
@@ -49,15 +51,15 @@ RTLSDR_LAN::~RTLSDR_LAN()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -71,25 +73,25 @@ void RTLSDR_LAN::startListening()
 	try
 	{
 		stopListening();
-		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
-		BaseLib::Output::printDebug("Connecting to RTLSDR-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
+		GD::out.printDebug("Connecting to RTLSDR-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		//_socket.open();
-		//BaseLib::Output::printInfo("Connected to RTLSDR-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		//GD::out.printInfo("Connected to RTLSDR-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&RTLSDR_LAN::listen, this);
-		BaseLib::Threads::setThreadPriority(_listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -103,21 +105,21 @@ void RTLSDR_LAN::stopListening()
 			_listenThread.join();
 		}
 		_stopCallbackThread = false;
-		_socket.close();
+		_socket->close();
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -141,14 +143,14 @@ void RTLSDR_LAN::listen()
 			{
 				do
 				{
-					receivedBytes = _socket.proofread(&buffer[0], bufferMax);
+					receivedBytes = _socket->proofread(&buffer[0], bufferMax);
 					if(receivedBytes > 0)
 					{
 						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
 						if(data.size() > 1000000)
 						{
 							data.clear();
-							BaseLib::Output::printError("Could not read from RTLSDR-LAN: Too much data.");
+							GD::out.printError("Could not read from RTLSDR-LAN: Too much data.");
 							break;
 						}
 					}
@@ -160,25 +162,25 @@ void RTLSDR_LAN::listen()
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
-				BaseLib::Output::printWarning("Warning: " + ex.what());
+				GD::out.printWarning("Warning: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
-				BaseLib::Output::printError("Error: " + ex.what());
+				GD::out.printError("Error: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			if(data.empty() || data.size() > 1000000) continue;
 
-        	if(BaseLib::Obj::ins->debugLevel >= 6)
+        	if(_bl->debugLevel >= 6)
         	{
-        		BaseLib::Output::printDebug("Debug: Packet received from HM-CFG-LAN. Raw data:");
-        		BaseLib::Output::printBinary(data);
+        		GD::out.printDebug("Debug: Packet received from HM-CFG-LAN. Raw data:");
+        		GD::out.printBinary(data);
         	}
 
-        	std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(new BidCoS::BidCoSPacket(data, true, BaseLib::HelperFunctions::getTime()));
+        	std::shared_ptr<BidCoSPacket> bidCoSPacket(new BidCoSPacket(data, true, BaseLib::HelperFunctions::getTime()));
 			raisePacketReceived(bidCoSPacket);
 			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 			data.clear();
@@ -186,15 +188,15 @@ void RTLSDR_LAN::listen()
     }
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

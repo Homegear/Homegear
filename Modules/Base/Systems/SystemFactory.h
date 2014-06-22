@@ -45,7 +45,7 @@ public:
 	SystemFactory() {}
 	virtual ~SystemFactory();
 
-	virtual DeviceFamily* createDeviceFamily(Obj* baseLib, DeviceFamily::IFamilyEventSink* eventHandler) = 0;
+	virtual DeviceFamily* createDeviceFamily(BaseLib::Obj* bl, DeviceFamily::IFamilyEventSink* eventHandler) = 0;
 };
 
 }

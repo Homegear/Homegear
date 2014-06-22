@@ -44,6 +44,9 @@ using namespace rapidxml;
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace RPC
 {
 
@@ -109,7 +112,7 @@ public:
 	PhysicalParameterAddress address;
 
 	PhysicalParameter();
-	PhysicalParameter(xml_node<>* node);
+	PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~PhysicalParameter() {}
 };
 

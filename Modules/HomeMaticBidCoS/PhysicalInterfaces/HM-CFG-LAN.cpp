@@ -28,6 +28,7 @@
  */
 
 #include "HM-CFG-LAN.h"
+#include "../GD.h"
 
 namespace BidCoS
 {
@@ -35,51 +36,52 @@ namespace BidCoS
 HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
 	signal(SIGPIPE, SIG_IGN);
+
 	if(!settings)
 	{
-		BaseLib::Output::printCritical("Critical: Error initializing HM-CFG-LAN. Settings pointer is empty.");
+		GD::out.printCritical("Critical: Error initializing HM-CFG-LAN. Settings pointer is empty.");
 		return;
 	}
 	if(!settings->lanKey.empty())
 	{
 		_useAES = true;
-		BaseLib::Output::printInfo("Info: Enabling AES encryption for communication with HM-CFG-LAN.");
+		GD::out.printInfo("Info: Enabling AES encryption for communication with HM-CFG-LAN.");
 	}
 	else
 	{
 		_useAES = false;
-		BaseLib::Output::printInfo("Info: Disabling AES encryption for communication with HM-CFG-LAN.");
+		GD::out.printInfo("Info: Disabling AES encryption for communication with HM-CFG-LAN.");
 	}
 
 	if(!settings->rfKey.empty())
 	{
-		_rfKey = BaseLib::HelperFunctions::getUBinary(settings->rfKey);
+		_rfKey = _bl->hf.getUBinary(settings->rfKey);
 		if(_rfKey.size() != 16)
 		{
-			BaseLib::Output::printError("Error: The RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
+			GD::out.printError("Error: The RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
 			_rfKey.clear();
 		}
 	}
 
 	if(!settings->oldRFKey.empty())
 	{
-		_oldRFKey = BaseLib::HelperFunctions::getUBinary(settings->oldRFKey);
+		_oldRFKey = _bl->hf.getUBinary(settings->oldRFKey);
 		if(_oldRFKey.size() != 16)
 		{
-			BaseLib::Output::printError("Error: The old RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
+			GD::out.printError("Error: The old RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
 			_oldRFKey.clear();
 		}
 	}
 
 	if(!_rfKey.empty() && settings->currentRFKeyIndex == 0)
 	{
-		BaseLib::Output::printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"0\". That means, the default AES key will be used (not yours!).");
+		GD::out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"0\". That means, the default AES key will be used (not yours!).");
 		_rfKey.clear();
 	}
 
 	if(!_oldRFKey.empty() && settings->currentRFKeyIndex == 1)
 	{
-		BaseLib::Output::printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"1\" but \"OldRFKey\" is specified. That is not possible. Increase the key index to \"2\".");
+		GD::out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"1\" but \"OldRFKey\" is specified. That is not possible. Increase the key index to \"2\".");
 		_oldRFKey.clear();
 	}
 
@@ -88,16 +90,18 @@ HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettin
 		_oldRFKey.clear();
 		if(settings->currentRFKeyIndex > 0)
 		{
-			BaseLib::Output::printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"0\" but no AES key is specified. Setting it to \"0\".");
+			GD::out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"0\" but no AES key is specified. Setting it to \"0\".");
 			settings->currentRFKeyIndex = 0;
 		}
 	}
 
 	if(settings->currentRFKeyIndex > 253)
 	{
-		BaseLib::Output::printError("Error: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"253\". That is not allowed.");
+		GD::out.printError("Error: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"253\". That is not allowed.");
 		settings->currentRFKeyIndex = 253;
 	}
+
+	_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl));
 }
 
 HM_CFG_LAN::~HM_CFG_LAN()
@@ -113,15 +117,15 @@ HM_CFG_LAN::~HM_CFG_LAN()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -146,15 +150,15 @@ std::string HM_CFG_LAN::getPeerInfoPacket(PeerInfo& peerInfo)
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }
@@ -178,15 +182,15 @@ void HM_CFG_LAN::addPeer(PeerInfo peerInfo)
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -203,15 +207,15 @@ void HM_CFG_LAN::addPeers(std::vector<PeerInfo>& peerInfos)
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -229,15 +233,15 @@ void HM_CFG_LAN::sendPeers()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -256,15 +260,15 @@ void HM_CFG_LAN::removePeer(int32_t address)
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -275,7 +279,7 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 	{
 		if(!packet)
 		{
-			BaseLib::Output::printWarning("Warning: Packet was nullptr.");
+			GD::out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
 		_lastAction = BaseLib::HelperFunctions::getTime();
@@ -284,7 +288,7 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		if(!bidCoSPacket) return;
 		if(bidCoSPacket->messageType() == 0x02 && packet->senderAddress() == _myAddress && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)
 		{
-			BaseLib::Output::printDebug("Debug: HM-CFG-LAN: Ignoring ACK packet.", 6);
+			GD::out.printDebug("Debug: HM-CFG-LAN: Ignoring ACK packet.", 6);
 			_lastPacketSent = BaseLib::HelperFunctions::getTime();
 			return;
 		}
@@ -292,22 +296,22 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		int64_t currentTimeMilliseconds = BaseLib::HelperFunctions::getTime();
 		uint32_t currentTime = currentTimeMilliseconds & 0xFFFFFFFF;
 		std::string packetString = packet->hexString();
-		if(BaseLib::Obj::ins->debugLevel >= 4) BaseLib::Output::printInfo("Info: Sending (" + _settings->id + "): " + packetString);
+		if(_bl->debugLevel >= 4) GD::out.printInfo("Info: Sending (" + _settings->id + "): " + packetString);
 		std::string hexString = "S" + BaseLib::HelperFunctions::getHexString(currentTime, 8) + ",00,00000000,01," + BaseLib::HelperFunctions::getHexString(currentTimeMilliseconds - _startUpTime, 8) + "," + packetString.substr(2) + "\r\n";
 		send(hexString, false);
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -321,15 +325,15 @@ void HM_CFG_LAN::send(std::string hexString, bool raw)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -341,35 +345,35 @@ void HM_CFG_LAN::send(std::vector<char>& data, bool raw)
     	std::vector<char> encryptedData;
     	if(_useAES && !raw) encryptedData = encrypt(data);
     	_sendMutex.lock();
-    	if(!_socket.connected() || _stopped)
+    	if(!_socket->connected() || _stopped)
     	{
-    		BaseLib::Output::printWarning(std::string("Warning: !!!Not!!! sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+    		GD::out.printWarning(std::string("Warning: !!!Not!!! sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
     		_sendMutex.unlock();
     		return;
     	}
-    	if(BaseLib::Obj::ins->debugLevel >= 5)
+    	if(_bl->debugLevel >= 5)
         {
-            BaseLib::Output::printInfo(std::string("Debug: Sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+            GD::out.printInfo(std::string("Debug: Sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
         }
-    	(_useAES && !raw) ? _socket.proofwrite(encryptedData) : _socket.proofwrite(data);
+    	(_useAES && !raw) ? _socket->proofwrite(encryptedData) : _socket->proofwrite(data);
     	 _sendMutex.unlock();
     	 return;
     }
     catch(BaseLib::SocketOperationException& ex)
     {
-    	BaseLib::Output::printError(ex.what());
+    	GD::out.printError(ex.what());
     }
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _stopped = true;
     _sendMutex.unlock();
@@ -381,25 +385,25 @@ void HM_CFG_LAN::startListening()
 	{
 		stopListening();
 		if(_useAES) openSSLInit();
-		_socket = BaseLib::SocketOperations(_settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate);
-		BaseLib::Output::printDebug("Connecting to HM-CFG-LAN with Hostname " + _settings->host + " on port " + _settings->port + "...");
-		//_socket.open();
-		//BaseLib::Output::printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
+		GD::out.printDebug("Connecting to HM-CFG-LAN with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		//_socket->open();
+		//GD::out.printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&HM_CFG_LAN::listen, this);
-		BaseLib::Threads::setThreadPriority(_listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -407,25 +411,25 @@ void HM_CFG_LAN::reconnect()
 {
 	try
 	{
-		_socket.close();
+		_socket->close();
 		if(_useAES) openSSLInit();
 		createInitCommandQueue();
-		BaseLib::Output::printDebug("Connecting to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
-		_socket.open();
-		BaseLib::Output::printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		GD::out.printDebug("Connecting to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_socket->open();
+		GD::out.printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -439,22 +443,22 @@ void HM_CFG_LAN::stopListening()
 			_listenThread.join();
 		}
 		_stopCallbackThread = false;
-		_socket.close();
+		_socket->close();
 		if(_useAES) openSSLCleanup();
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -466,21 +470,21 @@ void HM_CFG_LAN::createInitCommandQueue()
 		_initCommandQueue.clear();
 
 		int32_t i = 0;
-		while(!BaseLib::Obj::family->getCentral() && i < 30)
+		while(!GD::family->getCentral() && i < 30)
 		{
-			BaseLib::Output::printDebug("Debug: HM-CFG-LAN: Waiting for central to load.");
+			GD::out.printDebug("Debug: HM-CFG-LAN: Waiting for central to load.");
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			i++;
 		}
-		if(!BaseLib::Obj::family->getCentral())
+		if(!GD::family->getCentral())
 		{
 			_stopCallbackThread = true;
-			BaseLib::Output::printError("Error: Could not get central address for HM-CFG-LAN. Stopping listening.");
+			GD::out.printError("Error: Could not get central address for HM-CFG-LAN. Stopping listening.");
 			return;
 		}
 
 		std::vector<char> packet = {'A'};
-		_myAddress = BaseLib::Obj::family->getCentral()->physicalAddress();
+		_myAddress = GD::family->getCentral()->physicalAddress();
 		std::string hexString = BaseLib::HelperFunctions::getHexString(_myAddress, 6) + "\r\n";
 		packet.insert(packet.end(), hexString.begin(), hexString.end());
 		_initCommandQueue.push_back(packet);
@@ -520,15 +524,15 @@ void HM_CFG_LAN::createInitCommandQueue()
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -537,7 +541,7 @@ void HM_CFG_LAN::openSSLPrintError()
 	uint32_t errorCode = ERR_get_error();
 	std::vector<char> buffer(256); //At least 120 bytes
 	ERR_error_string(errorCode, &buffer.at(0));
-	BaseLib::Output::printError("Error: " + std::string(&buffer.at(0)));
+	GD::out.printError("Error: " + std::string(&buffer.at(0)));
 }
 
 bool HM_CFG_LAN::openSSLInit()
@@ -546,17 +550,17 @@ bool HM_CFG_LAN::openSSLInit()
 
 	if(_settings->lanKey.size() != 32)
 	{
-		BaseLib::Output::printError("Error: The AES key specified in physicalinterfaces.conf for communication with your HM-CFG-LAN has the wrong size.");
+		GD::out.printError("Error: The AES key specified in physicalinterfaces.conf for communication with your HM-CFG-LAN has the wrong size.");
 		return false;
 		//_key.resize(16);
 		//MD5((uint8_t*)_settings->lanKey.c_str(), _settings->lanKey.size(), &_key.at(0));
 	}
 	else
 	{
-		_key = BaseLib::HelperFunctions::getUBinary(_settings->lanKey);
+		_key = _bl->hf.getUBinary(_settings->lanKey);
 		if(_key.size() != 16)
 		{
-			BaseLib::Output::printError("Error: The AES key specified in physicalinterfaces.conf for communication with your HM-CFG-LAN is not a valid hexadecimal string.");
+			GD::out.printError("Error: The AES key specified in physicalinterfaces.conf for communication with your HM-CFG-LAN is not a valid hexadecimal string.");
 			return false;
 		}
 	}
@@ -649,15 +653,15 @@ void HM_CFG_LAN::sendKeepAlive()
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -675,15 +679,15 @@ void HM_CFG_LAN::sendTimePacket()
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -705,7 +709,7 @@ void HM_CFG_LAN::listen()
         	{
         		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         		if(_stopCallbackThread) return;
-        		BaseLib::Output::printWarning("Warning: Connection to HM-CFG-LAN closed. Trying to reconnect...");
+        		GD::out.printWarning("Warning: Connection to HM-CFG-LAN closed. Trying to reconnect...");
         		reconnect();
         		continue;
         	}
@@ -714,13 +718,13 @@ void HM_CFG_LAN::listen()
 			{
 				do
 				{
-					receivedBytes = _socket.proofread(&buffer[0], bufferMax);
+					receivedBytes = _socket->proofread(&buffer[0], bufferMax);
 					if(receivedBytes > 0)
 					{
 						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
 						if(data.size() > 1000000)
 						{
-							BaseLib::Output::printError("Could not read from HM-CFG-LAN: Too much data.");
+							GD::out.printError("Could not read from HM-CFG-LAN: Too much data.");
 							break;
 						}
 					}
@@ -730,7 +734,7 @@ void HM_CFG_LAN::listen()
 			{
 				if(data.empty()) //When receivedBytes is exactly 2048 bytes long, proofread will be called again, time out and the packet is received with a delay of 5 seconds. It doesn't matter as packets this big are only received at start up.
 				{
-					if(_socket.connected())
+					if(_socket->connected())
 					{
 						if(BaseLib::HelperFunctions::getTimeSeconds() - _lastTimePacket > 1800) sendTimePacket();
 						sendKeepAlive();
@@ -741,23 +745,23 @@ void HM_CFG_LAN::listen()
 			catch(BaseLib::SocketClosedException& ex)
 			{
 				_stopped = true;
-				BaseLib::Output::printWarning("Warning: " + ex.what());
+				GD::out.printWarning("Warning: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
 				_stopped = true;
-				BaseLib::Output::printError("Error: " + ex.what());
+				GD::out.printError("Error: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			if(data.empty() || data.size() > 1000000) continue;
 
-        	if(BaseLib::Obj::ins->debugLevel >= 6)
+        	if(_bl->debugLevel >= 6)
         	{
-        		BaseLib::Output::printDebug("Debug: Packet received from HM-CFG-LAN. Raw data:");
-        		BaseLib::Output::printBinary(data);
+        		GD::out.printDebug("Debug: Packet received from HM-CFG-LAN. Raw data:");
+        		GD::out.printBinary(data);
         	}
 
         	processData(data);
@@ -776,30 +780,30 @@ void HM_CFG_LAN::listen()
 			}
 			catch(const std::exception& ex)
 			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(BaseLib::Exception& ex)
 			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
 			catch(...)
 			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 			_packetBufferMutex.unlock();
         }
     }
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -812,28 +816,28 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 			if(!_useAES)
 			{
 				_stopCallbackThread = true;
-				BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. Device requires AES, but no AES key was specified in physicalinterfaces.conf.");
+				GD::out.printError("Error: Error communicating with HM-CFG-LAN. Device requires AES, but no AES key was specified in physicalinterfaces.conf.");
 				return false;
 			}
 			if(data.size() != 35)
 			{
 				_stopCallbackThread = true;
-				BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. Received IV has wrong size.");
+				GD::out.printError("Error: Error communicating with HM-CFG-LAN. Received IV has wrong size.");
 				return false;
 			}
 			_remoteIV.clear();
 			std::string ivHex(&data.at(1), &data.at(1) + (data.size() - 3));
-			_remoteIV = BaseLib::HelperFunctions::getUBinary(ivHex);
+			_remoteIV = _bl->hf.getUBinary(ivHex);
 			if(_remoteIV.size() != 16)
 			{
 				_stopCallbackThread = true;
-				BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. Received IV is not in hexadecimal format.");
+				GD::out.printError("Error: Error communicating with HM-CFG-LAN. Received IV is not in hexadecimal format.");
 				return false;
 			}
-			if(BaseLib::Obj::ins->debugLevel >= 5)
+			if(_bl->debugLevel >= 5)
 			{
-				BaseLib::Output::printDebug("HM-CFG-LAN IV is: ");
-				BaseLib::Output::printBinary(_remoteIV);
+				GD::out.printDebug("HM-CFG-LAN IV is: ");
+				GD::out.printBinary(_remoteIV);
 			}
 
 			if(EVP_EncryptInit_ex(_ctxEncrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_remoteIV.at(0)) != 1)
@@ -858,15 +862,15 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 				{
 					_myIV.at(i / 2) |= nibble;
 				}
-				response.push_back(BaseLib::HelperFunctions::getHexChar(nibble));
+				response.push_back(_bl->hf.getHexChar(nibble));
 			}
 			response.push_back(0x0D);
 			response.push_back(0x0A);
 
-			if(BaseLib::Obj::ins->debugLevel >= 5)
+			if(_bl->debugLevel >= 5)
 			{
-				BaseLib::Output::printDebug("Homegear IV is: ");
-				BaseLib::Output::printBinary(_myIV);
+				GD::out.printDebug("Homegear IV is: ");
+				GD::out.printBinary(_myIV);
 			}
 
 			if(EVP_DecryptInit_ex(_ctxDecrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_myIV.at(0)) != 1)
@@ -883,21 +887,21 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 		else if(_remoteIV.empty())
 		{
 			_stopCallbackThread = true;
-			BaseLib::Output::printError("Error: Error communicating with HM-CFG-LAN. AES is enabled but no IV was send from HM-CFG-LAN.");
+			GD::out.printError("Error: Error communicating with HM-CFG-LAN. AES is enabled but no IV was send from HM-CFG-LAN.");
 			return false;
 		}
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -930,15 +934,15 @@ void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -951,7 +955,7 @@ void HM_CFG_LAN::processInit(std::string& packet)
 		if(parts.size() != 7 || parts.at(0) != "HHM-LAN-IF")
 		{
 			_stopCallbackThread = true;
-			BaseLib::Output::printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
+			GD::out.printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
 			return;
 		}
 		_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::HelperFunctions::getNumber(parts.at(5), true);
@@ -976,7 +980,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 	try
 	{
 		if(packet.empty()) return;
-		if(BaseLib::Obj::ins->debugLevel >= 5) BaseLib::Output::printDebug(std::string("Debug: Packet received from HM-CFG-LAN") + (_useAES ? + " (encrypted)" : "") + ": " + packet);
+		if(_bl->debugLevel >= 5) GD::out.printDebug(std::string("Debug: Packet received from HM-CFG-LAN") + (_useAES ? + " (encrypted)" : "") + ": " + packet);
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packet, ',');
 		if(packet.at(0) == 'H' && parts.size() == 7)
 		{
@@ -998,7 +1002,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 		{
 			if(parts.size() != 6)
 			{
-				BaseLib::Output::printWarning("Warning: Invalid packet received from HM-CFG-LAN: " + packet);
+				GD::out.printWarning("Warning: Invalid packet received from HM-CFG-LAN: " + packet);
 				return;
 			}
 			/*
@@ -1019,8 +1023,8 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 			04: Overload
 			*/
 			uint8_t statusByte = tempNumber >> 8;
-			if(statusByte & 4) BaseLib::Output::printError("Error: HM-CFG-LAN reached 1% rule.");
-			else if(statusByte & 2) BaseLib::Output::printWarning("Warning: HM-CFG-LAN nearly reached 1% rule.");
+			if(statusByte & 4) GD::out.printError("Error: HM-CFG-LAN reached 1% rule.");
+			else if(statusByte & 2) GD::out.printWarning("Warning: HM-CFG-LAN nearly reached 1% rule.");
 
 			/*
 			00: Not set
@@ -1039,13 +1043,13 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 			if(parts.at(5).size() > 18) //18 is minimal packet length
         	{
 				std::vector<uint8_t> binaryPacket({ (uint8_t)(parts.at(5).size() / 2) });
-				BaseLib::HelperFunctions::getUBinary(parts.at(5), parts.at(5).size() - 1, binaryPacket);
+				_bl->hf.getUBinary(parts.at(5), parts.at(5).size() - 1, binaryPacket);
 				binaryPacket.push_back(BaseLib::HelperFunctions::getNumber(parts.at(4), true) - 65536);
 
-				std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(new BidCoS::BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
+				std::shared_ptr<BidCoSPacket> bidCoSPacket(new BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
 				if(packet.at(0) == 'E' && (statusByte & 1))
 				{
-					BaseLib::Output::printDebug("Debug: Waiting for AES handshake.");
+					GD::out.printDebug("Debug: Waiting for AES handshake.");
 					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 					_lastPacketSent = BaseLib::HelperFunctions::getTime();
 					return;
@@ -1053,14 +1057,14 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 				if((controlByte & 0x30) == 0x30 || (controlByte & 0x50) == 0x50)
 				{
 					_lastPacketReceived = BaseLib::HelperFunctions::getTime();
-					BaseLib::Output::printWarning("Warning: AES handshake was not successful: " + bidCoSPacket->hexString());
+					GD::out.printWarning("Warning: AES handshake was not successful: " + bidCoSPacket->hexString());
 					return;
 				}
 				if(packet.at(0) == 'R')
 				{
 					if(controlByte & 8)
 					{
-						BaseLib::Output::printWarning("Info: No response to packet after 3 tries: " + bidCoSPacket->hexString());
+						GD::out.printWarning("Info: No response to packet after 3 tries: " + bidCoSPacket->hexString());
 						return;
 					}
 					else if(controlByte & 2)
@@ -1075,20 +1079,20 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 				}
 				raisePacketReceived(bidCoSPacket);
         	}
-        	else if(!parts.at(5).empty()) BaseLib::Output::printWarning("Warning: Too short packet received: " + parts.at(5));
+        	else if(!parts.at(5).empty()) GD::out.printWarning("Warning: Too short packet received: " + parts.at(5));
 		}
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

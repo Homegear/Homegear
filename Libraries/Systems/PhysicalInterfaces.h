@@ -45,11 +45,13 @@ class PhysicalInterfaces
 public:
 	PhysicalInterfaces();
 	virtual ~PhysicalInterfaces() {}
+	virtual void dispose();
 	void load(std::string filename);
 
 	uint32_t count();
 	uint32_t count(BaseLib::Systems::DeviceFamilies family);
 	std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> get(BaseLib::Systems::DeviceFamilies family);
+	void clear(BaseLib::Systems::DeviceFamilies family);
 	void stopListening();
 	void startListening();
 	bool isOpen();

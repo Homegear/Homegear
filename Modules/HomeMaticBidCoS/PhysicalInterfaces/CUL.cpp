@@ -30,6 +30,7 @@
 #include "CUL.h"
 #include "../BidCoSPacket.h"
 #include "../../Base/BaseLib.h"
+#include "../GD.h"
 
 namespace BidCoS
 {
@@ -51,15 +52,15 @@ CUL::~CUL()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -69,22 +70,22 @@ void CUL::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 	{
 		if(!packet)
 		{
-			BaseLib::Output::printWarning("Warning: Packet was nullptr.");
+			GD::out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
 		if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
 		if(packet->payload()->size() > 54)
 		{
-			if(BaseLib::Obj::ins->debugLevel >= 2) BaseLib::Output::printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
+			if(_bl->debugLevel >= 2) GD::out.printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
 			return;
 		}
 		if(_updateMode)
 		{
-			std::shared_ptr<BidCoS::BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoS::BidCoSPacket>(packet));
+			std::shared_ptr<BidCoSPacket> bidCoSPacket(std::dynamic_pointer_cast<BidCoSPacket>(packet));
 			if(!bidCoSPacket) return;
 			if(!bidCoSPacket->isUpdatePacket())
 			{
-				BaseLib::Output::printInfo("Info: Can't send packet to BidCoS peer with address 0x" + BaseLib::HelperFunctions::getHexString(packet->destinationAddress(), 6) + ", because update mode is enabled.");
+				GD::out.printInfo("Info: Can't send packet to BidCoS peer with address 0x" + BaseLib::HelperFunctions::getHexString(packet->destinationAddress(), 6) + ", because update mode is enabled.");
 				return;
 			}
 		}
@@ -93,15 +94,15 @@ void CUL::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -114,15 +115,15 @@ void CUL::enableUpdateMode()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -137,15 +138,15 @@ void CUL::disableUpdateMode()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -161,7 +162,7 @@ void CUL::openDevice()
 		{
 			if(errno != EEXIST)
 			{
-				BaseLib::Output::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				GD::out.printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 
@@ -170,14 +171,14 @@ void CUL::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				BaseLib::Output::printCritical("CUL device is in use: " + _settings->device);
+				GD::out.printCritical("CUL device is in use: " + _settings->device);
 				return;
 			}
 			unlink(_lockfile.c_str());
 			lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 			if(lockfileDescriptor == -1)
 			{
-				BaseLib::Output::printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				GD::out.printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 		}
@@ -186,10 +187,10 @@ void CUL::openDevice()
 		//std::string chmod("chmod 666 " + _lockfile);
 		//system(chmod.c_str());
 
-		_fileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
+		_fileDescriptor = _bl->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
 		if(_fileDescriptor->descriptor == -1)
 		{
-			BaseLib::Output::printCritical("Couldn't open CUL device \"" + _settings->device + "\": " + strerror(errno));
+			GD::out.printCritical("Couldn't open CUL device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 
@@ -197,15 +198,15 @@ void CUL::openDevice()
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -213,20 +214,20 @@ void CUL::closeDevice()
 {
 	try
 	{
-		BaseLib::Obj::ins->fileDescriptorManager.close(_fileDescriptor);
+		_bl->fileDescriptorManager.close(_fileDescriptor);
 		unlink(_lockfile.c_str());
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -258,15 +259,15 @@ void CUL::setupDevice()
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -277,7 +278,7 @@ std::string CUL::readFromDevice()
 		if(_stopped) return "";
 		if(_fileDescriptor->descriptor == -1)
 		{
-			BaseLib::Output::printCritical("Couldn't read from CUL device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
+			GD::out.printCritical("Couldn't read from CUL device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
 			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
@@ -305,12 +306,12 @@ std::string CUL::readFromDevice()
 					if(!_stopCallbackThread) continue;
 					else return "";
 				case -1:
-					BaseLib::Output::printError("Error reading from CUL device: " + _settings->device);
+					GD::out.printError("Error reading from CUL device: " + _settings->device);
 					return "";
 				case 1:
 					break;
 				default:
-					BaseLib::Output::printError("Error reading from CUL device: " + _settings->device);
+					GD::out.printError("Error reading from CUL device: " + _settings->device);
 					return "";
 			}
 
@@ -318,13 +319,13 @@ std::string CUL::readFromDevice()
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				BaseLib::Output::printError("Error reading from CUL device: " + _settings->device);
+				GD::out.printError("Error reading from CUL device: " + _settings->device);
 				return "";
 			}
 			packet.push_back(localBuffer[0]);
 			if(packet.size() > 200)
 			{
-				BaseLib::Output::printError("CUL was disconnected.");
+				GD::out.printError("CUL was disconnected.");
 				closeDevice();
 				return "";
 			}
@@ -333,11 +334,11 @@ std::string CUL::readFromDevice()
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 	return "";
 }
@@ -350,9 +351,9 @@ void CUL::writeToDevice(std::string data, bool printSending)
         if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
         int32_t bytesWritten = 0;
         int32_t i;
-        if(BaseLib::Obj::ins->debugLevel > 3 && printSending)
+        if(_bl->debugLevel > 3 && printSending)
         {
-            BaseLib::Output::printInfo("Info: Sending (" + _settings->id + "): " + data.substr(2, data.size() - 4));
+            GD::out.printInfo("Info: Sending (" + _settings->id + "): " + data.substr(2, data.size() - 4));
         }
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
@@ -368,15 +369,15 @@ void CUL::writeToDevice(std::string data, bool printSending)
     }
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _sendMutex.unlock();
     _lastPacketSent = BaseLib::HelperFunctions::getTime();
@@ -393,19 +394,19 @@ void CUL::startListening()
 		writeToDevice("X21\nAr\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		_listenThread = std::thread(&CUL::listen, this);
-		BaseLib::Threads::setThreadPriority(_listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -430,15 +431,15 @@ void CUL::stopListening()
 	}
 	catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -457,23 +458,23 @@ void CUL::listen()
         	std::string packetHex = readFromDevice();
         	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + CUL "A")
         	{
-				std::shared_ptr<BidCoS::BidCoSPacket> packet(new BidCoS::BidCoSPacket(packetHex, BaseLib::HelperFunctions::getTime()));
+				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, BaseLib::HelperFunctions::getTime()));
 				raisePacketReceived(packet);
         	}
-        	else if(!packetHex.empty()) BaseLib::Output::printWarning("Warning: Too short packet received: " + packetHex);
+        	else if(!packetHex.empty()) GD::out.printWarning("Warning: Too short packet received: " + packetHex);
         }
     }
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -485,15 +486,15 @@ void CUL::setup(int32_t userID, int32_t groupID)
     }
     catch(const std::exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

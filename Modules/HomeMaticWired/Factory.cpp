@@ -29,9 +29,9 @@
 
 #include "Factory.h"
 
-BaseLib::Systems::DeviceFamily* HMWiredFactory::createDeviceFamily(BaseLib::Obj* baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* HMWiredFactory::createDeviceFamily(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
-	return new HMWired::HMWired(baseLib, eventHandler);
+	return new HMWired::HMWired(bl, eventHandler);
 }
 
 BaseLib::Systems::SystemFactory* getFactory()

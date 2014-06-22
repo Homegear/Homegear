@@ -64,12 +64,12 @@ class RTLSDR_LAN  : public IBidCoSInterface
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
-        virtual bool isOpen() { return _socket.connected(); }
+        virtual bool isOpen() { return _socket->connected(); }
         virtual bool firmwareUpdatesSupported() { return false; }
     protected:
         std::string _hostname;
         std::string _port;
-        BaseLib::SocketOperations _socket;
+        std::unique_ptr<BaseLib::SocketOperations> _socket;
         std::mutex _sendMutex;
         bool _initComplete = false;
 

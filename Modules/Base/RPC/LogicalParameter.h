@@ -46,6 +46,9 @@ using namespace rapidxml;
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace RPC
 {
 
@@ -57,7 +60,7 @@ public:
 	int32_t index = -1;
 
 	ParameterOption() {}
-	ParameterOption(xml_node<>* node);
+	ParameterOption(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~ParameterOption() {}
 };
 
@@ -73,11 +76,13 @@ public:
 	bool enforce = false;
 	Type::Enum type = Type::none;
 
-	LogicalParameter() {}
+	LogicalParameter(BaseLib::Obj* baseLib);
 	virtual ~LogicalParameter() {}
-	static std::shared_ptr<LogicalParameter> fromXML(xml_node<>* node);
+	static std::shared_ptr<LogicalParameter> fromXML(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid)); }
 	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid)); }
+protected:
+	BaseLib::Obj* _bl;
 };
 
 class LogicalParameterInteger : public LogicalParameter
@@ -89,8 +94,8 @@ public:
 	int32_t enforceValue = 0;
 	std::unordered_map<std::string, int32_t> specialValues;
 
-	LogicalParameterInteger();
-	LogicalParameterInteger(xml_node<>* node);
+	LogicalParameterInteger(BaseLib::Obj* baseLib);
+	LogicalParameterInteger(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterInteger() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
 	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
@@ -105,8 +110,8 @@ public:
 	double enforceValue = 0;
 	std::unordered_map<std::string, double> specialValues;
 
-	LogicalParameterFloat();
-	LogicalParameterFloat(xml_node<>* node);
+	LogicalParameterFloat(BaseLib::Obj* baseLib);
+	LogicalParameterFloat(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterFloat() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
 	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
@@ -120,8 +125,8 @@ public:
 	int32_t defaultValue = 0;
 	int32_t enforceValue = 0;
 
-	LogicalParameterEnum();
-	LogicalParameterEnum(xml_node<>* node);
+	LogicalParameterEnum(BaseLib::Obj* baseLib);
+	LogicalParameterEnum(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterEnum() {}
 	std::vector<ParameterOption> options;
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
@@ -136,8 +141,8 @@ public:
 	bool defaultValue = false;
 	bool enforceValue = false;
 
-	LogicalParameterBoolean();
-	LogicalParameterBoolean(xml_node<>* node);
+	LogicalParameterBoolean(BaseLib::Obj* baseLib);
+	LogicalParameterBoolean(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterBoolean() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
 	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
@@ -151,8 +156,8 @@ public:
 	std::string defaultValue;
 	std::string enforceValue;
 
-	LogicalParameterString();
-	LogicalParameterString(xml_node<>* node);
+	LogicalParameterString(BaseLib::Obj* baseLib);
+	LogicalParameterString(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterString() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
 	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }
@@ -166,8 +171,8 @@ public:
 	bool defaultValue = false;
 	bool enforceValue = false;
 
-	LogicalParameterAction();
-	LogicalParameterAction(xml_node<>* node);
+	LogicalParameterAction(BaseLib::Obj* baseLib);
+	LogicalParameterAction(BaseLib::Obj* baseLib, xml_node<>* node);
 	virtual ~LogicalParameterAction() {}
 	virtual std::shared_ptr<RPCVariable> getEnforceValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(enforceValue)); }
 	virtual std::shared_ptr<RPCVariable> getDefaultValue() { return std::shared_ptr<RPCVariable>(new RPCVariable(defaultValue)); }

@@ -41,19 +41,23 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace RPC
 {
 class RPCDecoder
 {
 public:
-	RPCDecoder();
+	RPCDecoder(BaseLib::Obj* baseLib);
 	virtual ~RPCDecoder() {}
 
 	virtual std::shared_ptr<RPCHeader> decodeHeader(std::shared_ptr<std::vector<char>> packet);
 	virtual std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> decodeRequest(std::shared_ptr<std::vector<char>> packet, std::string& methodName);
 	virtual std::shared_ptr<RPCVariable> decodeResponse(std::shared_ptr<std::vector<char>> packet, uint32_t offset = 0);
 private:
-	BinaryDecoder _decoder;
+	BaseLib::Obj* _bl = nullptr;
+	std::unique_ptr<BinaryDecoder> _decoder;
 
 	std::shared_ptr<RPCVariable> decodeParameter(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);
 	RPCVariableType decodeType(std::shared_ptr<std::vector<char>>& packet, uint32_t& position);

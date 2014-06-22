@@ -67,11 +67,11 @@ bool User::verify(const std::string& userName, const std::string& password)
 	}
 	catch(std::exception& ex)
 	{
-		BaseLib::Output::printError("Error verifying user credentials: " + std::string(ex.what()));
+		GD::out.printError("Error verifying user credentials: " + std::string(ex.what()));
 	}
 	catch(...)
 	{
-		BaseLib::Output::printError("Unknown error verifying user credentials.");
+		GD::out.printError("Unknown error verifying user credentials.");
 	}
 	return false;
 }

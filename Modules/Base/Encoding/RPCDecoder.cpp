@@ -35,8 +35,10 @@ namespace BaseLib
 namespace RPC
 {
 
-RPCDecoder::RPCDecoder()
+RPCDecoder::RPCDecoder(BaseLib::Obj* baseLib)
 {
+	_bl = baseLib;
+	_decoder = std::unique_ptr<BinaryDecoder>(new BinaryDecoder(baseLib));
 }
 
 std::shared_ptr<RPCHeader> RPCDecoder::decodeHeader(std::shared_ptr<std::vector<char>> packet)
@@ -47,28 +49,28 @@ std::shared_ptr<RPCHeader> RPCDecoder::decodeHeader(std::shared_ptr<std::vector<
 		if(!(packet->at(3) & 0x40) || packet->size() < 12) return header;
 		uint32_t position = 4;
 		uint32_t headerSize = 0;
-		headerSize = _decoder.decodeInteger(packet, position);
+		headerSize = _decoder->decodeInteger(packet, position);
 		if(headerSize < 4) return header;
-		uint32_t parameterCount = _decoder.decodeInteger(packet, position);
+		uint32_t parameterCount = _decoder->decodeInteger(packet, position);
 		for(uint32_t i = 0; i < parameterCount; i++)
 		{
-			std::string field = _decoder.decodeString(packet, position);
+			std::string field = _decoder->decodeString(packet, position);
 			HelperFunctions::toLower(field);
-			std::string value = _decoder.decodeString(packet, position);
+			std::string value = _decoder->decodeString(packet, position);
 			if(field == "authorization") header->authorization = value;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return header;
 }
@@ -79,14 +81,14 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeReq
 	{
 		uint32_t position = 4;
 		uint32_t headerSize = 0;
-		if(packet->at(3) & 0x40) headerSize = _decoder.decodeInteger(packet, position) + 4;
+		if(packet->at(3) & 0x40) headerSize = _decoder->decodeInteger(packet, position) + 4;
 		position = 8 + headerSize;
-		methodName = _decoder.decodeString(packet, position);
-		uint32_t parameterCount = _decoder.decodeInteger(packet, position);
+		methodName = _decoder->decodeString(packet, position);
+		uint32_t parameterCount = _decoder->decodeInteger(packet, position);
 		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> parameters(new std::vector<std::shared_ptr<RPCVariable>>());
 		if(parameterCount > 100)
 		{
-			Output::printError("Parameter count of RPC request is larger than 100.");
+			_bl->out.printError("Parameter count of RPC request is larger than 100.");
 			return parameters;
 		}
 		for(uint32_t i = 0; i < parameterCount; i++)
@@ -97,15 +99,15 @@ std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> RPCDecoder::decodeReq
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>();
 }
@@ -126,7 +128,7 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeResponse(std::shared_ptr<std::vec
 
 RPCVariableType RPCDecoder::decodeType(std::shared_ptr<std::vector<char>>& packet, uint32_t& position)
 {
-	return (RPCVariableType)_decoder.decodeInteger(packet, position);
+	return (RPCVariableType)_decoder->decodeInteger(packet, position);
 }
 
 std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(std::shared_ptr<std::vector<char>>& packet, uint32_t& position)
@@ -137,19 +139,19 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(std::shared_ptr<std::ve
 		std::shared_ptr<RPCVariable> variable(new RPCVariable(type));
 		if(type == RPCVariableType::rpcString || type == RPCVariableType::rpcBase64)
 		{
-			variable->stringValue = _decoder.decodeString(packet, position);
+			variable->stringValue = _decoder->decodeString(packet, position);
 		}
 		else if(type == RPCVariableType::rpcInteger)
 		{
-			variable->integerValue = _decoder.decodeInteger(packet, position);
+			variable->integerValue = _decoder->decodeInteger(packet, position);
 		}
 		else if(type == RPCVariableType::rpcFloat)
 		{
-			variable->floatValue = _decoder.decodeFloat(packet, position);
+			variable->floatValue = _decoder->decodeFloat(packet, position);
 		}
 		else if(type == RPCVariableType::rpcBoolean)
 		{
-			variable->booleanValue = _decoder.decodeBoolean(packet, position);
+			variable->booleanValue = _decoder->decodeBoolean(packet, position);
 		}
 		else if(type == RPCVariableType::rpcArray)
 		{
@@ -163,15 +165,15 @@ std::shared_ptr<RPCVariable> RPCDecoder::decodeParameter(std::shared_ptr<std::ve
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RPCVariable>();
 }
@@ -180,7 +182,7 @@ std::shared_ptr<RPCArray> RPCDecoder::decodeArray(std::shared_ptr<std::vector<ch
 {
 	try
 	{
-		uint32_t arrayLength = _decoder.decodeInteger(packet, position);
+		uint32_t arrayLength = _decoder->decodeInteger(packet, position);
 		std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>> array(new std::vector<std::shared_ptr<RPCVariable>>());
 		for(uint32_t i = 0; i < arrayLength; i++)
 		{
@@ -190,15 +192,15 @@ std::shared_ptr<RPCArray> RPCDecoder::decodeArray(std::shared_ptr<std::vector<ch
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<std::vector<std::shared_ptr<RPCVariable>>>();
 }
@@ -207,26 +209,26 @@ std::shared_ptr<RPCStruct> RPCDecoder::decodeStruct(std::shared_ptr<std::vector<
 {
 	try
 	{
-		uint32_t structLength = _decoder.decodeInteger(packet, position);
+		uint32_t structLength = _decoder->decodeInteger(packet, position);
 		std::shared_ptr<RPCStruct> rpcStruct(new RPCStruct());
 		for(uint32_t i = 0; i < structLength; i++)
 		{
-			std::string name = _decoder.decodeString(packet, position);
+			std::string name = _decoder->decodeString(packet, position);
 			rpcStruct->insert(RPCStructElement(name, decodeParameter(packet, position)));
 		}
 		return rpcStruct;
 	}
 	catch(const std::exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<RPCStruct>();
 }

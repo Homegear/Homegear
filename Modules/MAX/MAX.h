@@ -40,8 +40,10 @@ class MAXCentral;
 class MAX : public BaseLib::Systems::DeviceFamily
 {
 public:
-	MAX(BaseLib::Obj* baseLib, IFamilyEventSink* eventHandler);
+	MAX(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler);
 	virtual ~MAX();
+	virtual bool init();
+	virtual void dispose();
 
 	virtual std::shared_ptr<BaseLib::Systems::IPhysicalInterface> createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual void load();

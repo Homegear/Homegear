@@ -29,9 +29,9 @@
 
 #include "Factory.h"
 
-BaseLib::Systems::DeviceFamily* MAXFactory::createDeviceFamily(BaseLib::Obj* baseLib, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
+BaseLib::Systems::DeviceFamily* MAXFactory::createDeviceFamily(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler)
 {
-	return new MAX::MAX(baseLib, eventHandler);
+	return new MAX::MAX(bl, eventHandler);
 }
 
 BaseLib::Systems::SystemFactory* getFactory()

@@ -43,6 +43,9 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 namespace Systems
 {
 
@@ -78,8 +81,8 @@ public:
 	};
 	//End event handling
 
-	IPhysicalInterface();
-	IPhysicalInterface(std::shared_ptr<PhysicalInterfaceSettings> settings);
+	IPhysicalInterface(BaseLib::Obj* baseLib);
+	IPhysicalInterface(BaseLib::Obj* baseLib, std::shared_ptr<PhysicalInterfaceSettings> settings);
 
 	virtual ~IPhysicalInterface();
 
@@ -98,6 +101,7 @@ public:
 	virtual bool isDefault() { return _settings->isDefault; }
 	virtual bool isNetworkDevice() { return _settings->device.empty() && !_settings->host.empty() && !_settings->port.empty(); }
 protected:
+	BaseLib::Obj* _bl = nullptr;
 	std::shared_ptr<PhysicalInterfaceSettings> _settings;
 	std::thread _listenThread;
 	std::thread _callbackThread;

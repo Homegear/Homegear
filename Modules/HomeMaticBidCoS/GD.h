@@ -31,6 +31,7 @@
 #define GD_H_
 
 #include "PhysicalInterfaces/IBidCoSInterface.h"
+#include "BidCoS.h"
 
 namespace BidCoS
 {
@@ -40,8 +41,12 @@ class GD
 public:
 	virtual ~GD();
 
+	static BaseLib::Obj* bl;
+	static BidCoS* family;
 	static std::map<std::string, std::shared_ptr<IBidCoSInterface>> physicalInterfaces;
 	static std::shared_ptr<IBidCoSInterface> defaultPhysicalInterface;
+	static BaseLib::RPC::Devices rpcDevices;
+	static BaseLib::Output out;
 private:
 	GD();
 };

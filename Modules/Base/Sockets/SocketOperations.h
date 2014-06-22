@@ -68,6 +68,9 @@
 
 namespace BaseLib
 {
+
+class Obj;
+
 class SocketOperationException : public Exception
 {
 public:
@@ -113,10 +116,10 @@ public:
 class SocketOperations
 {
 public:
-	SocketOperations();
-	SocketOperations(std::shared_ptr<FileDescriptor> fileDescriptor, SSL* ssl);
-	SocketOperations(std::string hostname, std::string port);
-	SocketOperations(std::string hostname, std::string port, bool useSSL, bool verifyCertificate);
+	SocketOperations(BaseLib::Obj* baseLib);
+	SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> fileDescriptor, SSL* ssl);
+	SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port);
+	SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port, bool useSSL, bool verifyCertificate);
 	virtual ~SocketOperations();
 
 	void setReadTimeout(int64_t timeout) { _readTimeout = timeout; }
@@ -133,6 +136,7 @@ public:
 	void open();
 	void close();
 protected:
+	BaseLib::Obj* _bl = nullptr;
 	int64_t _readTimeout = 5000000;
 	bool _autoConnect = true;
 	std::string _hostname;

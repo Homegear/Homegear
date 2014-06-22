@@ -24,17 +24,15 @@ namespace BaseLib
 class Obj
 {
 public:
-	static Systems::DeviceFamily* family;
-	static Obj* ins;
-
 	int32_t debugLevel;
 	std::string executablePath;
 	FileDescriptorManager fileDescriptorManager;
 	Settings settings;
-	RPC::Devices rpcDevices;
 	Systems::UpdateInfo deviceUpdateInfo;
+	HelperFunctions hf;
+	Output out;
 
-	Obj(std::string executablePath);
+	Obj(std::string exePath);
 	virtual ~Obj();
 private:
 	//Non public constructor

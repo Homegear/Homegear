@@ -294,8 +294,6 @@ public:
 		addSignature(BaseLib::RPC::RPCVariableType::rpcVariant, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString});
 	}
 	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
-private:
-	BaseLib::RPC::RPCDecoder _rpcDecoder;
 };
 
 class RPCGetParamsetDescription : public RPCMethod

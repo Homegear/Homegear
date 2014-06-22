@@ -51,15 +51,15 @@ void Server::start()
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -72,17 +72,17 @@ void Server::stop()
 	}
 	catch(const std::exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_stateMutex.unlock();
 	}
 	catch(BaseLib::Exception& ex)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		_stateMutex.unlock();
 	}
 	catch(...)
 	{
-		BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 		_stateMutex.unlock();
 	}
 }
@@ -106,8 +106,8 @@ void Server::mainThread()
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
 				if(clientFileDescriptor->descriptor > _maxConnections)
 				{
-					BaseLib::Output::printError("Error: Client connection rejected, because there are too many clients connected to me.");
-					BaseLib::Obj::ins->fileDescriptorManager.shutdown(clientFileDescriptor);
+					GD::out.printError("Error: Client connection rejected, because there are too many clients connected to me.");
+					GD::bl->fileDescriptorManager.shutdown(clientFileDescriptor);
 					continue;
 				}
 				std::shared_ptr<ClientData> clientData = std::shared_ptr<ClientData>(new ClientData(clientFileDescriptor));
@@ -121,33 +121,33 @@ void Server::mainThread()
 			}
 			catch(const std::exception& ex)
 			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				_stateMutex.unlock();
 			}
 			catch(BaseLib::Exception& ex)
 			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				_stateMutex.unlock();
 			}
 			catch(...)
 			{
-				BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				_stateMutex.unlock();
 			}
 		}
-		BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -168,23 +168,23 @@ std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
 		socklen_t addressSize = sizeof(addressSize);
 		int32_t clientFileDescriptor = accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientAddress, &addressSize);
 		if(clientFileDescriptor == -1) return descriptor;
-		descriptor = BaseLib::Obj::ins->fileDescriptorManager.add(clientFileDescriptor);
+		descriptor = GD::bl->fileDescriptorManager.add(clientFileDescriptor);
 
-		BaseLib::Output::printInfo("Info: CLI connection accepted. Client number: " + std::to_string(clientFileDescriptor));
+		GD::out.printInfo("Info: CLI connection accepted. Client number: " + std::to_string(clientFileDescriptor));
 
 		return descriptor;
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return descriptor;
 }
@@ -208,17 +208,17 @@ void Server::removeClientData(int32_t clientID)
 	catch(const std::exception& ex)
     {
     	_stateMutex.unlock();
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_stateMutex.unlock();
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_stateMutex.unlock();
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -229,13 +229,13 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 		struct stat sb;
 		if(stat(GD::runDir.c_str(), &sb) == -1)
 		{
-			if(errno == ENOENT) BaseLib::Output::printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
+			if(errno == ENOENT) GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
 			else throw BaseLib::Exception("Error reading information of directory " + GD::runDir + ": " + strerror(errno));
 			return;
 		}
 		if(!S_ISDIR(sb.st_mode))
 		{
-			BaseLib::Output::printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
+			GD::out.printError("Directory " + GD::runDir + " does not exist. Please create it before starting Homegear.");
 			return;
 		}
 		if(deleteOldSocket)
@@ -244,12 +244,12 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 		}
 		else if(stat(GD::socketPath.c_str(), &sb) == 0) return;
 
-		_serverFileDescriptor = BaseLib::Obj::ins->fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0));
+		_serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0));
 		if(_serverFileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't create socket: " + GD::socketPath + ". Error: " + strerror(errno)));
 		int32_t reuseAddress = 1;
 		if(setsockopt(_serverFileDescriptor->descriptor, SOL_SOCKET, SO_REUSEADDR, (void*)&reuseAddress, sizeof(int32_t)) == -1)
 		{
-			BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 			throw(BaseLib::Exception("Couldn't set socket options: " + GD::socketPath + ". Error: " + strerror(errno)));
 		}
 		sockaddr_un serverAddress;
@@ -258,7 +258,7 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
-			BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 			throw BaseLib::Exception("Error: CLI server could not start listening. Error: " + std::string(strerror(errno)));
 		}
 		chmod(GD::socketPath.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
@@ -266,17 +266,17 @@ void Server::getFileDescriptor(bool deleteOldSocket)
     }
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());
+    	GD::out.printError("Couldn't create socket file " + GD::socketPath + ": " + ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+    GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 }
 
 void Server::readClient(std::shared_ptr<ClientData> clientData)
@@ -291,7 +291,7 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 		uint32_t packetLength = 0;
 		int32_t bytesRead;
 		uint32_t dataSize = 0;
-		BaseLib::Output::printDebug("Listening for incoming commands from client number " + std::to_string(clientData->fileDescriptor->descriptor) + ".");
+		GD::out.printDebug("Listening for incoming commands from client number " + std::to_string(clientData->fileDescriptor->descriptor) + ".");
 		while(!_stopServer)
 		{
 			//Timeout needs to be set every time, so don't put it outside of the while loop
@@ -306,10 +306,10 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			if(bytesRead != 1)
 			{
 				removeClientData(clientData->id);
-				BaseLib::Output::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
-				BaseLib::Obj::ins->fileDescriptorManager.close(clientData->fileDescriptor);
+				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
+				GD::bl->fileDescriptorManager.close(clientData->fileDescriptor);
 				//If we close the socket, the socket file gets deleted. We don't want that
-				//BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+				//GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 
@@ -317,10 +317,10 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			if(bytesRead <= 0)
 			{
 				removeClientData(clientData->id);
-				BaseLib::Output::printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
-				BaseLib::Obj::ins->fileDescriptorManager.close(clientData->fileDescriptor);
+				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
+				GD::bl->fileDescriptorManager.close(clientData->fileDescriptor);
 				//If we close the socket, the socket file gets deleted. We don't want that
-				//BaseLib::Obj::ins->fileDescriptorManager.close(_serverFileDescriptor);
+				//GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 
@@ -330,19 +330,19 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 		}
 		//This point is only reached, when stopServer is true
 		removeClientData(clientData->id);
-		BaseLib::Obj::ins->fileDescriptorManager.close(clientData->fileDescriptor);
+		GD::bl->fileDescriptorManager.close(clientData->fileDescriptor);
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -590,15 +590,15 @@ std::string Server::handleUserCommand(std::string& command)
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -648,12 +648,7 @@ std::string Server::handleGlobalCommand(std::string& command)
 				return stringStream.str();
 			}
 
-			BaseLib::Obj::ins->debugLevel = debugLevel;
-			BaseLib::Output::setDebugLevel(debugLevel);
-			for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
-			{
-				i->second->setDebugLevel(debugLevel);
-			}
+			GD::bl->debugLevel = debugLevel;
 			stringStream << "Debug level set to " << debugLevel << "." << std::endl;
 			return stringStream.str();
 		}
@@ -661,15 +656,15 @@ std::string Server::handleGlobalCommand(std::string& command)
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
 }
@@ -688,20 +683,20 @@ void Server::handleCommand(std::string& command, std::shared_ptr<ClientData> cli
 		response.push_back(0);
 		if(send(clientData->fileDescriptor->descriptor, response.c_str(), response.size(), MSG_NOSIGNAL) == -1)
 		{
-			BaseLib::Output::printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
+			GD::out.printError("Could not send data to client: " + std::to_string(clientData->fileDescriptor->descriptor));
 		}
 	}
     catch(const std::exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	BaseLib::Output::printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
