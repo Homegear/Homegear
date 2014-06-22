@@ -93,6 +93,7 @@ public:
 	EventHandler();
 	virtual ~EventHandler();
 
+	void init();
 	void load();
 	std::shared_ptr<BaseLib::RPC::RPCVariable> add(std::shared_ptr<BaseLib::RPC::RPCVariable> eventDescription);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> remove(std::string name);

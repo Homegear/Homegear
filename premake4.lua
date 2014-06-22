@@ -135,7 +135,8 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
-         
+
+--[[
    project "max"
       kind "SharedLib"
       language "C++"
@@ -163,7 +164,8 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
-
+--]]
+--[[
    project "insteon"
       kind "SharedLib"
       language "C++"
@@ -191,6 +193,7 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
+--]]
 
    project "user"
       kind "StaticLib"

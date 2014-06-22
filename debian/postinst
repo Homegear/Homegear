@@ -54,7 +54,7 @@ case $1 in
 		chmod -R 550 /var/lib/homegear/modules
 
 		if test ! -e /tmp/HOMEGEAR_STATIC_INSTALLATION; then
-			if test ! -e /etc/homegear/Device\ types/rf_s.xml; then
+			if test ! -e /etc/homegear/devices/0/rf_s.xml; then
 				echo "Downloading device description files..."
 				/etc/homegear/GetDeviceFiles.sh
 				[ $? -ne 0 ] && exit 1

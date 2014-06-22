@@ -33,8 +33,6 @@
 
 EventHandler::EventHandler()
 {
-	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
-	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 }
 
 EventHandler::~EventHandler()
@@ -48,6 +46,12 @@ EventHandler::~EventHandler()
 		i++;
 	}
 	if(_mainThread.joinable()) _mainThread.join();
+}
+
+void EventHandler::init()
+{
+	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
+	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 }
 
 void EventHandler::mainThread()
@@ -1250,6 +1254,12 @@ void EventHandler::load()
 {
 	try
 	{
+		if(!GD::bl || !_rpcDecoder)
+		{
+			GD::out.printError("Error: Tried to load events, but event handler is not initialized.");
+			return;
+		}
+
 		_databaseMutex.lock();
 		std::shared_ptr<BaseLib::Database::DataTable> rows = GD::db.getEvents();
 		_databaseMutex.unlock();

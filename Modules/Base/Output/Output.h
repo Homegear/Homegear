@@ -72,7 +72,7 @@ public:
 	void printMessage(std::string message, int32_t minDebugLevel = 0);
 private:
 	BaseLib::Obj* _bl = nullptr;
-	const int32_t _defaultDebugLevel = 0;
+	const int32_t _defaultDebugLevel = 4;
 	std::string _prefix;
 };
 }

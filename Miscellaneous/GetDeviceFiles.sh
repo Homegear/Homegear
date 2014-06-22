@@ -29,11 +29,18 @@ for i in /tmp/HomegearDeviceTypes/firmware/rftypes/*.xml; do
 done
 patch -d /tmp/HomegearDeviceTypes/firmware/rftypes -p1 < $SCRIPTDIR/DeviceTypePatch.patch
 [ $? -ne 0 ] && exit 1
-mkdir -p /etc/homegear/Device\ types
+mkdir -p /etc/homegear/devices/0
 [ $? -ne 0 ] && exit 1
-mv /tmp/HomegearDeviceTypes/firmware/rftypes/* /etc/homegear/Device\ types
+mkdir -p /etc/homegear/devices/1
+[ $? -ne 0 ] && exit 1
+mv /tmp/HomegearDeviceTypes/firmware/rftypes/rf_* /etc/homegear/devices/0
+[ $? -ne 0 ] && exit 1
+mv /tmp/HomegearDeviceTypes/firmware/rftypes/hmw_* /etc/homegear/devices/1
 [ $? -ne 0 ] && exit 1
 rm -Rf /tmp/HomegearDeviceTypes
-chown -R root:root /etc/homegear/Device\ types
-chmod 755 /etc/homegear/Device\ types
-chmod 644 /etc/homegear/Device\ types/*
+chown -R root:root /etc/homegear/devices
+chmod 755 /etc/homegear/devices
+chmod 755 /etc/homegear/devices/0
+chmod 644 /etc/homegear/devices/0/*
+chmod 755 /etc/homegear/devices/1
+chmod 644 /etc/homegear/devices/1/*

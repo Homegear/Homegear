@@ -498,6 +498,8 @@ int main(int argc, char* argv[])
         	GD::cliServer.start();
         }
 
+        GD::out.printInfo("Initializing event handler...");
+        GD::eventHandler.init();
         GD::out.printInfo("Loading events...");
         GD::eventHandler.load();
         _startUpComplete = true;
