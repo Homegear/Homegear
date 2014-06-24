@@ -39,6 +39,7 @@ class DatabaseController
 public:
 	DatabaseController();
 	virtual ~DatabaseController();
+	void init();
 
 	//General
 	virtual void open(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath = "");
@@ -93,7 +94,6 @@ public:
 	//End Peer
 protected:
 	BaseLib::Database::SQLite3 db;
-	std::mutex _databaseMutex;
 
 	std::unique_ptr<BaseLib::RPC::RPCDecoder> _rpcDecoder;
 	std::unique_ptr<BaseLib::RPC::RPCEncoder> _rpcEncoder;

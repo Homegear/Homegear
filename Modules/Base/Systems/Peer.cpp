@@ -49,7 +49,7 @@ Peer::Peer(BaseLib::Obj* baseLib, uint32_t parentID, bool centralFeatures, IPeer
 		}
 		_lastPacketReceived = HelperFunctions::getTimeSeconds();
 		rpcDevice.reset();
-		addEventHandler(eventHandler);
+		setEventHandler(eventHandler);
 	}
 	catch(const std::exception& ex)
     {
@@ -94,363 +94,78 @@ Peer::Peer(BaseLib::Obj* baseLib, int32_t id, int32_t address, std::string seria
 
 Peer::~Peer()
 {
-	serviceMessages->removeEventHandler(this);
+	serviceMessages->resetEventHandler();
 }
 
 //Event handling
 void Peer::raiseCreateSavepoint(std::string name)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IPeerEventSink*)*i)->onCreateSavepoint(name);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onCreateSavepoint(name);
 }
 
 void Peer::raiseReleaseSavepoint(std::string name)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IPeerEventSink*)*i)->onReleaseSavepoint(name);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onReleaseSavepoint(name);
 }
 
 void Peer::raiseDeleteMetadata(std::string objectID, std::string dataID)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IPeerEventSink*)*i)->onDeleteMetadata(objectID, dataID);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onDeleteMetadata(objectID, dataID);
 }
 
 void Peer::raiseDeletePeer()
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IPeerEventSink*)*i)->onDeletePeer(_peerID);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onDeletePeer(_peerID);
 }
 
 uint64_t Peer::raiseSavePeer()
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				uint64_t result = ((IPeerEventSink*)*i)->onSavePeer(_peerID, _parentID, _address, _serialNumber);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return 0;
+	if(!_eventHandler) return 0;
+	return ((IPeerEventSink*)_eventHandler)->onSavePeer(_peerID, _parentID, _address, _serialNumber);
 }
 
 uint64_t Peer::raiseSavePeerParameter(Database::DataRow data)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				uint64_t result = ((IPeerEventSink*)*i)->onSavePeerParameter(_peerID, data);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return 0;
+	if(!_eventHandler) return 0;
+	return ((IPeerEventSink*)_eventHandler)->onSavePeerParameter(_peerID, data);
 }
 
 uint64_t Peer::raiseSavePeerVariable(Database::DataRow data)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				uint64_t result = ((IPeerEventSink*)*i)->onSavePeerVariable(_peerID, data);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return 0;
+	if(!_eventHandler) return 0;
+	return ((IPeerEventSink*)_eventHandler)->onSavePeerVariable(_peerID, data);
 }
 
 std::shared_ptr<Database::DataTable> Peer::raiseGetPeerParameters()
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				std::shared_ptr<Database::DataTable> result = ((IPeerEventSink*)*i)->onGetPeerParameters(_peerID);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return std::shared_ptr<Database::DataTable>();
+	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
+	return ((IPeerEventSink*)_eventHandler)->onGetPeerParameters(_peerID);
 }
 
 std::shared_ptr<Database::DataTable> Peer::raiseGetPeerVariables()
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				std::shared_ptr<Database::DataTable> result = ((IPeerEventSink*)*i)->onGetPeerVariables(_peerID);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return std::shared_ptr<Database::DataTable>();
+	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
+	return ((IPeerEventSink*)_eventHandler)->onGetPeerVariables(_peerID);
 }
 
 void Peer::raiseDeletePeerParameter(Database::DataRow data)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IPeerEventSink*)*i)->onDeletePeerParameter(_peerID, data);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onDeletePeerParameter(_peerID, data);
 }
 
 void Peer::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IPeerEventSink*)*i)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
 
 void Peer::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IPeerEventSink*)*i)->onRPCUpdateDevice(id, channel, address, hint);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onRPCUpdateDevice(id, channel, address, hint);
 }
 
 void Peer::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IPeerEventSink*)*i)->onEvent(peerID, channel, variables, values);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onEvent(peerID, channel, variables, values);
 }
 //End event handling
 

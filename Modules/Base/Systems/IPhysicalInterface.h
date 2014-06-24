@@ -51,7 +51,7 @@ namespace Systems
 
 class Packet;
 
-class IPhysicalInterface : public IEvents
+class IPhysicalInterface : public IEventsEx
 {
 public:
 	struct GPIODirection

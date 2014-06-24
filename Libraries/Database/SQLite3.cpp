@@ -118,7 +118,6 @@ void SQLite3::closeDatabase()
 		sqlite3_exec(_database, "COMMIT", 0, 0, 0); //Release all savepoints
 		sqlite3_close(_database);
 		_database = nullptr;
-		_databaseMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -132,6 +131,7 @@ void SQLite3::closeDatabase()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _databaseMutex.unlock();
 }
 
 void SQLite3::getDataRows(sqlite3_stmt* statement, std::shared_ptr<DataTable>& dataRows)

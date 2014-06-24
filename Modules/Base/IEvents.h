@@ -50,13 +50,26 @@ public:
 	IEvents();
 	virtual ~IEvents();
 
+	virtual void setEventHandler(IEventSinkBase* eventHandler);
+	virtual void resetEventHandler();
+	virtual IEventSinkBase* getEventHandler();
+protected:
+    IEventSinkBase* _eventHandler = nullptr;
+};
+
+class IEventsEx
+{
+public:
+	IEventsEx();
+	virtual ~IEventsEx();
+
 	virtual void addEventHandler(IEventSinkBase* eventHandler);
 	virtual void addEventHandlers(std::forward_list<IEventSinkBase*> eventHandlers);
 	virtual void removeEventHandler(IEventSinkBase* eventHandler);
 	virtual std::forward_list<IEventSinkBase*> getEventHandlers();
 protected:
-	std::mutex _eventHandlerMutex;
+    std::mutex _eventHandlerMutex;
     std::forward_list<IEventSinkBase*> _eventHandlers;
 };
 }
-#endif /* IEVENTS_H_ */
+#endif

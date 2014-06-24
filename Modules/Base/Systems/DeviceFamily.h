@@ -116,7 +116,7 @@ protected:
 	BaseLib::Obj* _bl = nullptr;
 	IFamilyEventSink* _eventHandler;
 	DeviceFamilies _family = DeviceFamilies::none;
-	std::mutex _devicesMutex;
+	std::timed_mutex _devicesMutex;
 	std::thread _removeThread;
 	std::vector<std::shared_ptr<LogicalDevice>> _devices;
 	std::shared_ptr<BaseLib::Systems::LogicalDevice> _currentDevice;

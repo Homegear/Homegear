@@ -465,6 +465,7 @@ int main(int argc, char* argv[])
 		GD::familyController.loadModules();
 		if(GD::deviceFamilies.empty()) exit(1);
 
+		GD::db.init();
     	GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".bak");
     	if(!GD::db.isOpen()) exit(1);
 

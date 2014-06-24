@@ -33,13 +33,22 @@
 
 DatabaseController::DatabaseController()
 {
-	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
-	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 }
 
 DatabaseController::~DatabaseController()
 {
 
+}
+
+void DatabaseController::init()
+{
+	if(!GD::bl)
+	{
+		GD::out.printCritical("Critical: Could not initialize database controller, because base library is not initialized.");
+		return;
+	}
+	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
+	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 }
 
 //General
@@ -245,15 +254,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllMetadata(st
 	{
 		if(objectID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "objectID has more than 250 characters.");
 
-		_databaseMutex.lock();
-
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(objectID)));
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT dataID, serializedObject FROM metadata WHERE objectID=?", data);
 		if(rows->empty())
 		{
-			_databaseMutex.unlock();
 			return BaseLib::RPC::RPCVariable::createError(-1, "No metadata found.");
 		}
 
@@ -268,7 +274,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllMetadata(st
 		//getAllMetadata is called repetitively for all central peers. That takes a lot of ressources, so we wait a little after each call.
 		std::this_thread::sleep_for(std::chrono::milliseconds(3));
 
-		_databaseMutex.unlock();
 		return metadataStruct;
 	}
 	catch(const std::exception& ex)
@@ -283,7 +288,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllMetadata(st
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
@@ -294,8 +298,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getMetadata(std::
 		if(objectID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "objectID has more than 250 characters.");
 		if(dataID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
 
-		_databaseMutex.lock();
-
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(objectID)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(dataID)));
@@ -303,12 +305,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getMetadata(std::
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT serializedObject FROM metadata WHERE objectID=? AND dataID=?", data);
 		if(rows->empty() || rows->at(0).empty())
 		{
-			_databaseMutex.unlock();
 			return BaseLib::RPC::RPCVariable::createError(-1, "No metadata found.");
 		}
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> metadata = _rpcDecoder->decodeResponse(rows->at(0).at(0)->binaryValue);
-		_databaseMutex.unlock();
 		return metadata;
 	}
 	catch(const std::exception& ex)
@@ -323,7 +323,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getMetadata(std::
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
@@ -338,16 +337,13 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setMetadata(std::
 		if(metadata->stringValue.size() > 1000) return BaseLib::RPC::RPCVariable::createError(-32602, "Data has more than 1000 characters.");
 		if(metadata->type != BaseLib::RPC::RPCVariableType::rpcBase64 && metadata->type != BaseLib::RPC::RPCVariableType::rpcString && metadata->type != BaseLib::RPC::RPCVariableType::rpcInteger && metadata->type != BaseLib::RPC::RPCVariableType::rpcFloat && metadata->type != BaseLib::RPC::RPCVariableType::rpcBoolean) return BaseLib::RPC::RPCVariable::createError(-32602, "Type " + BaseLib::RPC::RPCVariable::getTypeString(metadata->type) + " is currently not supported.");
 
-		_databaseMutex.lock();
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT COUNT(*) FROM metadata");
 		if(rows->size() == 0 || rows->at(0).size() == 0)
 		{
-			_databaseMutex.unlock();
 			return BaseLib::RPC::RPCVariable::createError(-32500, "Error counting metadata in database.");
 		}
 		if(rows->at(0).at(0)->intValue > 1000000)
 		{
-			_databaseMutex.unlock();
 			return BaseLib::RPC::RPCVariable::createError(-32500, "Reached limit of 1000000 metadata entries. Please delete metadata before adding new entries.");
 		}
 
@@ -359,19 +355,16 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setMetadata(std::
 		std::shared_ptr<std::vector<char>> value = _rpcEncoder->encodeResponse(metadata);
 		if(!value)
 		{
-			_databaseMutex.unlock();
 			return BaseLib::RPC::RPCVariable::createError(-32700, "Could not encode data.");
 		}
 		if(value->size() > 1000)
 		{
-			_databaseMutex.unlock();
 			return BaseLib::RPC::RPCVariable::createError(-32602, "Data is larger than 1000 bytes.");
 		}
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(value)));
 
 		db.executeCommand("INSERT INTO metadata VALUES(?, ?, ?)", data);
 
-		_databaseMutex.unlock();
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -386,7 +379,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setMetadata(std::
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
@@ -394,7 +386,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteMetadata(st
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(objectID)));
 		std::string command("DELETE FROM metadata WHERE objectID=?");
@@ -405,7 +396,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteMetadata(st
 		}
 		db.executeCommand(command, data);
 
-		_databaseMutex.unlock();
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -420,7 +410,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteMetadata(st
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _databaseMutex.unlock();
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 //End metadata
@@ -430,9 +419,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()
 {
 	try
 	{
-		_databaseMutex.lock();
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT userID, name FROM users");
-		_databaseMutex.unlock();
 		return rows;
 	}
 	catch(const std::exception& ex)
@@ -447,7 +434,6 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
@@ -455,13 +441,11 @@ bool DatabaseController::createUser(std::string name, std::vector<uint8_t>& pass
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
 		db.executeCommand("INSERT INTO users VALUES(NULL, ?, ?, ?)", data);
-		_databaseMutex.unlock();
 		if(userNameExists(name)) return true;
 	}
 	catch(const std::exception& ex)
@@ -483,7 +467,6 @@ bool DatabaseController::updateUser(uint64_t id, std::vector<uint8_t>& passwordH
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(passwordHash)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(salt)));
@@ -491,7 +474,6 @@ bool DatabaseController::updateUser(uint64_t id, std::vector<uint8_t>& passwordH
 		db.executeCommand("UPDATE users SET password=?, salt=? WHERE userID=?", data);
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT userID FROM users WHERE password=? AND salt=? AND userID=?", data);
-		_databaseMutex.unlock();
 		return !rows->empty();
 	}
 	catch(const std::exception& ex)
@@ -506,7 +488,6 @@ bool DatabaseController::updateUser(uint64_t id, std::vector<uint8_t>& passwordH
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return false;
 }
 
@@ -514,13 +495,11 @@ bool DatabaseController::deleteUser(uint64_t id)
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
 		db.executeCommand("DELETE FROM users WHERE userID=?", data);
 
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT userID FROM users WHERE userID=?", data);
-		_databaseMutex.unlock();
 		return rows->empty();
 	}
 	catch(const std::exception& ex)
@@ -535,7 +514,6 @@ bool DatabaseController::deleteUser(uint64_t id)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return false;
 }
 
@@ -566,11 +544,9 @@ uint64_t DatabaseController::getUserID(std::string name)
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
 		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT userID FROM users WHERE name=?", data);
-		_databaseMutex.unlock();
 		if(result->empty()) return 0;
 		return result->at(0).at(0)->intValue;
 	}
@@ -586,7 +562,6 @@ uint64_t DatabaseController::getUserID(std::string name)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return 0;
 }
 
@@ -594,11 +569,9 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPassword(st
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow dataSelect;
 		dataSelect.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name)));
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT password, salt FROM users WHERE name=?", dataSelect);
-		_databaseMutex.unlock();
 		return rows;
 	}
 	catch(const std::exception& ex)
@@ -613,7 +586,6 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPassword(st
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 //End users
@@ -623,9 +595,7 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getEvents()
 {
 	try
 	{
-		_databaseMutex.lock();
 		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM events");
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -640,7 +610,6 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getEvents()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
@@ -648,11 +617,9 @@ uint64_t DatabaseController::saveEvent(BaseLib::Database::DataRow event)
 {
 	try
 	{
-		_databaseMutex.lock();
 		createSavepoint("event");
 		uint64_t result = db.executeWriteCommand("REPLACE INTO events VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", event);
 		releaseSavepoint("event");
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -668,7 +635,6 @@ uint64_t DatabaseController::saveEvent(BaseLib::Database::DataRow event)
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	releaseSavepoint("event");
-	_databaseMutex.unlock();
 	return 0;
 }
 
@@ -676,7 +642,6 @@ void DatabaseController::deleteEvent(std::string name)
 {
 	try
 	{
-		_databaseMutex.lock();
 		createSavepoint("eventREMOVE");
 		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(name))});
 		db.executeCommand("DELETE FROM events WHERE name=?", data);
@@ -694,7 +659,6 @@ void DatabaseController::deleteEvent(std::string name)
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	releaseSavepoint("eventREMOVE");
-	_databaseMutex.unlock();
 }
 //End events
 
@@ -703,11 +667,9 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDevices(uin
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(family)));
 		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM devices WHERE deviceFamily=?", data);
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -722,7 +684,6 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDevices(uin
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
@@ -730,7 +691,6 @@ void DatabaseController::deleteDevice(uint64_t id)
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
 		db.executeCommand("DELETE FROM devices WHERE deviceID=?", data);
@@ -747,14 +707,12 @@ void DatabaseController::deleteDevice(uint64_t id)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 }
 
 uint64_t DatabaseController::saveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family)
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		if(id != 0) data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
 		else data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
@@ -763,7 +721,6 @@ uint64_t DatabaseController::saveDevice(uint64_t id, int32_t address, std::strin
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(type)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(family)));
 		int32_t result = db.executeWriteCommand("REPLACE INTO devices VALUES(?, ?, ?, ?, ?)", data);
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -778,7 +735,6 @@ uint64_t DatabaseController::saveDevice(uint64_t id, int32_t address, std::strin
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return 0;
 }
 
@@ -786,14 +742,12 @@ uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
 {
 	try
 	{
-		_databaseMutex.lock();
 		uint64_t result;
 		if(data.size() == 2)
 		{
 			if(data.at(1)->intValue == 0)
 			{
 				GD::out.printError("Error: Could not save device variable. Variable ID is \"0\".");
-				_databaseMutex.unlock();
 				return 0;
 			}
 			switch(data.at(0)->dataType)
@@ -813,7 +767,6 @@ uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
 		{
 			result = db.executeWriteCommand("REPLACE INTO deviceVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 		}
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -828,7 +781,6 @@ uint64_t DatabaseController::saveDeviceVariable(BaseLib::Database::DataRow data)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return 0;
 }
 
@@ -836,7 +788,6 @@ void DatabaseController::deletePeers(int32_t deviceID)
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
 		db.executeCommand("DELETE FROM peers WHERE parent=?", data);
@@ -853,18 +804,15 @@ void DatabaseController::deletePeers(int32_t deviceID)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 }
 
 std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeers(uint64_t deviceID)
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
 		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM peers WHERE parent=?", data);
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -879,7 +827,6 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeers(uint6
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
@@ -887,11 +834,9 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDeviceVaria
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(deviceID)));
 		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM deviceVariables WHERE deviceID=?", data);
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -906,7 +851,6 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getDeviceVaria
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 //End device
@@ -916,7 +860,6 @@ void DatabaseController::deletePeer(uint64_t id)
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id))});
 		db.executeCommand("DELETE FROM parameters WHERE peerID=?", data);
 		db.executeCommand("DELETE FROM peerVariables WHERE peerID=?", data);
@@ -934,14 +877,12 @@ void DatabaseController::deletePeer(uint64_t id)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 }
 
 uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		if(id > 0) data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(id)));
 		else data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
@@ -949,7 +890,6 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(address)));
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(serialNumber)));
 		uint64_t result = db.executeWriteCommand("REPLACE INTO peers VALUES(?, ?, ?, ?)", data);
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -964,7 +904,6 @@ uint64_t DatabaseController::savePeer(uint64_t id, uint32_t parentID, int32_t ad
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return 0;
 }
 
@@ -972,7 +911,6 @@ uint64_t DatabaseController::savePeerParameter(uint64_t peerID, BaseLib::Databas
 {
 	try
 	{
-		_databaseMutex.lock();
 		createSavepoint("peerParameter" + std::to_string(peerID));
 		int32_t result;
 		if(data.size() == 2)
@@ -981,7 +919,6 @@ uint64_t DatabaseController::savePeerParameter(uint64_t peerID, BaseLib::Databas
 			{
 				GD::out.printError("Error: Could not save peer parameter. Parameter ID is \"0\".");
 				releaseSavepoint("peerParameter" + std::to_string(peerID));
-				_databaseMutex.unlock();
 				return 0;
 			}
 			result = db.executeWriteCommand("UPDATE parameters SET value=? WHERE parameterID=?", data);
@@ -991,7 +928,6 @@ uint64_t DatabaseController::savePeerParameter(uint64_t peerID, BaseLib::Databas
 			result = db.executeWriteCommand("REPLACE INTO parameters VALUES(?, ?, ?, ?, ?, ?, ?, ?)", data);
 		}
 		releaseSavepoint("peerParameter" + std::to_string(peerID));
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1007,7 +943,6 @@ uint64_t DatabaseController::savePeerParameter(uint64_t peerID, BaseLib::Databas
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	releaseSavepoint("peerParameter" + std::to_string(peerID));
-	_databaseMutex.unlock();
 	return 0;
 }
 
@@ -1015,7 +950,6 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 {
 	try
 	{
-		_databaseMutex.lock();
 		createSavepoint("peerVariable" + std::to_string(peerID));
 		uint64_t result;
 		if(data.size() == 2)
@@ -1024,7 +958,6 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 			{
 				GD::out.printError("Error: Could not save peer variable. Variable ID is \"0\".");
 				releaseSavepoint("peerVariable" + std::to_string(peerID));
-				_databaseMutex.unlock();
 				return 0;
 			}
 			switch(data.at(0)->dataType)
@@ -1045,7 +978,6 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 			result = db.executeWriteCommand("REPLACE INTO peerVariables VALUES(?, ?, ?, ?, ?, ?)", data);
 		}
 		releaseSavepoint("peerVariable" + std::to_string(peerID));
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1061,7 +993,6 @@ uint64_t DatabaseController::savePeerVariable(uint64_t peerID, BaseLib::Database
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 	releaseSavepoint("peerVariable" + std::to_string(peerID));
-	_databaseMutex.unlock();
 	return 0;
 }
 
@@ -1069,11 +1000,9 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerParamet
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(peerID)));
 		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM parameters WHERE peerID=?", data);
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1088,7 +1017,6 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerParamet
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
@@ -1096,11 +1024,9 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerVariabl
 {
 	try
 	{
-		_databaseMutex.lock();
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(peerID)));
 		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM peerVariables WHERE peerID=?", data);
-		_databaseMutex.unlock();
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -1115,7 +1041,6 @@ std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getPeerVariabl
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 	return std::shared_ptr<BaseLib::Database::DataTable>();
 }
 
@@ -1123,13 +1048,11 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 {
 	try
 	{
-		_databaseMutex.lock();
 		if(data.size() == 2)
 		{
 			if(data.at(1)->intValue == 0)
 			{
 				GD::out.printError("Error: Could not delete parameter. Parameter ID is \"0\".");
-				_databaseMutex.unlock();
 				return;
 			}
 			db.executeCommand("DELETE FROM parameters WHERE peerID=? AND parameterID=?", data);
@@ -1159,6 +1082,5 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	_databaseMutex.unlock();
 }
 //End peer

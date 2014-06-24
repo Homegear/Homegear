@@ -40,7 +40,7 @@ ServiceMessages::ServiceMessages(BaseLib::Obj* baseLib, uint64_t peerID, std::st
 	_bl = baseLib;
 	_peerID = peerID;
 	_peerSerial = peerSerial;
-	addEventHandler(eventHandler);
+	setEventHandler(eventHandler);
 }
 
 ServiceMessages::~ServiceMessages()
@@ -53,11 +53,7 @@ void ServiceMessages::raiseConfigPending(bool configPending)
 {
 	try
 	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IServiceEventSink*)*i)->onConfigPending(configPending);
-		}
+		if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onConfigPending(configPending);
 	}
 	catch(const std::exception& ex)
     {
@@ -71,18 +67,13 @@ void ServiceMessages::raiseConfigPending(bool configPending)
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _eventHandlerMutex.unlock();
 }
 
 void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
 	try
 	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IServiceEventSink*)*i)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
-		}
+		if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 	}
 	catch(const std::exception& ex)
     {
@@ -96,18 +87,13 @@ void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string de
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _eventHandlerMutex.unlock();
 }
 
 void ServiceMessages::raiseSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data)
 {
 	try
 	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IServiceEventSink*)*i)->onSaveParameter(name, channel, data);
-		}
+		if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onSaveParameter(name, channel, data);
 	}
 	catch(const std::exception& ex)
     {
@@ -121,18 +107,13 @@ void ServiceMessages::raiseSaveParameter(std::string name, uint32_t channel, std
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _eventHandlerMutex.unlock();
 }
 
 void ServiceMessages::raiseEnqueuePendingQueues()
 {
 	try
 	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IServiceEventSink*)*i)->onEnqueuePendingQueues();
-		}
+		if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onEnqueuePendingQueues();
 	}
 	catch(const std::exception& ex)
     {
@@ -146,7 +127,6 @@ void ServiceMessages::raiseEnqueuePendingQueues()
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _eventHandlerMutex.unlock();
 }
 //End event handling
 

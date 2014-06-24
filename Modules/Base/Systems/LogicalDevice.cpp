@@ -39,7 +39,7 @@ LogicalDevice::LogicalDevice(DeviceFamilies deviceFamily, BaseLib::Obj* baseLib,
 {
 	_bl = baseLib;
 	_deviceFamily = deviceFamily;
-	addEventHandler(eventHandler);
+	setEventHandler(eventHandler);
 }
 
 LogicalDevice::LogicalDevice(DeviceFamilies deviceFamily, BaseLib::Obj* baseLib, uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(deviceFamily, baseLib, eventHandler)
@@ -56,556 +56,111 @@ LogicalDevice::~LogicalDevice()
 //Event handling
 void LogicalDevice::raiseCreateSavepoint(std::string name)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onCreateSavepoint(name);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onCreateSavepoint(name);
 }
 
 void LogicalDevice::raiseReleaseSavepoint(std::string name)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onReleaseSavepoint(name);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onReleaseSavepoint(name);
 }
 
 void LogicalDevice::raiseDeleteMetadata(std::string objectID, std::string dataID)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onDeleteMetadata(objectID, dataID);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeleteMetadata(objectID, dataID);
 }
 
 void LogicalDevice::raiseDeletePeer(uint64_t id)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onDeletePeer(id);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeletePeer(id);
 }
 
 uint64_t LogicalDevice::raiseSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				uint64_t result = ((IDeviceEventSink*)*i)->onSavePeer(id, parentID, address, serialNumber);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return 0;
+	if(!_eventHandler) return 0;
+	return ((IDeviceEventSink*)_eventHandler)->onSavePeer(id, parentID, address, serialNumber);
 }
 
 uint64_t LogicalDevice::raiseSavePeerParameter(uint64_t peerID, Database::DataRow data)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				uint64_t result = ((IDeviceEventSink*)*i)->onSavePeerParameter(peerID, data);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return 0;
+	if(!_eventHandler) return 0;
+	return ((IDeviceEventSink*)_eventHandler)->onSavePeerParameter(peerID, data);
 }
 
 uint64_t LogicalDevice::raiseSavePeerVariable(uint64_t peerID, Database::DataRow data)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				uint64_t result = ((IDeviceEventSink*)*i)->onSavePeerVariable(peerID, data);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return 0;
+	if(!_eventHandler) return 0;
+	return ((IDeviceEventSink*)_eventHandler)->onSavePeerVariable(peerID, data);
 }
 
 std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeerParameters(uint64_t peerID)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				std::shared_ptr<Database::DataTable> result = ((IDeviceEventSink*)*i)->onGetPeerParameters(peerID);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return std::shared_ptr<Database::DataTable>();
+	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
+	return ((IDeviceEventSink*)_eventHandler)->onGetPeerParameters(peerID);
 }
 
 std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeerVariables(uint64_t peerID)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				std::shared_ptr<Database::DataTable> result = ((IDeviceEventSink*)*i)->onGetPeerVariables(peerID);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return std::shared_ptr<Database::DataTable>();
+	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
+	return ((IDeviceEventSink*)_eventHandler)->onGetPeerVariables(peerID);
 }
 
 void LogicalDevice::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow data)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onDeletePeerParameter(peerID, data);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeletePeerParameter(peerID, data);
 }
 
 uint64_t LogicalDevice::raiseSaveDevice()
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				uint64_t result = ((IDeviceEventSink*)*i)->onSaveDevice(_deviceID, _address, _serialNumber, _deviceType, (uint32_t)_deviceFamily);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return 0;
+	if(!_eventHandler) return 0;
+	return ((IDeviceEventSink*)_eventHandler)->onSaveDevice(_deviceID, _address, _serialNumber, _deviceType, (uint32_t)_deviceFamily);
 }
 
 uint64_t LogicalDevice::raiseSaveDeviceVariable(Database::DataRow data)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				int32_t result = ((IDeviceEventSink*)*i)->onSaveDeviceVariable(data);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return 0;
+	if(!_eventHandler) return 0;
+	return ((IDeviceEventSink*)_eventHandler)->onSaveDeviceVariable(data);
 }
 
 void LogicalDevice::raiseDeletePeers(int32_t deviceID)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onDeletePeers(deviceID);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeletePeers(deviceID);
 }
 
 std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetPeers()
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				std::shared_ptr<Database::DataTable> result = ((IDeviceEventSink*)*i)->onGetPeers(_deviceID);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return std::shared_ptr<Database::DataTable>();
+	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
+	return ((IDeviceEventSink*)_eventHandler)->onGetPeers(_deviceID);
 }
 
 std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetDeviceVariables()
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i)
-			{
-				std::shared_ptr<Database::DataTable> result = ((IDeviceEventSink*)*i)->onGetDeviceVariables(_deviceID);
-				_eventHandlerMutex.unlock();
-				return result;
-			}
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
-    return std::shared_ptr<Database::DataTable>();
+	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
+	return ((IDeviceEventSink*)_eventHandler)->onGetDeviceVariables(_deviceID);
 }
 
 void LogicalDevice::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
 
 void LogicalDevice::raiseRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onRPCUpdateDevice(id, channel, address, hint);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onRPCUpdateDevice(id, channel, address, hint);
 }
 
 void LogicalDevice::raiseRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onRPCNewDevices(deviceDescriptions);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onRPCNewDevices(deviceDescriptions);
 }
 
 void LogicalDevice::raiseRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onRPCDeleteDevices(deviceAddresses, deviceInfo);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onRPCDeleteDevices(deviceAddresses, deviceInfo);
 }
 
 void LogicalDevice::raiseEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IDeviceEventSink*)*i)->onEvent(peerID, channel, variables, values);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onEvent(peerID, channel, variables, values);
 }
 //End event handling
 

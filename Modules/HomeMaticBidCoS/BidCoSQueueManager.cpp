@@ -300,52 +300,12 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::get(int32_t address)
 //Event handling
 void BidCoSQueueManager::raiseCreateSavepoint(std::string name)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<BaseLib::IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IBidCoSQueueManagerEventSink*)*i)->onQueueCreateSavepoint(name);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IBidCoSQueueManagerEventSink*)_eventHandler)->onQueueCreateSavepoint(name);
 }
 
 void BidCoSQueueManager::raiseReleaseSavepoint(std::string name)
 {
-	try
-	{
-		_eventHandlerMutex.lock();
-		for(std::forward_list<BaseLib::IEventSinkBase*>::iterator i = _eventHandlers.begin(); i != _eventHandlers.end(); ++i)
-		{
-			if(*i) ((IBidCoSQueueManagerEventSink*)*i)->onQueueReleaseSavepoint(name);
-		}
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _eventHandlerMutex.unlock();
+	if(_eventHandler) ((IBidCoSQueueManagerEventSink*)_eventHandler)->onQueueReleaseSavepoint(name);
 }
 //End event hantlind
 }

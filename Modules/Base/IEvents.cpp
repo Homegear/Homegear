@@ -43,7 +43,34 @@ IEvents::~IEvents()
 
 }
 
-void IEvents::addEventHandler(IEventSinkBase* eventHandler)
+void IEvents::setEventHandler(IEventSinkBase* eventHandler)
+{
+	if(!eventHandler) return;
+	_eventHandler = eventHandler;
+}
+
+void IEvents::resetEventHandler()
+{
+	_eventHandler = nullptr;
+}
+
+IEventSinkBase* IEvents::getEventHandler()
+{
+    return _eventHandler;
+}
+
+IEventsEx::IEventsEx()
+{
+
+
+}
+
+IEventsEx::~IEventsEx()
+{
+
+}
+
+void IEventsEx::addEventHandler(IEventSinkBase* eventHandler)
 {
 	if(!eventHandler) return;
 	_eventHandlerMutex.lock();
@@ -59,7 +86,7 @@ void IEvents::addEventHandler(IEventSinkBase* eventHandler)
     _eventHandlerMutex.unlock();
 }
 
-void IEvents::addEventHandlers(std::forward_list<IEventSinkBase*> eventHandlers)
+void IEventsEx::addEventHandlers(std::forward_list<IEventSinkBase*> eventHandlers)
 {
 	if(eventHandlers.empty()) return;
 	_eventHandlerMutex.lock();
@@ -80,7 +107,7 @@ void IEvents::addEventHandlers(std::forward_list<IEventSinkBase*> eventHandlers)
     _eventHandlerMutex.unlock();
 }
 
-void IEvents::removeEventHandler(IEventSinkBase* eventHandler)
+void IEventsEx::removeEventHandler(IEventSinkBase* eventHandler)
 {
 	if(!eventHandler) return;
 	_eventHandlerMutex.lock();
@@ -88,7 +115,7 @@ void IEvents::removeEventHandler(IEventSinkBase* eventHandler)
     _eventHandlerMutex.unlock();
 }
 
-std::forward_list<IEventSinkBase*> IEvents::getEventHandlers()
+std::forward_list<IEventSinkBase*> IEventsEx::getEventHandlers()
 {
 	std::forward_list<IEventSinkBase*> eventHandlers;
 	_eventHandlerMutex.lock();
