@@ -2774,7 +2774,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 				addHomegearFeatures(peer, -1, true);
 				peer->setPairingComplete(true);
 				std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-				deviceDescriptions->arrayValue = peer->getDeviceDescription(true, std::map<std::string, bool>());
+				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(true, std::map<std::string, bool>());
 				raiseRPCNewDevices(deviceDescriptions);
 			}
 		}
@@ -3424,7 +3424,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listDevices(bool ch
 		{
 			//listDevices really needs a lot of resources, so wait a little bit after each device
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription(channels, fields);
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescriptions(channels, fields);
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{
@@ -3471,7 +3471,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listTeams()
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
 			std::string serialNumber = (*i)->getSerialNumber();
 			if(serialNumber.empty() || serialNumber.at(0) != '*') continue;
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription(true, std::map<std::string, bool>());
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescriptions(true, std::map<std::string, bool>());
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{

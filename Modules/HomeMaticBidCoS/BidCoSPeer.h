@@ -91,6 +91,10 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 		virtual ~BidCoSPeer();
 
+		//Features
+		virtual bool wireless() { return true; }
+		//End features
+
 		//In table variables:
 		int32_t getRemoteChannel() { return _remoteChannel; }
 		void setRemoteChannel(int32_t value) { _remoteChannel = value; saveVariable(1, value); }
@@ -176,7 +180,6 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         virtual IBidCoSInterface::PeerInfo getPeerInfo();
 
         //RPC methods
-        virtual std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription(bool channels, std::map<std::string, bool> fields);
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);

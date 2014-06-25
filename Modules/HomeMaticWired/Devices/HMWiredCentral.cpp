@@ -981,7 +981,7 @@ void HMWiredCentral::handleAnnounce(std::shared_ptr<HMWiredPacket> packet)
 		{
 			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 			peer->restoreLinks();
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = peer->getDeviceDescription(true, std::map<std::string, bool>());
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = peer->getDeviceDescriptions(true, std::map<std::string, bool>());
 			if(!descriptions)
 			{
 				_peerInitMutex.unlock();
@@ -1859,7 +1859,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::listDevices(bool chan
 		{
 			//listDevices really needs a lot of resources, so wait a little bit after each device
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription(channels, fields);
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescriptions(channels, fields);
 			if(!descriptions) continue;
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 			{
@@ -2168,7 +2168,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::searchDevices()
 				for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = newPeers.begin(); i != newPeers.end(); ++i)
 				{
 					(*i)->restoreLinks();
-					std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescription(true, std::map<std::string, bool>());
+					std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescriptions(true, std::map<std::string, bool>());
 					if(!descriptions) continue;
 					for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
 					{

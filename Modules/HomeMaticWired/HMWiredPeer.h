@@ -77,6 +77,10 @@ public:
 	HMWiredPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 	virtual ~HMWiredPeer();
 
+	//Features
+	virtual bool wireless() { return false; }
+	//End features
+
 	//In table variables:
 	int32_t getMessageCounter() { return _messageCounter; }
 	void setMessageCounter(int32_t value) { _messageCounter = value; saveVariable(5, value); }
@@ -119,8 +123,6 @@ public:
 	void packetReceived(std::shared_ptr<HMWiredPacket> packet);
 
 	//RPC methods
-	virtual std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription(bool channels, std::map<std::string, bool> fields);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> setLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description);
