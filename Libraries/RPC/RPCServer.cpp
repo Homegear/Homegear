@@ -902,7 +902,17 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 {
 	try
 	{
+		if(!_sslCTX)
+		{
+			GD::out.printError("Error: Could not initiate SSL connection. _sslCTX is nullptr.");
+			return;
+		}
 		client->ssl = SSL_new(_sslCTX);
+		if(!client->ssl)
+		{
+			GD::out.printError("Error creating SSL structure: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, 0)));
+			return;
+		}
 		SSL_set_fd(client->ssl, client->fileDescriptor->descriptor);
 		int32_t result = SSL_accept(client->ssl);
 		if(result < 1)
