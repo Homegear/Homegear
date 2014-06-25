@@ -69,7 +69,6 @@ void HMWiredDevice::dispose(bool wait)
 	try
 	{
 		if(_disposing) return;
-		LogicalDevice::dispose(wait);
 		_disposing = true;
 		GD::out.printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
 		if(GD::physicalInterface) GD::physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
@@ -79,6 +78,7 @@ void HMWiredDevice::dispose(bool wait)
 		//Packets might still arrive, after removing this device from the physical interface, so sleep a little bit
 		//This is not necessary if the physical interface doesn't listen anymore
 		if(wait && timeDifference >= 0 && timeDifference < 2000) std::this_thread::sleep_for(std::chrono::milliseconds(2000 - timeDifference));
+		LogicalDevice::dispose(wait);
 	}
     catch(const std::exception& ex)
     {
@@ -131,7 +131,6 @@ void HMWiredDevice::loadPeers()
 	{
 		//Check for GD::devices for non unique access
 		//Change peers identifier for device to id
-		_peersMutex.lock();
 		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetPeers();
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
@@ -141,24 +140,28 @@ void HMWiredDevice::loadPeers()
 			std::shared_ptr<HMWiredPeer> peer(new HMWiredPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
 			if(!peer->rpcDevice) continue;
+			_peersMutex.lock();
 			_peers[peer->getAddress()] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			_peersByID[peerID] = peer;
+			_peersMutex.unlock();
 		}
 	}
 	catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_peersMutex.unlock();
     }
     catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_peersMutex.unlock();
     }
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_peersMutex.unlock();
     }
-    _peersMutex.unlock();
 }
 
 void HMWiredDevice::loadVariables()

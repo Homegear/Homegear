@@ -267,6 +267,7 @@ int main(int argc, char* argv[])
     {
     	getExecutablePath();
     	GD::bl.reset(new BaseLib::Obj(GD::executablePath));
+    	GD::out.init(GD::bl.get());
 
     	for(int32_t i = 1; i < argc; i++)
     	{

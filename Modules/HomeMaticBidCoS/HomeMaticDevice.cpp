@@ -207,7 +207,7 @@ void HomeMaticDevice::dispose(bool wait)
 	try
 	{
 		if(_disposing) return;
-		LogicalDevice::dispose(wait);
+		_disposing = true;
 		GD::out.printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
 		for(std::map<std::string, std::shared_ptr<IBidCoSInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
 		{
@@ -220,6 +220,7 @@ void HomeMaticDevice::dispose(bool wait)
 		//Packets might still arrive, after removing this device from the rfDevice, so sleep a little bit
 		//This is not necessary if the rfDevice doesn't listen anymore
 		if(wait && timeDifference >= 0 && timeDifference < 2000) std::this_thread::sleep_for(std::chrono::milliseconds(2000 - timeDifference));
+		LogicalDevice::dispose(wait);
 	}
     catch(const std::exception& ex)
     {
@@ -576,7 +577,6 @@ void HomeMaticDevice::loadPeers()
 	{
 		//Check for GD::devices for non unique access
 		//Change peers identifier for device to id
-		_peersMutex.lock();
 		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetPeers();
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
@@ -586,12 +586,15 @@ void HomeMaticDevice::loadPeers()
 			std::shared_ptr<BidCoSPeer> peer(new BidCoSPeer(peerID, address, row->second.at(3)->textValue, _deviceID, isCentral(), this));
 			if(!peer->load(this)) continue;
 			if(!peer->rpcDevice) continue;
+			_peersMutex.lock();
 			_peers[peer->getAddress()] = peer;
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			_peersByID[peerID] = peer;
+			_peersMutex.unlock();
 			if(peer->getPhysicalInterface()->needsPeers()) peer->getPhysicalInterface()->addPeer(peer->getPeerInfo());
 			if(!peer->getTeamRemoteSerialNumber().empty())
 			{
+				_peersMutex.lock();
 				if(_peersBySerial.find(peer->getTeamRemoteSerialNumber()) == _peersBySerial.end())
 				{
 					std::shared_ptr<BidCoSPeer> team = createTeam(peer->getTeamRemoteAddress(), peer->getDeviceType(), peer->getTeamRemoteSerialNumber());
@@ -601,6 +604,7 @@ void HomeMaticDevice::loadPeers()
 					_peersBySerial[team->getSerialNumber()] = team;
 					_peersByID[team->getID()] = team;
 				}
+				_peersMutex.unlock();
 				for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
 				{
 					if(i->second->hasTeam)
@@ -615,16 +619,18 @@ void HomeMaticDevice::loadPeers()
 	catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_peersMutex.unlock();
     }
     catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_peersMutex.unlock();
     }
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_peersMutex.unlock();
     }
-    _peersMutex.unlock();
 }
 
 void HomeMaticDevice::saveVariables()

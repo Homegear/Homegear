@@ -94,6 +94,13 @@ void SQLite3::openDatabase(std::string databasePath, bool databaseSynchronous, b
 				sqlite3_free(errorMessage);
 			}
 		}
+
+		sqlite3_exec(_database, "VACUUM", 0, 0, &errorMessage);
+		if(errorMessage)
+		{
+			GD::out.printWarning("Warning: Can't execute \"VACUUM\": " + std::string(errorMessage));
+			sqlite3_free(errorMessage);
+		}
 	}
 	catch(const std::exception& ex)
     {
