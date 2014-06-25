@@ -242,16 +242,16 @@ void HM_LC_SWX_FM::handleStateChangeRemote(int32_t messageCounter, std::shared_p
 		if(packet->payload()->empty()) return;
 		int32_t channel = packet->payload()->at(0) & 0x3F;
 		if(channel > _channelCount) return;
-		std::shared_ptr<HomeMaticCentral> central = getCentral();
+		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
 		std::shared_ptr<BidCoSPeer> peer(central->getPeer(packet->senderAddress()));
 		//Check if channel is paired to me
-		std::shared_ptr<BasicPeer> me(peer->getPeer(channel, _address, channel));
+		std::shared_ptr<BaseLib::Systems::BasicPeer> me(peer->getPeer(channel, _address, channel));
 		if(!me) return;
 		int32_t channelGroupedWith = peer->getChannelGroupedWith(channel);
 		if(channelGroupedWith > -1)
 		{
 			//Check if grouped channel is also paired to me
-			std::shared_ptr<BasicPeer> me2(peer->getPeer(channelGroupedWith, _address, channelGroupedWith));
+			std::shared_ptr<BaseLib::Systems::BasicPeer> me2(peer->getPeer(channelGroupedWith, _address, channelGroupedWith));
 			if(!me2) channelGroupedWith = -1;
 		}
 		if(channelGroupedWith > -1)
@@ -284,10 +284,10 @@ void HM_LC_SWX_FM::handleStateChangeMotionDetector(int32_t messageCounter, std::
 		if(packet->payload()->empty()) return;
 		int32_t channel = packet->payload()->at(0) & 0x3F;
 		if(channel > _channelCount) return;
-		std::shared_ptr<HomeMaticCentral> central = getCentral();
+		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
 		std::shared_ptr<BidCoSPeer> peer(central->getPeer(packet->senderAddress()));
 		//Check if channel is paired to me
-		std::shared_ptr<BasicPeer> me(peer->getPeer(channel, _address, channel));
+		std::shared_ptr<BaseLib::Systems::BasicPeer> me(peer->getPeer(channel, _address, channel));
 		if(!me) return;
 		_states[channel] = true;
 

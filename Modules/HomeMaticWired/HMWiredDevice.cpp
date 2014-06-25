@@ -69,14 +69,15 @@ void HMWiredDevice::dispose(bool wait)
 	try
 	{
 		if(_disposing) return;
+		LogicalDevice::dispose(wait);
 		_disposing = true;
 		GD::out.printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
 		if(GD::physicalInterface) GD::physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		int64_t startTime = BaseLib::HelperFunctions::getTime();
 		//stopThreads();
 		int64_t timeDifference = BaseLib::HelperFunctions::getTime() - startTime;
-		//Packets might still arrive, after removing this device from the rfDevice, so sleep a little bit
-		//This is not necessary if the rfDevice doesn't listen anymore
+		//Packets might still arrive, after removing this device from the physical interface, so sleep a little bit
+		//This is not necessary if the physical interface doesn't listen anymore
 		if(wait && timeDifference >= 0 && timeDifference < 2000) std::this_thread::sleep_for(std::chrono::milliseconds(2000 - timeDifference));
 	}
     catch(const std::exception& ex)
@@ -295,6 +296,29 @@ bool HMWiredDevice::peerExists(uint64_t id)
     return false;
 }
 
+std::shared_ptr<BaseLib::Systems::Central> HMWiredDevice::getCentral()
+{
+	try
+	{
+		if(_central) return _central;
+		_central = GD::family->getCentral();
+		return _central;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<BaseLib::Systems::Central>();
+}
+
 std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(int32_t address)
 {
 	try
@@ -302,7 +326,7 @@ std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(int32_t address)
 		_peersMutex.lock();
 		if(_peers.find(address) != _peers.end())
 		{
-			std::shared_ptr<HMWiredPeer> peer(_peers.at(address));
+			std::shared_ptr<HMWiredPeer> peer(std::dynamic_pointer_cast<HMWiredPeer>(_peers.at(address)));
 			_peersMutex.unlock();
 			return peer;
 		}
@@ -330,7 +354,7 @@ std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(uint64_t id)
 		_peersMutex.lock();
 		if(_peersByID.find(id) != _peersByID.end())
 		{
-			std::shared_ptr<HMWiredPeer> peer(_peersByID.at(id));
+			std::shared_ptr<HMWiredPeer> peer(std::dynamic_pointer_cast<HMWiredPeer>(_peersByID.at(id)));
 			_peersMutex.unlock();
 			return peer;
 		}
@@ -358,7 +382,7 @@ std::shared_ptr<HMWiredPeer> HMWiredDevice::getPeer(std::string serialNumber)
 		_peersMutex.lock();
 		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
 		{
-			std::shared_ptr<HMWiredPeer> peer(_peersBySerial.at(serialNumber));
+			std::shared_ptr<HMWiredPeer> peer(std::dynamic_pointer_cast<HMWiredPeer>(_peersBySerial.at(serialNumber)));
 			_peersMutex.unlock();
 			return peer;
 		}
@@ -564,7 +588,7 @@ void HMWiredDevice::savePeers(bool full)
 	try
 	{
 		_peersMutex.lock();
-		for(std::unordered_map<int32_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		for(std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			//Necessary, because peers can be assigned to multiple virtual devices
 			if(i->second->getParentID() != _deviceID) continue;

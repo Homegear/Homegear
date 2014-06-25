@@ -710,7 +710,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetInstallMode::invoke(std::shared
 	try
 	{
 		int32_t familyID = -1;
-		if(parameters->empty())
+		if(!parameters->empty())
 		{
 			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
 				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger })

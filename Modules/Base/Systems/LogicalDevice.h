@@ -47,6 +47,9 @@ class Obj;
 
 namespace Systems
 {
+
+class Central;
+
 class LogicalDevice : public Peer::IPeerEventSink, public IPhysicalInterface::IPhysicalInterfaceEventSink, public IEvents
 {
 public:
@@ -90,6 +93,7 @@ public:
 	LogicalDevice(DeviceFamilies deviceFamily, BaseLib::Obj* baseLib, IDeviceEventSink* eventHandler);
 	LogicalDevice(DeviceFamilies deviceFamily, BaseLib::Obj* baseLib, uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
 	virtual ~LogicalDevice();
+	virtual void dispose(bool wait = true);
 
 	virtual DeviceFamilies deviceFamily();
 
@@ -98,8 +102,12 @@ public:
     virtual std::string getSerialNumber() { return _serialNumber; }
     virtual uint32_t getDeviceType() { return _deviceType; }
 	virtual std::string handleCLICommand(std::string command) { return ""; }
+	virtual std::shared_ptr<Central> getCentral() = 0;
+	void getPeers(std::vector<std::shared_ptr<Peer>>& peers);
+	std::shared_ptr<Peer> getPeer(int32_t address);
+    std::shared_ptr<Peer> getPeer(uint64_t id);
+    std::shared_ptr<Peer> getPeer(std::string serialNumber);
 	virtual bool peerSelected() { return false; }
-	virtual void dispose(bool wait = true) {}
 	virtual void deletePeersFromDatabase();
 	virtual void load();
 	virtual void loadVariables() = 0;
@@ -121,6 +129,13 @@ protected:
     bool _initialized = false;
     bool _disposing = false;
 	bool _disposed = false;
+
+	std::shared_ptr<Central> _central;
+	std::shared_ptr<Peer> _currentPeer;
+    std::unordered_map<int32_t, std::shared_ptr<Peer>> _peers;
+    std::unordered_map<std::string, std::shared_ptr<Peer>> _peersBySerial;
+    std::map<uint64_t, std::shared_ptr<Peer>> _peersByID;
+    std::timed_mutex _peersMutex;
 
 	//Event handling
 	//Database

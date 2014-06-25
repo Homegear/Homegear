@@ -555,9 +555,10 @@ void HM_CC_TC::setDecalcification()
 			try
 			{
 				_peersMutex.lock();
-				for(std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+				for(std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
 				{
-					i->second->config[0xFFFF] = 4;
+					std::shared_ptr<BidCoSPeer> peer(std::dynamic_pointer_cast<BidCoSPeer>(i->second));
+					peer->config[0xFFFF] = 4;
 				}
 			}
 			catch(const std::exception& ex)
@@ -720,7 +721,7 @@ int32_t HM_CC_TC::getNextDutyCycleDeviceAddress()
 			return -1;
 		}
 		int i = 0;
-		std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>>::iterator j = (_currentDutyCycleDeviceAddress == -1) ? _peers.begin() : _peers.find(_currentDutyCycleDeviceAddress);
+		std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator j = (_currentDutyCycleDeviceAddress == -1) ? _peers.begin() : _peers.find(_currentDutyCycleDeviceAddress);
 		if(j == _peers.end()) //_currentDutyCycleDeviceAddress does not exist anymore in peers
 		{
 			j = _peers.begin();

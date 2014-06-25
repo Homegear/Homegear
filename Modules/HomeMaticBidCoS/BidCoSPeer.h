@@ -84,40 +84,18 @@ public:
 	std::map<std::string, FrameValue> values;
 };
 
-class BasicPeer
-{
-public:
-	BasicPeer() {}
-	BasicPeer(int32_t addr, std::string serial, bool hid) { address = addr; serialNumber = serial; hidden = hid; }
-	virtual ~BasicPeer() {}
-
-	int32_t address = 0;
-	std::string serialNumber;
-	int32_t channel = 0;
-	bool hidden = false;
-	std::string linkName;
-	std::string linkDescription;
-	std::shared_ptr<HomeMaticDevice> device;
-	std::vector<uint8_t> data;
-};
-
 class BidCoSPeer : public BaseLib::Systems::Peer
 {
     public:
 		BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 		BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 		virtual ~BidCoSPeer();
-		void dispose();
 
 		//In table variables:
-		int32_t getFirmwareVersion() { return _firmwareVersion; }
-		void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
 		int32_t getRemoteChannel() { return _remoteChannel; }
 		void setRemoteChannel(int32_t value) { _remoteChannel = value; saveVariable(1, value); }
 		int32_t getLocalChannel() { return _localChannel; }
 		void setLocalChannel(int32_t value) { _localChannel = value; saveVariable(2, value); }
-		BaseLib::Systems::LogicalDeviceType getDeviceType() { return _deviceType; }
-		void setDeviceType(BaseLib::Systems::LogicalDeviceType value) { _deviceType = value; saveVariable(3, (int32_t)_deviceType.type()); }
 		int32_t getCountFromSysinfo() { return _countFromSysinfo; }
 		void setCountFromSysinfo(int32_t value) { _countFromSysinfo = value; saveVariable(4, value); }
 		int32_t getMessageCounter() { return _messageCounter; }
@@ -150,7 +128,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         std::shared_ptr<PendingBidCoSQueues> pendingBidCoSQueues;
 
         void worker();
-        std::string handleCLICommand(std::string command);
+        virtual std::string handleCLICommand(std::string command);
         void stopThreads();
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel, bool useConfigFunction);
@@ -176,11 +154,9 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         bool hasTeam() { return !_team.serialNumber.empty(); }
         virtual bool isTeam() { return _serialNumber.front() == '*'; }
         bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
-        void addPeer(int32_t channel, std::shared_ptr<BasicPeer> peer);
-        std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address, int32_t remoteChannel = -1);
+        void addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer);
         std::shared_ptr<HomeMaticDevice> getHiddenPeerDevice();
-        std::shared_ptr<BasicPeer> getHiddenPeer(int32_t channel);
-        std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel = -1);
+        std::shared_ptr<BaseLib::Systems::BasicPeer> getHiddenPeer(int32_t channel);
         void removePeer(int32_t channel, int32_t address, int32_t remoteChannel);
         std::shared_ptr<IBidCoSInterface> getPhysicalInterface() { return _physicalInterface; }
         void addVariableToResetCallback(std::shared_ptr<CallbackFunctionParameter> parameters);
@@ -193,23 +169,22 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         bool hasLowbatBit(std::shared_ptr<BaseLib::RPC::DeviceFrame> frame);
         void packetReceived(std::shared_ptr<BidCoSPacket> packet);
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
-        int32_t getChannelGroupedWith(int32_t channel);
-        int32_t getNewFirmwareVersion();
-        bool firmwareUpdateAvailable();
+        virtual int32_t getChannelGroupedWith(int32_t channel);
+        virtual int32_t getNewFirmwareVersion();
+        virtual bool firmwareUpdateAvailable();
         std::string printConfig();
         virtual IBidCoSInterface::PeerInfo getPeerInfo();
 
         //RPC methods
-        std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription(bool channels, std::map<std::string, bool> fields);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
+        virtual std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription(bool channels, std::map<std::string, bool> fields);
+        virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
         std::shared_ptr<BaseLib::RPC::RPCVariable> setLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkPeers(int32_t channel, bool returnID);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> getLink(int32_t channel, int32_t flags, bool avoidDuplicates);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getParamsetId(uint32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
+        virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
         std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
         std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false);
         std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(std::string interfaceID);
@@ -219,27 +194,23 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         uint32_t _lastRSSIDevice = 0;
         std::mutex _variablesToResetMutex;
         std::vector<std::shared_ptr<VariableToReset>> _variablesToReset;
-        std::shared_ptr<HomeMaticCentral> _central;
         std::shared_ptr<IBidCoSInterface> _physicalInterface;
 
         //In table variables:
-        int32_t _firmwareVersion = 0;
 		int32_t _remoteChannel = 0;
 		int32_t _localChannel = 0;
-		BaseLib::Systems::LogicalDeviceType _deviceType;
 		int32_t _countFromSysinfo = 0;
 		uint8_t _messageCounter = 0;
 		bool _pairingComplete = false;
 		int32_t _teamChannel = -1;
-		BasicPeer _team;
-		std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
+		BaseLib::Systems::BasicPeer _team;
 		int32_t _aesKeyIndex = 0;
 		int32_t _aesKeySendIndex = 0;
 		std::string _physicalInterfaceID;
 		//End
 
-		std::shared_ptr<HomeMaticCentral> getCentral();
-		std::shared_ptr<HomeMaticDevice> getDevice(int32_t address);
+		virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
+		virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
 
 		//ServiceMessages event handling
 		virtual void onConfigPending(bool configPending);

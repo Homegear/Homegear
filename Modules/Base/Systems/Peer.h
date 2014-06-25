@@ -44,6 +44,7 @@ namespace BaseLib
 namespace Systems
 {
 class LogicalDevice;
+class Central;
 
 class RPCConfigurationParameter
 {
@@ -65,6 +66,27 @@ public:
 
 	uint32_t databaseID = 0;
 	std::vector<uint8_t> data;
+};
+
+class BasicPeer
+{
+public:
+	BasicPeer() {}
+	BasicPeer(int32_t addr, std::string serial, bool hid) { address = addr; serialNumber = serial; hidden = hid; }
+	virtual ~BasicPeer() {}
+
+	bool isSender = false;
+	uint64_t id = 0;
+	int32_t address = 0;
+	std::string serialNumber;
+	int32_t channel = 0;
+	int32_t physicalIndexOffset = 0;
+	bool hidden = false;
+	std::string linkName;
+	std::string linkDescription;
+	std::shared_ptr<LogicalDevice> device;
+	std::vector<uint8_t> data;
+	int32_t configEEPROMAddress = -1;
 };
 
 class Peer : public ServiceMessages::IServiceEventSink, public IEvents
@@ -110,6 +132,7 @@ public:
 	Peer(BaseLib::Obj* baseLib, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 	Peer(BaseLib::Obj* baseLib, int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler);
 	virtual ~Peer();
+	virtual void dispose();
 
 	//In table peers:
 	virtual int32_t getParentID() { return _parentID; }
@@ -122,16 +145,24 @@ public:
 	//End
 
 	//In table variables:
+	virtual int32_t getFirmwareVersion() { return _firmwareVersion; }
+	virtual void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
+	virtual LogicalDeviceType getDeviceType() { return _deviceType; }
+	virtual void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(3, (int32_t)_deviceType.type()); }
     virtual std::string getName() { return _name; }
 	virtual void setName(std::string value) { _name = value; saveVariable(1000, _name); }
     //End
 
+	virtual std::string handleCLICommand(std::string command) = 0;
 	virtual RPC::Device::RXModes::Enum getRXModes();
 	virtual bool isTeam() { return false; }
 	virtual void setLastPacketReceived();
 	virtual uint32_t getLastPacketReceived() { return _lastPacketReceived; }
 	virtual bool pendingQueuesEmpty() { return true; }
 	virtual void enqueuePendingQueues() {}
+	virtual int32_t getChannelGroupedWith(int32_t channel) = 0;
+	virtual int32_t getNewFirmwareVersion() = 0;
+    virtual bool firmwareUpdateAvailable() = 0;
 
 	virtual bool load(LogicalDevice* device) { return false; }
 	virtual void save(bool savePeer, bool saveVariables, bool saveCentralConfig);
@@ -149,13 +180,25 @@ public:
     virtual void deleteFromDatabase();
     virtual void saveServiceMessages();
 
+    virtual std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address, int32_t remoteChannel = -1);
+	virtual std::shared_ptr<BasicPeer> getPeer(int32_t channel, uint64_t id, int32_t remoteChannel = -1);
+	virtual std::shared_ptr<BasicPeer> getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel = -1);
+
+    virtual std::shared_ptr<Central> getCentral() = 0;
+	virtual std::shared_ptr<LogicalDevice> getDevice(int32_t address) = 0;
+
     //RPC methods
+	virtual std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> getDeviceDescription(bool channels, std::map<std::string, bool> fields) = 0;
+    virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields) = 0;
+    virtual std::shared_ptr<RPC::RPCVariable> getLink(int32_t channel, int32_t flags, bool avoidDuplicates);
+    virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) = 0;
     virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
     //End RPC methods
 protected:
     BaseLib::Obj* _bl = nullptr;
     std::map<uint32_t, uint32_t> _variableDatabaseIDs;
     std::map<std::string, std::shared_ptr<BaseLib::RPC::RPCVariable>> _rpcCache;
+    std::shared_ptr<Central> _central;
 
 	//In table peers:
 	uint64_t _peerID = 0;
@@ -165,6 +208,9 @@ protected:
 	//End
 
 	//In table variables:
+	int32_t _firmwareVersion = 0;
+	LogicalDeviceType _deviceType;
+	std::unordered_map<int32_t, std::vector<std::shared_ptr<BasicPeer>>> _peers;
 	std::string _name;
 	//End
 

@@ -207,7 +207,7 @@ void HomeMaticDevice::dispose(bool wait)
 	try
 	{
 		if(_disposing) return;
-		_disposing = true;
+		LogicalDevice::dispose(wait);
 		GD::out.printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
 		for(std::map<std::string, std::shared_ptr<IBidCoSInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
 		{
@@ -245,7 +245,7 @@ void HomeMaticDevice::stopThreads()
 		_sentPackets.dispose(false);
 
 		_peersMutex.lock();
-		for(std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+		for(std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			i->second->dispose();
 		}
@@ -376,12 +376,12 @@ bool HomeMaticDevice::isDimmer(BaseLib::Systems::LogicalDeviceType type)
 	return false;
 }
 
-std::shared_ptr<HomeMaticCentral> HomeMaticDevice::getCentral()
+std::shared_ptr<BaseLib::Systems::Central> HomeMaticDevice::getCentral()
 {
 	try
 	{
 		if(_central) return _central;
-		_central = std::dynamic_pointer_cast<HomeMaticCentral>(GD::family->getCentral());
+		_central = GD::family->getCentral();
 		return _central;
 	}
 	catch(const std::exception& ex)
@@ -396,7 +396,7 @@ std::shared_ptr<HomeMaticCentral> HomeMaticDevice::getCentral()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
-	return std::shared_ptr<HomeMaticCentral>();
+	return std::shared_ptr<BaseLib::Systems::Central>();
 }
 
 std::shared_ptr<HomeMaticDevice> HomeMaticDevice::getDevice(int32_t address)
@@ -605,7 +605,7 @@ void HomeMaticDevice::loadPeers()
 				{
 					if(i->second->hasTeam)
 					{
-						_peersBySerial[peer->getTeamRemoteSerialNumber()]->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), peer->getTeamRemoteChannel()));
+						getPeer(peer->getTeamRemoteSerialNumber())->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), peer->getTeamRemoteChannel()));
 						break;
 					}
 				}
@@ -870,7 +870,7 @@ void HomeMaticDevice::savePeers(bool full)
 	try
 	{
 		_peersMutex.lock();
-		for(std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		for(std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			//Necessary, because peers can be assigned to multiple virtual devices
 			if(i->second->getParentID() != _deviceID)
@@ -1481,14 +1481,15 @@ void HomeMaticDevice::sendPeerList(int32_t messageCounter, int32_t destinationAd
 		std::vector<uint8_t> payload;
 		payload.push_back(0x01); //I think it's always channel 1
 		_peersMutex.lock();
-		for(std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
+		for(std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::const_iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			if(i->second->getDeviceType().type() == (uint32_t)DeviceType::HMRCV50) continue;
-			if(i->second->getLocalChannel() != channel) continue;
+			std::shared_ptr<BidCoSPeer> peer(std::dynamic_pointer_cast<BidCoSPeer>(i->second));
+			if(peer->getDeviceType().type() == (uint32_t)DeviceType::HMRCV50) continue;
+			if(peer->getLocalChannel() != channel) continue;
 			payload.push_back(i->first >> 16);
 			payload.push_back((i->first >> 8) & 0xFF);
 			payload.push_back(i->first & 0xFF);
-			payload.push_back(i->second->getRemoteChannel()); //Channel
+			payload.push_back(peer->getRemoteChannel()); //Channel
 		}
 		_peersMutex.unlock();
 		payload.push_back(0x00);
@@ -1863,7 +1864,7 @@ std::shared_ptr<BidCoSPeer> HomeMaticDevice::getPeer(int32_t address)
 		_peersMutex.lock();
 		if(_peers.find(address) != _peers.end())
 		{
-			std::shared_ptr<BidCoSPeer> peer(_peers.at(address));
+			std::shared_ptr<BidCoSPeer> peer(std::dynamic_pointer_cast<BidCoSPeer>(_peers.at(address)));
 			_peersMutex.unlock();
 			return peer;
 		}
@@ -1891,7 +1892,7 @@ std::shared_ptr<BidCoSPeer> HomeMaticDevice::getPeer(uint64_t id)
 		_peersMutex.lock();
 		if(_peersByID.find(id) != _peersByID.end())
 		{
-			std::shared_ptr<BidCoSPeer> peer(_peersByID.at(id));
+			std::shared_ptr<BidCoSPeer> peer(std::dynamic_pointer_cast<BidCoSPeer>(_peersByID.at(id)));
 			_peersMutex.unlock();
 			return peer;
 		}
@@ -1919,7 +1920,7 @@ std::shared_ptr<BidCoSPeer> HomeMaticDevice::getPeer(std::string serialNumber)
 		_peersMutex.lock();
 		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
 		{
-			std::shared_ptr<BidCoSPeer> peer(_peersBySerial.at(serialNumber));
+			std::shared_ptr<BidCoSPeer> peer(std::dynamic_pointer_cast<BidCoSPeer>(_peersBySerial.at(serialNumber)));
 			_peersMutex.unlock();
 			return peer;
 		}

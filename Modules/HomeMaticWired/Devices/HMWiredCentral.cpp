@@ -32,12 +32,12 @@
 
 namespace HMWired {
 
-HMWiredCentral::HMWiredCentral(IDeviceEventSink* eventHandler) : HMWiredDevice(eventHandler), BaseLib::Systems::Central(0)
+HMWiredCentral::HMWiredCentral(IDeviceEventSink* eventHandler) : HMWiredDevice(eventHandler), BaseLib::Systems::Central(GD::bl, this)
 {
 	init();
 }
 
-HMWiredCentral::HMWiredCentral(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : HMWiredDevice(deviceID, serialNumber, address, eventHandler), Central(address)
+HMWiredCentral::HMWiredCentral(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : HMWiredDevice(deviceID, serialNumber, address, eventHandler), Central(GD::bl, this)
 {
 	init();
 }
@@ -372,7 +372,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 					<< std::setw(unreachWidth) << " "
 					<< std::endl;
 				_peersMutex.lock();
-				for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+				for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 				{
 					if(filterType == "id")
 					{
@@ -493,7 +493,7 @@ std::string HMWiredCentral::handleCLICommand(std::string command)
 			if(all)
 			{
 				_peersMutex.lock();
-				for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+				for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 				{
 					if(i->second->firmwareUpdateAvailable()) ids.push_back(i->first);
 				}
@@ -1163,7 +1163,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::addLink(uint64_t send
 			if(validLink) break;
 		}
 
-		std::shared_ptr<BasicPeer> senderPeer(new BasicPeer());
+		std::shared_ptr<BaseLib::Systems::BasicPeer> senderPeer(new BaseLib::Systems::BasicPeer());
 		senderPeer->isSender = true;
 		senderPeer->id = sender->getID();
 		senderPeer->address = sender->getAddress();
@@ -1175,7 +1175,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::addLink(uint64_t send
 		senderPeer->configEEPROMAddress = receiver->getFreeEEPROMAddress(receiverChannelIndex, false);
 		if(senderPeer->configEEPROMAddress == -1) return BaseLib::RPC::RPCVariable::createError(-32500, "Can't get free eeprom address to store config.");
 
-		std::shared_ptr<BasicPeer> receiverPeer(new BasicPeer());
+		std::shared_ptr<BaseLib::Systems::BasicPeer> receiverPeer(new BaseLib::Systems::BasicPeer());
 		receiverPeer->id = receiver->getID();
 		receiverPeer->address = receiver->getAddress();
 		receiverPeer->channel = receiverChannelIndex;
@@ -1387,9 +1387,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getDeviceInfo(uint64_
 			std::vector<std::shared_ptr<HMWiredPeer>> peers;
 			//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
 			_peersMutex.lock();
-			for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+			for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 			{
-				peers.push_back(i->second);
+				peers.push_back(std::dynamic_pointer_cast<HMWiredPeer>(i->second));
 			}
 			_peersMutex.unlock();
 
@@ -1520,97 +1520,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getLinkPeers(uint64_t
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getLinks(std::string serialNumber, int32_t channel, int32_t flags)
-{
-	try
-	{
-		if(serialNumber.empty()) return getLinks(0, -1, flags);
-		std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
-		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		return getLinks(peer->getID(), channel, flags);
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getLinks(uint64_t peerID, int32_t channel, int32_t flags)
-{
-	try
-	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		std::shared_ptr<BaseLib::RPC::RPCVariable> element(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		if(peerID == 0)
-		{
-			try
-			{
-				std::vector<std::shared_ptr<HMWiredPeer>> peers;
-				//Copy all peers first, because getLinks takes very long and we don't want to lock _peersMutex too long
-				_peersMutex.lock();
-				for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
-				{
-					peers.push_back(i->second);
-				}
-				_peersMutex.unlock();
-
-				for(std::vector<std::shared_ptr<HMWiredPeer>>::iterator i = peers.begin(); i != peers.end(); ++i)
-				{
-					//listDevices really needs a lot of ressources, so wait a little bit after each device
-					std::this_thread::sleep_for(std::chrono::milliseconds(3));
-					element = (*i)->getLink(channel, flags, true);
-					array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
-				}
-			}
-			catch(const std::exception& ex)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
-		}
-		else
-		{
-			std::shared_ptr<HMWiredPeer> peer(getPeer(peerID));
-			if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-			element = peer->getLink(channel, flags, false);
-			array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
-		}
-		return array;
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
 std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
 {
 	try
@@ -1623,6 +1532,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getParamset(std::stri
 		else
 		{
 			std::shared_ptr<HMWiredPeer> peer(getPeer(serialNumber));
+			if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
 			uint64_t remoteID = 0;
 			if(!remoteSerialNumber.empty())
 			{
@@ -1630,8 +1540,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getParamset(std::stri
 				if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
 				remoteID = remotePeer->getID();
 			}
-			if(peer) return peer->getParamset(channel, type, remoteID, remoteChannel);
-			return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+			return peer->getParamset(channel, type, remoteID, remoteChannel);
 		}
 	}
 	catch(const std::exception& ex)
@@ -1846,9 +1755,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::getServiceMessages(bo
 		std::vector<std::shared_ptr<HMWiredPeer>> peers;
 		//Copy all peers first, because getServiceMessages takes very long and we don't want to lock _peersMutex too long
 		_peersMutex.lock();
-		for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 		{
-			peers.push_back(i->second);
+			peers.push_back(std::dynamic_pointer_cast<HMWiredPeer>(i->second));
 		}
 		_peersMutex.unlock();
 
@@ -1939,10 +1848,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::listDevices(bool chan
 		std::vector<std::shared_ptr<HMWiredPeer>> peers;
 		//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
 		_peersMutex.lock();
-		for(std::map<uint64_t, std::shared_ptr<HMWiredPeer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 		{
 			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
-			peers.push_back(i->second);
+			peers.push_back(std::dynamic_pointer_cast<HMWiredPeer>(i->second));
 		}
 		_peersMutex.unlock();
 

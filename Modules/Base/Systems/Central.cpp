@@ -28,15 +28,113 @@
  */
 
 #include "Central.h"
+#include "../BaseLib.h"
 
 namespace BaseLib
 {
 namespace Systems
 {
 
+Central::Central(BaseLib::Obj* baseLib, LogicalDevice* me)
+{
+	_baseLib = baseLib;
+	_me = me;
+}
+
 Central::~Central()
 {
 }
+
+int32_t Central::physicalAddress()
+{
+	return _me->getAddress();
+}
+
+//RPC methods
+std::shared_ptr<BaseLib::RPC::RPCVariable> Central::getLinks(std::string serialNumber, int32_t channel, int32_t flags)
+{
+	try
+	{
+		if(serialNumber.empty()) return getLinks(0, -1, flags);
+		std::shared_ptr<Peer> peer(_me->getPeer(serialNumber));
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		return getLinks(peer->getID(), channel, flags);
+	}
+	catch(const std::exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> Central::getLinks(uint64_t peerID, int32_t channel, int32_t flags)
+{
+	try
+	{
+		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::RPCVariable> element(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		if(peerID == 0)
+		{
+			try
+			{
+				std::vector<std::shared_ptr<Peer>> peers;
+				//Copy all peers first, because getLinks takes very long and we don't want to lock _peersMutex too long
+				_me->getPeers(peers);
+
+				for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+				{
+					//listDevices really needs a lot of ressources, so wait a little bit after each device
+					std::this_thread::sleep_for(std::chrono::milliseconds(3));
+					element = (*i)->getLink(channel, flags, true);
+					array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
+				}
+			}
+			catch(const std::exception& ex)
+			{
+				_baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+		}
+		else
+		{
+			std::shared_ptr<Peer> peer(_me->getPeer(peerID));
+			if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+			element = peer->getLink(channel, flags, false);
+			array->arrayValue->insert(array->arrayValue->begin(), element->arrayValue->begin(), element->arrayValue->end());
+		}
+		return array;
+	}
+	catch(const std::exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+//End RPC methods
 
 }
 }

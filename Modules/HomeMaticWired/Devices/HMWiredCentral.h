@@ -70,8 +70,6 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkPeers(std::string serialNumber, int32_t channel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkPeers(uint64_t peerID, int32_t channel);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinks(std::string serialNumber, int32_t channel, int32_t flags);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getLinks(uint64_t peerID, int32_t channel, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamsetDescription(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamsetDescription(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);

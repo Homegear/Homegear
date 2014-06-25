@@ -69,6 +69,7 @@ class HMWiredDevice : public BaseLib::Systems::LogicalDevice
         virtual bool peerSelected() { return (bool)_currentPeer; }
 		bool peerExists(int32_t address);
 		bool peerExists(uint64_t id);
+		virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 		std::shared_ptr<HMWiredPeer> getPeer(int32_t address);
 		std::shared_ptr<HMWiredPeer> getPeer(uint64_t id);
 		std::shared_ptr<HMWiredPeer> getPeer(std::string serialNumber);
@@ -98,11 +99,6 @@ class HMWiredDevice : public BaseLib::Systems::LogicalDevice
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         //End
 
-        std::shared_ptr<HMWiredPeer> _currentPeer;
-        std::unordered_map<int32_t, std::shared_ptr<HMWiredPeer>> _peers;
-        std::unordered_map<std::string, std::shared_ptr<HMWiredPeer>> _peersBySerial;
-        std::map<uint64_t, std::shared_ptr<HMWiredPeer>> _peersByID;
-        std::timed_mutex _peersMutex;
         HMWiredPacketManager _receivedPackets;
         HMWiredPacketManager _sentPackets;
         bool _pairing = false;

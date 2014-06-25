@@ -158,11 +158,6 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         int32_t _channelMax = 0;
         int32_t _lastPairingByte = 0;
         int32_t _currentList = 0;
-        std::shared_ptr<BidCoSPeer> _currentPeer;
-        std::unordered_map<int32_t, std::shared_ptr<BidCoSPeer>> _peers;
-        std::unordered_map<std::string, std::shared_ptr<BidCoSPeer>> _peersBySerial;
-        std::map<uint64_t, std::shared_ptr<BidCoSPeer>> _peersByID;
-        std::timed_mutex _peersMutex;
         std::unordered_map<int32_t, int32_t> _deviceTypeChannels;
         bool _pairing = false;
         bool _justPairedToOrThroughCentral = false;
@@ -170,14 +165,13 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         BidCoSPacketManager _receivedPackets;
         BidCoSPacketManager _sentPackets;
         std::shared_ptr<BidCoSMessages> _messages;
-        std::shared_ptr<HomeMaticCentral> _central;
         std::shared_ptr<IBidCoSInterface> _physicalInterface;
 
         bool _lowBattery = false;
 
         virtual std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
         virtual std::shared_ptr<BidCoSPeer> createTeam(int32_t address, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber);
-        virtual std::shared_ptr<HomeMaticCentral> getCentral();
+        virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
         virtual std::shared_ptr<HomeMaticDevice> getDevice(int32_t address);
         virtual std::shared_ptr<IBidCoSInterface> getPhysicalInterface(int32_t peerAddress);
         virtual void worker();

@@ -97,6 +97,15 @@ Peer::~Peer()
 	serviceMessages->resetEventHandler();
 }
 
+void Peer::dispose()
+{
+	_disposing = true;
+	_central.reset();
+	_rpcCache.clear();
+	_peers.clear();
+}
+
+
 //Event handling
 void Peer::raiseCreateSavepoint(std::string name)
 {
@@ -295,6 +304,93 @@ RPC::Device::RXModes::Enum Peer::getRXModes()
 void Peer::setLastPacketReceived()
 {
 	_lastPacketReceived = HelperFunctions::getTimeSeconds();
+}
+
+std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, std::string serialNumber, int32_t remoteChannel)
+{
+	try
+	{
+		if(_peers.find(channel) == _peers.end()) return std::shared_ptr<BasicPeer>();
+
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		{
+			if((*i)->serialNumber.empty())
+			{
+				std::shared_ptr<Central> central(getCentral());
+				if(central)
+				{
+					std::shared_ptr<Peer> peer(central->logicalDevice()->getPeer((*i)->address));
+					if(peer) (*i)->serialNumber = peer->getSerialNumber();
+				}
+			}
+			if((*i)->serialNumber == serialNumber && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return std::shared_ptr<BasicPeer>();
+}
+
+std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, int32_t address, int32_t remoteChannel)
+{
+	try
+	{
+		if(_peers.find(channel) == _peers.end()) return std::shared_ptr<BasicPeer>();
+
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		{
+			if((*i)->address == address && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return std::shared_ptr<BasicPeer>();
+}
+
+std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, uint64_t id, int32_t remoteChannel)
+{
+	try
+	{
+		if(_peers.find(channel) == _peers.end()) return std::shared_ptr<BasicPeer>();
+
+		for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers[channel].begin(); i != _peers[channel].end(); ++i)
+		{
+			if((*i)->id == id && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return std::shared_ptr<BasicPeer>();
 }
 
 void Peer::deleteFromDatabase()
@@ -904,12 +1000,223 @@ void Peer::loadConfig()
     _databaseMutex.unlock();
 }
 
+//RPC methods
+std::shared_ptr<BaseLib::RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, bool avoidDuplicates)
+{
+	try
+	{
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
+		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<RPC::RPCVariable> element;
+		bool groupFlag = false;
+		if(flags & 0x01) groupFlag = true;
+		if(channel > -1 && !groupFlag) //Get link of single channel
+		{
+			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
+			//Return if no peers are paired to the channel
+			if(_peers.find(channel) == _peers.end() || _peers.at(channel).empty()) return array;
+			bool isSender = false;
+			//Return if there are no link roles defined
+			std::shared_ptr<BaseLib::RPC::LinkRole> linkRoles = rpcDevice->channels.at(channel)->linkRoles;
+			if(!linkRoles) return array;
+			if(!linkRoles->sourceNames.empty()) isSender = true;
+			else if(linkRoles->targetNames.empty()) return array;
+			std::shared_ptr<Central> central = getCentral();
+			if(!central) return array; //central actually should always be set at this point
+			for(std::vector<std::shared_ptr<BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
+			{
+				if((*i)->hidden) continue;
+				std::shared_ptr<Peer> remotePeer(central->logicalDevice()->getPeer((*i)->address));
+				if(!remotePeer)
+				{
+					_bl->out.printDebug("Debug: Can't return link description for peer with address 0x" + BaseLib::HelperFunctions::getHexString((*i)->address, 6) + ". The peer is not paired to Homegear.");
+					continue;
+				}
+				bool peerKnowsMe = false;
+				if(remotePeer && remotePeer->getPeer((*i)->channel, _address, channel)) peerKnowsMe = true;
+
+				//Don't continue if peer is sender and exists in central's peer array to avoid generation of duplicate results when requesting all links (only generate results when we are sender)
+				if(!isSender && peerKnowsMe && avoidDuplicates) return array;
+				//If we are receiver this point is only reached, when the sender is not paired to this central
+
+				uint64_t peerID = (*i)->id;
+				std::string peerSerialNumber = (*i)->serialNumber;
+				int32_t brokenFlags = 0;
+				if(peerID == 0 || peerSerialNumber.empty())
+				{
+					if(peerKnowsMe ||
+					  (*i)->address == _address) //Link to myself with non-existing (virtual) channel (e. g. switches use this)
+					{
+						(*i)->id = remotePeer->getID();
+						(*i)->serialNumber = remotePeer->getSerialNumber();
+						peerID = (*i)->id;
+					}
+					else
+					{
+						//Peer not paired to central
+						std::ostringstream stringstream;
+						stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << (*i)->address;
+						peerSerialNumber = stringstream.str();
+						if(isSender) brokenFlags = 2; //LINK_FLAG_RECEIVER_BROKEN
+						else brokenFlags = 1; //LINK_FLAG_SENDER_BROKEN
+					}
+				}
+				//Relevent for switches
+				if(peerID == _peerID && rpcDevice->channels.find((*i)->channel) == rpcDevice->channels.end())
+				{
+					if(isSender) brokenFlags = 2 | 4; //LINK_FLAG_RECEIVER_BROKEN | PEER_IS_ME
+					else brokenFlags = 1 | 4; //LINK_FLAG_SENDER_BROKEN | PEER_IS_ME
+				}
+				if(brokenFlags == 0 && remotePeer && remotePeer->serviceMessages->getUnreach()) brokenFlags = 2;
+				if(serviceMessages->getUnreach()) brokenFlags |= 1;
+				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+				element->structValue->insert(BaseLib::RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->linkDescription))));
+				element->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(brokenFlags))));
+				element->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->linkName))));
+				if(isSender)
+				{
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peerSerialNumber + ":" + std::to_string((*i)->channel)))));
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)remotePeer->getID()))));
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_CHANNEL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->channel))));
+					if(flags & 4)
+					{
+						std::shared_ptr<BaseLib::RPC::RPCVariable> paramset;
+						if(!(brokenFlags & 2) && remotePeer) paramset = remotePeer->getParamset((*i)->channel, BaseLib::RPC::ParameterSet::Type::Enum::link, _peerID, channel);
+						else paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						if(paramset->errorStruct) paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_PARAMSET", paramset));
+					}
+					if(flags & 16)
+					{
+						std::shared_ptr<BaseLib::RPC::RPCVariable> description;
+						if(!(brokenFlags & 2) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel, std::map<std::string, bool>());
+						else description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						if(description->errorStruct) description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_DESCRIPTION", description));
+					}
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)_peerID))));
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_CHANNEL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel))));
+					if(flags & 2)
+					{
+						std::shared_ptr<BaseLib::RPC::RPCVariable> paramset;
+						if(!(brokenFlags & 1)) paramset = getParamset(channel, BaseLib::RPC::ParameterSet::Type::Enum::link, peerID, (*i)->channel);
+						else paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						if(paramset->errorStruct) paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_PARAMSET", paramset));
+					}
+					if(flags & 8)
+					{
+						std::shared_ptr<BaseLib::RPC::RPCVariable> description;
+						if(!(brokenFlags & 1)) description = getDeviceDescription(channel, std::map<std::string, bool>());
+						else description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						if(description->errorStruct) description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_DESCRIPTION", description));
+					}
+				}
+				else //When sender is broken
+				{
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_serialNumber + ":" + std::to_string(channel)))));
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)_peerID))));
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_CHANNEL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(channel))));
+					if(flags & 4)
+					{
+						std::shared_ptr<BaseLib::RPC::RPCVariable> paramset;
+						if(!(brokenFlags & 2) && remotePeer) paramset = getParamset(channel, BaseLib::RPC::ParameterSet::Type::Enum::link, peerID, (*i)->channel);
+						else paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						if(paramset->errorStruct) paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_PARAMSET", paramset));
+					}
+					if(flags & 16)
+					{
+						std::shared_ptr<BaseLib::RPC::RPCVariable> description;
+						if(!(brokenFlags & 2)) description = getDeviceDescription(channel, std::map<std::string, bool>());
+						else description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						if(description->errorStruct) description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(BaseLib::RPC::RPCStructElement("RECEIVER_DESCRIPTION", description));
+					}
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peerSerialNumber + ":" + std::to_string((*i)->channel)))));
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)remotePeer->getID()))));
+					element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_CHANNEL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->channel))));
+					if(flags & 2)
+					{
+						std::shared_ptr<BaseLib::RPC::RPCVariable> paramset;
+						if(!(brokenFlags & 1) && remotePeer) paramset = remotePeer->getParamset((*i)->channel, BaseLib::RPC::ParameterSet::Type::Enum::link, _peerID, channel);
+						else paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						if(paramset->errorStruct) paramset.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_PARAMSET", paramset));
+					}
+					if(flags & 8)
+					{
+						std::shared_ptr<BaseLib::RPC::RPCVariable> description;
+						if(!(brokenFlags & 1) && remotePeer) description = remotePeer->getDeviceDescription((*i)->channel, std::map<std::string, bool>());
+						else description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						if(description->errorStruct) description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+						element->structValue->insert(BaseLib::RPC::RPCStructElement("SENDER_DESCRIPTION", description));
+					}
+				}
+				array->arrayValue->push_back(element);
+			}
+		}
+		else
+		{
+			if(channel > -1 && groupFlag) //Get links for each grouped channel
+			{
+				if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
+				std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
+				if(rpcChannel->paired)
+				{
+					element = getLink(channel, flags & 0xFFFFFFFE, avoidDuplicates);
+					array->arrayValue->insert(array->arrayValue->end(), element->arrayValue->begin(), element->arrayValue->end());
+
+					int32_t groupedWith = getChannelGroupedWith(channel);
+					if(groupedWith > -1)
+					{
+						element = getLink(groupedWith, flags & 0xFFFFFFFE, avoidDuplicates);
+						array->arrayValue->insert(array->arrayValue->end(), element->arrayValue->begin(), element->arrayValue->end());
+					}
+				}
+				else
+				{
+					element = getLink(channel, flags & 0xFFFFFFFE, avoidDuplicates);
+					array->arrayValue->insert(array->arrayValue->end(), element->arrayValue->begin(), element->arrayValue->end());
+				}
+			}
+			else //Get links for all channels
+			{
+				flags &= 7; //Remove flag 8 and 16. Both are not processed, when getting links for all devices.
+				for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+				{
+					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+					element = getLink(i->first, flags, avoidDuplicates);
+					array->arrayValue->insert(array->arrayValue->end(), element->arrayValue->begin(), element->arrayValue->end());
+				}
+			}
+		}
+		return array;
+	}
+	catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> Peer::getServiceMessages(bool returnID)
 {
 	if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 	if(!serviceMessages) return RPC::RPCVariable::createError(-32500, "Service messages are not initialized.");
 	return serviceMessages->get(returnID);
 }
-
+//End RPC methods
 }
 }
