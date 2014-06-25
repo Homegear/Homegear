@@ -176,7 +176,7 @@ int64_t HelperFunctions::getTime()
 int32_t HelperFunctions::getTimeSeconds()
 	{
 		int32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();;
-		if(time < 0) time == 0;
+		if(time < 0) time = 0;
 		return time;
 	}
 

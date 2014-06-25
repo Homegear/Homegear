@@ -3999,7 +3999,13 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getParamsetId(std::
 		else
 		{
 			std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
-			if(peer) return peer->getParamsetId(channel, type, remoteSerialNumber, remoteChannel);
+			uint64_t remoteID = 0;
+			if(!remoteSerialNumber.empty())
+			{
+				std::shared_ptr<BidCoSPeer> remotePeer(getPeer(remoteSerialNumber));
+				if(remotePeer) remoteID = remotePeer->getID();
+			}
+			if(peer) return peer->getParamsetId(channel, type, remoteID, remoteChannel);
 			return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
 		}
 	}
@@ -4024,14 +4030,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getParamsetId(uint6
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(peerID));
 		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
-		std::string remoteSerialNumber;
-		if(remoteID > 0)
-		{
-			std::shared_ptr<BidCoSPeer> remotePeer(getPeer(peerID));
-			if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
-			remoteSerialNumber = remotePeer->getSerialNumber();
-		}
-		return peer->getParamsetId(channel, type, remoteSerialNumber, remoteChannel);
+		return peer->getParamsetId(channel, type, remoteID, remoteChannel);
 	}
 	catch(const std::exception& ex)
     {
@@ -4196,7 +4195,13 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getParamsetDescript
 		else
 		{
 			std::shared_ptr<BidCoSPeer> peer(getPeer(serialNumber));
-			if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
+			uint64_t remoteID = 0;
+			if(!remoteSerialNumber.empty())
+			{
+				std::shared_ptr<BidCoSPeer> remotePeer(getPeer(remoteSerialNumber));
+				if(remotePeer) remoteID = remotePeer->getID();
+			}
+			if(peer) return peer->getParamsetDescription(channel, type, remoteID, remoteChannel);
 			return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
 		}
 	}
@@ -4220,13 +4225,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getParamsetDescript
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
-		std::string remoteSerialNumber;
-		if(remoteID > 0)
-		{
-			std::shared_ptr<BidCoSPeer> remotePeer(getPeer(remoteID));
-			if(remotePeer) remoteSerialNumber = remotePeer->getSerialNumber();
-		}
-		if(peer) return peer->getParamsetDescription(channel, type, remoteSerialNumber, remoteChannel);
+		if(peer) return peer->getParamsetDescription(channel, type, remoteID, remoteChannel);
 		return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
 	}
 	catch(const std::exception& ex)

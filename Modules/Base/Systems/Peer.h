@@ -194,8 +194,11 @@ public:
     //RPC methods
 	virtual std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescriptions(bool channels, std::map<std::string, bool> fields);
     virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
+    virtual std::shared_ptr<RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
     virtual std::shared_ptr<RPC::RPCVariable> getLink(int32_t channel, int32_t flags, bool avoidDuplicates);
     virtual std::shared_ptr<RPC::RPCVariable> getParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) = 0;
+    virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet);
+    virtual std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
     virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
     //End RPC methods
 protected:

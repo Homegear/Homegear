@@ -2184,18 +2184,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceInfo(std::map<st
 {
 	try
 	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> info(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-
-		if(fields.empty() || fields.find("NAME") != fields.end()) info->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_name))));
-
-		if(fields.empty() || fields.find("RSSI") != fields.end())
-		{
-			if(valuesCentral.find(0) != valuesCentral.end() && valuesCentral.at(0).find("RSSI_DEVICE") != valuesCentral.at(0).end() && valuesCentral.at(0).at("RSSI_DEVICE").rpcParameter)
-			{
-				info->structValue->insert(BaseLib::RPC::RPCStructElement("RSSI", valuesCentral.at(0).at("RSSI_DEVICE").rpcParameter->convertFromPacket(valuesCentral.at(0).at("RSSI_DEVICE").data)));
-			}
-		}
+		std::shared_ptr<BaseLib::RPC::RPCVariable> info(Peer::getDeviceInfo(fields));
+		if(info->errorStruct) return info;
 
 		if(fields.empty() || fields.find("INTERFACE") != fields.end()) info->structValue->insert(BaseLib::RPC::RPCStructElement("INTERFACE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_physicalInterface->getID()))));
 
@@ -2216,21 +2206,22 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceInfo(std::map<st
     return std::shared_ptr<BaseLib::RPC::RPCVariable>();
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamsetId(uint32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
+std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
 	{
 		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer;
-		if(type == BaseLib::RPC::ParameterSet::Type::link && !remoteSerialNumber.empty())
+		if(channel < 0) channel = 0;
+		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel");
+		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set");
+		if(type == BaseLib::RPC::ParameterSet::Type::link && remoteID > 0)
 		{
-			remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
+			std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(channel, remoteID, remoteChannel);
 			if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown remote peer.");
 		}
 
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(rpcDevice->channels[channel]->parameterSets[type]->id));
+		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
+		return Peer::getParamsetDescription(parameterSet);
 	}
 	catch(const std::exception& ex)
     {
@@ -2742,382 +2733,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getLinkPeers(int32_t chan
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel)
-{
-	try
-	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(channel < 0) channel = 0;
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel");
-		if(rpcDevice->channels[channel]->parameterSets.find(type) == rpcDevice->channels[channel]->parameterSets.end()) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set");
-
-		std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer;
-		if(type == BaseLib::RPC::ParameterSet::Type::link && !remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
-
-		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = rpcDevice->channels[channel]->parameterSets[type];
-		std::shared_ptr<BaseLib::RPC::RPCVariable> descriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-		std::shared_ptr<BaseLib::RPC::RPCVariable> description(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-		std::shared_ptr<BaseLib::RPC::RPCVariable> element;
-		uint32_t index = 0;
-		for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
-		{
-			if((*i)->id.empty()) continue;
-			if(!((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::visible) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !((*i)->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::internal)) continue;
-			if((*i)->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeBoolean)
-			{
-				BaseLib::RPC::LogicalParameterBoolean* parameter = (BaseLib::RPC::LogicalParameterBoolean*)(*i)->logicalParameter.get();
-
-				if(!(*i)->control.empty())
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-					element->stringValue = (*i)->control;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("CONTROL", element));
-				}
-
-				if(parameter->defaultValueExists)
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcBoolean));
-					element->booleanValue = parameter->defaultValue;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", element));
-				}
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->uiFlags;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = (*i)->id;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcBoolean));
-				element->booleanValue = parameter->max;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MAX", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcBoolean));
-				element->booleanValue = parameter->min;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MIN", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = ((*i)->id == "AES_ACTIVE" && !_physicalInterface->aesSupported()) ? BaseLib::RPC::Parameter::Operations::read : (*i)->operations;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("OPERATIONS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = index;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TAB_ORDER", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = "BOOL";
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = parameter->unit;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("UNIT", element));
-			}
-			else if((*i)->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeString)
-			{
-				BaseLib::RPC::LogicalParameterString* parameter = (BaseLib::RPC::LogicalParameterString*)(*i)->logicalParameter.get();
-
-				if(!(*i)->control.empty())
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-					element->stringValue = (*i)->control;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("CONTROL", element));
-				}
-
-				if(parameter->defaultValueExists)
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-					element->stringValue = parameter->defaultValue;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", element));
-				}
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->uiFlags;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = (*i)->id;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = parameter->max;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MAX", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = parameter->min;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MIN", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->operations;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("OPERATIONS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = index;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TAB_ORDER", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = "STRING";
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = parameter->unit;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("UNIT", element));
-			}
-			else if((*i)->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeAction)
-			{
-				BaseLib::RPC::LogicalParameterAction* parameter = (BaseLib::RPC::LogicalParameterAction*)(*i)->logicalParameter.get();
-
-				if(!(*i)->control.empty())
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-					element->stringValue = (*i)->control;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("CONTROL", element));
-				}
-
-				if(parameter->defaultValueExists)
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcBoolean));
-					element->booleanValue = parameter->defaultValue;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", element));
-				}
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->uiFlags;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = (*i)->id;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcBoolean));
-				element->booleanValue = parameter->max;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MAX", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcBoolean));
-				element->booleanValue = parameter->min;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MIN", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->operations;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("OPERATIONS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = index;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TAB_ORDER", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = "ACTION";
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = parameter->unit;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("UNIT", element));
-			}
-			else if((*i)->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeInteger)
-			{
-				BaseLib::RPC::LogicalParameterInteger* parameter = (BaseLib::RPC::LogicalParameterInteger*)(*i)->logicalParameter.get();
-
-				if(!(*i)->control.empty())
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-					element->stringValue = (*i)->control;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("CONTROL", element));
-				}
-
-				if(parameter->defaultValueExists)
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-					element->integerValue = parameter->defaultValue;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", element));
-				}
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->uiFlags;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = (*i)->id;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = parameter->max;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MAX", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = parameter->min;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MIN", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->operations;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("OPERATIONS", element));
-
-				if(!parameter->specialValues.empty())
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-					for(std::unordered_map<std::string, int32_t>::iterator j = parameter->specialValues.begin(); j != parameter->specialValues.end(); ++j)
-					{
-						std::shared_ptr<BaseLib::RPC::RPCVariable> specialElement(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-						specialElement->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->first))));
-						specialElement->structValue->insert(BaseLib::RPC::RPCStructElement("VALUE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second))));
-						element->arrayValue->push_back(specialElement);
-					}
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("SPECIAL", element));
-				}
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = index;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TAB_ORDER", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = "INTEGER";
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = parameter->unit;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("UNIT", element));
-			}
-			else if((*i)->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeEnum)
-			{
-				BaseLib::RPC::LogicalParameterEnum* parameter = (BaseLib::RPC::LogicalParameterEnum*)(*i)->logicalParameter.get();
-
-				if(!(*i)->control.empty())
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-					element->stringValue = (*i)->control;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("CONTROL", element));
-				}
-
-				if(parameter->defaultValueExists)
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-					element->integerValue = parameter->defaultValue;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", element));
-				}
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->uiFlags;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = (*i)->id;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = parameter->max;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MAX", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = parameter->min;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MIN", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->operations;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("OPERATIONS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = index;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TAB_ORDER", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = "ENUM";
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = parameter->unit;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("UNIT", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-				for(std::vector<BaseLib::RPC::ParameterOption>::iterator j = parameter->options.begin(); j != parameter->options.end(); ++j)
-				{
-					element->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->id)));
-				}
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("VALUE_LIST", element));
-			}
-			else if((*i)->logicalParameter->type == BaseLib::RPC::LogicalParameter::Type::typeFloat)
-			{
-				BaseLib::RPC::LogicalParameterFloat* parameter = (BaseLib::RPC::LogicalParameterFloat*)(*i)->logicalParameter.get();
-
-				if(!(*i)->control.empty())
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-					element->stringValue = (*i)->control;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("CONTROL", element));
-				}
-
-				if(parameter->defaultValueExists)
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcFloat));
-					element->floatValue = parameter->defaultValue;
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("DEFAULT", element));
-				}
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->uiFlags;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("FLAGS", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = (*i)->id;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("ID", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcFloat));
-				element->floatValue = parameter->max;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MAX", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcFloat));
-				element->floatValue = parameter->min;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("MIN", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = (*i)->operations;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("OPERATIONS", element));
-
-				if(!parameter->specialValues.empty())
-				{
-					element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-					for(std::unordered_map<std::string, double>::iterator j = parameter->specialValues.begin(); j != parameter->specialValues.end(); ++j)
-					{
-						std::shared_ptr<BaseLib::RPC::RPCVariable> specialElement(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-						specialElement->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->first))));
-						specialElement->structValue->insert(BaseLib::RPC::RPCStructElement("VALUE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(j->second))));
-						element->arrayValue->push_back(specialElement);
-					}
-					description->structValue->insert(BaseLib::RPC::RPCStructElement("SPECIAL", element));
-				}
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcInteger));
-				element->integerValue = index;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TAB_ORDER", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = "FLOAT";
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", element));
-
-				element.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcString));
-				element->stringValue = parameter->unit;
-				description->structValue->insert(BaseLib::RPC::RPCStructElement("UNIT", element));
-			}
-
-			index++;
-			descriptions->structValue->insert(BaseLib::RPC::RPCStructElement((*i)->id, description));
-			description.reset(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-		}
-		return descriptions;
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
 std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getValue(uint32_t channel, std::string valueKey)
 {
 	try
@@ -3503,6 +3118,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
         _variablesToResetMutex.unlock();
     }
-    return BaseLib::RPC::RPCVariable::createError(-1, "unknown error");
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error. See error log for more details.");
 }
 }
