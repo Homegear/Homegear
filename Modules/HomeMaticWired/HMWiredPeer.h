@@ -100,11 +100,10 @@ public:
 	std::vector<uint8_t> getMasterConfigParameter(int32_t channelIndex, int32_t addressStart, int32_t addressStep, double indexOffset, double size);
 	std::vector<uint8_t> getMasterConfigParameter(int32_t channel, std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet, std::shared_ptr<BaseLib::RPC::Parameter> parameter);
 	virtual bool load(BaseLib::Systems::LogicalDevice* device);
-	void save(bool savePeer, bool variables, bool centralConfig);
     void serializePeers(std::vector<uint8_t>& encodedData);
     void unserializePeers(std::shared_ptr<std::vector<char>> serializedData);
-    void loadVariables(BaseLib::Systems::LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
-    void saveVariables();
+    virtual void loadVariables(BaseLib::Systems::LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
+    virtual void saveVariables();
 	void savePeers();
 	bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
 	void addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer);

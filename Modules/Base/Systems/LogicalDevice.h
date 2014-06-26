@@ -117,7 +117,7 @@ public:
 	virtual void saveVariable(uint32_t index, int64_t intValue);
 	virtual void saveVariable(uint32_t index, std::string& stringValue);
 	virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
-	virtual void savePeers(bool full) {}
+	virtual void savePeers(bool full) = 0;
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	DeviceFamilies _deviceFamily = DeviceFamilies::none;

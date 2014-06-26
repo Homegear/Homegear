@@ -1327,26 +1327,6 @@ bool HMWiredPeer::load(BaseLib::Systems::LogicalDevice* device)
     return false;
 }
 
-void HMWiredPeer::save(bool savePeer, bool variables, bool centralConfig)
-{
-	try
-	{
-		Peer::save(savePeer, variables, centralConfig);
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
 void HMWiredPeer::saveVariables()
 {
 	try

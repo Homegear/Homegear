@@ -145,8 +145,8 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         void unserializeNonCentralConfig(std::shared_ptr<std::vector<char>> serializedData);
         void serializeVariablesToReset(std::vector<uint8_t>& encodedData);
         void unserializeVariablesToReset(std::shared_ptr<std::vector<char>> serializedData);
-        void loadVariables(BaseLib::Systems::LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
-        void saveVariables();
+        virtual void loadVariables(BaseLib::Systems::LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
+        virtual void saveVariables();
         void savePeers();
         void saveNonCentralConfig();
         void saveVariablesToReset();

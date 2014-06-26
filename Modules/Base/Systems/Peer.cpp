@@ -440,6 +440,10 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 		if(variables)
 		{
 			saveVariables();
+		}
+		else
+		{
+			//Service messages are not saved when set.
 			saveServiceMessages();
 		}
 		if(centralConfig) saveConfig();
