@@ -133,7 +133,7 @@ uint64_t LogicalDevice::raiseSaveServiceMessage(uint64_t peerID, Database::DataR
 
 void LogicalDevice::raiseDeleteServiceMessage(uint64_t databaseID)
 {
-	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onDeleteServiceMessage(databaseID);
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeleteServiceMessage(databaseID);
 }
 
 uint64_t LogicalDevice::raiseSaveDevice()

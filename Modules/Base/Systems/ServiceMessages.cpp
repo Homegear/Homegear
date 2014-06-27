@@ -520,6 +520,7 @@ void ServiceMessages::setConfigPending(bool value)
 		if(value != _configPending)
 		{
 			_configPending = value;
+			save(2, value);
 			std::vector<uint8_t> data = { (uint8_t)value };
 			raiseSaveParameter("CONFIG_PENDING", 0, data);
 
@@ -559,6 +560,7 @@ void ServiceMessages::setUnreach(bool value)
 			}
 			_unreachResendCounter = 0;
 			_unreach = value;
+			save(0, value);
 
 			if(value) _bl->out.printInfo("Info: Peer " + std::to_string(_peerID) + " is unreachable.");
 			std::vector<uint8_t> data = { (uint8_t)value };
@@ -570,6 +572,8 @@ void ServiceMessages::setUnreach(bool value)
 
 			if(value)
 			{
+				_stickyUnreach = value;
+				save(1, value);
 				raiseSaveParameter("STICKY_UNREACH", 0, data);
 
 				valueKeys->push_back("STICKY_UNREACH");

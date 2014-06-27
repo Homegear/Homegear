@@ -40,8 +40,9 @@ namespace HMWired
 
 HMWired::HMWired(BaseLib::Obj* bl, BaseLib::Systems::DeviceFamily::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler)
 {
-	GD::bl = _bl;
+	GD::bl = bl;
 	GD::family = this;
+	GD::out.init(bl);
 	GD::out.setPrefix("Module HomeMatic Wired: ");
 	GD::out.printDebug("Debug: Loading module...");
 	_family = BaseLib::Systems::DeviceFamilies::HomeMaticWired;
