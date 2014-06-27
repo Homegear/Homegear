@@ -40,6 +40,11 @@ DatabaseController::~DatabaseController()
 
 }
 
+void DatabaseController::dispose()
+{
+	db.dispose();
+}
+
 void DatabaseController::init()
 {
 	if(!GD::bl)

@@ -47,6 +47,7 @@ class SQLite3
 		SQLite3();
         SQLite3(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal);
         virtual ~SQLite3();
+        void dispose();
         void init(std::string databasePath, bool databaseSynchronous, bool databaseMemoryJournal, std::string backupPath = "");
         uint32_t executeWriteCommand(std::string command, DataRow& dataToEscape);
         std::shared_ptr<DataTable> executeCommand(std::string command);

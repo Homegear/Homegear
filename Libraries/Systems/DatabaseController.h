@@ -39,6 +39,7 @@ class DatabaseController
 public:
 	DatabaseController();
 	virtual ~DatabaseController();
+	void dispose();
 	void init();
 
 	//General

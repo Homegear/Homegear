@@ -101,6 +101,7 @@ void terminate(int32_t signalNumber)
 			GD::physicalInterfaces.stopListening();
 			GD::physicalInterfaces.dispose();
 			GD::familyController.saveAndDispose(false);
+			GD::db.dispose();
 			GD::out.printMessage("(Shutdown) => Shutdown complete.");
 			if(_startAsDaemon)
 			{
@@ -149,7 +150,11 @@ void terminate(int32_t signalNumber)
 				GD::out.printCritical("Critical: Signal " + std::to_string(signalNumber) + " received. Stopping Homegear...");
 				GD::out.printCritical("Critical: Trying to save data to " + GD::bl->settings.databasePath() + ".crash");
 				GD::db.open(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".crash");
-				if(GD::db.isOpen()) GD::familyController.saveAndDispose(false, true);
+				if(GD::db.isOpen())
+				{
+					GD::familyController.saveAndDispose(false, true);
+					GD::db.dispose();
+				}
 			}
 			else
 			{
