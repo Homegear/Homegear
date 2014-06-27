@@ -112,6 +112,11 @@ public:
 			virtual std::shared_ptr<Database::DataTable> onGetPeerParameters(uint64_t peerID) = 0;
 			virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID) = 0;
 			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
+
+			//Service messages
+			virtual std::shared_ptr<Database::DataTable> onGetServiceMessages(uint64_t peerID) = 0;
+			virtual uint64_t onSaveServiceMessage(uint64_t peerID, Database::DataRow data) = 0;
+			virtual void onDeleteServiceMessage(uint64_t databaseID) = 0;
 		//End database
 
 		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
@@ -182,7 +187,7 @@ public:
     virtual void saveVariable(uint32_t index, std::string& stringValue);
     virtual void saveVariable(uint32_t index, std::vector<uint8_t>& binaryValue);
     virtual void deleteFromDatabase();
-    virtual void saveServiceMessages();
+    virtual void savePeers() = 0;
 
     virtual std::shared_ptr<BasicPeer> getPeer(int32_t channel, int32_t address, int32_t remoteChannel = -1);
 	virtual std::shared_ptr<BasicPeer> getPeer(int32_t channel, uint64_t id, int32_t remoteChannel = -1);
@@ -196,10 +201,17 @@ public:
     virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
     virtual std::shared_ptr<RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
     virtual std::shared_ptr<RPC::RPCVariable> getLink(int32_t channel, int32_t flags, bool avoidDuplicates);
+    virtual std::shared_ptr<RPC::RPCVariable> getLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> setLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description);
+	virtual std::shared_ptr<RPC::RPCVariable> getLinkPeers(int32_t channel, bool returnID);
     virtual std::shared_ptr<RPC::RPCVariable> getParamset(int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) = 0;
     virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet);
+    virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) = 0;
     virtual std::shared_ptr<RPC::RPCVariable> getParamsetId(uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
     virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
+    virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
+    virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false) = 0;
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value) = 0;
     //End RPC methods
 protected:
     BaseLib::Obj* _bl = nullptr;
@@ -245,6 +257,11 @@ protected:
 		virtual std::shared_ptr<Database::DataTable> raiseGetPeerParameters();
 		virtual std::shared_ptr<Database::DataTable> raiseGetPeerVariables();
 		virtual void raiseDeletePeerParameter(Database::DataRow data);
+
+		//Service messages
+		virtual std::shared_ptr<Database::DataTable> raiseGetServiceMessages();
+		virtual uint64_t raiseSaveServiceMessage(Database::DataRow data);
+		virtual void raiseDeleteServiceMessage(uint64_t id);
 	//End database
 
 	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
@@ -257,8 +274,13 @@ protected:
 
 	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
 	virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
+	virtual std::shared_ptr<Database::DataTable> onGetServiceMessages();
+	virtual uint64_t onSaveServiceMessage(Database::DataRow data);
+	virtual void onDeleteServiceMessage(uint64_t databaseID);
 	virtual void onEnqueuePendingQueues();
 	//End ServiceMessages event handling
+
+	virtual std::shared_ptr<RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type) = 0;
 };
 
 }

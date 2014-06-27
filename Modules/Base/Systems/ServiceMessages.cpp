@@ -51,146 +51,125 @@ ServiceMessages::~ServiceMessages()
 //Event handling
 void ServiceMessages::raiseConfigPending(bool configPending)
 {
-	try
-	{
-		if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onConfigPending(configPending);
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onConfigPending(configPending);
 }
 
 void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
-	try
-	{
-		if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
 
 void ServiceMessages::raiseSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data)
 {
-	try
-	{
-		if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onSaveParameter(name, channel, data);
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onSaveParameter(name, channel, data);
+}
+
+std::shared_ptr<Database::DataTable> ServiceMessages::raiseGetServiceMessages()
+{
+	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
+	return ((IServiceEventSink*)_eventHandler)->onGetServiceMessages();
+}
+
+uint64_t ServiceMessages::raiseSaveServiceMessage(Database::DataRow data)
+{
+	if(!_eventHandler) return 0;
+	return ((IServiceEventSink*)_eventHandler)->onSaveServiceMessage(data);
+}
+
+void ServiceMessages::raiseDeleteServiceMessage(uint64_t databaseID)
+{
+	((IServiceEventSink*)_eventHandler)->onDeleteServiceMessage(databaseID);
 }
 
 void ServiceMessages::raiseEnqueuePendingQueues()
 {
-	try
-	{
-		if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onEnqueuePendingQueues();
-	}
-	catch(const std::exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(Exception& ex)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
+	if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onEnqueuePendingQueues();
 }
 //End event handling
 
-void ServiceMessages::serialize(std::vector<uint8_t>& encodedData)
+void ServiceMessages::load()
 {
 	try
 	{
-		BinaryEncoder encoder(_bl);
-		encoder.encodeBoolean(encodedData, _unreach);
-		encoder.encodeBoolean(encodedData, _stickyUnreach);
-		encoder.encodeBoolean(encodedData, _configPending);
-		encoder.encodeBoolean(encodedData, _lowbat);
-		_errorMutex.lock();
-		encoder.encodeInteger(encodedData, _errors.size());
-		for(std::map<uint32_t, std::map<std::string, uint8_t>>::iterator i = _errors.begin(); i != _errors.end(); ++i)
+		std::shared_ptr<BaseLib::Database::DataTable> rows = raiseGetServiceMessages();
+		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
-			encoder.encodeInteger(encodedData, i->first);
-			encoder.encodeInteger(encodedData, i->second.size());
-			for(std::map<std::string, uint8_t>::iterator j = i->second.begin(); j != i->second.end(); ++j)
+			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
+			if(row->second.at(2)->intValue < 1000)
 			{
-				std::string name = j->first;
-				encoder.encodeString(encodedData, name);
-				encodedData.push_back(j->second);
+				switch(row->second.at(2)->intValue)
+				{
+				case 0:
+					_unreach = (bool)row->second.at(3)->intValue;
+					break;
+				case 1:
+					_stickyUnreach = (bool)row->second.at(3)->intValue;
+					break;
+				case 2:
+					_configPending = (bool)row->second.at(3)->intValue;
+					break;
+				case 3:
+					_lowbat = (bool)row->second.at(3)->intValue;
+					break;
+				}
+			}
+			else
+			{
+				int32_t channel = row->second.at(3)->intValue;
+				std::string id = row->second.at(4)->textValue;
+				std::shared_ptr<std::vector<char>> value = row->second.at(5)->binaryValue;
+				if(channel < 0 || id.empty() || value->empty()) continue;
+				_errorMutex.lock();
+				_errors[channel][id] = (uint8_t)value->at(0);
+				_errorMutex.unlock();
 			}
 		}
-		_errorMutex.unlock();
 	}
 	catch(const std::exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(Exception& ex)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	_errorMutex.unlock();
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
-void ServiceMessages::unserialize(std::shared_ptr<std::vector<char>> serializedData)
+void ServiceMessages::save(uint32_t index, bool value)
 {
 	try
 	{
-		BinaryDecoder decoder(_bl);
-		uint32_t position = 0;
-		_unreach = decoder.decodeBoolean(serializedData, position);
-		_stickyUnreach = decoder.decodeBoolean(serializedData, position);
-		_configPending = decoder.decodeBoolean(serializedData, position);
-		_lowbat = decoder.decodeBoolean(serializedData, position);
-		uint32_t errorSize = decoder.decodeInteger(serializedData, position);
-		_errorMutex.lock();
-		for(uint32_t i = 0; i < errorSize; ++i)
+		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
+		Database::DataRow data;
+		if(value)
 		{
-			int32_t channel = decoder.decodeInteger(serializedData, position);
-			uint32_t elementsSize = decoder.decodeInteger(serializedData, position);
-			for(uint32_t j = 0; j < elementsSize; ++j)
+			if(idIsKnown)
 			{
-				std::string name = decoder.decodeString(serializedData, position);
-				_errors[channel][name] = serializedData->at(position);
-				position++;
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn((int32_t)value)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_variableDatabaseIDs[index])));
+				raiseSaveServiceMessage(data);
 			}
+			else
+			{
+				if(_peerID == 0) return;
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn((int32_t)value)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+				uint64_t result = raiseSaveServiceMessage(data);
+				if(result) _variableDatabaseIDs[index] = result;
+			}
+		}
+		else if(idIsKnown)
+		{
+			raiseDeleteServiceMessage(_variableDatabaseIDs[index]);
+			_variableDatabaseIDs.erase(index);
 		}
 	}
 	catch(const std::exception& ex)
@@ -205,7 +184,61 @@ void ServiceMessages::unserialize(std::shared_ptr<std::vector<char>> serializedD
     {
     	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _errorMutex.unlock();
+}
+
+void ServiceMessages::save(int32_t channel, std::string id, uint8_t value)
+{
+	try
+	{
+		uint32_t index = 1000;
+		for(std::string::iterator i = id.begin(); i != id.end(); ++i)
+		{
+			index += (int32_t)*i;
+		}
+		bool idIsKnown = _variableDatabaseIDs.find(index) != _variableDatabaseIDs.end();
+		if(value > 0)
+		{
+			std::vector<char> binaryValue{ (char)value };
+			Database::DataRow data;
+			if(idIsKnown)
+			{
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(channel)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(id)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(binaryValue)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_variableDatabaseIDs[index])));
+				raiseSaveServiceMessage(data);
+			}
+			else
+			{
+				if(_peerID == 0) return;
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn()));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(_peerID)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(index)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(channel)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(id)));
+				data.push_back(std::shared_ptr<Database::DataColumn>(new Database::DataColumn(binaryValue)));
+				uint64_t result = raiseSaveServiceMessage(data);
+				if(result) _variableDatabaseIDs[index] = result;
+			}
+		}
+		else if(idIsKnown)
+		{
+			raiseDeleteServiceMessage(_variableDatabaseIDs[index]);
+			_variableDatabaseIDs.erase(index);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 bool ServiceMessages::set(std::string id, bool value)
@@ -214,10 +247,26 @@ bool ServiceMessages::set(std::string id, bool value)
 	{
 		if(_disposing) return false;
 		if(id == "LOWBAT_REPORTING") id = "LOWBAT"; //HM-TC-IT-WM-W-EU
-		if(id == "UNREACH" && value != _unreach) _unreach = value;
-		else if(id == "STICKY_UNREACH" && value != _stickyUnreach) _stickyUnreach = value;
-		else if(id == "CONFIG_PENDING" && value != _configPending) _configPending = value;
-		else if((id == "LOWBAT") && value != _lowbat) _lowbat = value;
+		if(id == "UNREACH" && value != _unreach)
+		{
+			_unreach = value;
+			save(0, value);
+		}
+		else if(id == "STICKY_UNREACH" && value != _stickyUnreach)
+		{
+			_stickyUnreach = value;
+			save(1, value);
+		}
+		else if(id == "CONFIG_PENDING" && value != _configPending)
+		{
+			_configPending = value;
+			save(2, value);
+		}
+		else if((id == "LOWBAT") && value != _lowbat)
+		{
+			_lowbat = value;
+			save(3, value);
+		}
 		else if(!value) //false == 0, a little dirty, but it works
 		{
 			_errorMutex.lock();
@@ -227,6 +276,7 @@ bool ServiceMessages::set(std::string id, bool value)
 				{
 					i->second.at(id) = 0;
 					std::vector<uint8_t> data = { (uint8_t)value };
+					save(i->first, id, value);
 					raiseSaveParameter(id, i->first, data);
 
 					std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({id}));
@@ -279,7 +329,7 @@ void ServiceMessages::set(std::string id, uint8_t value, uint32_t channel)
 		}
 		if(value > 0) _errors[channel][id] = value;
 		_errorMutex.unlock();
-
+		save(channel, id, value);
 		//RPC Broadcast is done in peer's packetReceived
 	}
 	catch(const std::exception& ex)

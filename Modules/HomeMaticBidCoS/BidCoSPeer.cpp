@@ -1065,10 +1065,8 @@ void BidCoSPeer::saveVariables()
 	{
 		if(_peerID == 0 || isTeam()) return;
 		Peer::saveVariables();
-		saveVariable(0, _firmwareVersion);
 		saveVariable(1, _remoteChannel);
 		saveVariable(2, _localChannel);
-		saveVariable(3, (int32_t)_deviceType.type());
 		saveVariable(4, _countFromSysinfo);
 		saveVariable(5, _messageCounter);
 		saveVariable(6, _pairingComplete);
@@ -1080,7 +1078,6 @@ void BidCoSPeer::saveVariables()
 		savePeers(); //12
 		saveNonCentralConfig(); //13
 		saveVariablesToReset(); //14
-		saveServiceMessages(); //15
 		savePendingQueues(); //16
 		if(_aesKeyIndex > 0 || _aesKeySendIndex > 0)
 		{
@@ -1235,21 +1232,11 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)
 			{
-			case 0:
-				_firmwareVersion = row->second.at(3)->intValue;
-				break;
 			case 1:
 				_remoteChannel = row->second.at(3)->intValue;
 				break;
 			case 2:
 				_localChannel = row->second.at(3)->intValue;
-				break;
-			case 3:
-				_deviceType = BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS, row->second.at(3)->intValue);
-				if(_deviceType.type() == (uint32_t)DeviceType::none)
-				{
-					GD::out.printError("Error loading HomeMatic BidCoS peer " + std::to_string(_peerID) + ": Device type unknown: 0x" + BaseLib::HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
-				}
 				break;
 			case 4:
 				_countFromSysinfo = row->second.at(3)->intValue;
@@ -1284,13 +1271,6 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 			case 14:
 				unserializeVariablesToReset(row->second.at(5)->binaryValue);
 				break;
-			case 15:
-				if(_centralFeatures)
-				{
-					serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
-					serviceMessages->unserialize(row->second.at(5)->binaryValue);
-				}
-				break;
 			case 16:
 				if(_centralFeatures && device)
 				{
@@ -1310,14 +1290,7 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 				break;
 			}
 		}
-		if(_centralFeatures)
-		{
-			if(!serviceMessages)
-			{
-				serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
-			}
-			if(!pendingBidCoSQueues) pendingBidCoSQueues.reset(new PendingBidCoSQueues());
-		}
+		if(_centralFeatures && !pendingBidCoSQueues) pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 	}
 	catch(const std::exception& ex)
     {
@@ -1960,6 +1933,33 @@ bool BidCoSPeer::hasLowbatBit(std::shared_ptr<BaseLib::RPC::DeviceFrame> frame)
     return false;
 }
 
+std::shared_ptr<BaseLib::RPC::ParameterSet> BidCoSPeer::getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type)
+{
+	try
+	{
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
+		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end())
+		{
+			GD::out.printWarning("Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
+			return std::shared_ptr<BaseLib::RPC::ParameterSet>();
+		}
+		return rpcChannel->parameterSets[type];
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<BaseLib::RPC::ParameterSet>();
+}
+
 void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 {
 	try
@@ -2238,7 +2238,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamsetDescription(in
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing)
+std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing)
 {
 	try
 	{
@@ -2394,7 +2394,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 		else if(type == BaseLib::RPC::ParameterSet::Type::Enum::link)
 		{
 			std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer;
-			if(!remoteSerialNumber.empty()) remotePeer = getPeer(channel, remoteSerialNumber, remoteChannel);
+			if(remoteID > 0) remotePeer = getPeer(channel, remoteID, remoteChannel);
 			if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-3, "Not paired to this peer.");
 			if(linksCentral[channel].find(remotePeer->address) == linksCentral[channel].end()) BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 			if(linksCentral[channel][_address].find(remotePeer->channel) == linksCentral[channel][_address].end()) BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
@@ -2599,160 +2599,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamset(int32_t chann
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel)
-{
-	try
-	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(_peers.find(senderChannel) == _peers.end()) return BaseLib::RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
-		std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(senderChannel, receiverSerialNumber, receiverChannel);
-		if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-2, "Peer not found.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> response(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-		response->structValue->insert(BaseLib::RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(remotePeer->linkDescription))));
-		response->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(remotePeer->linkName))));
-		return response;
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description)
-{
-	try
-	{
-		if(_peers.find(senderChannel) == _peers.end()) return BaseLib::RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
-		std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(senderChannel, receiverSerialNumber, receiverChannel);
-		if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-2, "Peer not found.");
-		remotePeer->linkDescription = description;
-		remotePeer->linkName = name;
-		savePeers();
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getLinkPeers(int32_t channel, bool returnID)
-{
-	try
-	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		if(channel > -1)
-		{
-			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-			//Return if no peers are paired to the channel
-			if(_peers.find(channel) == _peers.end() || _peers.at(channel).empty()) return array;
-			//Return if there are no link roles defined
-			std::shared_ptr<BaseLib::RPC::LinkRole> linkRoles = rpcDevice->channels.at(channel)->linkRoles;
-			if(!linkRoles) return array;
-			std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
-			if(!central) return array; //central actually should always be set at this point
-			for(std::vector<std::shared_ptr<BaseLib::Systems::BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
-			{
-				if((*i)->hidden) continue;
-				std::shared_ptr<BidCoSPeer> peer(central->getPeer((*i)->address));
-				if(returnID && !peer) continue;
-				bool peerKnowsMe = false;
-				if(peer && peer->getPeer(channel, _address)) peerKnowsMe = true;
-
-				std::string peerSerial = (*i)->serialNumber;
-				if((*i)->serialNumber.empty())
-				{
-					if(peerKnowsMe)
-					{
-						(*i)->serialNumber = peer->getSerialNumber();
-						peerSerial = (*i)->serialNumber;
-					}
-					else
-					{
-						//Peer not paired to central
-						std::ostringstream stringstream;
-						stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << (*i)->address;
-						peerSerial = stringstream.str();
-					}
-				}
-				if(returnID)
-				{
-					std::shared_ptr<BaseLib::RPC::RPCVariable> address(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-					array->arrayValue->push_back(address);
-					address->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)peer->getID())));
-					address->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->channel)));
-				}
-				else array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel))));
-			}
-		}
-		else
-		{
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
-			{
-				std::shared_ptr<BaseLib::RPC::RPCVariable> linkPeers = getLinkPeers(i->first, returnID);
-				array->arrayValue->insert(array->arrayValue->end(), linkPeers->arrayValue->begin(), linkPeers->arrayValue->end());
-			}
-		}
-		return array;
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getValue(uint32_t channel, std::string valueKey)
-{
-	try
-	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return BaseLib::RPC::RPCVariable::createError(-5, "Unknown parameter.");
-		return valuesCentral[channel][valueKey].rpcParameter->convertFromPacket(valuesCentral[channel][valueKey].data);
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }

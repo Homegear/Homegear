@@ -119,6 +119,23 @@ void LogicalDevice::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow 
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeletePeerParameter(peerID, data);
 }
 
+std::shared_ptr<Database::DataTable> LogicalDevice::raiseGetServiceMessages(uint64_t peerID)
+{
+	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
+	return ((IDeviceEventSink*)_eventHandler)->onGetServiceMessages(peerID);
+}
+
+uint64_t LogicalDevice::raiseSaveServiceMessage(uint64_t peerID, Database::DataRow data)
+{
+	if(!_eventHandler) return 0;
+	return ((IDeviceEventSink*)_eventHandler)->onSaveServiceMessage(peerID, data);
+}
+
+void LogicalDevice::raiseDeleteServiceMessage(uint64_t databaseID)
+{
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onDeleteServiceMessage(databaseID);
+}
+
 uint64_t LogicalDevice::raiseSaveDevice()
 {
 	if(!_eventHandler) return 0;
@@ -223,6 +240,21 @@ std::shared_ptr<BaseLib::Database::DataTable> LogicalDevice::onGetPeerVariables(
 void LogicalDevice::onDeletePeerParameter(uint64_t peerID, Database::DataRow data)
 {
 	raiseDeletePeerParameter(peerID, data);
+}
+
+std::shared_ptr<BaseLib::Database::DataTable> LogicalDevice::onGetServiceMessages(uint64_t peerID)
+{
+	return raiseGetServiceMessages(peerID);
+}
+
+uint64_t LogicalDevice::onSaveServiceMessage(uint64_t peerID, Database::DataRow data)
+{
+	return raiseSaveServiceMessage(peerID, data);
+}
+
+void LogicalDevice::onDeleteServiceMessage(uint64_t databaseID)
+{
+	raiseDeleteServiceMessage(databaseID);
 }
 
 void LogicalDevice::onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)

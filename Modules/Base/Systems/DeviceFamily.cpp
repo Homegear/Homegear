@@ -102,6 +102,23 @@ void DeviceFamily::raiseDeletePeerParameter(uint64_t peerID, Database::DataRow d
 	return ((IFamilyEventSink*)_eventHandler)->onDeletePeerParameter(peerID, data);
 }
 
+std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetServiceMessages(uint64_t peerID)
+{
+	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
+	return ((IFamilyEventSink*)_eventHandler)->onGetServiceMessages(peerID);
+}
+
+uint64_t DeviceFamily::raiseSaveServiceMessage(uint64_t peerID, Database::DataRow data)
+{
+	if(!_eventHandler) return 0;
+	return ((IFamilyEventSink*)_eventHandler)->onSaveServiceMessage(peerID, data);
+}
+
+void DeviceFamily::raiseDeleteServiceMessage(uint64_t databaseID)
+{
+	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onDeleteServiceMessage(databaseID);
+}
+
 std::shared_ptr<Database::DataTable> DeviceFamily::raiseGetDevices()
 {
 	if(!_eventHandler) return std::shared_ptr<Database::DataTable>();
@@ -217,6 +234,21 @@ std::shared_ptr<BaseLib::Database::DataTable> DeviceFamily::onGetPeerVariables(u
 void DeviceFamily::onDeletePeerParameter(uint64_t peerID, Database::DataRow data)
 {
 	raiseDeletePeerParameter(peerID, data);
+}
+
+std::shared_ptr<BaseLib::Database::DataTable> DeviceFamily::onGetServiceMessages(uint64_t peerID)
+{
+	return raiseGetServiceMessages(peerID);
+}
+
+uint64_t DeviceFamily::onSaveServiceMessage(uint64_t peerID, Database::DataRow data)
+{
+	return raiseSaveServiceMessage(peerID, data);
+}
+
+void DeviceFamily::onDeleteServiceMessage(uint64_t databaseID)
+{
+	raiseDeleteServiceMessage(databaseID);
 }
 
 uint64_t DeviceFamily::onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family)

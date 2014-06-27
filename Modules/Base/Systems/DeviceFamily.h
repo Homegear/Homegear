@@ -58,29 +58,34 @@ public:
 	public:
 		//Database
 			//General
-			virtual void onCreateSavepoint(std::string name) {}
-			virtual void onReleaseSavepoint(std::string name) {}
+			virtual void onCreateSavepoint(std::string name) = 0;
+			virtual void onReleaseSavepoint(std::string name) = 0;
 
 			//Metadata
-			virtual void onDeleteMetadata(std::string objectID, std::string dataID = "") {}
+			virtual void onDeleteMetadata(std::string objectID, std::string dataID = "") = 0;
 
 			//Device
-			virtual std::shared_ptr<Database::DataTable> onGetDevices(uint32_t family) { return std::shared_ptr<Database::DataTable>(); }
-			virtual void onDeleteDevice(uint64_t id) {};
-			virtual uint64_t onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family) { return 0; }
-			virtual uint64_t onSaveDeviceVariable(Database::DataRow data) { return 0; }
-			virtual void onDeletePeers(int32_t deviceID) {};
-			virtual std::shared_ptr<Database::DataTable> onGetPeers(uint64_t deviceID) { return std::shared_ptr<Database::DataTable>(); }
-			virtual std::shared_ptr<Database::DataTable> onGetDeviceVariables(uint64_t deviceID) { return std::shared_ptr<Database::DataTable>(); }
+			virtual std::shared_ptr<Database::DataTable> onGetDevices(uint32_t family) = 0;
+			virtual void onDeleteDevice(uint64_t id) = 0;
+			virtual uint64_t onSaveDevice(uint64_t id, int32_t address, std::string serialNumber, uint32_t type, uint32_t family) = 0;
+			virtual uint64_t onSaveDeviceVariable(Database::DataRow data) = 0;
+			virtual void onDeletePeers(int32_t deviceID) = 0;
+			virtual std::shared_ptr<Database::DataTable> onGetPeers(uint64_t deviceID) = 0;
+			virtual std::shared_ptr<Database::DataTable> onGetDeviceVariables(uint64_t deviceID) = 0;
 
 			//Peer
-			virtual void onDeletePeer(uint64_t id) {};
-			virtual uint64_t onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber) { return 0; }
-			virtual uint64_t onSavePeerParameter(uint64_t peerID, Database::DataRow data) { return 0; }
-			virtual uint64_t onSavePeerVariable(uint64_t peerID, Database::DataRow data) { return 0; }
-			virtual std::shared_ptr<Database::DataTable> onGetPeerParameters(uint64_t peerID) { return std::shared_ptr<Database::DataTable>(); }
-			virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID) { return std::shared_ptr<Database::DataTable>(); }
-			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) { }
+			virtual void onDeletePeer(uint64_t id) = 0;
+			virtual uint64_t onSavePeer(uint64_t id, uint32_t parentID, int32_t address, std::string serialNumber) = 0;
+			virtual uint64_t onSavePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
+			virtual uint64_t onSavePeerVariable(uint64_t peerID, Database::DataRow data) = 0;
+			virtual std::shared_ptr<Database::DataTable> onGetPeerParameters(uint64_t peerID) = 0;
+			virtual std::shared_ptr<Database::DataTable> onGetPeerVariables(uint64_t peerID) = 0;
+			virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data) = 0;
+
+			//Service messages
+			virtual std::shared_ptr<Database::DataTable> onGetServiceMessages(uint64_t peerID) = 0;
+			virtual uint64_t onSaveServiceMessage(uint64_t peerID, Database::DataRow data) = 0;
+			virtual void onDeleteServiceMessage(uint64_t databaseID) = 0;
 		//End database
 
 		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) {}
@@ -150,6 +155,11 @@ protected:
 		virtual std::shared_ptr<Database::DataTable> raiseGetPeerParameters(uint64_t peerID);
 		virtual std::shared_ptr<Database::DataTable> raiseGetPeerVariables(uint64_t peerID);
 		virtual void raiseDeletePeerParameter(uint64_t peerID, Database::DataRow data);
+
+		//Service messages
+		virtual std::shared_ptr<Database::DataTable> raiseGetServiceMessages(uint64_t peerID);
+		virtual uint64_t raiseSaveServiceMessage(uint64_t peerID, Database::DataRow data);
+		virtual void raiseDeleteServiceMessage(uint64_t id);
 	//End database
 
 	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
@@ -183,6 +193,11 @@ protected:
 		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerParameters(uint64_t peerID);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerVariables(uint64_t peerID);
 		virtual void onDeletePeerParameter(uint64_t peerID, Database::DataRow data);
+
+		//Service messages
+		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetServiceMessages(uint64_t peerID);
+		virtual uint64_t onSaveServiceMessage(uint64_t peerID, Database::DataRow data);
+		virtual void onDeleteServiceMessage(uint64_t databaseID);
 	//End database
 
 	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);

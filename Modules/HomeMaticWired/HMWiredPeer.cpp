@@ -1245,37 +1245,15 @@ void HMWiredPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sh
 		_databaseMutex.lock();
 		for(BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row)
 		{
-			_variableDatabaseIDs[row->second.at(2)->intValue] = row->second.at(0)->intValue;
 			switch(row->second.at(2)->intValue)
 			{
-			case 0:
-				_firmwareVersion = row->second.at(3)->intValue;
-				break;
-			case 3:
-				_deviceType = BaseLib::Systems::LogicalDeviceType(BaseLib::Systems::DeviceFamilies::HomeMaticWired, row->second.at(3)->intValue);
-				if(_deviceType.type() == (uint32_t)DeviceType::none)
-				{
-					GD::out.printError("Error loading HomeMatic Wired peer " + std::to_string(_peerID) + ": Device id unknown: 0x" + BaseLib::HelperFunctions::getHexString(row->second.at(3)->intValue) + " Firmware version: " + std::to_string(_firmwareVersion));
-				}
-				break;
 			case 5:
 				_messageCounter = row->second.at(3)->intValue;
 				break;
 			case 12:
 				unserializePeers(row->second.at(5)->binaryValue);
 				break;
-			case 15:
-				if(_centralFeatures)
-				{
-					serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
-					serviceMessages->unserialize(row->second.at(5)->binaryValue);
-				}
-				break;
 			}
-		}
-		if(_centralFeatures && !serviceMessages)
-		{
-			serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
 		}
 	}
 	catch(const std::exception& ex)
@@ -1333,11 +1311,8 @@ void HMWiredPeer::saveVariables()
 	{
 		if(_peerID == 0) return;
 		Peer::saveVariables();
-		saveVariable(0, _firmwareVersion);
-		saveVariable(3, (int32_t)_deviceType.type());
 		saveVariable(5, (int32_t)_messageCounter);
 		savePeers(); //12
-		saveServiceMessages(); //15
 	}
 	catch(const std::exception& ex)
     {
@@ -1974,108 +1949,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getDeviceInfo(std::map<s
     return std::shared_ptr<BaseLib::RPC::RPCVariable>();
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel)
-{
-	try
-	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(_peers.find(senderChannel) == _peers.end()) return BaseLib::RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
-		std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(senderChannel, receiverID, receiverChannel);
-		if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-2, "Peer not found.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> response(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-		response->structValue->insert(BaseLib::RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(remotePeer->linkDescription))));
-		response->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(remotePeer->linkName))));
-		return response;
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getLinkPeers(int32_t channel, bool returnID)
-{
-	try
-	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		if(channel > -1)
-		{
-			if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-			//Return if no peers are paired to the channel
-			if(_peers.find(channel) == _peers.end() || _peers.at(channel).empty()) return array;
-			//Return if there are no link roles defined
-			std::shared_ptr<BaseLib::RPC::LinkRole> linkRoles = rpcDevice->channels.at(channel)->linkRoles;
-			if(!linkRoles) return array;
-			std::shared_ptr<HMWiredCentral> central(std::dynamic_pointer_cast<HMWiredCentral>(getCentral()));
-			if(!central) return array; //central actually should always be set at this point
-			for(std::vector<std::shared_ptr<BaseLib::Systems::BasicPeer>>::iterator i = _peers.at(channel).begin(); i != _peers.at(channel).end(); ++i)
-			{
-				if((*i)->hidden) continue;
-				std::shared_ptr<HMWiredPeer> peer(central->getPeer((*i)->address));
-				bool peerKnowsMe = false;
-				if(peer && peer->getPeer(channel, _peerID)) peerKnowsMe = true;
-
-				std::string peerSerial = (*i)->serialNumber;
-				if((*i)->serialNumber.empty())
-				{
-					if(peerKnowsMe)
-					{
-						(*i)->serialNumber = peer->getSerialNumber();
-						peerSerial = (*i)->serialNumber;
-					}
-					else
-					{
-						//Peer not paired to central
-						std::ostringstream stringstream;
-						stringstream << '@' << std::hex << std::setw(6) << std::setfill('0') << (*i)->address;
-						peerSerial = stringstream.str();
-					}
-				}
-				if(returnID)
-				{
-					std::shared_ptr<BaseLib::RPC::RPCVariable> address(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-					array->arrayValue->push_back(address);
-					address->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)(*i)->id)));
-					address->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->channel)));
-				}
-				else array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peerSerial + ":" + std::to_string((*i)->channel))));
-			}
-		}
-		else
-		{
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
-			{
-				std::shared_ptr<BaseLib::RPC::RPCVariable> linkPeers = getLinkPeers(i->first, returnID);
-				array->arrayValue->insert(array->arrayValue->end(), linkPeers->arrayValue->begin(), linkPeers->arrayValue->end());
-			}
-		}
-		return array;
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
 std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel)
 {
 	try
@@ -2191,38 +2064,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamsetDescription(i
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getValue(uint32_t channel, std::string valueKey)
-{
-	try
-	{
-		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
-		if(!rpcDevice) return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return BaseLib::RPC::RPCVariable::createError(-5, "Unknown parameter.");
-		if(rpcDevice->channels.find(channel) == rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
-		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
-		std::shared_ptr<BaseLib::RPC::ParameterSet> parameterSet = getParameterSet(channel, BaseLib::RPC::ParameterSet::Type::Enum::values);
-		if(!parameterSet) return BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
-		std::shared_ptr<BaseLib::RPC::Parameter> parameter = parameterSet->getParameter(valueKey);
-		if(!parameter) return BaseLib::RPC::RPCVariable::createError(-5, "Unknown parameter.");
-		return parameter->convertFromPacket(valuesCentral[channel][valueKey].data);
-	}
-	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool putUnchanged, bool onlyPushing)
+std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing)
 {
 	try
 	{
@@ -2311,33 +2153,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::putParamset(int32_t chan
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setLinkInfo(int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description)
-{
-	try
-	{
-		if(_peers.find(senderChannel) == _peers.end()) return BaseLib::RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
-		std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer = getPeer(senderChannel, receiverID, receiverChannel);
-		if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-2, "Peer not found.");
-		remotePeer->linkDescription = description;
-		remotePeer->linkName = name;
-		savePeers();
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
-	}
-	catch(const std::exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
-	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value)

@@ -59,32 +59,33 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> addLink(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> deleteDevice(uint64_t peerID, int32_t flags) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(uint64_t id, int32_t channel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
+	virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(std::string serialNumber, int32_t channel);
+	virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(uint64_t id, int32_t channel);
 	virtual std::shared_ptr<RPC::RPCVariable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields) = 0;
-	virtual std::shared_ptr<RPC::RPCVariable> getPeerID(int32_t address) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getPeerID(std::string serialNumber) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
+	virtual std::shared_ptr<RPC::RPCVariable> getPeerID(int32_t address);
+	virtual std::shared_ptr<RPC::RPCVariable> getPeerID(std::string serialNumber);
 	virtual std::shared_ptr<RPC::RPCVariable> getInstallMode() { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> setLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> setLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getLinkPeers(std::string serialNumber, int32_t channel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getLinkPeers(uint64_t peerID, int32_t channel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
+	virtual std::shared_ptr<RPC::RPCVariable> getLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> getLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> getLinkPeers(std::string serialNumber, int32_t channel);
+	virtual std::shared_ptr<RPC::RPCVariable> getLinkPeers(uint64_t peerID, int32_t channel);
 	virtual std::shared_ptr<RPC::RPCVariable> getLinks(std::string serialNumber, int32_t channel, int32_t flags);
 	virtual std::shared_ptr<RPC::RPCVariable> getLinks(uint64_t peerID, int32_t channel, int32_t flags);
-	virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getParamsetId(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getParamsetId(uint64_t peerID, uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getParamset(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> getValue(uint64_t id, uint32_t channel, std::string valueKey) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
+	virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> getParamsetDescription(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> getParamsetId(std::string serialNumber, uint32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> getParamsetId(uint64_t peerID, uint32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> getParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> getParamset(uint64_t peerID, int32_t channel, RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+	virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
+	virtual std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
+	virtual std::shared_ptr<RPC::RPCVariable> getValue(uint64_t id, uint32_t channel, std::string valueKey);
 	virtual std::shared_ptr<RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields) = 0;
 	virtual std::shared_ptr<RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices) = 0;
 	virtual std::shared_ptr<RPC::RPCVariable> listTeams() { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
+	virtual std::shared_ptr<RPC::RPCVariable> setLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
+	virtual std::shared_ptr<RPC::RPCVariable> setLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description);
+	virtual std::shared_ptr<RPC::RPCVariable> setName(uint64_t id, std::string name);
 	virtual std::shared_ptr<RPC::RPCVariable> setTeam(std::string serialNumber, int32_t channel, std::string teamSerialNumber, int32_t teamChannel, bool force = false, bool burst = true) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> setTeam(uint64_t peerID, int32_t channel, uint64_t teamID, int32_t teamChannel, bool force = false, bool burst = true) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> putParamset(std::string serialNumber, int32_t channel, RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<RPC::RPCVariable> paramset) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
@@ -93,9 +94,8 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> removeLink(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> searchDevices() { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> setInstallMode(bool on, uint32_t duration = 60, bool debugOutput = true) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> setValue(uint64_t id, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
-	virtual std::shared_ptr<RPC::RPCVariable> setName(uint64_t id, std::string name) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
+	virtual std::shared_ptr<RPC::RPCVariable> setValue(std::string serialNumber, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
+	virtual std::shared_ptr<RPC::RPCVariable> setValue(uint64_t id, uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value);
 	virtual std::shared_ptr<RPC::RPCVariable> updateFirmware(std::vector<uint64_t> ids, bool manual) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> setInterface(uint64_t peerID, std::string interfaceID) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 protected:

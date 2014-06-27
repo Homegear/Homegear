@@ -34,6 +34,7 @@
 #include "../Encoding/BinaryEncoder.h"
 #include "../Encoding/BinaryDecoder.h"
 #include "../IEvents.h"
+#include "../Database/DatabaseTypes.h"
 
 #include <string>
 #include <iomanip>
@@ -61,6 +62,9 @@ public:
 
 		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
 		virtual void onSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data) = 0;
+		virtual std::shared_ptr<Database::DataTable> onGetServiceMessages() = 0;
+		virtual uint64_t onSaveServiceMessage(Database::DataRow data) = 0;
+		virtual void onDeleteServiceMessage(uint64_t databaseID) = 0;
 		virtual void onEnqueuePendingQueues() = 0;
 	};
 	//End event handling
@@ -71,8 +75,9 @@ public:
 	virtual void setPeerID(uint64_t peerID) { _peerID = peerID; }
 	virtual void setPeerSerial(std::string peerSerial) { _peerSerial = peerSerial; }
 
-	virtual void serialize(std::vector<uint8_t>& encodedData);
-	virtual void unserialize(std::shared_ptr<std::vector<char>> serializedData);
+	virtual void load();
+	virtual void save(uint32_t index, bool value);
+	virtual void save(int32_t channel, std::string id, uint8_t value);
 	virtual bool set(std::string id, bool value);
 	virtual void set(std::string id, uint8_t value, uint32_t channel);
 	virtual std::shared_ptr<RPC::RPCVariable> get(bool returnID);
@@ -86,6 +91,7 @@ public:
     virtual void endUnreach();
 protected:
     BaseLib::Obj* _bl = nullptr;
+    std::map<uint32_t, uint32_t> _variableDatabaseIDs;
     uint64_t _peerID = 0;
     std::string _peerSerial;
     bool _disposing = false;
@@ -103,6 +109,9 @@ protected:
 
 	virtual void raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values);
 	virtual void raiseSaveParameter(std::string name, uint32_t channel, std::vector<uint8_t>& data);
+	virtual std::shared_ptr<Database::DataTable> raiseGetServiceMessages();
+	virtual uint64_t raiseSaveServiceMessage(Database::DataRow data);
+	virtual void raiseDeleteServiceMessage(uint64_t databaseID);
 	virtual void raiseEnqueuePendingQueues();
 	//End event handling
 };

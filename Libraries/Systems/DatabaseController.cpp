@@ -67,6 +67,8 @@ void DatabaseController::initializeDatabase()
 		db.executeCommand("CREATE INDEX IF NOT EXISTS peersIndex ON peers (peerID, parent, address, serialNumber)");
 		db.executeCommand("CREATE TABLE IF NOT EXISTS peerVariables (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
 		db.executeCommand("CREATE INDEX IF NOT EXISTS peerVariablesIndex ON peerVariables (variableID, peerID, variableIndex)");
+		db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+		db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)");
 		db.executeCommand("CREATE TABLE IF NOT EXISTS parameters (parameterID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, parameterSetType INTEGER NOT NULL, peerChannel INTEGER NOT NULL, remotePeer INTEGER, remoteChannel INTEGER, parameterName TEXT, value BLOB)");
 		db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
 		db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
@@ -89,7 +91,7 @@ void DatabaseController::initializeDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
-			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.0")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -128,8 +130,8 @@ void DatabaseController::convertDatabase()
 		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM homegearVariables WHERE variableIndex=?", data);
 		if(result->empty()) return; //Handled in initializeDatabase
 		std::string version = result->at(0).at(3)->textValue;
-		if(version == "0.5.0") return; //Up to date
-		if(version != "0.3.1" && version != "0.4.3")
+		if(version == "0.5.1") return; //Up to date
+		if(version != "0.3.1" && version != "0.4.3" && version != "0.5.0")
 		{
 			GD::out.printCritical("Unknown database version: " + version);
 			exit(1); //Don't know, what to do
@@ -215,6 +217,31 @@ void DatabaseController::convertDatabase()
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			//Don't forget to set new version in initializeDatabase!!!
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.0")));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
+
+			GD::out.printMessage("Exiting Homegear after database conversion...");
+			exit(0);
+		}
+		else if(version == "0.5.0")
+		{
+			GD::out.printMessage("Converting database from version " + version + " to version 0.5.1...");
+			db.init(GD::bl->settings.databasePath(), GD::bl->settings.databaseSynchronous(), GD::bl->settings.databaseMemoryJournal(), GD::bl->settings.databasePath() + ".old");
+
+			db.executeCommand("DELETE FROM peerVariables WHERE variableIndex=15");
+
+			db.executeCommand("CREATE TABLE IF NOT EXISTS serviceMessages (variableID INTEGER PRIMARY KEY UNIQUE, peerID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
+			db.executeCommand("CREATE INDEX IF NOT EXISTS serviceMessagesIndex ON peerVariables (variableID, peerID, variableIndex)");
+
+			db.executeCommand("UPDATE peerVariables SET variableIndex=1001 WHERE variableIndex=0");
+			db.executeCommand("UPDATE peerVariables SET variableIndex=1002 WHERE variableIndex=3");
+
+			data.clear();
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(result->at(0).at(0)->intValue)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(0)));
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
+			//Don't forget to set new version in initializeDatabase!!!
+			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn("0.5.1")));
 			data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn()));
 			db.executeWriteCommand("REPLACE INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
@@ -864,6 +891,7 @@ void DatabaseController::deletePeer(uint64_t id)
 		db.executeCommand("DELETE FROM parameters WHERE peerID=?", data);
 		db.executeCommand("DELETE FROM peerVariables WHERE peerID=?", data);
 		db.executeCommand("DELETE FROM peers WHERE peerID=?", data);
+		db.executeCommand("DELETE FROM serviceMessages WHERE peerID=?", data);
 	}
 	catch(const std::exception& ex)
 	{
@@ -1084,3 +1112,110 @@ void DatabaseController::deletePeerParameter(uint64_t peerID, BaseLib::Database:
 	}
 }
 //End peer
+
+//Service messages
+std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getServiceMessages(uint64_t peerID)
+{
+	try
+	{
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(peerID)));
+		std::shared_ptr<BaseLib::Database::DataTable> result = db.executeCommand("SELECT * FROM serviceMessages WHERE peerID=?", data);
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return std::shared_ptr<BaseLib::Database::DataTable>();
+}
+
+uint64_t DatabaseController::saveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow data)
+{
+	try
+	{
+		createSavepoint("serviceMessage" + std::to_string(peerID));
+		uint64_t result;
+		if(data.size() == 2)
+		{
+			if(data.at(1)->intValue == 0)
+			{
+				GD::out.printError("Error: Could not save service message. Variable ID is \"0\".");
+				releaseSavepoint("serviceMessage" + std::to_string(peerID));
+				return 0;
+			}
+			switch(data.at(0)->dataType)
+			{
+			case BaseLib::Database::DataColumn::DataType::INTEGER:
+				result = db.executeWriteCommand("UPDATE serviceMessages SET integerValue=? WHERE variableID=?", data);
+				break;
+			case BaseLib::Database::DataColumn::DataType::TEXT:
+				result = db.executeWriteCommand("UPDATE serviceMessages SET stringValue=? WHERE variableID=?", data);
+				break;
+			case BaseLib::Database::DataColumn::DataType::BLOB:
+				result = db.executeWriteCommand("UPDATE serviceMessages SET binaryValue=? WHERE variableID=?", data);
+				break;
+			}
+		}
+		else if(data.size() == 4)
+		{
+			if(data.at(3)->intValue == 0)
+			{
+				GD::out.printError("Error: Could not save service message. Variable ID is \"0\".");
+				releaseSavepoint("serviceMessage" + std::to_string(peerID));
+				return 0;
+			}
+			result = db.executeWriteCommand("UPDATE serviceMessages SET integerValue=?, stringValue=?, binaryValue=? WHERE variableID=?", data);
+		}
+		else
+		{
+			result = db.executeWriteCommand("REPLACE INTO serviceMessages VALUES(?, ?, ?, ?, ?, ?)", data);
+		}
+		releaseSavepoint("serviceMessage" + std::to_string(peerID));
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	releaseSavepoint("serviceMessage" + std::to_string(peerID));
+	return 0;
+}
+
+void DatabaseController::deleteServiceMessage(uint64_t databaseID)
+{
+	try
+	{
+		BaseLib::Database::DataRow data({std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(databaseID))});
+		db.executeCommand("DELETE FROM serviceMessages WHERE variableID=?", data);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+//End service messages

@@ -147,7 +147,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         void unserializeVariablesToReset(std::shared_ptr<std::vector<char>> serializedData);
         virtual void loadVariables(BaseLib::Systems::LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
         virtual void saveVariables();
-        void savePeers();
+        virtual void savePeers();
         void saveNonCentralConfig();
         void saveVariablesToReset();
         void savePendingQueues();
@@ -182,15 +182,11 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         //RPC methods
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> setLinkInfo(int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> getLinkPeers(int32_t channel, bool returnID);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
+        virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamsetDescription(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false);
+        virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false);
         std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(std::string interfaceID);
-        std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
+        virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
         //End RPC methods
     protected:
         uint32_t _lastRSSIDevice = 0;
@@ -211,12 +207,14 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		std::string _physicalInterfaceID;
 		//End
 
-		virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
-		virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
-
 		//ServiceMessages event handling
 		virtual void onConfigPending(bool configPending);
 		//End ServiceMessages event handling
+
+		virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
+		virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);
+
+		virtual std::shared_ptr<BaseLib::RPC::ParameterSet> getParameterSet(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type);
 };
 }
 #endif // BIDCOSPEER_H

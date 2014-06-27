@@ -161,6 +161,21 @@ void FamilyController::onDeletePeerParameter(uint64_t peerID, BaseLib::Database:
 	GD::db.deletePeerParameter(peerID, data);
 }
 
+std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetServiceMessages(uint64_t peerID)
+{
+	return GD::db.getServiceMessages(peerID);
+}
+
+uint64_t FamilyController::onSaveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow data)
+{
+	return GD::db.saveServiceMessage(peerID, data);
+}
+
+void FamilyController::onDeleteServiceMessage(uint64_t databaseID)
+{
+	GD::db.deleteServiceMessage(databaseID);
+}
+
 std::shared_ptr<BaseLib::Database::DataTable> FamilyController::onGetDevices(uint32_t family)
 {
 	return GD::db.getDevices(family);

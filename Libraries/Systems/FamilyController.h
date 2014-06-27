@@ -83,6 +83,11 @@ public:
 		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerParameters(uint64_t peerID);
 		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetPeerVariables(uint64_t peerID);
 		virtual void onDeletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
+
+		//Service messages
+		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetServiceMessages(uint64_t peerID);
+		virtual uint64_t onSaveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow data);
+		virtual void onDeleteServiceMessage(uint64_t databaseID);
 	//End database
 
 	virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);

@@ -92,6 +92,12 @@ public:
 	virtual std::shared_ptr<BaseLib::Database::DataTable> getPeerVariables(uint64_t peerID);
 	virtual void deletePeerParameter(uint64_t peerID, BaseLib::Database::DataRow data);
 	//End Peer
+
+	//Service messages
+	virtual std::shared_ptr<BaseLib::Database::DataTable> getServiceMessages(uint64_t peerID);
+	virtual uint64_t saveServiceMessage(uint64_t peerID, BaseLib::Database::DataRow data);
+	virtual void deleteServiceMessage(uint64_t databaseID);
+	//End service messages
 protected:
 	BaseLib::Database::SQLite3 db;
 
