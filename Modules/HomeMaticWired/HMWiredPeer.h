@@ -37,22 +37,8 @@
 
 namespace HMWired
 {
-class CallbackFunctionParameter;
 class HMWiredCentral;
 class HMWiredDevice;
-
-class VariableToReset
-{
-public:
-	uint32_t channel = 0;
-	std::string key;
-	std::vector<uint8_t> data;
-	int64_t resetTime = 0;
-	bool isDominoEvent = false;
-
-	VariableToReset() {}
-	virtual ~VariableToReset() {}
-};
 
 class FrameValue
 {

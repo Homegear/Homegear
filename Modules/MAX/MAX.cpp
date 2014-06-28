@@ -54,9 +54,9 @@ MAX::~MAX()
 
 bool MAX::init()
 {
-	//GD::out.printInfo("Loading XML RPC devices...");
-	//GD::rpcDevices.load(_bl->settings.deviceDescriptionPath() + std::to_string((int32_t)BaseLib::Systems::DeviceFamilies::MAX));
-	//if(GD::rpcDevices.empty()) return false;
+	GD::out.printInfo("Loading XML RPC devices...");
+	GD::rpcDevices.load(_bl->settings.deviceDescriptionPath() + std::to_string((int32_t)BaseLib::Systems::DeviceFamilies::MAX));
+	if(GD::rpcDevices.empty()) return false;
 	return true;
 }
 

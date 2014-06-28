@@ -31,6 +31,7 @@
 #define MAXDEVICE_H
 
 #include "../Base/BaseLib.h"
+#include "MAXPeer.h"
 #include "MAXDeviceTypes.h"
 #include "MAXPacket.h"
 
@@ -62,9 +63,17 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
         virtual void dispose(bool wait = true);
         virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 
+        virtual bool peerSelected() { return (bool)_currentPeer; }
+        bool peerExists(int32_t address);
+		bool peerExists(uint64_t id);
+        virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
+        std::shared_ptr<MAXPeer> getPeer(int32_t address);
+		std::shared_ptr<MAXPeer> getPeer(uint64_t id);
+		std::shared_ptr<MAXPeer> getPeer(std::string serialNumber);
+
         virtual void loadVariables();
         virtual void saveVariables();
-
+        virtual void savePeers(bool full) {}
     protected:
         //In table variables
         int32_t _firmwareVersion = 0;

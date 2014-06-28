@@ -97,8 +97,10 @@ OBJECTS := \
 	$(OBJDIR)/MAXPacket.o \
 	$(OBJDIR)/MAXDevice.o \
 	$(OBJDIR)/GD.o \
+	$(OBJDIR)/MAXPeer.o \
 	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/MAX.o \
+	$(OBJDIR)/MAXCentral.o \
 	$(OBJDIR)/MAXSpyDevice.o \
 	$(OBJDIR)/CUL.o \
 
@@ -174,10 +176,16 @@ $(OBJDIR)/MAXDevice.o: Modules/MAX/MAXDevice.cpp
 $(OBJDIR)/GD.o: Modules/MAX/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MAXPeer.o: Modules/MAX/MAXPeer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Factory.o: Modules/MAX/Factory.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MAX.o: Modules/MAX/MAX.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MAXCentral.o: Modules/MAX/LogicalDevices/MAXCentral.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MAXSpyDevice.o: Modules/MAX/LogicalDevices/MAXSpyDevice.cpp
