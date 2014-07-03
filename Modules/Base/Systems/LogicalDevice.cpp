@@ -273,16 +273,16 @@ void LogicalDevice::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<st
 }
 //End Peer event handling
 
-void LogicalDevice::getPeers(std::vector<std::shared_ptr<Peer>>& peers)
+void LogicalDevice::getPeers(std::vector<std::shared_ptr<Peer>>& peers, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
 {
 	try
 	{
 		_peersMutex.lock();
-		for(std::unordered_map<std::string, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersBySerial.begin(); i != _peersBySerial.end(); ++i)
+		for(std::map<uint64_t, std::shared_ptr<Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
 		{
+			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
 			peers.push_back(i->second);
 		}
-		_peersMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -296,6 +296,7 @@ void LogicalDevice::getPeers(std::vector<std::shared_ptr<Peer>>& peers)
     {
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
 }
 
 std::shared_ptr<Peer> LogicalDevice::getPeer(int32_t address)

@@ -1469,7 +1469,7 @@ DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& 
 	for(xml_node<>* channelNode = node->first_node(); channelNode; channelNode = channelNode->next_sibling())
 	{
 		std::string nodeName(channelNode->name());
-		if(nodeName == "paramset")
+		if(nodeName == "parameters" || nodeName == "paramset")
 		{
 			std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(baseLib, channelNode));
 			if(parameterSets.find(parameterSet->type) == parameterSets.end()) parameterSets[parameterSet->type] = parameterSet;
@@ -1717,7 +1717,7 @@ void Device::parseXML(xml_node<>* node)
 		for(node = node->first_node(); node; node = node->next_sibling())
 		{
 			std::string nodeName(node->name());
-			if(nodeName == "supported_types")
+			if(nodeName == "types" || nodeName == "supported_types")
 			{
 				for(xml_node<>* typeNode = node->first_node("type"); typeNode; typeNode = typeNode->next_sibling())
 				{
@@ -1726,7 +1726,7 @@ void Device::parseXML(xml_node<>* node)
 					supportedTypes.push_back(deviceType);
 				}
 			}
-			else if(nodeName == "paramset")
+			else if(nodeName == "paramset" || nodeName == "parameters")
 			{
 				for(xml_attribute<>* attr = node->first_attribute(); attr; attr = attr->next_attribute())
 				{
@@ -1757,7 +1757,7 @@ void Device::parseXML(xml_node<>* node)
 				for(xml_node<>* paramsetNode = node->first_node(); paramsetNode; paramsetNode = paramsetNode->next_sibling())
 				{
 					std::string nodeName(paramsetNode->name());
-					if(nodeName == "paramset")
+					if(nodeName == "paramset" || nodeName == "parameters")
 					{
 						std::shared_ptr<ParameterSet> parameterSet(new ParameterSet(_bl, paramsetNode));
 						parameterSetDefinitions[parameterSet->id] = parameterSet;
@@ -1792,9 +1792,15 @@ void Device::parseXML(xml_node<>* node)
 					}
 				}
 			}
-			else if(nodeName == "frames")
+			else if(nodeName == "packets" || nodeName == "frames")
 			{
 				for(xml_node<>* frameNode = node->first_node("frame"); frameNode; frameNode = frameNode->next_sibling("frame"))
+				{
+					std::shared_ptr<DeviceFrame> frame(new DeviceFrame(_bl, frameNode));
+					framesByMessageType.insert(std::pair<uint32_t, std::shared_ptr<DeviceFrame>>(frame->type, frame));
+					framesByID[frame->id] = frame;
+				}
+				for(xml_node<>* frameNode = node->first_node("packet"); frameNode; frameNode = frameNode->next_sibling("packet"))
 				{
 					std::shared_ptr<DeviceFrame> frame(new DeviceFrame(_bl, frameNode));
 					framesByMessageType.insert(std::pair<uint32_t, std::shared_ptr<DeviceFrame>>(frame->type, frame));

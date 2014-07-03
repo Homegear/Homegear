@@ -64,7 +64,7 @@ void MAXPacket::import(std::string& packet, bool removeFirstCharacter)
 		}
 		_length = getByte(packet.substr(startIndex, 2));
 		_messageCounter = getByte(packet.substr(startIndex + 2, 2));
-		_byte2 = getByte(packet.substr(startIndex + 4, 2));
+		_messageSubtype = getByte(packet.substr(startIndex + 4, 2));
 		_messageType = getByte(packet.substr(startIndex + 6, 2));
 		_senderAddress = getInt(packet.substr(startIndex + 8, 6));
 		_destinationAddress = getInt(packet.substr(startIndex + 14, 6));
@@ -108,7 +108,7 @@ std::string MAXPacket::hexString()
 		stringStream << std::hex << std::uppercase << std::setfill('0') << std::setw(2);
 		stringStream << std::setw(2) << (9 + _payload.size());
 		stringStream << std::setw(2) << (int32_t)_messageCounter;
-		stringStream << std::setw(2) << (int32_t)_byte2;
+		stringStream << std::setw(2) << (int32_t)_messageSubtype;
 		stringStream << std::setw(2) << (int32_t)_messageType;
 		stringStream << std::setw(6) << _senderAddress;
 		stringStream << std::setw(6) << _destinationAddress;

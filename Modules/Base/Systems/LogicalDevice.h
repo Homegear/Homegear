@@ -108,7 +108,7 @@ public:
     virtual uint32_t getDeviceType() { return _deviceType; }
 	virtual std::string handleCLICommand(std::string command) { return ""; }
 	virtual std::shared_ptr<Central> getCentral() = 0;
-	void getPeers(std::vector<std::shared_ptr<Peer>>& peers);
+	void getPeers(std::vector<std::shared_ptr<Peer>>& peers, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices = std::shared_ptr<std::map<uint64_t, int32_t>>());
 	std::shared_ptr<Peer> getPeer(int32_t address);
     std::shared_ptr<Peer> getPeer(uint64_t id);
     std::shared_ptr<Peer> getPeer(std::string serialNumber);

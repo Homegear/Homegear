@@ -27,37 +27,42 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef MAXPACKET_H_
-#define MAXPACKET_H_
+#ifndef PENDINGQUEUES_H_
+#define PENDINGQUEUES_H_
 
-#include "../Base/BaseLib.h"
+#include "PacketQueue.h"
+#include "MAXPeer.h"
 
-#include <map>
+#include <string>
+#include <iostream>
+#include <memory>
+#include <queue>
+#include <mutex>
 
 namespace MAX
 {
-class MAXPacket : public BaseLib::Systems::Packet
-{
-    public:
-        //Properties
-        MAXPacket();
-        MAXPacket(std::string packet, int64_t timeReceived = 0);
-        virtual ~MAXPacket();
+class MAXDevice;
 
-        uint8_t messageCounter() { return _messageCounter; }
-        void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
-        uint8_t messageType() { return _messageType; }
-        virtual std::string hexString();
-    protected:
-        uint8_t _messageCounter = 0;
-        uint8_t _messageType = 0;
-        uint8_t _messageSubtype = 0;
-        uint8_t _rssiDevice = 0;
+class PendingQueues {
+public:
+	PendingQueues();
+	virtual ~PendingQueues() {}
+	void serialize(std::vector<uint8_t>& encodedData);
+	void unserialize(std::shared_ptr<std::vector<char>> serializedData, MAXPeer* peer, MAXDevice* device);
 
-        virtual void import(std::string& packet, bool removeFirstCharacter = true);
-        virtual uint8_t getByte(std::string);
-        int32_t getInt(std::string);
+	void push(std::shared_ptr<PacketQueue> queue);
+	void pop();
+	void pop(uint32_t id);
+	bool empty();
+	uint32_t size();
+	std::shared_ptr<PacketQueue> front();
+	void clear();
+	void removeQueue(std::string value, int32_t channel);
+	bool find(PacketQueueType queueType);
+private:
+	uint32_t _currentID = 0;
+	std::mutex _queuesMutex;
+    std::deque<std::shared_ptr<PacketQueue>> _queues;
 };
-
 }
 #endif

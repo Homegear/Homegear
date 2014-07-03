@@ -864,10 +864,10 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientFileDescriptor()
 
 		struct sockaddr_storage clientInfo;
 		socklen_t addressSize = sizeof(addressSize);
-		int32_t clientFileDescriptor = accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientInfo, &addressSize);
-		if(clientFileDescriptor == -1) return fileDescriptor;
-		fileDescriptor = GD::bl->fileDescriptorManager.add(clientFileDescriptor);
-		getpeername(clientFileDescriptor, (struct sockaddr*)&clientInfo, &addressSize);
+		fileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *) &clientInfo, &addressSize));
+		if(!fileDescriptor) return fileDescriptor;
+
+		getpeername(fileDescriptor->descriptor, (struct sockaddr*)&clientInfo, &addressSize);
 
 		uint32_t port;
 		char ipString[INET6_ADDRSTRLEN];
@@ -881,7 +881,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientFileDescriptor()
 			inet_ntop(AF_INET6, &s->sin6_addr, ipString, sizeof(ipString));
 		}
 		std::string ipString2(&ipString[0]);
-		GD::out.printInfo("Info: Connection from " + ipString2 + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(clientFileDescriptor));
+		GD::out.printInfo("Info: Connection from " + ipString2 + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(fileDescriptor->descriptor));
 	}
     catch(const std::exception& ex)
     {
@@ -902,19 +902,43 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 {
 	try
 	{
+		GD::out.printInfo("Position 0");
 		if(!_sslCTX)
 		{
 			GD::out.printError("Error: Could not initiate SSL connection. _sslCTX is nullptr.");
 			return;
 		}
+		GD::out.printInfo("Position 1");
 		client->ssl = SSL_new(_sslCTX);
 		if(!client->ssl)
 		{
 			GD::out.printError("Error creating SSL structure: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, 0)));
 			return;
 		}
-		SSL_set_fd(client->ssl, client->fileDescriptor->descriptor);
+		GD::out.printInfo("Position 2");
+		if(!client->fileDescriptor || client->fileDescriptor->descriptor == -1)
+		{
+			GD::out.printError("Error setting SSL file descriptor: Provided file descriptor is invalid.");
+			if(client->ssl) SSL_free(client->ssl);
+			client->ssl = nullptr;
+			return;
+		}
+		if(!SSL_set_fd(client->ssl, client->fileDescriptor->descriptor))
+		{
+			GD::out.printError("Error setting SSL file descriptor: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, 0)));
+			if(client->ssl) SSL_free(client->ssl);
+			client->ssl = nullptr;
+			return;
+		}
+		GD::out.printInfo("Position 3");
+		if(!client->ssl)
+		{
+			GD::out.printError("Error getting SSL file descriptor: client->ssl is nullptr.");
+			return;
+		}
+		GD::out.printInfo("Position 3a");
 		int32_t result = SSL_accept(client->ssl);
+		GD::out.printInfo("Position 4");
 		if(result < 1)
 		{
 			if(client->ssl && result != 0) GD::out.printError("Error during TLS/SSL handshake: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
@@ -924,6 +948,7 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 			client->ssl = nullptr;
 		}
 		else GD::out.printInfo("Info: New SSL connection to RPC server. Cipher: " + std::string(SSL_get_cipher(client->ssl)) + " (" + std::to_string(SSL_get_cipher_bits(client->ssl, 0)) + " bits)");
+		GD::out.printInfo("Position 5");
 		return;
 	}
     catch(const std::exception& ex)

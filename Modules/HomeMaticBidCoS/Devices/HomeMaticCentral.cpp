@@ -3399,57 +3399,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::deleteDevice(uint64
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listDevices(bool channels, std::map<std::string, bool> fields)
-{
-	return listDevices(channels, fields, std::shared_ptr<std::map<std::uint64_t, int32_t>>());
-}
-
-std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
-{
-	try
-	{
-		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-
-		std::vector<std::shared_ptr<BidCoSPeer>> peers;
-		//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
-		_peersMutex.lock();
-		for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
-		{
-			if(knownDevices && knownDevices->find(i->first) != knownDevices->end()) continue; //only add unknown devices
-			peers.push_back(std::dynamic_pointer_cast<BidCoSPeer>(i->second));
-		}
-		_peersMutex.unlock();
-
-		for(std::vector<std::shared_ptr<BidCoSPeer>>::iterator i = peers.begin(); i != peers.end(); ++i)
-		{
-			//listDevices really needs a lot of resources, so wait a little bit after each device
-			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescriptions(channels, fields);
-			if(!descriptions) continue;
-			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
-			{
-				array->arrayValue->push_back(*j);
-			}
-		}
-
-		return array;
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    _peersMutex.unlock();
-    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
-}
-
 std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::listTeams()
 {
 	try

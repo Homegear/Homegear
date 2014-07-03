@@ -122,8 +122,8 @@ rm homegear_current_armhf.deb
 service homegear stop
 echo \"*               soft    core            unlimited\" >> /etc/security/limits.d/homegear
 service ssh stop
-rm /etc/homegear/Device\ types/*
-rm -r /var/log/homegear/*
+rm -f /etc/homegear/devices/*
+rm -rf /var/log/homegear/*
 rm -f third-stage
 " > third-stage
 chmod +x third-stage

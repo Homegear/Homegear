@@ -27,12 +27,12 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef BIDCOSMESSAGE_H
-#define BIDCOSMESSAGE_H
+#ifndef MAXMESSAGE_H
+#define MAXMESSAGE_H
 
 #include "../Base/BaseLib.h"
-#include "BidCoSPacket.h"
-#include "HomeMaticDevice.h"
+#include "MAXPacket.h"
+#include "MAXDevice.h"
 
 #include <iostream>
 #include <vector>
@@ -40,19 +40,19 @@
 #include <map>
 #include <memory>
 
-namespace BidCoS
+namespace MAX
 {
 enum MessageAccess { NOACCESS = 0x00, ACCESSPAIREDTOSENDER = 0x01, ACCESSDESTISME = 0x02, ACCESSCENTRAL = 0x04, ACCESSUNPAIRING = 0x08, FULLACCESS = 0x80 };
 enum MessageDirection { DIRECTIONIN, DIRECTIONOUT };
 
-class BidCoSMessage
+class MAXMessage
 {
     public:
-        BidCoSMessage();
-        BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, void (HomeMaticDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<BidCoSPacket>));
-        BidCoSMessage(int32_t messageType, HomeMaticDevice* device, int32_t access, int32_t accessPairing, void (HomeMaticDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<BidCoSPacket>));
-        BidCoSMessage(int32_t messageType, int32_t controlByte, HomeMaticDevice* device, void (HomeMaticDevice::*messageHandlerOutgoing)(int32_t, int32_t, std::shared_ptr<BidCoSPacket>));
-        virtual ~BidCoSMessage();
+        MAXMessage();
+        MAXMessage(int32_t messageType, MAXDevice* device, int32_t access, void (MAXDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<MAXPacket>));
+        MAXMessage(int32_t messageType, MAXDevice* device, int32_t access, int32_t accessPairing, void (MAXDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<MAXPacket>));
+        MAXMessage(int32_t messageType, int32_t controlByte, MAXDevice* device, void (MAXDevice::*messageHandlerOutgoing)(int32_t, int32_t, std::shared_ptr<MAXPacket>));
+        virtual ~MAXMessage();
 
         MessageDirection getDirection() { return _direction; }
         void setDirection(MessageDirection direction) { _direction = direction; }
@@ -64,29 +64,29 @@ class BidCoSMessage
         void setMessageAccess(int32_t access) { _access = access; }
         int32_t getMessageAccessPairing() { return _accessPairing; }
         void setMessageAccessPairing(int32_t accessPairing) { _accessPairing = accessPairing; }
-        HomeMaticDevice* getDevice() { return _device; }
-        void invokeMessageHandlerIncoming(std::shared_ptr<BidCoSPacket> packet);
-        void invokeMessageHandlerOutgoing(std::shared_ptr<BidCoSPacket> packet);
-        bool checkAccess(std::shared_ptr<BidCoSPacket> packet, std::shared_ptr<BidCoSQueue> queue);
+        MAXDevice* getDevice() { return _device; }
+        void invokeMessageHandlerIncoming(std::shared_ptr<MAXPacket> packet);
+        void invokeMessageHandlerOutgoing(std::shared_ptr<MAXPacket> packet);
+        bool checkAccess(std::shared_ptr<MAXPacket> packet, std::shared_ptr<PacketQueue> queue);
         std::vector<std::pair<uint32_t, int32_t>>* getSubtypes() { return &_subtypes; }
         void addSubtype(int32_t subtypePosition, int32_t subtype) { _subtypes.push_back(std::pair<uint32_t, int32_t>(subtypePosition, subtype)); };
         uint32_t subtypeCount() { return _subtypes.size(); }
-        void setMessageCounter(std::shared_ptr<BidCoSPacket> packet);
-        bool typeIsEqual(std::shared_ptr<BidCoSPacket> packet);
-        bool typeIsEqual(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet);
-        bool typeIsEqual(std::shared_ptr<BidCoSMessage> message);
+        void setMessageCounter(std::shared_ptr<MAXPacket> packet);
+        bool typeIsEqual(std::shared_ptr<MAXPacket> packet);
+        bool typeIsEqual(std::shared_ptr<MAXMessage> message, std::shared_ptr<MAXPacket> packet);
+        bool typeIsEqual(std::shared_ptr<MAXMessage> message);
         bool typeIsEqual(int32_t messageType, std::vector<std::pair<uint32_t, int32_t>>* subtypes);
     protected:
         MessageDirection _direction = DIRECTIONIN;
         int32_t _messageType = -1;
         int32_t _controlByte = 0;
-        HomeMaticDevice* _device = nullptr;
+        MAXDevice* _device = nullptr;
         int32_t _access = 0;
         int32_t _accessPairing = 0;
         std::vector<std::pair<uint32_t, int32_t>> _subtypes;
-        void (HomeMaticDevice::*_messageHandlerIncoming)(int32_t, std::shared_ptr<BidCoSPacket>) = nullptr;
-        void (HomeMaticDevice::*_messageHandlerOutgoing)(int32_t, int32_t, std::shared_ptr<BidCoSPacket>) = nullptr;
+        void (MAXDevice::*_messageHandlerIncoming)(int32_t, std::shared_ptr<MAXPacket>) = nullptr;
+        void (MAXDevice::*_messageHandlerOutgoing)(int32_t, int32_t, std::shared_ptr<MAXPacket>) = nullptr;
     private:
 };
 }
-#endif // BIDCOSMESSAGE_H
+#endif

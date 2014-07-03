@@ -1,17 +1,17 @@
 <?xml version="1.0"?>
 <device version="1">
-  <supported_types>
+  <types>
     <type name="HM-TS-Sw-Pl" id="HM-TS-Sw-Pl">
       <parameter index="10.0" size="1.0" cond_op="GE" const_value="0x10"/>
       <parameter index="11.0" size="1.0" const_value="0x01"/>
     </type>
-  </supported_types>
-  <paramset type="MASTER" id="switch_dev_master">
-  </paramset>
+  </types>
+  <parameters type="MASTER" id="switch_dev_master">
+  </parameters>
   <channels>
     <channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
-      <paramset type="MASTER" id="maint_ch_master"/>
-      <paramset type="VALUES" id="maint_ch_values">
+      <parameters type="MASTER" id="maint_ch_master"/>
+      <parameters type="VALUES" id="maint_ch_values">
         <parameter id="UNREACH" operations="read,event" ui_flags="service">
           <logical type="boolean"/>
           <physical type="integer" interface="internal" value_id="UNREACH"/>
@@ -32,13 +32,13 @@
           <logical type="integer"/>
           <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
         </parameter>
-      </paramset>
+      </parameters>
     </channel>
     <channel index="1" type="SWITCH">
       <link_roles>
         <target name="SWITCH"/>
       </link_roles>
-      <paramset type="VALUES" id="switch_ch_values">
+      <parameters type="VALUES" id="switch_ch_values">
         <parameter id="STATE" operations="read,write,event" control="SWITCH.STATE">
           <logical type="boolean" default="false"/>
           <physical type="integer" interface="command" value_id="STATE">
@@ -48,20 +48,20 @@
           </physical>
           <conversion type="boolean_integer" threshold="96" false="94" true="114"/>
         </parameter>
-      </paramset>
+      </parameters>
     </channel>
   </channels>
-  <frames>
-    <frame id="LEVEL_SET" direction="to_device" type="0x40" subtype="0x04" subtype_index="1">
+  <packets>
+    <packet id="LEVEL_SET" direction="to_device" type="0x40" subtype="0x04" subtype_index="1">
       <parameter type="integer" index="9.0" size="1.0" const_value="1"/>
       <parameter type="integer" index="10.0" size="1.0" param="STATE"/>
-    </frame>
-    <frame id="INFO_LEVEL" direction="from_device" event="true" type="0x40" subtype="0x06" subtype_index="1">
+    </packet>
+    <packet id="INFO_LEVEL" direction="from_device" event="true" type="0x40" subtype="0x06" subtype_index="1">
       <parameter type="integer" index="10.0" size="1.0" param="STATE"/>
-    </frame>
-    <frame id="ACK_STATUS" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x02" subtype="1" subtype_index="9" channel_field="10">
+    </packet>
+    <packet id="ACK_STATUS" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x02" subtype="1" subtype_index="9" channel_field="10">
       <parameter type="integer" index="11.0" size="1.0" param="STATE"/>
       <parameter type="integer" index="12.4" size="0.3" param="STATE_FLAGS"/>
-    </frame>
-  </frames>
+    </packet>
+  </packets>
 </device>

@@ -51,6 +51,42 @@ int32_t Central::physicalAddress()
 }
 
 //RPC methods
+std::shared_ptr<RPC::RPCVariable> Central::getAllValues()
+{
+	try
+	{
+		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+
+		std::vector<std::shared_ptr<Peer>> peers;
+		//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
+		_me->getPeers(peers);
+
+		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+		{
+			//getAllValues really needs a lot of resources, so wait a little bit after each device
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			std::shared_ptr<RPC::RPCVariable> values = (*i)->getAllValues();
+			if(!values || values->errorStruct) continue;
+			array->arrayValue->push_back(values);
+		}
+
+		return array;
+	}
+	catch(const std::exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<RPC::RPCVariable> Central::getDeviceDescription(std::string serialNumber, int32_t channel)
 {
 	try
@@ -580,6 +616,50 @@ std::shared_ptr<RPC::RPCVariable> Central::getValue(uint64_t id, uint32_t channe
 		std::shared_ptr<Peer> peer(_me->getPeer(id));
 		if(peer) return peer->getValue(channel, valueKey);
 		return RPC::RPCVariable::createError(-2, "Unknown device.");
+	}
+	catch(const std::exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _baseLib->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<RPC::RPCVariable> Central::listDevices(bool channels, std::map<std::string, bool> fields)
+{
+	return listDevices(channels, fields, std::shared_ptr<std::map<std::uint64_t, int32_t>>());
+}
+
+std::shared_ptr<RPC::RPCVariable> Central::listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
+{
+	try
+	{
+		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+
+		std::vector<std::shared_ptr<Peer>> peers;
+		//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
+		_me->getPeers(peers, knownDevices);
+
+		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+		{
+			//listDevices really needs a lot of resources, so wait a little bit after each device
+			std::this_thread::sleep_for(std::chrono::milliseconds(3));
+			std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> descriptions = (*i)->getDeviceDescriptions(channels, fields);
+			if(!descriptions) continue;
+			for(std::vector<std::shared_ptr<RPC::RPCVariable>>::iterator j = descriptions->begin(); j != descriptions->end(); ++j)
+			{
+				array->arrayValue->push_back(*j);
+			}
+		}
+
+		return array;
 	}
 	catch(const std::exception& ex)
     {

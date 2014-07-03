@@ -249,6 +249,8 @@ std::string RPCClient::getIPAddress(std::string address)
 		}
 		if(address.substr(0, 7) == "http://") address = address.substr(7);
 		else if(address.substr(0, 8) == "https://") address = address.substr(8);
+		else if(address.substr(0, 9) == "binary://") address = address.substr(9);
+		else if(address.substr(0, 10) == "binarys://") address = address.substr(10);
 		if(address.empty())
 		{
 			GD::out.printError("Error: Server's address is empty.");
