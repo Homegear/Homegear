@@ -208,6 +208,11 @@ void PhysicalInterfaces::load(std::string filename)
 					settings->port = value;
 					GD::out.printDebug("Debug: Port of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->port);
 				}
+				else if(name == "portkeepalive")
+				{
+					settings->portKeepAlive = value;
+					GD::out.printDebug("Debug: PortKeepAlive of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->portKeepAlive);
+				}
 				else if(name == "oldrfkey")
 				{
 					settings->oldRFKey = value;

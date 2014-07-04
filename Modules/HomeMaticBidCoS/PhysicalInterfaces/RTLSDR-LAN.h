@@ -80,4 +80,4 @@ class RTLSDR_LAN  : public IBidCoSInterface
 };
 
 }
-#endif // TCPSOCKETDEVICE_H
+#endif

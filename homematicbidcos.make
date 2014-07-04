@@ -111,6 +111,7 @@ OBJECTS := \
 	$(OBJDIR)/HomeMaticCentral.o \
 	$(OBJDIR)/HM-SD.o \
 	$(OBJDIR)/HM-CC-TC.o \
+	$(OBJDIR)/HM-LGW.o \
 	$(OBJDIR)/RTLSDR-LAN.o \
 	$(OBJDIR)/IBidCoSInterface.o \
 	$(OBJDIR)/HM-CFG-USB.o \
@@ -231,6 +232,9 @@ $(OBJDIR)/HM-SD.o: Modules/HomeMaticBidCoS/Devices/HM-SD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/HM-CC-TC.o: Modules/HomeMaticBidCoS/Devices/HM-CC-TC.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/HM-LGW.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/HM-LGW.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/RTLSDR-LAN.o: Modules/HomeMaticBidCoS/PhysicalInterfaces/RTLSDR-LAN.cpp

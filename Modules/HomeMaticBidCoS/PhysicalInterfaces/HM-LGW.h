@@ -27,8 +27,8 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef HM_CFG_LAN_H
-#define HM_CFG_LAN_H
+#ifndef HM_LGW_H
+#define HM_LGW_H
 
 #include "../BidCoSPacket.h"
 #include "IBidCoSInterface.h"
@@ -56,11 +56,11 @@
 namespace BidCoS
 {
 
-class HM_CFG_LAN  : public IBidCoSInterface
+class HM_LGW  : public IBidCoSInterface
 {
     public:
-        HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
-        virtual ~HM_CFG_LAN();
+        HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+        virtual ~HM_LGW();
         void startListening();
         void stopListening();
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
@@ -77,26 +77,31 @@ class HM_CFG_LAN  : public IBidCoSInterface
         virtual void sendPeers();
         virtual std::string getPeerInfoPacket(PeerInfo& peerInfo);
     protected:
+        std::thread _listenThreadKeepAlive;
         std::mutex _peersMutex;
         std::map<int32_t, PeerInfo> _peers;
         int64_t _lastAction = 0;
         std::string _hostname;
         std::string _port;
         std::unique_ptr<BaseLib::SocketOperations> _socket;
+        std::unique_ptr<BaseLib::SocketOperations> _socketKeepAlive;
         std::mutex _sendMutex;
+        std::mutex _sendMutexKeepAlive;
         bool _initComplete = false;
+        bool _initCompleteKeepAlive = false;
         std::list<std::vector<char>> _initCommandQueue;
         int32_t _lastKeepAlive = 0;
         int32_t _lastKeepAliveResponse = 0;
         int32_t _lastTimePacket = 0;
-        std::vector<char> _keepAlivePacket = { 'K', '\r', '\n' };
         int64_t _startUpTime = 0;
         int32_t _myAddress = 0x1C6940;
+        uint8_t _packetIndex = 0;
+        uint8_t _packetIndexKeepAlive = 0;
 
         //AES stuff
         bool _aesInitialized = false;
         bool _aesExchangeComplete = false;
-        bool _useAES = false;
+        bool _aesExchangeKeepAliveComplete = false;
         std::vector<uint8_t> _rfKey;
         std::vector<uint8_t> _oldRFKey;
         std::vector<uint8_t> _key;
@@ -104,10 +109,17 @@ class HM_CFG_LAN  : public IBidCoSInterface
 		std::vector<uint8_t> _myIV;
         EVP_CIPHER_CTX* _ctxEncrypt = nullptr;
         EVP_CIPHER_CTX* _ctxDecrypt = nullptr;
+        std::vector<uint8_t> _remoteIVKeepAlive;
+		std::vector<uint8_t> _myIVKeepAlive;
+        EVP_CIPHER_CTX* _ctxEncryptKeepAlive = nullptr;
+        EVP_CIPHER_CTX* _ctxDecryptKeepAlive = nullptr;
 
         std::vector<char> encrypt(std::vector<char>& data);
         std::vector<uint8_t> decrypt(std::vector<uint8_t>& data);
+        std::vector<char> encryptKeepAlive(std::vector<char>& data);
+        std::vector<uint8_t> decryptKeepAlive(std::vector<uint8_t>& data);
         bool aesKeyExchange(std::vector<uint8_t>& data);
+        bool aesKeyExchangeKeepAlive(std::vector<uint8_t>& data);
         bool openSSLInit();
         void openSSLCleanup();
         void openSSLPrintError();
@@ -116,13 +128,18 @@ class HM_CFG_LAN  : public IBidCoSInterface
         void reconnect();
         void createInitCommandQueue();
         void processData(std::vector<uint8_t>& data);
+        void processDataKeepAlive(std::vector<uint8_t>& data);
         void processInit(std::string& packet);
+        void processInitKeepAlive(std::string& packet);
         void parsePacket(std::string& packet);
+        void parsePacketKeepAlive(std::string& packet);
         void send(std::string hexString, bool raw = false);
         void send(std::vector<char>& data, bool raw);
-        void sendKeepAlive();
+        void sendKeepAlive(std::vector<char>& data, bool raw);
+        void sendKeepAlivePacket();
         void sendTimePacket();
         void listen();
+        void listenKeepAlive();
         void getFileDescriptor(bool& timedout);
         std::shared_ptr<BaseLib::FileDescriptor> getConnection(std::string& hostname, const std::string& port, std::string& ipAddress);
     private:

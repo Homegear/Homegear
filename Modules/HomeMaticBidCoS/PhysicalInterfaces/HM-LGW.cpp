@@ -27,32 +27,28 @@
  * files in the program, then also delete it here.
  */
 
-#include "HM-CFG-LAN.h"
+#include "HM-LGW.h"
 #include "../GD.h"
 
 namespace BidCoS
 {
 
-HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
+HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
 	signal(SIGPIPE, SIG_IGN);
 
 	_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl));
+	_socketKeepAlive = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl));
 
 	if(!settings)
 	{
-		GD::out.printCritical("Critical: Error initializing HM-CFG-LAN. Settings pointer is empty.");
+		GD::out.printCritical("Critical: Error initializing HM-LGW. Settings pointer is empty.");
 		return;
 	}
-	if(!settings->lanKey.empty())
+	if(settings->lanKey.empty())
 	{
-		_useAES = true;
-		GD::out.printInfo("Info: Enabling AES encryption for communication with HM-CFG-LAN.");
-	}
-	else
-	{
-		_useAES = false;
-		GD::out.printInfo("Info: Disabling AES encryption for communication with HM-CFG-LAN.");
+		GD::out.printError("Error: No security key specified for HM-LGW in physicalinterfaces.conf.");
+		return;
 	}
 
 	if(!settings->rfKey.empty())
@@ -104,16 +100,14 @@ HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettin
 	}
 }
 
-HM_CFG_LAN::~HM_CFG_LAN()
+HM_LGW::~HM_LGW()
 {
 	try
 	{
-		if(_listenThread.joinable())
-		{
-			_stopCallbackThread = true;
-			_listenThread.join();
-		}
-		if(_useAES) openSSLCleanup();
+		_stopCallbackThread = true;
+		if(_listenThread.joinable()) _listenThread.join();
+		if(_listenThreadKeepAlive.joinable()) _listenThreadKeepAlive.join();
+		openSSLCleanup();
 	}
     catch(const std::exception& ex)
     {
@@ -129,7 +123,7 @@ HM_CFG_LAN::~HM_CFG_LAN()
     }
 }
 
-std::string HM_CFG_LAN::getPeerInfoPacket(PeerInfo& peerInfo)
+std::string HM_LGW::getPeerInfoPacket(PeerInfo& peerInfo)
 {
 	try
 	{
@@ -163,7 +157,7 @@ std::string HM_CFG_LAN::getPeerInfoPacket(PeerInfo& peerInfo)
     return "";
 }
 
-void HM_CFG_LAN::addPeer(PeerInfo peerInfo)
+void HM_LGW::addPeer(PeerInfo peerInfo)
 {
 	try
 	{
@@ -195,7 +189,7 @@ void HM_CFG_LAN::addPeer(PeerInfo peerInfo)
     _peersMutex.unlock();
 }
 
-void HM_CFG_LAN::addPeers(std::vector<PeerInfo>& peerInfos)
+void HM_LGW::addPeers(std::vector<PeerInfo>& peerInfos)
 {
 	try
 	{
@@ -220,7 +214,7 @@ void HM_CFG_LAN::addPeers(std::vector<PeerInfo>& peerInfos)
     _peersMutex.unlock();
 }
 
-void HM_CFG_LAN::sendPeers()
+void HM_LGW::sendPeers()
 {
 	try
 	{
@@ -246,7 +240,7 @@ void HM_CFG_LAN::sendPeers()
     _peersMutex.unlock();
 }
 
-void HM_CFG_LAN::removePeer(int32_t address)
+void HM_LGW::removePeer(int32_t address)
 {
 	try
 	{
@@ -273,7 +267,7 @@ void HM_CFG_LAN::removePeer(int32_t address)
     _peersMutex.unlock();
 }
 
-void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
+void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
@@ -288,7 +282,7 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		if(!bidCoSPacket) return;
 		if(bidCoSPacket->messageType() == 0x02 && packet->senderAddress() == _myAddress && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)
 		{
-			GD::out.printDebug("Debug: HM-CFG-LAN: Ignoring ACK packet.", 6);
+			GD::out.printDebug("Debug: HM-LGW: Ignoring ACK packet.", 6);
 			_lastPacketSent = BaseLib::HelperFunctions::getTime();
 			return;
 		}
@@ -315,7 +309,7 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
     }
 }
 
-void HM_CFG_LAN::send(std::string hexString, bool raw)
+void HM_LGW::send(std::string hexString, bool raw)
 {
 	try
     {
@@ -337,25 +331,25 @@ void HM_CFG_LAN::send(std::string hexString, bool raw)
     }
 }
 
-void HM_CFG_LAN::send(std::vector<char>& data, bool raw)
+void HM_LGW::send(std::vector<char>& data, bool raw)
 {
     try
     {
     	if(data.size() < 3) return; //Otherwise error in printInfo
     	std::vector<char> encryptedData;
-    	if(_useAES && !raw) encryptedData = encrypt(data);
+    	if(!raw) encryptedData = encrypt(data);
     	_sendMutex.lock();
     	if(!_socket->connected() || _stopped)
     	{
-    		GD::out.printWarning(std::string("Warning: !!!Not!!! sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+    		GD::out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->port + "): " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
     		_sendMutex.unlock();
     		return;
     	}
     	if(_bl->debugLevel >= 5)
         {
-            GD::out.printInfo(std::string("Debug: Sending") + ((_useAES && !raw) ? " (encrypted)" : "") + ": " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+            GD::out.printDebug("Debug: Sending (Port " + _settings->port + "): " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
         }
-    	(_useAES && !raw) ? _socket->proofwrite(encryptedData) : _socket->proofwrite(data);
+    	(!raw) ? _socket->proofwrite(encryptedData) : _socket->proofwrite(data);
     	 _sendMutex.unlock();
     	 return;
     }
@@ -379,18 +373,59 @@ void HM_CFG_LAN::send(std::vector<char>& data, bool raw)
     _sendMutex.unlock();
 }
 
-void HM_CFG_LAN::startListening()
+void HM_LGW::sendKeepAlive(std::vector<char>& data, bool raw)
+{
+    try
+    {
+    	if(data.size() < 3) return; //Otherwise error in printInfo
+    	std::vector<char> encryptedData;
+    	if(!raw) encryptedData = encryptKeepAlive(data);
+    	_sendMutexKeepAlive.lock();
+    	if(!_socketKeepAlive->connected() || _stopped)
+    	{
+    		GD::out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->portKeepAlive + "): " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+    		_sendMutexKeepAlive.unlock();
+    		return;
+    	}
+    	if(_bl->debugLevel >= 5)
+        {
+            GD::out.printDebug(std::string("Debug: Sending (Port " + _settings->portKeepAlive + "): ") + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+        }
+    	(!raw) ? _socketKeepAlive->proofwrite(encryptedData) : _socketKeepAlive->proofwrite(data);
+    	 _sendMutexKeepAlive.unlock();
+    	 return;
+    }
+    catch(BaseLib::SocketOperationException& ex)
+    {
+    	GD::out.printError(ex.what());
+    }
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _stopped = true;
+    _sendMutexKeepAlive.unlock();
+}
+
+void HM_LGW::startListening()
 {
 	try
 	{
 		stopListening();
-		if(_useAES) openSSLInit();
+		openSSLInit();
 		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
-		GD::out.printDebug("Connecting to HM-CFG-LAN with Hostname " + _settings->host + " on port " + _settings->port + "...");
-		//_socket->open();
-		//GD::out.printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		_socketKeepAlive = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->portKeepAlive, _settings->ssl, _settings->verifyCertificate));
+		GD::out.printDebug("Connecting to HM-LGW with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_stopped = false;
-		_listenThread = std::thread(&HM_CFG_LAN::listen, this);
+		_listenThread = std::thread(&HM_LGW::listen, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
@@ -407,16 +442,19 @@ void HM_CFG_LAN::startListening()
     }
 }
 
-void HM_CFG_LAN::reconnect()
+void HM_LGW::reconnect()
 {
 	try
 	{
 		_socket->close();
-		if(_useAES) openSSLInit();
+		_socketKeepAlive->close();
+		openSSLInit();
 		createInitCommandQueue();
-		GD::out.printDebug("Connecting to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_initCompleteKeepAlive = false;
+		GD::out.printDebug("Connecting to HM-LGW device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket->open();
-		GD::out.printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		_socketKeepAlive->open();
+		GD::out.printInfo("Connected to HM-LGW device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 	}
     catch(const std::exception& ex)
@@ -433,20 +471,20 @@ void HM_CFG_LAN::reconnect()
     }
 }
 
-void HM_CFG_LAN::stopListening()
+void HM_LGW::stopListening()
 {
 	try
 	{
-		if(_listenThread.joinable())
-		{
-			_stopCallbackThread = true;
-			_listenThread.join();
-		}
+		_stopCallbackThread = true;
+		if(_listenThread.joinable()) _listenThread.join();
+		if(_listenThreadKeepAlive.joinable()) _listenThreadKeepAlive.join();
 		_stopCallbackThread = false;
 		_socket->close();
-		if(_useAES) openSSLCleanup();
+		_socketKeepAlive->close();
+		openSSLCleanup();
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
+		_sendMutexKeepAlive.unlock();
 	}
 	catch(const std::exception& ex)
     {
@@ -462,7 +500,7 @@ void HM_CFG_LAN::stopListening()
     }
 }
 
-void HM_CFG_LAN::createInitCommandQueue()
+void HM_LGW::createInitCommandQueue()
 {
 	try
 	{
@@ -472,55 +510,18 @@ void HM_CFG_LAN::createInitCommandQueue()
 		int32_t i = 0;
 		while(!GD::family->getCentral() && i < 30)
 		{
-			GD::out.printDebug("Debug: HM-CFG-LAN: Waiting for central to load.");
+			GD::out.printDebug("Debug: HM-LGW: Waiting for central to load.");
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			i++;
 		}
 		if(!GD::family->getCentral())
 		{
 			_stopCallbackThread = true;
-			GD::out.printError("Error: Could not get central address for HM-CFG-LAN. Stopping listening.");
+			GD::out.printError("Error: Could not get central address for HM-LGW. Stopping listening.");
 			return;
 		}
 
-		std::vector<char> packet = {'A'};
-		_myAddress = GD::family->getCentral()->physicalAddress();
-		std::string hexString = BaseLib::HelperFunctions::getHexString(_myAddress, 6) + "\r\n";
-		packet.insert(packet.end(), hexString.begin(), hexString.end());
-		_initCommandQueue.push_back(packet);
 
-		packet.clear();
-		hexString = "C\r\n";
-		if(!_rfKey.empty())
-		{
-			hexString += "Y01," + BaseLib::HelperFunctions::getHexString(_settings->currentRFKeyIndex, 2) + "," + BaseLib::HelperFunctions::getHexString(_rfKey) + "\r\n";
-		}
-		else hexString += "Y01,00,\r\n";
-		packet.insert(packet.end(), hexString.begin(), hexString.end());
-		_initCommandQueue.push_back(packet);
-
-		packet.clear();
-		if(!_oldRFKey.empty())
-		{
-			hexString = "Y02," + BaseLib::HelperFunctions::getHexString(_settings->currentRFKeyIndex - 1, 2) + "," + BaseLib::HelperFunctions::getHexString(_oldRFKey) + "\r\n";
-		}
-		else hexString = "Y02,00,\r\n";
-		packet.insert(packet.end(), hexString.begin(), hexString.end());
-		_initCommandQueue.push_back(packet);
-
-		packet.clear();
-		hexString = "Y03,00,\r\n";
-		packet.insert(packet.end(), hexString.begin(), hexString.end());
-		_initCommandQueue.push_back(packet);
-
-		packet.clear();
-		const auto timePoint = std::chrono::system_clock::now();
-		time_t t = std::chrono::system_clock::to_time_t(timePoint);
-		tm* localTime = std::localtime(&t);
-		uint32_t time = (uint32_t)(t - 946684800) + 1; //I add one second for processing time
-		hexString = "T" + BaseLib::HelperFunctions::getHexString(time, 8) + ',' + BaseLib::HelperFunctions::getHexString(localTime->tm_gmtoff / 1800, 2) + ",00,00000000\r\n";
-		packet.insert(packet.end(), hexString.begin(), hexString.end());
-		_initCommandQueue.push_back(packet);
 	}
 	catch(const std::exception& ex)
     {
@@ -536,7 +537,7 @@ void HM_CFG_LAN::createInitCommandQueue()
     }
 }
 
-void HM_CFG_LAN::openSSLPrintError()
+void HM_LGW::openSSLPrintError()
 {
 	uint32_t errorCode = ERR_get_error();
 	std::vector<char> buffer(256); //At least 120 bytes
@@ -544,26 +545,17 @@ void HM_CFG_LAN::openSSLPrintError()
 	GD::out.printError("Error: " + std::string(&buffer.at(0)));
 }
 
-bool HM_CFG_LAN::openSSLInit()
+bool HM_LGW::openSSLInit()
 {
 	openSSLCleanup();
 
-	if(_settings->lanKey.size() != 32)
+	if(_settings->lanKey.empty())
 	{
-		GD::out.printError("Error: The AES key specified in physicalinterfaces.conf for communication with your HM-CFG-LAN has the wrong size.");
+		GD::out.printError("Error: No AES key specified in physicalinterfaces.conf for communication with your HM-LGW.");
 		return false;
-		//_key.resize(16);
-		//MD5((uint8_t*)_settings->lanKey.c_str(), _settings->lanKey.size(), &_key.at(0));
 	}
-	else
-	{
-		_key = _bl->hf.getUBinary(_settings->lanKey);
-		if(_key.size() != 16)
-		{
-			GD::out.printError("Error: The AES key specified in physicalinterfaces.conf for communication with your HM-CFG-LAN is not a valid hexadecimal string.");
-			return false;
-		}
-	}
+	_key.resize(16);
+	MD5((uint8_t*)_settings->lanKey.c_str(), _settings->lanKey.size(), &_key.at(0));
 
 	ERR_load_crypto_strings();
 	OpenSSL_add_all_algorithms();
@@ -582,25 +574,45 @@ bool HM_CFG_LAN::openSSLInit()
 		openSSLCleanup();
 		return false;
 	}
+	_ctxEncryptKeepAlive = EVP_CIPHER_CTX_new();
+	if(!_ctxEncryptKeepAlive)
+	{
+		openSSLPrintError();
+		openSSLCleanup();
+		return false;
+	}
+	_ctxDecryptKeepAlive = EVP_CIPHER_CTX_new();
+	if(!_ctxDecryptKeepAlive)
+	{
+		openSSLPrintError();
+		openSSLCleanup();
+		return false;
+	}
 	_aesInitialized = true;
 	_aesExchangeComplete = false;
+	_aesExchangeKeepAliveComplete = false;
 	return true;
 }
 
-void HM_CFG_LAN::openSSLCleanup()
+void HM_LGW::openSSLCleanup()
 {
 	if(!_aesInitialized) return;
 	_aesInitialized = false;
 	if(_ctxDecrypt) EVP_CIPHER_CTX_free(_ctxDecrypt);
 	if(_ctxEncrypt)	EVP_CIPHER_CTX_free(_ctxEncrypt);
+	if(_ctxDecryptKeepAlive) EVP_CIPHER_CTX_free(_ctxDecryptKeepAlive);
+	if(_ctxEncryptKeepAlive)	EVP_CIPHER_CTX_free(_ctxEncryptKeepAlive);
 	EVP_cleanup();
 	ERR_free_strings();
 	_myIV.clear();
 	_remoteIV.clear();
+	_myIVKeepAlive.clear();
+	_remoteIVKeepAlive.clear();
 	_aesExchangeComplete = false;
+	_aesExchangeKeepAliveComplete = false;
 }
 
-std::vector<char> HM_CFG_LAN::encrypt(std::vector<char>& data)
+std::vector<char> HM_LGW::encrypt(std::vector<char>& data)
 {
 	std::vector<char> encryptedData(data.size());
 	if(!_ctxEncrypt) return encryptedData;
@@ -617,7 +629,7 @@ std::vector<char> HM_CFG_LAN::encrypt(std::vector<char>& data)
 	return encryptedData;
 }
 
-std::vector<uint8_t> HM_CFG_LAN::decrypt(std::vector<uint8_t>& data)
+std::vector<uint8_t> HM_LGW::decrypt(std::vector<uint8_t>& data)
 {
 	std::vector<uint8_t> decryptedData(data.size());
 	if(!_ctxDecrypt) return decryptedData;
@@ -634,11 +646,45 @@ std::vector<uint8_t> HM_CFG_LAN::decrypt(std::vector<uint8_t>& data)
 	return decryptedData;
 }
 
-void HM_CFG_LAN::sendKeepAlive()
+std::vector<char> HM_LGW::encryptKeepAlive(std::vector<char>& data)
+{
+	std::vector<char> encryptedData(data.size());
+	if(!_ctxEncryptKeepAlive) return encryptedData;
+
+	int length = 0;
+	if(EVP_EncryptUpdate(_ctxEncryptKeepAlive, (uint8_t*)&encryptedData.at(0), &length, (uint8_t*)&data.at(0), data.size()) != 1)
+	{
+		openSSLPrintError();
+		_stopCallbackThread = true;
+		return std::vector<char>();
+	}
+	EVP_EncryptFinal_ex(_ctxEncryptKeepAlive, (uint8_t*)&encryptedData.at(0) + length, &length);
+
+	return encryptedData;
+}
+
+std::vector<uint8_t> HM_LGW::decryptKeepAlive(std::vector<uint8_t>& data)
+{
+	std::vector<uint8_t> decryptedData(data.size());
+	if(!_ctxDecryptKeepAlive) return decryptedData;
+
+	int length = 0;
+	if(EVP_DecryptUpdate(_ctxDecryptKeepAlive, &decryptedData.at(0), &length, &data.at(0), data.size()) != 1)
+	{
+		openSSLPrintError();
+		_stopCallbackThread = true;
+		return std::vector<uint8_t>();
+	}
+	EVP_DecryptFinal_ex(_ctxDecryptKeepAlive, &decryptedData.at(0) + length, &length);
+
+	return decryptedData;
+}
+
+void HM_LGW::sendKeepAlivePacket()
 {
 	try
     {
-		if(!_initComplete) return;
+		if(!_initCompleteKeepAlive) return;
 		if(BaseLib::HelperFunctions::getTimeSeconds() - _lastKeepAlive >= 10)
 		{
 			if(_lastKeepAliveResponse < _lastKeepAlive)
@@ -649,7 +695,8 @@ void HM_CFG_LAN::sendKeepAlive()
 			}
 
 			_lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
-			send(_keepAlivePacket, false);
+			std::vector<char> packet = { 'K', _bl->hf.getHexChar(_packetIndexKeepAlive >> 4), _bl->hf.getHexChar(_packetIndexKeepAlive & 0xF), '\r', '\n' };
+			sendKeepAlive(packet, false);
 		}
 	}
     catch(const std::exception& ex)
@@ -666,10 +713,11 @@ void HM_CFG_LAN::sendKeepAlive()
     }
 }
 
-void HM_CFG_LAN::sendTimePacket()
+void HM_LGW::sendTimePacket()
 {
 	try
     {
+		return;
 		const auto timePoint = std::chrono::system_clock::now();
 		time_t t = std::chrono::system_clock::to_time_t(timePoint);
 		tm* localTime = std::localtime(&t);
@@ -692,11 +740,12 @@ void HM_CFG_LAN::sendTimePacket()
     }
 }
 
-void HM_CFG_LAN::listen()
+void HM_LGW::listen()
 {
     try
     {
     	createInitCommandQueue(); //Called here in a seperate thread so that startListening is not blocking Homegear
+    	_listenThreadKeepAlive = std::thread(&HM_LGW::listenKeepAlive, this);
 
     	uint32_t receivedBytes = 0;
     	int32_t bufferMax = 2048;
@@ -710,7 +759,7 @@ void HM_CFG_LAN::listen()
         	{
         		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         		if(_stopCallbackThread) return;
-        		GD::out.printWarning("Warning: Connection to HM-CFG-LAN closed. Trying to reconnect...");
+        		GD::out.printWarning("Warning: Connection to HM-LGW closed. Trying to reconnect...");
         		reconnect();
         		continue;
         	}
@@ -725,7 +774,7 @@ void HM_CFG_LAN::listen()
 						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
 						if(data.size() > 1000000)
 						{
-							GD::out.printError("Could not read from HM-CFG-LAN: Too much data.");
+							GD::out.printError("Could not read from HM-LGW: Too much data.");
 							break;
 						}
 					}
@@ -738,7 +787,6 @@ void HM_CFG_LAN::listen()
 					if(_socket->connected())
 					{
 						if(BaseLib::HelperFunctions::getTimeSeconds() - _lastTimePacket > 1800) sendTimePacket();
-						sendKeepAlive();
 					}
 					continue;
 				}
@@ -761,7 +809,7 @@ void HM_CFG_LAN::listen()
 
         	if(_bl->debugLevel >= 6)
         	{
-        		GD::out.printDebug("Debug: Packet received from HM-CFG-LAN. Raw data:");
+        		GD::out.printDebug("Debug: Packet received from HM-LGW on port " + _settings->port + ". Raw data:");
         		GD::out.printBinary(data);
         	}
 
@@ -784,36 +832,132 @@ void HM_CFG_LAN::listen()
     }
 }
 
-bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
+void HM_LGW::listenKeepAlive()
+{
+	try
+    {
+    	uint32_t receivedBytes = 0;
+    	int32_t bufferMax = 2048;
+		std::vector<char> buffer(bufferMax);
+		_lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds();
+		_lastKeepAliveResponse = _lastKeepAlive;
+
+        while(!_stopCallbackThread)
+        {
+        	if(_stopped)
+        	{
+        		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        		if(_stopCallbackThread) return;
+        		continue;
+        	}
+        	std::vector<uint8_t> data;
+			try
+			{
+				do
+				{
+					receivedBytes = _socketKeepAlive->proofread(&buffer[0], bufferMax);
+					if(receivedBytes > 0)
+					{
+						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
+						if(data.size() > 1000000)
+						{
+							GD::out.printError("Could not read from HM-LGW: Too much data.");
+							break;
+						}
+					}
+				} while(receivedBytes == bufferMax);
+			}
+			catch(BaseLib::SocketTimeOutException& ex)
+			{
+				if(data.empty())
+				{
+					if(_socketKeepAlive->connected()) sendKeepAlivePacket();
+					continue;
+				}
+			}
+			catch(BaseLib::SocketClosedException& ex)
+			{
+				_stopped = true;
+				GD::out.printWarning("Warning: " + ex.what());
+				continue;
+			}
+			catch(BaseLib::SocketOperationException& ex)
+			{
+				_stopped = true;
+				GD::out.printError("Error: " + ex.what());
+				continue;
+			}
+			if(data.empty() || data.size() > 1000000) continue;
+
+        	if(_bl->debugLevel >= 6)
+        	{
+        		GD::out.printDebug("Debug: Packet received from HM-LGW on port " + _settings->portKeepAlive + ". Raw data:");
+        		GD::out.printBinary(data);
+        	}
+
+        	processDataKeepAlive(data);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 {
 	try
 	{
-		if(data.at(0) == 'V')
+		std::string hex(&data.at(0), &data.at(0) + data.size());
+		int32_t startPos = hex.find('\n');
+		if(startPos == std::string::npos)
 		{
-			if(!_useAES)
+			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			return false;
+		}
+		startPos += 5;
+		int32_t length = hex.find('\n', startPos);
+		if(length == std::string::npos)
+		{
+			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			return false;
+		}
+		length = length - startPos - 1;
+		if(length <= 30)
+		{
+			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			return false;
+		}
+		if(data.at(startPos - 4) == 'V' && data.at(startPos - 1) == ',')
+		{
+			_packetIndex = (_bl->hf.getNumber(data.at(startPos - 3)) << 4) + _bl->hf.getNumber(data.at(startPos - 2));
+			_packetIndex++;
+			if(length != 32)
 			{
 				_stopCallbackThread = true;
-				GD::out.printError("Error: Error communicating with HM-CFG-LAN. Device requires AES, but no AES key was specified in physicalinterfaces.conf.");
-				return false;
-			}
-			if(data.size() != 35)
-			{
-				_stopCallbackThread = true;
-				GD::out.printError("Error: Error communicating with HM-CFG-LAN. Received IV has wrong size.");
+				GD::out.printError("Error: Error communicating with HM-LGW. Received IV has wrong size.");
 				return false;
 			}
 			_remoteIV.clear();
-			std::string ivHex(&data.at(1), &data.at(1) + (data.size() - 3));
+			std::string ivHex(&data.at(startPos), &data.at(startPos) + length);
 			_remoteIV = _bl->hf.getUBinary(ivHex);
 			if(_remoteIV.size() != 16)
 			{
 				_stopCallbackThread = true;
-				GD::out.printError("Error: Error communicating with HM-CFG-LAN. Received IV is not in hexadecimal format.");
+				GD::out.printError("Error: Error communicating with HM-LGW. Received IV is not in hexadecimal format.");
 				return false;
 			}
 			if(_bl->debugLevel >= 5)
 			{
-				GD::out.printDebug("HM-CFG-LAN IV is: ");
+				GD::out.printDebug("HM-LGW IV is: ");
 				GD::out.printBinary(_remoteIV);
 			}
 
@@ -824,7 +968,7 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 				return false;
 			}
 
-			std::vector<char> response = { 'V' };
+			std::vector<char> response = { 'V', _bl->hf.getHexChar(_packetIndex >> 4), _bl->hf.getHexChar(_packetIndex & 0xF), ',' };
 			std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
 			std::uniform_int_distribution<int32_t> distribution(0, 15);
 			_myIV.clear();
@@ -864,7 +1008,7 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 		else if(_remoteIV.empty())
 		{
 			_stopCallbackThread = true;
-			GD::out.printError("Error: Error communicating with HM-CFG-LAN. AES is enabled but no IV was send from HM-CFG-LAN.");
+			GD::out.printError("Error: Error communicating with HM-LGW. No IV was send from HM-LGW.");
 			return false;
 		}
 	}
@@ -883,24 +1027,136 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
     return false;
 }
 
-void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
+bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
+{
+	try
+	{
+		std::string hex(&data.at(0), &data.at(0) + data.size());
+		int32_t startPos = hex.find('\n');
+		if(startPos == std::string::npos)
+		{
+			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			return false;
+		}
+		startPos += 5;
+		int32_t length = hex.find('\n', startPos);
+		if(length == std::string::npos)
+		{
+			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			return false;
+		}
+		length = length - startPos - 1;
+		if(length <= 30)
+		{
+			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			return false;
+		}
+		if(data.at(startPos - 4) == 'V' && data.at(startPos - 1) == ',')
+		{
+			_packetIndexKeepAlive = (_bl->hf.getNumber(data.at(startPos - 3)) << 4) + _bl->hf.getNumber(data.at(startPos - 2));
+			_packetIndexKeepAlive++;
+			if(length != 32)
+			{
+				_stopCallbackThread = true;
+				GD::out.printError("Error: Error communicating with HM-LGW. Received IV has wrong size.");
+				return false;
+			}
+			_remoteIVKeepAlive.clear();
+			std::string ivHex(&data.at(startPos), &data.at(startPos) + length);
+			_remoteIVKeepAlive = _bl->hf.getUBinary(ivHex);
+			if(_remoteIVKeepAlive.size() != 16)
+			{
+				_stopCallbackThread = true;
+				GD::out.printError("Error: Error communicating with HM-LGW. Received IV is not in hexadecimal format.");
+				return false;
+			}
+			if(_bl->debugLevel >= 5)
+			{
+				GD::out.printDebug("HM-LGW IV for keep alive packets is: ");
+				GD::out.printBinary(_remoteIVKeepAlive);
+			}
+
+			if(EVP_EncryptInit_ex(_ctxEncryptKeepAlive, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_remoteIVKeepAlive.at(0)) != 1)
+			{
+				_stopCallbackThread = true;
+				openSSLPrintError();
+				return false;
+			}
+
+			std::vector<char> response = { 'V', _bl->hf.getHexChar(_packetIndexKeepAlive >> 4), _bl->hf.getHexChar(_packetIndexKeepAlive & 0xF), ',' };
+			std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
+			std::uniform_int_distribution<int32_t> distribution(0, 15);
+			_myIVKeepAlive.clear();
+			for(int32_t i = 0; i < 32; i++)
+			{
+				int32_t nibble = distribution(generator);
+				if((i % 2) == 0)
+				{
+					_myIVKeepAlive.push_back(nibble << 4);
+				}
+				else
+				{
+					_myIVKeepAlive.at(i / 2) |= nibble;
+				}
+				response.push_back(_bl->hf.getHexChar(nibble));
+			}
+			response.push_back(0x0D);
+			response.push_back(0x0A);
+
+			if(_bl->debugLevel >= 5)
+			{
+				GD::out.printDebug("Homegear IV for keep alive packets is: ");
+				GD::out.printBinary(_myIVKeepAlive);
+			}
+
+			if(EVP_DecryptInit_ex(_ctxDecryptKeepAlive, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_myIVKeepAlive.at(0)) != 1)
+			{
+				_stopCallbackThread = true;
+				openSSLPrintError();
+				return false;
+			}
+
+			sendKeepAlive(response, true);
+			_aesExchangeKeepAliveComplete = true;
+			return true;
+		}
+		else if(_remoteIVKeepAlive.empty())
+		{
+			_stopCallbackThread = true;
+			GD::out.printError("Error: Error communicating with HM-LGW. No IV was send from HM-LGW.");
+			return false;
+		}
+	}
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
+void HM_LGW::processData(std::vector<uint8_t>& data)
 {
 	try
 	{
 		if(data.empty()) return;
 		std::string packets;
-		if(_useAES)
+		if(!_aesExchangeComplete)
 		{
-			if(!_aesExchangeComplete)
-			{
-				aesKeyExchange(data);
-				return;
-			}
-			std::vector<uint8_t> decryptedData = decrypt(data);
-			if(decryptedData.empty()) return;
-			packets.insert(packets.end(), decryptedData.begin(), decryptedData.end());
+			aesKeyExchange(data);
+			return;
 		}
-		else packets.insert(packets.end(), data.begin(), data.end());
+		return;
+		std::vector<uint8_t> decryptedData = decrypt(data);
+		if(decryptedData.empty()) return;
+		packets.insert(packets.end(), decryptedData.begin(), decryptedData.end());
 
 		std::istringstream stringStream(packets);
 		std::string packet;
@@ -923,7 +1179,43 @@ void HM_CFG_LAN::processData(std::vector<uint8_t>& data)
     }
 }
 
-void HM_CFG_LAN::processInit(std::string& packet)
+void HM_LGW::processDataKeepAlive(std::vector<uint8_t>& data)
+{
+	try
+	{
+		if(data.empty()) return;
+		std::string packets;
+		if(!_aesExchangeKeepAliveComplete)
+		{
+			aesKeyExchangeKeepAlive(data);
+			return;
+		}
+		std::vector<uint8_t> decryptedData = decryptKeepAlive(data);
+		if(decryptedData.empty()) return;
+		packets.insert(packets.end(), decryptedData.begin(), decryptedData.end());
+
+		std::istringstream stringStream(packets);
+		std::string packet;
+		while(std::getline(stringStream, packet))
+		{
+			if(_initCompleteKeepAlive) parsePacketKeepAlive(packet); else processInitKeepAlive(packet);
+		}
+	}
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LGW::processInit(std::string& packet)
 {
 	if(_initCommandQueue.empty() || packet.length() < 10) return;
 	if(_initCommandQueue.front().at(0) == 'A') //No init packet has been sent yet
@@ -932,7 +1224,7 @@ void HM_CFG_LAN::processInit(std::string& packet)
 		if(parts.size() != 7 || parts.at(0) != "HHM-LAN-IF")
 		{
 			_stopCallbackThread = true;
-			GD::out.printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
+			GD::out.printError("Error: First packet from HM-LGW does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
 			return;
 		}
 		_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::HelperFunctions::getNumber(parts.at(5), true);
@@ -952,12 +1244,32 @@ void HM_CFG_LAN::processInit(std::string& packet)
 	}
 }
 
-void HM_CFG_LAN::parsePacket(std::string& packet)
+void HM_LGW::processInitKeepAlive(std::string& packet)
+{
+	std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packet, ',');
+	if(parts.size() != 2 || parts.at(0).size() != 3 || parts.at(0).at(0) != 'S' || parts.at(1).size() < 6 || parts.at(1).compare(0, 6, "SysCom") != 0)
+	{
+		_stopCallbackThread = true;
+		GD::out.printError("Error: First packet from HM-LGW does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
+		return;
+	}
+
+	std::vector<char> response = { '>', _bl->hf.getHexChar(_packetIndexKeepAlive >> 4), _bl->hf.getHexChar(_packetIndexKeepAlive & 0xF), ',', '0', '0', '0', '0', '\r', '\n' };
+	sendKeepAlive(response, false);
+	response = std::vector<char>{ 'L', '0', '0', ',', '0', '2', ',', '0', '0', 'F', 'F', ',', '0', '0', '\r', '\n'};
+	sendKeepAlive(response, false);
+	_lastKeepAlive = BaseLib::HelperFunctions::getTimeSeconds() - 20;
+	_lastKeepAliveResponse = _lastKeepAlive;
+	_packetIndexKeepAlive = 0;
+	_initCompleteKeepAlive = true;
+}
+
+void HM_LGW::parsePacket(std::string& packet)
 {
 	try
 	{
 		if(packet.empty()) return;
-		if(_bl->debugLevel >= 5) GD::out.printDebug(std::string("Debug: Packet received from HM-CFG-LAN") + (_useAES ? + " (encrypted)" : "") + ": " + packet);
+		if(_bl->debugLevel >= 5) GD::out.printDebug(std::string("Debug: Packet received from HM-LGW: " + packet));
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packet, ',');
 		if(packet.at(0) == 'H' && parts.size() == 7)
 		{
@@ -979,7 +1291,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 		{
 			if(parts.size() != 6)
 			{
-				GD::out.printWarning("Warning: Invalid packet received from HM-CFG-LAN: " + packet);
+				GD::out.printWarning("Warning: Invalid packet received from HM-LGW: " + packet);
 				return;
 			}
 			/*
@@ -1000,8 +1312,8 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 			04: Overload
 			*/
 			uint8_t statusByte = tempNumber >> 8;
-			if(statusByte & 4) GD::out.printError("Error: HM-CFG-LAN reached 1% rule.");
-			else if(statusByte & 2) GD::out.printWarning("Warning: HM-CFG-LAN nearly reached 1% rule.");
+			if(statusByte & 4) GD::out.printError("Error: HM-LGW reached 1% rule.");
+			else if(statusByte & 2) GD::out.printWarning("Warning: HM-LGW nearly reached 1% rule.");
 
 			/*
 			00: Not set
@@ -1057,6 +1369,38 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 				raisePacketReceived(bidCoSPacket);
         	}
         	else if(!parts.at(5).empty()) GD::out.printWarning("Warning: Too short packet received: " + parts.at(5));
+		}
+	}
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LGW::parsePacketKeepAlive(std::string& packet)
+{
+	try
+	{
+		if(packet.empty()) return;
+		if(_bl->debugLevel >= 5) GD::out.printDebug(std::string("Debug: Packet received from HM-LGW on port " + _settings->portKeepAlive + ": " + packet));
+		if(packet.at(0) == '>'  && (packet.at(1) == 'K' || packet.at(1) == 'L') && packet.size() == 5)
+		{
+			if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: Keep alive response received from HM-LGW.");
+			std::string index = packet.substr(2, 2);
+			if(_bl->hf.getNumber(index, true) == _packetIndexKeepAlive)
+			{
+				_lastKeepAliveResponse = BaseLib::HelperFunctions::getTimeSeconds();
+				_packetIndexKeepAlive++;
+			}
+			if(packet.at(1) == 'L') sendKeepAlivePacket();
 		}
 	}
     catch(const std::exception& ex)

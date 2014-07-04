@@ -65,6 +65,7 @@ public:
 	std::map<uint32_t, GPIOSetting> gpio;
 	std::string host;
 	std::string port;
+	std::string portKeepAlive;
 	std::string oldRFKey;
 	std::string rfKey;
 	std::string lanKey;
