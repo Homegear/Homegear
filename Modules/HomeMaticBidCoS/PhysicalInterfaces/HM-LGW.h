@@ -56,6 +56,18 @@
 namespace BidCoS
 {
 
+class CRC16
+{
+public:
+	CRC16();
+	virtual ~CRC16() {}
+	uint16_t calculate(const std::vector<char>& data, bool ignoreLastTwoBytes = false);
+	uint16_t calculate(const std::vector<uint8_t>& data, bool ignoreLastTwoBytes = false);
+private:
+	std::map<uint16_t, uint16_t> _crcTable;
+	void initCRCTable();
+};
+
 class HM_LGW  : public IBidCoSInterface
 {
     public:
@@ -90,13 +102,16 @@ class HM_LGW  : public IBidCoSInterface
         bool _initComplete = false;
         bool _initCompleteKeepAlive = false;
         std::list<std::vector<char>> _initCommandQueue;
-        int32_t _lastKeepAlive = 0;
-        int32_t _lastKeepAliveResponse = 0;
+        int32_t _lastKeepAlive1 = 0;
+        int32_t _lastKeepAliveResponse1 = 0;
+        int32_t _lastKeepAlive2 = 0;
+        int32_t _lastKeepAliveResponse2 = 0;
         int32_t _lastTimePacket = 0;
         int64_t _startUpTime = 0;
         int32_t _myAddress = 0x1C6940;
         uint8_t _packetIndex = 0;
         uint8_t _packetIndexKeepAlive = 0;
+        CRC16 _crc;
 
         //AES stuff
         bool _aesInitialized = false;
@@ -129,14 +144,17 @@ class HM_LGW  : public IBidCoSInterface
         void createInitCommandQueue();
         void processData(std::vector<uint8_t>& data);
         void processDataKeepAlive(std::vector<uint8_t>& data);
-        void processInit(std::string& packet);
+        void processInit(std::vector<uint8_t>& packet);
         void processInitKeepAlive(std::string& packet);
-        void parsePacket(std::string& packet);
+        void parsePacket(std::vector<uint8_t>& packet);
         void parsePacketKeepAlive(std::string& packet);
+        void buildPacket(std::vector<char>& packet, const std::vector<char>& payload);
+        void escapePacket(const std::vector<char>& unescapedPacket, std::vector<char>& escapedPacket);
         void send(std::string hexString, bool raw = false);
         void send(std::vector<char>& data, bool raw);
         void sendKeepAlive(std::vector<char>& data, bool raw);
-        void sendKeepAlivePacket();
+        void sendKeepAlivePacket1();
+        void sendKeepAlivePacket2();
         void sendTimePacket();
         void listen();
         void listenKeepAlive();

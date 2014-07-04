@@ -371,7 +371,7 @@ std::string HelperFunctions::getHexString(const std::vector<char>& data)
 	stringstream << std::hex << std::setfill('0') << std::uppercase;
 	for(std::vector<char>::const_iterator i = data.begin(); i != data.end(); ++i)
 	{
-		stringstream << std::setw(2) << (int32_t)(*i);
+		stringstream << std::setw(2) << (int32_t)((uint8_t)(*i));
 	}
 	stringstream << std::dec;
 	return stringstream.str();
