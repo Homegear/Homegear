@@ -1062,6 +1062,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getAllValues()
 					_bl->out.printDebug("Debug: Omitting parameter " + (*j)->id + " because of it's ui flag.");
 					continue;
 				}
+				if(!((*j)->operations & BaseLib::RPC::Parameter::Operations::read) && !((*j)->operations & BaseLib::RPC::Parameter::Operations::event)) continue;
 				if(valuesCentral.find(i->first) == valuesCentral.end()) continue;
 				if(valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end()) continue;
 
@@ -1074,24 +1075,18 @@ std::shared_ptr<RPC::RPCVariable> Peer::getAllValues()
 				{
 					RPC::LogicalParameterBoolean* parameter = (RPC::LogicalParameterBoolean*)(*j)->logicalParameter.get();
 
-					element->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->min))));
-					element->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->max))));
 					element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
 				}
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeString)
 				{
 					RPC::LogicalParameterString* parameter = (RPC::LogicalParameterString*)(*j)->logicalParameter.get();
 
-					element->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->min))));
-					element->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->max))));
 					element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
 				}
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeAction)
 				{
 					RPC::LogicalParameterAction* parameter = (RPC::LogicalParameterAction*)(*j)->logicalParameter.get();
 
-					element->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->min))));
-					element->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->max))));
 					element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
 				}
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeInteger)

@@ -1975,6 +1975,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::getParamset(int32_t chan
 			std::shared_ptr<BaseLib::RPC::RPCVariable> element;
 			if(type == BaseLib::RPC::ParameterSet::Type::Enum::values)
 			{
+				if(!((*i)->operations & BaseLib::RPC::Parameter::Operations::read) && !((*i)->operations & BaseLib::RPC::Parameter::Operations::event)) continue;
 				if(valuesCentral.find(channel) == valuesCentral.end()) continue;
 				if(valuesCentral[channel].find((*i)->id) == valuesCentral[channel].end()) continue;
 				element = (*i)->convertFromPacket(valuesCentral[channel][(*i)->id].data);

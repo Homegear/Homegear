@@ -269,7 +269,7 @@ void HM_LGW::sendPeers()
 		_peersMutex.lock();
 		for(std::map<int32_t, PeerInfo>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			send(getPeerInfoPacket(i->second));
+			//send(getPeerInfoPacket(i->second));
 		}
 		_initComplete = true; //Init complete is set here within _peersMutex, so there is no conflict with addPeer() and peers are not sent twice
 	}
@@ -470,7 +470,9 @@ void HM_LGW::startListening()
 		stopListening();
 		openSSLInit();
 		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
+		_socket->setReadTimeout(1000000);
 		_socketKeepAlive = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->portKeepAlive, _settings->ssl, _settings->verifyCertificate));
+		_socketKeepAlive->setReadTimeout(1000000);
 		GD::out.printDebug("Connecting to HM-LGW with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_stopped = false;
 		_listenThread = std::thread(&HM_LGW::listen, this);
@@ -570,14 +572,21 @@ void HM_LGW::createInitCommandQueue()
 			return;
 		}
 
-		_initCommandQueue.push_back(std::vector<char>{ 3 });
-		_initCommandQueue.push_back(std::vector<char>{ 3 });
-		_initCommandQueue.push_back(std::vector<char>{ 2 });
-		_initCommandQueue.push_back(std::vector<char>{ 0xA, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 0xA, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 9, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 9, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 0xA, 0 });
+		_myAddress = GD::family->getCentral()->physicalAddress();
+
+		_initCommandQueue.push_back(std::vector<char>{ 0, 3 });
+		_initCommandQueue.push_back(std::vector<char>{ 0, 3 });
+		_initCommandQueue.push_back(std::vector<char>{ 0, 2 });
+		_initCommandQueue.push_back(std::vector<char>{ 0, 0xA, 0 });
+		_initCommandQueue.push_back(std::vector<char>{ 0, 0xA, 0 });
+		_initCommandQueue.push_back(std::vector<char>{ 0, 9, 0 });
+		_initCommandQueue.push_back(std::vector<char>{ 0, 9, 0 });
+		_initCommandQueue.push_back(std::vector<char>{ 0, 0xA, 0 });
+		_initCommandQueue.push_back(std::vector<char>{ 0, 0xE });
+		_initCommandQueue.push_back(std::vector<char>{ 0, 9, 0 });
+		_initCommandQueue.push_back(std::vector<char>{ 1, 3 });
+		if(_settings->currentRFKeyIndex > 1) _initCommandQueue.push_back(std::vector<char>{ 1, 0xF });
+		_initCommandQueue.push_back(std::vector<char>{ 1, 0 });
 	}
 	catch(const std::exception& ex)
     {
@@ -752,7 +761,7 @@ void HM_LGW::sendKeepAlivePacket1()
 
 			_lastKeepAlive1 = BaseLib::HelperFunctions::getTimeSeconds();
 			std::vector<char> packet;
-			std::vector<char> payload{ 8 };
+			std::vector<char> payload{ 0, 8 };
 			buildPacket(packet, payload);
 			_packetIndex++;
 			send(packet, false);
@@ -809,13 +818,20 @@ void HM_LGW::sendTimePacket()
 {
 	try
     {
-		return;
 		const auto timePoint = std::chrono::system_clock::now();
 		time_t t = std::chrono::system_clock::to_time_t(timePoint);
 		tm* localTime = std::localtime(&t);
-		uint32_t time = (uint32_t)(t - 946684800);
-		std::string hexString = "T" + BaseLib::HelperFunctions::getHexString(time, 8) + ',' + BaseLib::HelperFunctions::getHexString(localTime->tm_gmtoff / 1800, 2) + ",00,00000000\r\n";
-		send(hexString, false);
+		uint32_t time = (uint32_t)t;
+		std::vector<char> payload{ 0, 0xE };
+		payload.push_back(time >> 24);
+		payload.push_back((time >> 16) & 0xFF);
+		payload.push_back((time >> 8) & 0xFF);
+		payload.push_back(time & 0xFF);
+		payload.push_back(localTime->tm_gmtoff / 1800);
+		std::vector<char> packet;
+		buildPacket(packet, payload);
+		_packetIndex++;
+		send(packet, false);
 		_lastTimePacket = BaseLib::HelperFunctions::getTimeSeconds();
 	}
     catch(const std::exception& ex)
@@ -842,6 +858,7 @@ void HM_LGW::listen()
     	uint32_t receivedBytes = 0;
     	int32_t bufferMax = 2048;
 		std::vector<char> buffer(bufferMax);
+		_lastTimePacket = BaseLib::HelperFunctions::getTimeSeconds();
 		_lastKeepAlive1 = BaseLib::HelperFunctions::getTimeSeconds();
 		_lastKeepAliveResponse1 = _lastKeepAlive1;
 
@@ -860,6 +877,8 @@ void HM_LGW::listen()
 			{
 				do
 				{
+					if(BaseLib::HelperFunctions::getTimeSeconds() - _lastTimePacket > 1800) sendTimePacket();
+					else sendKeepAlivePacket1();
 					receivedBytes = _socket->proofread(&buffer[0], bufferMax);
 					if(receivedBytes > 0)
 					{
@@ -876,11 +895,6 @@ void HM_LGW::listen()
 			{
 				if(data.empty()) //When receivedBytes is exactly 2048 bytes long, proofread will be called again, time out and the packet is received with a delay of 5 seconds. It doesn't matter as packets this big are only received at start up.
 				{
-					if(_socket->connected())
-					{
-						sendKeepAlivePacket1();
-						if(BaseLib::HelperFunctions::getTimeSeconds() - _lastTimePacket > 1800) sendTimePacket();
-					}
 					continue;
 				}
 			}
@@ -1241,12 +1255,12 @@ void HM_LGW::buildPacket(std::vector<char>& packet, const std::vector<char>& pay
 	{
 		std::vector<char> unescapedPacket;
 		unescapedPacket.push_back(0xFD);
-		int32_t size = payload.size() + 2; //Payload size plus message counter size
+		int32_t size = payload.size() + 1; //Payload size plus message counter size - control byte
 		unescapedPacket.push_back(size >> 8);
 		unescapedPacket.push_back(size & 0xFF);
-		unescapedPacket.push_back(0);
+		unescapedPacket.push_back(payload.at(0));
 		unescapedPacket.push_back(_packetIndex);
-		unescapedPacket.insert(unescapedPacket.end(), payload.begin(), payload.end());
+		unescapedPacket.insert(unescapedPacket.end(), payload.begin() + 1, payload.end());
 		uint16_t crc = _crc.calculate(unescapedPacket);
 		unescapedPacket.push_back(crc >> 8);
 		unescapedPacket.push_back(crc & 0xFF);
@@ -1275,10 +1289,10 @@ void HM_LGW::escapePacket(const std::vector<char>& unescapedPacket, std::vector<
 		escapedPacket.push_back(unescapedPacket[0]);
 		for(uint32_t i = 1; i < unescapedPacket.size(); i++)
 		{
-			if(unescapedPacket[i] == 0xFC || unescapedPacket[i] == 0xFD)
+			if(unescapedPacket[i] == (char)0xFC || unescapedPacket[i] == (char)0xFD)
 			{
 				escapedPacket.push_back(0xFC);
-				escapedPacket.push_back(unescapedPacket[i] & 0x7F);
+				escapedPacket.push_back(unescapedPacket[i] & (char)0x7F);
 			}
 			else escapedPacket.push_back(unescapedPacket[i]);
 		}
@@ -1311,7 +1325,7 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 		std::vector<uint8_t> decryptedData = decrypt(data);
 		if(decryptedData.size() < 8) //8 is minimum size fd
 		{
-			GD::out.printWarning("Warning: Too small packet received vom HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(decryptedData));
+			GD::out.printWarning("Warning: Too small packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(decryptedData));
 			return;
 		}
 		if(!_initCommandQueue.empty() && _packetIndex == 0 && decryptedData.at(0) == 'S')
@@ -1330,7 +1344,8 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 				uint16_t crc = _crc.calculate(packet, true);
 				if(packet.at(packet.size() - 2) != (crc >> 8) || packet.at(packet.size() - 1) != (crc & 0xFF))
 				{
-					GD::out.printError("Error: CRC failed on packet received vom HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet));
+					GD::out.printError("Error: CRC failed on packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet));
+					_stopped = true;
 					return;
 				}
 				else
@@ -1356,7 +1371,8 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 		uint16_t crc = _crc.calculate(packet, true);
 		if(packet.at(packet.size() - 2) != (crc >> 8) || packet.at(packet.size() - 1) != (crc & 0xFF))
 		{
-			GD::out.printError("Error: CRC failed on packet received vom HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet));
+			GD::out.printError("Error: CRC failed on packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet));
+			_stopped = true;
 			return;
 		}
 		else
@@ -1529,11 +1545,120 @@ void HM_LGW::processInit(std::vector<uint8_t>& packet)
 				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
 			}
 			_initCommandQueue.pop_front();
-			//std::vector<char> response;
-			//buildPacket(response, _initCommandQueue.front());
-			//_packetIndex++;
-			//send(response, false);
-
+			const auto timePoint = std::chrono::system_clock::now();
+			time_t t = std::chrono::system_clock::to_time_t(timePoint);
+			tm* localTime = std::localtime(&t);
+			uint32_t time = (uint32_t)t;
+			std::vector<char> payload{ 0, 0xE };
+			payload.push_back(time >> 24);
+			payload.push_back((time >> 16) & 0xFF);
+			payload.push_back((time >> 8) & 0xFF);
+			payload.push_back(time & 0xFF);
+			payload.push_back(localTime->tm_gmtoff / 1800);
+			std::vector<char> packet;
+			buildPacket(packet, payload);
+			_packetIndex++;
+			send(packet, false);
+			_lastTimePacket = BaseLib::HelperFunctions::getTimeSeconds();
+		}
+		else if(_packetIndex == 9 && packet.at(5) == 4)
+		{
+			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
+			{
+				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
+			}
+			_initCommandQueue.pop_front();
+			std::vector<char> response;
+			buildPacket(response, _initCommandQueue.front());
+			_packetIndex++;
+			send(response, false);
+		}
+		else if(_packetIndex == 10 && packet.at(5) == 4)
+		{
+			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
+			{
+				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
+			}
+			_initCommandQueue.pop_front();
+			std::vector<char> payload = _initCommandQueue.front();
+			if(_settings->rfKey.empty())
+			{
+				payload.push_back(0);
+			}
+			else
+			{
+				std::vector<char> rfKey = _bl->hf.getBinary(_settings->rfKey);
+				payload.insert(payload.end(), rfKey.begin(), rfKey.end());
+				payload.push_back(_settings->currentRFKeyIndex);
+			}
+			std::vector<char> packet;
+			buildPacket(packet, payload);
+			_packetIndex++;
+			send(packet, false);
+		}
+		else if(_packetIndex == 11 && packet.at(5) == 4)
+		{
+			if(packet.at(3) != 1 || packet.at(4) != _packetIndex - 1)
+			{
+				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
+			}
+			_initCommandQueue.pop_front();
+			std::vector<char> payload = _initCommandQueue.front();
+			if(payload.at(1) == 0xF)
+			{
+				std::vector<char> rfKey = _bl->hf.getBinary(_settings->oldRFKey);
+				payload.insert(payload.end(), rfKey.begin(), rfKey.end());
+				payload.push_back(_settings->currentRFKeyIndex - 1);
+			}
+			else
+			{
+				payload.push_back(_myAddress >> 16);
+				payload.push_back((_myAddress >> 8) & 0xFF);
+				payload.push_back(_myAddress & 0xFF);
+			}
+			std::vector<char> packet;
+			buildPacket(packet, payload);
+			_packetIndex++;
+			send(packet, false);
+		}
+		else if(_packetIndex == 12 && packet.at(5) == 4)
+		{
+			if(packet.at(3) != 1 || packet.at(4) != _packetIndex - 1)
+			{
+				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
+			}
+			_initCommandQueue.pop_front();
+			if(_initCommandQueue.empty())
+			{
+				GD::out.printInfo("Info: Init queue completed. Sending peers...");
+				sendPeers();
+			}
+			else
+			{
+				std::vector<char> payload = _initCommandQueue.front();
+				payload.push_back(_myAddress >> 16);
+				payload.push_back((_myAddress >> 8) & 0xFF);
+				payload.push_back(_myAddress & 0xFF);
+				std::vector<char> packet;
+				buildPacket(packet, payload);
+				_packetIndex++;
+				send(packet, false);
+			}
+		}
+		else if(_packetIndex == 13 && packet.at(5) == 4)
+		{
+			if(packet.at(3) != 1 || packet.at(4) != _packetIndex - 1)
+			{
+				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
+			}
+			_initCommandQueue.pop_front();
+			if(!_initCommandQueue.empty())
+			{
+				GD::out.printWarning("Warning: Init command queue of HM-LGW is not empty.");
+				_initCommandQueue.clear();
+			}
+			GD::out.printInfo("Info: Init queue completed. Sending peers...");
+			sendPeers();
 		}
 	}
     catch(const std::exception& ex)
@@ -1590,14 +1715,24 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 	try
 	{
 		if(packet.empty()) return;
-		if(_bl->debugLevel >= 5) GD::out.printDebug(std::string("Debug: Packet received from HM-LGW: " + _bl->hf.getHexString(packet)));
-
 		if(packet.at(5) == 4)
 		{
 			if(packet.at(3) == 0 && packet.size() == 10 && packet.at(6) == 2 && packet.at(7) == 0)
 			{
 				if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: Keep alive response received from HM-LGW on port " + _settings->port + ".");
 				_lastKeepAliveResponse1 = BaseLib::HelperFunctions::getTimeSeconds();
+			}
+		}
+		else if(packet.at(5) == 5)
+		{
+			if(packet.at(3) == 1 && packet.size() >= 20)
+			{
+				std::vector<uint8_t> binaryPacket({(uint8_t)(packet.size() - 11)});
+				binaryPacket.insert(binaryPacket.end(), packet.begin() + 9, packet.end() - 2);
+				binaryPacket.push_back(packet.at(8));
+				std::shared_ptr<BidCoSPacket> bidCoSPacket(new BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
+				_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+				raisePacketReceived(bidCoSPacket);
 			}
 		}
 	}

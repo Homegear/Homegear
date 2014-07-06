@@ -19,10 +19,11 @@ if [ $return -lt 1 ] && test -e /var/run/homegear/homegear.pid; then
                 done
                 COREDIR=$COREDIR/$DIR
                 mkdir -p $COREDIR
-                mv $LOGDIR/core $COREDIR
-                mv $LOGDIR/homegear.log $COREDIR
-                mv $LOGDIR/homegear.err $COREDIR
-		cp /usr/bin/homegear $COREDIR
+				mv $LOGDIR/core $COREDIR
+				mv $LOGDIR/homegear.log $COREDIR
+				mv $LOGDIR/homegear.err $COREDIR
+                cp /var/lib/homegear/modules/* $COREDIR
+				cp /usr/bin/homegear $COREDIR
         fi
 
         /etc/init.d/homegear restart
