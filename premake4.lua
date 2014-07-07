@@ -108,7 +108,6 @@ solution "homegear"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
 
---[[
    project "homematicwired"
       kind "SharedLib"
       language "C++"
@@ -137,6 +136,7 @@ solution "homegear"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
 
+--[[
    project "max"
       kind "SharedLib"
       language "C++"

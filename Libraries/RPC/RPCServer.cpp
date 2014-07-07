@@ -941,7 +941,12 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 		GD::out.printInfo("Position 4");
 		if(result < 1)
 		{
-			if(client->ssl && result != 0) GD::out.printError("Error during TLS/SSL handshake: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
+			if(client->ssl && result != 0)
+			{
+				GD::out.printError("Error during TLS/SSL handshake: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
+				//Calling SSL_free here causes a segfault, so just set client->ssl to nullptr
+				client->ssl = nullptr;
+			}
 			else if(result == 0) GD::out.printError("The TLS/SSL handshake was unsuccessful. Client number: " + std::to_string(client->fileDescriptor->descriptor));
 			else GD::out.printError("Fatal error during TLS/SSL handshake. Client number: " + std::to_string(client->fileDescriptor->descriptor));
 			if(client->ssl) SSL_free(client->ssl);

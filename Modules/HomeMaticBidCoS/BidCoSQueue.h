@@ -91,7 +91,6 @@ class BidCoSQueue
         std::shared_ptr<IBidCoSInterface> _physicalInterface;
         std::shared_ptr<PendingBidCoSQueues> _pendingQueues;
         std::mutex _queueMutex;
-        std::mutex _sendThreadMutex;
         BidCoSQueueType _queueType;
         bool _stopResendThread = false;
         std::thread _resendThread;
@@ -101,8 +100,11 @@ class BidCoSQueue
         uint32_t _popWaitThreadId = 0;
         std::thread _popWaitThread;
         std::thread _sendThread;
+        std::mutex _sendThreadMutex;
         std::thread _startResendThread;
+        std::mutex _startResendThreadMutex;
         std::thread _pushPendingQueueThread;
+        std::mutex _pushPendingQueueThreadMutex;
         bool _workingOnPendingQueue = false;
         int64_t _lastPop = 0;
         void (HomeMaticDevice::*_queueProcessed)() = nullptr;

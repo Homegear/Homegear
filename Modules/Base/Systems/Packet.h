@@ -53,6 +53,7 @@ public:
 	//virtual std::vector<uint8_t> byteArray() { return std::vector<uint8_t>(); }
 	virtual int64_t timeReceived() { return _timeReceived; }
 	virtual int64_t timeSending() { return _timeSending; }
+	virtual void setTimeReceived(int64_t time) { _timeReceived = time; }
 	virtual void setTimeSending(int64_t time) { _timeSending = time; }
 	virtual std::vector<uint8_t> getPosition(double index, double size, int32_t mask) { return std::vector<uint8_t>(); }
 	virtual void setPosition(double index, double size, std::vector<uint8_t>& value) {}

@@ -147,8 +147,8 @@ std::string HM_CFG_LAN::getPeerInfoPacket(PeerInfo& peerInfo)
 		}
 		else
 		{
-			//When no AES is used, wakeUp is handled by Homegear
-			packetHex += "00,00,";
+			packetHex += peerInfo.wakeUp ? "02," : "00,";
+			packetHex += "00,";
 		}
 		packetHex += "\r\n";
 		return packetHex;
@@ -294,6 +294,12 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		if(bidCoSPacket->messageType() == 0x02 && packet->senderAddress() == _myAddress && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)
 		{
 			GD::out.printDebug("Debug: HM-CFG-LAN: Ignoring ACK packet.", 6);
+			_lastPacketSent = BaseLib::HelperFunctions::getTime();
+			return;
+		}
+		if((bidCoSPacket->controlByte() & 0x01) && packet->senderAddress() == _myAddress && (bidCoSPacket->payload()->empty() || (bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)))
+		{
+			GD::out.printDebug("Debug: HM-CFG-LAN: Ignoring wake up packet.", 6);
 			_lastPacketSent = BaseLib::HelperFunctions::getTime();
 			return;
 		}

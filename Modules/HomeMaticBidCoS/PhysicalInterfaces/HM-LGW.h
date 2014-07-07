@@ -86,6 +86,7 @@ class HM_LGW  : public IBidCoSInterface
         virtual void addPeer(PeerInfo peerInfo);
         virtual void addPeers(std::vector<PeerInfo>& peerInfos);
         virtual void setWakeUp(PeerInfo peerInfo);
+        virtual void setAES(int32_t address, int32_t channel, bool enabled);
         virtual void removePeer(int32_t address);
         virtual void sendPeers();
         virtual void sendPeer(PeerInfo& peerInfo);
@@ -121,6 +122,7 @@ class HM_LGW  : public IBidCoSInterface
         std::mutex _sendMutexKeepAlive;
         bool _initStarted = false;
         bool _initComplete = false;
+        bool _firstPacket = true;
         bool _initCompleteKeepAlive = false;
         int32_t _lastKeepAlive1 = 0;
         int32_t _lastKeepAliveResponse1 = 0;

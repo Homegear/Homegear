@@ -1006,6 +1006,16 @@ void HomeMaticDevice::sendPacket(std::shared_ptr<IBidCoSInterface> physicalInter
 		if(!packet || !physicalInterface) return;
 		uint32_t responseDelay = physicalInterface->responseDelay();
 		std::shared_ptr<BidCoSPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
+		/*int64_t time = _bl->hf.getTime();
+		if(_physicalInterface->autoResend())
+		{
+			if((packet->messageType() == 0x02 && packet->controlByte() == 0x80 && packet->payload()->size() == 1 && packet->payload()->at(0) == 0)
+				|| !((packet->controlByte() & 0x01) && (packet->payload()->empty() || (packet->payload()->size() == 1 && packet->payload()->at(0) == 0))))
+			{
+				time -= 80;
+			}
+		}
+		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet, time);*/
 		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet);
 		if(packetInfo)
 		{

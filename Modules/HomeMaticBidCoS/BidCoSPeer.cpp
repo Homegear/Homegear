@@ -2263,19 +2263,23 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			for(BaseLib::RPC::RPCStruct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
-				if(i->first == "AES_ACTIVE" && i->second->booleanValue)
-				{
-					if(!_physicalInterface->aesSupported())
-					{
-						GD::out.printWarning("Warning: Tried to set AES_ACTIVE on peer " + std::to_string(_peerID) + ", but AES is not supported by peer's physical interface.");
-						continue;
-					}
-					if(!aesEnabled()) aesActivated = true;
-				}
 				std::vector<uint8_t> value;
 				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
 				BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
 				if(!parameter->rpcParameter) continue;
+				if(i->first == "AES_ACTIVE")
+				{
+					if(i->second->booleanValue)
+					{
+						if(!_physicalInterface->aesSupported())
+						{
+							GD::out.printWarning("Warning: Tried to set AES_ACTIVE on peer " + std::to_string(_peerID) + ", but AES is not supported by peer's physical interface.");
+							continue;
+						}
+						if(!aesEnabled()) aesActivated = true;
+					}
+					_physicalInterface->setAES(_address, channel, i->second->booleanValue);
+				}
 				value = parameter->rpcParameter->convertToPacket(i->second);
 				std::vector<uint8_t> shiftedValue = value;
 				parameter->rpcParameter->adjustBitPosition(shiftedValue);

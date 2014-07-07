@@ -239,6 +239,7 @@ void HM_LGW::sendPeers()
 			sendPeer(i->second);
 		}
 		_initComplete = true; //Init complete is set here within _peersMutex, so there is no conflict with addPeer() and peers are not sent twice
+		_out.printInfo("Info: Peer sending completed.");
 	}
     catch(const std::exception& ex)
     {
@@ -286,7 +287,7 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 		}
 		//if(!peerInfo.aesChannels.empty())
 		//{
-			//Delete old configuration
+			//Disable AES for all channels
 			for(int32_t j = 0; j < 3; j++)
 			{
 				std::vector<uint8_t> responsePacket;
@@ -340,10 +341,9 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 				return;
 			}
 		}
-		if(peerInfo.wakeUp && !peerInfo.aesChannels.empty())
+		if(peerInfo.wakeUp)
 		{
 			//Enable sending of wake up packet or just request config again?
-			//When no AES is used, wake up is handled by Homegear
 			for(int32_t j = 0; j < 3; j++)
 			{
 				std::vector<uint8_t> responsePacket;
@@ -376,10 +376,8 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 			payload.push_back((peerInfo.address >> 8) & 0xFF);
 			payload.push_back(peerInfo.address & 0xFF);
 			payload.push_back(peerInfo.keyIndex);
-			//When no AES is used, wake up is handled by Homegear
-			bool wakeUp = peerInfo.wakeUp && !peerInfo.aesChannels.empty();
-			payload.push_back((char)wakeUp);
-			payload.push_back((char)wakeUp);
+			payload.push_back((char)peerInfo.wakeUp);
+			payload.push_back((char)peerInfo.wakeUp);
 			buildPacket(requestPacket, payload);
 			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 			_packetIndex++;
@@ -390,7 +388,7 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 				return;
 			}
 		}
-		//Set channels with AES activated
+		//Enable AES
 		if(!peerInfo.aesChannels.empty())
 		{
 			//Delete old configuration
@@ -440,13 +438,53 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
     }
 }
 
+void HM_LGW::setAES(int32_t address, int32_t channel, bool enabled)
+{
+	try
+	{
+		if(_stopped) return;
+		for(int32_t j = 0; j < 3; j++)
+		{
+			std::vector<uint8_t> responsePacket;
+			std::vector<char> requestPacket;
+			std::vector<char> payload{ 1 };
+			if(enabled) payload.push_back(9);
+			else payload.push_back(0xA);
+			payload.push_back(address >> 16);
+			payload.push_back((address >> 8) & 0xFF);
+			payload.push_back(address & 0xFF);
+			payload.push_back(0);
+			payload.push_back(channel);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+			_packetIndex++;
+			if(responsePacket.size() >= 9  && responsePacket.at(6) == 1) break;
+			if(j == 2)
+			{
+				_out.printError("Error: Could not set AES for peer with address 0x" + _bl->hf.getHexString(address, 6));
+				return;
+			}
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HM_LGW::setWakeUp(PeerInfo peerInfo)
 {
 	try
 	{
 		if(_stopped) return;
-		//When no AES is used, wake up is handled by Homegear
-		if(peerInfo.aesChannels.empty()) return;
 		for(int32_t j = 0; j < 3; j++)
 		{
 			std::vector<uint8_t> responsePacket;
@@ -544,7 +582,13 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		if(!bidCoSPacket) return;
 		if(bidCoSPacket->messageType() == 0x02 && packet->senderAddress() == _myAddress && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)
 		{
-			_out.printDebug("Debug: HM-LGW: Ignoring ACK packet.", 6);
+			_out.printDebug("Debug: Ignoring ACK packet.", 6);
+			_lastPacketSent = BaseLib::HelperFunctions::getTime();
+			return;
+		}
+		if((bidCoSPacket->controlByte() & 0x01) && packet->senderAddress() == _myAddress && (bidCoSPacket->payload()->empty() || (bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)))
+		{
+			_out.printDebug("Debug: Ignoring wake up packet.", 6);
 			_lastPacketSent = BaseLib::HelperFunctions::getTime();
 			return;
 		}
@@ -567,7 +611,12 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			buildPacket(requestPacket, payload);
 			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 			_packetIndex++;
-			if(responsePacket.size() >= 9  && responsePacket.at(6) != 4)
+			if(responsePacket.size() == 9  && responsePacket.at(6) == 8)
+			{
+				//Resend
+				continue;
+			}
+			else if(responsePacket.size() >= 9  && responsePacket.at(6) != 4)
 			{
 				if(responsePacket.size() == 9)
 				{
@@ -1215,6 +1264,7 @@ void HM_LGW::reconnect()
 		_initStarted = false;
 		_initComplete = false;
 		_initCompleteKeepAlive = false;
+		_firstPacket = true;
 		_out.printDebug("Connecting to HM-LGW device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket->open();
 		_socketKeepAlive->open();
@@ -1258,6 +1308,7 @@ void HM_LGW::stopListening()
 		_initStarted = false;
 		_initComplete = false;
 		_initCompleteKeepAlive = false;
+		_firstPacket = true;
 	}
 	catch(const std::exception& ex)
     {
@@ -1995,14 +2046,20 @@ void HM_LGW::processPacket(std::vector<uint8_t>& packet)
 	{
 		_out.printDebug(std::string("Debug: Packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet)));
 		uint16_t crc = _crc.calculate(packet, true);
-		if(packet.at(packet.size() - 2) != (crc >> 8) || packet.at(packet.size() - 1) != (crc & 0xFF))
+		if((packet.at(packet.size() - 2) != (crc >> 8) || packet.at(packet.size() - 1) != (crc & 0xFF)))
 		{
+			if(_firstPacket)
+			{
+				_firstPacket = false;
+				return;
+			}
 			_out.printError("Error: CRC failed on packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet));
 			_stopped = true;
 			return;
 		}
 		else
 		{
+			_firstPacket = false;
 			_requestsMutex.lock();
 			if(_requests.find(packet.at(4)) != _requests.end())
 			{
@@ -2194,6 +2251,15 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 			std::shared_ptr<BidCoSPacket> bidCoSPacket(new BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
 			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 			raisePacketReceived(bidCoSPacket);
+			if(packet.at(6) & 0x10) //Wake up was sent
+			{
+				std::vector<uint8_t> payload;
+				payload.push_back(0x00);
+				std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(bidCoSPacket->messageCounter(), 0x80, 0x02, bidCoSPacket->senderAddress(), _myAddress, payload));
+				ok->setTimeReceived(bidCoSPacket->timeReceived() + 1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(30));
+				raisePacketReceived(ok);
+			}
 		}
 	}
     catch(const std::exception& ex)

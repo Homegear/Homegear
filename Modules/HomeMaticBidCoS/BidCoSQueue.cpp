@@ -207,9 +207,15 @@ void BidCoSQueue::dispose()
 	{
 		if(_disposing) return;
 		_disposing = true;
+		_startResendThreadMutex.lock();
 		if(_startResendThread.joinable()) _startResendThread.join();
+		_startResendThreadMutex.unlock();
+		_pushPendingQueueThreadMutex.lock();
 		if(_pushPendingQueueThread.joinable()) _pushPendingQueueThread.join();
+		_pushPendingQueueThreadMutex.unlock();
+		_sendThreadMutex.lock();
         if(_sendThread.joinable()) _sendThread.join();
+        _sendThreadMutex.unlock();
 		stopResendThread();
 		stopPopWaitThread();
 		_queueMutex.lock();
@@ -219,14 +225,23 @@ void BidCoSQueue::dispose()
 	catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     }
     catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     }
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     }
     _queueMutex.unlock();
 }
@@ -372,8 +387,10 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 			if(_resendCounter < (retries - 2)) //This actually means that the message will be sent three times all together if there is no response
 			{
 				_resendCounter++;
+				_startResendThreadMutex.lock();
 				if(_startResendThread.joinable()) _startResendThread.join();
 				_startResendThread = std::thread(&BidCoSQueue::startResendThread, this, forceResend);
+				_startResendThreadMutex.unlock();
 			}
 			else _resendCounter = 0;
 		}
@@ -383,18 +400,21 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
     {
 		_queueMutex.unlock();
 		_sendThreadMutex.unlock();
+		_startResendThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_queueMutex.unlock();
     	_sendThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
     	_sendThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -1014,9 +1034,11 @@ void BidCoSQueue::nextQueueEntry()
 			{
 				_queueMutex.unlock();
 				GD::out.printDebug("Queue " + std::to_string(id) + " is empty. Pushing pending queue...");
+				_pushPendingQueueThreadMutex.lock();
 				if(_pushPendingQueueThread.joinable()) _pushPendingQueueThread.join();
 				_pushPendingQueueThread = std::thread(&BidCoSQueue::pushPendingQueue, this);
 				BaseLib::Threads::setThreadPriority(GD::bl, _pushPendingQueueThread.native_handle(), 45);
+				_pushPendingQueueThreadMutex.unlock();
 				return;
 			}
 		}
@@ -1056,18 +1078,21 @@ void BidCoSQueue::nextQueueEntry()
     {
 		_queueMutex.unlock();
 		_sendThreadMutex.unlock();
+		_pushPendingQueueThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_queueMutex.unlock();
     	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
     	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }

@@ -57,6 +57,7 @@ public:
 	virtual void addPeers(std::vector<PeerInfo>& peerInfos) {}
 	virtual void setWakeUp(PeerInfo peerInfo) {}
 	virtual void removePeer(int32_t address) {}
+	virtual void setAES(int32_t address, int32_t channel, bool enabled) {}
 
 	virtual bool aesSupported() { return false; }
 	virtual bool autoResend() { return false; }
