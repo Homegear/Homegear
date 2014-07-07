@@ -1962,6 +1962,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getValue(uint32_t channel, std::string v
 		if(!parameterSet) return RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 		std::shared_ptr<RPC::Parameter> parameter = parameterSet->getParameter(valueKey);
 		if(!parameter) return RPC::RPCVariable::createError(-5, "Unknown parameter.");
+		if(!(parameter->operations & BaseLib::RPC::Parameter::Operations::read) && !(parameter->operations & BaseLib::RPC::Parameter::Operations::event)) return RPC::RPCVariable::createError(-6, "Parameter is not readable.");
 		return parameter->convertFromPacket(valuesCentral[channel][valueKey].data);
 	}
 	catch(const std::exception& ex)
