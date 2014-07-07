@@ -89,7 +89,24 @@ class HM_LGW  : public IBidCoSInterface
         virtual void sendPeers();
         virtual std::string getPeerInfoPacket(PeerInfo& peerInfo);
     protected:
+        class Request
+        {
+        public:
+        	std::timed_mutex mutex;
+        	std::vector<uint8_t> response;
+        	uint8_t getResponseControlByte() { return _responseControlByte; }
+        	uint8_t getResponseType() { return _responseType; }
+
+        	Request(uint8_t responseControlByte, uint8_t responseType) { _responseControlByte = responseControlByte; _responseType = responseType; };
+        	virtual ~Request() {};
+        private:
+        	uint8_t _responseControlByte;
+        	uint8_t _responseType;
+        };
+
+        BaseLib::Output _out;
         std::thread _listenThreadKeepAlive;
+        std::thread _initThread;
         std::mutex _peersMutex;
         std::map<int32_t, PeerInfo> _peers;
         int64_t _lastAction = 0;
@@ -97,11 +114,13 @@ class HM_LGW  : public IBidCoSInterface
         std::string _port;
         std::unique_ptr<BaseLib::SocketOperations> _socket;
         std::unique_ptr<BaseLib::SocketOperations> _socketKeepAlive;
+        std::mutex _requestsMutex;
+        std::map<uint8_t, std::shared_ptr<Request>> _requests;
         std::mutex _sendMutex;
         std::mutex _sendMutexKeepAlive;
+        bool _initStarted = false;
         bool _initComplete = false;
         bool _initCompleteKeepAlive = false;
-        std::list<std::vector<char>> _initCommandQueue;
         int32_t _lastKeepAlive1 = 0;
         int32_t _lastKeepAliveResponse1 = 0;
         int32_t _lastKeepAlive2 = 0;
@@ -129,7 +148,7 @@ class HM_LGW  : public IBidCoSInterface
         EVP_CIPHER_CTX* _ctxEncryptKeepAlive = nullptr;
         EVP_CIPHER_CTX* _ctxDecryptKeepAlive = nullptr;
 
-        std::vector<char> encrypt(std::vector<char>& data);
+        std::vector<char> encrypt(const std::vector<char>& data);
         std::vector<uint8_t> decrypt(std::vector<uint8_t>& data);
         std::vector<char> encryptKeepAlive(std::vector<char>& data);
         std::vector<uint8_t> decryptKeepAlive(std::vector<uint8_t>& data);
@@ -141,17 +160,18 @@ class HM_LGW  : public IBidCoSInterface
         //End AES stuff
 
         void reconnect();
-        void createInitCommandQueue();
+        void doInit();
         void processData(std::vector<uint8_t>& data);
         void processDataKeepAlive(std::vector<uint8_t>& data);
-        void processInit(std::vector<uint8_t>& packet);
+        void processPacket(std::vector<uint8_t>& packet);
         void processInitKeepAlive(std::string& packet);
         void parsePacket(std::vector<uint8_t>& packet);
         void parsePacketKeepAlive(std::string& packet);
         void buildPacket(std::vector<char>& packet, const std::vector<char>& payload);
         void escapePacket(const std::vector<char>& unescapedPacket, std::vector<char>& escapedPacket);
+        void getResponse(const std::vector<char>& packet, std::vector<uint8_t>& response, uint8_t messageCounter, uint8_t responseControlByte, uint8_t responseType);
         void send(std::string hexString, bool raw = false);
-        void send(std::vector<char>& data, bool raw);
+        void send(const std::vector<char>& data, bool raw);
         void sendKeepAlive(std::vector<char>& data, bool raw);
         void sendKeepAlivePacket1();
         void sendKeepAlivePacket2();

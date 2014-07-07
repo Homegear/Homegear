@@ -140,24 +140,24 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 	int32_t bytesRead = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead == 0) throw SocketTimeOutException("Reading from socket timed out.");
-	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
+	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " with ip address/hostname " + _hostname + " and port " + _port + " closed.");
 	bytesRead = _ssl ? SSL_read(_ssl, buffer, bufferSize) : read(_fileDescriptor->descriptor, buffer, bufferSize);
 	if(bytesRead <= 0)
 	{
 		if(bytesRead < 0 && _ssl) throw SocketOperationException("Error reading SSL packet: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, bytesRead)));
-		else throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
+		else throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " with ip address/hostname " + _hostname + " and port " + _port + " closed.");
 	}
 	return bytesRead;
 }
 
-int32_t SocketOperations::proofwrite(std::shared_ptr<std::vector<char>> data)
+int32_t SocketOperations::proofwrite(const std::shared_ptr<std::vector<char>> data)
 {
 	if(!connected()) autoConnect();
 	if(!data || data->empty()) return 0;
 	return proofwrite(*data);
 }
 
-int32_t SocketOperations::proofwrite(std::vector<char>& data)
+int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 {
 	_bl->out.printDebug("Debug: Calling proofwrite ...", 6);
 	if(!connected()) autoConnect();
@@ -400,6 +400,6 @@ void SocketOperations::getConnection()
 			}
 		}
 	}
-	_bl->out.printInfo("Info: Connected to host " + _hostname + " on port " + _port + ".");
+	_bl->out.printInfo("Info: Connected to host " + _hostname + " on port " + _port + ". Client number is: " + std::to_string(_fileDescriptor->descriptor));
 }
 } /* namespace RPC */

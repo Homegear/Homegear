@@ -97,6 +97,11 @@ HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettin
 		}
 	}
 
+	if(_oldRFKey.empty() && settings->currentRFKeyIndex > 1)
+	{
+		GD::out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is larger than \"1\" but \"OldRFKey\" is not specified. Please set your old RF key or set key index to \"1\".");
+	}
+
 	if(settings->currentRFKeyIndex > 253)
 	{
 		GD::out.printError("Error: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"253\". That is not allowed.");

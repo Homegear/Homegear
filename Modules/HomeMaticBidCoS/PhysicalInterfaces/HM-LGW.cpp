@@ -83,6 +83,9 @@ uint16_t CRC16::calculate(const std::vector<uint8_t>& data, bool ignoreLastTwoBy
 
 HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
+	_out.init(GD::bl);
+	_out.setPrefix(_out.getPrefix() + settings->id + ": ");
+
 	signal(SIGPIPE, SIG_IGN);
 
 	_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl));
@@ -90,12 +93,12 @@ HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> sett
 
 	if(!settings)
 	{
-		GD::out.printCritical("Critical: Error initializing HM-LGW. Settings pointer is empty.");
+		_out.printCritical("Critical: Error initializing HM-LGW. Settings pointer is empty.");
 		return;
 	}
 	if(settings->lanKey.empty())
 	{
-		GD::out.printError("Error: No security key specified for HM-LGW in physicalinterfaces.conf.");
+		_out.printError("Error: No security key specified for HM-LGW in physicalinterfaces.conf.");
 		return;
 	}
 
@@ -104,7 +107,7 @@ HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> sett
 		_rfKey = _bl->hf.getUBinary(settings->rfKey);
 		if(_rfKey.size() != 16)
 		{
-			GD::out.printError("Error: The RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
+			_out.printError("Error: The RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
 			_rfKey.clear();
 		}
 	}
@@ -114,20 +117,20 @@ HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> sett
 		_oldRFKey = _bl->hf.getUBinary(settings->oldRFKey);
 		if(_oldRFKey.size() != 16)
 		{
-			GD::out.printError("Error: The old RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
+			_out.printError("Error: The old RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices is not a valid hexadecimal string.");
 			_oldRFKey.clear();
 		}
 	}
 
 	if(!_rfKey.empty() && settings->currentRFKeyIndex == 0)
 	{
-		GD::out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"0\". That means, the default AES key will be used (not yours!).");
+		_out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"0\". That means, the default AES key will be used (not yours!).");
 		_rfKey.clear();
 	}
 
 	if(!_oldRFKey.empty() && settings->currentRFKeyIndex == 1)
 	{
-		GD::out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"1\" but \"OldRFKey\" is specified. That is not possible. Increase the key index to \"2\".");
+		_out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is \"1\" but \"OldRFKey\" is specified. That is not possible. Increase the key index to \"2\".");
 		_oldRFKey.clear();
 	}
 
@@ -136,14 +139,19 @@ HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> sett
 		_oldRFKey.clear();
 		if(settings->currentRFKeyIndex > 0)
 		{
-			GD::out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"0\" but no AES key is specified. Setting it to \"0\".");
+			_out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"0\" but no AES key is specified. Setting it to \"0\".");
 			settings->currentRFKeyIndex = 0;
 		}
 	}
 
+	if(_oldRFKey.empty() && settings->currentRFKeyIndex > 1)
+	{
+		_out.printWarning("Warning: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is larger than \"1\" but \"OldRFKey\" is not specified. Please set your old RF key or set key index to \"1\".");
+	}
+
 	if(settings->currentRFKeyIndex > 253)
 	{
-		GD::out.printError("Error: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"253\". That is not allowed.");
+		_out.printError("Error: The RF AES key index specified in physicalinterfaces.conf for communication with your BidCoS devices is greater than \"253\". That is not allowed.");
 		settings->currentRFKeyIndex = 253;
 	}
 }
@@ -153,21 +161,22 @@ HM_LGW::~HM_LGW()
 	try
 	{
 		_stopCallbackThread = true;
+		if(_initThread.joinable()) _initThread.join();
 		if(_listenThread.joinable()) _listenThread.join();
 		if(_listenThreadKeepAlive.joinable()) _listenThreadKeepAlive.join();
 		openSSLCleanup();
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -192,15 +201,15 @@ std::string HM_LGW::getPeerInfoPacket(PeerInfo& peerInfo)
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "";
 }
@@ -224,15 +233,15 @@ void HM_LGW::addPeer(PeerInfo peerInfo)
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -249,15 +258,15 @@ void HM_LGW::addPeers(std::vector<PeerInfo>& peerInfos)
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -275,15 +284,15 @@ void HM_LGW::sendPeers()
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -302,15 +311,15 @@ void HM_LGW::removePeer(int32_t address)
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
 }
@@ -321,7 +330,7 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 	{
 		if(!packet)
 		{
-			GD::out.printWarning("Warning: Packet was nullptr.");
+			_out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
 		_lastAction = BaseLib::HelperFunctions::getTime();
@@ -330,7 +339,7 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		if(!bidCoSPacket) return;
 		if(bidCoSPacket->messageType() == 0x02 && packet->senderAddress() == _myAddress && bidCoSPacket->controlByte() == 0x80 && bidCoSPacket->payload()->size() == 1 && bidCoSPacket->payload()->at(0) == 0)
 		{
-			GD::out.printDebug("Debug: HM-LGW: Ignoring ACK packet.", 6);
+			_out.printDebug("Debug: HM-LGW: Ignoring ACK packet.", 6);
 			_lastPacketSent = BaseLib::HelperFunctions::getTime();
 			return;
 		}
@@ -338,22 +347,61 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		int64_t currentTimeMilliseconds = BaseLib::HelperFunctions::getTime();
 		uint32_t currentTime = currentTimeMilliseconds & 0xFFFFFFFF;
 		std::string packetString = packet->hexString();
-		if(_bl->debugLevel >= 4) GD::out.printInfo("Info: Sending (" + _settings->id + "): " + packetString);
+		if(_bl->debugLevel >= 4) _out.printInfo("Info: Sending (" + _settings->id + "): " + packetString);
 		std::string hexString = "S" + BaseLib::HelperFunctions::getHexString(currentTime, 8) + ",00,00000000,01," + BaseLib::HelperFunctions::getHexString(currentTimeMilliseconds - _startUpTime, 8) + "," + packetString.substr(2) + "\r\n";
 		send(hexString, false);
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LGW::getResponse(const std::vector<char>& packet, std::vector<uint8_t>& response, uint8_t messageCounter, uint8_t responseControlByte, uint8_t responseType)
+{
+	try
+    {
+		if(packet.size() < 8 || _stopped) return;
+		std::shared_ptr<Request> request(new Request(responseControlByte, responseType));
+		_requestsMutex.lock();
+		_requests[messageCounter] = request;
+		_requestsMutex.unlock();
+		request->mutex.try_lock(); //Lock and return immediately
+		send(packet, false);
+		if(!request->mutex.try_lock_for(std::chrono::milliseconds(10000)))
+		{
+			_out.printError("Error: No response received to packet: " + _bl->hf.getHexString(packet));
+		}
+		request->mutex.unlock();
+		response = request->response;
+
+		_requestsMutex.lock();
+		_requests.erase(messageCounter);
+		_requestsMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _requestsMutex.unlock();
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _requestsMutex.unlock();
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _requestsMutex.unlock();
     }
 }
 
@@ -367,19 +415,19 @@ void HM_LGW::send(std::string hexString, bool raw)
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void HM_LGW::send(std::vector<char>& data, bool raw)
+void HM_LGW::send(const std::vector<char>& data, bool raw)
 {
     try
     {
@@ -389,13 +437,13 @@ void HM_LGW::send(std::vector<char>& data, bool raw)
     	_sendMutex.lock();
     	if(!_socket->connected() || _stopped)
     	{
-    		GD::out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->port + "): " + _bl->hf.getHexString(data));
+    		_out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->port + "): " + _bl->hf.getHexString(data));
     		_sendMutex.unlock();
     		return;
     	}
     	if(_bl->debugLevel >= 5)
         {
-            GD::out.printDebug("Debug: Sending (Port " + _settings->port + "): " + _bl->hf.getHexString(data));
+            _out.printDebug("Debug: Sending (Port " + _settings->port + "): " + _bl->hf.getHexString(data));
         }
     	(!raw) ? _socket->proofwrite(encryptedData) : _socket->proofwrite(data);
     	 _sendMutex.unlock();
@@ -403,19 +451,19 @@ void HM_LGW::send(std::vector<char>& data, bool raw)
     }
     catch(BaseLib::SocketOperationException& ex)
     {
-    	GD::out.printError(ex.what());
+    	_out.printError(ex.what());
     }
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _stopped = true;
     _sendMutex.unlock();
@@ -431,13 +479,13 @@ void HM_LGW::sendKeepAlive(std::vector<char>& data, bool raw)
     	_sendMutexKeepAlive.lock();
     	if(!_socketKeepAlive->connected() || _stopped)
     	{
-    		GD::out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->portKeepAlive + "): " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+    		_out.printWarning("Warning: !!!Not!!! sending (Port " + _settings->portKeepAlive + "): " + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
     		_sendMutexKeepAlive.unlock();
     		return;
     	}
     	if(_bl->debugLevel >= 5)
         {
-            GD::out.printDebug(std::string("Debug: Sending (Port " + _settings->portKeepAlive + "): ") + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
+            _out.printDebug(std::string("Debug: Sending (Port " + _settings->portKeepAlive + "): ") + std::string(&data.at(0), &data.at(0) + (data.size() - 2)));
         }
     	(!raw) ? _socketKeepAlive->proofwrite(encryptedData) : _socketKeepAlive->proofwrite(data);
     	 _sendMutexKeepAlive.unlock();
@@ -445,22 +493,336 @@ void HM_LGW::sendKeepAlive(std::vector<char>& data, bool raw)
     }
     catch(BaseLib::SocketOperationException& ex)
     {
-    	GD::out.printError(ex.what());
+    	_out.printError(ex.what());
     }
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _stopped = true;
     _sendMutexKeepAlive.unlock();
+}
+
+void HM_LGW::doInit()
+{
+	try
+	{
+		_packetIndex = 0;
+
+		int32_t i = 0;
+		while(!GD::family->getCentral() && i < 30)
+		{
+			_out.printDebug("Debug: HM-LGW: Waiting for central to load.");
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			i++;
+		}
+		if(!GD::family->getCentral())
+		{
+			_stopCallbackThread = true;
+			_out.printError("Error: Could not get central address for HM-LGW. Stopping listening.");
+			return;
+		}
+
+		_myAddress = GD::family->getCentral()->physicalAddress();
+
+		if(_stopped) return;
+		//BidCoS-over-LAN" packet
+		std::shared_ptr<Request> request(new Request(0, 0));
+		_requestsMutex.lock();
+		_requests[0] = request;
+		_requestsMutex.unlock();
+		request->mutex.try_lock(); //Lock and return immediately
+		_initStarted = true;
+		if(!request->mutex.try_lock_for(std::chrono::milliseconds(30000)))
+		{
+			_out.printError("Error: No init packet received.");
+			_stopped = true;
+			request->mutex.unlock();
+			return;
+		}
+		request->mutex.unlock();
+		std::string packetString(request->response.begin(), request->response.end());
+		_requestsMutex.lock();
+		_requests.erase(0);
+		_requestsMutex.unlock();
+		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packetString, ',');
+		if(parts.size() != 2 || parts.at(0).size() != 3 || parts.at(0).at(0) != 'S' || parts.at(1).size() < 15 || parts.at(1).compare(0, 15, "BidCoS-over-LAN") != 0)
+		{
+			_stopped = true;
+			_out.printError("Error: First packet from HM-LGW does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
+			return;
+		}
+		uint8_t packetIndex = (_bl->hf.getNumber(parts.at(0).at(1)) << 4) + _bl->hf.getNumber(parts.at(0).at(2));
+		std::vector<char> response = { '>', _bl->hf.getHexChar(packetIndex >> 4), _bl->hf.getHexChar(packetIndex & 0xF), ',', '0', '0', '0', '0', '\r', '\n' };
+		send(response, false);
+
+		while(!_initCompleteKeepAlive && !_stopCallbackThread)
+    	{
+    		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    	}
+
+		//1st packet
+		if(_stopped) return;
+		std::vector<uint8_t> responsePacket;
+		std::vector<char> requestPacket;
+		std::vector<char> payload{ 0, 3 };
+		buildPacket(requestPacket, payload);
+		_packetIndex++;
+		getResponse(requestPacket, responsePacket, 0, 0, 0);
+
+		//2nd packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		buildPacket(requestPacket, payload);
+		_packetIndex++;
+		getResponse(requestPacket, responsePacket, 0, 0, 0);
+
+		//3rd packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(0);
+		payload.push_back(2);
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		//4th packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(0);
+		payload.push_back(0xA);
+		payload.push_back(0);
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		//5th packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(0);
+		payload.push_back(0xA);
+		payload.push_back(0);
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		//6th packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(0);
+		payload.push_back(9);
+		payload.push_back(0);
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		//7th packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(0);
+		payload.push_back(9);
+		payload.push_back(0);
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		//8th packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(0);
+		payload.push_back(0xA);
+		payload.push_back(0);
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		//9th packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		const auto timePoint = std::chrono::system_clock::now();
+		time_t t = std::chrono::system_clock::to_time_t(timePoint);
+		tm* localTime = std::localtime(&t);
+		uint32_t time = (uint32_t)t;
+		payload.push_back(0);
+		payload.push_back(0xE);
+		payload.push_back(time >> 24);
+		payload.push_back((time >> 16) & 0xFF);
+		payload.push_back((time >> 8) & 0xFF);
+		payload.push_back(time & 0xFF);
+		payload.push_back(localTime->tm_gmtoff / 1800);
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		//10th packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(0);
+		payload.push_back(9);
+		payload.push_back(0);
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		//11th packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(1);
+		payload.push_back(3);
+		if(_settings->rfKey.empty())
+		{
+			payload.push_back(0);
+		}
+		else
+		{
+			std::vector<char> rfKey = _bl->hf.getBinary(_settings->rfKey);
+			payload.insert(payload.end(), rfKey.begin(), rfKey.end());
+			payload.push_back(_settings->currentRFKeyIndex);
+		}
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		//12th packet
+		if(_settings->currentRFKeyIndex > 1 && !_settings->oldRFKey.empty())
+		{
+			if(_stopped) return;
+			responsePacket.clear();
+			requestPacket.clear();
+			payload.clear();
+			payload.push_back(1);
+			payload.push_back(0xF);
+			std::vector<char> rfKey = _bl->hf.getBinary(_settings->oldRFKey);
+			payload.insert(payload.end(), rfKey.begin(), rfKey.end());
+			payload.push_back(_settings->currentRFKeyIndex - 1);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+			_packetIndex++;
+			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+			{
+				_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
+		}
+
+		//13th packet
+		if(_stopped) return;
+		responsePacket.clear();
+		requestPacket.clear();
+		payload.clear();
+		payload.push_back(1);
+		payload.push_back(0);
+		payload.push_back(_myAddress >> 16);
+		payload.push_back((_myAddress >> 8) & 0xFF);
+		payload.push_back(_myAddress & 0xFF);
+		buildPacket(requestPacket, payload);
+		getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+		_packetIndex++;
+		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		{
+			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
+
+		_out.printInfo("Info: Init queue completed. Sending peers...");
+		if(_stopped) return;
+		sendPeers();
+	}
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void HM_LGW::startListening()
@@ -473,22 +835,26 @@ void HM_LGW::startListening()
 		_socket->setReadTimeout(1000000);
 		_socketKeepAlive = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->portKeepAlive, _settings->ssl, _settings->verifyCertificate));
 		_socketKeepAlive->setReadTimeout(1000000);
-		GD::out.printDebug("Connecting to HM-LGW with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_out.printDebug("Connecting to HM-LGW with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_stopped = false;
 		_listenThread = std::thread(&HM_LGW::listen, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
+		_listenThreadKeepAlive = std::thread(&HM_LGW::listenKeepAlive, this);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThreadKeepAlive.native_handle(), 45);
+		_initThread = std::thread(&HM_LGW::doInit, this);
+		BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -498,26 +864,33 @@ void HM_LGW::reconnect()
 	{
 		_socket->close();
 		_socketKeepAlive->close();
+		if(_initThread.joinable()) _initThread.join();
 		openSSLInit();
-		createInitCommandQueue();
+		_requestsMutex.lock();
+		_requests.clear();
+		_requestsMutex.unlock();
+		_initStarted = false;
+		_initComplete = false;
 		_initCompleteKeepAlive = false;
-		GD::out.printDebug("Connecting to HM-LGW device with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_out.printDebug("Connecting to HM-LGW device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket->open();
 		_socketKeepAlive->open();
-		GD::out.printInfo("Connected to HM-LGW device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		_out.printInfo("Connected to HM-LGW device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
+		_initThread = std::thread(&HM_LGW::doInit, this);
+		BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), 45);
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -526,6 +899,7 @@ void HM_LGW::stopListening()
 	try
 	{
 		_stopCallbackThread = true;
+		if(_initThread.joinable()) _initThread.join();
 		if(_listenThread.joinable()) _listenThread.join();
 		if(_listenThreadKeepAlive.joinable()) _listenThreadKeepAlive.join();
 		_stopCallbackThread = false;
@@ -535,70 +909,24 @@ void HM_LGW::stopListening()
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 		_sendMutexKeepAlive.unlock();
-	}
-	catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void HM_LGW::createInitCommandQueue()
-{
-	try
-	{
+		_requestsMutex.lock();
+		_requests.clear();
+		_requestsMutex.unlock();
+		_initStarted = false;
 		_initComplete = false;
-		_packetIndex = 0;
-		_initCommandQueue.clear();
-
-		int32_t i = 0;
-		while(!GD::family->getCentral() && i < 30)
-		{
-			GD::out.printDebug("Debug: HM-LGW: Waiting for central to load.");
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-			i++;
-		}
-		if(!GD::family->getCentral())
-		{
-			_stopCallbackThread = true;
-			GD::out.printError("Error: Could not get central address for HM-LGW. Stopping listening.");
-			return;
-		}
-
-		_myAddress = GD::family->getCentral()->physicalAddress();
-
-		_initCommandQueue.push_back(std::vector<char>{ 0, 3 });
-		_initCommandQueue.push_back(std::vector<char>{ 0, 3 });
-		_initCommandQueue.push_back(std::vector<char>{ 0, 2 });
-		_initCommandQueue.push_back(std::vector<char>{ 0, 0xA, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 0, 0xA, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 0, 9, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 0, 9, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 0, 0xA, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 0, 0xE });
-		_initCommandQueue.push_back(std::vector<char>{ 0, 9, 0 });
-		_initCommandQueue.push_back(std::vector<char>{ 1, 3 });
-		if(_settings->currentRFKeyIndex > 1) _initCommandQueue.push_back(std::vector<char>{ 1, 0xF });
-		_initCommandQueue.push_back(std::vector<char>{ 1, 0 });
+		_initCompleteKeepAlive = false;
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -607,7 +935,7 @@ void HM_LGW::openSSLPrintError()
 	uint32_t errorCode = ERR_get_error();
 	std::vector<char> buffer(256); //At least 120 bytes
 	ERR_error_string(errorCode, &buffer.at(0));
-	GD::out.printError("Error: " + std::string(&buffer.at(0)));
+	_out.printError("Error: " + std::string(&buffer.at(0)));
 }
 
 bool HM_LGW::openSSLInit()
@@ -616,7 +944,7 @@ bool HM_LGW::openSSLInit()
 
 	if(_settings->lanKey.empty())
 	{
-		GD::out.printError("Error: No AES key specified in physicalinterfaces.conf for communication with your HM-LGW.");
+		_out.printError("Error: No AES key specified in physicalinterfaces.conf for communication with your HM-LGW.");
 		return false;
 	}
 	_key.resize(16);
@@ -677,7 +1005,7 @@ void HM_LGW::openSSLCleanup()
 	_aesExchangeKeepAliveComplete = false;
 }
 
-std::vector<char> HM_LGW::encrypt(std::vector<char>& data)
+std::vector<char> HM_LGW::encrypt(const std::vector<char>& data)
 {
 	std::vector<char> encryptedData(data.size());
 	if(!_ctxEncrypt) return encryptedData;
@@ -749,7 +1077,7 @@ void HM_LGW::sendKeepAlivePacket1()
 {
 	try
     {
-		if(!_initCommandQueue.empty()) return;
+		if(!_initComplete) return;
 		if(BaseLib::HelperFunctions::getTimeSeconds() - _lastKeepAlive1 >= 5)
 		{
 			if(_lastKeepAliveResponse1 < _lastKeepAlive1)
@@ -769,15 +1097,15 @@ void HM_LGW::sendKeepAlivePacket1()
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -802,15 +1130,15 @@ void HM_LGW::sendKeepAlivePacket2()
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -836,15 +1164,15 @@ void HM_LGW::sendTimePacket()
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -852,8 +1180,10 @@ void HM_LGW::listen()
 {
     try
     {
-    	createInitCommandQueue(); //Called here in a seperate thread so that startListening is not blocking Homegear
-    	_listenThreadKeepAlive = std::thread(&HM_LGW::listenKeepAlive, this);
+    	while(!_initStarted && !_stopCallbackThread)
+    	{
+    		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    	}
 
     	uint32_t receivedBytes = 0;
     	int32_t bufferMax = 2048;
@@ -868,7 +1198,7 @@ void HM_LGW::listen()
         	{
         		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         		if(_stopCallbackThread) return;
-        		GD::out.printWarning("Warning: Connection to HM-LGW closed. Trying to reconnect...");
+        		_out.printWarning("Warning: Connection to HM-LGW closed. Trying to reconnect...");
         		reconnect();
         		continue;
         	}
@@ -885,7 +1215,7 @@ void HM_LGW::listen()
 						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
 						if(data.size() > 1000000)
 						{
-							GD::out.printError("Could not read from HM-LGW: Too much data.");
+							_out.printError("Could not read from HM-LGW: Too much data.");
 							break;
 						}
 					}
@@ -901,14 +1231,14 @@ void HM_LGW::listen()
 			catch(BaseLib::SocketClosedException& ex)
 			{
 				_stopped = true;
-				GD::out.printWarning("Warning: " + ex.what());
+				_out.printWarning("Warning: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
 				_stopped = true;
-				GD::out.printError("Error: " + ex.what());
+				_out.printError("Error: " + ex.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
@@ -916,8 +1246,8 @@ void HM_LGW::listen()
 
         	if(_bl->debugLevel >= 6)
         	{
-        		GD::out.printDebug("Debug: Packet received from HM-LGW on port " + _settings->port + ". Raw data:");
-        		GD::out.printBinary(data);
+        		_out.printDebug("Debug: Packet received from HM-LGW on port " + _settings->port + ". Raw data:");
+        		_out.printBinary(data);
         	}
 
         	processData(data);
@@ -927,15 +1257,15 @@ void HM_LGW::listen()
     }
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -943,6 +1273,11 @@ void HM_LGW::listenKeepAlive()
 {
 	try
     {
+		while(!_initStarted && !_stopCallbackThread)
+    	{
+    		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    	}
+
     	uint32_t receivedBytes = 0;
     	int32_t bufferMax = 2048;
 		std::vector<char> buffer(bufferMax);
@@ -968,7 +1303,7 @@ void HM_LGW::listenKeepAlive()
 						data.insert(data.end(), &buffer.at(0), &buffer.at(0) + receivedBytes);
 						if(data.size() > 1000000)
 						{
-							GD::out.printError("Could not read from HM-LGW: Too much data.");
+							_out.printError("Could not read from HM-LGW: Too much data.");
 							break;
 						}
 					}
@@ -985,21 +1320,21 @@ void HM_LGW::listenKeepAlive()
 			catch(BaseLib::SocketClosedException& ex)
 			{
 				_stopped = true;
-				GD::out.printWarning("Warning: " + ex.what());
+				_out.printWarning("Warning: " + ex.what());
 				continue;
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
 				_stopped = true;
-				GD::out.printError("Error: " + ex.what());
+				_out.printError("Error: " + ex.what());
 				continue;
 			}
 			if(data.empty() || data.size() > 1000000) continue;
 
         	if(_bl->debugLevel >= 6)
         	{
-        		GD::out.printDebug("Debug: Packet received from HM-LGW on port " + _settings->portKeepAlive + ". Raw data:");
-        		GD::out.printBinary(data);
+        		_out.printDebug("Debug: Packet received from HM-LGW on port " + _settings->portKeepAlive + ". Raw data:");
+        		_out.printBinary(data);
         	}
 
         	processDataKeepAlive(data);
@@ -1007,15 +1342,15 @@ void HM_LGW::listenKeepAlive()
     }
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1027,20 +1362,20 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 		int32_t startPos = hex.find('\n');
 		if(startPos == std::string::npos)
 		{
-			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;
 		}
 		startPos += 5;
 		int32_t length = hex.find('\n', startPos);
 		if(length == std::string::npos)
 		{
-			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;
 		}
 		length = length - startPos - 1;
 		if(length <= 30)
 		{
-			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;
 		}
 		if(data.at(startPos - 4) == 'V' && data.at(startPos - 1) == ',')
@@ -1050,7 +1385,7 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 			if(length != 32)
 			{
 				_stopCallbackThread = true;
-				GD::out.printError("Error: Error communicating with HM-LGW. Received IV has wrong size.");
+				_out.printError("Error: Error communicating with HM-LGW. Received IV has wrong size.");
 				return false;
 			}
 			_remoteIV.clear();
@@ -1059,13 +1394,13 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 			if(_remoteIV.size() != 16)
 			{
 				_stopCallbackThread = true;
-				GD::out.printError("Error: Error communicating with HM-LGW. Received IV is not in hexadecimal format.");
+				_out.printError("Error: Error communicating with HM-LGW. Received IV is not in hexadecimal format.");
 				return false;
 			}
 			if(_bl->debugLevel >= 5)
 			{
-				GD::out.printDebug("HM-LGW IV is: ");
-				GD::out.printBinary(_remoteIV);
+				_out.printDebug("HM-LGW IV is: ");
+				_out.printBinary(_remoteIV);
 			}
 
 			if(EVP_EncryptInit_ex(_ctxEncrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_remoteIV.at(0)) != 1)
@@ -1097,8 +1432,8 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 
 			if(_bl->debugLevel >= 5)
 			{
-				GD::out.printDebug("Homegear IV is: ");
-				GD::out.printBinary(_myIV);
+				_out.printDebug("Homegear IV is: ");
+				_out.printBinary(_myIV);
 			}
 
 			if(EVP_DecryptInit_ex(_ctxDecrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_myIV.at(0)) != 1)
@@ -1115,21 +1450,21 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 		else if(_remoteIV.empty())
 		{
 			_stopCallbackThread = true;
-			GD::out.printError("Error: Error communicating with HM-LGW. No IV was send from HM-LGW.");
+			_out.printError("Error: Error communicating with HM-LGW. No IV was send from HM-LGW.");
 			return false;
 		}
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -1142,20 +1477,20 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 		int32_t startPos = hex.find('\n');
 		if(startPos == std::string::npos)
 		{
-			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;
 		}
 		startPos += 5;
 		int32_t length = hex.find('\n', startPos);
 		if(length == std::string::npos)
 		{
-			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;
 		}
 		length = length - startPos - 1;
 		if(length <= 30)
 		{
-			GD::out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
+			_out.printError("Error: Error communicating with HM-LGW. Initial handshake packet has wrong format.");
 			return false;
 		}
 		if(data.at(startPos - 4) == 'V' && data.at(startPos - 1) == ',')
@@ -1165,7 +1500,7 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 			if(length != 32)
 			{
 				_stopCallbackThread = true;
-				GD::out.printError("Error: Error communicating with HM-LGW. Received IV has wrong size.");
+				_out.printError("Error: Error communicating with HM-LGW. Received IV has wrong size.");
 				return false;
 			}
 			_remoteIVKeepAlive.clear();
@@ -1174,13 +1509,13 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 			if(_remoteIVKeepAlive.size() != 16)
 			{
 				_stopCallbackThread = true;
-				GD::out.printError("Error: Error communicating with HM-LGW. Received IV is not in hexadecimal format.");
+				_out.printError("Error: Error communicating with HM-LGW. Received IV is not in hexadecimal format.");
 				return false;
 			}
 			if(_bl->debugLevel >= 5)
 			{
-				GD::out.printDebug("HM-LGW IV for keep alive packets is: ");
-				GD::out.printBinary(_remoteIVKeepAlive);
+				_out.printDebug("HM-LGW IV for keep alive packets is: ");
+				_out.printBinary(_remoteIVKeepAlive);
 			}
 
 			if(EVP_EncryptInit_ex(_ctxEncryptKeepAlive, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_remoteIVKeepAlive.at(0)) != 1)
@@ -1212,8 +1547,8 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 
 			if(_bl->debugLevel >= 5)
 			{
-				GD::out.printDebug("Homegear IV for keep alive packets is: ");
-				GD::out.printBinary(_myIVKeepAlive);
+				_out.printDebug("Homegear IV for keep alive packets is: ");
+				_out.printBinary(_myIVKeepAlive);
 			}
 
 			if(EVP_DecryptInit_ex(_ctxDecryptKeepAlive, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_myIVKeepAlive.at(0)) != 1)
@@ -1230,21 +1565,21 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 		else if(_remoteIVKeepAlive.empty())
 		{
 			_stopCallbackThread = true;
-			GD::out.printError("Error: Error communicating with HM-LGW. No IV was send from HM-LGW.");
+			_out.printError("Error: Error communicating with HM-LGW. No IV was send from HM-LGW.");
 			return false;
 		}
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -1268,15 +1603,15 @@ void HM_LGW::buildPacket(std::vector<char>& packet, const std::vector<char>& pay
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1299,15 +1634,59 @@ void HM_LGW::escapePacket(const std::vector<char>& unescapedPacket, std::vector<
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LGW::processPacket(std::vector<uint8_t>& packet)
+{
+	try
+	{
+		_out.printDebug(std::string("Debug: Packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet)));
+		uint16_t crc = _crc.calculate(packet, true);
+		if(packet.at(packet.size() - 2) != (crc >> 8) || packet.at(packet.size() - 1) != (crc & 0xFF))
+		{
+			_out.printError("Error: CRC failed on packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet));
+			_stopped = true;
+			return;
+		}
+		else
+		{
+			_requestsMutex.lock();
+			if(_requests.find(packet.at(4)) != _requests.end())
+			{
+				std::shared_ptr<Request> request = _requests.at(packet.at(4));
+				_requestsMutex.unlock();
+				if(packet.at(3) == request->getResponseControlByte() && packet.at(5) == request->getResponseType())
+				{
+					request->response = packet;
+					request->mutex.unlock();
+					return;
+				}
+			}
+			else _requestsMutex.unlock();
+			if(_initComplete) parsePacket(packet);
+		}
+	}
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1325,12 +1704,18 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 		std::vector<uint8_t> decryptedData = decrypt(data);
 		if(decryptedData.size() < 8) //8 is minimum size fd
 		{
-			GD::out.printWarning("Warning: Too small packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(decryptedData));
+			_out.printWarning("Warning: Too small packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(decryptedData));
 			return;
 		}
-		if(!_initCommandQueue.empty() && _packetIndex == 0 && decryptedData.at(0) == 'S')
+		if(!_initComplete && _packetIndex == 0 && decryptedData.at(0) == 'S')
 		{
-			processInit(decryptedData);
+			_requestsMutex.lock();
+			if(_requests.find(0) != _requests.end())
+			{
+				_requests.at(0)->response = decryptedData;
+				_requests.at(0)->mutex.unlock();
+			}
+			_requestsMutex.unlock();
 			return;
 		}
 
@@ -1340,18 +1725,7 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 		{
 			if(!packet.empty() && *i == 0xfd)
 			{
-				GD::out.printDebug(std::string("Debug: Packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet)));
-				uint16_t crc = _crc.calculate(packet, true);
-				if(packet.at(packet.size() - 2) != (crc >> 8) || packet.at(packet.size() - 1) != (crc & 0xFF))
-				{
-					GD::out.printError("Error: CRC failed on packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet));
-					_stopped = true;
-					return;
-				}
-				else
-				{
-					if(_initCommandQueue.empty()) parsePacket(packet); else processInit(packet);
-				}
+				processPacket(packet);
 				packet.clear();
 				escapeByte = false;
 			}
@@ -1367,30 +1741,19 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 			}
 			else packet.push_back(*i);
 		}
-		GD::out.printDebug(std::string("Debug: Packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet)));
-		uint16_t crc = _crc.calculate(packet, true);
-		if(packet.at(packet.size() - 2) != (crc >> 8) || packet.at(packet.size() - 1) != (crc & 0xFF))
-		{
-			GD::out.printError("Error: CRC failed on packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet));
-			_stopped = true;
-			return;
-		}
-		else
-		{
-			if(_initCommandQueue.empty()) parsePacket(packet); else processInit(packet);
-		}
+		processPacket(packet);
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1418,260 +1781,15 @@ void HM_LGW::processDataKeepAlive(std::vector<uint8_t>& data)
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-}
-
-void HM_LGW::processInit(std::vector<uint8_t>& packet)
-{
-	try
-	{
-		if(_initCommandQueue.empty()) return;
-		if(_packetIndex == 0) //Expecting "BidCoS-over-LAN" packet
-		{
-			std::string packetString(packet.begin(), packet.end());
-			std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packetString, ',');
-			if(parts.size() != 2 || parts.at(0).size() != 3 || parts.at(0).at(0) != 'S' || parts.at(1).size() < 15 || parts.at(1).compare(0, 15, "BidCoS-over-LAN") != 0)
-			{
-				_stopCallbackThread = true;
-				GD::out.printError("Error: First packet from HM-LGW does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
-				return;
-			}
-			uint8_t packetIndex = (_bl->hf.getNumber(parts.at(0).at(1)) << 4) + _bl->hf.getNumber(parts.at(0).at(2));
-			std::vector<char> response = { '>', _bl->hf.getHexChar(packetIndex >> 4), _bl->hf.getHexChar(packetIndex & 0xF), ',', '0', '0', '0', '0', '\r', '\n' };
-			send(response, false);
-			response.clear();
-			buildPacket(response, _initCommandQueue.front());
-			_packetIndex++;
-			send(response, false);
-			return;
-		}
-		if(_packetIndex == 1 && packet.at(5) == 0)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != 0)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> response;
-			buildPacket(response, _initCommandQueue.front());
-			_packetIndex++;
-			send(response, false);
-		}
-		else if(_packetIndex == 2 && packet.at(5) == 0)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != 0)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> response;
-			buildPacket(response, _initCommandQueue.front());
-			_packetIndex++;
-			send(response, false);
-		}
-		else if(_packetIndex == 3 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> response;
-			buildPacket(response, _initCommandQueue.front());
-			_packetIndex++;
-			send(response, false);
-		}
-		else if(_packetIndex == 4 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> response;
-			buildPacket(response, _initCommandQueue.front());
-			_packetIndex++;
-			send(response, false);
-		}
-		else if(_packetIndex == 5 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> response;
-			buildPacket(response, _initCommandQueue.front());
-			_packetIndex++;
-			send(response, false);
-		}
-		else if(_packetIndex == 6 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> response;
-			buildPacket(response, _initCommandQueue.front());
-			_packetIndex++;
-			send(response, false);
-		}
-		else if(_packetIndex == 7 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> response;
-			buildPacket(response, _initCommandQueue.front());
-			_packetIndex++;
-			send(response, false);
-		}
-		else if(_packetIndex == 8 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			const auto timePoint = std::chrono::system_clock::now();
-			time_t t = std::chrono::system_clock::to_time_t(timePoint);
-			tm* localTime = std::localtime(&t);
-			uint32_t time = (uint32_t)t;
-			std::vector<char> payload{ 0, 0xE };
-			payload.push_back(time >> 24);
-			payload.push_back((time >> 16) & 0xFF);
-			payload.push_back((time >> 8) & 0xFF);
-			payload.push_back(time & 0xFF);
-			payload.push_back(localTime->tm_gmtoff / 1800);
-			std::vector<char> packet;
-			buildPacket(packet, payload);
-			_packetIndex++;
-			send(packet, false);
-			_lastTimePacket = BaseLib::HelperFunctions::getTimeSeconds();
-		}
-		else if(_packetIndex == 9 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> response;
-			buildPacket(response, _initCommandQueue.front());
-			_packetIndex++;
-			send(response, false);
-		}
-		else if(_packetIndex == 10 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 0 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> payload = _initCommandQueue.front();
-			if(_settings->rfKey.empty())
-			{
-				payload.push_back(0);
-			}
-			else
-			{
-				std::vector<char> rfKey = _bl->hf.getBinary(_settings->rfKey);
-				payload.insert(payload.end(), rfKey.begin(), rfKey.end());
-				payload.push_back(_settings->currentRFKeyIndex);
-			}
-			std::vector<char> packet;
-			buildPacket(packet, payload);
-			_packetIndex++;
-			send(packet, false);
-		}
-		else if(_packetIndex == 11 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 1 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			std::vector<char> payload = _initCommandQueue.front();
-			if(payload.at(1) == 0xF)
-			{
-				std::vector<char> rfKey = _bl->hf.getBinary(_settings->oldRFKey);
-				payload.insert(payload.end(), rfKey.begin(), rfKey.end());
-				payload.push_back(_settings->currentRFKeyIndex - 1);
-			}
-			else
-			{
-				payload.push_back(_myAddress >> 16);
-				payload.push_back((_myAddress >> 8) & 0xFF);
-				payload.push_back(_myAddress & 0xFF);
-			}
-			std::vector<char> packet;
-			buildPacket(packet, payload);
-			_packetIndex++;
-			send(packet, false);
-		}
-		else if(_packetIndex == 12 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 1 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			if(_initCommandQueue.empty())
-			{
-				GD::out.printInfo("Info: Init queue completed. Sending peers...");
-				sendPeers();
-			}
-			else
-			{
-				std::vector<char> payload = _initCommandQueue.front();
-				payload.push_back(_myAddress >> 16);
-				payload.push_back((_myAddress >> 8) & 0xFF);
-				payload.push_back(_myAddress & 0xFF);
-				std::vector<char> packet;
-				buildPacket(packet, payload);
-				_packetIndex++;
-				send(packet, false);
-			}
-		}
-		else if(_packetIndex == 13 && packet.at(5) == 4)
-		{
-			if(packet.at(3) != 1 || packet.at(4) != _packetIndex - 1)
-			{
-				GD::out.printWarning("Warning: Packet from HM-LGW has wrong index.");
-			}
-			_initCommandQueue.pop_front();
-			if(!_initCommandQueue.empty())
-			{
-				GD::out.printWarning("Warning: Init command queue of HM-LGW is not empty.");
-				_initCommandQueue.clear();
-			}
-			GD::out.printInfo("Info: Init queue completed. Sending peers...");
-			sendPeers();
-		}
-	}
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1683,7 +1801,7 @@ void HM_LGW::processInitKeepAlive(std::string& packet)
 		if(parts.size() != 2 || parts.at(0).size() != 3 || parts.at(0).at(0) != 'S' || parts.at(1).size() < 6 || parts.at(1).compare(0, 6, "SysCom") != 0)
 		{
 			_stopCallbackThread = true;
-			GD::out.printError("Error: First packet from HM-LGW does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
+			_out.printError("Error: First packet from HM-LGW does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
 			return;
 		}
 
@@ -1698,15 +1816,15 @@ void HM_LGW::processInitKeepAlive(std::string& packet)
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1719,7 +1837,7 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 		{
 			if(packet.at(3) == 0 && packet.size() == 10 && packet.at(6) == 2 && packet.at(7) == 0)
 			{
-				if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: Keep alive response received from HM-LGW on port " + _settings->port + ".");
+				if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received from HM-LGW on port " + _settings->port + ".");
 				_lastKeepAliveResponse1 = BaseLib::HelperFunctions::getTimeSeconds();
 			}
 		}
@@ -1738,15 +1856,15 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1755,10 +1873,10 @@ void HM_LGW::parsePacketKeepAlive(std::string& packet)
 	try
 	{
 		if(packet.empty()) return;
-		if(_bl->debugLevel >= 5) GD::out.printDebug(std::string("Debug: Packet received from HM-LGW on port " + _settings->portKeepAlive + ": " + packet));
+		if(_bl->debugLevel >= 5) _out.printDebug(std::string("Debug: Packet received from HM-LGW on port " + _settings->portKeepAlive + ": " + packet));
 		if(packet.at(0) == '>'  && (packet.at(1) == 'K' || packet.at(1) == 'L') && packet.size() == 5)
 		{
-			if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: Keep alive response received from HM-LGW on port " + _settings->portKeepAlive + ".");
+			if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received from HM-LGW on port " + _settings->portKeepAlive + ".");
 			std::string index = packet.substr(2, 2);
 			if(_bl->hf.getNumber(index, true) == _packetIndexKeepAlive)
 			{
@@ -1770,15 +1888,15 @@ void HM_LGW::parsePacketKeepAlive(std::string& packet)
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

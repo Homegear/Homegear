@@ -231,7 +231,7 @@ std::shared_ptr<RPCVariable> XMLRPCDecoder::decodeParameter(xml_node<>* valueNod
 	{
 		if(valueNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
 		xml_node<>* subNode = valueNode->first_node();
-		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcVoid));
+		if(subNode == nullptr) return std::shared_ptr<RPCVariable>(new RPCVariable(RPCVariableType::rpcString));
 
 		std::string type(subNode->name());
 		HelperFunctions::toLower(type);

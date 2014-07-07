@@ -54,6 +54,7 @@ public:
 
 	void init(Obj* baseLib);
 
+	std::string getPrefix() { return _prefix; }
 	void setPrefix(std::string prefix) { _prefix = prefix; }
 
 	void printThreadPriority();

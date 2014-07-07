@@ -364,7 +364,7 @@ bool HM_SD::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Sys
 				}
 			}
 		}
-		if(printPacket) std::cout << BaseLib::HelperFunctions::getTimeString(bidCoSPacket->timeReceived()) << " HomeMatic BidCoS packet received (" + senderID + "): " + bidCoSPacket->hexString() << std::endl;
+		if(printPacket) std::cout << BaseLib::HelperFunctions::getTimeString(bidCoSPacket->timeReceived()) << " HomeMatic BidCoS packet received (" + senderID + (bidCoSPacket->rssiDevice() ? ", RSSI: 0x" + _bl->hf.getHexString(bidCoSPacket->rssiDevice(), 2) : "") + "): " + bidCoSPacket->hexString() << std::endl;
 		if(senderID != _physicalInterface->getID()) return true;
 		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
 		{
