@@ -73,6 +73,7 @@ class HM_CFG_LAN  : public IBidCoSInterface
 
         virtual void addPeer(PeerInfo peerInfo);
         virtual void addPeers(std::vector<PeerInfo>& peerInfos);
+        virtual void setWakeUp(PeerInfo peerInfo) { addPeer(peerInfo); }
         virtual void removePeer(int32_t address);
         virtual void sendPeers();
         virtual std::string getPeerInfoPacket(PeerInfo& peerInfo);

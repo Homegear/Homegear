@@ -1510,7 +1510,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetVersion::invoke(std::shared_ptr
 		if(error != ParameterError::Enum::noError) return getError(error);
 
 		std::string version(VERSION);
-		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(version));
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable("Homegear " + version));
 	}
 	catch(const std::exception& ex)
     {

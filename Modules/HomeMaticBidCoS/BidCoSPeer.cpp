@@ -1335,6 +1335,8 @@ bool BidCoSPeer::load(BaseLib::Systems::LogicalDevice* device)
 
 		checkAESKey();
 
+		if(pendingBidCoSQueues && !pendingBidCoSQueues->empty()) serviceMessages->setConfigPending(true);
+
 		return true;
 	}
 	catch(const std::exception& ex)
@@ -1597,7 +1599,7 @@ void BidCoSPeer::onConfigPending(bool configPending)
 			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && _physicalInterface->autoResend())
 			{
 				GD::out.printDebug("Debug: Setting physical device's wake up flag.");
-				_physicalInterface->addPeer(getPeerInfo());
+				_physicalInterface->setWakeUp(getPeerInfo());
 			}
 		}
 		else
@@ -1605,7 +1607,7 @@ void BidCoSPeer::onConfigPending(bool configPending)
 			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && _physicalInterface->autoResend())
 			{
 				GD::out.printDebug("Debug: Removing physical device's wake up flag.");
-				_physicalInterface->addPeer(getPeerInfo());
+				_physicalInterface->setWakeUp(getPeerInfo());
 			}
 		}
 	}
@@ -2373,14 +2375,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			pendingBidCoSQueues->push(queue);
 			if(aesActivated) checkAESKey();
 			serviceMessages->setConfigPending(true);
-			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
-			{
+			//if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
+			//{
 				if(!onlyPushing) std::dynamic_pointer_cast<HomeMaticCentral>(getCentral())->enqueuePendingQueues(_address);
-			}
-			else
-			{
-				GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-			}
+			//}
+			//else
+			//{
+				//GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			//}
 			raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
 		else if(type == BaseLib::RPC::ParameterSet::Type::Enum::values)
@@ -2508,14 +2510,14 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 
 			pendingBidCoSQueues->push(queue);
 			serviceMessages->setConfigPending(true);
-			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
-			{
+			//if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
+			//{
 				if(!onlyPushing) std::dynamic_pointer_cast<HomeMaticCentral>(getCentral())->enqueuePendingQueues(_address);
-			}
-			else
-			{
-				GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-			}
+			//}
+			//else
+			//{
+				//GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+			//}
 			raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));

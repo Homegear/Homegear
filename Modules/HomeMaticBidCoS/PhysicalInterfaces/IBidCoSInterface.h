@@ -55,6 +55,7 @@ public:
 
 	virtual void addPeer(PeerInfo peerInfo) {}
 	virtual void addPeers(std::vector<PeerInfo>& peerInfos) {}
+	virtual void setWakeUp(PeerInfo peerInfo) {}
 	virtual void removePeer(int32_t address) {}
 
 	virtual bool aesSupported() { return false; }

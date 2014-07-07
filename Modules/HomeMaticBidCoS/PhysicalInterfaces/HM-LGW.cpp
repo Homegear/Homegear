@@ -180,56 +180,14 @@ HM_LGW::~HM_LGW()
     }
 }
 
-std::string HM_LGW::getPeerInfoPacket(PeerInfo& peerInfo)
-{
-	try
-	{
-		std::string packetHex = std::string("+") + BaseLib::HelperFunctions::getHexString(peerInfo.address, 6) + ",";
-		if(!peerInfo.aesChannels.empty())
-		{
-			packetHex += peerInfo.wakeUp ? "03," : "01,";
-			packetHex += BaseLib::HelperFunctions::getHexString(peerInfo.keyIndex, 2) + ",";
-			packetHex += BaseLib::HelperFunctions::getHexString(peerInfo.getAESChannelMap()) + ",";
-		}
-		else
-		{
-			//When no AES is used, wakeUp is handled by Homegear
-			packetHex += "00,00,";
-		}
-		packetHex += "\r\n";
-		return packetHex;
-	}
-    catch(const std::exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return "";
-}
-
 void HM_LGW::addPeer(PeerInfo peerInfo)
 {
 	try
 	{
 		if(peerInfo.address == 0) return;
 		_peersMutex.lock();
-		//Remove old peer first. removePeer() is not called, so we don't need to unlock _peersMutex
-		if(_peers.find(peerInfo.address) != _peers.end()) _peers.erase(peerInfo.address);
-		if(_initComplete)
-		{
-			std::string packetHex = std::string("-") + BaseLib::HelperFunctions::getHexString(peerInfo.address, 6) + "\r\n";
-			send(packetHex);
-		}
 		_peers[peerInfo.address] = peerInfo;
-		std::string packetHex = getPeerInfoPacket(peerInfo);
-		if(_initComplete) send(packetHex);
+		if(_initComplete) sendPeer(peerInfo);
 	}
     catch(const std::exception& ex)
     {
@@ -278,7 +236,7 @@ void HM_LGW::sendPeers()
 		_peersMutex.lock();
 		for(std::map<int32_t, PeerInfo>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
-			//send(getPeerInfoPacket(i->second));
+			sendPeer(i->second);
 		}
 		_initComplete = true; //Init complete is set here within _peersMutex, so there is no conflict with addPeer() and peers are not sent twice
 	}
@@ -297,6 +255,238 @@ void HM_LGW::sendPeers()
     _peersMutex.unlock();
 }
 
+void HM_LGW::sendPeer(PeerInfo& peerInfo)
+{
+	try
+	{
+		for(int32_t i = 0; i < 2; i++) //The CCU sends this packet two times, I don't know why
+		{
+			//Get current config
+			for(int32_t j = 0; j < 3; j++)
+			{
+				std::vector<uint8_t> responsePacket;
+				std::vector<char> requestPacket;
+				std::vector<char> payload{ 1, 6 };
+				payload.push_back(peerInfo.address >> 16);
+				payload.push_back((peerInfo.address >> 8) & 0xFF);
+				payload.push_back(peerInfo.address & 0xFF);
+				payload.push_back(0);
+				payload.push_back(0);
+				payload.push_back(0);
+				buildPacket(requestPacket, payload);
+				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+				_packetIndex++;
+				if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+				if(j == 2)
+				{
+					_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
+					return;
+				}
+			}
+		}
+		//if(!peerInfo.aesChannels.empty())
+		//{
+			//Delete old configuration
+			for(int32_t j = 0; j < 3; j++)
+			{
+				std::vector<uint8_t> responsePacket;
+				std::vector<char> requestPacket;
+				std::vector<char> payload{ 1, 0xA };
+				payload.push_back(peerInfo.address >> 16);
+				payload.push_back((peerInfo.address >> 8) & 0xFF);
+				payload.push_back(peerInfo.address & 0xFF);
+				payload.push_back(0);
+
+				//bool aesEnabled = false;
+				for(std::map<int32_t, bool>::iterator k = peerInfo.aesChannels.begin(); k != peerInfo.aesChannels.end(); ++k)
+				{
+					//if(k->second)
+					//{
+						//aesEnabled = true;
+						payload.push_back(k->first);
+					//}
+				}
+				//if(!aesEnabled) break;
+				buildPacket(requestPacket, payload);
+				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+				_packetIndex++;
+				if(responsePacket.size() >= 9  && responsePacket.at(6) == 1) break;
+				if(j == 2)
+				{
+					_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
+					return;
+				}
+			}
+		//}
+		//Get current config again
+		for(int32_t j = 0; j < 3; j++)
+		{
+			std::vector<uint8_t> responsePacket;
+			std::vector<char> requestPacket;
+			std::vector<char> payload{ 1, 6 };
+			payload.push_back(peerInfo.address >> 16);
+			payload.push_back((peerInfo.address >> 8) & 0xFF);
+			payload.push_back(peerInfo.address & 0xFF);
+			payload.push_back(0);
+			payload.push_back(0);
+			payload.push_back(0);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+			_packetIndex++;
+			if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+			if(j == 2)
+			{
+				_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
+				return;
+			}
+		}
+		if(peerInfo.wakeUp && !peerInfo.aesChannels.empty())
+		{
+			//Enable sending of wake up packet or just request config again?
+			//When no AES is used, wake up is handled by Homegear
+			for(int32_t j = 0; j < 3; j++)
+			{
+				std::vector<uint8_t> responsePacket;
+				std::vector<char> requestPacket;
+				std::vector<char> payload{ 1, 6 };
+				payload.push_back(peerInfo.address >> 16);
+				payload.push_back((peerInfo.address >> 8) & 0xFF);
+				payload.push_back(peerInfo.address & 0xFF);
+				payload.push_back(0);
+				payload.push_back(1);
+				payload.push_back(1);
+				buildPacket(requestPacket, payload);
+				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+				_packetIndex++;
+				if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+				if(j == 2)
+				{
+					_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
+					return;
+				}
+			}
+		}
+		//Set key index and enable sending of wake up packet.
+		for(int32_t j = 0; j < 3; j++)
+		{
+			std::vector<uint8_t> responsePacket;
+			std::vector<char> requestPacket;
+			std::vector<char> payload{ 1, 6 };
+			payload.push_back(peerInfo.address >> 16);
+			payload.push_back((peerInfo.address >> 8) & 0xFF);
+			payload.push_back(peerInfo.address & 0xFF);
+			payload.push_back(peerInfo.keyIndex);
+			//When no AES is used, wake up is handled by Homegear
+			bool wakeUp = peerInfo.wakeUp && !peerInfo.aesChannels.empty();
+			payload.push_back((char)wakeUp);
+			payload.push_back((char)wakeUp);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+			_packetIndex++;
+			if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+			if(j == 2)
+			{
+				_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
+				return;
+			}
+		}
+		//Set channels with AES activated
+		if(!peerInfo.aesChannels.empty())
+		{
+			//Delete old configuration
+			for(int32_t j = 0; j < 3; j++)
+			{
+				std::vector<uint8_t> responsePacket;
+				std::vector<char> requestPacket;
+				std::vector<char> payload{ 1, 9 };
+				payload.push_back(peerInfo.address >> 16);
+				payload.push_back((peerInfo.address >> 8) & 0xFF);
+				payload.push_back(peerInfo.address & 0xFF);
+				payload.push_back(0);
+
+				bool aesEnabled = false;
+				for(std::map<int32_t, bool>::iterator k = peerInfo.aesChannels.begin(); k != peerInfo.aesChannels.end(); ++k)
+				{
+					if(k->second)
+					{
+						aesEnabled = true;
+						payload.push_back(k->first);
+					}
+				}
+				if(!aesEnabled) break;
+				buildPacket(requestPacket, payload);
+				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+				_packetIndex++;
+				if(responsePacket.size() >= 9  && responsePacket.at(6) == 1) break;
+				if(j == 2)
+				{
+					_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
+					return;
+				}
+			}
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LGW::setWakeUp(PeerInfo peerInfo)
+{
+	try
+	{
+		if(_stopped) return;
+		//When no AES is used, wake up is handled by Homegear
+		if(peerInfo.aesChannels.empty()) return;
+		for(int32_t j = 0; j < 3; j++)
+		{
+			std::vector<uint8_t> responsePacket;
+			std::vector<char> requestPacket;
+			std::vector<char> payload{ 1, 6 };
+			payload.push_back(peerInfo.address >> 16);
+			payload.push_back((peerInfo.address >> 8) & 0xFF);
+			payload.push_back(peerInfo.address & 0xFF);
+			payload.push_back(peerInfo.keyIndex);
+			payload.push_back((char)peerInfo.wakeUp);
+			payload.push_back((char)peerInfo.wakeUp);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+			_packetIndex++;
+			//Sometimes "0408" is returned, I don't know what that means.
+			//But it doesn't matter, the CCU sends this packet dozens of times
+			//so it's no problem to resend it. The correct response is returned
+			//after the first resend.
+			if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+			if(j == 2)
+			{
+				_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
+				return;
+			}
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HM_LGW::removePeer(int32_t address)
 {
 	try
@@ -305,8 +495,23 @@ void HM_LGW::removePeer(int32_t address)
 		if(_peers.find(address) != _peers.end()) _peers.erase(address);
 		if(_initComplete)
 		{
-			std::string packetHex = std::string("-") + BaseLib::HelperFunctions::getHexString(address, 6) + "\r\n";
-			send(packetHex);
+			for(int32_t i = 0; i < 3; i++)
+			{
+				std::vector<uint8_t> responsePacket;
+				std::vector<char> requestPacket;
+				std::vector<char> payload{ 1, 7 };
+				payload.push_back(address >> 16);
+				payload.push_back((address >> 8) & 0xFF);
+				payload.push_back(address & 0xFF);
+				buildPacket(requestPacket, payload);
+				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+				_packetIndex++;
+				if(responsePacket.size() >= 13  && responsePacket.at(6) == 7) break;
+				if(i == 2)
+				{
+					_out.printError("Error: Could not remove peer with address 0x" + _bl->hf.getHexString(address, 6));
+				}
+			}
 		}
 	}
     catch(const std::exception& ex)
@@ -344,12 +549,46 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			return;
 		}
 
-		int64_t currentTimeMilliseconds = BaseLib::HelperFunctions::getTime();
-		uint32_t currentTime = currentTimeMilliseconds & 0xFFFFFFFF;
-		std::string packetString = packet->hexString();
-		if(_bl->debugLevel >= 4) _out.printInfo("Info: Sending (" + _settings->id + "): " + packetString);
-		std::string hexString = "S" + BaseLib::HelperFunctions::getHexString(currentTime, 8) + ",00,00000000,01," + BaseLib::HelperFunctions::getHexString(currentTimeMilliseconds - _startUpTime, 8) + "," + packetString.substr(2) + "\r\n";
-		send(hexString, false);
+		if(!_initComplete)
+		{
+			_out.printWarning(std::string("Warning: !!!Not!!! sending packet, because init sequence is not complete: ") + bidCoSPacket->hexString());
+			return;
+		}
+
+		std::vector<char> packetBytes = bidCoSPacket->byteArraySigned();
+		if(_bl->debugLevel >= 4) _out.printInfo("Info: Sending (" + _settings->id + "): " + _bl->hf.getHexString(packetBytes));
+
+		for(int32_t j = 0; j < 3; j++)
+		{
+			std::vector<uint8_t> responsePacket;
+			std::vector<char> requestPacket;
+			std::vector<char> payload{ 1, 2, 0, 0 };
+			payload.insert(payload.end(), packetBytes.begin() + 1, packetBytes.end());
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
+			_packetIndex++;
+			if(responsePacket.size() >= 9  && responsePacket.at(6) != 4)
+			{
+				if(responsePacket.size() == 9)
+				{
+					_out.printDebug("Debug: Packet was sent successfully: " + _bl->hf.getHexString(packetBytes));
+					break;
+				}
+				parsePacket(responsePacket);
+				break;
+			}
+			else if(responsePacket.size() == 9  && responsePacket.at(6) == 4)
+			{
+				_out.printInfo("Info: No answer to packet " + _bl->hf.getHexString(packetBytes));
+				return;
+			}
+			if(j == 2)
+			{
+				_out.printInfo("Info: No response to packet " + _bl->hf.getHexString(packetBytes));
+				return;
+			}
+		}
+
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
@@ -564,10 +803,16 @@ void HM_LGW::doInit()
 		std::vector<char> response = { '>', _bl->hf.getHexChar(packetIndex >> 4), _bl->hf.getHexChar(packetIndex & 0xF), ',', '0', '0', '0', '0', '\r', '\n' };
 		send(response, false);
 
-		while(!_initCompleteKeepAlive && !_stopCallbackThread)
+		while(!_initCompleteKeepAlive && !_stopCallbackThread && !_stopped)
     	{
     		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     	}
+
+		//I think the gateway needs a moment here
+		std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+
+		//There are two paths depending if GW sends a "Co_CPU_BL" or not.
+		bool cpuBLPacket = false;
 
 		//1st packet
 		if(_stopped) return;
@@ -577,14 +822,62 @@ void HM_LGW::doInit()
 		buildPacket(requestPacket, payload);
 		_packetIndex++;
 		getResponse(requestPacket, responsePacket, 0, 0, 0);
+		if(responsePacket.size() == 17)
+		{
+			packetString.clear();
+			packetString.insert(packetString.end(), responsePacket.begin() + 6, responsePacket.end() - 2);
+			if(packetString == "Co_CPU_BL")
+			{
+				_out.printDebug("Debug: Co_CPU_BL packet received.");
+				cpuBLPacket = true;
+			}
+		}
+		else if(responsePacket.size() == 18)
+		{
+			packetString.clear();
+			packetString.insert(packetString.end(), responsePacket.begin() + 6, responsePacket.end() - 2);
+			if(packetString != "Co_CPU_App")
+			{
+				_out.printError("Error: Unknown packet received in response to init packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
+			else _out.printDebug("Debug: Co_CPU_App packet received.");
+		}
+		else
+		{
+			_out.printError("Error: Unknown packet received in response to init packet. Reconnecting...");
+			_stopped = true;
+			return;
+		}
 
 		//2nd packet
-		if(_stopped) return;
-		responsePacket.clear();
-		requestPacket.clear();
-		buildPacket(requestPacket, payload);
-		_packetIndex++;
-		getResponse(requestPacket, responsePacket, 0, 0, 0);
+		if(cpuBLPacket)
+		{
+			if(_stopped) return;
+			responsePacket.clear();
+			requestPacket.clear();
+			buildPacket(requestPacket, payload);
+			_packetIndex++;
+			getResponse(requestPacket, responsePacket, 0, 0, 0);
+			if(responsePacket.size() == 18)
+			{
+				packetString.clear();
+				packetString.insert(packetString.end(), responsePacket.begin() + 6, responsePacket.end() - 2);
+				if(packetString != "Co_CPU_App")
+				{
+					_out.printError("Error: Unknown packet received in response to init packet. Reconnecting...");
+					_stopped = true;
+					return;
+				}
+			}
+			else
+			{
+				_out.printError("Error: Unknown packet received in response to init packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
+		}
 
 		//3rd packet
 		if(_stopped) return;
@@ -598,7 +891,7 @@ void HM_LGW::doInit()
 		_packetIndex++;
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
@@ -616,27 +909,30 @@ void HM_LGW::doInit()
 		_packetIndex++;
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
 
 		//5th packet
-		if(_stopped) return;
-		responsePacket.clear();
-		requestPacket.clear();
-		payload.clear();
-		payload.push_back(0);
-		payload.push_back(0xA);
-		payload.push_back(0);
-		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
-		_packetIndex++;
-		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		if(cpuBLPacket)
 		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
-			_stopped = true;
-			return;
+			if(_stopped) return;
+			responsePacket.clear();
+			requestPacket.clear();
+			payload.clear();
+			payload.push_back(0);
+			payload.push_back(0xA);
+			payload.push_back(0);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+			_packetIndex++;
+			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+			{
+				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
 		}
 
 		//6th packet
@@ -652,45 +948,48 @@ void HM_LGW::doInit()
 		_packetIndex++;
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
 
 		//7th packet
-		if(_stopped) return;
-		responsePacket.clear();
-		requestPacket.clear();
-		payload.clear();
-		payload.push_back(0);
-		payload.push_back(9);
-		payload.push_back(0);
-		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
-		_packetIndex++;
-		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		if(cpuBLPacket)
 		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
-			_stopped = true;
-			return;
-		}
+			if(_stopped) return;
+			responsePacket.clear();
+			requestPacket.clear();
+			payload.clear();
+			payload.push_back(0);
+			payload.push_back(9);
+			payload.push_back(0);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+			_packetIndex++;
+			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+			{
+				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
 
-		//8th packet
-		if(_stopped) return;
-		responsePacket.clear();
-		requestPacket.clear();
-		payload.clear();
-		payload.push_back(0);
-		payload.push_back(0xA);
-		payload.push_back(0);
-		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
-		_packetIndex++;
-		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
-		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
-			_stopped = true;
-			return;
+			//8th packet
+			if(_stopped) return;
+			responsePacket.clear();
+			requestPacket.clear();
+			payload.clear();
+			payload.push_back(0);
+			payload.push_back(0xA);
+			payload.push_back(0);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+			_packetIndex++;
+			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+			{
+				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
 		}
 
 		//9th packet
@@ -714,27 +1013,30 @@ void HM_LGW::doInit()
 		_packetIndex++;
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
 
 		//10th packet
-		if(_stopped) return;
-		responsePacket.clear();
-		requestPacket.clear();
-		payload.clear();
-		payload.push_back(0);
-		payload.push_back(9);
-		payload.push_back(0);
-		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
-		_packetIndex++;
-		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+		if(cpuBLPacket)
 		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
-			_stopped = true;
-			return;
+			if(_stopped) return;
+			responsePacket.clear();
+			requestPacket.clear();
+			payload.clear();
+			payload.push_back(0);
+			payload.push_back(9);
+			payload.push_back(0);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+			_packetIndex++;
+			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+			{
+				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
 		}
 
 		//11th packet
@@ -759,7 +1061,7 @@ void HM_LGW::doInit()
 		_packetIndex++;
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
 		}
@@ -781,7 +1083,7 @@ void HM_LGW::doInit()
 			_packetIndex++;
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
-				_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 				_stopped = true;
 				return;
 			}
@@ -802,14 +1104,54 @@ void HM_LGW::doInit()
 		_packetIndex++;
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
-			_out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
 			_stopped = true;
 			return;
+		}
+
+		if(!cpuBLPacket)
+		{
+			//Packet with message counter 7
+			if(_stopped) return;
+			responsePacket.clear();
+			requestPacket.clear();
+			payload.clear();
+			payload.push_back(0);
+			payload.push_back(0xA);
+			payload.push_back(0);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+			_packetIndex++;
+			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+			{
+				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
+
+			//Packet with message counter 8
+			if(_stopped) return;
+			responsePacket.clear();
+			requestPacket.clear();
+			payload.clear();
+			payload.push_back(0);
+			payload.push_back(9);
+			payload.push_back(0);
+			buildPacket(requestPacket, payload);
+			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
+			_packetIndex++;
+			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
+			{
+				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
+				_stopped = true;
+				return;
+			}
 		}
 
 		_out.printInfo("Info: Init queue completed. Sending peers...");
 		if(_stopped) return;
 		sendPeers();
+		return;
 	}
     catch(const std::exception& ex)
     {
@@ -823,6 +1165,7 @@ void HM_LGW::doInit()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _stopped = true;
 }
 
 void HM_LGW::startListening()
@@ -1833,25 +2176,24 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 	try
 	{
 		if(packet.empty()) return;
-		if(packet.at(5) == 4)
+		if(packet.at(5) == 4 && packet.at(3) == 0 && packet.size() == 10 && packet.at(6) == 2 && packet.at(7) == 0)
 		{
-			if(packet.at(3) == 0 && packet.size() == 10 && packet.at(6) == 2 && packet.at(7) == 0)
-			{
-				if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received from HM-LGW on port " + _settings->port + ".");
-				_lastKeepAliveResponse1 = BaseLib::HelperFunctions::getTimeSeconds();
-			}
+			if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received from HM-LGW on port " + _settings->port + ".");
+			_lastKeepAliveResponse1 = BaseLib::HelperFunctions::getTimeSeconds();
 		}
-		else if(packet.at(5) == 5)
+		else if((packet.at(5) == 5 || packet.at(5) == 4) && packet.at(3) == 1 && packet.size() >= 20)
 		{
-			if(packet.at(3) == 1 && packet.size() >= 20)
-			{
-				std::vector<uint8_t> binaryPacket({(uint8_t)(packet.size() - 11)});
-				binaryPacket.insert(binaryPacket.end(), packet.begin() + 9, packet.end() - 2);
-				binaryPacket.push_back(packet.at(8));
-				std::shared_ptr<BidCoSPacket> bidCoSPacket(new BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
-				_lastPacketReceived = BaseLib::HelperFunctions::getTime();
-				raisePacketReceived(bidCoSPacket);
-			}
+			std::vector<uint8_t> binaryPacket({(uint8_t)(packet.size() - 11)});
+			binaryPacket.insert(binaryPacket.end(), packet.begin() + 9, packet.end() - 2);
+			int32_t rssi = packet.at(8); //Range should be from 0x0B to 0x8A. 0x0B is -11dBm 0x8A -138dBm.
+			rssi *= -1;
+			//Convert to TI CC1101 format
+			if(rssi <= -75) rssi = ((rssi + 74) * 2) + 256;
+			else rssi = (rssi + 74) * 2;
+			binaryPacket.push_back(rssi);
+			std::shared_ptr<BidCoSPacket> bidCoSPacket(new BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
+			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
+			raisePacketReceived(bidCoSPacket);
 		}
 	}
     catch(const std::exception& ex)

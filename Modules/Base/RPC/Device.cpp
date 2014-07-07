@@ -537,21 +537,11 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 			if(isEvent) return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(true));
 			else return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(false));
 		}
-		else if(id == "RSSI_DEVICE" || id == "RSSI_PEER")
+		else if(id == "RSSI_DEVICE")
 		{
-			//From CC1100 manual page 37:
-			//1) Read the RSSI status register
-			//2) Convert the reading from a hexadecimal
-			//number to a decimal number (RSSI_dec)
-			//3) If RSSI_dec ≥ 128 then RSSI_dBm =
-			//(RSSI_dec - 256)/2 – RSSI_offset
-			//4) Else if RSSI_dec < 128 then RSSI_dBm =
-			//(RSSI_dec)/2 – RSSI_offset
 			int32_t integerValue;
 			_bl->hf.memcpyBigEndian(integerValue, value);
-			std::shared_ptr<RPCVariable> variable(new RPCVariable(integerValue));
-			if(variable->integerValue >= 128) variable->integerValue = ((variable->integerValue - 256) / 2) - 74;
-			else variable->integerValue = (variable->integerValue / 2) - 74;
+			std::shared_ptr<RPCVariable> variable(new RPCVariable(integerValue * -1));
 			return variable;
 		}
 		else

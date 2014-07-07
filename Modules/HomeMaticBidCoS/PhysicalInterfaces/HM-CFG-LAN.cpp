@@ -298,6 +298,12 @@ void HM_CFG_LAN::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			return;
 		}
 
+		if(!_initComplete)
+		{
+			GD::out.printWarning(std::string("Warning: !!!Not!!! sending packet, because init sequence is not complete: ") + bidCoSPacket->hexString());
+			return;
+		}
+
 		int64_t currentTimeMilliseconds = BaseLib::HelperFunctions::getTime();
 		uint32_t currentTime = currentTimeMilliseconds & 0xFFFFFFFF;
 		std::string packetString = packet->hexString();
@@ -1026,7 +1032,11 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
         	{
 				std::vector<uint8_t> binaryPacket({ (uint8_t)(parts.at(5).size() / 2) });
 				_bl->hf.getUBinary(parts.at(5), parts.at(5).size() - 1, binaryPacket);
-				binaryPacket.push_back(BaseLib::HelperFunctions::getNumber(parts.at(4), true) - 65536);
+				int32_t rssi = BaseLib::HelperFunctions::getNumber(parts.at(4), true);
+				//Convert to TI CC1101 format
+				if(rssi <= -75) rssi = ((rssi + 74) * 2) + 256;
+				else rssi = (rssi + 74) * 2;
+				binaryPacket.push_back(rssi);
 
 				std::shared_ptr<BidCoSPacket> bidCoSPacket(new BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
 				if(packet.at(0) == 'E' && (statusByte & 1))

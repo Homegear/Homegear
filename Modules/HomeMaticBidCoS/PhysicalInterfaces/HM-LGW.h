@@ -85,9 +85,10 @@ class HM_LGW  : public IBidCoSInterface
 
         virtual void addPeer(PeerInfo peerInfo);
         virtual void addPeers(std::vector<PeerInfo>& peerInfos);
+        virtual void setWakeUp(PeerInfo peerInfo);
         virtual void removePeer(int32_t address);
         virtual void sendPeers();
-        virtual std::string getPeerInfoPacket(PeerInfo& peerInfo);
+        virtual void sendPeer(PeerInfo& peerInfo);
     protected:
         class Request
         {
