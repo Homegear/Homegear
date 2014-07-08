@@ -183,13 +183,13 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 		}
 		else _queueMutex.unlock();
 
+		_queueMutex.lock();
 		std::shared_ptr<BidCoSQueueData> queueData(new BidCoSQueueData(physicalInterface));
 		queueData->queue->setQueueType(queueType);
 		queueData->queue->device = device;
 		queueData->queue->lastAction = queueData->lastAction;
 		queueData->queue->id = _id++;
 		queueData->id = queueData->queue->id;
-		_queueMutex.lock();
 		_queues.insert(std::pair<int32_t, std::shared_ptr<BidCoSQueueData>>(address, queueData));
 		_queueMutex.unlock();
 		GD::out.printDebug("Creating SAVEPOINT BidCoSQueue" + std::to_string(address) + "_" + std::to_string(queueData->id));

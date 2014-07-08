@@ -139,7 +139,7 @@ std::string HM_CFG_LAN::getPeerInfoPacket(PeerInfo& peerInfo)
 	try
 	{
 		std::string packetHex = std::string("+") + BaseLib::HelperFunctions::getHexString(peerInfo.address, 6) + ",";
-		if(!peerInfo.aesChannels.empty())
+		if(peerInfo.aesEnabled)
 		{
 			packetHex += peerInfo.wakeUp ? "03," : "01,";
 			packetHex += BaseLib::HelperFunctions::getHexString(peerInfo.keyIndex, 2) + ",";

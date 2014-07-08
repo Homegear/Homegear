@@ -423,6 +423,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool
 {
 	try
 	{
+		if(_disposing) return;
 		BidCoSQueueEntry entry;
 		entry.setPacket(packet, true);
 		entry.stealthy = stealthy;
@@ -473,6 +474,7 @@ void BidCoSQueue::push(std::shared_ptr<PendingBidCoSQueues>& pendingQueues)
 {
 	try
 	{
+		if(_disposing) return;
 		_queueMutex.lock();
 		_pendingQueues = pendingQueues;
 		if(_queue.empty())
@@ -504,6 +506,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmedi
 {
 	try
 	{
+		if(_disposing) return;
 		if(!pendingQueue) return;
 		_queueMutex.lock();
 		if(!_pendingQueues) _pendingQueues.reset(new PendingBidCoSQueues());
@@ -537,6 +540,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 {
 	try
 	{
+		if(_disposing) return;
 		if(!message || !packet) return;
 		if(message->getDirection() != DIRECTIONOUT) GD::out.printWarning("Warning: Wrong push method used. Packet is not necessary for incoming messages");
 		BidCoSQueueEntry entry;
@@ -589,6 +593,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
 {
 	try
 	{
+		if(_disposing) return;
 		if(!message) return;
 		if(message->getDirection() == DIRECTIONOUT) GD::out.printCritical("Critical: Wrong push method used. Please provide the received packet for outgoing messages");
 		BidCoSQueueEntry entry;
@@ -640,6 +645,7 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
 {
 	try
 	{
+		if(_disposing) return;
 		keepAlive();
 		if(popBeforePushing)
 		{
@@ -723,6 +729,7 @@ void BidCoSQueue::popWait(uint32_t waitingTime)
 {
 	try
 	{
+		if(_disposing) return;
 		stopResendThread();
 		stopPopWaitThread();
 		_popWaitThread = std::thread(&BidCoSQueue::popWaitThread, this, _popWaitThreadId++, waitingTime);
@@ -892,6 +899,7 @@ void BidCoSQueue::sleepAndPushPendingQueue()
 {
 	try
 	{
+		if(_disposing) return;
 		std::this_thread::sleep_for(std::chrono::milliseconds(_physicalInterface->responseDelay()));
 		pushPendingQueue();
 	}
@@ -915,6 +923,11 @@ void BidCoSQueue::pushPendingQueue()
 	{
 		if(_disposing) return;
 		_queueMutex.lock();
+		if(_disposing)
+		{
+			_queueMutex.unlock();
+			return;
+		}
 		if(!_pendingQueues || _pendingQueues->empty())
 		{
 			_queueMutex.unlock();

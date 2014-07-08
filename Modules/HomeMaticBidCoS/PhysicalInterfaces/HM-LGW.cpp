@@ -84,7 +84,7 @@ uint16_t CRC16::calculate(const std::vector<uint8_t>& data, bool ignoreLastTwoBy
 HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
 	_out.init(GD::bl);
-	_out.setPrefix(_out.getPrefix() + settings->id + ": ");
+	_out.setPrefix(_out.getPrefix() + "HomeMatic LAN Gateway \"" + settings->id + "\": ");
 
 	signal(SIGPIPE, SIG_IGN);
 
@@ -98,7 +98,7 @@ HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> sett
 	}
 	if(settings->lanKey.empty())
 	{
-		_out.printError("Error: No security key specified for HM-LGW in physicalinterfaces.conf.");
+		_out.printError("Error: No security key specified in physicalinterfaces.conf.");
 		return;
 	}
 
@@ -263,7 +263,7 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 		for(int32_t i = 0; i < 2; i++) //The CCU sends this packet two times, I don't know why
 		{
 			//Get current config
-			for(int32_t j = 0; j < 3; j++)
+			for(int32_t j = 0; j < 40; j++)
 			{
 				std::vector<uint8_t> responsePacket;
 				std::vector<char> requestPacket;
@@ -275,9 +275,15 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 				payload.push_back(0);
 				payload.push_back(0);
 				buildPacket(requestPacket, payload);
-				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 				_packetIndex++;
+				getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 				if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+				else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+				{
+					//Operation pending
+					std::this_thread::sleep_for(std::chrono::milliseconds(50));
+					continue;
+				}
 				if(j == 2)
 				{
 					_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
@@ -285,42 +291,39 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 				}
 			}
 		}
-		//if(!peerInfo.aesChannels.empty())
-		//{
-			//Disable AES for all channels
-			for(int32_t j = 0; j < 3; j++)
-			{
-				std::vector<uint8_t> responsePacket;
-				std::vector<char> requestPacket;
-				std::vector<char> payload{ 1, 0xA };
-				payload.push_back(peerInfo.address >> 16);
-				payload.push_back((peerInfo.address >> 8) & 0xFF);
-				payload.push_back(peerInfo.address & 0xFF);
-				payload.push_back(0);
+		//Reset all channels
+		for(int32_t j = 0; j < 40; j++)
+		{
+			std::vector<uint8_t> responsePacket;
+			std::vector<char> requestPacket;
+			std::vector<char> payload{ 1, 0xA };
+			payload.push_back(peerInfo.address >> 16);
+			payload.push_back((peerInfo.address >> 8) & 0xFF);
+			payload.push_back(peerInfo.address & 0xFF);
+			payload.push_back(0);
 
-				//bool aesEnabled = false;
-				for(std::map<int32_t, bool>::iterator k = peerInfo.aesChannels.begin(); k != peerInfo.aesChannels.end(); ++k)
-				{
-					//if(k->second)
-					//{
-						//aesEnabled = true;
-						payload.push_back(k->first);
-					//}
-				}
-				//if(!aesEnabled) break;
-				buildPacket(requestPacket, payload);
-				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
-				_packetIndex++;
-				if(responsePacket.size() >= 9  && responsePacket.at(6) == 1) break;
-				if(j == 2)
-				{
-					_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
-					return;
-				}
+			for(std::map<int32_t, bool>::iterator k = peerInfo.aesChannels.begin(); k != peerInfo.aesChannels.end(); ++k)
+			{
+				payload.push_back(k->first);
 			}
-		//}
+			buildPacket(requestPacket, payload);
+			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
+			if(responsePacket.size() >= 9  && responsePacket.at(6) == 1) break;
+			else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+			{
+				//Operation pending
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				continue;
+			}
+			if(j == 2)
+			{
+				_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
+				return;
+			}
+		}
 		//Get current config again
-		for(int32_t j = 0; j < 3; j++)
+		for(int32_t j = 0; j < 40; j++)
 		{
 			std::vector<uint8_t> responsePacket;
 			std::vector<char> requestPacket;
@@ -332,9 +335,15 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 			payload.push_back(0);
 			payload.push_back(0);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 			if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+			else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+			{
+				//Operation pending
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				continue;
+			}
 			if(j == 2)
 			{
 				_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
@@ -344,7 +353,7 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 		if(peerInfo.wakeUp)
 		{
 			//Enable sending of wake up packet or just request config again?
-			for(int32_t j = 0; j < 3; j++)
+			for(int32_t j = 0; j < 40; j++)
 			{
 				std::vector<uint8_t> responsePacket;
 				std::vector<char> requestPacket;
@@ -356,9 +365,15 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 				payload.push_back(1);
 				payload.push_back(1);
 				buildPacket(requestPacket, payload);
-				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 				_packetIndex++;
+				getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 				if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+				else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+				{
+					//Operation pending
+					std::this_thread::sleep_for(std::chrono::milliseconds(50));
+					continue;
+				}
 				if(j == 2)
 				{
 					_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
@@ -367,7 +382,7 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 			}
 		}
 		//Set key index and enable sending of wake up packet.
-		for(int32_t j = 0; j < 3; j++)
+		for(int32_t j = 0; j < 40; j++)
 		{
 			std::vector<uint8_t> responsePacket;
 			std::vector<char> requestPacket;
@@ -379,9 +394,15 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 			payload.push_back((char)peerInfo.wakeUp);
 			payload.push_back((char)peerInfo.wakeUp);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 			if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+			else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+			{
+				//Operation pending
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				continue;
+			}
 			if(j == 2)
 			{
 				_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
@@ -389,10 +410,10 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 			}
 		}
 		//Enable AES
-		if(!peerInfo.aesChannels.empty())
+		if(peerInfo.aesEnabled)
 		{
 			//Delete old configuration
-			for(int32_t j = 0; j < 3; j++)
+			for(int32_t j = 0; j < 40; j++)
 			{
 				std::vector<uint8_t> responsePacket;
 				std::vector<char> requestPacket;
@@ -413,9 +434,15 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 				}
 				if(!aesEnabled) break;
 				buildPacket(requestPacket, payload);
-				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 				_packetIndex++;
+				getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 				if(responsePacket.size() >= 9  && responsePacket.at(6) == 1) break;
+				else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+				{
+					//Operation pending
+					std::this_thread::sleep_for(std::chrono::milliseconds(50));
+					continue;
+				}
 				if(j == 2)
 				{
 					_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
@@ -438,30 +465,55 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
     }
 }
 
-void HM_LGW::setAES(int32_t address, int32_t channel, bool enabled)
+void HM_LGW::setAES(PeerInfo peerInfo, int32_t channel)
 {
 	try
 	{
-		if(_stopped) return;
-		for(int32_t j = 0; j < 3; j++)
+		if(!_initComplete || _stopped) return;
+		try
+		{
+			_peersMutex.lock();
+			_peers[peerInfo.address] = peerInfo;
+		}
+		catch(const std::exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_peersMutex.unlock();
+		if(peerInfo.aesChannels.find(channel) == peerInfo.aesChannels.end()) return;
+		for(int32_t j = 0; j < 40; j++)
 		{
 			std::vector<uint8_t> responsePacket;
 			std::vector<char> requestPacket;
 			std::vector<char> payload{ 1 };
-			if(enabled) payload.push_back(9);
+			if(peerInfo.aesChannels.at(channel)) payload.push_back(9);
 			else payload.push_back(0xA);
-			payload.push_back(address >> 16);
-			payload.push_back((address >> 8) & 0xFF);
-			payload.push_back(address & 0xFF);
+			payload.push_back(peerInfo.address >> 16);
+			payload.push_back((peerInfo.address >> 8) & 0xFF);
+			payload.push_back(peerInfo.address & 0xFF);
 			payload.push_back(0);
 			payload.push_back(channel);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 			if(responsePacket.size() >= 9  && responsePacket.at(6) == 1) break;
+			else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+			{
+				//Operation pending
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				continue;
+			}
 			if(j == 2)
 			{
-				_out.printError("Error: Could not set AES for peer with address 0x" + _bl->hf.getHexString(address, 6));
+				_out.printError("Error: Could not set AES for peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
 				return;
 			}
 		}
@@ -484,8 +536,26 @@ void HM_LGW::setWakeUp(PeerInfo peerInfo)
 {
 	try
 	{
-		if(_stopped) return;
-		for(int32_t j = 0; j < 3; j++)
+		if(!_initComplete || _stopped) return;
+		try
+		{
+			_peersMutex.lock();
+			_peers[peerInfo.address] = peerInfo;
+		}
+		catch(const std::exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(BaseLib::Exception& ex)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+		}
+		catch(...)
+		{
+			_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+		}
+		_peersMutex.unlock();
+		for(int32_t j = 0; j < 40; j++)
 		{
 			std::vector<uint8_t> responsePacket;
 			std::vector<char> requestPacket;
@@ -497,13 +567,15 @@ void HM_LGW::setWakeUp(PeerInfo peerInfo)
 			payload.push_back((char)peerInfo.wakeUp);
 			payload.push_back((char)peerInfo.wakeUp);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 			_packetIndex++;
-			//Sometimes "0408" is returned, I don't know what that means.
-			//But it doesn't matter, the CCU sends this packet dozens of times
-			//so it's no problem to resend it. The correct response is returned
-			//after the first resend.
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 			if(responsePacket.size() >= 21  && responsePacket.at(6) == 7) break;
+			else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+			{
+				//Operation pending
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				continue;
+			}
 			if(j == 2)
 			{
 				_out.printError("Error: Could not add peer with address 0x" + _bl->hf.getHexString(peerInfo.address, 6));
@@ -542,8 +614,8 @@ void HM_LGW::removePeer(int32_t address)
 				payload.push_back((address >> 8) & 0xFF);
 				payload.push_back(address & 0xFF);
 				buildPacket(requestPacket, payload);
-				getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 				_packetIndex++;
+				getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 				if(responsePacket.size() >= 13  && responsePacket.at(6) == 7) break;
 				if(i == 2)
 				{
@@ -602,22 +674,28 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		std::vector<char> packetBytes = bidCoSPacket->byteArraySigned();
 		if(_bl->debugLevel >= 4) _out.printInfo("Info: Sending (" + _settings->id + "): " + _bl->hf.getHexString(packetBytes));
 
-		for(int32_t j = 0; j < 3; j++)
+		for(int32_t j = 0; j < 40; j++)
 		{
 			std::vector<uint8_t> responsePacket;
 			std::vector<char> requestPacket;
 			std::vector<char> payload{ 1, 2, 0, 0 };
 			payload.insert(payload.end(), packetBytes.begin() + 1, packetBytes.end());
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 			if(responsePacket.size() == 9  && responsePacket.at(6) == 8)
 			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
 				//Resend
 				continue;
 			}
 			else if(responsePacket.size() >= 9  && responsePacket.at(6) != 4)
 			{
+				if(responsePacket.at(6) == 0x0D)
+				{
+					_out.printWarning("Warning: AES handshake failed for packet: " + _bl->hf.getHexString(packetBytes));
+					return;
+				}
 				if(responsePacket.size() == 9)
 				{
 					_out.printDebug("Debug: Packet was sent successfully: " + _bl->hf.getHexString(packetBytes));
@@ -808,14 +886,14 @@ void HM_LGW::doInit()
 		int32_t i = 0;
 		while(!GD::family->getCentral() && i < 30)
 		{
-			_out.printDebug("Debug: HM-LGW: Waiting for central to load.");
+			_out.printDebug("Debug: Waiting for central to load.");
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			i++;
 		}
 		if(!GD::family->getCentral())
 		{
 			_stopCallbackThread = true;
-			_out.printError("Error: Could not get central address for HM-LGW. Stopping listening.");
+			_out.printError("Error: Could not get central address. Stopping listening.");
 			return;
 		}
 
@@ -845,7 +923,7 @@ void HM_LGW::doInit()
 		if(parts.size() != 2 || parts.at(0).size() != 3 || parts.at(0).at(0) != 'S' || parts.at(1).size() < 15 || parts.at(1).compare(0, 15, "BidCoS-over-LAN") != 0)
 		{
 			_stopped = true;
-			_out.printError("Error: First packet from HM-LGW does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
+			_out.printError("Error: First packet does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
 			return;
 		}
 		uint8_t packetIndex = (_bl->hf.getNumber(parts.at(0).at(1)) << 4) + _bl->hf.getNumber(parts.at(0).at(2));
@@ -858,7 +936,7 @@ void HM_LGW::doInit()
     	}
 
 		//I think the gateway needs a moment here
-		std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 		//There are two paths depending if GW sends a "Co_CPU_BL" or not.
 		bool cpuBLPacket = false;
@@ -903,28 +981,54 @@ void HM_LGW::doInit()
 		//2nd packet
 		if(cpuBLPacket)
 		{
-			if(_stopped) return;
-			responsePacket.clear();
-			requestPacket.clear();
-			buildPacket(requestPacket, payload);
-			_packetIndex++;
-			getResponse(requestPacket, responsePacket, 0, 0, 0);
-			if(responsePacket.size() == 18)
+			for(int32_t i = 0; i < 3; i++)
 			{
-				packetString.clear();
-				packetString.insert(packetString.end(), responsePacket.begin() + 6, responsePacket.end() - 2);
-				if(packetString != "Co_CPU_App")
+				std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+				if(_stopped) return;
+				responsePacket.clear();
+				requestPacket.clear();
+				buildPacket(requestPacket, payload);
+				_packetIndex++;
+				getResponse(requestPacket, responsePacket, 0, 0, 0);
+				if(responsePacket.size() == 18)
+				{
+					packetString.clear();
+					packetString.insert(packetString.end(), responsePacket.begin() + 6, responsePacket.end() - 2);
+					if(packetString == "Co_CPU_App")
+					{
+						_out.printDebug("Debug: Co_CPU_App packet received.");
+						break;
+					}
+					else
+					{
+						_out.printError("Error: Unknown packet received in response to init packet. Reconnecting...");
+						_stopped = true;
+						return;
+					}
+				}
+				else if(responsePacket.size() == 17)
+				{
+					packetString.clear();
+					packetString.insert(packetString.end(), responsePacket.begin() + 6, responsePacket.end() - 2);
+					if(packetString == "Co_CPU_BL")
+					{
+						_out.printDebug("Debug: Co_CPU_BL packet received a second time.");
+						cpuBLPacket = true;
+						continue;
+					}
+					else
+					{
+						_out.printError("Error: Unknown packet received in response to init packet. Reconnecting...");
+						_stopped = true;
+						return;
+					}
+				}
+				else
 				{
 					_out.printError("Error: Unknown packet received in response to init packet. Reconnecting...");
 					_stopped = true;
 					return;
 				}
-			}
-			else
-			{
-				_out.printError("Error: Unknown packet received in response to init packet. Reconnecting...");
-				_stopped = true;
-				return;
 			}
 		}
 
@@ -936,8 +1040,8 @@ void HM_LGW::doInit()
 		payload.push_back(0);
 		payload.push_back(2);
 		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 		_packetIndex++;
+		getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
 			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -954,8 +1058,8 @@ void HM_LGW::doInit()
 		payload.push_back(0xA);
 		payload.push_back(0);
 		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 		_packetIndex++;
+		getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
 			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -974,8 +1078,8 @@ void HM_LGW::doInit()
 			payload.push_back(0xA);
 			payload.push_back(0);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
 				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -993,8 +1097,8 @@ void HM_LGW::doInit()
 		payload.push_back(9);
 		payload.push_back(0);
 		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 		_packetIndex++;
+		getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
 			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1013,8 +1117,8 @@ void HM_LGW::doInit()
 			payload.push_back(9);
 			payload.push_back(0);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
 				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1031,8 +1135,8 @@ void HM_LGW::doInit()
 			payload.push_back(0xA);
 			payload.push_back(0);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
 				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1058,8 +1162,8 @@ void HM_LGW::doInit()
 		payload.push_back(time & 0xFF);
 		payload.push_back(localTime->tm_gmtoff / 1800);
 		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 		_packetIndex++;
+		getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
 			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1078,8 +1182,8 @@ void HM_LGW::doInit()
 			payload.push_back(9);
 			payload.push_back(0);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
 				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1106,8 +1210,8 @@ void HM_LGW::doInit()
 			payload.push_back(_settings->currentRFKeyIndex);
 		}
 		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 		_packetIndex++;
+		getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
 			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1128,8 +1232,8 @@ void HM_LGW::doInit()
 			payload.insert(payload.end(), rfKey.begin(), rfKey.end());
 			payload.push_back(_settings->currentRFKeyIndex - 1);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
 				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1149,8 +1253,8 @@ void HM_LGW::doInit()
 		payload.push_back((_myAddress >> 8) & 0xFF);
 		payload.push_back(_myAddress & 0xFF);
 		buildPacket(requestPacket, payload);
-		getResponse(requestPacket, responsePacket, _packetIndex, 1, 4);
 		_packetIndex++;
+		getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
 		if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 		{
 			if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1169,8 +1273,8 @@ void HM_LGW::doInit()
 			payload.push_back(0xA);
 			payload.push_back(0);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
 				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1187,8 +1291,8 @@ void HM_LGW::doInit()
 			payload.push_back(9);
 			payload.push_back(0);
 			buildPacket(requestPacket, payload);
-			getResponse(requestPacket, responsePacket, _packetIndex, 0, 4);
 			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
 			if(responsePacket.size() < 9 || responsePacket.at(6) == 4)
 			{
 				if(!responsePacket.size() < 9) _out.printError("Error: NACK received in response to init sequence packet. Reconnecting...");
@@ -1227,7 +1331,7 @@ void HM_LGW::startListening()
 		_socket->setReadTimeout(1000000);
 		_socketKeepAlive = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->portKeepAlive, _settings->ssl, _settings->verifyCertificate));
 		_socketKeepAlive->setReadTimeout(1000000);
-		_out.printDebug("Connecting to HM-LGW with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_out.printDebug("Connecting to HM-LGW with hostname " + _settings->host + " on port " + _settings->port + "...");
 		_stopped = false;
 		_listenThread = std::thread(&HM_LGW::listen, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
@@ -1265,10 +1369,10 @@ void HM_LGW::reconnect()
 		_initComplete = false;
 		_initCompleteKeepAlive = false;
 		_firstPacket = true;
-		_out.printDebug("Connecting to HM-LGW device with Hostname " + _settings->host + " on port " + _settings->port + "...");
+		_out.printDebug("Connecting to HM-LGW with hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket->open();
 		_socketKeepAlive->open();
-		_out.printInfo("Connected to HM-LGW device with Hostname " + _settings->host + " on port " + _settings->port + ".");
+		_out.printInfo("Connected to HM-LGW with hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_initThread = std::thread(&HM_LGW::doInit, this);
 		BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), 45);
@@ -1592,7 +1696,7 @@ void HM_LGW::listen()
         	{
         		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         		if(_stopCallbackThread) return;
-        		_out.printWarning("Warning: Connection to HM-LGW closed. Trying to reconnect...");
+        		_out.printWarning("Warning: Connection closed. Trying to reconnect...");
         		reconnect();
         		continue;
         	}
@@ -1640,7 +1744,7 @@ void HM_LGW::listen()
 
         	if(_bl->debugLevel >= 6)
         	{
-        		_out.printDebug("Debug: Packet received from HM-LGW on port " + _settings->port + ". Raw data:");
+        		_out.printDebug("Debug: Packet received on port " + _settings->port + ". Raw data:");
         		_out.printBinary(data);
         	}
 
@@ -1727,7 +1831,7 @@ void HM_LGW::listenKeepAlive()
 
         	if(_bl->debugLevel >= 6)
         	{
-        		_out.printDebug("Debug: Packet received from HM-LGW on port " + _settings->portKeepAlive + ". Raw data:");
+        		_out.printDebug("Debug: Packet received on port " + _settings->portKeepAlive + ". Raw data:");
         		_out.printBinary(data);
         	}
 
@@ -1753,6 +1857,12 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 	try
 	{
 		std::string hex(&data.at(0), &data.at(0) + data.size());
+		if(_bl->debugLevel >= 5)
+		{
+			std::string temp = hex;
+			_bl->hf.stringReplace(temp, "\r\n", "\\r\\n");
+			_out.printDebug(std::string("Debug: AES key exchange packet received on port " + _settings->port + ": " + temp));
+		}
 		int32_t startPos = hex.find('\n');
 		if(startPos == std::string::npos)
 		{
@@ -1791,11 +1901,7 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 				_out.printError("Error: Error communicating with HM-LGW. Received IV is not in hexadecimal format.");
 				return false;
 			}
-			if(_bl->debugLevel >= 5)
-			{
-				_out.printDebug("HM-LGW IV is: ");
-				_out.printBinary(_remoteIV);
-			}
+			if(_bl->debugLevel >= 5) _out.printDebug("HM-LGW IV is: " + _bl->hf.getHexString(_remoteIV));
 
 			if(EVP_EncryptInit_ex(_ctxEncrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_remoteIV.at(0)) != 1)
 			{
@@ -1824,11 +1930,7 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 			response.push_back(0x0D);
 			response.push_back(0x0A);
 
-			if(_bl->debugLevel >= 5)
-			{
-				_out.printDebug("Homegear IV is: ");
-				_out.printBinary(_myIV);
-			}
+			if(_bl->debugLevel >= 5) _out.printDebug("Homegear IV is: " + _bl->hf.getHexString(_myIV));
 
 			if(EVP_DecryptInit_ex(_ctxDecrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_myIV.at(0)) != 1)
 			{
@@ -1868,6 +1970,12 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 	try
 	{
 		std::string hex(&data.at(0), &data.at(0) + data.size());
+		if(_bl->debugLevel >= 5)
+		{
+			std::string temp = hex;
+			_bl->hf.stringReplace(temp, "\r\n", "\\r\\n");
+			_out.printDebug(std::string("Debug: AES key exchange packet received on port " + _settings->portKeepAlive + ": " + temp));
+		}
 		int32_t startPos = hex.find('\n');
 		if(startPos == std::string::npos)
 		{
@@ -1906,11 +2014,7 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 				_out.printError("Error: Error communicating with HM-LGW. Received IV is not in hexadecimal format.");
 				return false;
 			}
-			if(_bl->debugLevel >= 5)
-			{
-				_out.printDebug("HM-LGW IV for keep alive packets is: ");
-				_out.printBinary(_remoteIVKeepAlive);
-			}
+			if(_bl->debugLevel >= 5) _out.printDebug("HM-LGW IV for keep alive packets is: " + _bl->hf.getHexString(_remoteIVKeepAlive));
 
 			if(EVP_EncryptInit_ex(_ctxEncryptKeepAlive, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_remoteIVKeepAlive.at(0)) != 1)
 			{
@@ -1939,11 +2043,7 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 			response.push_back(0x0D);
 			response.push_back(0x0A);
 
-			if(_bl->debugLevel >= 5)
-			{
-				_out.printDebug("Homegear IV for keep alive packets is: ");
-				_out.printBinary(_myIVKeepAlive);
-			}
+			if(_bl->debugLevel >= 5) _out.printDebug("Homegear IV for keep alive packets is: " + _bl->hf.getHexString(_myIVKeepAlive));
 
 			if(EVP_DecryptInit_ex(_ctxDecryptKeepAlive, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_myIVKeepAlive.at(0)) != 1)
 			{
@@ -2071,6 +2171,14 @@ void HM_LGW::processPacket(std::vector<uint8_t>& packet)
 					request->mutex.unlock();
 					return;
 				}
+				//E. g.: FD0004000004001938
+				else if(packet.size() == 9 && packet.at(6) == 0 && packet.at(5) == 4 && packet.at(3) == 0)
+				{
+					_out.printError("Error: Something is wrong with your HM-LGW. You probably need to replace it. Check if it works with a CCU.");
+					request->response = packet;
+					request->mutex.unlock();
+					return;
+				}
 			}
 			else _requestsMutex.unlock();
 			if(_initComplete) parsePacket(packet);
@@ -2104,11 +2212,18 @@ void HM_LGW::processData(std::vector<uint8_t>& data)
 		std::vector<uint8_t> decryptedData = decrypt(data);
 		if(decryptedData.size() < 8) //8 is minimum size fd
 		{
-			_out.printWarning("Warning: Too small packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(decryptedData));
+			_out.printWarning("Warning: Too small packet received on port " + _settings->port + ": " + _bl->hf.getHexString(decryptedData));
 			return;
 		}
 		if(!_initComplete && _packetIndex == 0 && decryptedData.at(0) == 'S')
 		{
+			std::string packetString(&decryptedData.at(0), &decryptedData.at(0) + decryptedData.size());
+			if(_bl->debugLevel >= 5)
+			{
+				std::string temp = packetString;
+				_bl->hf.stringReplace(temp, "\r\n", "\\r\\n");
+				_out.printDebug(std::string("Debug: Packet received on port " + _settings->port + ": " + temp));
+			}
 			_requestsMutex.lock();
 			if(_requests.find(0) != _requests.end())
 			{
@@ -2176,6 +2291,7 @@ void HM_LGW::processDataKeepAlive(std::vector<uint8_t>& data)
 		std::string packet;
 		while(std::getline(stringStream, packet))
 		{
+			if(_bl->debugLevel >= 5) _out.printDebug(std::string("Debug: Packet received on port " + _settings->portKeepAlive + ": " + packet));
 			if(_initCompleteKeepAlive) parsePacketKeepAlive(packet); else processInitKeepAlive(packet);
 		}
 	}
@@ -2197,11 +2313,12 @@ void HM_LGW::processInitKeepAlive(std::string& packet)
 {
 	try
 	{
+		if(packet.empty()) return;
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packet, ',');
 		if(parts.size() != 2 || parts.at(0).size() != 3 || parts.at(0).at(0) != 'S' || parts.at(1).size() < 6 || parts.at(1).compare(0, 6, "SysCom") != 0)
 		{
 			_stopCallbackThread = true;
-			_out.printError("Error: First packet from HM-LGW does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
+			_out.printError("Error: First packet does not start with \"S\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
 			return;
 		}
 
@@ -2235,10 +2352,10 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 		if(packet.empty()) return;
 		if(packet.at(5) == 4 && packet.at(3) == 0 && packet.size() == 10 && packet.at(6) == 2 && packet.at(7) == 0)
 		{
-			if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received from HM-LGW on port " + _settings->port + ".");
+			if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received on port " + _settings->port + ".");
 			_lastKeepAliveResponse1 = BaseLib::HelperFunctions::getTimeSeconds();
 		}
-		else if((packet.at(5) == 5 || packet.at(5) == 4) && packet.at(3) == 1 && packet.size() >= 20)
+		else if((packet.at(5) == 5 || (packet.at(5) == 4 && packet.at(6) != 7)) && packet.at(3) == 1 && packet.size() >= 20)
 		{
 			std::vector<uint8_t> binaryPacket({(uint8_t)(packet.size() - 11)});
 			binaryPacket.insert(binaryPacket.end(), packet.begin() + 9, packet.end() - 2);
@@ -2249,9 +2366,19 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 			else rssi = (rssi + 74) * 2;
 			binaryPacket.push_back(rssi);
 			std::shared_ptr<BidCoSPacket> bidCoSPacket(new BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
+			//Don't use (packet.at(6) & 1) here. That bit is set for non-AES packets, too
+			if(packet.at(5) == 5 && ((packet.at(6) & 3) == 3 || (packet.at(6) & 5) == 5))
+			{
+				_out.printWarning("Warning: AES handshake failed for packet: " + _bl->hf.getHexString(binaryPacket));
+				return;
+			}
+			else if(_bl->debugLevel >= 5 && packet.at(5) == 5 && (packet.at(6) & 3) == 2)
+			{
+				_out.printDebug("Debug: AES handshake was successful for packet: " + _bl->hf.getHexString(binaryPacket));
+			}
 			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
 			raisePacketReceived(bidCoSPacket);
-			if(packet.at(6) & 0x10) //Wake up was sent
+			if(packet.at(5) == 5 && (packet.at(6) & 0x10)) //Wake up was sent
 			{
 				std::vector<uint8_t> payload;
 				payload.push_back(0x00);
@@ -2281,10 +2408,9 @@ void HM_LGW::parsePacketKeepAlive(std::string& packet)
 	try
 	{
 		if(packet.empty()) return;
-		if(_bl->debugLevel >= 5) _out.printDebug(std::string("Debug: Packet received from HM-LGW on port " + _settings->portKeepAlive + ": " + packet));
 		if(packet.at(0) == '>'  && (packet.at(1) == 'K' || packet.at(1) == 'L') && packet.size() == 5)
 		{
-			if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received from HM-LGW on port " + _settings->portKeepAlive + ".");
+			if(_bl->debugLevel >= 5) _out.printDebug("Debug: Keep alive response received on port " + _settings->portKeepAlive + ".");
 			std::string index = packet.substr(2, 2);
 			if(_bl->hf.getNumber(index, true) == _packetIndexKeepAlive)
 			{

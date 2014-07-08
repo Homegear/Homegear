@@ -107,10 +107,10 @@ void BidCoSPeer::initializeCentralConfig()
 						if((*j)->id == "AES_ACTIVE" && !_physicalInterface->aesSupported())
 						{
 							parameter.data.push_back(0);
-						}
-						else
-						{
-							parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+						//}
+						//else
+						//{
+							//parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 						}
 						configCentral[i->first][(*j)->id] = parameter;
 						saveParameter(0, BaseLib::RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
@@ -287,12 +287,12 @@ void BidCoSPeer::setPhysicalInterfaceID(std::string id)
 	if(id.empty() || (GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id)))
 	{
 		_physicalInterfaceID = id;
-		if(_physicalInterface->needsPeers()) _physicalInterface->removePeer(_address);
+		if(peerInfoPacketsEnabled && _physicalInterface->needsPeers()) _physicalInterface->removePeer(_address);
 		_physicalInterface = id.empty() ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(_physicalInterfaceID);
 		std::shared_ptr<HomeMaticDevice> virtualDevice = getHiddenPeerDevice();
 		if(virtualDevice) virtualDevice->setPhysicalInterfaceID(id);
 		saveVariable(19, _physicalInterfaceID);
-		if(_physicalInterface->needsPeers()) _physicalInterface->addPeer(getPeerInfo());
+		if(peerInfoPacketsEnabled && _physicalInterface->needsPeers()) _physicalInterface->addPeer(getPeerInfo());
 	}
 }
 
@@ -1555,20 +1555,22 @@ IBidCoSInterface::PeerInfo BidCoSPeer::getPeerInfo()
 		{
 			peerInfo.wakeUp = true;
 		}
-		if(_physicalInterface->aesSupported() && aesEnabled())
+		peerInfo.aesEnabled = pendingBidCoSQueues->find(BidCoSQueueType::SETAESKEY) ? false : aesEnabled();
+		peerInfo.keyIndex = _aesKeyIndex;
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
-			peerInfo.keyIndex = _aesKeyIndex;
-			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
+			if(i->first == 0) continue;
+			if(!i->second || !peerInfo.aesEnabled)
 			{
-				if(!i->second) continue;
-				if(configCentral.find(i->first) == configCentral.end() || configCentral.at(i->first).find("AES_ACTIVE") == configCentral.at(i->first).end())
-				{
-					peerInfo.aesChannels[i->first] = i->second->aesDefault;
-				}
-				else
-				{
-					peerInfo.aesChannels[i->first] = (bool)configCentral.at(i->first).at("AES_ACTIVE").data.at(0);
-				}
+				peerInfo.aesChannels[i->first] = false;
+			}
+			else if(configCentral.find(i->first) == configCentral.end() || configCentral.at(i->first).find("AES_ACTIVE") == configCentral.at(i->first).end() || configCentral.at(i->first).at("AES_ACTIVE").data.empty())
+			{
+				peerInfo.aesChannels[i->first] = i->second->aesDefault;
+			}
+			else
+			{
+				peerInfo.aesChannels[i->first] = (bool)configCentral.at(i->first).at("AES_ACTIVE").data.at(0);
 			}
 		}
 		return peerInfo;
@@ -1599,7 +1601,7 @@ void BidCoSPeer::onConfigPending(bool configPending)
 			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && _physicalInterface->autoResend())
 			{
 				GD::out.printDebug("Debug: Setting physical device's wake up flag.");
-				_physicalInterface->setWakeUp(getPeerInfo());
+				if(peerInfoPacketsEnabled) _physicalInterface->setWakeUp(getPeerInfo());
 			}
 		}
 		else
@@ -1607,7 +1609,7 @@ void BidCoSPeer::onConfigPending(bool configPending)
 			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && _physicalInterface->autoResend())
 			{
 				GD::out.printDebug("Debug: Removing physical device's wake up flag.");
-				_physicalInterface->setWakeUp(getPeerInfo());
+				if(peerInfoPacketsEnabled) _physicalInterface->setWakeUp(getPeerInfo());
 			}
 		}
 	}
@@ -2276,9 +2278,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 							GD::out.printWarning("Warning: Tried to set AES_ACTIVE on peer " + std::to_string(_peerID) + ", but AES is not supported by peer's physical interface.");
 							continue;
 						}
-						if(!aesEnabled()) aesActivated = true;
+						if(!aesEnabled())
+						{
+							GD::out.printDebug("Debug: AES is enabled now for peer " + std::to_string(_peerID) + ".");
+							aesActivated = true;
+						}
 					}
-					_physicalInterface->setAES(_address, channel, i->second->booleanValue);
 				}
 				value = parameter->rpcParameter->convertToPacket(i->second);
 				std::vector<uint8_t> shiftedValue = value;
@@ -2299,6 +2304,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 				}
 				parameter->data = value;
 				saveParameter(parameter->databaseID, parameter->data);
+				if(peerInfoPacketsEnabled && i->first == "AES_ACTIVE" && !aesActivated) _physicalInterface->setAES(getPeerInfo(), channel);
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
 				//Only send to device when parameter is of type config
 				if(parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::config && parameter->rpcParameter->physicalParameter->interface != BaseLib::RPC::PhysicalParameter::Interface::Enum::configString) continue;
@@ -2377,7 +2383,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			}
 
 			pendingBidCoSQueues->push(queue);
-			if(aesActivated) checkAESKey();
+			if(aesActivated) checkAESKey(onlyPushing);
 			serviceMessages->setConfigPending(true);
 			//if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
 			//{
@@ -2748,9 +2754,21 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setInterface(std::string 
 		{
 			return BaseLib::RPC::RPCVariable::createError(-5, "Unknown physical interface.");
 		}
-		if(aesEnabled() && !GD::physicalInterfaces.at(interfaceID)->aesSupported())
+		std::shared_ptr<IBidCoSInterface> interface(GD::physicalInterfaces.at(interfaceID));
+		if(aesEnabled())
 		{
-			return BaseLib::RPC::RPCVariable::createError(-100, "Can't set physical interface, because AES is enabled for this peer and the new physical interface doesn't support AES. Please disable AES first.");
+			if(!interface->aesSupported())
+			{
+				return BaseLib::RPC::RPCVariable::createError(-100, "Can't set physical interface, because AES is enabled for this peer and the new physical interface doesn't support AES. Please disable AES first.");
+			}
+			else if(_aesKeyIndex != _physicalInterface->currentRFKeyIndex())
+			{
+				return BaseLib::RPC::RPCVariable::createError(-101, "Can't set physical interface, because the peer's AES key needs to be updated to the current one first. Please make sure, there are no pending configuration packets, before executing this method.");
+			}
+			else if(interface->rfKey() != _physicalInterface->rfKey())
+			{
+				return BaseLib::RPC::RPCVariable::createError(-102, "Can't set physical interface, because the AES keys of the old and the new interface don't match. You need to disable AES first.");
+			}
 		}
 		setPhysicalInterfaceID(interfaceID);
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));

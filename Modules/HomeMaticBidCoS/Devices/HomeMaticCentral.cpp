@@ -2655,6 +2655,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 			else queue->pop(); //Otherwise the queue might persist forever. NACKS shouldn't be received when not pairing
 			return;
 		}
+		bool aesKeyChanged = false;
 		if(queue->getQueueType() == BidCoSQueueType::PAIRING)
 		{
 			if(sentPacket && sentPacket->messageType() == 0x01 && sentPacket->payload()->at(0) == 0x00 && sentPacket->payload()->at(1) == 0x06)
@@ -2694,9 +2695,11 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 					{
 						if(queue->peer->getPhysicalInterface()->aesSupported() && i->second->aesDefault)
 						{
+							queue->peer->peerInfoPacketsEnabled = false;
 							std::shared_ptr<BaseLib::RPC::RPCVariable> variables(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
 							variables->structValue->insert(BaseLib::RPC::RPCStructElement("AES_ACTIVE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(true))));
 							queue->peer->putParamset(i->first, BaseLib::RPC::ParameterSet::Type::master, 0, -1, variables, true);
+							queue->peer->peerInfoPacketsEnabled = true;
 						}
 						if(i->second->hasTeam)
 						{
@@ -2743,7 +2746,6 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 							break;
 						}
 					}
-					queue->peer->checkAESKey(true);
 				}
 			}
 		}
@@ -2763,10 +2765,15 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 				GD::out.printInfo("Info: Successfully changed AES key of peer " + std::to_string(peer->getID()) + ".");
 				peer->setAESKeySendIndex(peer->getAESKeyIndex() + 2);
 				peer->setAESKeyIndex(peer->getPhysicalInterface()->getCurrentRFKeyIndex());
-				peer->getPhysicalInterface()->addPeer(peer->getPeerInfo());
+				aesKeyChanged = true;
 			}
 		}
 		queue->pop(); //Messages are not popped by default.
+		if(aesKeyChanged)
+		{
+			std::shared_ptr<BidCoSPeer> peer = getPeer(packet->senderAddress());
+			peer->getPhysicalInterface()->addPeer(peer->getPeerInfo());
+		}
 
 		if(queue->isEmpty())
 		{

@@ -63,7 +63,7 @@ std::vector<char> IBidCoSInterface::PeerInfo::getAESChannelMap()
 
 IBidCoSInterface::IBidCoSInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, settings)
 {
-
+	_bl->hf.toLower(settings->rfKey);
 }
 
 IBidCoSInterface::~IBidCoSInterface()
@@ -71,4 +71,4 @@ IBidCoSInterface::~IBidCoSInterface()
 
 }
 
-} /* namespace BidCoS */
+}

@@ -86,7 +86,7 @@ class HM_LGW  : public IBidCoSInterface
         virtual void addPeer(PeerInfo peerInfo);
         virtual void addPeers(std::vector<PeerInfo>& peerInfos);
         virtual void setWakeUp(PeerInfo peerInfo);
-        virtual void setAES(int32_t address, int32_t channel, bool enabled);
+        virtual void setAES(PeerInfo peerInfo, int32_t channel);
         virtual void removePeer(int32_t address);
         virtual void sendPeers();
         virtual void sendPeer(PeerInfo& peerInfo);

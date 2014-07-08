@@ -44,6 +44,7 @@ public:
 		virtual ~PeerInfo() {}
 		std::vector<char> getAESChannelMap();
 
+		bool aesEnabled = false;
 		bool wakeUp = 0;
 		int32_t address = 0;
 		int32_t keyIndex = 0;
@@ -57,12 +58,14 @@ public:
 	virtual void addPeers(std::vector<PeerInfo>& peerInfos) {}
 	virtual void setWakeUp(PeerInfo peerInfo) {}
 	virtual void removePeer(int32_t address) {}
-	virtual void setAES(int32_t address, int32_t channel, bool enabled) {}
+	virtual void setAES(PeerInfo peerInfo, int32_t channel) {}
 
 	virtual bool aesSupported() { return false; }
 	virtual bool autoResend() { return false; }
 	virtual bool needsPeers() { return false; }
 	virtual bool firmwareUpdatesSupported() { return true; }
+	virtual uint32_t currentRFKeyIndex() { return _settings->currentRFKeyIndex; }
+	virtual std::string rfKey() { return _settings->rfKey; }
 
 	virtual uint32_t getCurrentRFKeyIndex() { return _settings->currentRFKeyIndex; }
 };

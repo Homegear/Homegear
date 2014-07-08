@@ -456,6 +456,9 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
 			_bl->out.printError("Error copying file " + source + ": " + strerror(errno));
 			return;
 		}
+
+		unlink(dest.c_str());
+
 		int out_fd = open(dest.c_str(), O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP);
 		if(out_fd == -1)
 		{

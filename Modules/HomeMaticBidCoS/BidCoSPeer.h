@@ -126,10 +126,9 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         void setCentralFeatures(bool value) { _centralFeatures = value; }
 
         std::unordered_map<int32_t, int32_t> config;
-
         std::vector<std::pair<std::string, uint32_t>> teamChannels;
-
         std::shared_ptr<PendingBidCoSQueues> pendingBidCoSQueues;
+        bool peerInfoPacketsEnabled = true;
 
         void worker();
         virtual std::string handleCLICommand(std::string command);
