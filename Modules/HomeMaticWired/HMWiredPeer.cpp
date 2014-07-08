@@ -2177,7 +2177,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 		if((rpcParameter->operations & BaseLib::RPC::Parameter::Operations::read) || (rpcParameter->operations & BaseLib::RPC::Parameter::Operations::event))
 		{
 			valueKeys->push_back(valueKey);
-			values->push_back(values);
+			values->push_back(value);
 		}
 		if(rpcParameter->physicalParameter->interface == BaseLib::RPC::PhysicalParameter::Interface::Enum::store)
 		{

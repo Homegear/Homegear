@@ -144,7 +144,7 @@ solution "homegear"
       files { "./Modules/MAX/LogicalDevices/*.h", "./Modules/MAX/LogicalDevices/*.cpp" }
       files { "./Modules/MAX/PhysicalInterfaces/*.h", "./Modules/MAX/PhysicalInterfaces/*.cpp" }
       linkoptions { "-l pthread", "-l base" }
-	   
+      
       configuration "Debug"
          defines { "DEBUG" }
          flags { "Symbols" }
