@@ -81,7 +81,7 @@ class HM_LGW  : public IBidCoSInterface
         virtual bool aesSupported() { return true; }
         virtual bool autoResend() { return true; }
         virtual bool needsPeers() { return true; }
-        virtual bool firmwareUpdatesSupported() { return false; }
+        virtual bool firmwareUpdatesSupported() { return true; }
 
         virtual void addPeer(PeerInfo peerInfo);
         virtual void addPeers(std::vector<PeerInfo>& peerInfos);
@@ -90,6 +90,8 @@ class HM_LGW  : public IBidCoSInterface
         virtual void removePeer(int32_t address);
         virtual void sendPeers();
         virtual void sendPeer(PeerInfo& peerInfo);
+        void enableUpdateMode();
+        void disableUpdateMode();
     protected:
         class Request
         {

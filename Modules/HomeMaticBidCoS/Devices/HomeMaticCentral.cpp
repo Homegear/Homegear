@@ -1176,14 +1176,16 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			{
 				std::vector<uint8_t> payload({0xCA});
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(_messageCounter[0]++, 0x30, 0x11, _address, peer->getAddress(), payload, true));
-				physicalInterface->sendPacket(packet);
 				int64_t time = BaseLib::HelperFunctions::getTime();
+				physicalInterface->sendPacket(packet);
 				waitIndex = 0;
-				while(waitIndex < 50) //Wait, wait, wait. The WOR preamble alone needs 360ms with the CUL!
+				while(waitIndex < 100) //Wait, wait, wait. The WOR preamble alone needs 360ms with the CUL! And AES handshakes need time, too.
 				{
 					receivedPacket = _receivedPackets.get(peer->getAddress());
-					if(receivedPacket && receivedPacket->timeReceived() > time && receivedPacket->payload()->size() == 1 && receivedPacket->payload()->at(0) == 0 && receivedPacket->destinationAddress() == _address && receivedPacket->controlByte() == 0x80 && receivedPacket->messageType() == 2)
+					if(receivedPacket) GD::out.printError("Moin: " + receivedPacket->hexString() + " " + std::to_string(receivedPacket->timeReceived()) + " " + std::to_string(time));
+					if(receivedPacket && receivedPacket->timeReceived() > time && receivedPacket->payload()->size() >= 1 && receivedPacket->payload()->at(0) == 0 && receivedPacket->destinationAddress() == _address && receivedPacket->controlByte() == 0x80 && receivedPacket->messageType() == 2)
 					{
+						GD::out.printInfo("Info: Enter bootloader packet was accepted by peer.");
 						responseReceived = true;
 						break;
 					}

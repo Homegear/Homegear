@@ -185,6 +185,100 @@ HM_LGW::~HM_LGW()
     }
 }
 
+void HM_LGW::enableUpdateMode()
+{
+	try
+	{
+		if(!_initComplete || _stopped) return;
+		_updateMode = true;
+		for(int32_t j = 0; j < 40; j++)
+		{
+			std::vector<uint8_t> responsePacket;
+			std::vector<char> requestPacket;
+			std::vector<char> payload{ 0, 7 };
+			payload.push_back(0xE9);
+			payload.push_back(0xCA);
+			buildPacket(requestPacket, payload);
+			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
+			if(responsePacket.size() >= 9  && responsePacket.at(6) == 1)
+			{
+				_out.printInfo("Info: Update mode enabled.");
+				break;
+			}
+			else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+			{
+				//Operation pending
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				continue;
+			}
+			if(j == 2)
+			{
+				_out.printError("Error: Could not enable update mode.");
+				return;
+			}
+		}
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void HM_LGW::disableUpdateMode()
+{
+	try
+	{
+		if(!_initComplete || _stopped) return;
+		for(int32_t j = 0; j < 40; j++)
+		{
+			std::vector<uint8_t> responsePacket;
+			std::vector<char> requestPacket;
+			std::vector<char> payload{ 0, 6 };
+			buildPacket(requestPacket, payload);
+			_packetIndex++;
+			getResponse(requestPacket, responsePacket, _packetIndex - 1, 0, 4);
+			if(responsePacket.size() >= 9  && responsePacket.at(6) == 1)
+			{
+				_out.printInfo("Info: Update mode disabled.");
+				break;
+			}
+			else if(responsePacket.size() == 9 && responsePacket.at(6) == 8)
+			{
+				//Operation pending
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				continue;
+			}
+			if(j == 2)
+			{
+				_out.printError("Error: Could not enable update mode.");
+				return;
+			}
+		}
+		_updateMode = false;
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HM_LGW::addPeer(PeerInfo peerInfo)
 {
 	try
@@ -1343,6 +1437,8 @@ void HM_LGW::doInit()
 		_out.printInfo("Info: Init queue completed. Sending peers...");
 		if(_stopped) return;
 		sendPeers();
+		if(_stopped) return;
+		disableUpdateMode();
 		return;
 	}
     catch(const std::exception& ex)
