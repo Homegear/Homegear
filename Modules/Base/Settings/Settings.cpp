@@ -48,6 +48,7 @@ void Settings::reset()
 	_keyPath = "/etc/homegear/homegear.key";
 	_dhParamPath = "/etc/homegear/dh2048.pem";
 	_debugLevel = 3;
+	_devLog = false;
 	_databasePath = _bl->executablePath + "db.sql";
 	_databaseSynchronous = false;
 	_databaseMemoryJournal = true;
@@ -137,6 +138,11 @@ void Settings::load(std::string filename)
 					if(_debugLevel < 0) _debugLevel = 3;
 					_bl->debugLevel = _debugLevel;
 					_bl->out.printDebug("Debug: debugLevel set to " + std::to_string(_debugLevel));
+				}
+				else if(name == "devlog")
+				{
+					if(HelperFunctions::toLower(value) == "true") _devLog = true;
+					_bl->out.printDebug("Debug: devLog set to " + std::to_string(_devLog));
 				}
 				else if(name == "databasepath")
 				{

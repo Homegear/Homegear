@@ -179,6 +179,7 @@ class HM_LGW  : public IBidCoSInterface
         void sendKeepAlivePacket1();
         void sendKeepAlivePacket2();
         void sendTimePacket();
+        void dutyCycleTest(int32_t destinationAddress);
         void listen();
         void listenKeepAlive();
         void getFileDescriptor(bool& timedout);

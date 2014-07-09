@@ -55,6 +55,11 @@ HM_CFG_LAN::HM_CFG_LAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettin
 		GD::out.printInfo("Info: Disabling AES encryption for communication with HM-CFG-LAN.");
 	}
 
+	if(settings->rfKey.empty())
+	{
+		GD::out.printError("Error: No RF AES key specified in physicalinterfaces.conf on your HM-CFG-LAN for communication with your BidCoS devices.");
+	}
+
 	if(!settings->rfKey.empty())
 	{
 		_rfKey = _bl->hf.getUBinary(settings->rfKey);
@@ -401,6 +406,11 @@ void HM_CFG_LAN::startListening()
 	try
 	{
 		stopListening();
+		if(_rfKey.empty())
+		{
+			GD::out.printError("Error: Cannot start listening , because rfKey is not specified for HM-CFG-LAN.");
+			return;
+		}
 		if(_useAES) openSSLInit();
 		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
 		GD::out.printDebug("Connecting to HM-CFG-LAN with Hostname " + _settings->host + " on port " + _settings->port + "...");

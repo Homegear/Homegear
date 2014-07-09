@@ -380,9 +380,14 @@ void BidCoSPeer::worker()
 			variablesToReset.clear();
 		}
 		if(rpcDevice) serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
-		if(serviceMessages->getConfigPending() && (!pendingBidCoSQueues || pendingBidCoSQueues->empty()))
+		if(serviceMessages->getConfigPending())
 		{
-			serviceMessages->setConfigPending(false);
+			if(!pendingBidCoSQueues || pendingBidCoSQueues->empty()) serviceMessages->setConfigPending(false);
+			else if(_bl->settings.devLog() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && (_bl->hf.getTime() - serviceMessages->getConfigPendingSetTime()) > 360000)
+			{
+				GD::out.printWarning("Devlog warning: Configuration for peer with id " + std::to_string(_peerID) + " supporting wake up is pending since more than 6 minutes.");
+				serviceMessages->resetConfigPendingSetTime();
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -1412,7 +1417,7 @@ void BidCoSPeer::checkAESKey(bool onlyPushing)
 		bool firstPacket = true;
 
 		payload.push_back(1);
-		payload.push_back(_aesKeySendIndex);
+		payload.push_back(_aesKeyIndex * 2);
 		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter, 0xA0, 0x04, central->getAddress(), _address, payload));
 		queue->push(configPacket);
 		queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
@@ -1420,7 +1425,7 @@ void BidCoSPeer::checkAESKey(bool onlyPushing)
 		setMessageCounter(_messageCounter + 1);
 
 		payload.push_back(1);
-		payload.push_back(_aesKeySendIndex + 1);
+		payload.push_back((_aesKeyIndex * 2) + 1);
 		configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter, 0xA0, 0x04, central->getAddress(), _address, payload));
 		queue->push(configPacket);
 		queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
@@ -1555,7 +1560,7 @@ IBidCoSInterface::PeerInfo BidCoSPeer::getPeerInfo()
 		{
 			peerInfo.wakeUp = true;
 		}
-		peerInfo.aesEnabled = pendingBidCoSQueues->find(BidCoSQueueType::SETAESKEY) ? false : aesEnabled();
+		peerInfo.aesEnabled = (pendingBidCoSQueues->find(BidCoSQueueType::SETAESKEY) && _aesKeyIndex == 0) ? false : aesEnabled();
 		peerInfo.keyIndex = _aesKeyIndex;
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
@@ -2768,6 +2773,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setInterface(std::string 
 			else if(interface->rfKey() != _physicalInterface->rfKey())
 			{
 				return BaseLib::RPC::RPCVariable::createError(-102, "Can't set physical interface, because the AES keys of the old and the new interface don't match. You need to disable AES first.");
+			}
+			else if(interface->currentRFKeyIndex() != _physicalInterface->currentRFKeyIndex())
+			{
+				return BaseLib::RPC::RPCVariable::createError(-103, "Can't set physical interface, because the AES key indexes of the old and new interface don't match. You need to disable AES first.");
 			}
 		}
 		setPhysicalInterfaceID(interfaceID);

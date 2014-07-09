@@ -52,6 +52,7 @@ public:
 	bool loadDHParamsFromFile() { return _loadDHParamsFromFile; }
 	std::string dhParamPath() { return _dhParamPath;  }
 	int32_t debugLevel() { return _debugLevel; }
+	bool devLog() { return _devLog; }
 	std::string databasePath() { return _databasePath; }
 	bool databaseSynchronous() { return _databaseSynchronous; }
 	bool databaseMemoryJournal() { return _databaseMemoryJournal; }
@@ -76,6 +77,7 @@ private:
 	bool _loadDHParamsFromFile = true;
 	std::string _dhParamPath;
 	int32_t _debugLevel = 3;
+	bool _devLog = false;
 	std::string _databasePath;
 	bool _databaseSynchronous = false;
 	bool _databaseMemoryJournal = true;

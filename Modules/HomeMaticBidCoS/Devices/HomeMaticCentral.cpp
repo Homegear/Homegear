@@ -2763,7 +2763,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 			if(peer && queue->getQueue()->size() < 2)
 			{
 				GD::out.printInfo("Info: Successfully changed AES key of peer " + std::to_string(peer->getID()) + ".");
-				peer->setAESKeySendIndex(peer->getAESKeyIndex() + 2);
+				peer->setAESKeySendIndex(peer->getAESKeySendIndex() + 2);
 				peer->setAESKeyIndex(peer->getPhysicalInterface()->getCurrentRFKeyIndex());
 				aesKeyChanged = true;
 			}

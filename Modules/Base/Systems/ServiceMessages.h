@@ -84,6 +84,8 @@ public:
 
 	virtual void setConfigPending(bool value);
 	virtual bool getConfigPending() { return _configPending; }
+	virtual void resetConfigPendingSetTime();
+	virtual int64_t getConfigPendingSetTime() { return _configPendingSetTime; }
 
 	virtual void setUnreach(bool value);
 	virtual bool getUnreach() { return _unreach; }
@@ -96,6 +98,7 @@ protected:
     std::string _peerSerial;
     bool _disposing = false;
     bool _configPending = false;
+    int64_t _configPendingSetTime = 0;
     int32_t _unreachResendCounter = 0;
     bool _unreach = false;
 	bool _stickyUnreach = false;

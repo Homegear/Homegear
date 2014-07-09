@@ -102,6 +102,11 @@ HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> sett
 		return;
 	}
 
+	if(settings->rfKey.empty())
+	{
+		_out.printError("Error: No RF AES key specified in physicalinterfaces.conf for communication with your BidCoS devices.");
+	}
+
 	if(!settings->rfKey.empty())
 	{
 		_rfKey = _bl->hf.getUBinary(settings->rfKey);
@@ -254,6 +259,22 @@ void HM_LGW::sendPeers()
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _peersMutex.unlock();
+
+    //There is no duty cycle => tested with version 1.1.3
+    /*std::thread t1(&HM_LGW::dutyCycleTest, this, 0x123456);
+	BaseLib::Threads::setThreadPriority(_bl, t1.native_handle(), 45);
+	t1.detach();*/
+}
+
+void HM_LGW::dutyCycleTest(int32_t destinationAddress)
+{
+	for(int32_t i = 0; i < 1000000; i++)
+    {
+    	std::vector<uint8_t> payload { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF };
+		std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(i, 0x80, 0x10, _myAddress, destinationAddress, payload));
+		sendPacket(packet);
+		usleep(10000);
+    }
 }
 
 void HM_LGW::sendPeer(PeerInfo& peerInfo)
@@ -691,10 +712,24 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			}
 			else if(responsePacket.size() >= 9  && responsePacket.at(6) != 4)
 			{
+				//I assume byte 7 with i. e. 0x02 is the message type
 				if(responsePacket.at(6) == 0x0D)
 				{
+					//0x0D is returned, when there is no response to the A003 packet and if the 8002
+					//packet doesn't match
+					//Example: FD000501BC040D025E14
 					_out.printWarning("Warning: AES handshake failed for packet: " + _bl->hf.getHexString(packetBytes));
 					return;
+				}
+				else if(responsePacket.at(6) == 0x03)
+				{
+					//Example: FD001001B3040302391A8002282BE6FD26EF00C54D
+					_out.printDebug("Debug: Packet was sent successfully: " + _bl->hf.getHexString(packetBytes));
+				}
+				else if(responsePacket.at(6) == 0x0C)
+				{
+					//Example: FD00140168040C0228128002282BE6FD26EF00938ABE1C163D
+					_out.printDebug("Debug: Packet was sent successfully and AES handshake was successful: " + _bl->hf.getHexString(packetBytes));
 				}
 				if(responsePacket.size() == 9)
 				{
@@ -706,12 +741,16 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			}
 			else if(responsePacket.size() == 9  && responsePacket.at(6) == 4)
 			{
+				//The gateway tries to send the packet three times, when there is no response
+				//NACK (0404) is returned
+				//NACK is sometimes also returned when the AES handshake wasn't successful (i. e.
+				//the handshake after sending a wake up packet)
 				_out.printInfo("Info: No answer to packet " + _bl->hf.getHexString(packetBytes));
 				return;
 			}
 			if(j == 2)
 			{
-				_out.printInfo("Info: No response to packet " + _bl->hf.getHexString(packetBytes));
+				_out.printInfo("Info: No response from HM-LGW to packet " + _bl->hf.getHexString(packetBytes));
 				return;
 			}
 		}
@@ -1326,6 +1365,11 @@ void HM_LGW::startListening()
 	try
 	{
 		stopListening();
+		if(_rfKey.empty())
+		{
+			_out.printError("Error: Cannot start listening, because rfKey is not specified.");
+			return;
+		}
 		openSSLInit();
 		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
 		_socket->setReadTimeout(1000000);
@@ -2145,6 +2189,7 @@ void HM_LGW::processPacket(std::vector<uint8_t>& packet)
 	try
 	{
 		_out.printDebug(std::string("Debug: Packet received from HM-LGW on port " + _settings->port + ": " + _bl->hf.getHexString(packet)));
+		if(packet.size() < 8) return;
 		uint16_t crc = _crc.calculate(packet, true);
 		if((packet.at(packet.size() - 2) != (crc >> 8) || packet.at(packet.size() - 1) != (crc & 0xFF)))
 		{

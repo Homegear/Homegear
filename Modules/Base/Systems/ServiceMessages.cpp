@@ -41,6 +41,7 @@ ServiceMessages::ServiceMessages(BaseLib::Obj* baseLib, uint64_t peerID, std::st
 	_peerID = peerID;
 	_peerSerial = peerSerial;
 	setEventHandler(eventHandler);
+	_configPendingSetTime = _bl->hf.getTime();
 }
 
 ServiceMessages::~ServiceMessages()
@@ -261,6 +262,7 @@ bool ServiceMessages::set(std::string id, bool value)
 		{
 			_configPending = value;
 			save(2, value);
+			if(_configPending) _configPendingSetTime = _bl->hf.getTime();
 		}
 		else if((id == "LOWBAT") && value != _lowbat)
 		{
@@ -513,6 +515,26 @@ void ServiceMessages::endUnreach()
     }
 }
 
+void ServiceMessages::resetConfigPendingSetTime()
+{
+	try
+	{
+		_configPendingSetTime = _bl->hf.getTime();
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void ServiceMessages::setConfigPending(bool value)
 {
 	try
@@ -521,6 +543,7 @@ void ServiceMessages::setConfigPending(bool value)
 		{
 			_configPending = value;
 			save(2, value);
+			if(_configPending) _configPendingSetTime = _bl->hf.getTime();
 			std::vector<uint8_t> data = { (uint8_t)value };
 			raiseSaveParameter("CONFIG_PENDING", 0, data);
 
