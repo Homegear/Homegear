@@ -84,7 +84,7 @@ uint16_t CRC16::calculate(const std::vector<uint8_t>& data, bool ignoreLastTwoBy
 HM_LGW::HM_LGW(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
 	_out.init(GD::bl);
-	_out.setPrefix(_out.getPrefix() + "HomeMatic LAN Gateway \"" + settings->id + "\": ");
+	_out.setPrefix(GD::out.getPrefix() + "LAN Gateway \"" + settings->id + "\": ");
 
 	signal(SIGPIPE, SIG_IGN);
 
@@ -780,13 +780,18 @@ void HM_LGW::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			return;
 		}
 
+		std::vector<char> packetBytes = bidCoSPacket->byteArraySigned();
+		if(bidCoSPacket->senderAddress() != _myAddress)
+		{
+			_out.printError("Error: Can't send packet, because sender address is not mine: " + _bl->hf.getHexString(packetBytes));
+			return;
+		}
 		if(!_initComplete)
 		{
-			_out.printWarning(std::string("Warning: !!!Not!!! sending packet, because init sequence is not complete: ") + bidCoSPacket->hexString());
+			_out.printWarning(std::string("Warning: !!!Not!!! sending packet, because init sequence is not complete: ") + _bl->hf.getHexString(packetBytes));
 			return;
 		}
 
-		std::vector<char> packetBytes = bidCoSPacket->byteArraySigned();
 		if(_bl->debugLevel >= 4) _out.printInfo("Info: Sending (" + _settings->id + "): " + _bl->hf.getHexString(packetBytes));
 
 		for(int32_t j = 0; j < 40; j++)
@@ -1830,6 +1835,7 @@ void HM_LGW::listen()
 		_lastKeepAlive1 = BaseLib::HelperFunctions::getTimeSeconds();
 		_lastKeepAliveResponse1 = _lastKeepAlive1;
 
+		std::vector<uint8_t> data;
         while(!_stopCallbackThread)
         {
         	if(_stopped)
@@ -1840,7 +1846,6 @@ void HM_LGW::listen()
         		reconnect();
         		continue;
         	}
-        	std::vector<uint8_t> data;
 			try
 			{
 				do
@@ -1880,7 +1885,17 @@ void HM_LGW::listen()
 				std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 				continue;
 			}
-			if(data.empty() || data.size() > 1000000) continue;
+			if(data.size() == 1 && data.at(0) == 0xFD)
+			{
+				//Happens sometimes. The rest of the packet comes with the next read.
+				continue;
+			}
+			if(data.empty()) continue;
+			if(data.size() > 1000000)
+			{
+				data.clear();
+				continue;
+			}
 
         	if(_bl->debugLevel >= 6)
         	{
@@ -1889,6 +1904,7 @@ void HM_LGW::listen()
         	}
 
         	processData(data);
+        	data.clear();
 
         	_lastPacketReceived = BaseLib::HelperFunctions::getTime();
         }

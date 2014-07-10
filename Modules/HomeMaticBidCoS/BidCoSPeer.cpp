@@ -288,12 +288,33 @@ void BidCoSPeer::setPhysicalInterfaceID(std::string id)
 	{
 		_physicalInterfaceID = id;
 		if(peerInfoPacketsEnabled && _physicalInterface->needsPeers()) _physicalInterface->removePeer(_address);
-		_physicalInterface = id.empty() ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(_physicalInterfaceID);
+		setPhysicalInterface(id.empty() ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(_physicalInterfaceID));
 		std::shared_ptr<HomeMaticDevice> virtualDevice = getHiddenPeerDevice();
 		if(virtualDevice) virtualDevice->setPhysicalInterfaceID(id);
 		saveVariable(19, _physicalInterfaceID);
 		if(peerInfoPacketsEnabled && _physicalInterface->needsPeers()) _physicalInterface->addPeer(getPeerInfo());
 	}
+}
+
+void BidCoSPeer::setPhysicalInterface(std::shared_ptr<IBidCoSInterface> interface)
+{
+	try
+	{
+		if(!interface) return;
+		_physicalInterface = interface;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, parentID, centralFeatures, eventHandler)
@@ -305,7 +326,7 @@ BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* 
 		{
 			pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 		}
-		_physicalInterface = GD::defaultPhysicalInterface;
+		setPhysicalInterface(GD::defaultPhysicalInterface);
 	}
 	catch(const std::exception& ex)
     {
@@ -323,7 +344,7 @@ BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* 
 
 BidCoSPeer::BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
-	_physicalInterface = GD::defaultPhysicalInterface;
+	setPhysicalInterface(GD::defaultPhysicalInterface);
 }
 
 void BidCoSPeer::worker()
@@ -1084,10 +1105,9 @@ void BidCoSPeer::saveVariables()
 		saveNonCentralConfig(); //13
 		saveVariablesToReset(); //14
 		savePendingQueues(); //16
-		if(_aesKeyIndex > 0 || _aesKeySendIndex > 0)
+		if(_aesKeyIndex > 0)
 		{
 			saveVariable(17, _aesKeyIndex);
-			saveVariable(18, _aesKeySendIndex);
 		}
 		saveVariable(19, _physicalInterfaceID);
 	}
@@ -1286,12 +1306,9 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 			case 17:
 				_aesKeyIndex = row->second.at(3)->intValue;
 				break;
-			case 18:
-				_aesKeySendIndex = row->second.at(3)->intValue;
-				break;
 			case 19:
 				_physicalInterfaceID = row->second.at(4)->textValue;
-				if(!_physicalInterfaceID.empty() && GD::physicalInterfaces.find(_physicalInterfaceID) != GD::physicalInterfaces.end()) _physicalInterface = GD::physicalInterfaces.at(_physicalInterfaceID);
+				if(!_physicalInterfaceID.empty() && GD::physicalInterfaces.find(_physicalInterfaceID) != GD::physicalInterfaces.end()) setPhysicalInterface(GD::physicalInterfaces.at(_physicalInterfaceID));
 				break;
 			}
 		}

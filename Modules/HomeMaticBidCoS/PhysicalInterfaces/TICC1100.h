@@ -208,6 +208,7 @@ protected:
 	struct spi_ioc_transfer _transfer;
 	std::timed_mutex _txMutex;
 	bool _sending = false;
+	bool _sendingPending = false;
 
 	void setupDevice();
 	void openDevice();

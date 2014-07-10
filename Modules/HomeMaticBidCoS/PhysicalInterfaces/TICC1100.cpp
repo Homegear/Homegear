@@ -39,6 +39,9 @@ TICC1100::TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> 
 {
 	try
 	{
+		_out.init(GD::bl);
+		_out.setPrefix(GD::out.getPrefix() + "TI CC110X \"" + settings->id + "\": ");
+
 		_transfer =  { (uint64_t)0, (uint64_t)0, (uint32_t)0, (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
 
 		_config = //Read from HM-CC-VD
@@ -88,15 +91,15 @@ TICC1100::TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> 
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -111,15 +114,15 @@ TICC1100::~TICC1100()
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -148,15 +151,15 @@ void TICC1100::enableUpdateMode()
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _txMutex.unlock();
 }
@@ -215,15 +218,15 @@ void TICC1100::disableUpdateMode()
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -239,7 +242,7 @@ void TICC1100::openDevice()
 		{
 			if(errno != EEXIST)
 			{
-				GD::out.printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				_out.printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 
@@ -248,26 +251,26 @@ void TICC1100::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				GD::out.printCritical("Rf device is in use: " + _settings->device);
+				_out.printCritical("Rf device is in use: " + _settings->device);
 				return;
 			}
 			unlink(_lockfile.c_str());
 			lockfileDescriptor = open(_lockfile.c_str(), O_WRONLY | O_EXCL | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 			if(lockfileDescriptor == -1)
 			{
-				GD::out.printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
+				_out.printCritical("Couldn't create lockfile " + _lockfile + ": " + strerror(errno));
 				return;
 			}
 		}
 		dprintf(lockfileDescriptor, "%10i", getpid());
 		close(lockfileDescriptor);
 
-		_fileDescriptor = _bl->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR));
+		_fileDescriptor = _bl->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NONBLOCK));
 		usleep(1000);
 
 		if(_fileDescriptor->descriptor == -1)
 		{
-			GD::out.printCritical("Couldn't open CRC rf device \"" + _settings->device + "\": " + strerror(errno));
+			_out.printCritical("Couldn't open rf device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 
@@ -275,15 +278,15 @@ void TICC1100::openDevice()
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -296,15 +299,15 @@ void TICC1100::closeDevice()
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -312,28 +315,28 @@ void TICC1100::setup(int32_t userID, int32_t groupID)
 {
 	try
 	{
-		GD::out.printDebug("Debug: CC1100: Setting device permissions");
+		_out.printDebug("Debug: CC1100: Setting device permissions");
 		setDevicePermission(userID, groupID);
-		GD::out.printDebug("Debug: CC1100: Exporting GPIO");
+		_out.printDebug("Debug: CC1100: Exporting GPIO");
 		exportGPIO(1);
-		GD::out.printDebug("Debug: CC1100: Setting GPIO permissions");
+		_out.printDebug("Debug: CC1100: Setting GPIO permissions");
 		setGPIOPermission(1, userID, groupID, true);
-		GD::out.printDebug("Debug: CC1100: Setting GPIO direction");
+		_out.printDebug("Debug: CC1100: Setting GPIO direction");
 		setGPIODirection(1, GPIODirection::IN);
-		GD::out.printDebug("Debug: CC1100: Settings GPIO edge");
+		_out.printDebug("Debug: CC1100: Settings GPIO edge");
 		setGPIOEdge(1, GPIOEdge::BOTH);
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -358,15 +361,15 @@ void TICC1100::setupDevice()
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -376,13 +379,13 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 	{
 		if(!packet)
 		{
-			GD::out.printWarning("Warning: Packet was nullptr.");
+			_out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
 		if(_fileDescriptor->descriptor == -1 || _gpioDescriptors[1]->descriptor == -1 || _stopped) return;
 		if(packet->payload()->size() > 54)
 		{
-			GD::out.printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
+			_out.printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
 			return;
 		}
 		if(_updateMode)
@@ -391,7 +394,7 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			if(!bidCoSPacket) return;
 			if(!bidCoSPacket->isUpdatePacket())
 			{
-				GD::out.printInfo("Info: Can't send packet to BidCoS peer with address 0x" + BaseLib::HelperFunctions::getHexString(packet->destinationAddress(), 6) + ", because update mode is enabled.");
+				_out.printInfo("Info: Can't send packet to BidCoS peer with address 0x" + BaseLib::HelperFunctions::getHexString(packet->destinationAddress(), 6) + ", because update mode is enabled.");
 				return;
 			}
 		}
@@ -409,7 +412,9 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		}
 		encodedPacket[i] = decodedPacket[i] ^ decodedPacket[2];
 
+		_sendingPending = true;
 		_txMutex.lock();
+		_sendingPending = false;
 		if(_stopCallbackThread || _fileDescriptor->descriptor == -1 || _gpioDescriptors[1]->descriptor == -1 || _stopped)
 		{
 			_txMutex.unlock();
@@ -429,7 +434,7 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 				//std::this_thread::sleep_for(std::chrono::milliseconds(2));
 				//waitIndex++;
 			//}
-			//if(waitIndex == 200) GD::out.printError("Error sending BidCoS packet. No CCA within 400ms.");
+			//if(waitIndex == 200) _out.printError("Error sending BidCoS packet. No CCA within 400ms.");
 			usleep(360000);
 		}
 		writeRegisters(Registers::Enum::FIFO, encodedPacket);
@@ -445,7 +450,7 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			//}
 			//if(waitIndex == 200)
 			//{
-				//GD::out.printError("Error sending BidCoS packet. No CCA within 400ms.");
+				//_out.printError("Error sending BidCoS packet. No CCA within 400ms.");
 				//sendCommandStrobe(CommandStrobes::Enum::SFTX);
 			//}
 		}
@@ -454,11 +459,11 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		{
 			if(packet->timeSending() > 0)
 			{
-				GD::out.printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString() + " Planned sending time: " + BaseLib::HelperFunctions::getTimeString(packet->timeSending()));
+				_out.printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString() + " Planned sending time: " + BaseLib::HelperFunctions::getTimeString(packet->timeSending()));
 			}
 			else
 			{
-				GD::out.printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString());
+				_out.printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString());
 			}
 		}
 
@@ -466,15 +471,15 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -495,7 +500,7 @@ void TICC1100::readwrite(std::vector<uint8_t>& data)
 			}
 			std::cout << std::dec << std::endl;
 		}
-		if(!ioctl(_fileDescriptor->descriptor, SPI_IOC_MESSAGE(1), &_transfer)) throw(BaseLib::Exception("Couldn't write to device " + _settings->device));
+		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_MESSAGE(1), &_transfer) == -1) throw(BaseLib::Exception("Couldn't write to device " + _settings->device + ": " + std::string(strerror(errno))));
 		if(_bl->debugLevel >= 6)
 		{
 			std::cout << BaseLib::HelperFunctions::getTimeString() << " Received: " << std::hex << std::setfill('0');
@@ -510,17 +515,17 @@ void TICC1100::readwrite(std::vector<uint8_t>& data)
 	catch(const std::exception& ex)
     {
 		_sendMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_sendMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_sendMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -534,15 +539,15 @@ bool TICC1100::checkStatus(uint8_t statusByte, Status::Enum status)
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -565,15 +570,15 @@ uint8_t TICC1100::readRegister(Registers::Enum registerAddress)
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
@@ -598,15 +603,15 @@ std::vector<uint8_t> TICC1100::readRegisters(Registers::Enum startAddress, uint8
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::vector<uint8_t>();
 }
@@ -631,15 +636,15 @@ uint8_t TICC1100::writeRegister(Registers::Enum registerAddress, uint8_t value, 
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
@@ -656,15 +661,15 @@ void TICC1100::writeRegisters(Registers::Enum startAddress, std::vector<uint8_t>
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -685,15 +690,15 @@ uint8_t TICC1100::sendCommandStrobe(CommandStrobes::Enum commandStrobe)
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return 0;
 }
@@ -709,15 +714,15 @@ void TICC1100::enableRX(bool flushRXFIFO)
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _txMutex.unlock();
 }
@@ -728,7 +733,7 @@ void TICC1100::initChip()
 	{
 		if(_fileDescriptor->descriptor == -1)
 		{
-			GD::out.printError("Error: Could not initialize TI CC1100. The spi device's file descriptor is not valid.");
+			_out.printError("Error: Could not initialize TI CC1100. The spi device's file descriptor is not valid.");
 			return;
 		}
 		reset();
@@ -751,15 +756,15 @@ void TICC1100::initChip()
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -774,15 +779,15 @@ void TICC1100::reset()
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -796,15 +801,15 @@ bool TICC1100::crcOK()
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -832,15 +837,15 @@ void TICC1100::startListening()
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -860,15 +865,15 @@ void TICC1100::stopListening()
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -884,15 +889,15 @@ void TICC1100::endSending()
 	}
 	catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -920,7 +925,7 @@ void TICC1100::mainThread()
 			pollResult = poll(&pollstruct, 1, 100);
 			/*if(pollstruct.revents & POLLERR)
 			{
-				GD::out.printWarning("Warning: Error polling GPIO. Reopening...");
+				_out.printWarning("Warning: Error polling GPIO. Reopening...");
 				closeGPIO();
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				openGPIO(_settings->gpio1);
@@ -959,19 +964,21 @@ void TICC1100::mainThread()
 							std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(decodedData, true, BaseLib::HelperFunctions::getTime()));
 							raisePacketReceived(packet);
 						}
-						else GD::out.printWarning("Warning: Too small packet received: " + BaseLib::HelperFunctions::getHexString(encodedData));
+						else _out.printWarning("Warning: Too small packet received: " + BaseLib::HelperFunctions::getHexString(encodedData));
 					}
-					else GD::out.printDebug("Debug: HomeMatic BidCoS packet received, but CRC failed.");
-
-					sendCommandStrobe(CommandStrobes::Enum::SFRX);
-					sendCommandStrobe(CommandStrobes::Enum::SRX);
+					else _out.printDebug("Debug: BidCoS packet received, but CRC failed.");
+					if(!_sendingPending)
+					{
+						sendCommandStrobe(CommandStrobes::Enum::SFRX);
+						sendCommandStrobe(CommandStrobes::Enum::SRX);
+					}
 				}
 				_txMutex.unlock(); //Packet sent or received, now we can send again
 			}
 			else if(pollResult < 0)
 			{
 				_txMutex.unlock();
-				GD::out.printError("Error: Could not poll gpio: " + std::string(strerror(errno)) + ". Reopening...");
+				_out.printError("Error: Could not poll gpio: " + std::string(strerror(errno)) + ". Reopening...");
 				closeGPIO(1);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				openGPIO(1, true);
@@ -982,23 +989,23 @@ void TICC1100::mainThread()
     catch(const std::exception& ex)
     {
     	_txMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_txMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_txMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     try
     {
 		if(!_stopCallbackThread && (_fileDescriptor->descriptor == -1 || _gpioDescriptors[1]->descriptor == -1))
 		{
-			GD::out.printError("Connection to TI CC1101 closed inexpectedly... Trying to reconnect...");
+			_out.printError("Connection to TI CC1101 closed inexpectedly... Trying to reconnect...");
 			_stopCallbackThread = true; //Set to true, so that sendPacket aborts
 			_txMutex.unlock(); //Make sure _txMutex is unlocked
 			std::thread thread(&TICC1100::startListening, this);
@@ -1008,15 +1015,15 @@ void TICC1100::mainThread()
 	}
     catch(const std::exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 }

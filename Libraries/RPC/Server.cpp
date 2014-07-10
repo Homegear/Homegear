@@ -54,8 +54,10 @@ void Server::registerMethods()
 		_server->registerMethod("clientServerInitialized", std::shared_ptr<RPCMethod>(new RPCClientServerInitialized()));
 		_server->registerMethod("deleteDevice", std::shared_ptr<RPCMethod>(new RPCDeleteDevice()));
 		_server->registerMethod("deleteMetadata", std::shared_ptr<RPCMethod>(new RPCDeleteMetadata()));
+		_server->registerMethod("deleteSystemVariable", std::shared_ptr<RPCMethod>(new RPCDeleteSystemVariable()));
 		_server->registerMethod("enableEvent", std::shared_ptr<RPCMethod>(new RPCEnableEvent()));
 		_server->registerMethod("getAllMetadata", std::shared_ptr<RPCMethod>(new RPCGetAllMetadata()));
+		_server->registerMethod("getAllSystemVariables", std::shared_ptr<RPCMethod>(new RPCGetAllSystemVariables()));
 		_server->registerMethod("getAllValues", std::shared_ptr<RPCMethod>(new RPCGetAllValues()));
 		_server->registerMethod("getDeviceDescription", std::shared_ptr<RPCMethod>(new RPCGetDeviceDescription()));
 		_server->registerMethod("getDeviceInfo", std::shared_ptr<RPCMethod>(new RPCGetDeviceInfo()));
@@ -70,6 +72,7 @@ void Server::registerMethods()
 		_server->registerMethod("getParamsetId", std::shared_ptr<RPCMethod>(new RPCGetParamsetId()));
 		_server->registerMethod("getPeerId", std::shared_ptr<RPCMethod>(new RPCGetPeerId()));
 		_server->registerMethod("getServiceMessages", std::shared_ptr<RPCMethod>(new RPCGetServiceMessages()));
+		_server->registerMethod("getSystemVariable", std::shared_ptr<RPCMethod>(new RPCGetSystemVariable()));
 		_server->registerMethod("getUpdateStatus", std::shared_ptr<RPCMethod>(new RPCGetUpdateStatus()));
 		_server->registerMethod("getValue", std::shared_ptr<RPCMethod>(new RPCGetValue()));
 		_server->registerMethod("getVersion", std::shared_ptr<RPCMethod>(new RPCGetVersion()));
@@ -92,6 +95,7 @@ void Server::registerMethods()
 		_server->registerMethod("setLinkInfo", std::shared_ptr<RPCMethod>(new RPCSetLinkInfo()));
 		_server->registerMethod("setMetadata", std::shared_ptr<RPCMethod>(new RPCSetMetadata()));
 		_server->registerMethod("setName", std::shared_ptr<RPCMethod>(new RPCSetName()));
+		_server->registerMethod("setSystemVariable", std::shared_ptr<RPCMethod>(new RPCSetSystemVariable()));
 		_server->registerMethod("setTeam", std::shared_ptr<RPCMethod>(new RPCSetTeam()));
 		_server->registerMethod("setValue", std::shared_ptr<RPCMethod>(new RPCSetValue()));
 		_server->registerMethod("triggerEvent", std::shared_ptr<RPCMethod>(new RPCTriggerEvent()));

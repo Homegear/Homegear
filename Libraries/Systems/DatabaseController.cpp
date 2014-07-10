@@ -78,6 +78,8 @@ void DatabaseController::initializeDatabase()
 		db.executeCommand("CREATE INDEX IF NOT EXISTS parametersIndex ON parameters (parameterID, peerID, parameterSetType, peerChannel, remotePeer, remoteChannel, parameterName)");
 		db.executeCommand("CREATE TABLE IF NOT EXISTS metadata (objectID TEXT, dataID TEXT, serializedObject BLOB)");
 		db.executeCommand("CREATE INDEX IF NOT EXISTS metadataIndex ON metadata (objectID, dataID)");
+		db.executeCommand("CREATE TABLE IF NOT EXISTS systemVariables (variableID TEXT, serializedObject BLOB)");
+		db.executeCommand("CREATE INDEX IF NOT EXISTS systemVariablesIndex ON metadata (variableID)");
 		db.executeCommand("CREATE TABLE IF NOT EXISTS devices (deviceID INTEGER PRIMARY KEY UNIQUE, address INTEGER NOT NULL, serialNumber TEXT NOT NULL, deviceType INTEGER NOT NULL, deviceFamily INTEGER NOT NULL)");
 		db.executeCommand("CREATE INDEX IF NOT EXISTS devicesIndex ON devices (deviceID, address, deviceType, deviceFamily)");
 		db.executeCommand("CREATE TABLE IF NOT EXISTS deviceVariables (variableID INTEGER PRIMARY KEY UNIQUE, deviceID INTEGER NOT NULL, variableIndex INTEGER NOT NULL, integerValue INTEGER, stringValue TEXT, binaryValue BLOB)");
@@ -418,6 +420,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteMetadata(st
 {
 	try
 	{
+		if(objectID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "objectID has more than 250 characters.");
+		if(dataID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
+
 		BaseLib::Database::DataRow data;
 		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(objectID)));
 		std::string command("DELETE FROM metadata WHERE objectID=?");
@@ -445,6 +450,158 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteMetadata(st
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 //End metadata
+
+//System variables
+std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllSystemVariables()
+{
+	try
+	{
+		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
+		if(rows->empty())
+		{
+			return BaseLib::RPC::RPCVariable::createError(-1, "No system variables found.");
+		}
+
+		std::shared_ptr<BaseLib::RPC::RPCVariable> systemVariableStruct(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
+		{
+			if(i->second.size() < 2) continue;
+			std::shared_ptr<BaseLib::RPC::RPCVariable> value = _rpcDecoder->decodeResponse(i->second.at(1)->binaryValue);
+			systemVariableStruct->structValue->insert(BaseLib::RPC::RPCStructElement(i->second.at(0)->textValue, value));
+		}
+
+		return systemVariableStruct;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getSystemVariable(std::string variableID)
+{
+	try
+	{
+		if(variableID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "variableID has more than 250 characters.");
+
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
+
+		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT serializedObject FROM systemVariables WHERE variableID=?", data);
+		if(rows->empty() || rows->at(0).empty())
+		{
+			return BaseLib::RPC::RPCVariable::createError(-1, "System variable not found.");
+		}
+
+		std::shared_ptr<BaseLib::RPC::RPCVariable> value = _rpcDecoder->decodeResponse(rows->at(0).at(0)->binaryValue);
+		return value;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::setSystemVariable(std::string variableID, std::shared_ptr<BaseLib::RPC::RPCVariable> value)
+{
+	try
+	{
+		if(!value) return BaseLib::RPC::RPCVariable::createError(-32602, "Could not parse data.");
+		if(variableID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "variableID has more than 250 characters.");
+		//Don't check for type here, so base64, string and future data types that use stringValue are handled
+		if(value->stringValue.size() > 1000) return BaseLib::RPC::RPCVariable::createError(-32602, "Data has more than 1000 characters.");
+		if(value->type != BaseLib::RPC::RPCVariableType::rpcBase64 && value->type != BaseLib::RPC::RPCVariableType::rpcString && value->type != BaseLib::RPC::RPCVariableType::rpcInteger && value->type != BaseLib::RPC::RPCVariableType::rpcFloat && value->type != BaseLib::RPC::RPCVariableType::rpcBoolean) return BaseLib::RPC::RPCVariable::createError(-32602, "Type " + BaseLib::RPC::RPCVariable::getTypeString(value->type) + " is currently not supported.");
+
+		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT COUNT(*) FROM systemVariables");
+		if(rows->size() == 0 || rows->at(0).size() == 0)
+		{
+			return BaseLib::RPC::RPCVariable::createError(-32500, "Error counting system variables in database.");
+		}
+		if(rows->at(0).at(0)->intValue > 1000000)
+		{
+			return BaseLib::RPC::RPCVariable::createError(-32500, "Reached limit of 1000000 system variable entries. Please delete system variables before adding new ones.");
+		}
+
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
+		db.executeCommand("DELETE FROM systemVariables WHERE variableID=?", data);
+
+		std::shared_ptr<std::vector<char>> encodedValue = _rpcEncoder->encodeResponse(value);
+		if(!encodedValue)
+		{
+			return BaseLib::RPC::RPCVariable::createError(-32700, "Could not encode data.");
+		}
+		if(encodedValue->size() > 1000)
+		{
+			return BaseLib::RPC::RPCVariable::createError(-32602, "Data is larger than 1000 bytes.");
+		}
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(encodedValue)));
+
+		db.executeCommand("INSERT INTO systemVariables VALUES(?, ?)", data);
+
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::deleteSystemVariable(std::string variableID)
+{
+	try
+	{
+		if(variableID.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "variableID has more than 250 characters.");
+
+		BaseLib::Database::DataRow data;
+		data.push_back(std::shared_ptr<BaseLib::Database::DataColumn>(new BaseLib::Database::DataColumn(variableID)));
+		std::string command("DELETE FROM systemVariables WHERE variableID=?");
+		db.executeCommand(command, data);
+
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+//End system variables
 
 //Users
 std::shared_ptr<BaseLib::Database::DataTable> DatabaseController::getUsers()

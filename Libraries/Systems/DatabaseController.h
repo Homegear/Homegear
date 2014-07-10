@@ -58,6 +58,13 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteMetadata(std::string objectID, std::string dataID = "");
 	//End metadata
 
+	//System variables
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setSystemVariable(std::string variableID, std::shared_ptr<BaseLib::RPC::RPCVariable> metadata);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getSystemVariable(std::string variableID);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getAllSystemVariables();
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteSystemVariable(std::string variableID);
+	//End system variables
+
 	//Users
 	virtual std::shared_ptr<BaseLib::Database::DataTable> getUsers();
 	virtual bool userNameExists(std::string name);

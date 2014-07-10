@@ -101,10 +101,12 @@ namespace RPC
 		private:
 			int32_t _currentClientID = 0;
 			std::shared_ptr<ServerSettings::Settings> _settings;
+			std::mutex _sslCTXMutex;
 			SSL_CTX* _sslCTX = nullptr;
 			int32_t _threadPolicy = SCHED_OTHER;
 			int32_t _threadPriority = 0;
 			bool _stopServer = false;
+			bool _stopped = true;
 			std::thread _mainThread;
 			int32_t _backlog = 10;
 			std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;

@@ -68,6 +68,8 @@ public:
 	virtual std::string rfKey() { return _settings->rfKey; }
 
 	virtual uint32_t getCurrentRFKeyIndex() { return _settings->currentRFKeyIndex; }
+protected:
+	BaseLib::Output _out;
 };
 
 }

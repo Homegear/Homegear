@@ -117,8 +117,6 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		std::vector<uint8_t>& getTeamData() { return _team.data; }
 		int32_t getAESKeyIndex() { return _aesKeyIndex; }
 		void setAESKeyIndex(int32_t value);
-		int32_t getAESKeySendIndex() { return _aesKeySendIndex; }
-		void setAESKeySendIndex(int32_t value) { _aesKeySendIndex = value; saveVariable(18, value); }
 		std::string getPhysicalInterfaceID() { return _physicalInterfaceID; }
 		void setPhysicalInterfaceID(std::string);
 		//End
@@ -202,9 +200,10 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		int32_t _teamChannel = -1;
 		BaseLib::Systems::BasicPeer _team;
 		int32_t _aesKeyIndex = 0;
-		int32_t _aesKeySendIndex = 0;
 		std::string _physicalInterfaceID;
 		//End
+
+		virtual void setPhysicalInterface(std::shared_ptr<IBidCoSInterface> interface);
 
 		//ServiceMessages event handling
 		virtual void onConfigPending(bool configPending);

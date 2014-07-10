@@ -496,16 +496,78 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCDeleteMetadata::invoke(std::shared
 	try
 	{
 		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
-				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString }),
-				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString })
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger }),
+			std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
-		if(parameters->at(0)->stringValue.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "objectID has more than 250 characters.");
-		if(parameters->size() > 1 && parameters->at(1)->stringValue.size() > 250) return BaseLib::RPC::RPCVariable::createError(-32602, "dataID has more than 250 characters.");
+
+		std::string serialNumber;
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcString)
+		{
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1) serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		bool deviceFound = false;
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(central)
+			{
+				if(useSerialNumber)
+				{
+					if(central->knowsDevice(serialNumber))
+					{
+						deviceFound = true;
+						break;
+					}
+				}
+				else
+				{
+					if(central->knowsDevice(parameters->at(0)->integerValue))
+					{
+						deviceFound = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if(!deviceFound) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+
+		std::string objectID(useSerialNumber ? parameters->at(0)->stringValue : std::to_string(parameters->at(0)->integerValue));
 		std::string dataID;
 		if(parameters->size() > 1) dataID = parameters->at(1)->stringValue;
+		return GD::db.deleteMetadata(objectID, dataID);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
 
-		return GD::db.deleteMetadata(parameters->at(0)->stringValue, dataID);
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCDeleteSystemVariable::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::db.deleteSystemVariable(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -550,10 +612,74 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllMetadata::invoke(std::shared
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }),
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger })
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::db.getAllMetadata(parameters->at(0)->stringValue);
+		std::string serialNumber;
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcString)
+		{
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1) serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		bool deviceFound = false;
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(central)
+			{
+				if(useSerialNumber)
+				{
+					if(central->knowsDevice(serialNumber))
+					{
+						deviceFound = true;
+						break;
+					}
+				}
+				else
+				{
+					if(central->knowsDevice(parameters->at(0)->integerValue))
+					{
+						deviceFound = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if(!deviceFound) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+
+		std::string objectID(useSerialNumber ? parameters->at(0)->stringValue : std::to_string(parameters->at(0)->integerValue));
+		return GD::db.getAllMetadata(objectID);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllSystemVariables::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+
+		return GD::db.getAllSystemVariables();
 	}
 	catch(const std::exception& ex)
     {
@@ -1040,10 +1166,51 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetMetadata::invoke(std::shared_pt
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString }),
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString })
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::db.getMetadata(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
+		std::string serialNumber;
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcString)
+		{
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1) serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		bool deviceFound = false;
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(central)
+			{
+				if(useSerialNumber)
+				{
+					if(central->knowsDevice(serialNumber))
+					{
+						deviceFound = true;
+						break;
+					}
+				}
+				else
+				{
+					if(central->knowsDevice(parameters->at(0)->integerValue))
+					{
+						deviceFound = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if(!deviceFound) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+
+		std::string objectID(useSerialNumber ? parameters->at(0)->stringValue : std::to_string(parameters->at(0)->integerValue));
+		return GD::db.getMetadata(objectID, parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -1388,6 +1555,30 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetServiceMessages::invoke(std::sh
 		}
 
 		return serviceMessages;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetSystemVariable::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::db.getSystemVariable(parameters->at(0)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -2365,10 +2556,51 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetMetadata::invoke(std::shared_pt
 {
 	try
 	{
-		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcVariant }));
+		ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcVariant }),
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcVariant })
+		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 
-		return GD::db.setMetadata(parameters->at(0)->stringValue, parameters->at(1)->stringValue, parameters->at(2));
+		std::string serialNumber;
+		bool useSerialNumber = false;
+		if(parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcString)
+		{
+			useSerialNumber = true;
+			int32_t pos = parameters->at(0)->stringValue.find(':');
+			if(pos > -1) serialNumber = parameters->at(0)->stringValue.substr(0, pos);
+			else serialNumber = parameters->at(0)->stringValue;
+		}
+
+		bool deviceFound = false;
+		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
+		{
+			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
+			if(central)
+			{
+				if(useSerialNumber)
+				{
+					if(central->knowsDevice(serialNumber))
+					{
+						deviceFound = true;
+						break;
+					}
+				}
+				else
+				{
+					if(central->knowsDevice(parameters->at(0)->integerValue))
+					{
+						deviceFound = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if(!deviceFound) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+
+		std::string objectID(useSerialNumber ? parameters->at(0)->stringValue : std::to_string(parameters->at(0)->integerValue));
+		return GD::db.setMetadata(objectID, parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {
@@ -2404,6 +2636,30 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetName::invoke(std::shared_ptr<st
 		}
 
 		return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetSystemVariable::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcVariant }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::db.setSystemVariable(parameters->at(0)->stringValue, parameters->at(1));
 	}
 	catch(const std::exception& ex)
     {

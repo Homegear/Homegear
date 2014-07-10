@@ -963,6 +963,7 @@ void BidCoSQueue::pushPendingQueue()
 				{
 					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
+					_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
 					_sendThreadMutex.unlock();
 					BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
@@ -979,6 +980,7 @@ void BidCoSQueue::pushPendingQueue()
 				{
 					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
+					_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 					_sendThread = std::thread(&BidCoSQueue::send, this, i->getPacket(), i->stealthy);
 					_sendThreadMutex.unlock();
 					BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);

@@ -1182,7 +1182,6 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 				while(waitIndex < 100) //Wait, wait, wait. The WOR preamble alone needs 360ms with the CUL! And AES handshakes need time, too.
 				{
 					receivedPacket = _receivedPackets.get(peer->getAddress());
-					if(receivedPacket) GD::out.printError("Moin: " + receivedPacket->hexString() + " " + std::to_string(receivedPacket->timeReceived()) + " " + std::to_string(time));
 					if(receivedPacket && receivedPacket->timeReceived() > time && receivedPacket->payload()->size() >= 1 && receivedPacket->payload()->at(0) == 0 && receivedPacket->destinationAddress() == _address && receivedPacket->controlByte() == 0x80 && receivedPacket->messageType() == 2)
 					{
 						GD::out.printInfo("Info: Enter bootloader packet was accepted by peer.");
@@ -2764,10 +2763,9 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 			std::shared_ptr<BidCoSPeer> peer = getPeer(packet->senderAddress());
 			if(peer && queue->getQueue()->size() < 2)
 			{
-				GD::out.printInfo("Info: Successfully changed AES key of peer " + std::to_string(peer->getID()) + ".");
-				peer->setAESKeySendIndex(peer->getAESKeySendIndex() + 2);
 				peer->setAESKeyIndex(peer->getPhysicalInterface()->getCurrentRFKeyIndex());
 				aesKeyChanged = true;
+				GD::out.printInfo("Info: Successfully changed AES key of peer " + std::to_string(peer->getID()) + ". Key index now is: " + std::to_string(peer->getAESKeyIndex()));
 			}
 		}
 		queue->pop(); //Messages are not popped by default.

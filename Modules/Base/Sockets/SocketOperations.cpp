@@ -140,12 +140,12 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
 	int32_t bytesRead = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead == 0) throw SocketTimeOutException("Reading from socket timed out.");
-	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " with ip address/hostname " + _hostname + " and port " + _port + " closed.");
+	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
 	bytesRead = _ssl ? SSL_read(_ssl, buffer, bufferSize) : read(_fileDescriptor->descriptor, buffer, bufferSize);
 	if(bytesRead <= 0)
 	{
 		if(bytesRead < 0 && _ssl) throw SocketOperationException("Error reading SSL packet: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, bytesRead)));
-		else throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " with ip address/hostname " + _hostname + " and port " + _port + " closed.");
+		else throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
 	}
 	return bytesRead;
 }
