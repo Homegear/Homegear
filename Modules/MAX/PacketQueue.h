@@ -90,8 +90,7 @@ class PacketQueue
         std::shared_ptr<BaseLib::Systems::IPhysicalInterface> _physicalInterface;
         std::shared_ptr<PendingQueues> _pendingQueues;
         std::mutex _queueMutex;
-        std::mutex _sendThreadMutex;
-        BidCoSQueueType _queueType;
+        PacketQueueType _queueType;
         bool _stopResendThread = false;
         std::thread _resendThread;
         int32_t _resendCounter = 0;
@@ -100,9 +99,13 @@ class PacketQueue
         uint32_t _popWaitThreadId = 0;
         std::thread _popWaitThread;
         std::thread _sendThread;
+        std::mutex _sendThreadMutex;
         std::thread _startResendThread;
+        std::mutex _startResendThreadMutex;
         std::thread _pushPendingQueueThread;
+        std::mutex _pushPendingQueueThreadMutex;
         bool _workingOnPendingQueue = false;
+        int64_t _lastPop = 0;
         int64_t _lastPop = 0;
         void (MAXDevice::*_queueProcessed)() = nullptr;
         void pushPendingQueue();
@@ -123,26 +126,26 @@ class PacketQueue
         std::shared_ptr<MAXPeer> peer;
         std::shared_ptr<CallbackFunctionParameter> callbackParameter;
         delegate<void (std::shared_ptr<CallbackFunctionParameter>)> queueEmptyCallback;
-        BidCoSQueueType getQueueType() { return _queueType; }
+        PacketQueueType getQueueType() { return _queueType; }
         std::list<PacketQueueEntry>* getQueue() { return &_queue; }
-        void setQueueType(BidCoSQueueType queueType) {  _queueType = queueType; }
+        void setQueueType(PacketQueueType queueType) {  _queueType = queueType; }
         std::shared_ptr<BaseLib::Systems::IPhysicalInterface> getPhysicalInterface() { return _physicalInterface; }
         std::string parameterName;
         int32_t channel = -1;
 
         void push(std::shared_ptr<MAXMessage> message, bool forceResend = false);
-        void push(std::shared_ptr<MAXMessage> message, std::shared_ptr<BidCoSPacket> packet, bool forceResend = false);
-        void pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy = false, bool popBeforePushing = false, bool forceResend = false);
-        void push(std::shared_ptr<BidCoSPacket> packet, bool forceResend = false, bool stealthy = false);
-        void push(std::shared_ptr<PendingQueues>& pendingBidCoSQueues);
-        void push(std::shared_ptr<BidCoSQueue> pendingBidCoSQueue, bool popImmediately, bool clearPendingQueues);
+        void push(std::shared_ptr<MAXMessage> message, std::shared_ptr<MAXPacket> packet, bool forceResend = false);
+        void pushFront(std::shared_ptr<MAXPacket> packet, bool stealthy = false, bool popBeforePushing = false, bool forceResend = false);
+        void push(std::shared_ptr<MAXPacket> packet, bool forceResend = false, bool stealthy = false);
+        void push(std::shared_ptr<PendingQueues>& pendingQueues);
+        void push(std::shared_ptr<PacketQueue> pendingQueue, bool popImmediately, bool clearPendingQueues);
         PacketQueueEntry* front() { return &_queue.front(); }
         void pop();
         void popWait(uint32_t waitingTime);
         bool isEmpty();
         bool pendingQueuesEmpty();
         void clear();
-        void send(std::shared_ptr<BidCoSPacket> packet, bool stealthy);
+        void send(std::shared_ptr<MAXPacket> packet, bool stealthy);
         void keepAlive();
         void longKeepAlive();
         void dispose();
@@ -151,7 +154,7 @@ class PacketQueue
 
         PacketQueue();
         PacketQueue(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface);
-        PacketQueue(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, BidCoSQueueType queueType);
+        PacketQueue(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, PacketQueueType queueType);
         virtual ~PacketQueue();
 };
 }

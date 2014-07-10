@@ -491,25 +491,14 @@ void TICC1100::readwrite(std::vector<uint8_t>& data)
 		_transfer.tx_buf = (uint64_t)&data[0];
 		_transfer.rx_buf = (uint64_t)&data[0];
 		_transfer.len = (uint32_t)data.size();
-		if(_bl->debugLevel >= 6)
+		if(_bl->debugLevel >= 6) _out.printDebug("Debug: Sending: " + _bl->hf.getHexString(data));
+		if(!ioctl(_fileDescriptor->descriptor, SPI_IOC_MESSAGE(1), &_transfer))
 		{
-			std::cout << BaseLib::HelperFunctions::getTimeString() << " Sending: " << std::hex << std::setfill('0');
-			for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
-			{
-				std::cout << std::setw(2) << (int32_t)*i;
-			}
-			std::cout << std::dec << std::endl;
+			_sendMutex.unlock();
+			_out.printError("Couldn't write to device " + _settings->device + ": " + std::string(strerror(errno)));
+			return;
 		}
-		if(ioctl(_fileDescriptor->descriptor, SPI_IOC_MESSAGE(1), &_transfer) == -1) throw(BaseLib::Exception("Couldn't write to device " + _settings->device + ": " + std::string(strerror(errno))));
-		if(_bl->debugLevel >= 6)
-		{
-			std::cout << BaseLib::HelperFunctions::getTimeString() << " Received: " << std::hex << std::setfill('0');
-			for(std::vector<uint8_t>::const_iterator i = data.begin(); i != data.end(); ++i)
-			{
-				std::cout << std::setw(2) << (int32_t)*i;
-			}
-			std::cout << std::dec << std::endl;
-		}
+		if(_bl->debugLevel >= 6) _out.printDebug("Debug: Received: " + _bl->hf.getHexString(data));
 		_sendMutex.unlock();
 	}
 	catch(const std::exception& ex)
@@ -944,6 +933,7 @@ void TICC1100::mainThread()
 				else
 				{
 					//sendCommandStrobe(CommandStrobes::Enum::SIDLE);
+					std::shared_ptr<BidCoSPacket> packet;
 					if(crcOK())
 					{
 						uint8_t firstByte = readRegister(Registers::Enum::FIFO);
@@ -961,8 +951,7 @@ void TICC1100::mainThread()
 							decodedData[i] = encodedData[i] ^ decodedData[2];
 							decodedData[i + 1] = encodedData[i + 1]; //RSSI_DEVICE
 
-							std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(decodedData, true, BaseLib::HelperFunctions::getTime()));
-							raisePacketReceived(packet);
+							packet.reset(new BidCoSPacket(decodedData, true, BaseLib::HelperFunctions::getTime()));
 						}
 						else _out.printWarning("Warning: Too small packet received: " + BaseLib::HelperFunctions::getHexString(encodedData));
 					}
@@ -972,6 +961,7 @@ void TICC1100::mainThread()
 						sendCommandStrobe(CommandStrobes::Enum::SFRX);
 						sendCommandStrobe(CommandStrobes::Enum::SRX);
 					}
+					if(packet) raisePacketReceived(packet);
 				}
 				_txMutex.unlock(); //Packet sent or received, now we can send again
 			}

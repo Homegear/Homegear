@@ -43,7 +43,8 @@ public:
 
 	static BaseLib::Obj* bl;
 	static MAX* family;
-	static std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface;
+	static std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> physicalInterfaces;
+	static std::shared_ptr<BaseLib::Systems::IPhysicalInterface> defaultPhysicalInterface;
 	static BaseLib::RPC::Devices rpcDevices;
 	static BaseLib::Output out;
 private:

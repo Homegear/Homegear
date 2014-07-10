@@ -27,32 +27,32 @@
  * files in the program, then also delete it here.
  */
 
-#include "BidCoSQueue.h"
-#include "BidCoSMessage.h"
-#include "PendingBidCoSQueues.h"
+#include "PacketQueue.h"
+#include "MAXMessage.h"
+#include "PendingQueues.h"
 #include "../Base/BaseLib.h"
 #include "GD.h"
 
-namespace BidCoS
+namespace MAX
 {
-BidCoSQueue::BidCoSQueue() : _queueType(BidCoSQueueType::EMPTY)
+PacketQueue::PacketQueue() : _queueType(PacketQueueType::EMPTY)
 {
 	_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	_physicalInterface = GD::defaultPhysicalInterface;
 }
 
-BidCoSQueue::BidCoSQueue(std::shared_ptr<IBidCoSInterface> physicalInterface)
+PacketQueue::PacketQueue(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface)
 {
 	if(physicalInterface) _physicalInterface = physicalInterface;
 	else _physicalInterface = GD::defaultPhysicalInterface;
 }
 
-BidCoSQueue::BidCoSQueue(std::shared_ptr<IBidCoSInterface> physicalInterface, BidCoSQueueType queueType) : BidCoSQueue(physicalInterface)
+PacketQueue::PacketQueue(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, PacketQueueType queueType) : PacketQueue(physicalInterface)
 {
 	_queueType = queueType;
 }
 
-BidCoSQueue::~BidCoSQueue()
+PacketQueue::~PacketQueue()
 {
 	try
 	{
@@ -72,7 +72,7 @@ BidCoSQueue::~BidCoSQueue()
     }
 }
 
-void BidCoSQueue::serialize(std::vector<uint8_t>& encodedData)
+void PacketQueue::serialize(std::vector<uint8_t>& encodedData)
 {
 	try
 	{
@@ -85,7 +85,7 @@ void BidCoSQueue::serialize(std::vector<uint8_t>& encodedData)
 		}
 		encoder.encodeByte(encodedData, (int32_t)_queueType);
 		encoder.encodeInteger(encodedData, _queue.size());
-		for(std::list<BidCoSQueueEntry>::iterator i = _queue.begin(); i != _queue.end(); ++i)
+		for(std::list<PacketQueueEntry>::iterator i = _queue.begin(); i != _queue.end(); ++i)
 		{
 			encoder.encodeByte(encodedData, (uint8_t)i->getType());
 			encoder.encodeBoolean(encodedData, i->stealthy);
@@ -98,7 +98,7 @@ void BidCoSQueue::serialize(std::vector<uint8_t>& encodedData)
 				encoder.encodeByte(encodedData, packet.size());
 				encodedData.insert(encodedData.end(), packet.begin(), packet.end());
 			}
-			std::shared_ptr<BidCoSMessage> message = i->getMessage();
+			std::shared_ptr<MAXMessage> message = i->getMessage();
 			if(!message) encoder.encodeBoolean(encodedData, false);
 			else
 			{
@@ -134,7 +134,7 @@ void BidCoSQueue::serialize(std::vector<uint8_t>& encodedData)
 	_queueMutex.unlock();
 }
 
-void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData, HomeMaticDevice* device, uint32_t position)
+void PacketQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData, MAXDevice* device, uint32_t position)
 {
 	try
 	{
@@ -144,8 +144,8 @@ void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 		uint32_t queueSize = decoder.decodeInteger(serializedData, position);
 		for(uint32_t i = 0; i < queueSize; i++)
 		{
-			_queue.push_back(BidCoSQueueEntry());
-			BidCoSQueueEntry* entry = &_queue.back();
+			_queue.push_back(PacketQueueEntry());
+			PacketQueueEntry* entry = &_queue.back();
 			entry->setType((QueueEntryType)decoder.decodeByte(serializedData, position));
 			entry->stealthy = decoder.decodeBoolean(serializedData, position);
 			entry->forceResend = decoder.decodeBoolean(serializedData, position);
@@ -201,15 +201,21 @@ void BidCoSQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
     _queueMutex.unlock();
 }
 
-void BidCoSQueue::dispose()
+void PacketQueue::dispose()
 {
 	try
 	{
 		if(_disposing) return;
 		_disposing = true;
+		_startResendThreadMutex.lock();
 		if(_startResendThread.joinable()) _startResendThread.join();
+		_startResendThreadMutex.unlock();
+		_pushPendingQueueThreadMutex.lock();
 		if(_pushPendingQueueThread.joinable()) _pushPendingQueueThread.join();
+		_pushPendingQueueThreadMutex.unlock();
+		_sendThreadMutex.lock();
         if(_sendThread.joinable()) _sendThread.join();
+        _sendThreadMutex.unlock();
 		stopResendThread();
 		stopPopWaitThread();
 		_queueMutex.lock();
@@ -219,29 +225,38 @@ void BidCoSQueue::dispose()
 	catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     }
     catch(BaseLib::Exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     }
     catch(...)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     }
     _queueMutex.unlock();
 }
 
-bool BidCoSQueue::isEmpty()
+bool PacketQueue::isEmpty()
 {
 	return _queue.empty() && (!_pendingQueues || _pendingQueues->empty());
 }
 
-bool BidCoSQueue::pendingQueuesEmpty()
+bool PacketQueue::pendingQueuesEmpty()
 {
 	 return (!_pendingQueues || _pendingQueues->empty());
 }
 
-void BidCoSQueue::resend(uint32_t threadId, bool burst)
+void PacketQueue::resend(uint32_t threadId, bool burst)
 {
 	try
 	{
@@ -338,7 +353,7 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 				if(_queue.front().getType() == QueueEntryType::MESSAGE)
 				{
 					GD::out.printDebug("Invoking outgoing message handler from BidCoSQueue.");
-					BidCoSMessage* message = _queue.front().getMessage().get();
+					MAXMessage* message = _queue.front().getMessage().get();
 					_queueMutex.unlock();
 					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
@@ -347,7 +362,7 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 						_sendThreadMutex.unlock();
 						return;
 					}
-					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message, packet);
+					_sendThread = std::thread(&MAXMessage::invokeMessageHandlerOutgoing, message, packet);
 					BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
 					_sendThreadMutex.unlock();
 				}
@@ -362,7 +377,7 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 						_sendThreadMutex.unlock();
 						return;
 					}
-					_sendThread = std::thread(&BidCoSQueue::send, this, packet, stealthy);
+					_sendThread = std::thread(&PacketQueue::send, this, packet, stealthy);
 					BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
 					_sendThreadMutex.unlock();
 				}
@@ -372,8 +387,10 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
 			if(_resendCounter < (retries - 2)) //This actually means that the message will be sent three times all together if there is no response
 			{
 				_resendCounter++;
+				_startResendThreadMutex.lock();
 				if(_startResendThread.joinable()) _startResendThread.join();
-				_startResendThread = std::thread(&BidCoSQueue::startResendThread, this, forceResend);
+				_startResendThread = std::thread(&PacketQueue::startResendThread, this, forceResend);
+				_startResendThreadMutex.unlock();
 			}
 			else _resendCounter = 0;
 		}
@@ -383,27 +400,31 @@ void BidCoSQueue::resend(uint32_t threadId, bool burst)
     {
 		_queueMutex.unlock();
 		_sendThreadMutex.unlock();
+		_startResendThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_queueMutex.unlock();
     	_sendThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
     	_sendThreadMutex.unlock();
+    	_startResendThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool forceResend)
+void PacketQueue::push(std::shared_ptr<MAXPacket> packet, bool stealthy, bool forceResend)
 {
 	try
 	{
-		BidCoSQueueEntry entry;
+		if(_disposing) return;
+		PacketQueueEntry entry;
 		entry.setPacket(packet, true);
 		entry.stealthy = stealthy;
 		entry.forceResend = forceResend;
@@ -417,7 +438,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool
 			{
 				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
-				_sendThread = std::thread(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
+				_sendThread = std::thread(&PacketQueue::send, this, entry.getPacket(), entry.stealthy);
 				BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
 				_sendThreadMutex.unlock();
 				startResendThread(forceResend);
@@ -449,10 +470,11 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool
     }
 }
 
-void BidCoSQueue::push(std::shared_ptr<PendingBidCoSQueues>& pendingQueues)
+void PacketQueue::push(std::shared_ptr<PendingQueues>& pendingQueues)
 {
 	try
 	{
+		if(_disposing) return;
 		_queueMutex.lock();
 		_pendingQueues = pendingQueues;
 		if(_queue.empty())
@@ -480,13 +502,14 @@ void BidCoSQueue::push(std::shared_ptr<PendingBidCoSQueues>& pendingQueues)
 
 }
 
-void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmediately, bool clearPendingQueues)
+void PacketQueue::push(std::shared_ptr<PacketQueue> pendingQueue, bool popImmediately, bool clearPendingQueues)
 {
 	try
 	{
+		if(_disposing) return;
 		if(!pendingQueue) return;
 		_queueMutex.lock();
-		if(!_pendingQueues) _pendingQueues.reset(new PendingBidCoSQueues());
+		if(!_pendingQueues) _pendingQueues.reset(new PendingQueues());
 		if(clearPendingQueues) _pendingQueues->clear();
 		_pendingQueues->push(pendingQueue);
 		_queueMutex.unlock();
@@ -513,13 +536,14 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSQueue> pendingQueue, bool popImmedi
     _queueMutex.unlock();
 }
 
-void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<BidCoSPacket> packet, bool forceResend)
+void PacketQueue::push(std::shared_ptr<MAXMessage> message, std::shared_ptr<MAXPacket> packet, bool forceResend)
 {
 	try
 	{
+		if(_disposing) return;
 		if(!message || !packet) return;
 		if(message->getDirection() != DIRECTIONOUT) GD::out.printWarning("Warning: Wrong push method used. Packet is not necessary for incoming messages");
-		BidCoSQueueEntry entry;
+		PacketQueueEntry entry;
 		entry.setMessage(message, true);
 		entry.setPacket(packet, false);
 		entry.forceResend = forceResend;
@@ -533,7 +557,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
 			{
 				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
-				_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
+				_sendThread = std::thread(&MAXMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
 				_sendThreadMutex.unlock();
 				startResendThread(forceResend);
@@ -565,13 +589,14 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, std::shared_ptr<B
     }
 }
 
-void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
+void PacketQueue::push(std::shared_ptr<MAXMessage> message, bool forceResend)
 {
 	try
 	{
+		if(_disposing) return;
 		if(!message) return;
 		if(message->getDirection() == DIRECTIONOUT) GD::out.printCritical("Critical: Wrong push method used. Please provide the received packet for outgoing messages");
-		BidCoSQueueEntry entry;
+		PacketQueueEntry entry;
 		entry.setMessage(message, true);
 		entry.forceResend = forceResend;
 		_queueMutex.lock();
@@ -584,7 +609,7 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
 			{
 				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
-				_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
+				_sendThread = std::thread(&MAXMessage::invokeMessageHandlerOutgoing, message.get(), entry.getPacket());
 				BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
 				_sendThreadMutex.unlock();
 				startResendThread(forceResend);
@@ -616,10 +641,11 @@ void BidCoSQueue::push(std::shared_ptr<BidCoSMessage> message, bool forceResend)
     }
 }
 
-void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy, bool popBeforePushing, bool forceResend)
+void PacketQueue::pushFront(std::shared_ptr<MAXPacket> packet, bool stealthy, bool popBeforePushing, bool forceResend)
 {
 	try
 	{
+		if(_disposing) return;
 		keepAlive();
 		if(popBeforePushing)
 		{
@@ -630,7 +656,7 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
 			_queue.pop_front();
 			_queueMutex.unlock();
 		}
-		BidCoSQueueEntry entry;
+		PacketQueueEntry entry;
 		entry.setPacket(packet, true);
 		entry.stealthy = stealthy;
 		entry.forceResend = forceResend;
@@ -644,7 +670,7 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
 			{
 				_sendThreadMutex.lock();
 				if(_sendThread.joinable()) _sendThread.join();
-				_sendThread = std::thread(&BidCoSQueue::send, this, entry.getPacket(), entry.stealthy);
+				_sendThread = std::thread(&PacketQueue::send, this, entry.getPacket(), entry.stealthy);
 				BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
 				_sendThreadMutex.unlock();
 				startResendThread(forceResend);
@@ -677,7 +703,7 @@ void BidCoSQueue::pushFront(std::shared_ptr<BidCoSPacket> packet, bool stealthy,
     }
 }
 
-void BidCoSQueue::stopPopWaitThread()
+void PacketQueue::stopPopWaitThread()
 {
 	try
 	{
@@ -699,13 +725,14 @@ void BidCoSQueue::stopPopWaitThread()
     }
 }
 
-void BidCoSQueue::popWait(uint32_t waitingTime)
+void PacketQueue::popWait(uint32_t waitingTime)
 {
 	try
 	{
+		if(_disposing) return;
 		stopResendThread();
 		stopPopWaitThread();
-		_popWaitThread = std::thread(&BidCoSQueue::popWaitThread, this, _popWaitThreadId++, waitingTime);
+		_popWaitThread = std::thread(&PacketQueue::popWaitThread, this, _popWaitThreadId++, waitingTime);
 		BaseLib::Threads::setThreadPriority(GD::bl, _popWaitThread.native_handle(), 45);
 	}
 	catch(const std::exception& ex)
@@ -722,7 +749,7 @@ void BidCoSQueue::popWait(uint32_t waitingTime)
     }
 }
 
-void BidCoSQueue::popWaitThread(uint32_t threadId, uint32_t waitingTime)
+void PacketQueue::popWaitThread(uint32_t threadId, uint32_t waitingTime)
 {
 	try
 	{
@@ -752,7 +779,7 @@ void BidCoSQueue::popWaitThread(uint32_t threadId, uint32_t waitingTime)
     }
 }
 
-void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet, bool stealthy)
+void PacketQueue::send(std::shared_ptr<MAXPacket> packet, bool stealthy)
 {
 	try
 	{
@@ -774,7 +801,7 @@ void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet, bool stealthy)
     }
 }
 
-void BidCoSQueue::stopResendThread()
+void PacketQueue::stopResendThread()
 {
 	try
 	{
@@ -796,7 +823,7 @@ void BidCoSQueue::stopResendThread()
     }
 }
 
-void BidCoSQueue::startResendThread(bool force)
+void PacketQueue::startResendThread(bool force)
 {
 	try
 	{
@@ -819,11 +846,11 @@ void BidCoSQueue::startResendThread(bool force)
 		else throw BaseLib::Exception("Packet or message pointer of BidCoS queue is empty.");
 
 		_queueMutex.unlock();
-		if(!_physicalInterface->autoResend() && ((!(controlByte & 0x02) && (controlByte & 0x20)) || force)) //Resend when no response?
+		if((!(controlByte & 0x02) && (controlByte & 0x20)) || force) //Resend when no response?
 		{
 			stopResendThread();
 			bool burst = controlByte & 0x10;
-			_resendThread = std::thread(&BidCoSQueue::resend, this, _resendThreadId++, burst);
+			_resendThread = std::thread(&PacketQueue::resend, this, _resendThreadId++, burst);
 			BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), 45);
 		}
 	}
@@ -844,7 +871,7 @@ void BidCoSQueue::startResendThread(bool force)
     }
 }
 
-void BidCoSQueue::clear()
+void PacketQueue::clear()
 {
 	try
 	{
@@ -868,10 +895,11 @@ void BidCoSQueue::clear()
     _queueMutex.unlock();
 }
 
-void BidCoSQueue::sleepAndPushPendingQueue()
+void PacketQueue::sleepAndPushPendingQueue()
 {
 	try
 	{
+		if(_disposing) return;
 		std::this_thread::sleep_for(std::chrono::milliseconds(_physicalInterface->responseDelay()));
 		pushPendingQueue();
 	}
@@ -889,12 +917,17 @@ void BidCoSQueue::sleepAndPushPendingQueue()
     }
 }
 
-void BidCoSQueue::pushPendingQueue()
+void PacketQueue::pushPendingQueue()
 {
 	try
 	{
 		if(_disposing) return;
 		_queueMutex.lock();
+		if(_disposing)
+		{
+			_queueMutex.unlock();
+			return;
+		}
 		if(!_pendingQueues || _pendingQueues->empty())
 		{
 			_queueMutex.unlock();
@@ -910,7 +943,7 @@ void BidCoSQueue::pushPendingQueue()
 			_queueMutex.unlock();
 			return;
 		}
-		std::shared_ptr<BidCoSQueue> queue = _pendingQueues->front();
+		std::shared_ptr<PacketQueue> queue = _pendingQueues->front();
 		_queueMutex.unlock();
 		if(!queue) return; //Not really necessary, as the mutex is locked, but I had a segmentation fault in this function, so just to make
 		_queueType = queue->getQueueType();
@@ -918,7 +951,7 @@ void BidCoSQueue::pushPendingQueue()
 		callbackParameter = queue->callbackParameter;
 		retries = queue->retries;
 		pendingQueueID = queue->pendingQueueID;
-		for(std::list<BidCoSQueueEntry>::iterator i = queue->getQueue()->begin(); i != queue->getQueue()->end(); ++i)
+		for(std::list<PacketQueueEntry>::iterator i = queue->getQueue()->begin(); i != queue->getQueue()->end(); ++i)
 		{
 			if(!noSending && i->getType() == QueueEntryType::MESSAGE && i->getMessage()->getDirection() == DIRECTIONOUT && (_queue.size() == 0 || (_queue.size() == 1 && _queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()->getDirection() == DIRECTIONIN)))
 			{
@@ -930,7 +963,8 @@ void BidCoSQueue::pushPendingQueue()
 				{
 					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
-					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
+					_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+					_sendThread = std::thread(&MAXMessage::invokeMessageHandlerOutgoing, i->getMessage().get(), i->getPacket());
 					_sendThreadMutex.unlock();
 					BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
 					startResendThread(i->forceResend);
@@ -946,7 +980,8 @@ void BidCoSQueue::pushPendingQueue()
 				{
 					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
-					_sendThread = std::thread(&BidCoSQueue::send, this, i->getPacket(), i->stealthy);
+					_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+					_sendThread = std::thread(&PacketQueue::send, this, i->getPacket(), i->stealthy);
 					_sendThreadMutex.unlock();
 					BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
 					startResendThread(i->forceResend);
@@ -981,19 +1016,19 @@ void BidCoSQueue::pushPendingQueue()
     }
 }
 
-void BidCoSQueue::keepAlive()
+void PacketQueue::keepAlive()
 {
 	if(_disposing) return;
 	if(lastAction) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-void BidCoSQueue::longKeepAlive()
+void PacketQueue::longKeepAlive()
 {
 	if(_disposing) return;
 	if(lastAction) *lastAction = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() + 5000;
 }
 
-void BidCoSQueue::nextQueueEntry()
+void PacketQueue::nextQueueEntry()
 {
 	try
 	{
@@ -1014,9 +1049,11 @@ void BidCoSQueue::nextQueueEntry()
 			{
 				_queueMutex.unlock();
 				GD::out.printDebug("Queue " + std::to_string(id) + " is empty. Pushing pending queue...");
+				_pushPendingQueueThreadMutex.lock();
 				if(_pushPendingQueueThread.joinable()) _pushPendingQueueThread.join();
-				_pushPendingQueueThread = std::thread(&BidCoSQueue::pushPendingQueue, this);
+				_pushPendingQueueThread = std::thread(&PacketQueue::pushPendingQueue, this);
 				BaseLib::Threads::setThreadPriority(GD::bl, _pushPendingQueueThread.native_handle(), 45);
+				_pushPendingQueueThreadMutex.unlock();
 				return;
 			}
 		}
@@ -1029,11 +1066,11 @@ void BidCoSQueue::nextQueueEntry()
 				std::shared_ptr<BidCoSPacket> packet = _queue.front().getPacket();
 				if(_queue.front().getType() == QueueEntryType::MESSAGE)
 				{
-					BidCoSMessage* message = _queue.front().getMessage().get();
+					MAXMessage* message = _queue.front().getMessage().get();
 					_queueMutex.unlock();
 					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
-					_sendThread = std::thread(&BidCoSMessage::invokeMessageHandlerOutgoing, message, packet);
+					_sendThread = std::thread(&MAXMessage::invokeMessageHandlerOutgoing, message, packet);
 					_sendThreadMutex.unlock();
 				}
 				else
@@ -1042,7 +1079,7 @@ void BidCoSQueue::nextQueueEntry()
 					_queueMutex.unlock();
 					_sendThreadMutex.lock();
 					if(_sendThread.joinable()) _sendThread.join();
-					_sendThread = std::thread(&BidCoSQueue::send, this, packet, stealthy);
+					_sendThread = std::thread(&PacketQueue::send, this, packet, stealthy);
 					_sendThreadMutex.unlock();
 				}
 				BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), 45);
@@ -1056,23 +1093,26 @@ void BidCoSQueue::nextQueueEntry()
     {
 		_queueMutex.unlock();
 		_sendThreadMutex.unlock();
+		_pushPendingQueueThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
     	_queueMutex.unlock();
     	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
     	_queueMutex.unlock();
     	_sendThreadMutex.unlock();
+    	_pushPendingQueueThreadMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-void BidCoSQueue::pop()
+void PacketQueue::pop()
 {
 	try
 	{

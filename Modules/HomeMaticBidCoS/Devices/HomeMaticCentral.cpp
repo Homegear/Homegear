@@ -212,10 +212,10 @@ bool HomeMaticCentral::onPacketReceived(std::string& senderID, std::shared_ptr<B
 		if(!bidCoSPacket) return false;
 		if(bidCoSPacket->senderAddress() == _address) //Packet spoofed
 		{
-			if(GD::physicalInterfaces.size() > 1) return true; //Packet we sent was received by another interface
 			std::shared_ptr<BidCoSPeer> peer(getPeer(bidCoSPacket->destinationAddress()));
 			if(peer)
 			{
+				if(senderID != peer->getPhysicalInterfaceID()) return true; //Packet we sent was received by another interface
 				GD::out.printWarning("Warning: Central address of packet to peer " + std::to_string(peer->getID()) + " was spoofed. Packet was: " + packet->hexString());
 				peer->serviceMessages->set("CENTRAL_ADDRESS_SPOOFED", 1, 0);
 				std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string> { "CENTRAL_ADDRESS_SPOOFED" });

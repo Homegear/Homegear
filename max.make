@@ -94,10 +94,15 @@ ifeq ($(config),profiling)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/PacketQueue.o \
 	$(OBJDIR)/MAXPacket.o \
 	$(OBJDIR)/MAXDevice.o \
 	$(OBJDIR)/GD.o \
+	$(OBJDIR)/MAXMessages.o \
 	$(OBJDIR)/MAXPeer.o \
+	$(OBJDIR)/PendingQueues.o \
+	$(OBJDIR)/QueueManager.o \
+	$(OBJDIR)/MAXMessage.o \
 	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/MAX.o \
 	$(OBJDIR)/MAXCentral.o \
@@ -167,6 +172,9 @@ endif
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 endif
 
+$(OBJDIR)/PacketQueue.o: Modules/MAX/PacketQueue.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MAXPacket.o: Modules/MAX/MAXPacket.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
@@ -176,7 +184,19 @@ $(OBJDIR)/MAXDevice.o: Modules/MAX/MAXDevice.cpp
 $(OBJDIR)/GD.o: Modules/MAX/GD.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MAXMessages.o: Modules/MAX/MAXMessages.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MAXPeer.o: Modules/MAX/MAXPeer.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PendingQueues.o: Modules/MAX/PendingQueues.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/QueueManager.o: Modules/MAX/QueueManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/MAXMessage.o: Modules/MAX/MAXMessage.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/Factory.o: Modules/MAX/Factory.cpp

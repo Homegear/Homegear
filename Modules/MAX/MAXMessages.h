@@ -27,28 +27,28 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef BIDCOSMESSAGES_H
-#define BIDCOSMESSAGES_H
+#ifndef MAXMESSAGES_H
+#define MAXMESSAGES_H
 
-#include "BidCoSMessage.h"
+#include "MAXMessage.h"
 
 #include <iostream>
 #include <memory>
 #include <vector>
 
-namespace BidCoS
+namespace MAX
 {
-class BidCoSMessages
+class MAXMessages
 {
     public:
-        BidCoSMessages() {}
-        virtual ~BidCoSMessages() {}
-        void add(std::shared_ptr<BidCoSMessage> message);
-        std::shared_ptr<BidCoSMessage> find(int32_t direction, std::shared_ptr<BidCoSPacket> packet);
-        std::shared_ptr<BidCoSMessage> find(int32_t direction, int32_t messageType, std::vector<std::pair<uint32_t, int32_t> > subtypes);
+        MAXMessages() {}
+        virtual ~MAXMessages() {}
+        void add(std::shared_ptr<MAXMessage> message);
+        std::shared_ptr<MAXMessage> find(int32_t direction, std::shared_ptr<MAXPacket> packet);
+        std::shared_ptr<MAXMessage> find(int32_t direction, int32_t messageType, std::vector<std::pair<uint32_t, int32_t> > subtypes);
     protected:
     private:
-        std::vector<std::shared_ptr<BidCoSMessage>> _messages;
+        std::vector<std::shared_ptr<MAXMessage>> _messages;
 };
 }
 #endif

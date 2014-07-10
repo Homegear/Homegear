@@ -72,13 +72,17 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> MAX::createPhysicalDevice(
 {
 	try
 	{
-		if(!settings) return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
+		std::shared_ptr<BaseLib::Systems::IPhysicalInterface> device;
+		if(!settings) return device;
 		GD::out.printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
-		GD::physicalInterface = std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
-		if(!settings) return GD::physicalInterface;
-		if(settings->type == "cul") GD::physicalInterface.reset(new CUL(settings));
+		if(settings->type == "cul") device.reset(new CUL(settings));
 		else GD::out.printError("Error: Unsupported physical device type: " + settings->type);
-		return GD::physicalInterface;
+		if(device)
+		{
+			GD::physicalInterfaces[settings->id] = device;
+			if(settings->isDefault || !GD::defaultPhysicalInterface) GD::defaultPhysicalInterface = device;
+		}
+		return device;
 	}
 	catch(const std::exception& ex)
 	{

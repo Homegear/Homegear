@@ -202,6 +202,7 @@ void RPCServer::stop()
 {
 	try
 	{
+		if(_stopped) return;
 		_stopped = true;
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
