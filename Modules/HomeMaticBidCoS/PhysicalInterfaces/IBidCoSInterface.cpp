@@ -64,6 +64,12 @@ std::vector<char> IBidCoSInterface::PeerInfo::getAESChannelMap()
 IBidCoSInterface::IBidCoSInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, settings)
 {
 	_bl->hf.toLower(settings->rfKey);
+
+	if(settings->listenThreadPriority == -1)
+	{
+		settings->listenThreadPriority = 0;
+		settings->listenThreadPolicy = SCHED_OTHER;
+	}
 }
 
 IBidCoSInterface::~IBidCoSInterface()

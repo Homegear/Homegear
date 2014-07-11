@@ -79,7 +79,7 @@ void stopRPCServers()
 	{
 		i->second.stop();
 	}
-	GD::rpcServers.clear();
+	//Don't clear map!!! Server is still accessed i. e. by the event handler!
 }
 
 void terminate(int32_t signalNumber)
@@ -496,6 +496,9 @@ int main(int argc, char* argv[])
         if(GD::deviceFamilies.empty()) exit(1);
         GD::out.printInfo("Loading devices...");
         GD::familyController.load(); //Don't load before database is open!
+
+        GD::out.printInfo("Initializing RPC client...");
+        GD::rpcClient.init();
 
         startRPCServers();
 

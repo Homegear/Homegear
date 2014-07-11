@@ -60,7 +60,7 @@ void HomeMaticDevice::init()
 
 		setUpBidCoSMessages();
 		_workerThread = std::thread(&HomeMaticDevice::worker, this);
-		BaseLib::Threads::setThreadPriority(_bl, _workerThread.native_handle(), 19);
+		BaseLib::Threads::setThreadPriority(_bl, _workerThread.native_handle(), _bl->settings.workerThreadPriority(), _bl->settings.workerThreadPolicy());
 	}
 	catch(const std::exception& ex)
     {

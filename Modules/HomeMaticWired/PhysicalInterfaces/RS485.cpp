@@ -36,6 +36,11 @@ namespace HMWired
 
 RS485::RS485(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : BaseLib::Systems::IPhysicalInterface(GD::bl, settings)
 {
+	if(settings->listenThreadPriority == -1)
+	{
+		settings->listenThreadPriority = 45;
+		settings->listenThreadPolicy = SCHED_FIFO;
+	}
 }
 
 RS485::~RS485()
@@ -498,7 +503,7 @@ void RS485::startListening()
 		}
 		_stopped = false;
 		_listenThread = std::thread(&RS485::listen, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {

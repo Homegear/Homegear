@@ -36,6 +36,11 @@ namespace MAX
 
 CUL::CUL(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, settings)
 {
+	if(settings->listenThreadPriority == -1)
+	{
+		settings->listenThreadPriority = 45;
+		settings->listenThreadPolicy = SCHED_FIFO;
+	}
 }
 
 CUL::~CUL()
@@ -339,7 +344,7 @@ void CUL::startListening()
 		writeToDevice("X21\nZr\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		_listenThread = std::thread(&CUL::listen, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {

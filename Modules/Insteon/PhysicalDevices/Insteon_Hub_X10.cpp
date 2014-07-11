@@ -37,6 +37,12 @@ InsteonHubX10::InsteonHubX10(std::shared_ptr<BaseLib::Systems::PhysicalInterface
 {
 	signal(SIGPIPE, SIG_IGN);
 	_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl));
+
+	if(settings->listenThreadPriority == -1)
+	{
+		settings->listenThreadPriority = 0;
+		settings->listenThreadPolicy = SCHED_OTHER;
+	}
 }
 
 InsteonHubX10::~InsteonHubX10()
@@ -131,7 +137,7 @@ void InsteonHubX10::startListening()
 		GD::out.printInfo("Connected to Insteon Hub X10 with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&InsteonHubX10::listen, this);
-		BaseLib::Threads::setThreadPriority(GD::bl, _listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(GD::bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {

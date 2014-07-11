@@ -48,6 +48,7 @@ RPCClient::RPCClient()
 	{
 		signal(SIGPIPE, SIG_IGN);
 
+		if(!GD::bl) GD::out.printCritical("Critical: Can't initialize RPC client, because base library is not initialized.");
 		_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
 		_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 		_xmlRpcDecoder = std::unique_ptr<BaseLib::RPC::XMLRPCDecoder>(new BaseLib::RPC::XMLRPCDecoder(GD::bl.get()));
@@ -376,7 +377,11 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 		}
 
-		if(GD::bl->debugLevel >= 5) GD::out.printDebug("Sending packet: " + std::string(&data->at(0), data->size()));
+		if(GD::bl->debugLevel >= 5)
+		{
+			if(server->binary) GD::out.printDebug("Sending packet: " + GD::bl->hf.getHexString(*data));
+			else GD::out.printDebug("Sending packet: " + std::string(&data->at(0), data->size()));
+		}
 		try
 		{
 			server->socket->proofwrite(data);

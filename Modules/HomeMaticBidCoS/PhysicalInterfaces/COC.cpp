@@ -39,6 +39,12 @@ COC::COC(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) 
 {
 	_out.init(GD::bl);
 	_out.setPrefix(GD::out.getPrefix() + "COC \"" + settings->id + "\": ");
+
+	if(settings->listenThreadPriority == -1)
+	{
+		settings->listenThreadPriority = 45;
+		settings->listenThreadPolicy = SCHED_FIFO;
+	}
 }
 
 COC::~COC()
@@ -410,7 +416,7 @@ void COC::startListening()
 		writeToDevice("X21\nAr\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		_listenThread = std::thread(&COC::listen, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {

@@ -347,4 +347,71 @@ bool PendingBidCoSQueues::find(BidCoSQueueType queueType)
 	_queuesMutex.unlock();
 	return false;
 }
+
+void PendingBidCoSQueues::getInfoString(std::ostringstream& stringStream)
+{
+	try
+	{
+		_queuesMutex.lock();
+		stringStream << "Number of Pending queues: " << _queues.size() << std::endl;
+		int32_t j = 1;
+		for(std::deque<std::shared_ptr<BidCoSQueue>>::iterator i = _queues.begin(); i != _queues.end(); ++i)
+		{
+			stringStream << std::dec << "Queue " << j << ":" << std::endl;
+			std::list<BidCoSQueueEntry>* queue = (*i)->getQueue();
+			stringStream << "  Number of packets: " << queue->size() << std::endl;
+			int32_t l = 1;
+			for(std::list<BidCoSQueueEntry>::iterator k = queue->begin(); k != queue->end(); ++k)
+			{
+				stringStream << "  Packet " << l << " (Type: ";
+				if(k->getType() == QueueEntryType::PACKET)
+				{
+					std::shared_ptr<BidCoSPacket> packet = k->getPacket();
+					stringStream << "Packet): " << (packet ? packet->hexString() : "Nullptr") << std::endl;
+				}
+				else if(k->getType() == QueueEntryType::MESSAGE)
+				{
+					stringStream << "Message): ";
+					std::shared_ptr<BidCoSMessage> message = k->getMessage();
+					if(message)
+					{
+						stringStream << "Type: " << GD::bl->hf.getHexString(message->getMessageType(), 2) << " Control byte: " << GD::bl->hf.getHexString(message->getControlByte(), 2);
+						if(!message->getSubtypes()->empty())
+						{
+							stringStream << " Subtypes: ";
+							for(std::vector<std::pair<uint32_t, int32_t>>::iterator m = message->getSubtypes()->begin(); m != message->getSubtypes()->end(); ++m)
+							{
+								stringStream << "Index " << m->first << ": " << GD::bl->hf.getHexString(m->second, 2) << "; ";
+							}
+						}
+						stringStream << std::endl;
+					}
+					else
+					{
+						stringStream << "Nullptr" << std::endl;
+					}
+				}
+				else
+				{
+					stringStream << "Unknown)" << std::endl;
+				}
+				l++;
+			}
+			j++;
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_queuesMutex.unlock();
+}
 }

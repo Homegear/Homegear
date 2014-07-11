@@ -43,6 +43,8 @@ class Threads
 public:
 	virtual ~Threads();
 
+	static int32_t getThreadPolicyFromString(std::string policy);
+	static int32_t parseThreadPriority(int32_t priority, int32_t policy);
 	static void setThreadPriority(BaseLib::Obj* baseLib, pthread_t thread, int32_t priority, int32_t policy = SCHED_FIFO);
 private:
 	//Non public constructor
@@ -50,4 +52,4 @@ private:
 };
 
 }
-#endif /* THREADS_H_ */
+#endif

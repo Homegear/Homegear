@@ -42,6 +42,12 @@ TICC1100::TICC1100(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> 
 		_out.init(GD::bl);
 		_out.setPrefix(GD::out.getPrefix() + "TI CC110X \"" + settings->id + "\": ");
 
+		if(settings->listenThreadPriority == -1)
+		{
+			settings->listenThreadPriority = 45;
+			settings->listenThreadPolicy = SCHED_FIFO;
+		}
+
 		_transfer =  { (uint64_t)0, (uint64_t)0, (uint32_t)0, (uint32_t)4000000, (uint16_t)0, (uint8_t)8, (uint8_t)0, (uint32_t)0 };
 
 		_config = //Read from HM-CC-VD
@@ -818,7 +824,7 @@ void TICC1100::startListening()
 
 		_stopCallbackThread = false;
 		_listenThread = std::thread(&TICC1100::mainThread, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 
 		//For sniffing update packets
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1000));

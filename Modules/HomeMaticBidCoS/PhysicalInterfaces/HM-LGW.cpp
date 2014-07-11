@@ -356,7 +356,6 @@ void HM_LGW::sendPeers()
 
     //There is no duty cycle => tested with version 1.1.3
     /*std::thread t1(&HM_LGW::dutyCycleTest, this, 0x123456);
-	BaseLib::Threads::setThreadPriority(_bl, t1.native_handle(), 45);
 	t1.detach();*/
 }
 
@@ -1479,11 +1478,11 @@ void HM_LGW::startListening()
 		_out.printDebug("Connecting to HM-LGW with hostname " + _settings->host + " on port " + _settings->port + "...");
 		_stopped = false;
 		_listenThread = std::thread(&HM_LGW::listen, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 		_listenThreadKeepAlive = std::thread(&HM_LGW::listenKeepAlive, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThreadKeepAlive.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThreadKeepAlive.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 		_initThread = std::thread(&HM_LGW::doInit, this);
-		BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {
@@ -1520,7 +1519,7 @@ void HM_LGW::reconnect()
 		_out.printInfo("Connected to HM-LGW with hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_initThread = std::thread(&HM_LGW::doInit, this);
-		BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _initThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {

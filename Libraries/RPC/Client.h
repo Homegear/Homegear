@@ -49,8 +49,9 @@ public:
 		enum Enum { updateHintAll = 0, updateHintLinks = 1 };
 	};
 
-	Client() { _servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>()); }
+	Client();
 	virtual ~Client();
+	void init();
 
 	void initServerMethods(std::pair<std::string, std::string> address);
 	void broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values);
@@ -67,7 +68,7 @@ public:
 	std::shared_ptr<BaseLib::RPC::RPCVariable> clientServerInitialized(std::string id);
 	void reset();
 private:
-	RPCClient _client;
+	std::unique_ptr<RPCClient> _client;
 	std::mutex _serversMutex;
 	std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> _servers;
 };

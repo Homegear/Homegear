@@ -32,6 +32,7 @@
 
 #include "BidCoSQueue.h"
 #include "BidCoSPeer.h"
+#include "BidCoSMessage.h"
 
 #include <string>
 #include <iostream>
@@ -59,6 +60,8 @@ public:
 	void clear();
 	void removeQueue(std::string value, int32_t channel);
 	bool find(BidCoSQueueType queueType);
+
+	void getInfoString(std::ostringstream& stringStream);
 private:
 	uint32_t _currentID = 0;
 	std::mutex _queuesMutex;

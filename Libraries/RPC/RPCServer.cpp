@@ -49,16 +49,14 @@ RPCServer::RPCServer()
 	_settings.reset(new ServerSettings::Settings());
 	_rpcMethods.reset(new std::map<std::string, std::shared_ptr<RPCMethod>>);
 	_serverFileDescriptor.reset(new BaseLib::FileDescriptor);
-	if(GD::bl->settings.rpcServerThreadPriority() > 0)
-	{
-		_threadPriority = GD::bl->settings.rpcServerThreadPriority();
-		_threadPolicy = SCHED_FIFO;
-	}
+	_threadPriority = GD::bl->settings.rpcServerThreadPriority();
+	_threadPolicy = GD::bl->settings.rpcServerThreadPolicy();
 }
 
 RPCServer::~RPCServer()
 {
 	stop();
+	_rpcMethods->clear();
 }
 
 void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
@@ -284,6 +282,11 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 	{
 		removeClient(client->id);
 		GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
+		if(client->ssl)
+		{
+			SSL_free(client->ssl);
+			client->ssl = nullptr;
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -942,6 +945,7 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 {
 	try
 	{
+		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 1");
 		_sslCTXMutex.lock();
 		if(!_sslCTX)
 		{
@@ -950,6 +954,7 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 			return;
 		}
 		client->ssl = SSL_new(_sslCTX);
+		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 2");
 		_sslCTXMutex.unlock();
 		if(!client->ssl)
 		{
@@ -963,6 +968,7 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 			client->ssl = nullptr;
 			return;
 		}
+		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 3");
 		if(!SSL_set_fd(client->ssl, client->fileDescriptor->descriptor))
 		{
 			GD::out.printError("Error setting SSL file descriptor: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, 0)));
@@ -975,7 +981,9 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 			GD::out.printError("Error getting SSL file descriptor: client->ssl is nullptr.");
 			return;
 		}
+		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 4");
 		int32_t result = SSL_accept(client->ssl);
+		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 5");
 		if(result < 1)
 		{
 			if(client->ssl && result != 0)
@@ -990,6 +998,7 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 			client->ssl = nullptr;
 		}
 		else GD::out.printInfo("Info: New SSL connection to RPC server. Cipher: " + std::string(SSL_get_cipher(client->ssl)) + " (" + std::to_string(SSL_get_cipher_bits(client->ssl, 0)) + " bits)");
+		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 6");
 		return;
 	}
     catch(const std::exception& ex)

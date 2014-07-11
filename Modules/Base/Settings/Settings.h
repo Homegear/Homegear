@@ -60,7 +60,18 @@ public:
 	bool prioritizeThreads() { return _prioritizeThreads; }
 	void setPrioritizeThreads(bool value) { _prioritizeThreads = value; }
 	uint32_t workerThreadWindow() { return _workerThreadWindow; }
-	uint32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
+	int32_t rpcServerThreadPriority() { return _rpcServerThreadPriority; }
+	int32_t rpcServerThreadPolicy() { return _rpcServerThreadPolicy; }
+	int32_t rpcClientThreadPriority() { return _rpcClientThreadPriority; }
+	int32_t rpcClientThreadPolicy() { return _rpcClientThreadPolicy; }
+	int32_t workerThreadPriority() { return _workerThreadPriority; }
+	int32_t workerThreadPolicy() { return _workerThreadPolicy; }
+	int32_t packetQueueThreadPriority() { return _packetQueueThreadPriority; }
+	int32_t packetQueueThreadPolicy() { return _packetQueueThreadPolicy; }
+	int32_t packetReceivedThreadPriority() { return _packetReceivedThreadPriority; }
+	int32_t packetReceivedThreadPolicy() { return _packetReceivedThreadPolicy; }
+	int32_t eventTriggerThreadPriority() { return _eventTriggerThreadPriority; }
+	int32_t eventTriggerThreadPolicy() { return _eventTriggerThreadPolicy; }
 	std::string deviceDescriptionPath() { return _deviceDescriptionPath; }
 	std::string clientSettingsPath() { return _clientSettingsPath; }
 	std::string serverSettingsPath() { return _serverSettingsPath; }
@@ -84,7 +95,18 @@ private:
 	std::string _logfilePath;
 	bool _prioritizeThreads = true;
 	uint32_t _workerThreadWindow = 3000;
-	uint32_t _rpcServerThreadPriority = 0;
+	int32_t _rpcServerThreadPriority = 0;
+	int32_t _rpcServerThreadPolicy = SCHED_OTHER;
+	int32_t _rpcClientThreadPriority = 0;
+	int32_t _rpcClientThreadPolicy = SCHED_OTHER;
+	int32_t _workerThreadPriority = 0;
+	int32_t _workerThreadPolicy = SCHED_OTHER;
+	int32_t _packetQueueThreadPriority = 45;
+	int32_t _packetQueueThreadPolicy = SCHED_FIFO;
+	int32_t _packetReceivedThreadPriority = 0;
+	int32_t _packetReceivedThreadPolicy = SCHED_OTHER;
+	int32_t _eventTriggerThreadPriority = 0;
+	int32_t _eventTriggerThreadPolicy = SCHED_OTHER;
 	std::string _deviceDescriptionPath;
 	std::string _clientSettingsPath;
 	std::string _serverSettingsPath;

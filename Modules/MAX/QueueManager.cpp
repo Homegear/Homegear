@@ -163,7 +163,7 @@ std::shared_ptr<BidCoSQueue> BidCoSQueueManager::createQueue(HomeMaticDevice* de
 					if(_workerThread.joinable()) _workerThread.join();
 					_stopWorkerThread = false;
 					_workerThread = std::thread(&BidCoSQueueManager::worker, this);
-					BaseLib::Threads::setThreadPriority(GD::bl, _workerThread.native_handle(), 19);
+					BaseLib::Threads::setThreadPriority(GD::bl, _workerThread.native_handle(), GD::bl->settings.workerThreadPriority(), GD::bl->settings.workerThreadPolicy());
 				}
 				catch(const std::exception& ex)
 				{

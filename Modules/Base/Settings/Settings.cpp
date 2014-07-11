@@ -56,6 +56,17 @@ void Settings::reset()
 	_prioritizeThreads = true;
 	_workerThreadWindow = 3000;
 	_rpcServerThreadPriority = 0;
+	_rpcServerThreadPolicy = SCHED_OTHER;
+	_rpcClientThreadPriority = 0;
+	_rpcClientThreadPolicy = SCHED_OTHER;
+	_workerThreadPriority = 0;
+	_workerThreadPolicy = SCHED_OTHER;
+	_packetQueueThreadPriority = 45;
+	_packetQueueThreadPolicy = SCHED_FIFO;
+	_packetReceivedThreadPriority = 0;
+	_packetReceivedThreadPolicy = SCHED_OTHER;
+	_eventTriggerThreadPriority = 0;
+	_eventTriggerThreadPolicy = SCHED_OTHER;
 	_deviceDescriptionPath = "/etc/homegear/devices/";
 	_clientSettingsPath = "/etc/homegear/rpcclients.conf";
 	_serverSettingsPath = "/etc/homegear/rpcservers.conf";
@@ -184,6 +195,77 @@ void Settings::load(std::string filename)
 					if(_rpcServerThreadPriority > 99) _rpcServerThreadPriority = 99;
 					if(_rpcServerThreadPriority < 0) _rpcServerThreadPriority = 0;
 					_bl->out.printDebug("Debug: rpcServerThreadPriority set to " + std::to_string(_rpcServerThreadPriority));
+				}
+				else if(name == "rpcserverthreadpolicy")
+				{
+					_rpcServerThreadPolicy = Threads::getThreadPolicyFromString(value);
+					_rpcServerThreadPriority = Threads::parseThreadPriority(_rpcServerThreadPriority, _rpcServerThreadPolicy);
+					_bl->out.printDebug("Debug: rpcServerThreadPolicy set to " + std::to_string(_rpcServerThreadPolicy));
+				}
+				else if(name == "rpcclientthreadpriority")
+				{
+					_rpcClientThreadPriority = HelperFunctions::getNumber(value);
+					if(_rpcClientThreadPriority > 99) _rpcClientThreadPriority = 99;
+					if(_rpcClientThreadPriority < 0) _rpcClientThreadPriority = 0;
+					_bl->out.printDebug("Debug: rpcClientThreadPriority set to " + std::to_string(_rpcClientThreadPriority));
+				}
+				else if(name == "rpcclientthreadpolicy")
+				{
+					_rpcClientThreadPolicy = Threads::getThreadPolicyFromString(value);
+					_rpcClientThreadPriority = Threads::parseThreadPriority(_rpcClientThreadPriority, _rpcClientThreadPolicy);
+					_bl->out.printDebug("Debug: rpcClientThreadPolicy set to " + std::to_string(_rpcClientThreadPolicy));
+				}
+				else if(name == "workerthreadpriority")
+				{
+					_workerThreadPriority = HelperFunctions::getNumber(value);
+					if(_workerThreadPriority > 99) _workerThreadPriority = 99;
+					if(_workerThreadPriority < 0) _workerThreadPriority = 0;
+					_bl->out.printDebug("Debug: workerThreadPriority set to " + std::to_string(_workerThreadPriority));
+				}
+				else if(name == "workerthreadpolicy")
+				{
+					_workerThreadPolicy = Threads::getThreadPolicyFromString(value);
+					_workerThreadPriority = Threads::parseThreadPriority(_workerThreadPriority, _workerThreadPolicy);
+					_bl->out.printDebug("Debug: workerThreadPolicy set to " + std::to_string(_workerThreadPolicy));
+				}
+				else if(name == "packetqueuethreadpriority")
+				{
+					_packetQueueThreadPriority = HelperFunctions::getNumber(value);
+					if(_packetQueueThreadPriority > 99) _packetQueueThreadPriority = 99;
+					if(_packetQueueThreadPriority < 0) _packetQueueThreadPriority = 0;
+					_bl->out.printDebug("Debug: physicalInterfaceThreadPriority set to " + std::to_string(_packetQueueThreadPriority));
+				}
+				else if(name == "packetqueuethreadpolicy")
+				{
+					_packetQueueThreadPolicy = Threads::getThreadPolicyFromString(value);
+					_packetQueueThreadPriority = Threads::parseThreadPriority(_packetQueueThreadPriority, _packetQueueThreadPolicy);
+					_bl->out.printDebug("Debug: physicalInterfaceThreadPolicy set to " + std::to_string(_packetQueueThreadPolicy));
+				}
+				else if(name == "packetreceivedthreadpriority")
+				{
+					_packetReceivedThreadPriority = HelperFunctions::getNumber(value);
+					if(_packetReceivedThreadPriority > 99) _packetReceivedThreadPriority = 99;
+					if(_packetReceivedThreadPriority < 0) _packetReceivedThreadPriority = 0;
+					_bl->out.printDebug("Debug: packetReceivedThreadPriority set to " + std::to_string(_packetReceivedThreadPriority));
+				}
+				else if(name == "packetreceivedthreadpolicy")
+				{
+					_packetReceivedThreadPolicy = Threads::getThreadPolicyFromString(value);
+					_packetReceivedThreadPriority = Threads::parseThreadPriority(_packetReceivedThreadPriority, _packetReceivedThreadPolicy);
+					_bl->out.printDebug("Debug: packetReceivedThreadPolicy set to " + std::to_string(_packetReceivedThreadPolicy));
+				}
+				else if(name == "eventtriggerthreadpriority")
+				{
+					_eventTriggerThreadPriority = HelperFunctions::getNumber(value);
+					if(_eventTriggerThreadPriority > 99) _eventTriggerThreadPriority = 99;
+					if(_eventTriggerThreadPriority < 0) _eventTriggerThreadPriority = 0;
+					_bl->out.printDebug("Debug: eventTriggerThreadPriority set to " + std::to_string(_eventTriggerThreadPriority));
+				}
+				else if(name == "eventtriggerthreadpolicy")
+				{
+					_eventTriggerThreadPolicy = Threads::getThreadPolicyFromString(value);
+					_eventTriggerThreadPriority = Threads::parseThreadPriority(_eventTriggerThreadPriority, _eventTriggerThreadPolicy);
+					_bl->out.printDebug("Debug: eventTriggerThreadPolicy set to " + std::to_string(_eventTriggerThreadPolicy));
 				}
 				else if(name == "devicedescriptionpath")
 				{

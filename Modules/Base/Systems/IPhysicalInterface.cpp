@@ -70,7 +70,7 @@ void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet)
 	try
 	{
 		std::thread t(&IPhysicalInterface::raisePacketReceivedThread, this, packet);
-		BaseLib::Threads::setThreadPriority(_bl, t.native_handle(), 40);
+		BaseLib::Threads::setThreadPriority(_bl, t.native_handle(), _bl->settings.packetReceivedThreadPriority(), _bl->settings.packetReceivedThreadPolicy());
 		t.detach();
 	}
     catch(const std::exception& ex)

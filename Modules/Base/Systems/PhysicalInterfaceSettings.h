@@ -75,6 +75,8 @@ public:
 	bool oneWay = false;
 	int32_t enableRXValue = -1;
 	int32_t enableTXValue = -1;
+	int32_t listenThreadPriority = -1;
+	int32_t listenThreadPolicy = SCHED_OTHER;
 };
 
 }

@@ -42,7 +42,7 @@ HMWiredPacketManager::HMWiredPacketManager()
 	try
 	{
 		_workerThread = std::thread(&HMWiredPacketManager::worker, this);
-		BaseLib::Threads::setThreadPriority(GD::bl, _workerThread.native_handle(), 19);
+		BaseLib::Threads::setThreadPriority(GD::bl, _workerThread.native_handle(), GD::bl->settings.workerThreadPriority(), GD::bl->settings.workerThreadPolicy());
 	}
 	catch(const std::exception& ex)
     {

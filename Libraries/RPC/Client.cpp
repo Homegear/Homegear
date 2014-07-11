@@ -33,9 +33,20 @@
 
 namespace RPC
 {
+Client::Client()
+{
+	_servers.reset(new std::vector<std::shared_ptr<RemoteRPCServer>>());
+}
+
 Client::~Client()
 {
 
+}
+
+void Client::init()
+{
+	//GD::bl needs to be valid, before _client is created.
+	_client.reset(new RPCClient());
 }
 
 void Client::initServerMethods(std::pair<std::string, std::string> address)
@@ -98,8 +109,8 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			}
 			parameters->push_back(array);
 			//Sadly some clients only support multicall and not "event" directly for single events. That's why we use multicall even when there is only one value.
-			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "system.multicall", parameters);
-			BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), 40);
+			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "system.multicall", parameters);
+			BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), GD::bl->settings.rpcClientThreadPriority(), GD::bl->settings.rpcClientThreadPolicy());
 			t.detach();
 		}
 	}
@@ -125,7 +136,7 @@ void Client::systemListMethods(std::pair<std::string, std::string> address)
 		std::shared_ptr<RemoteRPCServer> server = getServer(address);
 		if(!server) return;
 		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>> { std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(server->id)) });
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client.invoke(server, "system.listMethods", parameters);
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client->invoke(server, "system.listMethods", parameters);
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
@@ -173,7 +184,7 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		if(!server) return;
 		if(!server->knownMethods.empty() && server->knownMethods.find("listDevices") == server->knownMethods.end()) return;
 		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>> { std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(server->id)) });
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client.invoke(server, "listDevices", parameters);
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client->invoke(server, "listDevices", parameters);
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
@@ -255,7 +266,7 @@ void Client::sendUnknownDevices(std::pair<std::string, std::string> address)
 		}
 		if(devices->arrayValue->empty()) return;
 		std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>{ std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(server->id)), devices });
-		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client.invoke(server, "newDevices", parameters);
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = _client->invoke(server, "newDevices", parameters);
 		if(result->errorStruct)
 		{
 			if(server->removed) return;
@@ -291,7 +302,7 @@ void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> devi
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
 			parameters->push_back(deviceDescriptions);
-			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "newDevices", parameters);
+			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "newDevices", parameters);
 			t.detach();
 		}
 		_serversMutex.unlock();
@@ -326,7 +337,7 @@ void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> d
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*server)->id)));
 			if((*server)->useID) parameters->push_back(deviceInfo);
 			else parameters->push_back(deviceAddresses);
-			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "deleteDevices", parameters);
+			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "deleteDevices", parameters);
 			t.detach();
 		}
 		_serversMutex.unlock();
@@ -366,7 +377,7 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 			}
 			else parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(address)));
 			parameters->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)hint)));
-			std::thread t(&RPCClient::invokeBroadcast, &_client, (*server), "updateDevice", parameters);
+			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "updateDevice", parameters);
 			t.detach();
 		}
 	}

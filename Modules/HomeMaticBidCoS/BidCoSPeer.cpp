@@ -530,13 +530,7 @@ std::string BidCoSPeer::handleCLICommand(std::string command)
 				index++;
 			}
 
-			stringStream << "Number of Pending queues:\t\t\t" << pendingBidCoSQueues->size() << std::endl;
-			if(!pendingBidCoSQueues->empty() && !pendingBidCoSQueues->front()->isEmpty())
-			{
-				stringStream << "First pending queue type:\t\t\t" << (int32_t)pendingBidCoSQueues->front()->getQueueType() << std::endl;
-				if(pendingBidCoSQueues->front()->front()->getPacket()) stringStream << "First packet of first pending queue:\t\t" << pendingBidCoSQueues->front()->front()->getPacket()->hexString() << std::endl;
-				stringStream << "Type of first entry of first pending queue:\t" << (int32_t)pendingBidCoSQueues->front()->front()->getType() << std::endl;
-			}
+			pendingBidCoSQueues->getInfoString(stringStream);
 			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "queues clear") == 0)

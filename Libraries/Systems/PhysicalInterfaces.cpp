@@ -245,6 +245,19 @@ void PhysicalInterfaces::load(std::string filename)
 					if(value == "false") settings->verifyCertificate = false;
 					GD::out.printDebug("Debug: VerifyCertificate of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->verifyCertificate));
 				}
+				else if(name == "listenthreadpriority")
+				{
+					settings->listenThreadPriority = BaseLib::HelperFunctions::getNumber(value);
+					if(settings->listenThreadPriority > 99) settings->listenThreadPriority = 99;
+					if(settings->listenThreadPriority < 0) settings->listenThreadPriority = 0;
+					GD::out.printDebug("Debug: ListenThreadPriority of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->listenThreadPriority));
+				}
+				else if(name == "listenthreadpolicy")
+				{
+					settings->listenThreadPolicy = BaseLib::Threads::getThreadPolicyFromString(value);
+					settings->listenThreadPriority = BaseLib::Threads::parseThreadPriority(settings->listenThreadPriority, settings->listenThreadPolicy);
+					GD::out.printDebug("Debug: ListenThreadPolicy of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->listenThreadPolicy));
+				}
 				else
 				{
 					GD::out.printWarning("Warning: Unknown physical device setting: " + std::string(input));

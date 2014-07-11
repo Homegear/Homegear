@@ -457,12 +457,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> DatabaseController::getAllSystemVaria
 	try
 	{
 		std::shared_ptr<BaseLib::Database::DataTable> rows = db.executeCommand("SELECT variableID, serializedObject FROM systemVariables");
-		if(rows->empty())
-		{
-			return BaseLib::RPC::RPCVariable::createError(-1, "No system variables found.");
-		}
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> systemVariableStruct(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		if(rows->empty()) return systemVariableStruct;
 		for(BaseLib::Database::DataTable::iterator i = rows->begin(); i != rows->end(); ++i)
 		{
 			if(i->second.size() < 2) continue;

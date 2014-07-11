@@ -597,7 +597,7 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::shared_ptr<std
 	{
 		if(_disposing) return;
 		std::thread t(&EventHandler::triggerThreadMultipleVariables, this, peerID, channel, variables, values);
-		BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), 44);
+		BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), GD::bl->settings.eventTriggerThreadPriority(), GD::bl->settings.eventTriggerThreadPolicy());
 		t.detach();
 	}
 	catch(const std::exception& ex)
@@ -645,7 +645,7 @@ void EventHandler::trigger(uint64_t peerID, int32_t channel, std::string& variab
 	{
 		if(_disposing) return;
 		std::thread t(&EventHandler::triggerThread, this, peerID, channel, variable, value);
-		BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), 44);
+		BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), GD::bl->settings.eventTriggerThreadPriority(), GD::bl->settings.eventTriggerThreadPolicy());
 		t.detach();
 	}
 	catch(const std::exception& ex)

@@ -37,6 +37,11 @@ namespace BidCoS
 
 HM_CFG_USB::HM_CFG_USB(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IBidCoSInterface(settings)
 {
+	if(settings->listenThreadPriority == -1)
+	{
+		settings->listenThreadPriority = 45;
+		settings->listenThreadPolicy = SCHED_FIFO;
+	}
 }
 
 HM_CFG_USB::~HM_CFG_USB()
@@ -352,7 +357,7 @@ void HM_CFG_USB::startListening()
 		writeToDevice("X21\nAr\n", false);
 		std::this_thread::sleep_for(std::chrono::milliseconds(400));
 		_listenThread = std::thread(&HM_CFG_USB::listen, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {

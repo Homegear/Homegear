@@ -53,7 +53,7 @@ public:
 	virtual ~RPCEncoder() {}
 
 	virtual void insertHeader(std::shared_ptr<std::vector<char>> packet, std::shared_ptr<RPCHeader> header);
-	virtual std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::shared_ptr<RPCHeader> header = std::shared_ptr<RPCHeader>());
+	virtual std::shared_ptr<std::vector<char>> encodeRequest(std::string methodName, std::shared_ptr<std::list<std::shared_ptr<RPCVariable>>> parameters, std::shared_ptr<RPCHeader> header = nullptr);
 	virtual std::shared_ptr<std::vector<char>> encodeResponse(std::shared_ptr<RPCVariable> variable);
 private:
 	BaseLib::Obj* _bl = nullptr;

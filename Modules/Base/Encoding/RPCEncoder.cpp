@@ -41,7 +41,7 @@ RPCEncoder::RPCEncoder(BaseLib::Obj* baseLib)
 	_encoder = std::unique_ptr<BinaryEncoder>(new BinaryEncoder(baseLib));
 
 	strncpy(&_packetStartRequest[0], "Bin", 3);
-	_packetStartResponse[3] = 0;
+	_packetStartRequest[3] = 0;
 	strncpy(&_packetStartResponse[0], "Bin", 3);
 	_packetStartResponse[3] = 1;
 	strncpy(&_packetStartError[0], "Bin", 3);
@@ -58,8 +58,8 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeRequest(std::string methodN
 		uint32_t headerSize = 0;
 		if(header)
 		{
-			packet->at(3) |= 0x40;
 			headerSize = encodeHeader(packet, header) + 4;
+			if(headerSize > 0) packet->at(3) |= 0x40;
 		}
 		_encoder->encodeString(packet, methodName);
 		if(!parameters) _encoder->encodeInteger(packet, 0);
@@ -148,6 +148,7 @@ uint32_t RPCEncoder::encodeHeader(std::shared_ptr<std::vector<char>>& packet, st
 		_encoder->encodeString(packet, temp);
 		_encoder->encodeString(packet, header->authorization);
 	}
+	else return 0; //No header
 	char result[4];
 	_bl->hf.memcpyBigEndian(result, (char*)&parameterCount, 4);
 	packet->insert(packet->begin() + oldPacketSize, result, result + 4);

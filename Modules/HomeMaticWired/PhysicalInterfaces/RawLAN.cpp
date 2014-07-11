@@ -37,6 +37,12 @@ RawLAN::RawLAN(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> sett
 {
 	signal(SIGPIPE, SIG_IGN);
 	_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl));
+
+	if(settings->listenThreadPriority == -1)
+	{
+		settings->listenThreadPriority = 0;
+		settings->listenThreadPolicy = SCHED_OTHER;
+	}
 }
 
 RawLAN::~RawLAN()
@@ -138,7 +144,7 @@ void RawLAN::startListening()
 		//GD::out.printInfo("Connected to raw RS485 LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
 		_stopped = false;
 		_listenThread = std::thread(&RawLAN::listen, this);
-		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), 45);
+		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
     {
