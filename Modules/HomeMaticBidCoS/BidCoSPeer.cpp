@@ -1567,7 +1567,8 @@ IBidCoSInterface::PeerInfo BidCoSPeer::getPeerInfo()
 		IBidCoSInterface::PeerInfo peerInfo;
 		peerInfo.address = _address;
 		if(!rpcDevice) return peerInfo;
-		if(serviceMessages->getConfigPending() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp))
+		BaseLib::RPC::Device::RXModes::Enum rxModes = getRXModes();
+		if(serviceMessages->getConfigPending() && ((rxModes & BaseLib::RPC::Device::RXModes::Enum::wakeUp) || (rxModes & BaseLib::RPC::Device::RXModes::Enum::lazyConfig)))
 		{
 			peerInfo.wakeUp = true;
 		}
