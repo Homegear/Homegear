@@ -678,8 +678,8 @@ void HM_LGW::setWakeUp(PeerInfo peerInfo)
 			payload.push_back((peerInfo.address >> 8) & 0xFF);
 			payload.push_back(peerInfo.address & 0xFF);
 			payload.push_back(peerInfo.keyIndex);
-			payload.push_back((char)peerInfo.wakeUp);
-			payload.push_back((char)peerInfo.wakeUp);
+			payload.push_back((char)peerInfo.wakeUp); //CCU2 sets this for wake up, too. No idea, what the meaning is.
+			payload.push_back((char)peerInfo.wakeUp); //This actually enables the sending of the wake up packet
 			buildPacket(requestPacket, payload);
 			_packetIndex++;
 			getResponse(requestPacket, responsePacket, _packetIndex - 1, 1, 4);
@@ -2534,15 +2534,16 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 				_out.printDebug("Debug: AES handshake was successful for packet: " + _bl->hf.getHexString(binaryPacket));
 			}
 			_lastPacketReceived = BaseLib::HelperFunctions::getTime();
-			raisePacketReceived(bidCoSPacket);
-			if(packet.at(5) == 5 && (packet.at(6) & 0x10)) //Wake up was sent
+			bool wakeUp = packet.at(5) == 5 && (packet.at(6) & 0x10);
+			raisePacketReceived(bidCoSPacket, wakeUp);
+			if(wakeUp) //Wake up was sent
 			{
 				std::vector<uint8_t> payload;
 				payload.push_back(0x00);
 				std::shared_ptr<BidCoSPacket> ok(new BidCoSPacket(bidCoSPacket->messageCounter(), 0x80, 0x02, bidCoSPacket->senderAddress(), _myAddress, payload));
 				ok->setTimeReceived(bidCoSPacket->timeReceived() + 1);
 				std::this_thread::sleep_for(std::chrono::milliseconds(30));
-				raisePacketReceived(ok);
+				raisePacketReceived(ok, true);
 			}
 		}
 	}

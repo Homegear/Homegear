@@ -410,6 +410,10 @@ void BidCoSPeer::worker()
 				serviceMessages->resetConfigPendingSetTime();
 			}
 		}
+		if(_valuePending)
+		{
+			if(!pendingBidCoSQueues || pendingBidCoSQueues->empty()) setValuePending(false);
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -1104,6 +1108,7 @@ void BidCoSPeer::saveVariables()
 			saveVariable(17, _aesKeyIndex);
 		}
 		saveVariable(19, _physicalInterfaceID);
+		saveVariable(20, (int32_t)_valuePending);
 	}
 	catch(const std::exception& ex)
     {
@@ -1304,6 +1309,9 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 				_physicalInterfaceID = row->second.at(4)->textValue;
 				if(!_physicalInterfaceID.empty() && GD::physicalInterfaces.find(_physicalInterfaceID) != GD::physicalInterfaces.end()) setPhysicalInterface(GD::physicalInterfaces.at(_physicalInterfaceID));
 				break;
+			case 20:
+				_valuePending = row->second.at(3)->intValue;
+				break;
 			}
 		}
 		if(_centralFeatures && !pendingBidCoSQueues) pendingBidCoSQueues.reset(new PendingBidCoSQueues());
@@ -1350,8 +1358,6 @@ bool BidCoSPeer::load(BaseLib::Systems::LogicalDevice* device)
 		}
 
 		checkAESKey();
-
-		if(pendingBidCoSQueues && !pendingBidCoSQueues->empty()) serviceMessages->setConfigPending(true);
 
 		return true;
 	}
@@ -1568,7 +1574,7 @@ IBidCoSInterface::PeerInfo BidCoSPeer::getPeerInfo()
 		peerInfo.address = _address;
 		if(!rpcDevice) return peerInfo;
 		BaseLib::RPC::Device::RXModes::Enum rxModes = getRXModes();
-		if(serviceMessages->getConfigPending() && ((rxModes & BaseLib::RPC::Device::RXModes::Enum::wakeUp) || (rxModes & BaseLib::RPC::Device::RXModes::Enum::lazyConfig)))
+		if((serviceMessages->getConfigPending() || _valuePending) && ((rxModes & BaseLib::RPC::Device::RXModes::Enum::wakeUp) || (rxModes & BaseLib::RPC::Device::RXModes::Enum::lazyConfig)))
 		{
 			peerInfo.wakeUp = true;
 		}
@@ -1613,9 +1619,10 @@ void BidCoSPeer::onConfigPending(bool configPending)
 	{
 		Peer::onConfigPending(configPending);
 
+		BaseLib::RPC::Device::RXModes::Enum rxModes = getRXModes();
 		if(configPending)
 		{
-			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && _physicalInterface->autoResend())
+			if(((rxModes & BaseLib::RPC::Device::RXModes::Enum::wakeUp) || (rxModes & BaseLib::RPC::Device::RXModes::Enum::lazyConfig)) && _physicalInterface->autoResend())
 			{
 				GD::out.printDebug("Debug: Setting physical device's wake up flag.");
 				if(peerInfoPacketsEnabled) _physicalInterface->setWakeUp(getPeerInfo());
@@ -1623,7 +1630,7 @@ void BidCoSPeer::onConfigPending(bool configPending)
 		}
 		else
 		{
-			if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && _physicalInterface->autoResend())
+			if(((rxModes & BaseLib::RPC::Device::RXModes::Enum::wakeUp) || (rxModes & BaseLib::RPC::Device::RXModes::Enum::lazyConfig)) && _physicalInterface->autoResend())
 			{
 				GD::out.printDebug("Debug: Removing physical device's wake up flag.");
 				if(peerInfoPacketsEnabled) _physicalInterface->setWakeUp(getPeerInfo());
@@ -2099,7 +2106,7 @@ void BidCoSPeer::packetReceived(std::shared_ptr<BidCoSPacket> packet)
 		}
 		if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && packet->senderAddress() == _address && (packet->controlByte() & 2) && pendingBidCoSQueues && !pendingBidCoSQueues->empty()) //Packet is wake me up packet and not bidirectional
 		{
-			if(packet->controlByte() & 32) //Bidirectional?
+			if(packet->controlByte() & 0x20) //Bidirectional?
 			{
 				std::vector<uint8_t> payload;
 				payload.push_back(0x00);
@@ -2997,7 +3004,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 			if(HomeMaticDevice::isDimmer(_deviceType) || HomeMaticDevice::isSwitch(_deviceType)) queue->retries = 12;
 			central->enqueuePendingQueues(_address);
 		}
-		else GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+		else
+		{
+			setValuePending(true);
+			if(peerInfoPacketsEnabled && _physicalInterface->autoResend()) _physicalInterface->setWakeUp(getPeerInfo());
+			GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
+		}
 
 		if(!valueKeys->empty()) raiseRPCEvent(_peerID, channel, _serialNumber + ":" + std::to_string(channel), valueKeys, values);
 

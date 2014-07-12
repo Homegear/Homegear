@@ -460,7 +460,7 @@ void FamilyController::saveAndDispose(bool full, bool crash)
 		GD::out.printMessage("(Shutdown) => Saving devices");
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
-			i->second->save(full);
+			if(i->second) i->second->save(full);
 		}
 		if(!crash)
 		{

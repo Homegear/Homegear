@@ -976,7 +976,7 @@ std::string HomeMaticCentral::handleCLICommand(std::string command)
 			if(!_currentPeer) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				stringStream << "Peer with id " << peerID << " and device type 0x" << (int32_t)_currentPeer->getDeviceType().type() << " selected." << std::dec << std::endl;
+				stringStream << "Peer with id " << peerID << " and device type 0x" << _bl->hf.getHexString(_currentPeer->getDeviceType().type()) << " selected." << std::dec << std::endl;
 				stringStream << "For information about the peer's commands type: \"help\"" << std::endl;
 			}
 			return stringStream.str();
@@ -2209,7 +2209,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 			return;
 		}
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
-		if(!queue) return;
+		if(!queue || queue->isEmpty()) return;
 		//Config was requested by central
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
 		bool continuousData = false;
@@ -2329,7 +2329,11 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 								while(parameter->partialData.size() < (*i)->physicalParameter->size) parameter->partialData.push_back(0);
 								position = 9 + 2;
 								std::vector<uint8_t> data = packet->getPosition(position, missingBytes, (*i)->physicalParameter->mask);
-								for(uint32_t j = 0; j < byteOffset; j++) parameter->data.at(j) = parameter->partialData.at(j);
+								for(uint32_t j = 0; j < byteOffset; j++)
+								{
+									if(j >= parameter->data.size()) parameter->data.push_back(parameter->partialData.at(j));
+									else parameter->data.at(j) = parameter->partialData.at(j);
+								}
 								for(uint32_t j = byteOffset; j < (*i)->physicalParameter->size; j++)
 								{
 									if(j >= parameter->data.size()) parameter->data.push_back(data.at(j - byteOffset));

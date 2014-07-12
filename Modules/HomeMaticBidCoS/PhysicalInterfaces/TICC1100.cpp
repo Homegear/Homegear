@@ -418,6 +418,7 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		}
 		encodedPacket[i] = decodedPacket[i] ^ decodedPacket[2];
 
+		int64_t timeBeforeLock = BaseLib::HelperFunctions::getTime();
 		_sendingPending = true;
 		_txMutex.lock();
 		_sendingPending = false;
@@ -426,10 +427,14 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			_txMutex.unlock();
 			return;
 		}
-		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 		_sending = true;
 		sendCommandStrobe(CommandStrobes::Enum::SIDLE);
 		sendCommandStrobe(CommandStrobes::Enum::SFTX);
+		_lastPacketSent = BaseLib::HelperFunctions::getTime();
+		if(_lastPacketSent - timeBeforeLock > 100)
+		{
+			_out.printWarning("Warning: Timing problem. Sending took more than 100ms. Do you have enough system resources?");
+		}
 		if(burst)
 		{
 			//int32_t waitIndex = 0;

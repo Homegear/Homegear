@@ -119,6 +119,8 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		void setAESKeyIndex(int32_t value);
 		std::string getPhysicalInterfaceID() { return _physicalInterfaceID; }
 		void setPhysicalInterfaceID(std::string);
+		bool getValuePending() { return _valuePending; }
+		void setValuePending(bool value) { _valuePending = value; saveVariable(20, value); }
 		//End
 
         void setCentralFeatures(bool value) { _centralFeatures = value; }
@@ -201,6 +203,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		BaseLib::Systems::BasicPeer _team;
 		int32_t _aesKeyIndex = 0;
 		std::string _physicalInterfaceID;
+		bool _valuePending = false;
 		//End
 
 		virtual void setPhysicalInterface(std::shared_ptr<IBidCoSInterface> interface);

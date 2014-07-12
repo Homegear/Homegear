@@ -65,12 +65,19 @@ void IPhysicalInterface::disableUpdateMode()
 	throw Exception("Error: Method disableUpdateMode is not implemented.");
 }
 
-void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet)
+void IPhysicalInterface::raisePacketReceived(std::shared_ptr<Packet> packet, bool highPriority)
 {
 	try
 	{
 		std::thread t(&IPhysicalInterface::raisePacketReceivedThread, this, packet);
-		BaseLib::Threads::setThreadPriority(_bl, t.native_handle(), _bl->settings.packetReceivedThreadPriority(), _bl->settings.packetReceivedThreadPolicy());
+		if(highPriority)
+		{
+			BaseLib::Threads::setThreadPriority(_bl, t.native_handle(), 45, SCHED_FIFO);
+		}
+		else
+		{
+			BaseLib::Threads::setThreadPriority(_bl, t.native_handle(), _bl->settings.packetReceivedThreadPriority(), _bl->settings.packetReceivedThreadPolicy());
+		}
 		t.detach();
 	}
     catch(const std::exception& ex)

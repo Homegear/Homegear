@@ -116,7 +116,7 @@ protected:
 	bool _updateMode = false;
 
 	//Event handling
-	virtual void raisePacketReceived(std::shared_ptr<Packet> packet);
+	virtual void raisePacketReceived(std::shared_ptr<Packet> packet, bool highPriority = false);
 	virtual void raisePacketReceivedThread(std::shared_ptr<Packet> packet);
 	//End event handling
 	virtual void setDevicePermission(int32_t userID, int32_t groupID);
