@@ -2523,6 +2523,7 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 			binaryPacket.push_back(rssi);
 			std::shared_ptr<BidCoSPacket> bidCoSPacket(new BidCoSPacket(binaryPacket, true, BaseLib::HelperFunctions::getTime()));
 			//Don't use (packet.at(6) & 1) here. That bit is set for non-AES packets, too
+			//packet.at(6) == 3 and packet.at(7) == 0 is set on pairing packets: FD0020018A0503002494840026219BFD00011000AD4C4551303030333835365803FFFFCB99
 			if(packet.at(5) == 5 && ((packet.at(6) & 3) == 3 || (packet.at(6) & 5) == 5))
 			{
 				_out.printWarning("Warning: AES handshake failed for packet: " + _bl->hf.getHexString(binaryPacket));

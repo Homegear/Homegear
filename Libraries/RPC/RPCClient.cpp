@@ -458,7 +458,8 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				{
 					if(!(buffer[3] & 1) && buffer[3] != 0xFF)
 					{
-						GD::out.printError("Error: RPC client received binary request as response from server " + server->hostname + " on port " + server->address.second);
+						packet->insert(packet->begin(), buffer, buffer + receivedBytes);
+						GD::out.printError("Error: RPC client received binary request as response from server " + server->hostname + " on port " + server->address.second + ". Packet was: " + GD::bl->hf.getHexString(*packet));
 						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
