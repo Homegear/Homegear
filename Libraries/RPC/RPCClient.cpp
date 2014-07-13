@@ -501,11 +501,11 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 					}
 					packet->insert(packet->end(), buffer, buffer + receivedBytes);
 					packetLength += receivedBytes;
-					if(packetLength == dataSize)
-					{
-						packet->push_back('\0');
-						break;
-					}
+				}
+				if(packetLength == dataSize)
+				{
+					packet->push_back('\0');
+					break;
 				}
 			}
 			else

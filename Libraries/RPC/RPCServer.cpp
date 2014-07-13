@@ -281,12 +281,12 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 	try
 	{
 		removeClient(client->id);
-		GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
 		if(client->ssl)
 		{
 			SSL_free(client->ssl);
 			client->ssl = nullptr;
 		}
+		GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
 	}
 	catch(const std::exception& ex)
     {

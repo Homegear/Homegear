@@ -959,10 +959,10 @@ void HM_CFG_LAN::processInit(std::string& packet)
 	if(_initCommandQueue.front().at(0) == 'A') //No init packet has been sent yet
 	{
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packet, ',');
-		if(parts.size() != 7 || parts.at(0) != "HHM-LAN-IF")
+		if(parts.size() < 7 || parts.at(0) != "HHM-LAN-IF")
 		{
 			_stopCallbackThread = true;
-			_out.printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening.");
+			_out.printError("Error: First packet from HM-CFG-LAN does not start with \"HHM-LAN-IF\" or has wrong structure. Please check your AES key in physicalinterfaces.conf. Stopping listening. Packet was: " + packet);
 			return;
 		}
 		_startUpTime = BaseLib::HelperFunctions::getTime() - (int64_t)BaseLib::HelperFunctions::getNumber(parts.at(5), true);
@@ -989,7 +989,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 		if(packet.empty()) return;
 		if(_bl->debugLevel >= 5) _out.printDebug(std::string("Debug: Packet received from HM-CFG-LAN") + (_useAES ? + " (encrypted)" : "") + ": " + packet);
 		std::vector<std::string> parts = BaseLib::HelperFunctions::splitAll(packet, ',');
-		if(packet.at(0) == 'H' && parts.size() == 7)
+		if(packet.at(0) == 'H' && parts.size() >= 7)
 		{
 			/*
 			Index	Meaning
@@ -1007,7 +1007,7 @@ void HM_CFG_LAN::parsePacket(std::string& packet)
 		}
 		else if(packet.at(0) == 'E' || packet.at(0) == 'R')
 		{
-			if(parts.size() != 6)
+			if(parts.size() < 6)
 			{
 				_out.printWarning("Warning: Invalid packet received from HM-CFG-LAN: " + packet);
 				return;

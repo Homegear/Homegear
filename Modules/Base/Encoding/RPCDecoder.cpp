@@ -46,7 +46,7 @@ std::shared_ptr<RPCHeader> RPCDecoder::decodeHeader(std::shared_ptr<std::vector<
 	std::shared_ptr<RPCHeader> header(new RPCHeader());
 	try
 	{
-		if(!(packet->at(3) & 0x40) || packet->size() < 12) return header;
+		if(!(packet->size() < 12 || packet->at(3) & 0x40)) return header;
 		uint32_t position = 4;
 		uint32_t headerSize = 0;
 		headerSize = _decoder->decodeInteger(packet, position);
