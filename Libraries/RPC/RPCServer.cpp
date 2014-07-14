@@ -39,6 +39,12 @@ RPCServer::Client::Client()
 	 fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor());
 }
 
+RPCServer::Client::~Client()
+{
+	GD::bl->fileDescriptorManager.shutdown(fileDescriptor);
+	if(ssl) SSL_free(ssl);
+}
+
 RPCServer::RPCServer()
 {
 	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
@@ -743,9 +749,26 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				//buffer[3] & 1 is true for buffer[3] == 0xFF, too
 				packetType = (buffer[3] & 1) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
 				if(bytesRead < 8) continue;
-				GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
+				uint32_t headerSize = 0;
+				if(buffer[3] & 0x40)
+				{
+					GD::bl->hf.memcpyBigEndian((char*)&headerSize, buffer + 4, 4);
+					if(bytesRead < headerSize + 12)
+					{
+						GD::out.printError("Error: Binary rpc packet has invalid header size.");
+						continue;
+					}
+					GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 8 + headerSize, 4);
+					dataSize += headerSize + 4;
+				}
+				else GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
 				GD::out.printDebug("Receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
 				if(dataSize == 0) continue;
+				if(headerSize > 1024)
+				{
+					GD::out.printError("Error: Binary rpc packet with header larger than 1 KiB received.");
+					continue;
+				}
 				if(dataSize > 104857600)
 				{
 					GD::out.printError("Error: Packet with data larger than 100 MiB received.");

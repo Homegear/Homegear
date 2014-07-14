@@ -231,29 +231,54 @@ void SocketOperations::getSSL()
 	}
 	if(!SSL_set_fd(_ssl, _fileDescriptor->descriptor))
 	{
-		std::string error(_ssl ? "Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, 0)) : "Error during TLS/SSL handshake.");
+		std::string error(_ssl ? "Error during TLS/SSL handshake (1): " + HelperFunctions::getSSLError(SSL_get_error(_ssl, 0)) : "Error during TLS/SSL handshake.");
 		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		if(_ssl) SSL_free(_ssl);
 		_ssl = nullptr;
 		throw SocketSSLException(error);
 	}
-	int32_t result = SSL_connect(_ssl);
-	if(!_ssl || result < 1)
+	int32_t result = 0;
+	bool throwError = false;
+	int32_t errorNumber = 0;
+	for(int32_t i = 0; i < 10; i++)
 	{
-		std::string error(_ssl ? "Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, result)) : "Error during TLS/SSL handshake.");
-		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-		if(_ssl) SSL_free(_ssl);
-		_ssl = nullptr;
-		throw SocketSSLException(error);
+		throwError = false;
+		result = SSL_connect(_ssl);
+		if(!_ssl)
+		{
+			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+			if(_ssl) SSL_free(_ssl);
+			_ssl = nullptr;
+			throw SocketSSLException("Error during TLS/SSL handshake (2).");
+		}
+		if(result < 1)
+		{
+			errorNumber = SSL_get_error(_ssl, result);
+			if(errorNumber == SSL_ERROR_WANT_READ && i < 9)
+			{
+				waitForSocket();
+				continue;
+			}
+			else throwError = true;
+		}
+		if(throwError)
+		{
+			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+			if(_ssl) SSL_free(_ssl);
+			_ssl = nullptr;
+			throw SocketSSLException("Error during TLS/SSL handshake (2): " + HelperFunctions::getSSLError(errorNumber));
+		}
+		break;
 	}
 
 	X509* serverCert = SSL_get_peer_certificate(_ssl);
 	if(!serverCert)
 	{
+		errorNumber = SSL_get_error(_ssl, 0);
 		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		if(_ssl) SSL_free(_ssl);
 		_ssl = nullptr;
-		throw SocketSSLException("Could not get server certificate.");
+		throw SocketSSLException("Could not get server certificate: " + HelperFunctions::getSSLError(errorNumber));
 	}
 
 	//When no certificate was received, verify returns X509_V_OK!
@@ -264,6 +289,19 @@ void SocketOperations::getSSL()
 		_ssl = nullptr;
 		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
 	}
+}
+
+bool SocketOperations::waitForSocket()
+{
+	timeval timeout;
+	timeout.tv_sec = 10;
+	timeout.tv_usec = 0;
+	fd_set readFileDescriptor;
+	FD_ZERO(&readFileDescriptor);
+	FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
+	int32_t bytesRead = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+	if(bytesRead != 1) return false;
+	return true;
 }
 
 void SocketOperations::getConnection()
@@ -365,10 +403,6 @@ void SocketOperations::getConnection()
 
 		if(connectResult != 0) //We have to wait for the connection
 		{
-			timeval timeout;
-			timeout.tv_sec = 5;
-			timeout.tv_usec = 0;
-
 			pollfd pollstruct
 			{
 				(int)_fileDescriptor->descriptor,

@@ -80,7 +80,7 @@ namespace RPC
 				Auth auth;
 
 				Client();
-				virtual ~Client() { if(ssl) SSL_free(ssl); };
+				virtual ~Client();
 			};
 
 			struct PacketType

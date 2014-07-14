@@ -153,6 +153,7 @@ protected:
 	void getSSL();
 	void initSSL();
 	void autoConnect();
+	bool waitForSocket();
 };
 
 }
