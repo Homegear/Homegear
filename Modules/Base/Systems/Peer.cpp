@@ -1483,6 +1483,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 						(*i)->id = remotePeer->getID();
 						(*i)->serialNumber = remotePeer->getSerialNumber();
 						peerID = (*i)->id;
+						peerSerialNumber = remotePeer->getSerialNumber();
 					}
 					else
 					{
