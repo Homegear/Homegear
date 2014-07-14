@@ -740,7 +740,8 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			if(!strncmp(&buffer[0], "Bin", 3))
 			{
 				http.reset();
-				packetType = ((buffer[3] & 1) || buffer[3] == 0xFF) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
+				//buffer[3] & 1 is true for buffer[3] == 0xFF, too
+				packetType = (buffer[3] & 1) ? PacketType::Enum::binaryResponse : PacketType::Enum::binaryRequest;
 				if(bytesRead < 8) continue;
 				GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
 				GD::out.printDebug("Receiving binary rpc packet with size: " + std::to_string(dataSize), 6);

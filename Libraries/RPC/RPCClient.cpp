@@ -472,7 +472,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 						return std::shared_ptr<std::vector<char>>();
 					}
 					GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
-					GD::out.printDebug("RPC client receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
+					GD::out.printDebug("RPC client receiving binary rpc packet with size: " + std::to_string(receivedBytes) + ". Payload size is: " + std::to_string(dataSize));
 					if(dataSize == 0)
 					{
 						GD::out.printError("Error: RPC client received binary packet without data from server " + server->hostname + " on port " + server->address.second);
@@ -531,7 +531,11 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 		}
 		if(!server->keepAlive) server->socket->close();
-		GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
+		if(GD::bl->debugLevel >= 5)
+		{
+			if(server->binary) GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ": " + GD::bl->hf.getHexString(*packet));
+			else GD::out.printDebug("Debug: Received packet from server " + server->hostname + " on port " + server->address.second + ":\n" + std::string(&http.getContent()->at(0), http.getContent()->size()));
+		}
 		_sendCounter--;
 		if(server->binary) return packet;
 		else if(http.isFinished()) return http.getContent();
