@@ -60,6 +60,7 @@ public:
 	void clear();
 	void removeQueue(std::string value, int32_t channel);
 	bool find(BidCoSQueueType queueType);
+	void setWakeOnRadioBit();
 
 	void getInfoString(std::ostringstream& stringStream);
 private:

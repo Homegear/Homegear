@@ -83,6 +83,7 @@ case $1 in
 				
                 log_daemon_msg "Starting Homegear" "homegear"
                 lock_homegear
+                #Probably has no effect at all...
                 ulimit -r 100
                 start-stop-daemon --start --quiet --oknodo -c $RUNASUSER -g $RUNASGROUP --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $HOMEGEAR_OPTS
                 status=$?

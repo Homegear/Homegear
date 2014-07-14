@@ -348,6 +348,30 @@ bool PendingBidCoSQueues::find(BidCoSQueueType queueType)
 	return false;
 }
 
+void PendingBidCoSQueues::setWakeOnRadioBit()
+{
+	try
+	{
+		_queuesMutex.lock();
+		std::shared_ptr<BidCoSQueue> firstQueue = _queues.front();
+		std::shared_ptr<BidCoSPacket> packet = firstQueue->front()->getPacket();
+		if(packet) packet->setControlByte(packet->controlByte() | 0x10);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_queuesMutex.unlock();
+}
+
 void PendingBidCoSQueues::getInfoString(std::ostringstream& stringStream)
 {
 	try

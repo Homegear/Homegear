@@ -274,12 +274,16 @@ void HomeMaticCentral::enqueuePendingQueues(int32_t deviceAddress)
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer = getPeer(deviceAddress);
-		if(!peer) return;
+		if(!peer || !peer->pendingBidCoSQueues) return;
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(deviceAddress);
 		if(!queue) queue = _bidCoSQueueManager.createQueue(this, peer->getPhysicalInterface(), BidCoSQueueType::DEFAULT, deviceAddress);
 		if(!queue) return;
 		if(!queue->peer) queue->peer = peer;
-		if(queue->pendingQueuesEmpty()) queue->push(peer->pendingBidCoSQueues);
+		if(queue->pendingQueuesEmpty())
+		{
+			if(peer->getRXModes() & BaseLib::RPC::Device::RXModes::burst) peer->pendingBidCoSQueues->setWakeOnRadioBit();
+			queue->push(peer->pendingBidCoSQueues);
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -2210,6 +2214,7 @@ void HomeMaticCentral::handleConfigParamResponse(int32_t messageCounter, std::sh
 		}
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.get(packet->senderAddress());
 		if(!queue || queue->isEmpty()) return;
+		if(packet->controlByte() & 0x04) return; //Ignore broadcast packets
 		//Config was requested by central
 		std::shared_ptr<BidCoSPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
 		bool continuousData = false;
@@ -2695,6 +2700,7 @@ void HomeMaticCentral::handleAck(int32_t messageCounter, std::shared_ptr<BidCoSP
 						_peersMutex.unlock();
 						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 					}
+					sleep(5);
 					GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(queue->peer->getAddress()) + ".");
 					for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = queue->peer->rpcDevice->channels.begin(); i != queue->peer->rpcDevice->channels.end(); ++i)
 					{

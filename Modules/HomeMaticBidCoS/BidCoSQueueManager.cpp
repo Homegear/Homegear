@@ -221,7 +221,6 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 		_queueMutex.lock();
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->queue && !_queues.at(address)->queue->isEmpty() && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 2000)
 		{
-			if(_queues.empty()) _stopWorkerThread = true;
 			_queueMutex.unlock();
 			return;
 		}
@@ -231,8 +230,14 @@ void BidCoSQueueManager::resetQueue(int32_t address, uint32_t id)
 		bool setUnreach = false;
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
 		{
-			GD::out.printDebug("Debug: Deleting queue " + std::to_string(id) + " for BidCoS peer with address 0x" + BaseLib::HelperFunctions::getHexString(address));
 			queue = _queues.at(address);
+			if(queue->queue.use_count() > 1 && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 20000)
+			{
+				_queueMutex.unlock();
+				GD::out.printDebug("Debug: Postponing deletion of queue " + std::to_string(id) + " for BidCoS peer with address 0x" + BaseLib::HelperFunctions::getHexString(address) + ", because it is still in use (" + std::to_string(queue->queue.use_count()) + " referring objects).");
+				return;
+			}
+			GD::out.printDebug("Debug: Deleting queue " + std::to_string(id) + " for BidCoS peer with address 0x" + BaseLib::HelperFunctions::getHexString(address));
 			_queues.erase(address);
 			if(!queue->queue->isEmpty() && queue->queue->getQueueType() != BidCoSQueueType::PAIRING)
 			{

@@ -530,7 +530,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCServer::callMethod(std::string& me
 	try
 	{
 		if(!parameters) parameters = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
-		if(_stopped) return parameters;
+		if(_stopped) return BaseLib::RPC::RPCVariable::createError(100000, "Server is stopped.");
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
 			GD::out.printError("Warning: RPC method not found: " + methodName);

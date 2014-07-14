@@ -47,6 +47,7 @@ public:
 	void registerMethods();
 	void start(std::shared_ptr<ServerSettings::Settings>& settings);
 	void stop();
+	bool isRunning() { if(!_server) return false; return _server->isRunning(); }
 	uint32_t connectionCount();
 	std::shared_ptr<BaseLib::RPC::RPCVariable> callMethod(std::string methodName, std::shared_ptr<BaseLib::RPC::RPCVariable> parameters);
 protected:

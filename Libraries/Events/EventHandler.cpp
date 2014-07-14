@@ -61,6 +61,11 @@ void EventHandler::mainThread()
 		try
 		{
 			int64_t currentTime = BaseLib::HelperFunctions::getTime();
+			if(!GD::rpcServers.begin()->second.isRunning())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(300));
+				continue;
+			}
 			_eventsMutex.lock();
 			if(!_timedEvents.empty() && _timedEvents.begin()->first <= currentTime)
 			{

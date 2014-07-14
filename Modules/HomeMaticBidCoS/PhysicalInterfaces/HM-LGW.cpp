@@ -2526,8 +2526,13 @@ void HM_LGW::parsePacket(std::vector<uint8_t>& packet)
 			//packet.at(6) == 3 and packet.at(7) == 0 is set on pairing packets: FD0020018A0503002494840026219BFD00011000AD4C4551303030333835365803FFFFCB99
 			if(packet.at(5) == 5 && ((packet.at(6) & 3) == 3 || (packet.at(6) & 5) == 5))
 			{
-				_out.printWarning("Warning: AES handshake failed for packet: " + _bl->hf.getHexString(binaryPacket));
-				return;
+				//Accept pairing packets from HM-TC-IT-WM-W-EU (version 1.0) and maybe other devices.
+				//For these devices the handshake is never executed, but the "failed bit" set anyway: Bug
+				if(!(bidCoSPacket->controlByte() & 0x4) || bidCoSPacket->messageType() != 0 || bidCoSPacket->payload()->size() != 17)
+				{
+					_out.printWarning("Warning: AES handshake failed for packet: " + _bl->hf.getHexString(binaryPacket));
+					return;
+				}
 			}
 			else if(_bl->debugLevel >= 5 && packet.at(5) == 5 && (packet.at(6) & 3) == 2)
 			{

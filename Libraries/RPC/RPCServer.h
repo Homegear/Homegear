@@ -91,6 +91,7 @@ namespace RPC
 			RPCServer();
 			virtual ~RPCServer();
 
+			bool isRunning() { return !_stopped; }
 			void start(std::shared_ptr<ServerSettings::Settings>& settings);
 			void stop();
 			void registerMethod(std::string methodName, std::shared_ptr<RPCMethod> method);

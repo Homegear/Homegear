@@ -52,6 +52,7 @@ class BidCoSPacket : public BaseLib::Systems::Packet
         uint8_t messageType() { return _messageType; }
         uint8_t rssiDevice() { return _rssiDevice; }
         bool isUpdatePacket() { return _updatePacket; }
+        virtual void setControlByte(uint8_t value) { _controlByte = value; }
         virtual std::string hexString();
         virtual std::vector<uint8_t> byteArray();
         virtual std::vector<char> byteArraySigned();
