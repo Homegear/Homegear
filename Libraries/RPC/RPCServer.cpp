@@ -961,7 +961,7 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 		_sslCTXMutex.unlock();
 		if(!client->ssl)
 		{
-			GD::out.printError("Error creating SSL structure: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, 0)));
+			GD::out.printError("Error creating SSL structure.");
 			return;
 		}
 		if(!client->fileDescriptor || client->fileDescriptor->descriptor == -1)

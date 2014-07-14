@@ -222,21 +222,36 @@ void SocketOperations::getSSL()
 		throw SocketSSLException("Could not connect to server using SSL. SSL is not initialized. Look for previous error messages.");
 	}
 	_ssl = SSL_new(_sslCTX);
-	SSL_set_fd(_ssl, _fileDescriptor->descriptor);
+	if(!_ssl)
+	{
+		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+		if(_ssl) SSL_free(_ssl);
+		_ssl = nullptr;
+		throw SocketSSLException("Error during TLS/SSL handshake. Could not create SSL structure.");
+	}
+	if(!SSL_set_fd(_ssl, _fileDescriptor->descriptor))
+	{
+		std::string error(_ssl ? "Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, 0)) : "Error during TLS/SSL handshake.");
+		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+		if(_ssl) SSL_free(_ssl);
+		_ssl = nullptr;
+		throw SocketSSLException(error);
+	}
 	int32_t result = SSL_connect(_ssl);
 	if(!_ssl || result < 1)
 	{
+		std::string error(_ssl ? "Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, result)) : "Error during TLS/SSL handshake.");
 		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-		SSL_free(_ssl);
+		if(_ssl) SSL_free(_ssl);
 		_ssl = nullptr;
-		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, result)));
+		throw SocketSSLException(error);
 	}
 
 	X509* serverCert = SSL_get_peer_certificate(_ssl);
 	if(!serverCert)
 	{
 		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-		SSL_free(_ssl);
+		if(_ssl) SSL_free(_ssl);
 		_ssl = nullptr;
 		throw SocketSSLException("Could not get server certificate.");
 	}
@@ -245,7 +260,7 @@ void SocketOperations::getSSL()
 	if((result = SSL_get_verify_result(_ssl)) != X509_V_OK && (result != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT || _verifyCertificate))
 	{
 		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-		SSL_free(_ssl);
+		if(_ssl) SSL_free(_ssl);
 		_ssl = nullptr;
 		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
 	}

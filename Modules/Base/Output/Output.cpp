@@ -175,25 +175,36 @@ void Output::printBinary(std::vector<char>& data)
 
 void Output::printEx(std::string file, uint32_t line, std::string function, std::string what)
 {
-	if(!what.empty()) std::cerr << getTimeString() << " " << _prefix << "Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
-	else std::cerr << getTimeString() << " " << _prefix << "Unknown error in file " << file << " line " << line << " in function " << function << "." << std::endl;
+	if(!what.empty())
+	{
+		std::cout << getTimeString() << " " << _prefix << "Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
+		std::cerr << getTimeString() << " " << _prefix << "Error in file " << file << " line " << line << " in function " << function <<": " << what << std::endl;
+	}
+	else
+	{
+		std::cout << getTimeString() << " " << _prefix << "Unknown error in file " << file << " line " << line << " in function " << function << "." << std::endl;
+		std::cerr << getTimeString() << " " << _prefix << "Unknown error in file " << file << " line " << line << " in function " << function << "." << std::endl;
+	}
 }
 
 void Output::printCritical(std::string errorString)
 {
 	if(_bl && _bl->debugLevel < 1) return;
+	std::cout << getTimeString() << " " << _prefix << errorString << std::endl;
 	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
 }
 
 void Output::printError(std::string errorString)
 {
 	if(_bl && _bl->debugLevel < 2) return;
+	std::cout << getTimeString() << " " << _prefix << errorString << std::endl;
 	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
 }
 
 void Output::printWarning(std::string errorString)
 {
 	if(_bl && _bl->debugLevel < 3) return;
+	std::cout << getTimeString() << " " << _prefix << errorString << std::endl;
 	std::cerr << getTimeString() << " " << _prefix << errorString << std::endl;
 }
 
