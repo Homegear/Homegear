@@ -86,6 +86,7 @@ class BidCoSQueue
 {
     protected:
 		bool _disposing = false;
+		bool _setWakeOnRadioBit = false;
 		//I'm using list, so iterators are not invalidated
         std::list<BidCoSQueueEntry> _queue;
         std::shared_ptr<IBidCoSInterface> _physicalInterface;
@@ -148,6 +149,7 @@ class BidCoSQueue
         void send(std::shared_ptr<BidCoSPacket> packet, bool stealthy);
         void keepAlive();
         void longKeepAlive();
+        void setWakeOnRadioBit();
         void dispose();
         void serialize(std::vector<uint8_t>& encodedData);
         void unserialize(std::shared_ptr<std::vector<char>> serializedData, HomeMaticDevice* device, uint32_t position = 0);

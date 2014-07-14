@@ -783,7 +783,12 @@ void BidCoSQueue::send(std::shared_ptr<BidCoSPacket> packet, bool stealthy)
 {
 	try
 	{
-		if(noSending || _disposing) return;
+		if(noSending || _disposing || !packet) return;
+		if(_setWakeOnRadioBit)
+		{
+			packet->setControlByte(packet->controlByte() | 0x10);
+			_setWakeOnRadioBit = false;
+		}
 		if(device) device->sendPacket(_physicalInterface, packet, stealthy);
 		else GD::out.printError("Error: Device pointer of queue " + std::to_string(id) + " is null.");
 	}
@@ -1152,5 +1157,26 @@ void BidCoSQueue::pop()
     	_queueMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+void BidCoSQueue::setWakeOnRadioBit()
+{
+	try
+	{
+		_setWakeOnRadioBit = true;
+		if(_disposing) return;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 }

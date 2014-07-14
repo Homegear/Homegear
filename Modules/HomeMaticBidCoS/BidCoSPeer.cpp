@@ -107,10 +107,10 @@ void BidCoSPeer::initializeCentralConfig()
 						if((*j)->id == "AES_ACTIVE" && !_physicalInterface->aesSupported())
 						{
 							parameter.data.push_back(0);
-						//}
-						//else
-						//{
-							//parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+						}
+						else
+						{
+							parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
 						}
 						configCentral[i->first][(*j)->id] = parameter;
 						saveParameter(0, BaseLib::RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);

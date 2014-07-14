@@ -1617,7 +1617,6 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLink(int32_t channel, int32_t flags, 
 			}
 			else //Get links for all channels
 			{
-				flags &= 7; //Remove flag 8 and 16. Both are not processed, when getting links for all devices.
 				for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 				{
 					element.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
@@ -1650,6 +1649,15 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkInfo(int32_t senderChannel, uint6
 		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(_peers.find(senderChannel) == _peers.end()) return RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
 		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverID, receiverChannel);
+		if(!remotePeer)
+		{
+			std::shared_ptr<Peer> peer = getCentral()->logicalDevice()->getPeer(receiverID);
+			if(peer)
+			{
+				remotePeer = getPeer(senderChannel, peer->getAddress(), receiverChannel);
+				if(remotePeer) remotePeer->id = peer->getID();
+			}
+		}
 		if(!remotePeer) return RPC::RPCVariable::createError(-2, "Peer not found.");
 		std::shared_ptr<RPC::RPCVariable> response(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
 		response->structValue->insert(RPC::RPCStructElement("DESCRIPTION", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(remotePeer->linkDescription))));
@@ -1696,11 +1704,12 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel, bool retur
 				if(peer && peer->getPeer(channel, _peerID)) peerKnowsMe = true;
 
 				std::string peerSerial = (*i)->serialNumber;
-				if((*i)->serialNumber.empty())
+				if((*i)->serialNumber.empty() || (*i)->id == 0)
 				{
 					if(peerKnowsMe)
 					{
 						(*i)->serialNumber = peer->getSerialNumber();
+						(*i)->id = peer->getID();
 						peerSerial = (*i)->serialNumber;
 					}
 					else
@@ -1986,7 +1995,16 @@ std::shared_ptr<RPC::RPCVariable> Peer::setLinkInfo(int32_t senderChannel, uint6
 	{
 		if(_peers.find(senderChannel) == _peers.end()) return RPC::RPCVariable::createError(-2, "No peer found for sender channel.");
 		std::shared_ptr<BasicPeer> remotePeer = getPeer(senderChannel, receiverID, receiverChannel);
-		if(!remotePeer) return RPC::RPCVariable::createError(-2, "Peer not found.");
+		if(!remotePeer)
+		{
+			std::shared_ptr<Peer> peer = getCentral()->logicalDevice()->getPeer(receiverID);
+			if(peer)
+			{
+				remotePeer = getPeer(senderChannel, peer->getAddress(), receiverChannel);
+				if(remotePeer) remotePeer->id = peer->getID();
+			}
+		}
+		if(!remotePeer)	return RPC::RPCVariable::createError(-2, "Peer not found.");
 		remotePeer->linkDescription = description;
 		remotePeer->linkName = name;
 		savePeers();
