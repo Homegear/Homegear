@@ -108,8 +108,6 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RP
 		char result[4];
 		_bl->hf.memcpyBigEndian(result, (char*)&dataSize, 4);
 		packet->insert(packet->begin() + 4, result, result + 4);
-
-		return packet;
 	}
 	catch(const std::exception& ex)
     {

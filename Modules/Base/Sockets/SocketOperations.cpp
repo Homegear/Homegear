@@ -121,9 +121,10 @@ void SocketOperations::autoConnect()
 
 void SocketOperations::close()
 {
+	//Never ever call SSL_free before closing the socket!!! => sometimes segfault
+	_bl->fileDescriptorManager.close(_fileDescriptor);
 	if(_ssl) SSL_free(_ssl);
 	_ssl = nullptr;
-	_bl->fileDescriptorManager.close(_fileDescriptor);
 }
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
@@ -225,27 +226,27 @@ void SocketOperations::getSSL()
 	int32_t result = SSL_connect(_ssl);
 	if(!_ssl || result < 1)
 	{
+		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		SSL_free(_ssl);
 		_ssl = nullptr;
-		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, result)));
 	}
 
 	X509* serverCert = SSL_get_peer_certificate(_ssl);
 	if(!serverCert)
 	{
+		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		SSL_free(_ssl);
 		_ssl = nullptr;
-		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		throw SocketSSLException("Could not get server certificate.");
 	}
 
 	//When no certificate was received, verify returns X509_V_OK!
 	if((result = SSL_get_verify_result(_ssl)) != X509_V_OK && (result != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT || _verifyCertificate))
 	{
+		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		SSL_free(_ssl);
 		_ssl = nullptr;
-		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
 	}
 }

@@ -281,12 +281,13 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 	try
 	{
 		removeClient(client->id);
+		//Never ever call SSL_free before closing the socket!!! => segfault
+		GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
 		if(client->ssl)
 		{
 			SSL_free(client->ssl);
 			client->ssl = nullptr;
 		}
-		GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -341,6 +342,7 @@ void RPCServer::mainThread()
 					getSSLFileDescriptor(client);
 					if(!client->ssl)
 					{
+						//Remove client from _clients again. Socket is already closed.
 						closeClientConnection(client);
 						continue;
 					}
@@ -972,6 +974,7 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 		if(!SSL_set_fd(client->ssl, client->fileDescriptor->descriptor))
 		{
 			GD::out.printError("Error setting SSL file descriptor: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, 0)));
+			GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
 			if(client->ssl) SSL_free(client->ssl);
 			client->ssl = nullptr;
 			return;
@@ -986,14 +989,10 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 5");
 		if(result < 1)
 		{
-			if(client->ssl && result != 0)
-			{
-				GD::out.printError("Error during TLS/SSL handshake: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
-				//Calling SSL_free here causes a segfault, so just set client->ssl to nullptr
-				client->ssl = nullptr;
-			}
+			if(client->ssl && result != 0) GD::out.printError("Error during TLS/SSL handshake: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
 			else if(result == 0) GD::out.printError("The TLS/SSL handshake was unsuccessful. Client number: " + std::to_string(client->fileDescriptor->descriptor));
 			else GD::out.printError("Fatal error during TLS/SSL handshake. Client number: " + std::to_string(client->fileDescriptor->descriptor));
+			GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
 			if(client->ssl) SSL_free(client->ssl);
 			client->ssl = nullptr;
 		}
@@ -1013,6 +1012,7 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
     if(client->ssl) SSL_free(client->ssl);
     client->ssl = nullptr;
 }
