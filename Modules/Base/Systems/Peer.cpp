@@ -1707,7 +1707,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getLinkPeers(int32_t channel, bool retur
 				std::string peerSerial = (*i)->serialNumber;
 				if((*i)->serialNumber.empty() || (*i)->id == 0)
 				{
-					if(peerKnowsMe)
+					if(peerKnowsMe || (*i)->address == _address)
 					{
 						(*i)->serialNumber = peer->getSerialNumber();
 						(*i)->id = peer->getID();

@@ -80,12 +80,10 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 		{
 			SSL_load_error_strings();
 			SSLeay_add_ssl_algorithms();
-			_sslCTXMutex.lock();
 			_sslCTX = SSL_CTX_new(SSLv23_server_method());
 			if(!_sslCTX)
 			{
 				GD::out.printError("Error: Could not start RPC Server with SSL support." + std::string(ERR_reason_error_string(ERR_get_error())));
-				_sslCTXMutex.unlock();
 				return;
 			}
 
@@ -99,7 +97,6 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 					BIO_free(bio);
 					SSL_CTX_free(_sslCTX);
 					_sslCTX = nullptr;
-					_sslCTXMutex.unlock();
 					return;
 				}
 
@@ -110,7 +107,6 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 					BIO_free(bio);
 					SSL_CTX_free(_sslCTX);
 					_sslCTX = nullptr;
-					_sslCTXMutex.unlock();
 					return;
 				}
 
@@ -124,7 +120,6 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 					GD::out.printError("Error: Could not start RPC Server with SSL support. Initialization of Diffie-Hellman parameters failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
 					SSL_CTX_free(_sslCTX);
 					_sslCTX = nullptr;
-					_sslCTXMutex.unlock();
 					return;
 				}
 				GD::out.printInfo("Generating temporary Diffie-Hellman parameters. This might take a long time...");
@@ -133,7 +128,6 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 					GD::out.printError("Error: Could not start RPC Server with SSL support. Could not generate Diffie Hellman parameters: " + std::string(ERR_reason_error_string(ERR_get_error())));
 					SSL_CTX_free(_sslCTX);
 					_sslCTX = nullptr;
-					_sslCTXMutex.unlock();
 					return;
 				}
 			}
@@ -143,7 +137,6 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 				GD::out.printError("Error: Could not start RPC Server with SSL support. Diffie Hellman check failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
 				SSL_CTX_free(_sslCTX);
 				_sslCTX = nullptr;
-				_sslCTXMutex.unlock();
 				return;
 			}
 			if(!DH_generate_key(dh))
@@ -151,7 +144,6 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 				GD::out.printError("Error: Could not start RPC Server with SSL support. Could not generate Diffie Hellman key: " + std::string(ERR_reason_error_string(ERR_get_error())));
 				SSL_CTX_free(_sslCTX);
 				_sslCTX = nullptr;
-				_sslCTXMutex.unlock();
 				return;
 			}
 			SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
@@ -161,7 +153,6 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 				SSL_CTX_free(_sslCTX);
 				_sslCTX = nullptr;
 				GD::out.printError("Error: Could not load certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
-				_sslCTXMutex.unlock();
 				return;
 			}
 			if(SSL_CTX_use_PrivateKey_file(_sslCTX, GD::bl->settings.keyPath().c_str(), SSL_FILETYPE_PEM) < 1)
@@ -169,7 +160,6 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 				SSL_CTX_free(_sslCTX);
 				_sslCTX = nullptr;
 				GD::out.printError("Error: Could not load key from certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
-				_sslCTXMutex.unlock();
 				return;
 			}
 			if(!SSL_CTX_check_private_key(_sslCTX))
@@ -177,10 +167,8 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 				SSL_CTX_free(_sslCTX);
 				_sslCTX = nullptr;
 				GD::out.printError("Error: Private key does not match the public key");
-				_sslCTXMutex.unlock();
 				return;
 			}
-			_sslCTXMutex.unlock();
 		}
 		_mainThread = std::thread(&RPCServer::mainThread, this);
 		BaseLib::Threads::setThreadPriority(GD::bl.get(), _mainThread.native_handle(), _threadPriority, _threadPolicy);
@@ -199,7 +187,6 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    _sslCTXMutex.unlock();
 }
 
 void RPCServer::stop()
@@ -210,7 +197,6 @@ void RPCServer::stop()
 		_stopped = true;
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
-		_sslCTXMutex.lock();
 		if(_sslCTX)
 		{
 			SSL_CTX_free(_sslCTX);
@@ -229,7 +215,6 @@ void RPCServer::stop()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-	_sslCTXMutex.unlock();
 }
 
 uint32_t RPCServer::connectionCount()
@@ -297,17 +282,14 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 	}
 	catch(const std::exception& ex)
     {
-		_stateMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_stateMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_stateMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -972,16 +954,13 @@ void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
 	try
 	{
 		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 1");
-		_sslCTXMutex.lock();
 		if(!_sslCTX)
 		{
 			GD::out.printError("Error: Could not initiate SSL connection. _sslCTX is nullptr.");
-			_sslCTXMutex.unlock();
 			return;
 		}
 		client->ssl = SSL_new(_sslCTX);
 		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 2");
-		_sslCTXMutex.unlock();
 		if(!client->ssl)
 		{
 			GD::out.printError("Error creating SSL structure.");

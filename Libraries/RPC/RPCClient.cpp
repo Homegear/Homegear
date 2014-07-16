@@ -471,30 +471,11 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();
 					}
-					uint32_t headerSize = 0;
-					if(buffer[3] & 0x40)
-					{
-						GD::bl->hf.memcpyBigEndian((char*)&headerSize, buffer + 4, 4);
-						if(receivedBytes < headerSize + 12)
-						{
-							GD::out.printError("Error: Binary rpc packet has invalid header size.");
-							continue;
-						}
-						GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 8 + headerSize, 4);
-						dataSize += headerSize + 4;
-					}
-					else GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
+					GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
 					GD::out.printDebug("RPC client receiving binary rpc packet with size: " + std::to_string(receivedBytes) + ". Payload size is: " + std::to_string(dataSize));
 					if(dataSize == 0)
 					{
 						GD::out.printError("Error: RPC client received binary packet without data from server " + server->hostname + " on port " + server->address.second);
-						if(!server->keepAlive) server->socket->close();
-						_sendCounter--;
-						return std::shared_ptr<std::vector<char>>();
-					}
-					if(headerSize > 1024)
-					{
-						GD::out.printError("Error: RPC client received binary packet with header larger than 1 KiB.");
 						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
 						return std::shared_ptr<std::vector<char>>();

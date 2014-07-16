@@ -1817,11 +1817,16 @@ void Device::parseXML(xml_node<>* node)
 					*parameterSet = *parameterSetDefinitions.at(j->second->subsetReference);
 					parameterSet->type = j->second->type;
 					parameterSet->id = j->second->id;
+					for(std::vector<std::shared_ptr<Parameter>>::iterator k = j->second->parameters.begin(); k != j->second->parameters.end(); ++k)
+					{
+						if(!*k) continue;
+						parameterSet->parameters.push_back(*k);
+					}
 					//We can't change the map while we are iterating through it, so we temporarily store the parameterSet
 					parameterSetsToAdd[i->first][j->first] = parameterSet;
-					for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameterSet->parameters.begin(); i != parameterSet->parameters.end(); ++i)
+					for(std::vector<std::shared_ptr<Parameter>>::iterator k = parameterSet->parameters.begin(); k != parameterSet->parameters.end(); ++k)
 					{
-						(*i)->parentParameterSet = parameterSet.get();
+						(*k)->parentParameterSet = parameterSet.get();
 					}
 				}
 			}
