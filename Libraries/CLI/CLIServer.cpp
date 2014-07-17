@@ -254,7 +254,13 @@ void Server::getFileDescriptor(bool deleteOldSocket)
 		}
 		sockaddr_un serverAddress;
 		serverAddress.sun_family = AF_UNIX;
-		strcpy(serverAddress.sun_path, GD::socketPath.c_str());
+		if(GD::socketPath.length() > 107)
+		{
+			//Check for buffer overflow
+			GD::out.printCritical("Critical: Socket path is too long.");
+			return;
+		}
+		strncpy(serverAddress.sun_path, GD::socketPath.c_str(), GD::socketPath.length());
 		bool bound = (bind(_serverFileDescriptor->descriptor, (sockaddr*)&serverAddress, strlen(serverAddress.sun_path) + sizeof(serverAddress.sun_family)) != -1);
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
