@@ -197,7 +197,7 @@ public:
 	virtual std::shared_ptr<LogicalDevice> getDevice(int32_t address) = 0;
 
     //RPC methods
-	virtual std::shared_ptr<RPC::RPCVariable> getAllValues();
+	virtual std::shared_ptr<RPC::RPCVariable> getAllValues(bool returnWriteOnly);
 	virtual std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> getDeviceDescriptions(bool channels, std::map<std::string, bool> fields);
     virtual std::shared_ptr<RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
     virtual std::shared_ptr<RPC::RPCVariable> getDeviceInfo(std::map<std::string, bool> fields);

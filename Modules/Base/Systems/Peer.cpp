@@ -1021,7 +1021,7 @@ void Peer::loadConfig()
 }
 
 //RPC methods
-std::shared_ptr<RPC::RPCVariable> Peer::getAllValues()
+std::shared_ptr<RPC::RPCVariable> Peer::getAllValues(bool returnWriteOnly)
 {
 	try
 	{
@@ -1062,40 +1062,44 @@ std::shared_ptr<RPC::RPCVariable> Peer::getAllValues()
 					_bl->out.printDebug("Debug: Omitting parameter " + (*j)->id + " because of it's ui flag.");
 					continue;
 				}
-				if(!((*j)->operations & BaseLib::RPC::Parameter::Operations::read) && !((*j)->operations & BaseLib::RPC::Parameter::Operations::event)) continue;
+				bool writeOnly = false;
+				if(!((*j)->operations & BaseLib::RPC::Parameter::Operations::read) && !((*j)->operations & BaseLib::RPC::Parameter::Operations::event)) writeOnly = true;
+				if(writeOnly && !returnWriteOnly) continue;
 				if(valuesCentral.find(i->first) == valuesCentral.end()) continue;
 				if(valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end()) continue;
 
-				std::shared_ptr<RPC::RPCVariable> value((*j)->convertFromPacket(valuesCentral[i->first][(*j)->id].data));
-				if(!value) continue;
 				std::shared_ptr<RPC::RPCVariable> element(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
-				element->structValue->insert(RPC::RPCStructElement("VALUE", value));
+				std::shared_ptr<RPC::RPCVariable> value;
+				if(!writeOnly)
+				{
+					value = ((*j)->convertFromPacket(valuesCentral[i->first][(*j)->id].data));
+					if(!value) continue;
+					element->structValue->insert(RPC::RPCStructElement("VALUE", value));
+				}
 
+				if(returnWriteOnly) element->structValue->insert(RPC::RPCStructElement("READABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(!writeOnly))));
+				element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
 				if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeBoolean)
 				{
 					RPC::LogicalParameterBoolean* parameter = (RPC::LogicalParameterBoolean*)(*j)->logicalParameter.get();
-
-					element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
+					element->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("BOOL")))));
 				}
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeString)
 				{
 					RPC::LogicalParameterString* parameter = (RPC::LogicalParameterString*)(*j)->logicalParameter.get();
-
-					element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
+					element->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("STRING")))));
 				}
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeAction)
 				{
 					RPC::LogicalParameterAction* parameter = (RPC::LogicalParameterAction*)(*j)->logicalParameter.get();
-
-					element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
+					element->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("ACTION")))));
 				}
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeInteger)
 				{
 					RPC::LogicalParameterInteger* parameter = (RPC::LogicalParameterInteger*)(*j)->logicalParameter.get();
-
+					element->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("INTEGER")))));
 					element->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->min))));
 					element->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->max))));
-					element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
 
 					if(!parameter->specialValues.empty())
 					{
@@ -1113,10 +1117,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getAllValues()
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeEnum)
 				{
 					RPC::LogicalParameterEnum* parameter = (RPC::LogicalParameterEnum*)(*j)->logicalParameter.get();
-
+					element->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("ENUM")))));
 					element->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->min))));
 					element->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->max))));
-					element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
 
 					std::shared_ptr<RPC::RPCVariable> valueList(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 					for(std::vector<RPC::ParameterOption>::iterator j = parameter->options.begin(); j != parameter->options.end(); ++j)
@@ -1128,10 +1131,9 @@ std::shared_ptr<RPC::RPCVariable> Peer::getAllValues()
 				else if((*j)->logicalParameter->type == RPC::LogicalParameter::Type::typeFloat)
 				{
 					RPC::LogicalParameterFloat* parameter = (RPC::LogicalParameterFloat*)(*j)->logicalParameter.get();
-
+					element->structValue->insert(RPC::RPCStructElement("TYPE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("FLOAT")))));
 					element->structValue->insert(RPC::RPCStructElement("MIN", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->min))));
 					element->structValue->insert(RPC::RPCStructElement("MAX", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(parameter->max))));
-					element->structValue->insert(RPC::RPCStructElement("WRITEABLE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(((*j)->operations & 2) == 2))));
 
 					if(!parameter->specialValues.empty())
 					{

@@ -700,7 +700,16 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllValues::invoke(std::shared_p
 {
 	try
 	{
-		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
+		if(parameters->size() > 0)
+		{
+			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean })
+		}));
+		if(error != ParameterError::Enum::noError) return getError(error);
+		}
+
+		bool returnWriteOnly = false;
+		if(parameters->size() > 0) returnWriteOnly = parameters->at(0)->booleanValue;
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> values(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -708,7 +717,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllValues::invoke(std::shared_p
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->getAllValues();
+			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->getAllValues(returnWriteOnly);
 			if(result->errorStruct)
 			{
 				GD::out.printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);

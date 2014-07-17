@@ -51,7 +51,7 @@ int32_t Central::physicalAddress()
 }
 
 //RPC methods
-std::shared_ptr<RPC::RPCVariable> Central::getAllValues()
+std::shared_ptr<RPC::RPCVariable> Central::getAllValues(bool returnWriteOnly)
 {
 	try
 	{
@@ -65,7 +65,7 @@ std::shared_ptr<RPC::RPCVariable> Central::getAllValues()
 		{
 			//getAllValues really needs a lot of resources, so wait a little bit after each device
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<RPC::RPCVariable> values = (*i)->getAllValues();
+			std::shared_ptr<RPC::RPCVariable> values = (*i)->getAllValues(returnWriteOnly);
 			if(!values || values->errorStruct) continue;
 			array->arrayValue->push_back(values);
 		}
