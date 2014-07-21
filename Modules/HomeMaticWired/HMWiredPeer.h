@@ -98,7 +98,7 @@ public:
 	int32_t getPhysicalIndexOffset(int32_t channel);
 	virtual int32_t getChannelGroupedWith(int32_t channel) { return -1; }
 	virtual int32_t getNewFirmwareVersion();
-	virtual std::string getFirmwareVersion(int32_t firmwareVersion);
+	virtual std::string getFirmwareVersionString(int32_t firmwareVersion);
     virtual bool firmwareUpdateAvailable();
 	void restoreLinks();
 

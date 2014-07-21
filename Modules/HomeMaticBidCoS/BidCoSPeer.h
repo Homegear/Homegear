@@ -174,7 +174,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         bool setHomegearValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
         virtual int32_t getChannelGroupedWith(int32_t channel);
         virtual int32_t getNewFirmwareVersion();
-        virtual std::string getFirmwareVersion(int32_t firmwareVersion);
+        virtual std::string getFirmwareVersionString(int32_t firmwareVersion);
         virtual bool firmwareUpdateAvailable();
         std::string printConfig();
         virtual IBidCoSInterface::PeerInfo getPeerInfo();

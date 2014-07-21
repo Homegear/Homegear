@@ -1718,7 +1718,7 @@ int32_t BidCoSPeer::getNewFirmwareVersion()
 	return 0;
 }
 
-std::string BidCoSPeer::getFirmwareVersion(int32_t firmwareVersion)
+std::string BidCoSPeer::getFirmwareVersionString(int32_t firmwareVersion)
 {
 	try
 	{

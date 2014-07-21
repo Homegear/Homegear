@@ -1614,7 +1614,7 @@ int32_t HMWiredPeer::getNewFirmwareVersion()
 	return 0;
 }
 
-std::string HMWiredPeer::getFirmwareVersion(int32_t firmwareVersion)
+std::string HMWiredPeer::getFirmwareVersionString(int32_t firmwareVersion)
 {
 	try
 	{

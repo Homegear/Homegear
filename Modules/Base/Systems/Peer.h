@@ -171,7 +171,7 @@ public:
 	virtual void enqueuePendingQueues() {}
 	virtual int32_t getChannelGroupedWith(int32_t channel) = 0;
 	virtual int32_t getNewFirmwareVersion() = 0;
-	virtual std::string getFirmwareVersion(int32_t firmwareVersion) = 0;
+	virtual std::string getFirmwareVersionString(int32_t firmwareVersion) = 0;
     virtual bool firmwareUpdateAvailable() = 0;
 
 	virtual bool load(LogicalDevice* device) { return false; }

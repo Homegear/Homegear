@@ -1108,8 +1108,8 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 			_updateMode = false;
 			return;
 		}
-		std::string oldVersionString = BaseLib::HelperFunctions::getHexString((peer->getFirmwareVersion() >> 4)) + "." + BaseLib::HelperFunctions::getHexString(peer->getFirmwareVersion() & 0x0F);
-		std::string versionString = BaseLib::HelperFunctions::getHexString(firmwareVersion >> 4) + "." + BaseLib::HelperFunctions::getHexString(firmwareVersion & 0x0F);
+		std::string oldVersionString = peer->getFirmwareVersionString(peer->getFirmwareVersion());
+		std::string versionString = peer->getFirmwareVersionString(firmwareVersion);
 
 		std::string firmwareHex;
 		try

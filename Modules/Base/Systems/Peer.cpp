@@ -1215,14 +1215,14 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel, st
 
 			if(fields.empty() || fields.find("FIRMWARE") != fields.end())
 			{
-				if(_firmwareVersion != 0) description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(getFirmwareVersion(_firmwareVersion)))));
+				if(_firmwareVersion != 0) description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(getFirmwareVersionString(_firmwareVersion)))));
 				else description->structValue->insert(RPC::RPCStructElement("FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(std::string("?")))));
 			}
 
 			if(fields.empty() || fields.find("AVAILABLE_FIRMWARE") != fields.end())
 			{
 				int32_t newFirmwareVersion = getNewFirmwareVersion();
-				if(newFirmwareVersion > _firmwareVersion) description->structValue->insert(RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(getFirmwareVersion(newFirmwareVersion)))));
+				if(newFirmwareVersion > _firmwareVersion) description->structValue->insert(RPC::RPCStructElement("AVAILABLE_FIRMWARE", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(getFirmwareVersionString(newFirmwareVersion)))));
 			}
 
 			if(fields.empty() || fields.find("FLAGS") != fields.end())
