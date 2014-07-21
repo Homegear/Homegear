@@ -1614,6 +1614,27 @@ int32_t HMWiredPeer::getNewFirmwareVersion()
 	return 0;
 }
 
+std::string HMWiredPeer::getFirmwareVersion(int32_t firmwareVersion)
+{
+	try
+	{
+		return GD::bl->hf.getHexString(firmwareVersion >> 8) + "." + GD::bl->hf.getHexString(firmwareVersion & 0xFF);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return "";
+}
+
 bool HMWiredPeer::firmwareUpdateAvailable()
 {
 	try
