@@ -876,6 +876,7 @@ void BidCoSPeer::serializePeers(std::vector<uint8_t>& encodedData)
 			encoder.encodeInteger(encodedData, i->second.size());
 			for(std::vector<std::shared_ptr<BaseLib::Systems::BasicPeer>>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
 			{
+				//TODO: Save id
 				if(!*j) continue;
 				encoder.encodeInteger(encodedData, (*j)->address);
 				encoder.encodeInteger(encodedData, (*j)->channel);

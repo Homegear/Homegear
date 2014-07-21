@@ -88,11 +88,11 @@ public:
 			virtual void onDeleteServiceMessage(uint64_t databaseID) = 0;
 		//End database
 
-		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) {}
-		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint) {}
-		virtual void onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions) {}
-		virtual void onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo) {}
-		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values) {}
+		virtual void onRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values) = 0;
+		virtual void onRPCUpdateDevice(uint64_t id, int32_t channel, std::string address, int32_t hint) = 0;
+		virtual void onRPCNewDevices(std::shared_ptr<RPC::RPCVariable> deviceDescriptions) = 0;
+		virtual void onRPCDeleteDevices(std::shared_ptr<RPC::RPCVariable> deviceAddresses, std::shared_ptr<RPC::RPCVariable> deviceInfo) = 0;
+		virtual void onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<std::vector<std::string>> variables, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> values) = 0;
 	};
 	//End event handling
 

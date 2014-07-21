@@ -273,7 +273,7 @@ void LogicalDevice::onEvent(uint64_t peerID, int32_t channel, std::shared_ptr<st
 }
 //End Peer event handling
 
-void LogicalDevice::getPeers(std::vector<std::shared_ptr<Peer>>& peers, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
+void LogicalDevice::getPeers(std::vector<std::shared_ptr<Peer>>& peers, std::shared_ptr<std::set<uint64_t>> knownDevices)
 {
 	try
 	{

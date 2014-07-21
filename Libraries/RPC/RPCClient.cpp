@@ -37,7 +37,7 @@ namespace RPC
 RemoteRPCServer::RemoteRPCServer()
 {
 	socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get()));
-	knownDevices.reset(new std::map<uint64_t, int32_t>());
+	knownDevices.reset(new std::set<uint64_t>());
 	fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor);
 	path = "/RPC2";
 }
@@ -404,7 +404,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		ssize_t receivedBytes;
 
 		int32_t bufferMax = 2048;
-		char buffer[bufferMax];
+		char buffer[bufferMax + 1];
 		HTTP http;
 		uint32_t packetLength = 0;
 		uint32_t dataSize = 0;
@@ -416,6 +416,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			try
 			{
 				receivedBytes = server->socket->proofread(buffer, bufferMax);
+
 				//Some clients send only one byte in the first packet
 				if(packetLength == 0 && receivedBytes == 1) receivedBytes += server->socket->proofread(&buffer[1], bufferMax - 1);
 			}
@@ -444,13 +445,6 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			//We are using string functions to process the buffer. So just to make sure,
 			//they don't do something in the memory after buffer, we add '\0'
 			buffer[receivedBytes] = '\0';
-			if(!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
-			{
-				GD::out.printError("Error: Authentication failed. Server " + server->hostname + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
-				if(!server->keepAlive) server->socket->close();
-				_sendCounter--;
-				return std::shared_ptr<std::vector<char>>();
-			}
 
 			if(server->binary)
 			{
@@ -458,7 +452,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 				{
 					if(!(buffer[3] & 1) && buffer[3] != 0xFF)
 					{
-						packet->insert(packet->begin(), buffer, buffer + receivedBytes);
+						packet->insert(packet->end(), buffer, buffer + receivedBytes);
 						GD::out.printError("Error: RPC client received binary request as response from server " + server->hostname + " on port " + server->address.second + ". Packet was: " + GD::bl->hf.getHexString(*packet));
 						if(!server->keepAlive) server->socket->close();
 						_sendCounter--;
@@ -488,7 +482,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 						return std::shared_ptr<std::vector<char>>();
 					}
 					packetLength = receivedBytes - 8;
-					packet->insert(packet->begin(), buffer, buffer + receivedBytes);
+					packet->insert(packet->end(), buffer, buffer + receivedBytes);
 				}
 				else
 				{
@@ -510,6 +504,14 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			}
 			else
 			{
+				if(!strncmp(buffer, "401", 3) || !strncmp(&buffer[9], "401", 3)) //"401 Unauthorized" or "HTTP/1.X 401 Unauthorized"
+				{
+					GD::out.printError("Error: Authentication failed. Server " + server->hostname + ", port " + server->address.second + ". Check user name and password in rpcclients.conf.");
+					if(!server->keepAlive) server->socket->close();
+					_sendCounter--;
+					return std::shared_ptr<std::vector<char>>();
+				}
+
 				try
 				{
 					http.process(buffer, receivedBytes);

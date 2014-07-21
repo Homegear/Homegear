@@ -1092,6 +1092,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetLinks::invoke(std::shared_ptr<s
 				std::vector<BaseLib::RPC::RPCVariableType>(),
 				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }),
 				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString, BaseLib::RPC::RPCVariableType::rpcInteger }),
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger }),
 				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger }),
 				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcInteger })
 		}));
@@ -1121,7 +1122,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetLinks::invoke(std::shared_ptr<s
 			else
 			{
 				peerID = parameters->at(0)->integerValue;
-				if(peerID > 0)
+				if(peerID > 0 && parameters->size() > 1)
 				{
 					channel = parameters->at(1)->integerValue;
 					if(parameters->size() == 3) flags = parameters->at(2)->integerValue;

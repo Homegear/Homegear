@@ -39,6 +39,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <set>
 #include <list>
 #include <mutex>
 #include <map>
@@ -78,7 +79,7 @@ public:
 	std::pair<std::string, std::string> address;
 	std::string path;
 	std::string id;
-	std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices;
+	std::shared_ptr<std::set<uint64_t>> knownDevices;
 	std::map<std::string, bool> knownMethods;
 	std::shared_ptr<BaseLib::SocketOperations> socket;
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;

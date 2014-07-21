@@ -132,6 +132,13 @@ double BinaryDecoder::decodeFloat(std::shared_ptr<std::vector<char>>& encodedDat
 		position += 4;
 		double floatValue = (double)mantissa / 0x40000000;
 		floatValue *= std::pow(2, exponent);
+		if(floatValue != 0)
+		{
+			int32_t digits = std::lround(std::floor(std::log10(floatValue) + 1));
+			double factor = std::pow(10, 9 - digits);
+			//Round to 9 digits
+			floatValue = std::floor(floatValue * factor + 0.5) / factor;
+		}
 		return floatValue;
 	}
 	catch(const std::exception& ex)

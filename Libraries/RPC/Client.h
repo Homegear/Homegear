@@ -73,5 +73,5 @@ private:
 	std::shared_ptr<std::vector<std::shared_ptr<RemoteRPCServer>>> _servers;
 };
 
-} /* namespace RPC */
-#endif /* CLIENT_H_ */
+}
+#endif

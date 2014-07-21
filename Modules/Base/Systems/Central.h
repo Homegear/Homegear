@@ -33,6 +33,8 @@
 #include "../RPC/RPCVariable.h"
 #include "../RPC/Device.h"
 
+#include <set>
+
 namespace BaseLib
 {
 
@@ -82,7 +84,7 @@ public:
 	virtual std::shared_ptr<RPC::RPCVariable> getValue(std::string serialNumber, uint32_t channel, std::string valueKey);
 	virtual std::shared_ptr<RPC::RPCVariable> getValue(uint64_t id, uint32_t channel, std::string valueKey);
 	virtual std::shared_ptr<RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields);
-	virtual std::shared_ptr<RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices);
+	virtual std::shared_ptr<RPC::RPCVariable> listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::set<uint64_t>> knownDevices);
 	virtual std::shared_ptr<RPC::RPCVariable> listTeams() { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> setLinkInfo(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
 	virtual std::shared_ptr<RPC::RPCVariable> setLinkInfo(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description);

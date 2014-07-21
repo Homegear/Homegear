@@ -198,26 +198,19 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 		{
 			if((*i)->type == BaseLib::RPC::RPCVariableType::rpcStruct)
 			{
-				std::pair<uint64_t, int32_t> device;
+				uint64_t device = 0;
 				std::string serialNumber;
-				for(BaseLib::RPC::RPCStruct::iterator j = (*i)->structValue->begin(); j != (*i)->structValue->end(); ++j)
+				if((*i)->structValue->find("ID") != (*i)->structValue->end())
 				{
-					if(!j->second) continue;
-					if(j->first == "ID")
-					{
-						device.first = j->second->integerValue;
-						if(device.first == 0) break;
-					}
-					else if(j->first == "ADDRESS")
-					{
-						serialNumber = j->second->stringValue;
-					}
-					else if(j->first == "VERSION")
-					{
-						device.second = j->second->integerValue;
-					}
+					device = (*i)->structValue->at("ID")->integerValue;
+					if(device == 0) continue;
 				}
-				if(device.first == 0) //Client doesn't support ID's
+				else if((*i)->structValue->find("ADDRESS") != (*i)->structValue->end())
+				{
+					serialNumber = (*i)->structValue->at("ADDRESS")->stringValue;
+				}
+				else continue;
+				if(device == 0) //Client doesn't support ID's
 				{
 					if(serialNumber.empty()) break;
 					for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -225,8 +218,8 @@ void Client::listDevices(std::pair<std::string, std::string> address)
 						std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 						if(central)
 						{
-							device.first = central->getPeerIDFromSerial(serialNumber);
-							if(device.first > 0) break;
+							device = central->getPeerIDFromSerial(serialNumber);
+							if(device > 0) break;
 						}
 					}
 				}
@@ -328,7 +321,7 @@ void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> d
 {
 	try
 	{
-		if(!deviceAddresses) return;
+		if(!deviceAddresses || !deviceInfo) return;
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
@@ -363,7 +356,7 @@ void Client::broadcastUpdateDevice(uint64_t id, int32_t channel, std::string add
 {
 	try
 	{
-		if(!address.empty()) return;
+		if(id == 0 || address.empty()) return;
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
@@ -603,4 +596,4 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> Client::clientServerInitialized(std::
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
-} /* namespace RPC */
+}

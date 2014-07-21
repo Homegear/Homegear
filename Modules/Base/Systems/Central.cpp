@@ -634,10 +634,10 @@ std::shared_ptr<RPC::RPCVariable> Central::getValue(uint64_t id, uint32_t channe
 
 std::shared_ptr<RPC::RPCVariable> Central::listDevices(bool channels, std::map<std::string, bool> fields)
 {
-	return listDevices(channels, fields, std::shared_ptr<std::map<std::uint64_t, int32_t>>());
+	return listDevices(channels, fields, std::shared_ptr<std::set<std::uint64_t>>());
 }
 
-std::shared_ptr<RPC::RPCVariable> Central::listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::map<uint64_t, int32_t>> knownDevices)
+std::shared_ptr<RPC::RPCVariable> Central::listDevices(bool channels, std::map<std::string, bool> fields, std::shared_ptr<std::set<uint64_t>> knownDevices)
 {
 	try
 	{
