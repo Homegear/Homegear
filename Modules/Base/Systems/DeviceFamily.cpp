@@ -57,9 +57,9 @@ void DeviceFamily::raiseReleaseSavepoint(std::string name)
 	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onReleaseSavepoint(name);
 }
 
-void DeviceFamily::raiseDeleteMetadata(std::string objectID, std::string dataID)
+void DeviceFamily::raiseDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
 {
-	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onDeleteMetadata(objectID, dataID);
+	if(_eventHandler) ((IFamilyEventSink*)_eventHandler)->onDeleteMetadata(peerID, serialNumber, dataID);
 }
 
 void DeviceFamily::raiseDeletePeer(uint64_t id)
@@ -196,9 +196,9 @@ void DeviceFamily::onReleaseSavepoint(std::string name)
 	raiseReleaseSavepoint(name);
 }
 
-void DeviceFamily::onDeleteMetadata(std::string objectID, std::string dataID)
+void DeviceFamily::onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
 {
-	raiseDeleteMetadata(objectID, dataID);
+	raiseDeleteMetadata(peerID, serialNumber, dataID);
 }
 
 void DeviceFamily::onDeletePeer(uint64_t id)

@@ -114,9 +114,9 @@ void Peer::raiseReleaseSavepoint(std::string name)
 	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onReleaseSavepoint(name);
 }
 
-void Peer::raiseDeleteMetadata(std::string objectID, std::string dataID)
+void Peer::raiseDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
 {
-	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onDeleteMetadata(objectID, dataID);
+	if(_eventHandler) ((IPeerEventSink*)_eventHandler)->onDeleteMetadata(peerID, serialNumber, dataID);
 }
 
 void Peer::raiseDeletePeer()
@@ -437,16 +437,7 @@ void Peer::deleteFromDatabase()
 	try
 	{
 		deleting = true;
-		raiseDeleteMetadata(_serialNumber);
-		raiseDeleteMetadata(std::to_string(_peerID));
-		if(rpcDevice)
-		{
-			for(std::map<uint32_t, std::shared_ptr<RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
-			{
-				raiseDeleteMetadata(_serialNumber + ':' + std::to_string(i->first));
-				raiseDeleteMetadata(std::to_string(_peerID) + ':' + std::to_string(i->first));
-			}
-		}
+		raiseDeleteMetadata(_peerID, _serialNumber);
 		raiseDeletePeer();
 	}
 	catch(const std::exception& ex)

@@ -1,5 +1,12 @@
 #!/bin/bash
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+#TMPDIR="/tmp"
+#FREESPACE=`df -P $TMPDIR | tail -1 | awk '{print $4}'`
+#if [[ "$FREESPACE" -lt 4000000 ]]; then
+#        echo "There is not enough free space on /tmp. Please specify a location to store temporary files. They will be $
+#        read TMPDIR;
+#fi
+#echo $TMPDIR;
 rm -Rf /tmp/HomegearDeviceTypes
 [ $? -ne 0 ] && exit 1
 mkdir /tmp/HomegearDeviceTypes

@@ -121,9 +121,9 @@ void FamilyController::onReleaseSavepoint(std::string name)
 	GD::db.releaseSavepoint(name);
 }
 
-void FamilyController::onDeleteMetadata(std::string objectID, std::string dataID)
+void FamilyController::onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
 {
-	GD::db.deleteMetadata(objectID, dataID);
+	GD::db.deleteMetadata(peerID, serialNumber, dataID);
 }
 
 void FamilyController::onDeletePeer(uint64_t id)

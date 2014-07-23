@@ -74,9 +74,9 @@ void LogicalDevice::raiseReleaseSavepoint(std::string name)
 	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onReleaseSavepoint(name);
 }
 
-void LogicalDevice::raiseDeleteMetadata(std::string objectID, std::string dataID)
+void LogicalDevice::raiseDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
 {
-	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeleteMetadata(objectID, dataID);
+	if(_eventHandler) ((IDeviceEventSink*)_eventHandler)->onDeleteMetadata(peerID, serialNumber, dataID);
 }
 
 void LogicalDevice::raiseDeletePeer(uint64_t id)
@@ -202,9 +202,9 @@ void LogicalDevice::onReleaseSavepoint(std::string name)
 	raiseReleaseSavepoint(name);
 }
 
-void LogicalDevice::onDeleteMetadata(std::string objectID, std::string dataID)
+void LogicalDevice::onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID)
 {
-	raiseDeleteMetadata(objectID, dataID);
+	raiseDeleteMetadata(peerID, serialNumber, dataID);
 }
 
 void LogicalDevice::onDeletePeer(uint64_t id)

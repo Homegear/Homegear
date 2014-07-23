@@ -64,7 +64,7 @@ public:
 		virtual void onReleaseSavepoint(std::string name);
 
 		//Metadata
-		virtual void onDeleteMetadata(std::string objectID, std::string dataID = "");
+		virtual void onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID = "");
 
 		//Device
 		virtual std::shared_ptr<BaseLib::Database::DataTable> onGetDevices(uint32_t family);

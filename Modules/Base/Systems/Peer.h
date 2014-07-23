@@ -102,7 +102,7 @@ public:
 			virtual void onReleaseSavepoint(std::string name) = 0;
 
 			//Metadata
-			virtual void onDeleteMetadata(std::string objectID, std::string dataID = "") = 0;
+			virtual void onDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID = "") = 0;
 
 			//Peer
 			virtual void onDeletePeer(uint64_t id) = 0;
@@ -249,7 +249,7 @@ protected:
 		virtual void raiseReleaseSavepoint(std::string name);
 
 		//Metadata
-		virtual void raiseDeleteMetadata(std::string objectID, std::string dataID = "");
+		virtual void raiseDeleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID = "");
 
 		//Peer
 		virtual void raiseDeletePeer();

@@ -52,10 +52,10 @@ public:
 	//End general
 
 	//Metadata
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setMetadata(std::string objectID, std::string dataID, std::shared_ptr<BaseLib::RPC::RPCVariable> metadata);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getMetadata(std::string objectID, std::string dataID);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getAllMetadata(std::string objectID);
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteMetadata(std::string objectID, std::string dataID = "");
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setMetadata(uint64_t peerID, std::string serialNumber, std::string dataID, std::shared_ptr<BaseLib::RPC::RPCVariable> metadata);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getMetadata(uint64_t peerID, std::string serialNumber, std::string dataID);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getAllMetadata(uint64_t peerID, std::string serialNumber);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteMetadata(uint64_t peerID, std::string serialNumber, std::string dataID = "");
 	//End metadata
 
 	//System variables

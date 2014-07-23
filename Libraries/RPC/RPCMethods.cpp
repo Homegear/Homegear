@@ -513,7 +513,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCDeleteMetadata::invoke(std::shared
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
-		bool deviceFound = false;
+		std::shared_ptr<BaseLib::Systems::Peer> peer;
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
@@ -521,29 +521,22 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCDeleteMetadata::invoke(std::shared
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber))
-					{
-						deviceFound = true;
-						break;
-					}
+					peer = central->logicalDevice()->getPeer(serialNumber);
+					if(peer) break;
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue))
-					{
-						deviceFound = true;
-						break;
-					}
+					peer = central->logicalDevice()->getPeer((uint64_t)parameters->at(0)->integerValue);
+					if(peer) break;
 				}
 			}
 		}
 
-		if(!deviceFound) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 
-		std::string objectID(useSerialNumber ? parameters->at(0)->stringValue : std::to_string(parameters->at(0)->integerValue));
 		std::string dataID;
 		if(parameters->size() > 1) dataID = parameters->at(1)->stringValue;
-		return GD::db.deleteMetadata(objectID, dataID);
+		return GD::db.deleteMetadata(peer->getID(), peer->getSerialNumber(), dataID);
 	}
 	catch(const std::exception& ex)
     {
@@ -628,7 +621,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllMetadata::invoke(std::shared
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
-		bool deviceFound = false;
+		std::shared_ptr<BaseLib::Systems::Peer> peer;
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
@@ -636,27 +629,20 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllMetadata::invoke(std::shared
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber))
-					{
-						deviceFound = true;
-						break;
-					}
+					peer = central->logicalDevice()->getPeer(serialNumber);
+					if(peer) break;
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue))
-					{
-						deviceFound = true;
-						break;
-					}
+					peer = central->logicalDevice()->getPeer((uint64_t)parameters->at(0)->integerValue);
+					if(peer) break;
 				}
 			}
 		}
 
-		if(!deviceFound) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 
-		std::string objectID(useSerialNumber ? parameters->at(0)->stringValue : std::to_string(parameters->at(0)->integerValue));
-		return GD::db.getAllMetadata(objectID);
+		return GD::db.getAllMetadata(peer->getID(), peer->getSerialNumber());
 	}
 	catch(const std::exception& ex)
     {
@@ -1192,7 +1178,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetMetadata::invoke(std::shared_pt
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
-		bool deviceFound = false;
+		std::shared_ptr<BaseLib::Systems::Peer> peer;
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
@@ -1200,27 +1186,20 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetMetadata::invoke(std::shared_pt
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber))
-					{
-						deviceFound = true;
-						break;
-					}
+					peer = central->logicalDevice()->getPeer(serialNumber);
+					if(peer) break;
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue))
-					{
-						deviceFound = true;
-						break;
-					}
+					peer = central->logicalDevice()->getPeer((uint64_t)parameters->at(0)->integerValue);
+					if(peer) break;
 				}
 			}
 		}
 
-		if(!deviceFound) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 
-		std::string objectID(useSerialNumber ? parameters->at(0)->stringValue : std::to_string(parameters->at(0)->integerValue));
-		return GD::db.getMetadata(objectID, parameters->at(1)->stringValue);
+		return GD::db.getMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue);
 	}
 	catch(const std::exception& ex)
     {
@@ -2582,7 +2561,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetMetadata::invoke(std::shared_pt
 			else serialNumber = parameters->at(0)->stringValue;
 		}
 
-		bool deviceFound = false;
+		std::shared_ptr<BaseLib::Systems::Peer> peer;
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
 		{
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
@@ -2590,27 +2569,20 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCSetMetadata::invoke(std::shared_pt
 			{
 				if(useSerialNumber)
 				{
-					if(central->knowsDevice(serialNumber))
-					{
-						deviceFound = true;
-						break;
-					}
+					peer = central->logicalDevice()->getPeer(serialNumber);
+					if(peer) break;
 				}
 				else
 				{
-					if(central->knowsDevice(parameters->at(0)->integerValue))
-					{
-						deviceFound = true;
-						break;
-					}
+					peer = central->logicalDevice()->getPeer((uint64_t)parameters->at(0)->integerValue);
+					if(peer) break;
 				}
 			}
 		}
 
-		if(!deviceFound) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Device not found.");
 
-		std::string objectID(useSerialNumber ? parameters->at(0)->stringValue : std::to_string(parameters->at(0)->integerValue));
-		return GD::db.setMetadata(objectID, parameters->at(1)->stringValue, parameters->at(2));
+		return GD::db.setMetadata(peer->getID(), peer->getSerialNumber(), parameters->at(1)->stringValue, parameters->at(2));
 	}
 	catch(const std::exception& ex)
     {

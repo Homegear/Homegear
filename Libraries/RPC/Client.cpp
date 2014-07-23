@@ -298,23 +298,20 @@ void Client::broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> devi
 			std::thread t(&RPCClient::invokeBroadcast, _client.get(), (*server), "newDevices", parameters);
 			t.detach();
 		}
-		_serversMutex.unlock();
 	}
 	catch(const std::exception& ex)
     {
-		_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _serversMutex.unlock();
 }
 
 void Client::broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses, std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo)
