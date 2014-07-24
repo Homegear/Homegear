@@ -57,6 +57,7 @@ void ServiceMessages::raiseConfigPending(bool configPending)
 
 void ServiceMessages::raiseRPCEvent(uint64_t id, int32_t channel, std::string deviceAddress, std::shared_ptr<std::vector<std::string>> valueKeys, std::shared_ptr<std::vector<std::shared_ptr<RPC::RPCVariable>>> values)
 {
+	if(id == 0) return;
 	if(_eventHandler) ((IServiceEventSink*)_eventHandler)->onRPCEvent(id, channel, deviceAddress, valueKeys, values);
 }
 

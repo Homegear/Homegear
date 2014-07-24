@@ -95,7 +95,7 @@ public:
 	std::vector<double> factors;
 	int32_t div = 0;
 	int32_t mul = 0;
-	int32_t threshold = 0;
+	int32_t threshold = 1;
 	int32_t valueFalse = 0;
 	int32_t valueTrue = 0;
 	double offset = 0;

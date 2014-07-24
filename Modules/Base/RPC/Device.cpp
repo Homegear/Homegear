@@ -512,13 +512,13 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 		{
-			int32_t integerValue;
+			int32_t integerValue = 0;
 			_bl->hf.memcpyBigEndian(integerValue, value);
 			return std::shared_ptr<RPCVariable>(new RPCVariable(integerValue));
 		}
 		else if(logicalParameter->type == LogicalParameter::Type::Enum::typeBoolean && conversion.empty())
 		{
-			int32_t integerValue;
+			int32_t integerValue = 0;
 			_bl->hf.memcpyBigEndian(integerValue, value);
 			return std::shared_ptr<RPC::RPCVariable>(new RPCVariable((bool)integerValue));
 		}
