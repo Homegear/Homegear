@@ -118,7 +118,7 @@ void Client::start()
 				GD::out.printCritical("Critical: Socket path is too long.");
 				return;
 			}
-			strncpy(remoteAddress.sun_path, GD::socketPath.c_str(), GD::socketPath.length());
+			strncpy(remoteAddress.sun_path, GD::socketPath.c_str(), 108);
 			if(connect(_fileDescriptor->descriptor, (struct sockaddr*)&remoteAddress, strlen(remoteAddress.sun_path) + sizeof(remoteAddress.sun_family)) == -1)
 			{
 				GD::bl->fileDescriptorManager.shutdown(_fileDescriptor);

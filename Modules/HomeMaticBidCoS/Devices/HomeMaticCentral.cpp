@@ -1683,6 +1683,64 @@ void HomeMaticCentral::addHomegearFeaturesMotionDetector(std::shared_ptr<BidCoSP
     }
 }
 
+void HomeMaticCentral::addHomegearFeaturesHMCCRTDN(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues)
+{
+	try
+	{
+		if(!peer) return;
+		std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>> channels;
+		if(channel == -1) channel = 3;
+		if(peer->hasPeers(channel) && !peer->getPeer(channel, _address)) return;
+		GD::out.printInfo("Info: Adding Homegear features to HM-CC-RT-DN.");
+		std::shared_ptr<BaseLib::Systems::BasicPeer> switchPeer;
+
+		switchPeer.reset(new BaseLib::Systems::BasicPeer());
+		switchPeer->id = 0xFFFFFFFFFFFFFFFF;
+		switchPeer->address = _address;
+		switchPeer->serialNumber = _serialNumber;
+		switchPeer->channel = channel;
+		switchPeer->hidden = true;
+		peer->addPeer(channel, switchPeer);
+
+		std::vector<uint8_t> payload;
+		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(peer->getPhysicalInterface(), BidCoSQueueType::CONFIG));
+		pendingQueue->noSending = true;
+
+		payload.clear();
+		payload.push_back(channel);
+		payload.push_back(0x01);
+		payload.push_back(_address >> 16);
+		payload.push_back((_address >> 8) & 0xFF);
+		payload.push_back(_address & 0xFF);
+		payload.push_back(channel);
+		payload.push_back(0);
+		std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, peer->getAddress(), payload));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		_messageCounter[0]++;
+		peer->pendingBidCoSQueues->push(pendingQueue);
+		peer->serviceMessages->setConfigPending(true);
+
+		if(pushPendingBidCoSQueues)
+		{
+			std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, peer->getPhysicalInterface(), BidCoSQueueType::CONFIG, peer->getAddress());
+			queue->push(peer->pendingBidCoSQueues);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<BidCoSPeer> peer, int32_t channel, bool pushPendingBidCoSQueues)
 {
 	try
@@ -1720,6 +1778,8 @@ void HomeMaticCentral::addHomegearFeatures(std::shared_ptr<BidCoSPeer> peer, int
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMSECMDIRSCHUECO ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMSENMDIRSM ||
 				peer->getDeviceType().type() == (uint32_t)DeviceType::HMSENMDIRO) addHomegearFeaturesMotionDetector(peer, channel, pushPendingBidCoSQueues);
+		else if(peer->getDeviceType().type() == (uint32_t)DeviceType::HMCCRTDN ||
+				peer->getDeviceType().type() == (uint32_t)DeviceType::HMCCRTDNBOM) addHomegearFeaturesHMCCRTDN(peer, channel, pushPendingBidCoSQueues);
 		else GD::out.printDebug("Debug: No homegear features to add.");
 	}
 	catch(const std::exception& ex)
