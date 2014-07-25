@@ -7,6 +7,10 @@ case "$1" in
 
     upgrade|abort-upgrade)
     	service homegear stop
+		read -p "Do you want to update your device description files? All old device description files in \"/etc/homegear/devices\" will be deleted (y/n): " DELETE
+		if [ "$DELETE" == "y" ]; then
+			rm -Rf /etc/homegear/devices/*
+		fi
     	rm -f /var/lib/homegear/firmware/GetFirmwareUpdates.sh
     	rm -f /var/lib/homegear/modules/mod_*.so
         ;;

@@ -876,8 +876,20 @@ diff -Naur Original/rf_bl.xml Patched/rf_bl.xml
      <channel index="1" type="BLIND" count_from_sysinfo="23.0:1.0">
 diff -Naur Original/rf_cc_rt_dn_bom.xml Patched/rf_cc_rt_dn_bom.xml
 --- Original/rf_cc_rt_dn_bom.xml	2014-02-24 20:35:39.667011748 +0100
-+++ Patched/rf_cc_rt_dn_bom.xml	2014-02-24 20:35:46.643011751 +0100
-@@ -1147,6 +1147,13 @@
++++ Patched/rf_cc_rt_dn_bom.xml	2014-07-25 10:17:02.356908264 +0200
+@@ -1,4 +1,11 @@
+ <?xml version="1.0"?>
++<!--
++Modified from original
++Changes:
++	- Added event to parameter INHIBIT
++	- Added parameter WINDOW_STATE
++	- Added frame WINDOW_STATE_SET
++-->
+ <device version="3" rx_modes="CONFIG,BURST" cyclic_timeout="552" supports_aes="true">
+   <supported_types>
+     <type name="ClimateControl-RadiatorThermostat" id="HM-CC-RT-DN-BoM" updatable="true">
+@@ -1147,6 +1154,13 @@
            <logical type="integer"/>
            <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
          </parameter>
@@ -891,10 +903,50 @@ diff -Naur Original/rf_cc_rt_dn_bom.xml Patched/rf_cc_rt_dn_bom.xml
          <parameter id="INHIBIT" operations="read,write,event" control="NONE" loopback="true">
            <logical type="boolean"/>
            <physical type="integer" interface="command" value_id="INHIBIT">
+@@ -1190,7 +1204,15 @@
+           <physical type="boolean" interface="internal" value_id="AES"/>
+         </parameter>
+       </paramset>
+-      <paramset type="VALUES" id="cc_rt_ch_wsr_values"/>
++      <paramset type="VALUES" id="cc_rt_ch_wsr_values">
++        <parameter id="WINDOW_STATE" operations="read,write" control="SWITCH.STATE">
++          <logical type="boolean" default="false"/>
++          <physical type="integer" interface="command" value_id="WINDOW_STATE">
++            <set request="WINDOW_STATE_SET"/>
++          </physical>
++          <conversion type="boolean_integer" threshold="1" false="0" true="200"/>
++        </parameter>
++      </paramset>
+       <paramset type="LINK" id="cc_rt_ch_wsr_link">
+         <parameter id="SHORT_COND_VALUE_LO">
+           <logical type="integer" min="0" max="255" default="50"/>
+@@ -1546,6 +1568,10 @@
+     <frame id="SET_LOCK" direction="to_device" type="0x11" channel_field="10">
+       <parameter type="integer" index="9.0" size="0.1" param="INHIBIT"/>
+     </frame>
++    <frame id="WINDOW_STATE_SET" direction="to_device" type="0x41" subtype="0x01" subtype_index="9">
++      <parameter type="integer" index="10.0" size="1.0" const_value="01"/>
++      <parameter type="integer" index="11.0" size="1.0" param="WINDOW_STATE"/>
++    </frame>
+     <frame id="ENTER_BOOTLOADER" direction="to_device" type="0x11" subtype="0xCA" subtype_index="9"/>
+   </frames>
+   <paramset_defs/>
 diff -Naur Original/rf_cc_rt_dn.xml Patched/rf_cc_rt_dn.xml
 --- Original/rf_cc_rt_dn.xml	2014-02-24 20:35:39.683011748 +0100
-+++ Patched/rf_cc_rt_dn.xml	2014-02-24 20:35:46.659011751 +0100
-@@ -1177,6 +1177,13 @@
++++ Patched/rf_cc_rt_dn.xml	2014-07-25 09:56:21.952865147 +0200
+@@ -1,4 +1,11 @@
+ <?xml version="1.0"?>
++<!--
++Modified from original
++Changes:
++	- Added event to parameter INHIBIT
++	- Added parameter WINDOW_STATE
++	- Added frame WINDOW_STATE_SET
++-->
+ <device version="17" rx_modes="CONFIG,WAKEUP,BURST" rx_default="BURST" cyclic_timeout="600" supports_aes="true">
+   <supported_types>
+     <type name="ClimateControl-RadiatorThermostat" id="HM-CC-RT-DN" updatable="true">
+@@ -1177,6 +1184,13 @@
            <logical type="integer"/>
            <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
          </parameter>
@@ -908,6 +960,34 @@ diff -Naur Original/rf_cc_rt_dn.xml Patched/rf_cc_rt_dn.xml
          <parameter id="INHIBIT" operations="read,write,event" control="NONE" loopback="true">
            <logical type="boolean"/>
            <physical type="integer" interface="command" value_id="INHIBIT">
+@@ -1220,7 +1234,15 @@
+           <physical type="boolean" interface="internal" value_id="AES"/>
+         </parameter>
+       </paramset>
+-      <paramset type="VALUES" id="cc_rt_ch_wsr_values"/>
++      <paramset type="VALUES" id="cc_rt_ch_wsr_values">
++        <parameter id="WINDOW_STATE" operations="read,write" control="SWITCH.STATE">
++          <logical type="boolean" default="false"/>
++          <physical type="integer" interface="command" value_id="WINDOW_STATE">
++            <set request="WINDOW_STATE_SET"/>
++          </physical>
++          <conversion type="boolean_integer" threshold="1" false="0" true="200"/>
++        </parameter>
++      </paramset>
+       <paramset type="LINK" id="cc_rt_ch_wsr_link">
+         <parameter id="SHORT_COND_VALUE_LO">
+           <logical type="integer" min="0" max="255" default="50"/>
+@@ -1465,6 +1487,10 @@
+     <frame id="SET_LOCK" direction="to_device" type="0x11" channel_field="10">
+       <parameter type="integer" index="9.0" size="0.1" param="INHIBIT"/>
+     </frame>
++    <frame id="WINDOW_STATE_SET" direction="to_device" type="0x41" subtype="0x01" subtype_index="9">
++      <parameter type="integer" index="10.0" size="1.0" const_value="01"/>
++      <parameter type="integer" index="11.0" size="1.0" param="WINDOW_STATE"/>
++    </frame>
+     <frame id="ENTER_BOOTLOADER" direction="to_device" type="0x11" subtype="0xCA" subtype_index="9"/>
+   </frames>
+   <paramset_defs/>
 diff -Naur Original/rf_cc_tc_le_v1_9.xml Patched/rf_cc_tc_le_v1_9.xml
 --- Original/rf_cc_tc_le_v1_9.xml	2014-02-24 20:35:39.703011748 +0100
 +++ Patched/rf_cc_tc_le_v1_9.xml	2014-02-24 20:35:46.679011751 +0100
@@ -1148,17 +1228,18 @@ diff -Naur Original/rf_d_le_v1_7.xml Patched/rf_d_le_v1_7.xml
      <channel index="1" type="DIMMER" count_from_sysinfo="23.0:0.2">
 diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
 --- Original/rf_es_pmsw.xml	2014-02-24 20:35:39.943011748 +0100
-+++ Patched/rf_es_pmsw.xml	2014-02-24 21:29:30.815010052 +0100
-@@ -1,4 +1,8 @@
++++ Patched/rf_es_pmsw.xml	2014-07-16 19:45:01.901903429 +0200
+@@ -1,4 +1,9 @@
  <?xml version="1.0"?>
 +<!-- Modified from original
 +	Changes:
 +	- Added parameter for LOWBAT
++	- Removed parameter "BOOT" from frame POWER_EVENT_CYCLIC
 +-->
  <device version="7" supports_aes="true" cyclic_timeout="600">
    <supported_types>
      <type name="power meter switch actuator 1-channel" id="HM-ES-PMSw1-Pl" updatable="true" priority="2">
-@@ -37,6 +41,10 @@
+@@ -37,6 +42,10 @@
            <logical type="boolean"/>
            <physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
          </parameter>
@@ -1169,7 +1250,7 @@ diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
          <parameter id="DUTYCYCLE" operations="read,event" ui_flags="service">
            <logical type="boolean"/>
            <physical type="integer" interface="internal" value_id="DUTYCYCLE"/>
-@@ -49,6 +57,13 @@
+@@ -49,6 +58,13 @@
            <logical type="integer"/>
            <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
          </parameter>
@@ -1183,6 +1264,14 @@ diff -Naur Original/rf_es_pmsw.xml Patched/rf_es_pmsw.xml
          <parameter id="AES_KEY" operations="read" ui_flags="invisible">
            <logical type="integer" min="0" max="127"/>
            <physical type="integer" interface="internal" value_id="AES_KEY"/>
+@@ -315,7 +331,6 @@
+       <parameter type="integer" const_value="0" param="INHIBIT"/>
+     </frame>
+     <frame id="POWER_EVENT_CYCLIC" direction="from_device" event="true" fixed_channel="2" type="0x5e">
+-      <parameter type="integer" index="9.7" size="0.1" param="BOOT"/>
+       <parameter type="integer" index="9.0" size="2.7" param="ENERGY_COUNTER"/>
+       <parameter type="integer" index="12.0" size="3.0" param="POWER"/>
+       <parameter type="integer" index="15.0" size="2.0" param="CURRENT"/>
 diff -Naur Original/rf_fs_ba.xml Patched/rf_fs_ba.xml
 --- Original/rf_fs_ba.xml	2014-02-24 20:35:39.947011749 +0100
 +++ Patched/rf_fs_ba.xml	2014-02-24 20:35:46.915011751 +0100
@@ -2035,14 +2124,20 @@ diff -Naur Original/rf_sec_sd_schueco.xml Patched/rf_sec_sd_schueco.xml
      <channel index="1" type="SMOKE_DETECTOR" count="1" direction="sender" has_team="true" team_tag="smoke_detector">
 diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
 --- Original/rf_sec_sd.xml	2014-02-24 20:35:40.127011749 +0100
-+++ Patched/rf_sec_sd.xml	2014-02-25 14:29:21.686114007 +0100
-@@ -1,4 +1,5 @@
++++ Patched/rf_sec_sd.xml	2014-07-20 09:27:08.334008301 +0200
+@@ -1,4 +1,11 @@
  <?xml version="1.0"?>
-+<!-- Modified from original Changes: - Added parameter SENDERADDRESS - Added frame INFO_LEVEL_ERROR and modified LOWBAT -->
++<!--
++Modified from original Changes: 
++- Added parameter SENDERADDRESS
++- Added frame INFO_LEVEL_ERROR and modified LOWBAT
++- Added "write" to team's STATE
++- Added "write" to team's INSTALL_TEST
++-->
  <device version="8" rx_modes="BURST" supports_aes="false" cyclic_timeout="1209600">
    <supported_types>
      <type name="HM Smoke Detector" id="HM-Sec-SD" priority="2">
-@@ -27,7 +28,9 @@
+@@ -27,7 +34,9 @@
          </parameter>
          <parameter id="LOWBAT" operations="read,event" ui_flags="service">
            <logical type="boolean"/>
@@ -2053,7 +2148,7 @@ diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
          </parameter>
          <parameter id="DUTYCYCLE" operations="read,event" ui_flags="service">
            <logical type="boolean"/>
-@@ -41,6 +44,13 @@
+@@ -41,6 +50,13 @@
            <logical type="integer"/>
            <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
          </parameter>
@@ -2067,7 +2162,7 @@ diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
        </paramset>
      </channel>
      <channel index="1" type="SMOKE_DETECTOR" count="1" direction="sender" has_team="true" team_tag="smoke_detector">
-@@ -75,6 +85,9 @@
+@@ -75,6 +91,9 @@
      <frame id="INFO_LEVEL" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x10" subtype="6" subtype_index="9" channel_field="10">
        <parameter type="integer" index="11.0" size="1.0" param="STATE"/>
      </frame>
@@ -2077,7 +2172,23 @@ diff -Naur Original/rf_sec_sd.xml Patched/rf_sec_sd.xml
      <frame id="LEVEL_GET" direction="to_device" type="0x01" channel_field="9">
        <parameter type="integer" index="10.0" size="1.0" const_value="14"/>
      </frame>
-@@ -111,6 +124,10 @@
+@@ -97,7 +116,7 @@
+         </link_roles>
+         <paramset type="MASTER" id="smoke_detector_team_ch_master"/>
+         <paramset type="VALUES" id="smoke_detector_team_ch_values">
+-          <parameter id="STATE" operations="read,event" control="DANGER.STATE">
++          <parameter id="STATE" operations="read,write,event" control="DANGER.STATE">
+             <logical type="boolean"/>
+             <physical type="integer" interface="command" value_id="STATE">
+               <event frame="EVENT"/>
+@@ -105,12 +124,16 @@
+             </physical>
+             <conversion type="boolean_integer" threshold="180"/>
+           </parameter>
+-          <parameter id="INSTALL_TEST" operations="event" ui_flags="internal">
++          <parameter id="INSTALL_TEST" operations="write,event" ui_flags="internal">
+             <logical type="action"/>
+             <physical type="integer" interface="command" value_id="INSTALL_TEST_VALUE">
                <event frame="EVENT"/>
              </physical>
            </parameter>
@@ -2274,7 +2385,7 @@ diff -Naur Original/rf_s.xml Patched/rf_s.xml
        <parameter id="WORKING" operations="read,event" ui_flags="internal">
 diff -Naur Original/rf_tc_it_wm-w-eu.xml Patched/rf_tc_it_wm-w-eu.xml
 --- Original/rf_tc_it_wm-w-eu.xml	2014-02-24 20:35:40.211011749 +0100
-+++ Patched/rf_tc_it_wm-w-eu.xml	2014-02-24 20:35:47.175011751 +0100
++++ Patched/rf_tc_it_wm-w-eu.xml	2014-07-11 23:42:47.028007412 +0200
 @@ -2935,6 +2935,13 @@
            <logical type="integer"/>
            <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
