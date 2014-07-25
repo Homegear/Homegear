@@ -413,6 +413,10 @@ std::shared_ptr<BasicPeer> Peer::getPeer(int32_t channel, uint64_t id, int32_t r
 			{
 				std::shared_ptr<Peer> peer = getCentral()->logicalDevice()->getPeer(id);
 				if(peer) (*i)->id = peer->getID();
+				else if((*i)->hidden && (*i)->address == getCentral()->logicalDevice()->getAddress())
+				{
+					(*i)->id = 0xFFFFFFFFFFFFFFFF;
+				}
 			}
 			if((*i)->id == id && (remoteChannel < 0 || remoteChannel == (*i)->channel)) return *i;
 		}

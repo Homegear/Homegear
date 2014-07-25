@@ -2452,7 +2452,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 		else if(type == BaseLib::RPC::ParameterSet::Type::Enum::link)
 		{
 			std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer;
-			if(remoteID > 0) remotePeer = getPeer(channel, remoteID, remoteChannel);
+			if(remoteID == 0) remoteID = 0xFFFFFFFFFFFFFFFF; //Remote peer is central
+			remotePeer = getPeer(channel, remoteID, remoteChannel);
 			if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-3, "Not paired to this peer.");
 			if(linksCentral[channel].find(remotePeer->address) == linksCentral[channel].end()) BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
 			if(linksCentral[channel][_address].find(remotePeer->channel) == linksCentral[channel][_address].end()) BaseLib::RPC::RPCVariable::createError(-3, "Unknown parameter set.");
@@ -2633,7 +2634,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getParamset(int32_t chann
 			else if(type == BaseLib::RPC::ParameterSet::Type::Enum::link)
 			{
 				std::shared_ptr<BaseLib::Systems::BasicPeer> remotePeer;
-				if(remoteID > 0) remotePeer = getPeer(channel, remoteID, remoteChannel);
+				if(remoteID == 0) remoteID = 0xFFFFFFFFFFFFFFFF; //Remote peer is central
+				remotePeer = getPeer(channel, remoteID, remoteChannel);
 				if(!remotePeer) return BaseLib::RPC::RPCVariable::createError(-3, "Not paired to this peer.");
 				if(linksCentral.find(channel) == linksCentral.end()) continue;
 				if(linksCentral[channel][remotePeer->address][remotePeer->channel].find((*i)->id) == linksCentral[channel][remotePeer->address][remotePeer->channel].end()) continue;

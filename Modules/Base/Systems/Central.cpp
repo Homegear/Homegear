@@ -341,8 +341,11 @@ std::shared_ptr<RPC::RPCVariable> Central::getParamset(std::string serialNumber,
 			if(!remoteSerialNumber.empty())
 			{
 				std::shared_ptr<Peer> remotePeer(_me->getPeer(remoteSerialNumber));
-				if(!remotePeer) return RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
-				remoteID = remotePeer->getID();
+				if(!remotePeer)
+				{
+					if(remoteSerialNumber != _me->getSerialNumber()) return RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
+				}
+				else remoteID = remotePeer->getID();
 			}
 			return peer->getParamset(channel, type, remoteID, remoteChannel);
 		}

@@ -1507,6 +1507,13 @@ DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& 
 		}
 		else _bl->out.printWarning("Warning: Unknown node name for \"device\": " + nodeName);
 	}
+	if(parameterSets.find(ParameterSet::Type::Enum::master) == parameterSets.end() || !parameterSets[ParameterSet::Type::Enum::master])
+	{
+		//Create master parameter set if not existant
+		std::shared_ptr<ParameterSet> masterSet(new ParameterSet(_bl));
+		masterSet->type = ParameterSet::Type::Enum::master;
+		parameterSets[ParameterSet::Type::Enum::master] = masterSet;
+	}
 }
 
 Device::Device(BaseLib::Obj* baseLib)
