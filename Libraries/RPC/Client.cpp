@@ -83,9 +83,15 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 	{
 		if(!valueKeys || !values || valueKeys->size() != values->size()) return;
 		std::string methodName("event"); //We can't just create the methods BaseLib::RPC::RPCVariable with new BaseLib::RPC::RPCVariable("methodName", "event") because "event" is not a string object. That's why we create the string object here.
+		std::vector<std::shared_ptr<RemoteRPCServer>> _serversToRemove;
 		_serversMutex.lock();
 		for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _servers->begin(); server != _servers->end(); ++server)
 		{
+			if((*server)->removed)
+			{
+				_serversToRemove.push_back(*server);
+				continue;
+			}
 			if(!(*server)->initialized || (!(*server)->knownMethods.empty() && ((*server)->knownMethods.find("event") == (*server)->knownMethods.end() || (*server)->knownMethods.find("system.multicall") == (*server)->knownMethods.end()))) continue;
 			std::shared_ptr<std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters(new std::list<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
 			std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
@@ -113,6 +119,15 @@ void Client::broadcastEvent(uint64_t id, int32_t channel, std::string deviceAddr
 			BaseLib::Threads::setThreadPriority(GD::bl.get(), t.native_handle(), GD::bl->settings.rpcClientThreadPriority(), GD::bl->settings.rpcClientThreadPolicy());
 			t.detach();
 		}
+		_serversMutex.unlock();
+		if(!_serversToRemove.empty())
+		{
+			for(std::vector<std::shared_ptr<RemoteRPCServer>>::iterator server = _serversToRemove.begin(); server != _serversToRemove.end(); ++server)
+			{
+				removeServer((*server)->address);
+			}
+		}
+		return;
 	}
 	catch(const std::exception& ex)
     {
@@ -568,8 +583,10 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> Client::clientServerInitialized(std::
 		{
 			if((*i)->id == id)
 			{
-				initialized = true;
-				break;
+				_serversMutex.unlock();
+				if((*i)->removed) removeServer((*i)->address);
+				else initialized = true;
+				return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(initialized));
 			}
 		}
 		_serversMutex.unlock();
@@ -577,19 +594,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> Client::clientServerInitialized(std::
 	}
 	catch(const std::exception& ex)
     {
-		_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_serversMutex.unlock();
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _serversMutex.unlock();
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 

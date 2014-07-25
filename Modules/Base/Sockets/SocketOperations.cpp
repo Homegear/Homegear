@@ -170,7 +170,7 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 	while (bytesSentSoFar < (signed)data.size())
 	{
 		timeval timeout;
-		timeout.tv_sec = 1;
+		timeout.tv_sec = 5;
 		timeout.tv_usec = 0;
 		fd_set writeFileDescriptor;
 		FD_ZERO(&writeFileDescriptor);

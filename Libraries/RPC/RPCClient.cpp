@@ -117,15 +117,25 @@ void RPCClient::invokeBroadcast(std::shared_ptr<RemoteRPCServer> server, std::st
 		if(server->binary) requestData = _rpcEncoder->encodeRequest(methodName, parameters);
 		else requestData = _xmlRpcEncoder->encodeRequest(methodName, parameters);
 		std::shared_ptr<std::vector<char>> result;
-		for(uint32_t i = 0; i < 5; ++i)
+		for(uint32_t i = 0; i < 3; ++i)
 		{
+			timedout = false;
 			if(i == 0) result = sendRequest(server, requestData, true, timedout);
 			else result = sendRequest(server, requestData, false, timedout);
 			if(!timedout || server->removed) break;
 		}
-		if(timedout || server->removed)
+		if(server->removed)
 		{
 			server->sendMutex.unlock();
+			GD::rpcClient.removeServer(server->address);
+			return;
+		}
+		if(timedout)
+		{
+			GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
+			server->removed = true;
+			server->sendMutex.unlock();
+			GD::rpcClient.removeServer(server->address);
 			return;
 		}
 		if(!result || result->empty())
@@ -171,6 +181,11 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 		if(methodName.empty()) return BaseLib::RPC::RPCVariable::createError(-32601, "Method name is empty");
 		if(!server) return BaseLib::RPC::RPCVariable::createError(-32500, "Could not send packet. Pointer to server is nullptr.");
 		server->sendMutex.lock();
+		if(server->removed)
+		{
+			server->sendMutex.unlock();
+			return BaseLib::RPC::RPCVariable::createError(-32300, "Server was removed and has to send \"init\" again.");;
+		}
 		GD::out.printInfo("Info: Calling XML RPC method " + methodName + " on server " + server->address.first + " and port " + server->address.second + ".");
 		if(GD::bl->debugLevel >= 5)
 		{
@@ -185,8 +200,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 		if(server->binary) requestData = _rpcEncoder->encodeRequest(methodName, parameters);
 		else requestData = _xmlRpcEncoder->encodeRequest(methodName, parameters);
 		std::shared_ptr<std::vector<char>> result;
-		for(uint32_t i = 0; i < 5; ++i)
+		for(uint32_t i = 0; i < 3; ++i)
 		{
+			timedout = false;
 			if(i == 0) result = sendRequest(server, requestData, true, timedout);
 			else result = sendRequest(server, requestData, false, timedout);
 			if(!timedout || server->removed) break;
@@ -194,11 +210,15 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCClient::invoke(std::shared_ptr<Rem
 		if(server->removed)
 		{
 			server->sendMutex.unlock();
+			GD::rpcClient.removeServer(server->address);
 			return BaseLib::RPC::RPCVariable::createError(-32300, "Server was removed and has to send \"init\" again.");
 		}
 		if(timedout)
 		{
+			GD::out.printError("Removing server \"" + server->id + "\". Server has to send \"init\" again.");
+			server->removed = true;
 			server->sendMutex.unlock();
+			GD::rpcClient.removeServer(server->address);
 			return BaseLib::RPC::RPCVariable::createError(-32300, "Request timed out.");
 		}
 		if(!result || result->empty())
@@ -303,7 +323,6 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		{
 			GD::out.printError("RPC Client: Tried to send unencrypted packet to " + server->hostname + " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again.");
 			server->removed = true;
-			GD::rpcClient.removeServer(server->address);
 			return std::shared_ptr<std::vector<char>>();
 		}
 
@@ -330,7 +349,6 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		{
 			GD::out.printError(ex.what() + " Removing server. Server has to send \"init\" again.");
 			server->removed = true;
-			GD::rpcClient.removeServer(server->address);
 			_sendCounter--;
 			return std::shared_ptr<std::vector<char>>();
 		}
