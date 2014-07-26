@@ -59,7 +59,7 @@
 #include <poll.h>
 #include <signal.h>
 
-#include <gnutls/gnutls.h>
+#include "../../../GnuTLS/lib/includes/gnutls/gnutlsxx.h"
 
 namespace BaseLib
 {

@@ -58,7 +58,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 
-#include <gnutls/gnutls.h>
+#include "../../GnuTLS/lib/includes/gnutls/gnutlsxx.h"
 
 namespace RPC
 {
