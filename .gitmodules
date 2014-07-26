@@ -1,0 +1,3 @@
+[submodule "GnuTLS"]
+	path = GnuTLS
+	url = git://gitorious.org/gnutls/gnutls.git

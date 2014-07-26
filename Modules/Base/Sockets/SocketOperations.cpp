@@ -39,13 +39,13 @@ SocketOperations::SocketOperations(BaseLib::Obj* baseLib)
 	_fileDescriptor.reset(new FileDescriptor);
 }
 
-SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> fileDescriptor, SSL* ssl)
+SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> fileDescriptor, gnutls_session_t tlsSession)
 {
 	_bl = baseLib;
 	_autoConnect = false;
 	if(fileDescriptor) _fileDescriptor = fileDescriptor;
 	else _fileDescriptor.reset(new FileDescriptor);
-	_ssl = ssl;
+	_tlsSession = tlsSession;
 }
 
 SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port)
@@ -68,16 +68,16 @@ SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::string hostname, 
 
 SocketOperations::~SocketOperations()
 {
-	if(_sslCTX)
+	/*if(_sslCTX)
 	{
 		SSL_CTX_free(_sslCTX);
 		_sslCTX = nullptr;
-	}
+	}*/
 }
 
 void SocketOperations::initSSL()
 {
-	if(_sslCTX)
+	/*if(_sslCTX)
 	{
 		SSL_CTX_free(_sslCTX);
 		_sslCTX = nullptr;
@@ -95,7 +95,7 @@ void SocketOperations::initSSL()
 	if(!SSL_CTX_load_verify_locations(_sslCTX, NULL, "/etc/ssl/certs"))
 	{
 		throw SocketSSLException("Could not load root certificates from /etc/ssl/certs." + std::string(ERR_reason_error_string(ERR_get_error())));
-	}
+	}*/
 }
 
 void SocketOperations::open()
@@ -121,10 +121,10 @@ void SocketOperations::autoConnect()
 
 void SocketOperations::close()
 {
-	//Never ever call SSL_free before closing the socket!!! => sometimes segfault
+	if(_tlsSession) gnutls_bye(_tlsSession, GNUTLS_SHUT_WR);
 	_bl->fileDescriptorManager.close(_fileDescriptor);
-	if(_ssl) SSL_free(_ssl);
-	_ssl = nullptr;
+	if(_tlsSession) gnutls_deinit(_tlsSession);
+	_tlsSession = nullptr;
 }
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
@@ -142,10 +142,10 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	int32_t bytesRead = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead == 0) throw SocketTimeOutException("Reading from socket timed out.");
 	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
-	bytesRead = _ssl ? SSL_read(_ssl, buffer, bufferSize) : read(_fileDescriptor->descriptor, buffer, bufferSize);
+	bytesRead = _tlsSession ? gnutls_record_recv(_tlsSession, buffer, bufferSize) : read(_fileDescriptor->descriptor, buffer, bufferSize);
 	if(bytesRead <= 0)
 	{
-		if(bytesRead < 0 && _ssl) throw SocketOperationException("Error reading SSL packet: " + HelperFunctions::getSSLError(SSL_get_error(_ssl, bytesRead)));
+		if(bytesRead < 0 && _tlsSession) throw SocketOperationException("Error reading SSL packet: " + std::string(gnutls_strerror(bytesRead)));
 		else throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
 	}
 	return bytesRead;
@@ -180,12 +180,13 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
 
 		int32_t bytesToSend = data.size() - bytesSentSoFar;
-		int32_t bytesSentInStep = _ssl ? SSL_write(_ssl, &data.at(bytesSentSoFar), bytesToSend) : send(_fileDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
+		int32_t bytesSentInStep = _tlsSession ? gnutls_record_send(_tlsSession, &data.at(bytesSentSoFar), bytesToSend) : send(_fileDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
 		if(bytesSentInStep <= 0)
 		{
 			_bl->out.printDebug("Debug: ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
 			close();
-			throw SocketOperationException(strerror(errno));
+			if(_tlsSession) throw SocketOperationException(gnutls_strerror(bytesSentInStep));
+			else throw SocketOperationException(strerror(errno));
 		}
 		bytesSentSoFar += bytesSentInStep;
 	}
@@ -216,7 +217,7 @@ void SocketOperations::getFileDescriptor()
 void SocketOperations::getSSL()
 {
 	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) throw SocketSSLException("Could not connect to server using SSL. File descriptor is invalid.");
-	if(!_sslCTX)
+	/*if(!_sslCTX)
 	{
 		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
 		throw SocketSSLException("Could not connect to server using SSL. SSL is not initialized. Look for previous error messages.");
@@ -288,7 +289,7 @@ void SocketOperations::getSSL()
 		if(_ssl) SSL_free(_ssl);
 		_ssl = nullptr;
 		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
-	}
+	}*/
 }
 
 bool SocketOperations::waitForSocket()

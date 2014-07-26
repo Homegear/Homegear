@@ -58,12 +58,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 
-#include <openssl/rsa.h>
-#include <openssl/crypto.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include <gnutls/gnutls.h>
 
 namespace RPC
 {
@@ -74,8 +69,8 @@ namespace RPC
 			public:
 				int32_t id = -1;
 				std::thread readThread;
-				std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
-				SSL* ssl = nullptr;
+				std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor;
+				gnutls_session_t tlsSession = nullptr;
 				std::shared_ptr<BaseLib::SocketOperations> socket;
 				Auth auth;
 
@@ -100,9 +95,12 @@ namespace RPC
 			std::shared_ptr<BaseLib::RPC::RPCVariable> callMethod(std::string& methodName, std::shared_ptr<BaseLib::RPC::RPCVariable>& parameters);
 		protected:
 		private:
+			BaseLib::Output _out;
 			int32_t _currentClientID = 0;
 			std::shared_ptr<ServerSettings::Settings> _settings;
-			SSL_CTX* _sslCTX = nullptr;
+			gnutls_certificate_credentials_t _x509Cred = nullptr;
+			gnutls_priority_t _tlsPriorityCache = nullptr;
+			gnutls_dh_params_t _dhParams = nullptr;
 			int32_t _threadPolicy = SCHED_OTHER;
 			int32_t _threadPriority = 0;
 			bool _stopServer = false;
@@ -119,9 +117,9 @@ namespace RPC
 			std::unique_ptr<BaseLib::RPC::XMLRPCDecoder> _xmlRpcDecoder;
 			std::unique_ptr<BaseLib::RPC::XMLRPCEncoder> _xmlRpcEncoder;
 
-			void getFileDescriptor();
-			std::shared_ptr<BaseLib::FileDescriptor> getClientFileDescriptor();
-			void getSSLFileDescriptor(std::shared_ptr<Client>);
+			void getSocketDescriptor();
+			std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor();
+			void getSSLSocketDescriptor(std::shared_ptr<Client>);
 			void mainThread();
 			void readClient(std::shared_ptr<Client> client);
 			void sendRPCResponseToClient(std::shared_ptr<Client> client, std::shared_ptr<BaseLib::RPC::RPCVariable> error, PacketType::Enum packetType, bool keepAlive);
@@ -136,4 +134,4 @@ namespace RPC
 			bool clientValid(std::shared_ptr<Client>& client);
 	};
 }
-#endif /* RPCSERVER_H_ */
+#endif

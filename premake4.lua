@@ -30,7 +30,6 @@ newplatform {
     }
 }
 
--- A solution contains projects, and defines the available configurations
 solution "homegear"
    configurations { "Debug", "Release", "Profiling" }
  
@@ -332,7 +331,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
 	  files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l ssl", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l base" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l base" }
  
       configuration "Debug"
          defines { "DEBUG" }

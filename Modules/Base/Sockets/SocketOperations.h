@@ -59,12 +59,7 @@
 #include <poll.h>
 #include <signal.h>
 
-#include <openssl/rsa.h>
-#include <openssl/crypto.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include <gnutls/gnutls.h>
 
 namespace BaseLib
 {
@@ -117,7 +112,7 @@ class SocketOperations
 {
 public:
 	SocketOperations(BaseLib::Obj* baseLib);
-	SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> fileDescriptor, SSL* ssl);
+	SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> fileDescriptor, gnutls_session_t tlsSession);
 	SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port);
 	SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port, bool useSSL, bool verifyCertificate);
 	virtual ~SocketOperations();
@@ -145,8 +140,7 @@ protected:
 
 	std::shared_ptr<FileDescriptor> _fileDescriptor;
 	bool _useSSL = false;
-	SSL* _ssl = nullptr;
-	SSL_CTX* _sslCTX = nullptr;
+	gnutls_session_t _tlsSession = nullptr;
 
 	void getFileDescriptor();
 	void getConnection();

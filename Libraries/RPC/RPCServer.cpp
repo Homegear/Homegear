@@ -36,17 +36,20 @@ using namespace RPC;
 RPCServer::Client::Client()
 {
 	 socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get()));
-	 fileDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor());
+	 socketDescriptor = std::shared_ptr<BaseLib::FileDescriptor>(new BaseLib::FileDescriptor());
 }
 
 RPCServer::Client::~Client()
 {
-	GD::bl->fileDescriptorManager.shutdown(fileDescriptor);
-	if(ssl) SSL_free(ssl);
+	if(tlsSession) gnutls_bye(tlsSession, GNUTLS_SHUT_WR);
+	GD::bl->fileDescriptorManager.shutdown(socketDescriptor);
+	if(tlsSession) gnutls_deinit(tlsSession);
 }
 
 RPCServer::RPCServer()
 {
+	_out.init(GD::bl.get());
+
 	_rpcDecoder = std::unique_ptr<BaseLib::RPC::RPCDecoder>(new BaseLib::RPC::RPCDecoder(GD::bl.get()));
 	_rpcEncoder = std::unique_ptr<BaseLib::RPC::RPCEncoder>(new BaseLib::RPC::RPCEncoder(GD::bl.get()));
 	_xmlRpcDecoder = std::unique_ptr<BaseLib::RPC::XMLRPCDecoder>(new BaseLib::RPC::XMLRPCDecoder(GD::bl.get()));
@@ -73,102 +76,61 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 		_settings = settings;
 		if(!_settings)
 		{
-			GD::out.printError("Error: settings is nullptr.");
+			_out.printError("Error: Settings is nullptr.");
 			return;
 		}
+		_out.setPrefix("RPC Server (Port " + std::to_string(settings->port) + "): ");
 		if(_settings->ssl)
 		{
-			SSL_load_error_strings();
-			SSLeay_add_ssl_algorithms();
-			_sslCTX = SSL_CTX_new(SSLv23_server_method());
-			if(!_sslCTX)
+			int32_t result = 0;
+			if((result = gnutls_certificate_allocate_credentials(&_x509Cred)) != GNUTLS_E_SUCCESS)
 			{
-				GD::out.printError("Error: Could not start RPC Server with SSL support." + std::string(ERR_reason_error_string(ERR_get_error())));
+				_out.printError("Error: Could not allocate TLS certificate structure: " + std::string(gnutls_strerror(result)));
 				return;
 			}
-
-			DH* dh = nullptr;
+			if((result = gnutls_certificate_set_x509_key_file(_x509Cred, GD::bl->settings.certPath().c_str(), GD::bl->settings.keyPath().c_str(), GNUTLS_X509_FMT_PEM)) < 0)
+			{
+				_out.printError("Error: Could not load certificate or key file: " + std::string(gnutls_strerror(result)));
+				gnutls_certificate_free_credentials(_x509Cred);
+				return;
+			}
+			if(!_dhParams)
+			{
 			if(GD::bl->settings.loadDHParamsFromFile())
 			{
-				BIO* bio = BIO_new_file(GD::bl->settings.dhParamPath().c_str(), "r");
-				if(!bio)
+				gnutls_datum_t data;
+				if((result = gnutls_load_file(GD::bl->settings.dhParamPath().c_str(), &data)) != GNUTLS_E_SUCCESS)
 				{
-					GD::out.printError("Error: Could not start RPC Server with SSL support. Could not load Diffie-Hellman parameter file (" + GD::bl->settings.dhParamPath() + "): " + std::string(ERR_reason_error_string(ERR_get_error())));
-					BIO_free(bio);
-					SSL_CTX_free(_sslCTX);
-					_sslCTX = nullptr;
+					_out.printError("Error: Could not load DH parameter file: " + std::string(gnutls_strerror(result)));
+					gnutls_certificate_free_credentials(_x509Cred);
 					return;
 				}
 
-				dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
-				if(!dh)
-				{
-					GD::out.printError("Error: Could not start RPC Server with SSL support. Reading of Diffie-Hellman parameters failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
-					BIO_free(bio);
-					SSL_CTX_free(_sslCTX);
-					_sslCTX = nullptr;
-					return;
-				}
-
-				BIO_free(bio);
 			}
 			else
 			{
-				dh = DH_new();
-				if(!dh)
+				uint32_t bits = gnutls_sec_param_to_pk_bits(GNUTLS_PK_DH, GNUTLS_SEC_PARAM_ULTRA);
+				if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
 				{
-					GD::out.printError("Error: Could not start RPC Server with SSL support. Initialization of Diffie-Hellman parameters failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
-					SSL_CTX_free(_sslCTX);
-					_sslCTX = nullptr;
+					_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
+					gnutls_certificate_free_credentials(_x509Cred);
 					return;
 				}
-				GD::out.printInfo("Generating temporary Diffie-Hellman parameters. This might take a long time...");
-				if(!DH_generate_parameters_ex(dh, settings->diffieHellmanKeySize, DH_GENERATOR_5, NULL))
+				if((result = gnutls_dh_params_generate2(_dhParams, bits)) != GNUTLS_E_SUCCESS)
 				{
-					GD::out.printError("Error: Could not start RPC Server with SSL support. Could not generate Diffie Hellman parameters: " + std::string(ERR_reason_error_string(ERR_get_error())));
-					SSL_CTX_free(_sslCTX);
-					_sslCTX = nullptr;
+					_out.printError("Error: Could not generate DH parameters: " + std::string(gnutls_strerror(result)));
+					gnutls_certificate_free_credentials(_x509Cred);
 					return;
 				}
 			}
-			int32_t codes = 0;
-			if(!DH_check(dh, &codes))
+			}
+			if((result = gnutls_priority_init(&_tlsPriorityCache, "PERFORMANCE:%SERVER_PRECEDENCE", NULL)) != GNUTLS_E_SUCCESS)
 			{
-				GD::out.printError("Error: Could not start RPC Server with SSL support. Diffie Hellman check failed: " + std::string(ERR_reason_error_string(ERR_get_error())));
-				SSL_CTX_free(_sslCTX);
-				_sslCTX = nullptr;
+				_out.printError("Error: Could not initialize cipher priorities: " + std::string(gnutls_strerror(result)));
+				gnutls_certificate_free_credentials(_x509Cred);
 				return;
 			}
-			if(!DH_generate_key(dh))
-			{
-				GD::out.printError("Error: Could not start RPC Server with SSL support. Could not generate Diffie Hellman key: " + std::string(ERR_reason_error_string(ERR_get_error())));
-				SSL_CTX_free(_sslCTX);
-				_sslCTX = nullptr;
-				return;
-			}
-			SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
-			SSL_CTX_set_tmp_dh(_sslCTX, dh);
-			if(SSL_CTX_use_certificate_file(_sslCTX, GD::bl->settings.certPath().c_str(), SSL_FILETYPE_PEM) < 1)
-			{
-				SSL_CTX_free(_sslCTX);
-				_sslCTX = nullptr;
-				GD::out.printError("Error: Could not load certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
-				return;
-			}
-			if(SSL_CTX_use_PrivateKey_file(_sslCTX, GD::bl->settings.keyPath().c_str(), SSL_FILETYPE_PEM) < 1)
-			{
-				SSL_CTX_free(_sslCTX);
-				_sslCTX = nullptr;
-				GD::out.printError("Error: Could not load key from certificate file: " + std::string(ERR_reason_error_string(ERR_get_error())));
-				return;
-			}
-			if(!SSL_CTX_check_private_key(_sslCTX))
-			{
-				SSL_CTX_free(_sslCTX);
-				_sslCTX = nullptr;
-				GD::out.printError("Error: Private key does not match the public key");
-				return;
-			}
+			gnutls_certificate_set_dh_params(_x509Cred, _dhParams);
 		}
 		_mainThread = std::thread(&RPCServer::mainThread, this);
 		BaseLib::Threads::setThreadPriority(GD::bl.get(), _mainThread.native_handle(), _threadPriority, _threadPolicy);
@@ -177,15 +139,15 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -197,23 +159,34 @@ void RPCServer::stop()
 		_stopped = true;
 		_stopServer = true;
 		if(_mainThread.joinable()) _mainThread.join();
-		if(_sslCTX)
+		int32_t result = 0;
+		if(_x509Cred)
 		{
-			SSL_CTX_free(_sslCTX);
-			_sslCTX = nullptr;
+			gnutls_certificate_free_credentials(_x509Cred);
+			_x509Cred = nullptr;
+		}
+		if(_tlsPriorityCache)
+		{
+			gnutls_priority_deinit(_tlsPriorityCache);
+			_tlsPriorityCache = nullptr;
+		}
+		if(_dhParams)
+		{
+			gnutls_dh_params_deinit(_hhParams);
+			_dhParams = nullptr;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -228,15 +201,15 @@ uint32_t RPCServer::connectionCount()
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _stateMutex.unlock();
     return 0;
@@ -248,22 +221,22 @@ void RPCServer::registerMethod(std::string methodName, std::shared_ptr<RPCMethod
 	{
 		if(_rpcMethods->find(methodName) != _rpcMethods->end())
 		{
-			GD::out.printWarning("Warning: Could not register RPC method, because a method with this name already exists.");
+			_out.printWarning("Warning: Could not register RPC method, because a method with this name already exists.");
 			return;
 		}
 		_rpcMethods->insert(std::pair<std::string, std::shared_ptr<RPCMethod>>(methodName, method));
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -272,25 +245,25 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 	try
 	{
 		removeClient(client->id);
-		//Never ever call SSL_free before closing the socket!!! => segfault
-		GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
-		if(client->ssl)
+		if(client->tlsSession) gnutls_bye(client->tlsSession, GNUTLS_SHUT_WR);
+		GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+		if(client->tlsSession)
 		{
-			SSL_free(client->ssl);
-			client->ssl = nullptr;
+			gnutls_deinit(client->tlsSession);
+			client->tlsSession = nullptr;
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -298,7 +271,7 @@ void RPCServer::mainThread()
 {
 	try
 	{
-		getFileDescriptor();
+		getSocketDescriptor();
 		while(!_stopServer)
 		{
 			try
@@ -306,36 +279,36 @@ void RPCServer::mainThread()
 				if(!_serverFileDescriptor || _serverFileDescriptor->descriptor < 0)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-					getFileDescriptor();
+					getSocketDescriptor();
 					continue;
 				}
-				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientFileDescriptor();
+				std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = getClientSocketDescriptor();
 				if(!clientFileDescriptor || clientFileDescriptor->descriptor < 0) continue;
 				_stateMutex.lock();
 				if(_clients.size() >= _maxConnections)
 				{
 					_stateMutex.unlock();
-					GD::out.printError("Error: Client connection rejected, because there are too many clients connected to me.");
+					_out.printError("Error: Client connection rejected, because there are too many clients connected to me.");
 					GD::bl->fileDescriptorManager.shutdown(clientFileDescriptor);
 					continue;
 				}
 				std::shared_ptr<Client> client(new Client());
 				client->id = _currentClientID++;
-				client->fileDescriptor = clientFileDescriptor;
+				client->socketDescriptor = clientFileDescriptor;
 				_clients[client->id] = client;
 				_stateMutex.unlock();
 
 				if(_settings->ssl)
 				{
-					getSSLFileDescriptor(client);
-					if(!client->ssl)
+					getSSLSocketDescriptor(client);
+					if(!client->tlsSession)
 					{
 						//Remove client from _clients again. Socket is already closed.
 						closeClientConnection(client);
 						continue;
 					}
 				}
-				client->socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get(), client->fileDescriptor, client->ssl));
+				client->socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get(), client->socketDescriptor, client->tlsSession));
 
 				client->readThread = std::thread(&RPCServer::readClient, this, client);
 				BaseLib::Threads::setThreadPriority(GD::bl.get(), client->readThread.native_handle(), _threadPriority, _threadPolicy);
@@ -343,17 +316,17 @@ void RPCServer::mainThread()
 			}
 			catch(const std::exception& ex)
 			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				_stateMutex.unlock();
 			}
 			catch(BaseLib::Exception& ex)
 			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				_stateMutex.unlock();
 			}
 			catch(...)
 			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				_stateMutex.unlock();
 			}
 		}
@@ -361,15 +334,15 @@ void RPCServer::mainThread()
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -377,20 +350,20 @@ bool RPCServer::clientValid(std::shared_ptr<Client>& client)
 {
 	try
 	{
-		if(client->fileDescriptor->descriptor < 0) return false;
+		if(client->socketDescriptor->descriptor < 0) return false;
 		return true;
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _stateMutex.unlock();
     return false;
@@ -410,26 +383,26 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 		}
 		catch(BaseLib::SocketDataLimitException& ex)
 		{
-			GD::out.printWarning("Warning: " + ex.what());
+			_out.printWarning("Warning: " + ex.what());
 		}
 		catch(BaseLib::SocketOperationException& ex)
 		{
-			GD::out.printError("Error: " + ex.what());
+			_out.printError("Error: " + ex.what());
 			error = true;
 		}
 		if(!keepAlive || error) closeClientConnection(client);
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -444,7 +417,7 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::shared_ptr<std::
 		else if(packetType == PacketType::Enum::xmlRequest) parameters = _xmlRpcDecoder->decodeRequest(packet, methodName);
 		if(!parameters)
 		{
-			GD::out.printWarning("Warning: Could not decode RPC packet.");
+			_out.printWarning("Warning: Could not decode RPC packet.");
 			return;
 		}
 		PacketType::Enum responseType = (packetType == PacketType::Enum::binaryRequest) ? PacketType::Enum::binaryResponse : PacketType::Enum::xmlResponse;
@@ -457,15 +430,15 @@ void RPCServer::analyzeRPC(std::shared_ptr<Client> client, std::shared_ptr<std::
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -484,7 +457,7 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 			data->insert(data->begin(), header.begin(), header.end());
 			if(GD::bl->debugLevel >= 5)
 			{
-				GD::out.printDebug("Response packet: " + std::string(&data->at(0), data->size()));
+				_out.printDebug("Response packet: " + std::string(&data->at(0), data->size()));
 			}
 			sendRPCResponseToClient(client, data, keepAlive);
 		}
@@ -493,23 +466,23 @@ void RPCServer::sendRPCResponseToClient(std::shared_ptr<Client> client, std::sha
 			data = _rpcEncoder->encodeResponse(variable);
 			if(GD::bl->debugLevel >= 5)
 			{
-				GD::out.printDebug("Response binary:");
-				GD::out.printBinary(data);
+				_out.printDebug("Response binary:");
+				_out.printBinary(data);
 			}
 			sendRPCResponseToClient(client, data, keepAlive);
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -521,12 +494,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCServer::callMethod(std::string& me
 		if(_stopped) return BaseLib::RPC::RPCVariable::createError(100000, "Server is stopped.");
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			GD::out.printError("Warning: RPC method not found: " + methodName);
+			_out.printError("Warning: RPC method not found: " + methodName);
 			return BaseLib::RPC::RPCVariable::createError(-32601, ": Requested method not found.");
 		}
 		if(GD::bl->debugLevel >= 4)
 		{
-			GD::out.printInfo("Info: Method called: " + methodName + " Parameters:");
+			_out.printInfo("Info: Method called: " + methodName + " Parameters:");
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->arrayValue->begin(); i != parameters->arrayValue->end(); ++i)
 			{
 				(*i)->print();
@@ -535,22 +508,22 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCServer::callMethod(std::string& me
 		std::shared_ptr<BaseLib::RPC::RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters->arrayValue);
 		if(GD::bl->debugLevel >= 5)
 		{
-			GD::out.printDebug("Response: ");
+			_out.printDebug("Response: ");
 			ret->print();
 		}
 		return ret;
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, ": Unknown application error.");
 }
@@ -562,13 +535,13 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		if(_stopped) return;
 		if(_rpcMethods->find(methodName) == _rpcMethods->end())
 		{
-			GD::out.printError("Warning: RPC method not found: " + methodName);
+			_out.printError("Warning: RPC method not found: " + methodName);
 			sendRPCResponseToClient(client, BaseLib::RPC::RPCVariable::createError(-32601, ": Requested method not found."), responseType, keepAlive);
 			return;
 		}
 		if(GD::bl->debugLevel >= 4)
 		{
-			GD::out.printInfo("Info: Method called: " + methodName + " Parameters:");
+			_out.printInfo("Info: Method called: " + methodName + " Parameters:");
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				(*i)->print();
@@ -577,22 +550,22 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		std::shared_ptr<BaseLib::RPC::RPCVariable> ret = _rpcMethods->at(methodName)->invoke(parameters);
 		if(GD::bl->debugLevel >= 5)
 		{
-			GD::out.printDebug("Response: ");
+			_out.printDebug("Response: ");
 			ret->print();
 		}
 		sendRPCResponseToClient(client, ret, responseType, keepAlive);
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -618,21 +591,21 @@ void RPCServer::analyzeRPCResponse(std::shared_ptr<Client> client, std::shared_p
 		if(!response) return;
 		if(GD::bl->debugLevel >= 3)
 		{
-			GD::out.printWarning("Warning: RPC server received RPC response. This shouldn't happen. Response data: ");
+			_out.printWarning("Warning: RPC server received RPC response. This shouldn't happen. Response data: ");
 			response->print();
 		}
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -645,15 +618,15 @@ void RPCServer::packetReceived(std::shared_ptr<Client> client, std::shared_ptr<s
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -666,15 +639,15 @@ void RPCServer::removeClient(int32_t clientID)
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _stateMutex.unlock();
 }
@@ -693,7 +666,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		PacketType::Enum packetType;
 		HTTP http;
 
-		GD::out.printDebug("Listening for incoming packets from client number " + std::to_string(client->fileDescriptor->descriptor) + ".");
+		_out.printDebug("Listening for incoming packets from client number " + std::to_string(client->socketDescriptor->descriptor) + ".");
 		while(!_stopServer)
 		{
 			try
@@ -708,12 +681,12 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			}
 			catch(BaseLib::SocketClosedException& ex)
 			{
-				GD::out.printInfo("Info: " + ex.what());
+				_out.printInfo("Info: " + ex.what());
 				break;
 			}
 			catch(BaseLib::SocketOperationException& ex)
 			{
-				GD::out.printError(ex.what());
+				_out.printError(ex.what());
 				break;
 			}
 
@@ -723,7 +696,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 			{
 				std::vector<uint8_t> rawPacket;
 				rawPacket.insert(rawPacket.begin(), buffer, buffer + bytesRead);
-				GD::out.printDebug("Debug: Packet received: " + BaseLib::HelperFunctions::getHexString(rawPacket));
+				_out.printDebug("Debug: Packet received: " + BaseLib::HelperFunctions::getHexString(rawPacket));
 			}
 			if(!strncmp(&buffer[0], "Bin", 3))
 			{
@@ -737,23 +710,23 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					GD::bl->hf.memcpyBigEndian((char*)&headerSize, buffer + 4, 4);
 					if(bytesRead < headerSize + 12)
 					{
-						GD::out.printError("Error: Binary rpc packet has invalid header size.");
+						_out.printError("Error: Binary rpc packet has invalid header size.");
 						continue;
 					}
 					GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 8 + headerSize, 4);
 					dataSize += headerSize + 4;
 				}
 				else GD::bl->hf.memcpyBigEndian((char*)&dataSize, buffer + 4, 4);
-				GD::out.printDebug("Receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
+				_out.printDebug("Receiving binary rpc packet with size: " + std::to_string(dataSize), 6);
 				if(dataSize == 0) continue;
 				if(headerSize > 1024)
 				{
-					GD::out.printError("Error: Binary rpc packet with header larger than 1 KiB received.");
+					_out.printError("Error: Binary rpc packet with header larger than 1 KiB received.");
 					continue;
 				}
 				if(dataSize > 104857600)
 				{
-					GD::out.printError("Error: Packet with data larger than 100 MiB received.");
+					_out.printError("Error: Packet with data larger than 100 MiB received.");
 					continue;
 				}
 				packet.reset(new std::vector<char>());
@@ -767,14 +740,14 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					{
 						if(!client->auth.basicServer(header))
 						{
-							GD::out.printError("Error: Authorization failed. Closing connection.");
+							_out.printError("Error: Authorization failed. Closing connection.");
 							break;
 						}
-						else GD::out.printDebug("Client successfully authorized using basic authentification.");
+						else _out.printDebug("Client successfully authorized using basic authentification.");
 					}
 					catch(AuthException& ex)
 					{
-						GD::out.printError("Error: Authorization failed. Closing connection. Error was: " + ex.what());
+						_out.printError("Error: Authorization failed. Closing connection. Error was: " + ex.what());
 						break;
 					}
 				}
@@ -801,12 +774,12 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				}
 				catch(HTTPException& ex)
 				{
-					GD::out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+					_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
 				}
 
 				if(http.getHeader()->contentLength > 104857600)
 				{
-					GD::out.printError("Error: Packet with data larger than 100 MiB received.");
+					_out.printError("Error: Packet with data larger than 100 MiB received.");
 					continue;
 				}
 
@@ -818,14 +791,14 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					{
 						if(!client->auth.basicServer(http))
 						{
-							GD::out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
+							_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection.");
 							break;
 						}
-						else GD::out.printDebug("Client successfully authorized using basic authentification.");
+						else _out.printDebug("Client successfully authorized using basic authentification.");
 					}
 					catch(AuthException& ex)
 					{
-						GD::out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
+						_out.printError("Error: Authorization failed for host " + http.getHeader()->host + ". Closing connection. Error was: " + ex.what());
 						break;
 					}
 				}
@@ -836,7 +809,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 				{
 					if(packetLength + bytesRead > dataSize)
 					{
-						GD::out.printError("Error: Packet length is wrong.");
+						_out.printError("Error: Packet length is wrong.");
 						packetLength = 0;
 						continue;
 					}
@@ -859,19 +832,19 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 					}
 					catch(HTTPException& ex)
 					{
-						GD::out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
+						_out.printError("XML RPC Server: Could not process HTTP packet: " + ex.what() + " Buffer: " + std::string(buffer, bytesRead));
 					}
 
 					if(http.getContentSize() > 104857600)
 					{
 						http.reset();
-						GD::out.printError("Error: Packet with data larger than 100 MiB received.");
+						_out.printError("Error: Packet with data larger than 100 MiB received.");
 					}
 				}
 			}
 			else
 			{
-				GD::out.printError("Error: Uninterpretable packet received. Closing connection. Packet was: " + std::string(buffer, buffer + bytesRead));
+				_out.printError("Error: Uninterpretable packet received. Closing connection. Packet was: " + std::string(buffer, buffer + bytesRead));
 				break;
 			}
 			if(http.isFinished())
@@ -888,19 +861,19 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
-std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientFileDescriptor()
+std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()
 {
 	std::shared_ptr<BaseLib::FileDescriptor> fileDescriptor;
 	try
@@ -932,95 +905,106 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientFileDescriptor()
 			inet_ntop(AF_INET6, &s->sin6_addr, ipString, sizeof(ipString));
 		}
 		std::string ipString2(&ipString[0]);
-		GD::out.printInfo("Info: Connection from " + ipString2 + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(fileDescriptor->descriptor));
+		_out.printInfo("Info: Connection from " + ipString2 + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(fileDescriptor->descriptor));
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return fileDescriptor;
 }
 
-void RPCServer::getSSLFileDescriptor(std::shared_ptr<Client> client)
+void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 {
 	try
 	{
-		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 1");
-		if(!_sslCTX)
+		if(!_tlsPriorityCache)
 		{
-			GD::out.printError("Error: Could not initiate SSL connection. _sslCTX is nullptr.");
+			_out.printError("Error: Could not initiate TLS connection. _tlsPriorityCache is nullptr.");
 			return;
 		}
-		client->ssl = SSL_new(_sslCTX);
-		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 2");
-		if(!client->ssl)
+		if(!_x509Cred)
 		{
-			GD::out.printError("Error creating SSL structure.");
+			_out.printError("Error: Could not initiate TLS connection. _x509Cred is nullptr.");
 			return;
 		}
-		if(!client->fileDescriptor || client->fileDescriptor->descriptor == -1)
+		int32_t result = 0;
+		if((result = gnutls_init(&client->tlsSession, GNUTLS_SERVER)) != GNUTLS_E_SUCCESS)
 		{
-			GD::out.printError("Error setting SSL file descriptor: Provided file descriptor is invalid.");
-			if(client->ssl) SSL_free(client->ssl);
-			client->ssl = nullptr;
+			_out.printError("Error: Could not initialize TLS session: " + std::string(gnutls_strerror(result)));
+			client->tlsSession = nullptr;
 			return;
 		}
-		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 3");
-		if(!SSL_set_fd(client->ssl, client->fileDescriptor->descriptor))
+		if(!client->tlsSession)
 		{
-			GD::out.printError("Error setting SSL file descriptor: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, 0)));
-			GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
-			if(client->ssl) SSL_free(client->ssl);
-			client->ssl = nullptr;
+			_out.printError("Error: Client TLS session is nullptr.");
 			return;
 		}
-		if(!client->ssl)
+		if((result = gnutls_priority_set(client->tlsSession, _tlsPriorityCache)) != GNUTLS_E_SUCCESS)
 		{
-			GD::out.printError("Error getting SSL file descriptor: client->ssl is nullptr.");
+			_out.printError("Error: Could not set cipher priority on TLS session: " + std::string(gnutls_strerror(result)));
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+			gnutls_deinit(client->tlsSession);
+			client->tlsSession = nullptr;
 			return;
 		}
-		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 4");
-		int32_t result = SSL_accept(client->ssl);
-		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 5");
-		if(result < 1)
+		if((result = gnutls_credentials_set(client->tlsSession, GNUTLS_CRD_CERTIFICATE, _x509Cred)) != GNUTLS_E_SUCCESS)
 		{
-			if(client->ssl && result != 0) GD::out.printError("Error during TLS/SSL handshake: " + BaseLib::HelperFunctions::getSSLError(SSL_get_error(client->ssl, result)));
-			else if(result == 0) GD::out.printError("The TLS/SSL handshake was unsuccessful. Client number: " + std::to_string(client->fileDescriptor->descriptor));
-			else GD::out.printError("Fatal error during TLS/SSL handshake. Client number: " + std::to_string(client->fileDescriptor->descriptor));
-			GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
-			if(client->ssl) SSL_free(client->ssl);
-			client->ssl = nullptr;
+			_out.printError("Error: Could not set x509 credentials on TLS session: " + std::string(gnutls_strerror(result)));
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+			gnutls_deinit(client->tlsSession);
+			client->tlsSession = nullptr;
+			return;
 		}
-		else GD::out.printInfo("Info: New SSL connection to RPC server. Cipher: " + std::string(SSL_get_cipher(client->ssl)) + " (" + std::to_string(SSL_get_cipher_bits(client->ssl, 0)) + " bits)");
-		if(GD::bl->settings.devLog()) GD::out.printInfo("Position 6");
+		gnutls_certificate_server_set_request(client->tlsSession, GNUTLS_CERT_IGNORE);
+		if(!client->socketDescriptor || client->socketDescriptor->descriptor == -1)
+		{
+			_out.printError("Error setting TLS socket descriptor: Provided socket descriptor is invalid.");
+			gnutls_deinit(client->tlsSession);
+			client->tlsSession = nullptr;
+			return;
+		}
+		gnutls_transport_set_ptr(client->tlsSession, (gnutls_transport_ptr_t)client->socketDescriptor->descriptor);
+		do
+		{
+			result = gnutls_handshake(client->tlsSession);
+        } while (result < 0 && gnutls_error_is_fatal(result) == 0);
+		if(result < 0)
+		{
+			_out.printError("Error: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+			gnutls_deinit(client->tlsSession);
+			client->tlsSession = nullptr;
+			return;
+		}
 		return;
 	}
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::bl->fileDescriptorManager.shutdown(client->fileDescriptor);
-    if(client->ssl) SSL_free(client->ssl);
-    client->ssl = nullptr;
+    GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
+    if(client->tlsSession) gnutls_deinit(client->tlsSession);
+    client->tlsSession = nullptr;
 }
 
-void RPCServer::getFileDescriptor()
+void RPCServer::getSocketDescriptor()
 {
 	try
 	{
@@ -1039,7 +1023,7 @@ void RPCServer::getFileDescriptor()
 		int32_t result;
 		if((result = getaddrinfo(_settings->interface.c_str(), port.c_str(), &hostInfo, &serverInfo)) != 0)
 		{
-			GD::out.printCritical("Error: Could not get address information: " + std::string(gai_strerror(result)));
+			_out.printCritical("Error: Could not get address information: " + std::string(gai_strerror(result)));
 			return;
 		}
 
@@ -1071,7 +1055,7 @@ void RPCServer::getFileDescriptor()
 					address = std::string(buffer);
 					break;
 			}
-			GD::out.printInfo("Info: RPC Server started listening on address " + address + " and port " + port);
+			_out.printInfo("Info: RPC Server started listening on address " + address + " and port " + port);
 			bound = true;
 			break;
 		}
@@ -1079,26 +1063,26 @@ void RPCServer::getFileDescriptor()
 		if(!bound)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			GD::out.printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(error)));
+			_out.printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(error)));
 			return;
 		}
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
 			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
-			GD::out.printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
+			_out.printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
 			return;
 		}
     }
     catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }

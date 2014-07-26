@@ -27,6 +27,8 @@
  * files in the program, then also delete it here.
  */
 
+#define GNUTLS
+
 #include "Version.h"
 #include "Libraries/GD/GD.h"
 #include "Modules/Base/BaseLib.h"
@@ -108,6 +110,9 @@ void terminate(int32_t signalNumber)
 				fclose(stdout);
 				fclose(stderr);
 			}
+#ifdef GNUTLS
+		gnutls_global_deinit();
+#endif
 			exit(0);
 		}
 		else if(signalNumber == SIGHUP)
@@ -467,6 +472,10 @@ int main(int argc, char* argv[])
 			GD::out.printCritical("Critical: Time is still in the past. Check that ntp is setup correctly and your internet connection is working. Exiting...");
 			exit(1);
 		}
+
+#ifdef GNUTLS
+		gnutls_global_init();
+#endif
 
 		GD::familyController.loadModules();
 		if(GD::deviceFamilies.empty()) exit(1);
