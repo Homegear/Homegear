@@ -85,6 +85,7 @@ void SocketOperations::initSSL()
 	if(_caFile.length() == 0)
 	{
 		if(_verifyCertificate) throw SocketSSLException("Certificate verification is enabled, but \"caFile\" is not specified for the host \"" + _hostname + "\" in rpcclients.conf.");
+		else GD::out.printWarning("Warning: \"caFile\" is not specified for the host \"" + _hostname + "\" in rpcclients.conf and certificate verification is disabled. It is highly recommended to enable certificate verification.");
 	}
 	else if((result = gnutls_certificate_set_x509_trust_file(_x509Cred, _caFile.c_str(), GNUTLS_X509_FMT_PEM)) < 0)
 	{
@@ -289,6 +290,7 @@ void SocketOperations::getSSL()
 			close();
 			throw SocketSSLException("Error verifying server certificate (Code: " + std::to_string(status) + "): " + HelperFunctions::getGNUTLSCertVerificationError(status));
 		}
+		else GD::out.printWarning("Warning: Certificate verification failed (Code: " + std::to_string(status) + "): " + HelperFunctions::getGNUTLSCertVerificationError(status));
 	}
 	else //Verify hostname
 	{

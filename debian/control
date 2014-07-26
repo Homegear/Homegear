@@ -3,12 +3,12 @@ Maintainer: Sathya Laufer <sathya@laufers.net>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.4
-Build-Depends: debhelper (>= 8), libsqlite3-dev (>= 3.7.13), libreadline6-dev (>= 6.2), libssl-dev (>= 1.0.1e)
+Build-Depends: debhelper (>= 8), libsqlite3-dev (>= 3.7.13), libreadline6-dev (>= 6.2), libgcrypt11-dev (>= 1.5.0), libgpg-error-dev (>= 1.10), libgnutls-dev (>= 2.12.20)
 Homepage: https://homegear.eu
 
 Package: homegear
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libsqlite3-0 (>= 3.7.13), libreadline6 (>= 6.2), adduser (>= 3.113), libssl1.0.0 (>= 1.0.1e), unzip (>= 6.0), p7zip-full (>= 9.0), libxml2-utils (>= 2.8.0), liblzo2-dev (>= 2.06), python-lzo (>= 1.08)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libsqlite3-0 (>= 3.7.13), libreadline6 (>= 6.2), adduser (>= 3.113), libgcrypt11 (>= 1.5.0), libgnutlsxx27 (>= 2.12.20), libgpg-error0 (>= 1.10), unzip (>= 6.0), p7zip-full (>= 9.0), libxml2-utils (>= 2.8.0), liblzo2-dev (>= 2.06), python-lzo (>= 1.08)
 Description: Program to control your HomeMatic devices
  Homegear a program to interface your home automation software 
  with your HomeMatic devices.
