@@ -239,6 +239,11 @@ void PhysicalInterfaces::load(std::string filename)
 					if(value == "true") settings->ssl = true;
 					GD::out.printDebug("Debug: SSL of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + std::to_string(settings->ssl));
 				}
+				else if(name == "cafile")
+				{
+					settings->caFile = value;
+					GD::out.printDebug("Debug: CAFile of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->caFile);
+				}
 				else if(name == "verifycertificate")
 				{
 					BaseLib::HelperFunctions::toLower(value);

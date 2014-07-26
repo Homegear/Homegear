@@ -470,7 +470,7 @@ std::string Server::handleUserCommand(std::string& command)
 			if(GD::db.userNameExists(userName)) return "A user with that name already exists.\n";
 
 			std::vector<uint8_t> salt;
-			std::vector<uint8_t> passwordHash = User::generatePBKDF2(password, salt);
+			std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL(password, salt);
 
 			if(GD::db.createUser(userName, passwordHash, salt)) stringStream << "User successfully created." << std::endl;
 			else stringStream << "Error creating user. See log for more details." << std::endl;
@@ -539,7 +539,7 @@ std::string Server::handleUserCommand(std::string& command)
 			if(userID == 0) return "The user doesn't exist.\n";
 
 			std::vector<uint8_t> salt;
-			std::vector<uint8_t> passwordHash = User::generatePBKDF2(password, salt);
+			std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL(password, salt);
 
 			if(GD::db.updateUser(userID, passwordHash, salt)) stringStream << "User successfully updated." << std::endl;
 			else stringStream << "Error updating user. See log for more details." << std::endl;

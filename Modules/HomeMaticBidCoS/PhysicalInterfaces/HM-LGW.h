@@ -48,10 +48,7 @@
 #include <termios.h>
 #include <signal.h>
 
-#include <openssl/conf.h>
-#include <openssl/evp.h>
-#include <openssl/err.h>
-#include <openssl/md5.h>
+#include <gcrypt.h>
 
 namespace BidCoS
 {
@@ -145,12 +142,12 @@ class HM_LGW  : public IBidCoSInterface
         std::vector<uint8_t> _key;
 		std::vector<uint8_t> _remoteIV;
 		std::vector<uint8_t> _myIV;
-        EVP_CIPHER_CTX* _ctxEncrypt = nullptr;
-        EVP_CIPHER_CTX* _ctxDecrypt = nullptr;
+        gcry_cipher_hd_t _encryptHandle = nullptr;
+        gcry_cipher_hd_t _decryptHandle = nullptr;
         std::vector<uint8_t> _remoteIVKeepAlive;
 		std::vector<uint8_t> _myIVKeepAlive;
-        EVP_CIPHER_CTX* _ctxEncryptKeepAlive = nullptr;
-        EVP_CIPHER_CTX* _ctxDecryptKeepAlive = nullptr;
+        gcry_cipher_hd_t _encryptHandleKeepAlive = nullptr;
+        gcry_cipher_hd_t _decryptHandleKeepAlive = nullptr;
 
         std::vector<char> encrypt(const std::vector<char>& data);
         std::vector<uint8_t> decrypt(std::vector<uint8_t>& data);
@@ -158,9 +155,8 @@ class HM_LGW  : public IBidCoSInterface
         std::vector<uint8_t> decryptKeepAlive(std::vector<uint8_t>& data);
         bool aesKeyExchange(std::vector<uint8_t>& data);
         bool aesKeyExchangeKeepAlive(std::vector<uint8_t>& data);
-        bool openSSLInit();
-        void openSSLCleanup();
-        void openSSLPrintError();
+        bool aesInit();
+        void aesCleanup();
         //End AES stuff
 
         void reconnect();

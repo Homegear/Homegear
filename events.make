@@ -31,7 +31,7 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/events
   TARGETDIR  = lib/Debug
   TARGET     = $(TARGETDIR)/libevents.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
@@ -53,7 +53,7 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/events
   TARGETDIR  = lib/Release
   TARGET     = $(TARGETDIR)/libevents.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
@@ -75,7 +75,7 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/events
   TARGETDIR  = lib/Profiling
   TARGET     = $(TARGETDIR)/libevents.a
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg

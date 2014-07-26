@@ -27,8 +27,6 @@
  * files in the program, then also delete it here.
  */
 
-#define GNUTLS
-
 #include "Version.h"
 #include "Libraries/GD/GD.h"
 #include "Modules/Base/BaseLib.h"
@@ -50,6 +48,10 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+
+#include <gcrypt.h>
+
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
 
 bool _dbDumpFailed = false;
 bool _startAsDaemon = false;
@@ -110,9 +112,10 @@ void terminate(int32_t signalNumber)
 				fclose(stdout);
 				fclose(stderr);
 			}
-#ifdef GNUTLS
-		gnutls_global_deinit();
-#endif
+			gnutls_global_deinit();
+			gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+			gcry_control(GCRYCTL_TERM_SECMEM);
+			gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 			exit(0);
 		}
 		else if(signalNumber == SIGHUP)
@@ -473,9 +476,30 @@ int main(int argc, char* argv[])
 			exit(1);
 		}
 
-#ifdef GNUTLS
+		//Init gcrypt and GnuTLS
+		gcry_error_t result;
+		if((result = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
+		{
+			GD::out.printCritical("Critical: Could not enable thread support for gcrypt.");
+			exit(2);
+		}
+
+		if (!gcry_check_version(GCRYPT_VERSION))
+		{
+			GD::out.printCritical("Critical: Wrong gcrypt version.");
+			exit(2);
+		}
+		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+		if((result = gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0)) != GPG_ERR_NO_ERROR)
+		{
+			GD::out.printCritical("Critical: Could not allocate secure memory.");
+			exit(2);
+		}
+		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
+		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+
 		gnutls_global_init();
-#endif
+		//End init gcrypt
 
 		GD::familyController.loadModules();
 		if(GD::deviceFamilies.empty()) exit(1);

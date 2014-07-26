@@ -131,7 +131,39 @@ std::string HelperFunctions::getFileContent(std::string filename)
 		in.close();
 		return(contents);
 	}
-	throw(strerror(errno));
+	throw Exception(strerror(errno));
+}
+
+std::vector<char> HelperFunctions::getBinaryFileContent(std::string filename)
+{
+	std::ifstream in(filename.c_str(), std::ios::in | std::ios::binary);
+	if(in)
+	{
+		std::vector<char> contents;
+		in.seekg(0, std::ios::end);
+		contents.resize(in.tellg());
+		in.seekg(0, std::ios::beg);
+		in.read(&contents[0], contents.size());
+		in.close();
+		return(contents);
+	}
+	throw Exception(strerror(errno));
+}
+
+std::vector<uint8_t> HelperFunctions::getUBinaryFileContent(std::string filename)
+{
+	std::ifstream in(filename.c_str(), std::ios::in | std::ios::binary);
+	if(in)
+	{
+		std::vector<uint8_t> contents;
+		in.seekg(0, std::ios::end);
+		contents.resize(in.tellg());
+		in.seekg(0, std::ios::beg);
+		in.read((char*)&contents[0], contents.size());
+		in.close();
+		return(contents);
+	}
+	throw Exception(strerror(errno));
 }
 
 std::vector<std::string> HelperFunctions::getFiles(std::string path)
@@ -205,7 +237,8 @@ std::string HelperFunctions::getTimeString(int64_t time)
 
 int32_t HelperFunctions::getRandomNumber(int32_t min, int32_t max)
 {
-	std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
+	std::random_device rd;
+	std::default_random_engine generator(rd());
 	std::uniform_int_distribution<int32_t> distribution(min, max);
 	return distribution(generator);
 }
@@ -496,104 +529,6 @@ void HelperFunctions::copyFile(std::string source, std::string dest)
     }
 }
 
-std::string HelperFunctions::getSSLError(int32_t errorNumber)
-{
-	switch(errorNumber)
-	{
-	case SSL_ERROR_ZERO_RETURN:
-		return "The connection has been closed.";
-	case SSL_ERROR_WANT_READ:
-		return "Read error: The operation did not complete.";
-	case SSL_ERROR_WANT_WRITE:
-		return "Write error: The operation did not complete.";
-	case SSL_ERROR_WANT_CONNECT:
-		return "The operation did not complete. Not connected yet.";
-	case SSL_ERROR_WANT_ACCEPT:
-		return "The operation did not complete. Not connected yet.";
-	case SSL_ERROR_SYSCALL:
-		errorNumber = ERR_get_error();
-		if(errorNumber > 0) return std::string(ERR_reason_error_string(errorNumber));
-		else return "Some I/O error occured.";
-	case SSL_ERROR_SSL:
-		errorNumber = ERR_get_error();
-		if(errorNumber > 0) return std::string(ERR_reason_error_string(errorNumber));
-		else return "Unknown error.";
-	}
-	return std::to_string(errorNumber);
-}
-
-std::string HelperFunctions::getSSLCertVerificationError(int32_t errorNumber)
-{
-	switch(errorNumber)
-	{
-	case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
-		return "Unable to get issuer certificate.";
-	case X509_V_ERR_UNABLE_TO_GET_CRL:
-		return "Unable to get certificate CRL.";
-	case X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE:
-		return "Unable to decrypt certificate's signature.";
-	case X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE:
-		return "Unable to decrypt CRL's signature.";
-	case X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY:
-		return "Unable to decode issuer public key.";
-	case X509_V_ERR_CERT_SIGNATURE_FAILURE:
-		return "Certificate signature failure.";
-	case X509_V_ERR_CRL_SIGNATURE_FAILURE:
-		return "CRL signature failure.";
-	case X509_V_ERR_CERT_NOT_YET_VALID:
-		return "Certificate is not yet valid.";
-	case X509_V_ERR_CERT_HAS_EXPIRED:
-		return "Certificate has expired.";
-	case X509_V_ERR_CRL_NOT_YET_VALID:
-		return "CRL is not yet valid.";
-	case X509_V_ERR_CRL_HAS_EXPIRED:
-		return "CRL has expired.";
-	case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
-		return "Format error in certificate's notBefore field.";
-	case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
-		return "Format error in certificate's notAfter field.";
-	case X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD:
-		return "Format error in CRL's lastUpdate field.";
-	case X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD:
-		return "Format error in CRL's nextUpdate field.";
-	case X509_V_ERR_OUT_OF_MEM:
-		return "Out of memory.";
-	case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
-		return "Certificate is a self signed certificate. If you want to use it add the root certificate to your certificate store (recommended) or set \"verifyCertificate\" to false in main.conf (not recommended).";
-	case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
-		return "Self signed certificate in certificate chain.";
-	case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
-		return "Unable to get local issuer certificate.";
-	case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
-		return "Unable to verify the first certificate.";
-	case X509_V_ERR_CERT_CHAIN_TOO_LONG:
-		return "Certificate chain too long.";
-	case X509_V_ERR_CERT_REVOKED:
-		return "Certificate revoked.";
-	case X509_V_ERR_INVALID_CA:
-		return "Invalid CA certificate.";
-	case X509_V_ERR_PATH_LENGTH_EXCEEDED:
-		return "Path length constraint exceeded.";
-	case X509_V_ERR_INVALID_PURPOSE:
-		return "Unsupported certificate purpose.";
-	case X509_V_ERR_CERT_UNTRUSTED:
-		return "Certificate not trusted.";
-	case X509_V_ERR_CERT_REJECTED:
-		return "Certificate rejected.";
-	case X509_V_ERR_SUBJECT_ISSUER_MISMATCH:
-		return "Subject issuer mismatch.";
-	case X509_V_ERR_AKID_SKID_MISMATCH:
-		return "Authority and subject key identifier mismatch.";
-	case X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH:
-		return "Authority and issuer serial number mismatch.";
-	case X509_V_ERR_KEYUSAGE_NO_CERTSIGN:
-		return "Key usage does not include certificate signing.";
-	case X509_V_ERR_APPLICATION_VERIFICATION:
-		return "Application verification failure.";
-	}
-	return "Unknown verification error. Error number: " + std::to_string(errorNumber);
-}
-
 int32_t HelperFunctions::userID(std::string username)
 {
 	struct passwd pwd;
@@ -636,6 +571,27 @@ void HelperFunctions::checkEndianness()
 	} bint = {0x01020304};
 
 	_isBigEndian = bint.c[0] == 1;
+}
+
+std::string HelperFunctions::getGNUTLSCertVerificationError(uint32_t errorCode)
+{
+	if(errorCode & GNUTLS_CERT_REVOKED) return "Certificate is revoked by its authority.";
+	else if(errorCode & GNUTLS_CERT_SIGNER_NOT_FOUND) return "The certificate’s issuer is not known.";
+	else if(errorCode & GNUTLS_CERT_SIGNER_NOT_CA) return "The certificate’s signer was not a CA.";
+	else if(errorCode & GNUTLS_CERT_INSECURE_ALGORITHM) return "The certificate was signed using an insecure algorithm such as MD2 or MD5. These algorithms have been broken and should not be trusted.";
+	else if(errorCode & GNUTLS_CERT_NOT_ACTIVATED) return "The certificate is not yet activated. ";
+	else if(errorCode & GNUTLS_CERT_EXPIRED) return "The certificate has expired. ";
+	//TODO: Add missing errors, when GNUTLS 3 is in Debian stable
+	return "Unknown error code.";
+}
+
+std::string HelperFunctions::getGCRYPTError(int32_t errorCode)
+{
+	_gcryptBufferMutex.lock();
+	gpg_strerror_r(errorCode, _gcryptBuffer, 1024);
+	std::string result(_gcryptBuffer);
+	_gcryptBufferMutex.unlock();
+	return result;
 }
 
 }

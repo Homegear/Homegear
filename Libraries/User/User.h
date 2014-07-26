@@ -36,14 +36,14 @@
 #include <vector>
 #include <functional>
 
-#include <openssl/evp.h>
+#include <gcrypt.h>
 
 class User
 {
 public:
 	User() {}
 	virtual ~User() {}
-	static std::vector<unsigned char> generatePBKDF2(const std::string& password, std::vector<unsigned char>& salt);
+	static std::vector<unsigned char> generateWHIRLPOOL(const std::string& password, std::vector<unsigned char>& salt);
 	static bool verify(const std::string& userName, const std::string& password);
 };
 

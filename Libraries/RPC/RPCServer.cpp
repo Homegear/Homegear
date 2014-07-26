@@ -98,14 +98,39 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 			{
 			if(GD::bl->settings.loadDHParamsFromFile())
 			{
-				gnutls_datum_t data;
-				if((result = gnutls_load_file(GD::bl->settings.dhParamPath().c_str(), &data)) != GNUTLS_E_SUCCESS)
+				if((result = gnutls_dh_params_init(&_dhParams)) != GNUTLS_E_SUCCESS)
 				{
-					_out.printError("Error: Could not load DH parameter file: " + std::string(gnutls_strerror(result)));
+					_out.printError("Error: Could not initialize DH parameters: " + std::string(gnutls_strerror(result)));
 					gnutls_certificate_free_credentials(_x509Cred);
 					return;
 				}
-
+				std::vector<uint8_t> binaryData;
+				try
+				{
+					binaryData = GD::bl->hf.getUBinaryFileContent(GD::bl->settings.dhParamPath().c_str());
+					binaryData.push_back(0); //gnutls_datum_t.data needs to be null terminated
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\": " + std::string(ex.what()));
+					gnutls_certificate_free_credentials(_x509Cred);
+					return;
+				}
+				catch(...)
+				{
+					_out.printError("Error: Could not load DH parameter file \"" + GD::bl->settings.dhParamPath() + "\".");
+					gnutls_certificate_free_credentials(_x509Cred);
+					return;
+				}
+				gnutls_datum_t data;
+				data.data = &binaryData.at(0);
+				data.size = binaryData.size();
+				if((result = gnutls_dh_params_import_pkcs3(_dhParams, &data, GNUTLS_X509_FMT_PEM)) != GNUTLS_E_SUCCESS)
+				{
+					_out.printError("Error: Could not import DH parameters: " + std::string(gnutls_strerror(result)));
+					gnutls_certificate_free_credentials(_x509Cred);
+					return;
+				}
 			}
 			else
 			{
@@ -124,7 +149,7 @@ void RPCServer::start(std::shared_ptr<ServerSettings::Settings>& settings)
 				}
 			}
 			}
-			if((result = gnutls_priority_init(&_tlsPriorityCache, "PERFORMANCE:%SERVER_PRECEDENCE", NULL)) != GNUTLS_E_SUCCESS)
+			if((result = gnutls_priority_init(&_tlsPriorityCache, "NORMAL", NULL)) != GNUTLS_E_SUCCESS)
 			{
 				_out.printError("Error: Could not initialize cipher priorities: " + std::string(gnutls_strerror(result)));
 				gnutls_certificate_free_credentials(_x509Cred);
@@ -172,7 +197,7 @@ void RPCServer::stop()
 		}
 		if(_dhParams)
 		{
-			gnutls_dh_params_deinit(_hhParams);
+			gnutls_dh_params_deinit(_dhParams);
 			_dhParams = nullptr;
 		}
 	}
@@ -972,7 +997,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			client->tlsSession = nullptr;
 			return;
 		}
-		gnutls_transport_set_ptr(client->tlsSession, (gnutls_transport_ptr_t)client->socketDescriptor->descriptor);
+		gnutls_transport_set_ptr(client->tlsSession, (gnutls_transport_ptr_t)(uintptr_t)client->socketDescriptor->descriptor);
 		do
 		{
 			result = gnutls_handshake(client->tlsSession);

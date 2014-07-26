@@ -36,15 +36,15 @@ SocketOperations::SocketOperations(BaseLib::Obj* baseLib)
 {
 	_bl = baseLib;
 	_autoConnect = false;
-	_fileDescriptor.reset(new FileDescriptor);
+	_socketDescriptor.reset(new FileDescriptor);
 }
 
-SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> fileDescriptor, gnutls_session_t tlsSession)
+SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> socketDescriptor, gnutls_session_t tlsSession)
 {
 	_bl = baseLib;
 	_autoConnect = false;
-	if(fileDescriptor) _fileDescriptor = fileDescriptor;
-	else _fileDescriptor.reset(new FileDescriptor);
+	if(socketDescriptor) _socketDescriptor = socketDescriptor;
+	else _socketDescriptor.reset(new FileDescriptor);
 	_tlsSession = tlsSession;
 }
 
@@ -53,14 +53,15 @@ SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::string hostname, 
 	_bl = baseLib;
 	signal(SIGPIPE, SIG_IGN);
 
-	_fileDescriptor.reset(new FileDescriptor);
+	_socketDescriptor.reset(new FileDescriptor);
 	_hostname = hostname;
 	_port = port;
 }
 
-SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port, bool useSSL, bool verifyCertificate) : SocketOperations(baseLib, hostname, port)
+SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port, bool useSSL, std::string caFile, bool verifyCertificate) : SocketOperations(baseLib, hostname, port)
 {
 	_useSSL = useSSL;
+	_caFile = caFile;
 	_verifyCertificate = verifyCertificate;
 
 	if(_useSSL) initSSL();
@@ -68,61 +69,62 @@ SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::string hostname, 
 
 SocketOperations::~SocketOperations()
 {
-	/*if(_sslCTX)
-	{
-		SSL_CTX_free(_sslCTX);
-		_sslCTX = nullptr;
-	}*/
+	if(_x509Cred) gnutls_certificate_free_credentials(_x509Cred);
 }
 
 void SocketOperations::initSSL()
 {
-	/*if(_sslCTX)
-	{
-		SSL_CTX_free(_sslCTX);
-		_sslCTX = nullptr;
-	}
+	if(_x509Cred) gnutls_certificate_free_credentials(_x509Cred);
 
-	SSLeay_add_ssl_algorithms();
-	SSL_load_error_strings();
-	_sslCTX = SSL_CTX_new(SSLv23_client_method());
-	SSL_CTX_set_options(_sslCTX, SSL_OP_NO_SSLv2);
-	if(!_sslCTX)
+	int32_t result = 0;
+	if((result = gnutls_certificate_allocate_credentials(&_x509Cred)) != GNUTLS_E_SUCCESS)
 	{
-		_sslCTX = nullptr;
-		throw SocketSSLException("Could not initialize SSL support for TCP client." + std::string(ERR_reason_error_string(ERR_get_error())));
+		_x509Cred = nullptr;
+		throw SocketSSLException("Could not allocate certificate credentials: " + std::string(gnutls_strerror(result)));
 	}
-	if(!SSL_CTX_load_verify_locations(_sslCTX, NULL, "/etc/ssl/certs"))
+	if(_caFile.length() == 0)
 	{
-		throw SocketSSLException("Could not load root certificates from /etc/ssl/certs." + std::string(ERR_reason_error_string(ERR_get_error())));
-	}*/
+		if(_verifyCertificate) throw SocketSSLException("Certificate verification is enabled, but \"caFile\" is not specified for the host \"" + _hostname + "\" in rpcclients.conf.");
+	}
+	else if((result = gnutls_certificate_set_x509_trust_file(_x509Cred, _caFile.c_str(), GNUTLS_X509_FMT_PEM)) < 0)
+	{
+		gnutls_certificate_free_credentials(_x509Cred);
+		_x509Cred = nullptr;
+		throw SocketSSLException("Could not load trusted certificates from \"" + _caFile + "\": " + std::string(gnutls_strerror(result)));
+	}
+	if(result == 0 && _verifyCertificate)
+	{
+		gnutls_certificate_free_credentials(_x509Cred);
+		_x509Cred = nullptr;
+		throw SocketSSLException("No certificates found in \"" + _caFile + "\".");
+	}
 }
 
 void SocketOperations::open()
 {
-	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) getFileDescriptor();
+	if(!_socketDescriptor || _socketDescriptor->descriptor < 0) getSocketDescriptor();
 	else if(!connected())
 	{
 		close();
-		getFileDescriptor();
+		getSocketDescriptor();
 	}
 }
 
 void SocketOperations::autoConnect()
 {
 	if(!_autoConnect) return;
-	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) getFileDescriptor();
+	if(!_socketDescriptor || _socketDescriptor->descriptor < 0) getSocketDescriptor();
 	else if(!connected())
 	{
 		close();
-		getFileDescriptor();
+		getSocketDescriptor();
 	}
 }
 
 void SocketOperations::close()
 {
 	if(_tlsSession) gnutls_bye(_tlsSession, GNUTLS_SHUT_WR);
-	_bl->fileDescriptorManager.close(_fileDescriptor);
+	_bl->fileDescriptorManager.close(_socketDescriptor);
 	if(_tlsSession) gnutls_deinit(_tlsSession);
 	_tlsSession = nullptr;
 }
@@ -138,16 +140,12 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	timeout.tv_usec = _readTimeout - (1000000 * seconds);
 	fd_set readFileDescriptor;
 	FD_ZERO(&readFileDescriptor);
-	FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
-	int32_t bytesRead = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
+	int32_t bytesRead = select(_socketDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead == 0) throw SocketTimeOutException("Reading from socket timed out.");
-	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
-	bytesRead = _tlsSession ? gnutls_record_recv(_tlsSession, buffer, bufferSize) : read(_fileDescriptor->descriptor, buffer, bufferSize);
-	if(bytesRead <= 0)
-	{
-		if(bytesRead < 0 && _tlsSession) throw SocketOperationException("Error reading SSL packet: " + std::string(gnutls_strerror(bytesRead)));
-		else throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
-	}
+	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+	bytesRead = _tlsSession ? gnutls_record_recv(_tlsSession, buffer, bufferSize) : read(_socketDescriptor->descriptor, buffer, bufferSize);
+	if(bytesRead <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
 	return bytesRead;
 }
 
@@ -174,13 +172,13 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 		timeout.tv_usec = 0;
 		fd_set writeFileDescriptor;
 		FD_ZERO(&writeFileDescriptor);
-		FD_SET(_fileDescriptor->descriptor, &writeFileDescriptor);
-		int32_t readyFds = select(_fileDescriptor->descriptor + 1, NULL, &writeFileDescriptor, NULL, &timeout);
+		FD_SET(_socketDescriptor->descriptor, &writeFileDescriptor);
+		int32_t readyFds = select(_socketDescriptor->descriptor + 1, NULL, &writeFileDescriptor, NULL, &timeout);
 		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
-		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_fileDescriptor->descriptor) + " closed.");
+		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
 
 		int32_t bytesToSend = data.size() - bytesSentSoFar;
-		int32_t bytesSentInStep = _tlsSession ? gnutls_record_send(_tlsSession, &data.at(bytesSentSoFar), bytesToSend) : send(_fileDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
+		int32_t bytesSentInStep = _tlsSession ? gnutls_record_send(_tlsSession, &data.at(bytesSentSoFar), bytesToSend) : send(_socketDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
 		if(bytesSentInStep <= 0)
 		{
 			_bl->out.printDebug("Debug: ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
@@ -197,99 +195,124 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 
 bool SocketOperations::connected()
 {
-	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) return false;
+	if(!_socketDescriptor || _socketDescriptor->descriptor < 0) return false;
 	char buffer[1];
-	if(recv(_fileDescriptor->descriptor, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT) == 0) return false;
+	if(recv(_socketDescriptor->descriptor, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT) == 0) return false;
 	return true;
 }
 
-void SocketOperations::getFileDescriptor()
+void SocketOperations::getSocketDescriptor()
 {
 	_bl->out.printDebug("Debug: Calling getFileDescriptor...");
-	_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+	_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 
 	getConnection();
-	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) throw SocketOperationException("Could not connect to server.");
+	if(!_socketDescriptor || _socketDescriptor->descriptor < 0) throw SocketOperationException("Could not connect to server.");
 
 	if(_useSSL) getSSL();
 }
 
 void SocketOperations::getSSL()
 {
-	if(!_fileDescriptor || _fileDescriptor->descriptor < 0) throw SocketSSLException("Could not connect to server using SSL. File descriptor is invalid.");
-	/*if(!_sslCTX)
+	if(!_socketDescriptor || _socketDescriptor->descriptor < 0) throw SocketSSLException("Could not connect to server using SSL. File descriptor is invalid.");
+	if(!_x509Cred)
 	{
-		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-		throw SocketSSLException("Could not connect to server using SSL. SSL is not initialized. Look for previous error messages.");
-	}
-	_ssl = SSL_new(_sslCTX);
-	if(!_ssl)
-	{
-		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-		if(_ssl) SSL_free(_ssl);
-		_ssl = nullptr;
-		throw SocketSSLException("Error during TLS/SSL handshake. Could not create SSL structure.");
-	}
-	if(!SSL_set_fd(_ssl, _fileDescriptor->descriptor))
-	{
-		std::string error(_ssl ? "Error during TLS/SSL handshake (1): " + HelperFunctions::getSSLError(SSL_get_error(_ssl, 0)) : "Error during TLS/SSL handshake.");
-		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-		if(_ssl) SSL_free(_ssl);
-		_ssl = nullptr;
-		throw SocketSSLException(error);
+		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
+		throw SocketSSLException("Could not connect to server using SSL. Certificate credentials are not initialized. Look for previous error messages.");
 	}
 	int32_t result = 0;
-	bool throwError = false;
-	int32_t errorNumber = 0;
-	for(int32_t i = 0; i < 10; i++)
+	//Disable TCP Nagle algorithm to improve performance
+	const int32_t value = 1;
+	if ((result = setsockopt(_socketDescriptor->descriptor, IPPROTO_TCP, TCP_NODELAY, &value, sizeof(value))) < 0) {
+		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
+		throw SocketSSLException("Could not disable Nagle algorithm.");
+	}
+	if((result = gnutls_init(&_tlsSession, GNUTLS_CLIENT)) != GNUTLS_E_SUCCESS)
 	{
-		throwError = false;
-		result = SSL_connect(_ssl);
-		if(!_ssl)
-		{
-			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-			if(_ssl) SSL_free(_ssl);
-			_ssl = nullptr;
-			throw SocketSSLException("Error during TLS/SSL handshake (2).");
-		}
-		if(result < 1)
-		{
-			errorNumber = SSL_get_error(_ssl, result);
-			if(errorNumber == SSL_ERROR_WANT_READ && i < 9)
-			{
-				waitForSocket();
-				continue;
-			}
-			else throwError = true;
-		}
-		if(throwError)
-		{
-			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-			if(_ssl) SSL_free(_ssl);
-			_ssl = nullptr;
-			throw SocketSSLException("Error during TLS/SSL handshake (2): " + HelperFunctions::getSSLError(errorNumber));
-		}
-		break;
+		_tlsSession = nullptr;
+		throw SocketSSLException("Could not initialize TLS session: " + std::string(gnutls_strerror(result)));
+	}
+	if(!_tlsSession) throw SocketSSLException("Could not initialize TLS session.");
+	if((result = gnutls_priority_set_direct(_tlsSession, "NORMAL", NULL)) != GNUTLS_E_SUCCESS)
+	{
+		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
+		gnutls_deinit(_tlsSession);
+		throw SocketSSLException("Could not set cipher priorities: " + std::string(gnutls_strerror(result)));
+	}
+	if((result = gnutls_credentials_set(_tlsSession, GNUTLS_CRD_CERTIFICATE, _x509Cred)) != GNUTLS_E_SUCCESS)
+	{
+		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
+		gnutls_deinit(_tlsSession);
+		throw SocketSSLException("Could not set trusted certificates: " + std::string(gnutls_strerror(result)));
+	}
+	gnutls_transport_set_ptr(_tlsSession, (gnutls_transport_ptr_t)(uintptr_t)_socketDescriptor->descriptor);
+	if((result = gnutls_server_name_set(_tlsSession, GNUTLS_NAME_DNS, _hostname.c_str(), _hostname.length())) != GNUTLS_E_SUCCESS)
+	{
+		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
+		gnutls_deinit(_tlsSession);
+		throw SocketSSLException("Could not set server's hostname: " + std::string(gnutls_strerror(result)));
+	}
+	do
+	{
+		result = gnutls_handshake(_tlsSession);
+	} while (result < 0 && gnutls_error_is_fatal(result) == 0);
+	if(result != GNUTLS_E_SUCCESS)
+	{
+		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
+		gnutls_deinit(_tlsSession);
+		throw SocketSSLException("Error during TLS handshake: " + std::string(gnutls_strerror(result)));
 	}
 
-	X509* serverCert = SSL_get_peer_certificate(_ssl);
-	if(!serverCert)
+	//Now verify the certificate
+	uint32_t serverCertChainLength = 0;
+	const gnutls_datum_t* const serverCertChain = gnutls_certificate_get_peers(_tlsSession, &serverCertChainLength);
+	if(!serverCertChain || serverCertChainLength == 0)
 	{
-		errorNumber = SSL_get_error(_ssl, 0);
-		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-		if(_ssl) SSL_free(_ssl);
-		_ssl = nullptr;
-		throw SocketSSLException("Could not get server certificate: " + HelperFunctions::getSSLError(errorNumber));
+		close();
+		throw SocketSSLException("Could not get server certificate.");
 	}
-
-	//When no certificate was received, verify returns X509_V_OK!
-	if((result = SSL_get_verify_result(_ssl)) != X509_V_OK && (result != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT || _verifyCertificate))
+	uint32_t status = (uint32_t)-1;
+	if((result = gnutls_certificate_verify_peers2(_tlsSession, &status)) != GNUTLS_E_SUCCESS)
 	{
-		_bl->fileDescriptorManager.shutdown(_fileDescriptor);
-		if(_ssl) SSL_free(_ssl);
-		_ssl = nullptr;
-		throw SocketSSLException("Error during TLS/SSL handshake: " + HelperFunctions::getSSLCertVerificationError(result));
-	}*/
+		close();
+		throw SocketSSLException("Could not verify server certificate: " + std::string(gnutls_strerror(result)));
+	}
+	if(status > 0)
+	{
+		if(_verifyCertificate)
+		{
+			close();
+			throw SocketSSLException("Error verifying server certificate (Code: " + std::to_string(status) + "): " + HelperFunctions::getGNUTLSCertVerificationError(status));
+		}
+		else if((status & GNUTLS_CERT_REVOKED) || (status & GNUTLS_CERT_INSECURE_ALGORITHM) || (status & GNUTLS_CERT_NOT_ACTIVATED) || (status & GNUTLS_CERT_EXPIRED))
+		{
+			close();
+			throw SocketSSLException("Error verifying server certificate (Code: " + std::to_string(status) + "): " + HelperFunctions::getGNUTLSCertVerificationError(status));
+		}
+	}
+	else //Verify hostname
+	{
+		gnutls_x509_crt_t serverCert;
+		if((result = gnutls_x509_crt_init(&serverCert)) != GNUTLS_E_SUCCESS)
+		{
+			close();
+			throw SocketSSLException("Could not initialize server certificate structure: " + std::string(gnutls_strerror(result)));
+		}
+		//The peer certificate is the first certificate in the list
+		if((result = gnutls_x509_crt_import(serverCert, serverCertChain, GNUTLS_X509_FMT_DER)) != GNUTLS_E_SUCCESS)
+		{
+			gnutls_x509_crt_deinit(serverCert);
+			close();
+			throw SocketSSLException("Could not import server certificate: " + std::string(gnutls_strerror(result)));
+		}
+		if((result = gnutls_x509_crt_check_hostname(serverCert, _hostname.c_str())) == 0)
+		{
+			gnutls_x509_crt_deinit(serverCert);
+			close();
+			throw SocketSSLException("Server's hostname does not match the server certificate.");
+		}
+		gnutls_x509_crt_deinit(serverCert);
+	}
 }
 
 bool SocketOperations::waitForSocket()
@@ -299,8 +322,8 @@ bool SocketOperations::waitForSocket()
 	timeout.tv_usec = 0;
 	fd_set readFileDescriptor;
 	FD_ZERO(&readFileDescriptor);
-	FD_SET(_fileDescriptor->descriptor, &readFileDescriptor);
-	int32_t bytesRead = select(_fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
+	int32_t bytesRead = select(_socketDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead != 1) return false;
 	return true;
 }
@@ -338,65 +361,65 @@ void SocketOperations::getConnection()
 		}
 		std::string ipAddress = std::string(&ipStringBuffer[0]);
 
-		_fileDescriptor = _bl->fileDescriptorManager.add(socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol));
-		if(_fileDescriptor->descriptor == -1)
+		_socketDescriptor = _bl->fileDescriptorManager.add(socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol));
+		if(_socketDescriptor->descriptor == -1)
 		{
 			freeaddrinfo(serverInfo);
 			throw SocketOperationException("Could not create socket for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		int32_t optValue = 1;
-		if(setsockopt(_fileDescriptor->descriptor, SOL_SOCKET, SO_KEEPALIVE, (void*)&optValue, sizeof(int32_t)) == -1)
+		if(setsockopt(_socketDescriptor->descriptor, SOL_SOCKET, SO_KEEPALIVE, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
-			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+			_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		optValue = 30;
-		if(setsockopt(_fileDescriptor->descriptor, SOL_TCP, TCP_KEEPIDLE, (void*)&optValue, sizeof(int32_t)) == -1)
+		if(setsockopt(_socketDescriptor->descriptor, SOL_TCP, TCP_KEEPIDLE, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
-			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+			_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		optValue = 4;
-		if(setsockopt(_fileDescriptor->descriptor, SOL_TCP, TCP_KEEPCNT, (void*)&optValue, sizeof(int32_t)) == -1)
+		if(setsockopt(_socketDescriptor->descriptor, SOL_TCP, TCP_KEEPCNT, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
-			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+			_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 		optValue = 15;
-		if(setsockopt(_fileDescriptor->descriptor, SOL_TCP, TCP_KEEPINTVL, (void*)&optValue, sizeof(int32_t)) == -1)
+		if(setsockopt(_socketDescriptor->descriptor, SOL_TCP, TCP_KEEPINTVL, (void*)&optValue, sizeof(int32_t)) == -1)
 		{
 			freeaddrinfo(serverInfo);
-			_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+			_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 			throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 		}
 
-		if(!(fcntl(_fileDescriptor->descriptor, F_GETFL) & O_NONBLOCK))
+		if(!(fcntl(_socketDescriptor->descriptor, F_GETFL) & O_NONBLOCK))
 		{
-			if(fcntl(_fileDescriptor->descriptor, F_SETFL, fcntl(_fileDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
+			if(fcntl(_socketDescriptor->descriptor, F_SETFL, fcntl(_socketDescriptor->descriptor, F_GETFL) | O_NONBLOCK) < 0)
 			{
 				freeaddrinfo(serverInfo);
-				_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+				_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 				throw SocketOperationException("Could not set socket options for server " + ipAddress + " on port " + _port + ": " + strerror(errno));
 			}
 		}
 
 		int32_t connectResult;
-		if((connectResult = connect(_fileDescriptor->descriptor, serverInfo->ai_addr, serverInfo->ai_addrlen)) == -1 && errno != EINPROGRESS)
+		if((connectResult = connect(_socketDescriptor->descriptor, serverInfo->ai_addr, serverInfo->ai_addrlen)) == -1 && errno != EINPROGRESS)
 		{
 			if(i < 5)
 			{
 				freeaddrinfo(serverInfo);
-				_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+				_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 				std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 				continue;
 			}
 			else
 			{
 				freeaddrinfo(serverInfo);
-				_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+				_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 				throw SocketTimeOutException("Connecting to server " + ipAddress + " on port " + _port + " timed out: " + strerror(errno));
 			}
 		}
@@ -406,7 +429,7 @@ void SocketOperations::getConnection()
 		{
 			pollfd pollstruct
 			{
-				(int)_fileDescriptor->descriptor,
+				(int)_socketDescriptor->descriptor,
 				(short)(POLLIN | POLLOUT | POLLERR),
 				(short)0
 			};
@@ -416,22 +439,22 @@ void SocketOperations::getConnection()
 			{
 				if(i < 5)
 				{
-					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 					std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 					continue;
 				}
 				else
 				{
-					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 					throw SocketTimeOutException("Could not connect to server " + ipAddress + " on port " + _port + ". Poll failed with error code: " + std::to_string(pollResult) + ".");
 				}
 			}
 			else if(pollResult > 0)
 			{
 				socklen_t resultLength = sizeof(connectResult);
-				if(getsockopt(_fileDescriptor->descriptor, SOL_SOCKET, SO_ERROR, &connectResult, &resultLength) < 0)
+				if(getsockopt(_socketDescriptor->descriptor, SOL_SOCKET, SO_ERROR, &connectResult, &resultLength) < 0)
 				{
-					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 					throw SocketOperationException("Could not connect to server " + ipAddress + " on port " + _port + ": " + strerror(errno) + ".");
 				}
 				break;
@@ -440,17 +463,17 @@ void SocketOperations::getConnection()
 			{
 				if(i < 5)
 				{
-					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 					continue;
 				}
 				else
 				{
-					_bl->fileDescriptorManager.shutdown(_fileDescriptor);
+					_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 					throw SocketTimeOutException("Connecting to server " + ipAddress + " on port " + _port + " timed out.");
 				}
 			}
 		}
 	}
-	_bl->out.printInfo("Info: Connected to host " + _hostname + " on port " + _port + ". Client number is: " + std::to_string(_fileDescriptor->descriptor));
+	_bl->out.printInfo("Info: Connected to host " + _hostname + " on port " + _port + ". Client number is: " + std::to_string(_socketDescriptor->descriptor));
 }
-} /* namespace RPC */
+}

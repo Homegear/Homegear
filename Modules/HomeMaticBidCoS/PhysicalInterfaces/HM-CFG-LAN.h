@@ -48,10 +48,7 @@
 #include <termios.h>
 #include <signal.h>
 
-#include <openssl/conf.h>
-#include <openssl/evp.h>
-#include <openssl/err.h>
-#include <openssl/md5.h>
+#include <gcrypt.h>
 
 namespace BidCoS
 {
@@ -104,15 +101,14 @@ class HM_CFG_LAN  : public IBidCoSInterface
         std::vector<uint8_t> _key;
 		std::vector<uint8_t> _remoteIV;
 		std::vector<uint8_t> _myIV;
-        EVP_CIPHER_CTX* _ctxEncrypt = nullptr;
-        EVP_CIPHER_CTX* _ctxDecrypt = nullptr;
+        gcry_cipher_hd_t _encryptHandle = nullptr;
+        gcry_cipher_hd_t _decryptHandle = nullptr;
 
         std::vector<char> encrypt(std::vector<char>& data);
         std::vector<uint8_t> decrypt(std::vector<uint8_t>& data);
         bool aesKeyExchange(std::vector<uint8_t>& data);
-        bool openSSLInit();
-        void openSSLCleanup();
-        void openSSLPrintError();
+        bool aesInit();
+        void aesCleanup();
         //End AES stuff
 
         void reconnect();

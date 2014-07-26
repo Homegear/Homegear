@@ -319,6 +319,7 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 		//Get settings pointer every time this method is executed, because
 		//the settings might change.
 		server->settings = GD::clientSettings.get(server->hostname);
+		if(server->settings) GD::out.printDebug("Debug: Settings found for host " + server->hostname);
 		if(!server->useSSL && server->settings && server->settings->forceSSL)
 		{
 			GD::out.printError("RPC Client: Tried to send unencrypted packet to " + server->hostname + " with forceSSL enabled for this server. Removing server from list. Server has to send \"init\" again.");
@@ -340,8 +341,12 @@ std::shared_ptr<std::vector<char>> RPCClient::sendRequest(std::shared_ptr<Remote
 			{
 				server->socket->setHostname(server->hostname);
 				server->socket->setPort(server->address.second);
+				if(server->settings)
+				{
+					server->socket->setCAFile(server->settings->caFile);
+					server->socket->setVerifyCertificate(server->settings->verifyCertificate);
+				}
 				server->socket->setUseSSL(server->useSSL);
-				if(server->settings) server->socket->setVerifyCertificate(server->settings->verifyCertificate);
 				server->socket->open();
 			}
 		}

@@ -51,6 +51,7 @@ public:
 		std::string hostname;
 		bool forceSSL = true;
 		AuthType authType = AuthType::none;
+		std::string caFile;
 		bool verifyCertificate = true;
 		std::string userName;
 		std::string password;

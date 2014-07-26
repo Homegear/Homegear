@@ -71,6 +71,7 @@ public:
 	std::string lanKey;
 	uint32_t currentRFKeyIndex = 0;
 	bool ssl = false;
+	std::string caFile;
 	bool verifyCertificate = true;
 	bool oneWay = false;
 	int32_t enableRXValue = -1;

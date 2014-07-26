@@ -48,11 +48,6 @@
 #include <termios.h>
 #include <signal.h>
 
-#include <openssl/conf.h>
-#include <openssl/evp.h>
-#include <openssl/err.h>
-#include <openssl/md5.h>
-
 namespace BidCoS
 {
 

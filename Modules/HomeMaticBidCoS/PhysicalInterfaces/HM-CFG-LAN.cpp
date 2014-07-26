@@ -126,7 +126,7 @@ HM_CFG_LAN::~HM_CFG_LAN()
 			_stopCallbackThread = true;
 			_listenThread.join();
 		}
-		if(_useAES) openSSLCleanup();
+		if(_useAES) aesCleanup();
 	}
     catch(const std::exception& ex)
     {
@@ -414,8 +414,8 @@ void HM_CFG_LAN::startListening()
 			_out.printError("Error: Cannot start listening , because rfKey is not specified.");
 			return;
 		}
-		if(_useAES) openSSLInit();
-		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
+		if(_useAES) aesInit();
+		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->caFile, _settings->verifyCertificate));
 		_out.printDebug("Connecting to HM-CFG-LAN with hostname " + _settings->host + " on port " + _settings->port + "...");
 		//_socket->open();
 		//_out.printInfo("Connected to HM-CFG-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");
@@ -442,7 +442,7 @@ void HM_CFG_LAN::reconnect()
 	try
 	{
 		_socket->close();
-		if(_useAES) openSSLInit();
+		if(_useAES) aesInit();
 		createInitCommandQueue();
 		_out.printDebug("Connecting to HM-CFG-LAN device with hostname " + _settings->host + " on port " + _settings->port + "...");
 		_socket->open();
@@ -474,7 +474,7 @@ void HM_CFG_LAN::stopListening()
 		}
 		_stopCallbackThread = false;
 		_socket->close();
-		if(_useAES) openSSLCleanup();
+		if(_useAES) aesCleanup();
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 	}
@@ -566,17 +566,9 @@ void HM_CFG_LAN::createInitCommandQueue()
     }
 }
 
-void HM_CFG_LAN::openSSLPrintError()
+bool HM_CFG_LAN::aesInit()
 {
-	uint32_t errorCode = ERR_get_error();
-	std::vector<char> buffer(256); //At least 120 bytes
-	ERR_error_string(errorCode, &buffer.at(0));
-	_out.printError("Error: " + std::string(&buffer.at(0)));
-}
-
-bool HM_CFG_LAN::openSSLInit()
-{
-	openSSLCleanup();
+	aesCleanup();
 
 	if(_settings->lanKey.size() != 32)
 	{
@@ -595,36 +587,56 @@ bool HM_CFG_LAN::openSSLInit()
 		}
 	}
 
-	ERR_load_crypto_strings();
-	OpenSSL_add_all_algorithms();
-	OPENSSL_config(NULL);
-	_ctxEncrypt = EVP_CIPHER_CTX_new();
-	if(!_ctxEncrypt)
+	gcry_error_t result;
+	if((result = gcry_cipher_open(&_encryptHandle, GCRY_CIPHER_AES128, GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE)) != GPG_ERR_NO_ERROR)
 	{
-		openSSLPrintError();
-		openSSLCleanup();
+		_encryptHandle = nullptr;
+		_out.printError("Error initializing cypher handle for encryption: " + _bl->hf.getGCRYPTError(result));
 		return false;
 	}
-	_ctxDecrypt = EVP_CIPHER_CTX_new();
-	if(!_ctxDecrypt)
+	if(!_encryptHandle)
 	{
-		openSSLPrintError();
-		openSSLCleanup();
+		_out.printError("Error cypher handle for encryption is nullptr.");
 		return false;
 	}
+	if((result = gcry_cipher_setkey(_encryptHandle, &_key.at(0), _key.size())) != GPG_ERR_NO_ERROR)
+	{
+		aesCleanup();
+		_out.printError("Error: Could not set key for encryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+
+	if((result = gcry_cipher_open(&_decryptHandle, GCRY_CIPHER_AES128, GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE)) != GPG_ERR_NO_ERROR)
+	{
+		_decryptHandle = nullptr;
+		_out.printError("Error initializing cypher handle for decryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+	if(!_decryptHandle)
+	{
+		_out.printError("Error cypher handle for decryption is nullptr.");
+		return false;
+	}
+	if((result = gcry_cipher_setkey(_decryptHandle, &_key.at(0), _key.size())) != GPG_ERR_NO_ERROR)
+	{
+		aesCleanup();
+		_out.printError("Error: Could not set key for decryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+
 	_aesInitialized = true;
 	_aesExchangeComplete = false;
 	return true;
 }
 
-void HM_CFG_LAN::openSSLCleanup()
+void HM_CFG_LAN::aesCleanup()
 {
 	if(!_aesInitialized) return;
 	_aesInitialized = false;
-	if(_ctxDecrypt) EVP_CIPHER_CTX_free(_ctxDecrypt);
-	if(_ctxEncrypt)	EVP_CIPHER_CTX_free(_ctxEncrypt);
-	EVP_cleanup();
-	ERR_free_strings();
+	if(_decryptHandle) gcry_cipher_close(_decryptHandle);
+	if(_encryptHandle) gcry_cipher_close(_encryptHandle);
+	_decryptHandle = nullptr;
+	_encryptHandle = nullptr;
 	_myIV.clear();
 	_remoteIV.clear();
 	_aesExchangeComplete = false;
@@ -633,34 +645,28 @@ void HM_CFG_LAN::openSSLCleanup()
 std::vector<char> HM_CFG_LAN::encrypt(std::vector<char>& data)
 {
 	std::vector<char> encryptedData(data.size());
-	if(!_ctxEncrypt) return encryptedData;
-
-	int length = 0;
-	if(EVP_EncryptUpdate(_ctxEncrypt, (uint8_t*)&encryptedData.at(0), &length, (uint8_t*)&data.at(0), data.size()) != 1)
+	if(!_encryptHandle) return encryptedData;
+	gcry_error_t result;
+	if((result = gcry_cipher_encrypt(_encryptHandle, &encryptedData.at(0), data.size(), &data.at(0), data.size())) != GPG_ERR_NO_ERROR)
 	{
-		openSSLPrintError();
+		GD::out.printError("Error encrypting data: " + _bl->hf.getGCRYPTError(result));
 		_stopCallbackThread = true;
 		return std::vector<char>();
 	}
-	EVP_EncryptFinal_ex(_ctxEncrypt, (uint8_t*)&encryptedData.at(0) + length, &length);
-
 	return encryptedData;
 }
 
 std::vector<uint8_t> HM_CFG_LAN::decrypt(std::vector<uint8_t>& data)
 {
 	std::vector<uint8_t> decryptedData(data.size());
-	if(!_ctxDecrypt) return decryptedData;
-
-	int length = 0;
-	if(EVP_DecryptUpdate(_ctxDecrypt, &decryptedData.at(0), &length, &data.at(0), data.size()) != 1)
+	if(!_decryptHandle) return decryptedData;
+	gcry_error_t result;
+	if((result = gcry_cipher_decrypt(_decryptHandle, &decryptedData.at(0), data.size(), &data.at(0), data.size())) != GPG_ERR_NO_ERROR)
 	{
-		openSSLPrintError();
+		GD::out.printError("Error decrypting data: " + _bl->hf.getGCRYPTError(result));
 		_stopCallbackThread = true;
 		return std::vector<uint8_t>();
 	}
-	EVP_DecryptFinal_ex(_ctxDecrypt, &decryptedData.at(0) + length, &length);
-
 	return decryptedData;
 }
 
@@ -841,21 +847,20 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 				_out.printError("Error: Error communicating with HM-CFG-LAN. Received IV is not in hexadecimal format.");
 				return false;
 			}
-			if(_bl->debugLevel >= 5)
-			{
-				_out.printDebug("HM-CFG-LAN IV is: ");
-				_out.printBinary(_remoteIV);
-			}
+			if(_bl->debugLevel >= 5) _out.printDebug("HM-CFG-LAN IV is: " + _bl->hf.getHexString(_remoteIV));
 
-			if(EVP_EncryptInit_ex(_ctxEncrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_remoteIV.at(0)) != 1)
+			gcry_error_t result;
+			if((result = gcry_cipher_setiv(_encryptHandle, &_remoteIV.at(0), _remoteIV.size())) != GPG_ERR_NO_ERROR)
 			{
 				_stopCallbackThread = true;
-				openSSLPrintError();
+				aesCleanup();
+				_out.printError("Error: Could not set IV for encryption: " + _bl->hf.getGCRYPTError(result));
 				return false;
 			}
 
 			std::vector<char> response = { 'V' };
-			std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
+			std::random_device rd;
+			std::default_random_engine generator(rd());
 			std::uniform_int_distribution<int32_t> distribution(0, 15);
 			_myIV.clear();
 			for(int32_t i = 0; i < 32; i++)
@@ -874,16 +879,13 @@ bool HM_CFG_LAN::aesKeyExchange(std::vector<uint8_t>& data)
 			response.push_back(0x0D);
 			response.push_back(0x0A);
 
-			if(_bl->debugLevel >= 5)
-			{
-				_out.printDebug("Homegear IV is: ");
-				_out.printBinary(_myIV);
-			}
+			if(_bl->debugLevel >= 5) _out.printDebug("Homegear IV is: " + _bl->hf.getHexString(_myIV));
 
-			if(EVP_DecryptInit_ex(_ctxDecrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_myIV.at(0)) != 1)
+			if((result = gcry_cipher_setiv(_decryptHandle, &_myIV.at(0), _myIV.size())) != GPG_ERR_NO_ERROR)
 			{
 				_stopCallbackThread = true;
-				openSSLPrintError();
+				aesCleanup();
+				_out.printError("Error: Could not set IV for decryption: " + _bl->hf.getGCRYPTError(result));
 				return false;
 			}
 

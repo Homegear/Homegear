@@ -44,12 +44,6 @@
 #include <mutex>
 #include <map>
 
-#include <openssl/crypto.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-
 #include <unistd.h>
 #include <cstring>
 #include <arpa/inet.h>

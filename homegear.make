@@ -31,12 +31,12 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/homegear
   TARGETDIR  = bin/Debug
   TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Debug -l rpc -l dl -l pthread -l sqlite3 -l readline -l gnutls -l user -l cli -l events -l gd -l database -l base
+  LDFLAGS   += -Llib/Debug -l rpc -l dl -l pthread -l sqlite3 -l readline -l gpg-error -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -53,12 +53,12 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/homegear
   TARGETDIR  = bin/Release
   TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -std=c++11
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Release -s -l rpc -l dl -l pthread -l sqlite3 -l readline -l gnutls -l user -l cli -l events -l gd -l database -l base
+  LDFLAGS   += -Llib/Release -s -l rpc -l dl -l pthread -l sqlite3 -l readline -l gpg-error -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l base
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 
@@ -75,12 +75,12 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/homegear
   TARGETDIR  = bin/Profiling
   TARGET     = $(TARGETDIR)/homegear
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -std=c++11 -pg
   CXXFLAGS  += $(CFLAGS) 
-  LDFLAGS   += -Llib/Profiling -l rpc -l dl -l pthread -l sqlite3 -l readline -l gnutls -l user -l cli -l events -l gd -l database -l base -pg
+  LDFLAGS   += -Llib/Profiling -l rpc -l dl -l pthread -l sqlite3 -l readline -l gpg-error -l gcrypt -l gnutls -l user -l cli -l events -l gd -l database -l base -pg
   RESFLAGS  += $(DEFINES) $(INCLUDES) 
   LIBS      += 
   LDDEPS    += 

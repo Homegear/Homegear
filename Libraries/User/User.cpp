@@ -31,24 +31,39 @@
 #include "../GD/GD.h"
 #include "../../Modules/Base/BaseLib.h"
 
-std::vector<unsigned char> User::generatePBKDF2(const std::string& password, std::vector<unsigned char>& salt)
+std::vector<unsigned char> User::generateWHIRLPOOL(const std::string& password, std::vector<unsigned char>& salt)
 {
 	std::vector<char> passwordBytes;
 	passwordBytes.insert(passwordBytes.begin(), password.begin(), password.end());
 	if(salt.empty())
 	{
-		std::default_random_engine generator;
+		std::random_device rd;
+		std::default_random_engine generator(rd());
 		std::uniform_int_distribution<unsigned char> distribution(0, 255);
 		auto randByte = std::bind(distribution, generator);
 		for(uint32_t i = 0; i < 16; ++i) salt.push_back(randByte());
 	}
-	int32_t keySize = 20;
-	std::vector<unsigned char> keyBytes(keySize);
-	if(PKCS5_PBKDF2_HMAC_SHA1(&passwordBytes.at(0), passwordBytes.size(), &salt.at(0), salt.size(), 4000, keySize, &keyBytes.at(0)) != 0)
+	passwordBytes.insert(passwordBytes.end(), salt.begin(), salt.end());
+
+	gcry_error_t result;
+	gcry_md_hd_t stribogHandle = nullptr;
+	if((result = gcry_md_open(&stribogHandle, GCRY_MD_WHIRLPOOL, 0)) != GPG_ERR_NO_ERROR)
 	{
-		return keyBytes;
+		GD::out.printError("Could not initialize WHIRLPOOL handle: " + GD::bl->hf.getGCRYPTError(result));
+		return std::vector<unsigned char>();
 	}
-	else return std::vector<unsigned char>();
+	gcry_md_write(stribogHandle, &passwordBytes.at(0), passwordBytes.size());
+	gcry_md_final(stribogHandle);
+	uint8_t* digest = gcry_md_read(stribogHandle, GCRY_MD_WHIRLPOOL);
+	if(!digest)
+	{
+		GD::out.printError("Could not generate WHIRLPOOL of password: " + GD::bl->hf.getGCRYPTError(result));
+		gcry_md_close(stribogHandle);
+		return std::vector<unsigned char>();
+	}
+	std::vector<unsigned char> keyBytes(digest, digest + gcry_md_get_algo_dlen(GCRY_MD_WHIRLPOOL));
+	gcry_md_close(stribogHandle);
+	return keyBytes;
 }
 
 bool User::verify(const std::string& userName, const std::string& password)
@@ -61,7 +76,8 @@ bool User::verify(const std::string& userName, const std::string& password)
 		salt.insert(salt.begin(), rows->at(0).at(1)->binaryValue->begin(), rows->at(0).at(1)->binaryValue->end());
 		std::vector<unsigned char> storedHash;
 		storedHash.insert(storedHash.begin(), rows->at(0).at(0)->binaryValue->begin(), rows->at(0).at(0)->binaryValue->end());
-		std::vector<unsigned char> hash = generatePBKDF2(password, salt);
+		std::vector<unsigned char> hash = generateWHIRLPOOL(password, salt);
+		if(hash.empty()) return false;
 		if(hash == storedHash) return true;
 		return false;
 	}

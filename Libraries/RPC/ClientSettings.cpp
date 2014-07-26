@@ -105,6 +105,11 @@ void ClientSettings::load(std::string filename)
 					settings->hostname = BaseLib::HelperFunctions::toLower(value);
 					GD::out.printDebug("Debug: hostname of RPC client " + settings->name + " set to " + settings->hostname);
 				}
+				else if(name == "cafile")
+				{
+					settings->caFile = value;
+					GD::out.printDebug("Debug: caFile of RPC client " + settings->name + " set to " + settings->caFile);
+				}
 				else if(name == "forcessl")
 				{
 					BaseLib::HelperFunctions::toLower(value);

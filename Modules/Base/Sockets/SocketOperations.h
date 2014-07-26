@@ -59,7 +59,8 @@
 #include <poll.h>
 #include <signal.h>
 
-#include "../../../GnuTLS/lib/includes/gnutls/gnutlsxx.h"
+#include <gnutls/x509.h>
+#include <gnutls/gnutls.h>
 
 namespace BaseLib
 {
@@ -112,9 +113,9 @@ class SocketOperations
 {
 public:
 	SocketOperations(BaseLib::Obj* baseLib);
-	SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> fileDescriptor, gnutls_session_t tlsSession);
+	SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> socketDescriptor, gnutls_session_t tlsSession);
 	SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port);
-	SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port, bool useSSL, bool verifyCertificate);
+	SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port, bool useSSL, std::string caFile, bool verifyCertificate);
 	virtual ~SocketOperations();
 
 	void setReadTimeout(int64_t timeout) { _readTimeout = timeout; }
@@ -122,6 +123,7 @@ public:
 	void setHostname(std::string hostname) { close(); _hostname = hostname; }
 	void setPort(std::string port) { close(); _port = port; }
 	void setUseSSL(bool useSSL) { close(); _useSSL = useSSL; if(_useSSL) initSSL(); }
+	void setCAFile(std::string caFile) { close(); _caFile = caFile; }
 	void setVerifyCertificate(bool verifyCertificate) { close(); _verifyCertificate = verifyCertificate; }
 
 	bool connected();
@@ -136,13 +138,15 @@ protected:
 	bool _autoConnect = true;
 	std::string _hostname;
 	std::string _port;
+	std::string _caFile;
 	bool _verifyCertificate = true;
 
-	std::shared_ptr<FileDescriptor> _fileDescriptor;
+	std::shared_ptr<FileDescriptor> _socketDescriptor;
 	bool _useSSL = false;
 	gnutls_session_t _tlsSession = nullptr;
+	gnutls_certificate_credentials_t _x509Cred = nullptr;
 
-	void getFileDescriptor();
+	void getSocketDescriptor();
 	void getConnection();
 	void getSSL();
 	void initSSL();

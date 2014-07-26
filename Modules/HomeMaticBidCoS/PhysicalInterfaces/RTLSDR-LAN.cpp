@@ -73,7 +73,7 @@ void RTLSDR_LAN::startListening()
 	try
 	{
 		stopListening();
-		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
+		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->caFile, _settings->verifyCertificate));
 		GD::out.printDebug("Connecting to RTLSDR-LAN device with Hostname " + _settings->host + " on port " + _settings->port + "...");
 		//_socket.open();
 		//GD::out.printInfo("Connected to RTLSDR-LAN device with Hostname " + _settings->host + " on port " + _settings->port + ".");

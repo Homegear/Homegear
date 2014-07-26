@@ -35,7 +35,8 @@ solution "homegear"
  
    configuration { "linux", "gmake" }
       buildoptions { "-std=c++11" }
-      defines "FORTIFY_SOURCE=2"
+      --GCRYPT_NO_DEPRECATED only works after modifying the header file. See: http://lists.gnupg.org/pipermail/gcrypt-devel/2011-September/001844.html
+      defines { "FORTIFY_SOURCE=2", "GCRYPT_NO_DEPRECATED" }
 
    configuration { "rpi", "gmake" }
       buildoptions { "-std=c++11" }
@@ -106,7 +107,7 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
-
+--[[
    project "homematicwired"
       kind "SharedLib"
       language "C++"
@@ -134,7 +135,7 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
-
+--]]
 --[[
    project "max"
       kind "SharedLib"
@@ -331,7 +332,7 @@ solution "homegear"
       language "C++"
       files { "*.h", "*.cpp" }
 	  files { "./Libraries/Systems/*.h", "./Libraries/Systems/*.cpp" }
-      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l base" }
+      linkoptions { "-l rpc", "-l dl", "-l pthread", "-l sqlite3", "-l readline", "-l gpg-error", "-l gcrypt", "-l gnutls", "-l user", "-l cli", "-l events", "-l gd", "-l database", "-l base" }
  
       configuration "Debug"
          defines { "DEBUG" }

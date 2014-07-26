@@ -103,7 +103,7 @@ void DatabaseController::initializeDatabase()
 			db.executeCommand("INSERT INTO homegearVariables VALUES(?, ?, ?, ?, ?)", data);
 
 			std::vector<uint8_t> salt;
-			std::vector<uint8_t> passwordHash = User::generatePBKDF2("homegear", salt);
+			std::vector<uint8_t> passwordHash = User::generateWHIRLPOOL("homegear", salt);
 
 			createUser("homegear", passwordHash, salt);
 		}

@@ -37,18 +37,18 @@
 #include <map>
 #include <fstream>
 #include <sstream>
+#include <mutex>
 
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-#include <openssl/x509_vfy.h>
 #include <string.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <grp.h>
+
+#include <gcrypt.h>
 
 namespace BaseLib
 {
@@ -64,6 +64,8 @@ public:
 
 	static bool fileExists(std::string filename);
 	static std::string getFileContent(std::string filename);
+	static std::vector<char> getBinaryFileContent(std::string filename);
+	static std::vector<uint8_t> getUBinaryFileContent(std::string filename);
 	std::vector<std::string> getFiles(std::string path);
 
 	static int64_t getTime();
@@ -186,17 +188,18 @@ public:
 	std::vector<uint8_t> getUBinary(std::string hexString);
 	std::vector<uint8_t>& getUBinary(std::string hexString, uint32_t size, std::vector<uint8_t>& binary);
 	std::vector<uint8_t> getUBinary(std::vector<uint8_t>& hexData);
-	static std::string getSSLError(int32_t errorNumber);
-	static std::string getSSLCertVerificationError(int32_t errorNumber);
 	int32_t userID(std::string username);
 	int32_t groupID(std::string groupname);
-
+	std::string getGCRYPTError(int32_t errorCode);
+	static std::string getGNUTLSCertVerificationError(uint32_t errorCode);
 private:
 	BaseLib::Obj* _bl = nullptr;
 	bool _isBigEndian;
 	std::map<char, int32_t> _hexMap;
 	int32_t _asciiToBinaryTable[23];
 	char _binaryToASCIITable[16];
+	char _gcryptBuffer[1024];
+	std::mutex _gcryptBufferMutex;
 
 	void checkEndianness();
 };

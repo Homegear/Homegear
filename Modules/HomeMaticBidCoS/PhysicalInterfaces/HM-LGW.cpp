@@ -169,7 +169,7 @@ HM_LGW::~HM_LGW()
 		if(_initThread.joinable()) _initThread.join();
 		if(_listenThread.joinable()) _listenThread.join();
 		if(_listenThreadKeepAlive.joinable()) _listenThreadKeepAlive.join();
-		openSSLCleanup();
+		aesCleanup();
 	}
     catch(const std::exception& ex)
     {
@@ -1470,10 +1470,10 @@ void HM_LGW::startListening()
 			_out.printError("Error: Cannot start listening, because rfKey is not specified.");
 			return;
 		}
-		openSSLInit();
-		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->verifyCertificate));
+		aesInit();
+		_socket = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->port, _settings->ssl, _settings->caFile, _settings->verifyCertificate));
 		_socket->setReadTimeout(1000000);
-		_socketKeepAlive = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->portKeepAlive, _settings->ssl, _settings->verifyCertificate));
+		_socketKeepAlive = std::unique_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(_bl, _settings->host, _settings->portKeepAlive, _settings->ssl, _settings->caFile, _settings->verifyCertificate));
 		_socketKeepAlive->setReadTimeout(1000000);
 		_out.printDebug("Connecting to HM-LGW with hostname " + _settings->host + " on port " + _settings->port + "...");
 		_stopped = false;
@@ -1505,7 +1505,7 @@ void HM_LGW::reconnect()
 		_socket->close();
 		_socketKeepAlive->close();
 		if(_initThread.joinable()) _initThread.join();
-		openSSLInit();
+		aesInit();
 		_requestsMutex.lock();
 		_requests.clear();
 		_requestsMutex.unlock();
@@ -1546,7 +1546,7 @@ void HM_LGW::stopListening()
 		_stopCallbackThread = false;
 		_socket->close();
 		_socketKeepAlive->close();
-		openSSLCleanup();
+		aesCleanup();
 		_stopped = true;
 		_sendMutex.unlock(); //In case it is deadlocked - shouldn't happen of course
 		_sendMutexKeepAlive.unlock();
@@ -1572,73 +1572,127 @@ void HM_LGW::stopListening()
     }
 }
 
-void HM_LGW::openSSLPrintError()
+bool HM_LGW::aesInit()
 {
-	uint32_t errorCode = ERR_get_error();
-	std::vector<char> buffer(256); //At least 120 bytes
-	ERR_error_string(errorCode, &buffer.at(0));
-	_out.printError("Error: " + std::string(&buffer.at(0)));
-}
-
-bool HM_LGW::openSSLInit()
-{
-	openSSLCleanup();
+	aesCleanup();
 
 	if(_settings->lanKey.empty())
 	{
 		_out.printError("Error: No AES key specified in physicalinterfaces.conf for communication with your HM-LGW.");
 		return false;
 	}
-	_key.resize(16);
-	MD5((uint8_t*)_settings->lanKey.c_str(), _settings->lanKey.size(), &_key.at(0));
 
-	ERR_load_crypto_strings();
-	OpenSSL_add_all_algorithms();
-	OPENSSL_config(NULL);
-	_ctxEncrypt = EVP_CIPHER_CTX_new();
-	if(!_ctxEncrypt)
+	gcry_error_t result;
+	gcry_md_hd_t md5Handle = nullptr;
+	if((result = gcry_md_open(&md5Handle, GCRY_MD_MD5, 0)) != GPG_ERR_NO_ERROR)
 	{
-		openSSLPrintError();
-		openSSLCleanup();
+		_out.printError("Could not initialize MD5 handle: " + _bl->hf.getGCRYPTError(result));
 		return false;
 	}
-	_ctxDecrypt = EVP_CIPHER_CTX_new();
-	if(!_ctxDecrypt)
+	gcry_md_write(md5Handle, _settings->lanKey.c_str(), _settings->lanKey.size());
+	gcry_md_final(md5Handle);
+	uint8_t* digest = gcry_md_read(md5Handle, GCRY_MD_MD5);
+	if(!digest)
 	{
-		openSSLPrintError();
-		openSSLCleanup();
+		_out.printError("Could not generate MD5 of lanKey: " + _bl->hf.getGCRYPTError(result));
+		gcry_md_close(md5Handle);
 		return false;
 	}
-	_ctxEncryptKeepAlive = EVP_CIPHER_CTX_new();
-	if(!_ctxEncryptKeepAlive)
+	if(gcry_md_get_algo_dlen(GCRY_MD_MD5) != 16) _out.printError("Could not generate MD5 of lanKey: Wront digest size.");
+	_key.clear();
+	_key.insert(_key.begin(), digest, digest + 16);
+	gcry_md_close(md5Handle);
+
+	if((result = gcry_cipher_open(&_encryptHandle, GCRY_CIPHER_AES128, GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE)) != GPG_ERR_NO_ERROR)
 	{
-		openSSLPrintError();
-		openSSLCleanup();
+		_encryptHandle = nullptr;
+		_out.printError("Error initializing cypher handle for encryption: " + _bl->hf.getGCRYPTError(result));
 		return false;
 	}
-	_ctxDecryptKeepAlive = EVP_CIPHER_CTX_new();
-	if(!_ctxDecryptKeepAlive)
+	if(!_encryptHandle)
 	{
-		openSSLPrintError();
-		openSSLCleanup();
+		_out.printError("Error cypher handle for encryption is nullptr.");
 		return false;
 	}
+	if((result = gcry_cipher_setkey(_encryptHandle, &_key.at(0), _key.size())) != GPG_ERR_NO_ERROR)
+	{
+		aesCleanup();
+		_out.printError("Error: Could not set key for encryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+
+	if((result = gcry_cipher_open(&_decryptHandle, GCRY_CIPHER_AES128, GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE)) != GPG_ERR_NO_ERROR)
+	{
+		_decryptHandle = nullptr;
+		_out.printError("Error initializing cypher handle for decryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+	if(!_decryptHandle)
+	{
+		_out.printError("Error cypher handle for decryption is nullptr.");
+		return false;
+	}
+	if((result = gcry_cipher_setkey(_decryptHandle, &_key.at(0), _key.size())) != GPG_ERR_NO_ERROR)
+	{
+		aesCleanup();
+		_out.printError("Error: Could not set key for decryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+
+	if((result = gcry_cipher_open(&_encryptHandleKeepAlive, GCRY_CIPHER_AES128, GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE)) != GPG_ERR_NO_ERROR)
+	{
+		_encryptHandleKeepAlive = nullptr;
+		_out.printError("Error initializing cypher handle for keep alive encryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+	if(!_encryptHandleKeepAlive)
+	{
+		_out.printError("Error cypher handle for keep alive encryption is nullptr.");
+		return false;
+	}
+	if((result = gcry_cipher_setkey(_encryptHandleKeepAlive, &_key.at(0), _key.size())) != GPG_ERR_NO_ERROR)
+	{
+		aesCleanup();
+		_out.printError("Error: Could not set key for keep alive encryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+
+	if((result = gcry_cipher_open(&_decryptHandleKeepAlive, GCRY_CIPHER_AES128, GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE)) != GPG_ERR_NO_ERROR)
+	{
+		_decryptHandleKeepAlive = nullptr;
+		_out.printError("Error initializing cypher handle for keep alive decryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+	if(!_decryptHandleKeepAlive)
+	{
+		_out.printError("Error cypher handle for keep alive decryption is nullptr.");
+		return false;
+	}
+	if((result = gcry_cipher_setkey(_decryptHandleKeepAlive, &_key.at(0), _key.size())) != GPG_ERR_NO_ERROR)
+	{
+		aesCleanup();
+		_out.printError("Error: Could not set key for keep alive decryption: " + _bl->hf.getGCRYPTError(result));
+		return false;
+	}
+
 	_aesInitialized = true;
 	_aesExchangeComplete = false;
 	_aesExchangeKeepAliveComplete = false;
 	return true;
 }
 
-void HM_LGW::openSSLCleanup()
+void HM_LGW::aesCleanup()
 {
 	if(!_aesInitialized) return;
 	_aesInitialized = false;
-	if(_ctxDecrypt) EVP_CIPHER_CTX_free(_ctxDecrypt);
-	if(_ctxEncrypt)	EVP_CIPHER_CTX_free(_ctxEncrypt);
-	if(_ctxDecryptKeepAlive) EVP_CIPHER_CTX_free(_ctxDecryptKeepAlive);
-	if(_ctxEncryptKeepAlive)	EVP_CIPHER_CTX_free(_ctxEncryptKeepAlive);
-	EVP_cleanup();
-	ERR_free_strings();
+	if(_decryptHandle) gcry_cipher_close(_decryptHandle);
+	if(_encryptHandle) gcry_cipher_close(_encryptHandle);
+	if(_decryptHandleKeepAlive) gcry_cipher_close(_decryptHandleKeepAlive);
+	if(_encryptHandleKeepAlive) gcry_cipher_close(_encryptHandleKeepAlive);
+	_decryptHandle = nullptr;
+	_encryptHandle = nullptr;
+	_decryptHandleKeepAlive = nullptr;
+	_encryptHandleKeepAlive = nullptr;
 	_myIV.clear();
 	_remoteIV.clear();
 	_myIVKeepAlive.clear();
@@ -1650,68 +1704,57 @@ void HM_LGW::openSSLCleanup()
 std::vector<char> HM_LGW::encrypt(const std::vector<char>& data)
 {
 	std::vector<char> encryptedData(data.size());
-	if(!_ctxEncrypt) return encryptedData;
+	if(!_encryptHandle) return encryptedData;
 
-	int length = 0;
-	if(EVP_EncryptUpdate(_ctxEncrypt, (uint8_t*)&encryptedData.at(0), &length, (uint8_t*)&data.at(0), data.size()) != 1)
+	gcry_error_t result;
+	if((result = gcry_cipher_encrypt(_encryptHandle, &encryptedData.at(0), data.size(), &data.at(0), data.size())) != GPG_ERR_NO_ERROR)
 	{
-		openSSLPrintError();
+		GD::out.printError("Error encrypting data: " + _bl->hf.getGCRYPTError(result));
 		_stopCallbackThread = true;
 		return std::vector<char>();
 	}
-	EVP_EncryptFinal_ex(_ctxEncrypt, (uint8_t*)&encryptedData.at(0) + length, &length);
-
 	return encryptedData;
 }
 
 std::vector<uint8_t> HM_LGW::decrypt(std::vector<uint8_t>& data)
 {
 	std::vector<uint8_t> decryptedData(data.size());
-	if(!_ctxDecrypt) return decryptedData;
-
-	int length = 0;
-	if(EVP_DecryptUpdate(_ctxDecrypt, &decryptedData.at(0), &length, &data.at(0), data.size()) != 1)
+	if(!_decryptHandle) return decryptedData;
+	gcry_error_t result;
+	if((result = gcry_cipher_decrypt(_decryptHandle, &decryptedData.at(0), data.size(), &data.at(0), data.size())) != GPG_ERR_NO_ERROR)
 	{
-		openSSLPrintError();
+		GD::out.printError("Error decrypting data: " + _bl->hf.getGCRYPTError(result));
 		_stopCallbackThread = true;
 		return std::vector<uint8_t>();
 	}
-	EVP_DecryptFinal_ex(_ctxDecrypt, &decryptedData.at(0) + length, &length);
-
 	return decryptedData;
 }
 
 std::vector<char> HM_LGW::encryptKeepAlive(std::vector<char>& data)
 {
 	std::vector<char> encryptedData(data.size());
-	if(!_ctxEncryptKeepAlive) return encryptedData;
-
-	int length = 0;
-	if(EVP_EncryptUpdate(_ctxEncryptKeepAlive, (uint8_t*)&encryptedData.at(0), &length, (uint8_t*)&data.at(0), data.size()) != 1)
+	if(!_encryptHandleKeepAlive) return encryptedData;
+	gcry_error_t result;
+	if((result = gcry_cipher_encrypt(_encryptHandleKeepAlive, &encryptedData.at(0), data.size(), &data.at(0), data.size())) != GPG_ERR_NO_ERROR)
 	{
-		openSSLPrintError();
+		GD::out.printError("Error encrypting keep alive data: " + _bl->hf.getGCRYPTError(result));
 		_stopCallbackThread = true;
 		return std::vector<char>();
 	}
-	EVP_EncryptFinal_ex(_ctxEncryptKeepAlive, (uint8_t*)&encryptedData.at(0) + length, &length);
-
 	return encryptedData;
 }
 
 std::vector<uint8_t> HM_LGW::decryptKeepAlive(std::vector<uint8_t>& data)
 {
 	std::vector<uint8_t> decryptedData(data.size());
-	if(!_ctxDecryptKeepAlive) return decryptedData;
-
-	int length = 0;
-	if(EVP_DecryptUpdate(_ctxDecryptKeepAlive, &decryptedData.at(0), &length, &data.at(0), data.size()) != 1)
+	if(!_decryptHandleKeepAlive) return decryptedData;
+	gcry_error_t result;
+	if((result = gcry_cipher_decrypt(_decryptHandleKeepAlive, &decryptedData.at(0), data.size(), &data.at(0), data.size())) != GPG_ERR_NO_ERROR)
 	{
-		openSSLPrintError();
+		GD::out.printError("Error decrypting keep alive data: " + _bl->hf.getGCRYPTError(result));
 		_stopCallbackThread = true;
 		return std::vector<uint8_t>();
 	}
-	EVP_DecryptFinal_ex(_ctxDecryptKeepAlive, &decryptedData.at(0) + length, &length);
-
 	return decryptedData;
 }
 
@@ -2058,15 +2101,18 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 			}
 			if(_bl->debugLevel >= 5) _out.printDebug("HM-LGW IV is: " + _bl->hf.getHexString(_remoteIV));
 
-			if(EVP_EncryptInit_ex(_ctxEncrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_remoteIV.at(0)) != 1)
+			gcry_error_t result;
+			if((result = gcry_cipher_setiv(_encryptHandle, &_remoteIV.at(0), _remoteIV.size())) != GPG_ERR_NO_ERROR)
 			{
 				_stopCallbackThread = true;
-				openSSLPrintError();
+				aesCleanup();
+				_out.printError("Error: Could not set IV for encryption: " + _bl->hf.getGCRYPTError(result));
 				return false;
 			}
 
 			std::vector<char> response = { 'V', _bl->hf.getHexChar(packetIndex >> 4), _bl->hf.getHexChar(packetIndex & 0xF), ',' };
-			std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
+			std::random_device rd;
+			std::default_random_engine generator(rd());
 			std::uniform_int_distribution<int32_t> distribution(0, 15);
 			_myIV.clear();
 			for(int32_t i = 0; i < 32; i++)
@@ -2087,10 +2133,11 @@ bool HM_LGW::aesKeyExchange(std::vector<uint8_t>& data)
 
 			if(_bl->debugLevel >= 5) _out.printDebug("Homegear IV is: " + _bl->hf.getHexString(_myIV));
 
-			if(EVP_DecryptInit_ex(_ctxDecrypt, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_myIV.at(0)) != 1)
+			if((result = gcry_cipher_setiv(_decryptHandle, &_myIV.at(0), _myIV.size())) != GPG_ERR_NO_ERROR)
 			{
 				_stopCallbackThread = true;
-				openSSLPrintError();
+				aesCleanup();
+				_out.printError("Error: Could not set IV for decryption: " + _bl->hf.getGCRYPTError(result));
 				return false;
 			}
 
@@ -2171,15 +2218,18 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 			}
 			if(_bl->debugLevel >= 5) _out.printDebug("HM-LGW IV for keep alive packets is: " + _bl->hf.getHexString(_remoteIVKeepAlive));
 
-			if(EVP_EncryptInit_ex(_ctxEncryptKeepAlive, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_remoteIVKeepAlive.at(0)) != 1)
+			gcry_error_t result;
+			if((result = gcry_cipher_setiv(_encryptHandleKeepAlive, &_remoteIVKeepAlive.at(0), _remoteIVKeepAlive.size())) != GPG_ERR_NO_ERROR)
 			{
 				_stopCallbackThread = true;
-				openSSLPrintError();
+				aesCleanup();
+				_out.printError("Error: Could not set IV for keep alive encryption: " + _bl->hf.getGCRYPTError(result));
 				return false;
 			}
 
 			std::vector<char> response = { 'V', _bl->hf.getHexChar(_packetIndexKeepAlive >> 4), _bl->hf.getHexChar(_packetIndexKeepAlive & 0xF), ',' };
-			std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
+			std::random_device rd;
+			std::default_random_engine generator(rd());
 			std::uniform_int_distribution<int32_t> distribution(0, 15);
 			_myIVKeepAlive.clear();
 			for(int32_t i = 0; i < 32; i++)
@@ -2200,10 +2250,11 @@ bool HM_LGW::aesKeyExchangeKeepAlive(std::vector<uint8_t>& data)
 
 			if(_bl->debugLevel >= 5) _out.printDebug("Homegear IV for keep alive packets is: " + _bl->hf.getHexString(_myIVKeepAlive));
 
-			if(EVP_DecryptInit_ex(_ctxDecryptKeepAlive, EVP_aes_128_cfb128(), NULL, &_key.at(0), &_myIVKeepAlive.at(0)) != 1)
+			if((result = gcry_cipher_setiv(_decryptHandleKeepAlive, &_myIVKeepAlive.at(0), _myIVKeepAlive.size())) != GPG_ERR_NO_ERROR)
 			{
 				_stopCallbackThread = true;
-				openSSLPrintError();
+				aesCleanup();
+				_out.printError("Error: Could not set IV for keep alive decryption: " + _bl->hf.getGCRYPTError(result));
 				return false;
 			}
 
