@@ -2205,6 +2205,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int3
 			if(!_team.serialNumber.empty() && rpcChannel->hasTeam)
 			{
 				if(fields.empty() || fields.find("TEAM") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TEAM", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_team.serialNumber))));
+				if(fields.empty() || fields.find("TEAM_ID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TEAM_ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)_team.id))));
+				if(fields.empty() || fields.find("TEAM_CHANNEL") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TEAM_CHANNEL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)_team.channel))));
 
 				if(fields.empty() || fields.find("TEAM_TAG") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TEAM_TAG", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(rpcChannel->teamTag))));
 			}

@@ -511,6 +511,7 @@ std::string Server::handleUserCommand(std::string& command)
 
 					if(password.front() == '"' && password.back() == '"')
 					{
+						password = password.substr(1, password.size() - 2);
 						BaseLib::HelperFunctions::stringReplace(password, "\\\"", "\"");
 						BaseLib::HelperFunctions::stringReplace(password, "\\\\", "\\");
 					}
