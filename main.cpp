@@ -477,8 +477,8 @@ int main(int argc, char* argv[])
 		}
 
 		//Init gcrypt and GnuTLS
-		gcry_error_t result;
-		if((result = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
+		gcry_error_t gcryResult;
+		if((gcryResult = gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)) != GPG_ERR_NO_ERROR)
 		{
 			GD::out.printCritical("Critical: Could not enable thread support for gcrypt.");
 			exit(2);
@@ -490,7 +490,7 @@ int main(int argc, char* argv[])
 			exit(2);
 		}
 		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-		if((result = gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0)) != GPG_ERR_NO_ERROR)
+		if((gcryResult = gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0)) != GPG_ERR_NO_ERROR)
 		{
 			GD::out.printCritical("Critical: Could not allocate secure memory.");
 			exit(2);
@@ -498,7 +498,12 @@ int main(int argc, char* argv[])
 		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
-		gnutls_global_init();
+		int32_t gnutlsResult = 0;
+		if((gnutlsResult = gnutls_global_init()) != GNUTLS_E_SUCCESS)
+		{
+			GD::out.printCritical("Critical: Could not initialize GnuTLS: " + std::string(gnutls_strerror(gnutlsResult)));
+			exit(2);
+		}
 		//End init gcrypt
 
 		GD::familyController.loadModules();
