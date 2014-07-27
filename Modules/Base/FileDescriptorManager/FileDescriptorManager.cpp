@@ -50,8 +50,15 @@ std::shared_ptr<FileDescriptor> FileDescriptorManager::add(int32_t fileDescripto
 		_descriptorsMutex.lock();
 		if(_descriptors.find(fileDescriptor) != _descriptors.end())
 		{
-			_bl->out.printInfo("Old file descriptor " + std::to_string(fileDescriptor) + " was invalidated.");
-			_descriptors.at(fileDescriptor)->descriptor = -1;
+			std::shared_ptr<FileDescriptor> oldDescriptor = _descriptors.at(fileDescriptor);
+			_bl->out.printInfo("Info: Old file descriptor " + std::to_string(fileDescriptor) + " was invalidated.");
+			if(oldDescriptor->tlsSession)
+			{
+				if(_bl->settings.devLog()) _bl->out.printWarning("Devlog warning: Possibly dangerous operation: Cleaning up TLS session of closed socket descriptor.");
+				gnutls_deinit(oldDescriptor->tlsSession);
+				oldDescriptor->tlsSession = nullptr;
+			}
+			oldDescriptor->descriptor = -1;
 		}
 		std::shared_ptr<FileDescriptor> descriptor(new FileDescriptor());
 		descriptor->id = _currentID++;
@@ -84,6 +91,7 @@ void FileDescriptorManager::remove(std::shared_ptr<FileDescriptor> descriptor)
 		_descriptorsMutex.lock();
 		if(_descriptors.find(descriptor->descriptor) != _descriptors.end() && _descriptors.at(descriptor->descriptor)->id == descriptor->id)
 		{
+			if(descriptor->tlsSession) _bl->out.printWarning("Warning: Removed descriptor, but TLS session pointer is not empty.");
 			descriptor->descriptor = -1;
 			_descriptors.erase(descriptor->descriptor);
 		}
@@ -112,8 +120,11 @@ void FileDescriptorManager::close(std::shared_ptr<FileDescriptor> descriptor)
 		if(_descriptors.find(descriptor->descriptor) != _descriptors.end() && _descriptors.at(descriptor->descriptor)->id == descriptor->id)
 		{
 			_descriptors.erase(descriptor->descriptor);
+			if(descriptor->tlsSession) gnutls_bye(descriptor->tlsSession, GNUTLS_SHUT_WR);
 			::close(descriptor->descriptor);
+			if(descriptor->tlsSession) gnutls_deinit(descriptor->tlsSession);
 			descriptor->descriptor = -1;
+			descriptor->tlsSession = nullptr;
 		}
 	}
 	catch(const std::exception& ex)
@@ -140,9 +151,12 @@ void FileDescriptorManager::shutdown(std::shared_ptr<FileDescriptor> descriptor)
 		if(_descriptors.find(descriptor->descriptor) != _descriptors.end() && _descriptors.at(descriptor->descriptor)->id == descriptor->id)
 		{
 			_descriptors.erase(descriptor->descriptor);
-			::shutdown(descriptor->descriptor, 0);
+			if(descriptor->tlsSession) gnutls_bye(descriptor->tlsSession, GNUTLS_SHUT_WR);
+			if(!descriptor->tlsSession) ::shutdown(descriptor->descriptor, 0);
 			::close(descriptor->descriptor);
+			if(descriptor->tlsSession) gnutls_deinit(descriptor->tlsSession);
 			descriptor->descriptor = -1;
+			descriptor->tlsSession = nullptr;
 		}
 	}
 	catch(const std::exception& ex)
@@ -157,6 +171,16 @@ void FileDescriptorManager::shutdown(std::shared_ptr<FileDescriptor> descriptor)
 	{
 		_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+	_descriptorsMutex.unlock();
+}
+
+void FileDescriptorManager::lock()
+{
+	_descriptorsMutex.lock();
+}
+
+void FileDescriptorManager::unlock()
+{
 	_descriptorsMutex.unlock();
 }
 

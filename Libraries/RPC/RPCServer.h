@@ -70,7 +70,6 @@ namespace RPC
 				int32_t id = -1;
 				std::thread readThread;
 				std::shared_ptr<BaseLib::FileDescriptor> socketDescriptor;
-				gnutls_session_t tlsSession = nullptr;
 				std::shared_ptr<BaseLib::SocketOperations> socket;
 				Auth auth;
 

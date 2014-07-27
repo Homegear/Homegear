@@ -39,13 +39,12 @@ SocketOperations::SocketOperations(BaseLib::Obj* baseLib)
 	_socketDescriptor.reset(new FileDescriptor);
 }
 
-SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> socketDescriptor, gnutls_session_t tlsSession)
+SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> socketDescriptor)
 {
 	_bl = baseLib;
 	_autoConnect = false;
 	if(socketDescriptor) _socketDescriptor = socketDescriptor;
 	else _socketDescriptor.reset(new FileDescriptor);
-	_tlsSession = tlsSession;
 }
 
 SocketOperations::SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port)
@@ -124,10 +123,7 @@ void SocketOperations::autoConnect()
 
 void SocketOperations::close()
 {
-	if(_tlsSession) gnutls_bye(_tlsSession, GNUTLS_SHUT_WR);
 	_bl->fileDescriptorManager.close(_socketDescriptor);
-	if(_tlsSession) gnutls_deinit(_tlsSession);
-	_tlsSession = nullptr;
 }
 
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
@@ -145,7 +141,7 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	int32_t bytesRead = select(_socketDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead == 0) throw SocketTimeOutException("Reading from socket timed out.");
 	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
-	bytesRead = _tlsSession ? gnutls_record_recv(_tlsSession, buffer, bufferSize) : read(_socketDescriptor->descriptor, buffer, bufferSize);
+	bytesRead = _socketDescriptor->tlsSession ? gnutls_record_recv(_socketDescriptor->tlsSession, buffer, bufferSize) : read(_socketDescriptor->descriptor, buffer, bufferSize);
 	if(bytesRead <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
 	return bytesRead;
 }
@@ -179,12 +175,12 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
 
 		int32_t bytesToSend = data.size() - bytesSentSoFar;
-		int32_t bytesSentInStep = _tlsSession ? gnutls_record_send(_tlsSession, &data.at(bytesSentSoFar), bytesToSend) : send(_socketDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
+		int32_t bytesSentInStep = _socketDescriptor->tlsSession ? gnutls_record_send(_socketDescriptor->tlsSession, &data.at(bytesSentSoFar), bytesToSend) : send(_socketDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
 		if(bytesSentInStep <= 0)
 		{
 			_bl->out.printDebug("Debug: ... exception at " + std::to_string(bytesSentSoFar) + " error is " + strerror(errno));
 			close();
-			if(_tlsSession) throw SocketOperationException(gnutls_strerror(bytesSentInStep));
+			if(_socketDescriptor->tlsSession) throw SocketOperationException(gnutls_strerror(bytesSentInStep));
 			else throw SocketOperationException(strerror(errno));
 		}
 		bytesSentSoFar += bytesSentInStep;
@@ -192,7 +188,6 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 	_bl->out.printDebug("Debug: ... sent " + std::to_string(bytesSentSoFar), 6);
 	return bytesSentSoFar;
 }
-
 
 bool SocketOperations::connected()
 {
@@ -228,52 +223,48 @@ void SocketOperations::getSSL()
 		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 		throw SocketSSLException("Could not disable Nagle algorithm.");
 	}
-	if((result = gnutls_init(&_tlsSession, GNUTLS_CLIENT)) != GNUTLS_E_SUCCESS)
+	if((result = gnutls_init(&_socketDescriptor->tlsSession, GNUTLS_CLIENT)) != GNUTLS_E_SUCCESS)
 	{
-		_tlsSession = nullptr;
+		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
 		throw SocketSSLException("Could not initialize TLS session: " + std::string(gnutls_strerror(result)));
 	}
-	if(!_tlsSession) throw SocketSSLException("Could not initialize TLS session.");
-	if((result = gnutls_priority_set_direct(_tlsSession, "NORMAL", NULL)) != GNUTLS_E_SUCCESS)
+	if(!_socketDescriptor->tlsSession) throw SocketSSLException("Could not initialize TLS session.");
+	if((result = gnutls_priority_set_direct(_socketDescriptor->tlsSession, "NORMAL", NULL)) != GNUTLS_E_SUCCESS)
 	{
 		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
-		gnutls_deinit(_tlsSession);
 		throw SocketSSLException("Could not set cipher priorities: " + std::string(gnutls_strerror(result)));
 	}
-	if((result = gnutls_credentials_set(_tlsSession, GNUTLS_CRD_CERTIFICATE, _x509Cred)) != GNUTLS_E_SUCCESS)
+	if((result = gnutls_credentials_set(_socketDescriptor->tlsSession, GNUTLS_CRD_CERTIFICATE, _x509Cred)) != GNUTLS_E_SUCCESS)
 	{
 		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
-		gnutls_deinit(_tlsSession);
 		throw SocketSSLException("Could not set trusted certificates: " + std::string(gnutls_strerror(result)));
 	}
-	gnutls_transport_set_ptr(_tlsSession, (gnutls_transport_ptr_t)(uintptr_t)_socketDescriptor->descriptor);
-	if((result = gnutls_server_name_set(_tlsSession, GNUTLS_NAME_DNS, _hostname.c_str(), _hostname.length())) != GNUTLS_E_SUCCESS)
+	gnutls_transport_set_ptr(_socketDescriptor->tlsSession, (gnutls_transport_ptr_t)(uintptr_t)_socketDescriptor->descriptor);
+	if((result = gnutls_server_name_set(_socketDescriptor->tlsSession, GNUTLS_NAME_DNS, _hostname.c_str(), _hostname.length())) != GNUTLS_E_SUCCESS)
 	{
 		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
-		gnutls_deinit(_tlsSession);
 		throw SocketSSLException("Could not set server's hostname: " + std::string(gnutls_strerror(result)));
 	}
 	do
 	{
-		result = gnutls_handshake(_tlsSession);
+		result = gnutls_handshake(_socketDescriptor->tlsSession);
 	} while (result < 0 && gnutls_error_is_fatal(result) == 0);
 	if(result != GNUTLS_E_SUCCESS)
 	{
 		_bl->fileDescriptorManager.shutdown(_socketDescriptor);
-		gnutls_deinit(_tlsSession);
 		throw SocketSSLException("Error during TLS handshake: " + std::string(gnutls_strerror(result)));
 	}
 
 	//Now verify the certificate
 	uint32_t serverCertChainLength = 0;
-	const gnutls_datum_t* const serverCertChain = gnutls_certificate_get_peers(_tlsSession, &serverCertChainLength);
+	const gnutls_datum_t* const serverCertChain = gnutls_certificate_get_peers(_socketDescriptor->tlsSession, &serverCertChainLength);
 	if(!serverCertChain || serverCertChainLength == 0)
 	{
 		close();
 		throw SocketSSLException("Could not get server certificate.");
 	}
 	uint32_t status = (uint32_t)-1;
-	if((result = gnutls_certificate_verify_peers2(_tlsSession, &status)) != GNUTLS_E_SUCCESS)
+	if((result = gnutls_certificate_verify_peers2(_socketDescriptor->tlsSession, &status)) != GNUTLS_E_SUCCESS)
 	{
 		close();
 		throw SocketSSLException("Could not verify server certificate: " + std::string(gnutls_strerror(result)));

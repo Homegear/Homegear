@@ -41,9 +41,7 @@ RPCServer::Client::Client()
 
 RPCServer::Client::~Client()
 {
-	if(tlsSession) gnutls_bye(tlsSession, GNUTLS_SHUT_WR);
-	GD::bl->fileDescriptorManager.shutdown(socketDescriptor);
-	if(tlsSession) gnutls_deinit(tlsSession);
+	GD::bl->fileDescriptorManager.close(socketDescriptor);
 }
 
 RPCServer::RPCServer()
@@ -270,13 +268,8 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 	try
 	{
 		removeClient(client->id);
-		if(client->tlsSession) gnutls_bye(client->tlsSession, GNUTLS_SHUT_WR);
-		GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-		if(client->tlsSession)
-		{
-			gnutls_deinit(client->tlsSession);
-			client->tlsSession = nullptr;
-		}
+		GD::bl->fileDescriptorManager.close(client->socketDescriptor);
+		return;
 	}
 	catch(const std::exception& ex)
     {
@@ -290,6 +283,7 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    GD::bl->fileDescriptorManager.unlock();
 }
 
 void RPCServer::mainThread()
@@ -314,7 +308,7 @@ void RPCServer::mainThread()
 				{
 					_stateMutex.unlock();
 					_out.printError("Error: Client connection rejected, because there are too many clients connected to me.");
-					GD::bl->fileDescriptorManager.shutdown(clientFileDescriptor);
+					GD::bl->fileDescriptorManager.close(clientFileDescriptor);
 					continue;
 				}
 				std::shared_ptr<Client> client(new Client());
@@ -326,14 +320,14 @@ void RPCServer::mainThread()
 				if(_settings->ssl)
 				{
 					getSSLSocketDescriptor(client);
-					if(!client->tlsSession)
+					if(!client->socketDescriptor->tlsSession)
 					{
 						//Remove client from _clients again. Socket is already closed.
 						closeClientConnection(client);
 						continue;
 					}
 				}
-				client->socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get(), client->socketDescriptor, client->tlsSession));
+				client->socket = std::shared_ptr<BaseLib::SocketOperations>(new BaseLib::SocketOperations(GD::bl.get(), client->socketDescriptor));
 
 				client->readThread = std::thread(&RPCServer::readClient, this, client);
 				BaseLib::Threads::setThreadPriority(GD::bl.get(), client->readThread.native_handle(), _threadPriority, _threadPolicy);
@@ -962,52 +956,45 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 			return;
 		}
 		int32_t result = 0;
-		if((result = gnutls_init(&client->tlsSession, GNUTLS_SERVER)) != GNUTLS_E_SUCCESS)
+		if((result = gnutls_init(&client->socketDescriptor->tlsSession, GNUTLS_SERVER)) != GNUTLS_E_SUCCESS)
 		{
 			_out.printError("Error: Could not initialize TLS session: " + std::string(gnutls_strerror(result)));
-			client->tlsSession = nullptr;
+			client->socketDescriptor->tlsSession = nullptr;
 			return;
 		}
-		if(!client->tlsSession)
+		if(!client->socketDescriptor->tlsSession)
 		{
 			_out.printError("Error: Client TLS session is nullptr.");
 			return;
 		}
-		if((result = gnutls_priority_set(client->tlsSession, _tlsPriorityCache)) != GNUTLS_E_SUCCESS)
+		if((result = gnutls_priority_set(client->socketDescriptor->tlsSession, _tlsPriorityCache)) != GNUTLS_E_SUCCESS)
 		{
 			_out.printError("Error: Could not set cipher priority on TLS session: " + std::string(gnutls_strerror(result)));
-			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-			gnutls_deinit(client->tlsSession);
-			client->tlsSession = nullptr;
+			GD::bl->fileDescriptorManager.close(client->socketDescriptor);
 			return;
 		}
-		if((result = gnutls_credentials_set(client->tlsSession, GNUTLS_CRD_CERTIFICATE, _x509Cred)) != GNUTLS_E_SUCCESS)
+		if((result = gnutls_credentials_set(client->socketDescriptor->tlsSession, GNUTLS_CRD_CERTIFICATE, _x509Cred)) != GNUTLS_E_SUCCESS)
 		{
 			_out.printError("Error: Could not set x509 credentials on TLS session: " + std::string(gnutls_strerror(result)));
-			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-			gnutls_deinit(client->tlsSession);
-			client->tlsSession = nullptr;
+			GD::bl->fileDescriptorManager.close(client->socketDescriptor);
 			return;
 		}
-		gnutls_certificate_server_set_request(client->tlsSession, GNUTLS_CERT_IGNORE);
+		gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_IGNORE);
 		if(!client->socketDescriptor || client->socketDescriptor->descriptor == -1)
 		{
 			_out.printError("Error setting TLS socket descriptor: Provided socket descriptor is invalid.");
-			gnutls_deinit(client->tlsSession);
-			client->tlsSession = nullptr;
+			GD::bl->fileDescriptorManager.close(client->socketDescriptor);
 			return;
 		}
-		gnutls_transport_set_ptr(client->tlsSession, (gnutls_transport_ptr_t)(uintptr_t)client->socketDescriptor->descriptor);
+		gnutls_transport_set_ptr(client->socketDescriptor->tlsSession, (gnutls_transport_ptr_t)(uintptr_t)client->socketDescriptor->descriptor);
 		do
 		{
-			result = gnutls_handshake(client->tlsSession);
+			result = gnutls_handshake(client->socketDescriptor->tlsSession);
         } while (result < 0 && gnutls_error_is_fatal(result) == 0);
 		if(result < 0)
 		{
 			_out.printError("Error: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
-			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-			gnutls_deinit(client->tlsSession);
-			client->tlsSession = nullptr;
+			GD::bl->fileDescriptorManager.close(client->socketDescriptor);
 			return;
 		}
 		return;
@@ -1024,9 +1011,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
-    if(client->tlsSession) gnutls_deinit(client->tlsSession);
-    client->tlsSession = nullptr;
+    GD::bl->fileDescriptorManager.close(client->socketDescriptor);
 }
 
 void RPCServer::getSocketDescriptor()

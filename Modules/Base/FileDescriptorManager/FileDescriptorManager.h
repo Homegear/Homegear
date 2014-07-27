@@ -38,6 +38,8 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#include <gnutls/gnutls.h>
+
 namespace BaseLib
 {
 
@@ -51,6 +53,7 @@ public:
 
 	int32_t id = -1;
 	int32_t descriptor = -1;
+	gnutls_session_t tlsSession = nullptr;
 };
 
 class FileDescriptorManager
@@ -67,6 +70,8 @@ public:
 	virtual std::shared_ptr<FileDescriptor> get(int32_t fileDescriptor);
 	virtual bool isValid(int32_t fileDescriptor, int32_t id);
 	virtual bool isValid(std::shared_ptr<FileDescriptor> descriptor);
+	virtual void lock();
+	virtual void unlock();
 private:
 	BaseLib::Obj* _bl = nullptr;
 	uint32_t _currentID = 0;

@@ -113,7 +113,7 @@ class SocketOperations
 {
 public:
 	SocketOperations(BaseLib::Obj* baseLib);
-	SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> socketDescriptor, gnutls_session_t tlsSession);
+	SocketOperations(BaseLib::Obj* baseLib, std::shared_ptr<FileDescriptor> socketDescriptor);
 	SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port);
 	SocketOperations(BaseLib::Obj* baseLib, std::string hostname, std::string port, bool useSSL, std::string caFile, bool verifyCertificate);
 	virtual ~SocketOperations();
@@ -143,7 +143,6 @@ protected:
 
 	std::shared_ptr<FileDescriptor> _socketDescriptor;
 	bool _useSSL = false;
-	gnutls_session_t _tlsSession = nullptr;
 	gnutls_certificate_credentials_t _x509Cred = nullptr;
 
 	void getSocketDescriptor();
