@@ -319,7 +319,7 @@ bool HM_SD::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Sys
 			}
 		}
 		if(_filters.size() == 0) printPacket = true;
-		if(_hack && senderID == _physicalInterface->getID())
+		/*if(_hack && senderID == _physicalInterface->getID())
 		{
 			int32_t addressMotionDetector = 0x1A4EFE;
 			int32_t addressKeyMatic = 0x1F454D;
@@ -363,7 +363,7 @@ bool HM_SD::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Sys
 					_physicalInterface->sendPacket(packet4);
 				}
 			}
-		}
+		}*/
 		if(printPacket) std::cout << BaseLib::HelperFunctions::getTimeString(bidCoSPacket->timeReceived()) << " HomeMatic BidCoS packet received (" + senderID + (bidCoSPacket->rssiDevice() ? ", RSSI: 0x" + _bl->hf.getHexString(bidCoSPacket->rssiDevice(), 2) : "") + "): " + bidCoSPacket->hexString() << std::endl;
 		if(senderID != _physicalInterface->getID()) return true;
 		for(std::list<HM_SD_OverwriteResponse>::const_iterator i = _responsesToOverwrite.begin(); i != _responsesToOverwrite.end(); ++i)
@@ -855,7 +855,7 @@ std::string HM_SD::handleCLICommand(std::string command)
 			stringStream << "Packet sent: " << packet->hexString() << std::endl;
 			return stringStream.str();
 		}
-		else if(command.compare(0, 4, "hack") == 0)
+		/*else if(command.compare(0, 4, "hack") == 0)
 		{
 			if(_hack)
 			{
@@ -867,7 +867,7 @@ std::string HM_SD::handleCLICommand(std::string command)
 				_hack = true;
 				return "Hack enabled.\n";
 			}
-		}
+		}*/
 		else return "Unknown command.\n";
 	}
 	catch(const std::exception& ex)
