@@ -689,13 +689,28 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllValues::invoke(std::shared_p
 		if(parameters->size() > 0)
 		{
 			ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::RPC::RPCVariableType>>({
-				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean })
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcBoolean }),
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger }),
+				std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcInteger, BaseLib::RPC::RPCVariableType::rpcBoolean })
 		}));
 		if(error != ParameterError::Enum::noError) return getError(error);
 		}
 
+		uint64_t peerID = 0;
 		bool returnWriteOnly = false;
-		if(parameters->size() > 0) returnWriteOnly = parameters->at(0)->booleanValue;
+		if(parameters->size() == 1 && parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcBoolean)
+		{
+			returnWriteOnly = parameters->at(0)->booleanValue;
+		}
+		else if(parameters->size() == 1 && parameters->at(0)->type == BaseLib::RPC::RPCVariableType::rpcInteger)
+		{
+			peerID = parameters->at(0)->integerValue;
+		}
+		else if(parameters->size() == 2)
+		{
+			peerID = parameters->at(0)->integerValue;
+			returnWriteOnly = parameters->at(1)->booleanValue;
+		}
 
 		std::shared_ptr<BaseLib::RPC::RPCVariable> values(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 		for(std::map<BaseLib::Systems::DeviceFamilies, std::unique_ptr<BaseLib::Systems::DeviceFamily>>::iterator i = GD::deviceFamilies.begin(); i != GD::deviceFamilies.end(); ++i)
@@ -703,7 +718,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetAllValues::invoke(std::shared_p
 			std::shared_ptr<BaseLib::Systems::Central> central = i->second->getCentral();
 			if(!central) continue;
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->getAllValues(returnWriteOnly);
+			std::shared_ptr<BaseLib::RPC::RPCVariable> result = central->getAllValues(peerID, returnWriteOnly);
 			if(result->errorStruct)
 			{
 				GD::out.printWarning("Warning: Error calling method \"listDevices\" on device family " + i->second->getName() + ": " + result->structValue->at("faultString")->stringValue);

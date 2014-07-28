@@ -41,7 +41,7 @@ RPCServer::Client::Client()
 
 RPCServer::Client::~Client()
 {
-	GD::bl->fileDescriptorManager.close(socketDescriptor);
+	GD::bl->fileDescriptorManager.shutdown(socketDescriptor);
 }
 
 RPCServer::RPCServer()
@@ -268,7 +268,7 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 	try
 	{
 		removeClient(client->id);
-		GD::bl->fileDescriptorManager.close(client->socketDescriptor);
+		GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -306,7 +306,7 @@ void RPCServer::mainThread()
 				{
 					_stateMutex.unlock();
 					_out.printError("Error: Client connection rejected, because there are too many clients connected to me.");
-					GD::bl->fileDescriptorManager.close(clientFileDescriptor);
+					GD::bl->fileDescriptorManager.shutdown(clientFileDescriptor);
 					continue;
 				}
 				std::shared_ptr<Client> client(new Client());
@@ -347,7 +347,7 @@ void RPCServer::mainThread()
 				_stateMutex.unlock();
 			}
 		}
-		GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+		GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
 	}
 	catch(const std::exception& ex)
     {
@@ -976,20 +976,20 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 		if((result = gnutls_priority_set(client->socketDescriptor->tlsSession, _tlsPriorityCache)) != GNUTLS_E_SUCCESS)
 		{
 			_out.printError("Error: Could not set cipher priority on TLS session: " + std::string(gnutls_strerror(result)));
-			GD::bl->fileDescriptorManager.close(client->socketDescriptor);
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		if((result = gnutls_credentials_set(client->socketDescriptor->tlsSession, GNUTLS_CRD_CERTIFICATE, _x509Cred)) != GNUTLS_E_SUCCESS)
 		{
 			_out.printError("Error: Could not set x509 credentials on TLS session: " + std::string(gnutls_strerror(result)));
-			GD::bl->fileDescriptorManager.close(client->socketDescriptor);
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		gnutls_certificate_server_set_request(client->socketDescriptor->tlsSession, GNUTLS_CERT_IGNORE);
 		if(!client->socketDescriptor || client->socketDescriptor->descriptor == -1)
 		{
 			_out.printError("Error setting TLS socket descriptor: Provided socket descriptor is invalid.");
-			GD::bl->fileDescriptorManager.close(client->socketDescriptor);
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		gnutls_transport_set_ptr(client->socketDescriptor->tlsSession, (gnutls_transport_ptr_t)(uintptr_t)client->socketDescriptor->descriptor);
@@ -1000,7 +1000,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
 		if(result < 0)
 		{
 			_out.printError("Error: TLS handshake has failed: " + std::string(gnutls_strerror(result)));
-			GD::bl->fileDescriptorManager.close(client->socketDescriptor);
+			GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 			return;
 		}
 		return;
@@ -1017,7 +1017,7 @@ void RPCServer::getSSLSocketDescriptor(std::shared_ptr<Client> client)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::bl->fileDescriptorManager.close(client->socketDescriptor);
+    GD::bl->fileDescriptorManager.shutdown(client->socketDescriptor);
 }
 
 void RPCServer::getSocketDescriptor()
@@ -1078,13 +1078,13 @@ void RPCServer::getSocketDescriptor()
 		freeaddrinfo(serverInfo);
 		if(!bound)
 		{
-			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+			GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
 			_out.printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(error)));
 			return;
 		}
 		if(_serverFileDescriptor->descriptor == -1 || !bound || listen(_serverFileDescriptor->descriptor, _backlog) == -1)
 		{
-			GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
+			GD::bl->fileDescriptorManager.shutdown(_serverFileDescriptor);
 			_out.printCritical("Error: Server could not start listening on port " + port + ": " + std::string(strerror(errno)));
 			return;
 		}

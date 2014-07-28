@@ -1801,7 +1801,7 @@ void HomeMaticCentral::deletePeer(uint64_t id)
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
-		if(!peer) return;
+		if(!peer || peer->isTeam()) return;
 		peer->deleting = true;
 		std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
 		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peer->getSerialNumber())));
@@ -1851,7 +1851,7 @@ void HomeMaticCentral::reset(uint64_t id, bool defer)
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
-		if(!peer) return;
+		if(!peer || peer->isTeam()) return;
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, peer->getPhysicalInterface(), BidCoSQueueType::UNPAIRING, peer->getAddress());
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(peer->getPhysicalInterface(), BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
@@ -1897,7 +1897,7 @@ void HomeMaticCentral::unpair(uint64_t id, bool defer)
 	try
 	{
 		std::shared_ptr<BidCoSPeer> peer(getPeer(id));
-		if(!peer) return;
+		if(!peer || peer->isTeam()) return;
 		std::shared_ptr<BidCoSQueue> queue = _bidCoSQueueManager.createQueue(this, peer->getPhysicalInterface(), BidCoSQueueType::UNPAIRING, peer->getAddress());
 		std::shared_ptr<BidCoSQueue> pendingQueue(new BidCoSQueue(peer->getPhysicalInterface(), BidCoSQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
@@ -2536,22 +2536,21 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<BidCoSPeer> peer, uint32_t chan
 	{
 		removePeerFromTeam(peer);
 
-		std::shared_ptr<BidCoSPeer> team;
-		std::string serialNumber('*' + peer->getSerialNumber());
-		_peersMutex.lock();
-		if(_peersBySerial.find(serialNumber) == _peersBySerial.end())
+		std::string teamSerialNumber('*' + peer->getSerialNumber());
+		std::shared_ptr<BidCoSPeer> team = getPeer(teamSerialNumber);
+		bool teamCreated = false;
+		if(!team)
 		{
-			_peersMutex.unlock();
-			team = createTeam(peer->getAddress(), peer->getDeviceType(), serialNumber);
+			team = createTeam(peer->getAddress(), peer->getDeviceType(), teamSerialNumber);
 			team->rpcDevice = peer->rpcDevice->team;
 			team->setID(peer->getID() | (1 << 30));
 			team->initializeCentralConfig();
 			_peersMutex.lock();
 			_peersBySerial[team->getSerialNumber()] = team;
 			_peersByID[team->getID()] = team;
+			_peersMutex.unlock();
+			teamCreated = true;
 		}
-		else team = getPeer('*' + peer->getSerialNumber());
-		_peersMutex.unlock();
 		peer->setTeamRemoteAddress(team->getAddress());
 		peer->setTeamRemoteID(team->getID());
 		peer->setTeamRemoteSerialNumber(team->getSerialNumber());
@@ -2565,6 +2564,13 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<BidCoSPeer> peer, uint32_t chan
 			}
 		}
 		team->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
+		if(teamCreated)
+		{
+			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			deviceDescriptions->arrayValue = team->getDeviceDescriptions(true, std::map<std::string, bool>());
+			raiseRPCNewDevices(deviceDescriptions);
+		}
+		else raiseRPCUpdateDevice(team->getID(), peer->getTeamRemoteChannel(), team->getSerialNumber() + ":" + std::to_string(peer->getTeamRemoteChannel()), 2);
 	}
 	catch(const std::exception& ex)
     {
@@ -2635,6 +2641,7 @@ void HomeMaticCentral::addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t c
 		peer->setTeamChannel(channel);
 		peer->setTeamRemoteChannel(teamChannel);
 		team->teamChannels.push_back(std::pair<std::string, uint32_t>(peer->getSerialNumber(), channel));
+		raiseRPCUpdateDevice(team->getID(), teamChannel, team->getSerialNumber() + ":" + std::to_string(teamChannel), 2);
 	}
 	catch(const std::exception& ex)
     {
@@ -2654,7 +2661,9 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer)
 {
 	try
 	{
+		if(peer->getTeamRemoteSerialNumber().empty()) return;
 		std::shared_ptr<BidCoSPeer> oldTeam = getPeer(peer->getTeamRemoteSerialNumber());
+		if(!oldTeam) return; //No old team, e. g. on pairing
 		//Remove peer from old team
 		for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
 		{
@@ -2667,6 +2676,7 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer)
 		//Delete team if there are no peers anymore
 		if(oldTeam->teamChannels.empty())
 		{
+			oldTeam->deleting = true;
 			_peersMutex.lock();
 			try
 			{
@@ -2686,7 +2696,24 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer)
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 			_peersMutex.unlock();
+
+			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(oldTeam->getSerialNumber())));
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = oldTeam->rpcDevice->channels.begin(); i != oldTeam->rpcDevice->channels.end(); ++i)
+			{
+				deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(oldTeam->getSerialNumber() + ":" + std::to_string(i->first))));
+			}
+			std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+			deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)oldTeam->getID()))));
+			std::shared_ptr<BaseLib::RPC::RPCVariable> channels(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+			deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
+			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = oldTeam->rpcDevice->channels.begin(); i != oldTeam->rpcDevice->channels.end(); ++i)
+			{
+				channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
+			}
+			raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 		}
+		else raiseRPCUpdateDevice(oldTeam->getID(), peer->getTeamRemoteChannel(), oldTeam->getSerialNumber() + ":" + std::to_string(peer->getTeamRemoteChannel()), 2);
 		peer->setTeamRemoteSerialNumber("");
 		peer->setTeamRemoteID(0);
 		peer->setTeamRemoteAddress(0);
@@ -3546,7 +3573,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(std::string
 			if(!team) return BaseLib::RPC::RPCVariable::createError(-2, "Team does not exist.");
 			teamID = team->getID();
 		}
-		return setTeam(peer->getID(), channel, teamID, teamChannel);
+		return setTeam(peer->getID(), channel, teamID, teamChannel, force, burst);
 	}
 	catch(const std::exception& ex)
     {
@@ -3651,7 +3678,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t pe
 		peer->serviceMessages->setConfigPending(true);
 		if((peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (peer->getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)) enqueuePendingQueues(peer->getAddress());
 		else GD::out.printDebug("Debug: Packet was queued and will be sent with next wake me up packet.");
-		raiseRPCUpdateDevice(peer->getID(), channel, peer->getSerialNumber() + ":" + std::to_string(channel), 0);
+		raiseRPCUpdateDevice(peer->getID(), channel, peer->getSerialNumber() + ":" + std::to_string(channel), 2);
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)

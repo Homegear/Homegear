@@ -152,6 +152,7 @@ void FileDescriptorManager::shutdown(std::shared_ptr<FileDescriptor> descriptor)
 		{
 			_descriptors.erase(descriptor->descriptor);
 			if(descriptor->tlsSession) gnutls_bye(descriptor->tlsSession, GNUTLS_SHUT_WR);
+			//On SSL connections shutdown is not necessary and might even cause segfaults
 			if(!descriptor->tlsSession) ::shutdown(descriptor->descriptor, 0);
 			::close(descriptor->descriptor);
 			if(descriptor->tlsSession) gnutls_deinit(descriptor->tlsSession);

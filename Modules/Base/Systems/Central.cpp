@@ -51,23 +51,35 @@ int32_t Central::physicalAddress()
 }
 
 //RPC methods
-std::shared_ptr<RPC::RPCVariable> Central::getAllValues(bool returnWriteOnly)
+std::shared_ptr<RPC::RPCVariable> Central::getAllValues(uint64_t peerID, bool returnWriteOnly)
 {
 	try
 	{
 		std::shared_ptr<RPC::RPCVariable> array(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
 
-		std::vector<std::shared_ptr<Peer>> peers;
-		//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
-		_me->getPeers(peers);
-
-		for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+		if(peerID > 0)
 		{
-			//getAllValues really needs a lot of resources, so wait a little bit after each device
-			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<RPC::RPCVariable> values = (*i)->getAllValues(returnWriteOnly);
-			if(!values || values->errorStruct) continue;
+			std::shared_ptr<Peer> peer = _me->getPeer(peerID);
+			if(!peer) return RPC::RPCVariable::createError(-2, "Unknown device.");
+			std::shared_ptr<RPC::RPCVariable> values = peer->getAllValues(returnWriteOnly);
+			if(!values) return RPC::RPCVariable::createError(-32500, "Unknown application error. Values is nullptr.");
+			if(values->errorStruct) return values;
 			array->arrayValue->push_back(values);
+		}
+		else
+		{
+			std::vector<std::shared_ptr<Peer>> peers;
+			//Copy all peers first, because listDevices takes very long and we don't want to lock _peersMutex too long
+			_me->getPeers(peers);
+
+			for(std::vector<std::shared_ptr<Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
+			{
+				//getAllValues really needs a lot of resources, so wait a little bit after each device
+				std::this_thread::sleep_for(std::chrono::milliseconds(3));
+				std::shared_ptr<RPC::RPCVariable> values = (*i)->getAllValues(returnWriteOnly);
+				if(!values || values->errorStruct) continue;
+				array->arrayValue->push_back(values);
+			}
 		}
 
 		return array;
