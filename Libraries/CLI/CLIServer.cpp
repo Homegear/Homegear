@@ -161,8 +161,16 @@ std::shared_ptr<BaseLib::FileDescriptor> Server::getClientFileDescriptor()
 		timeout.tv_usec = 0;
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
+		GD::bl->fileDescriptorManager.lock();
+		int32_t nfds = _serverFileDescriptor->descriptor + 1;
 		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-		if(!select(_serverFileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout)) return descriptor;
+		GD::bl->fileDescriptorManager.unlock();
+		if(nfds <= 0)
+		{
+			GD::out.printError("Error: CLI server socket descriptor is invalid.");
+			return descriptor;
+		}
+		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout)) return descriptor;
 
 		sockaddr_un clientAddress;
 		socklen_t addressSize = sizeof(addressSize);
@@ -306,16 +314,24 @@ void Server::readClient(std::shared_ptr<ClientData> clientData)
 			timeout.tv_usec = 0;
 			fd_set readFileDescriptor;
 			FD_ZERO(&readFileDescriptor);
+			GD::bl->fileDescriptorManager.lock();
+			int32_t nfds = clientData->fileDescriptor->descriptor + 1;
 			FD_SET(clientData->fileDescriptor->descriptor, &readFileDescriptor);
-			bytesRead = select(clientData->fileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+			GD::bl->fileDescriptorManager.unlock();
+			if(nfds <= 0)
+			{
+				removeClientData(clientData->id);
+				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
+				GD::bl->fileDescriptorManager.close(clientData->fileDescriptor);
+				return;
+			}
+			bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 			if(bytesRead == 0) continue;
 			if(bytesRead != 1)
 			{
 				removeClientData(clientData->id);
 				GD::out.printDebug("Connection to client number " + std::to_string(clientData->fileDescriptor->descriptor) + " closed.");
 				GD::bl->fileDescriptorManager.close(clientData->fileDescriptor);
-				//If we close the socket, the socket file gets deleted. We don't want that
-				//GD::bl->fileDescriptorManager.close(_serverFileDescriptor);
 				return;
 			}
 

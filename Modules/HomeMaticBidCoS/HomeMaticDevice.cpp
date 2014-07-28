@@ -876,6 +876,7 @@ void HomeMaticDevice::savePeers(bool full)
 	try
 	{
 		_peersMutex.lock();
+		//Don't change this to _peersByID, because then teams would be saved!
 		for(std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
 		{
 			//Necessary, because peers can be assigned to multiple virtual devices
@@ -1122,23 +1123,20 @@ void HomeMaticDevice::reset()
 		_justPairedToOrThroughCentral = false;
 		_peersMutex.lock();
 		_peers.clear();
-		_peersMutex.unlock();
     }
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
 }
 
 void HomeMaticDevice::handlePairingRequest(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)
@@ -1163,22 +1161,21 @@ void HomeMaticDevice::handlePairingRequest(int32_t messageCounter, std::shared_p
 			_pairing = false;
 			sendOK(messageCounter, packet->senderAddress());
 		}
+		return;
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    _peersMutex.unlock();
 }
 
 void HomeMaticDevice::handleWakeUp(int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet)

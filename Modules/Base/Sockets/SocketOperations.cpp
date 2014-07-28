@@ -129,6 +129,7 @@ void SocketOperations::close()
 int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 {
 	_bl->out.printDebug("Debug: Calling proofread...", 6);
+	if(!_socketDescriptor) throw SocketOperationException("Socket descriptor is nullptr.");
 	if(!connected()) autoConnect();
 	//Timeout needs to be set every time, so don't put it outside of the while loop
 	timeval timeout;
@@ -137,8 +138,12 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	timeout.tv_usec = _readTimeout - (1000000 * seconds);
 	fd_set readFileDescriptor;
 	FD_ZERO(&readFileDescriptor);
+	_bl->fileDescriptorManager.lock();
+	int32_t nfds = _socketDescriptor->descriptor + 1;
 	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
-	int32_t bytesRead = select(_socketDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+	_bl->fileDescriptorManager.unlock();
+	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+	int32_t bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead == 0) throw SocketTimeOutException("Reading from socket timed out.");
 	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
 	bytesRead = _socketDescriptor->tlsSession ? gnutls_record_recv(_socketDescriptor->tlsSession, buffer, bufferSize) : read(_socketDescriptor->descriptor, buffer, bufferSize);
@@ -155,7 +160,9 @@ int32_t SocketOperations::proofwrite(const std::shared_ptr<std::vector<char>> da
 
 int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 {
+
 	_bl->out.printDebug("Debug: Calling proofwrite ...", 6);
+	if(!_socketDescriptor) throw SocketOperationException("Socket descriptor is nullptr.");
 	if(!connected()) autoConnect();
 	if(data.empty()) return 0;
 	if(data.size() > 104857600) throw SocketDataLimitException("Data size is larger than 100MB.");
@@ -169,8 +176,12 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 		timeout.tv_usec = 0;
 		fd_set writeFileDescriptor;
 		FD_ZERO(&writeFileDescriptor);
+		_bl->fileDescriptorManager.lock();
+		int32_t nfds = _socketDescriptor->descriptor + 1;
 		FD_SET(_socketDescriptor->descriptor, &writeFileDescriptor);
-		int32_t readyFds = select(_socketDescriptor->descriptor + 1, NULL, &writeFileDescriptor, NULL, &timeout);
+		_bl->fileDescriptorManager.unlock();
+		if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+		int32_t readyFds = select(nfds, NULL, &writeFileDescriptor, NULL, &timeout);
 		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
 		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
 
@@ -310,13 +321,18 @@ void SocketOperations::getSSL()
 
 bool SocketOperations::waitForSocket()
 {
+	if(!_socketDescriptor) throw SocketOperationException("Socket descriptor is nullptr.");
 	timeval timeout;
 	timeout.tv_sec = 10;
 	timeout.tv_usec = 0;
 	fd_set readFileDescriptor;
 	FD_ZERO(&readFileDescriptor);
+	_bl->fileDescriptorManager.lock();
+	int32_t nfds = _socketDescriptor->descriptor + 1;
 	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
-	int32_t bytesRead = select(_socketDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout);
+	_bl->fileDescriptorManager.unlock();
+	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+	int32_t bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead != 1) return false;
 	return true;
 }

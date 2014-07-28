@@ -269,7 +269,6 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
 	{
 		removeClient(client->id);
 		GD::bl->fileDescriptorManager.close(client->socketDescriptor);
-		return;
 	}
 	catch(const std::exception& ex)
     {
@@ -283,7 +282,6 @@ void RPCServer::closeClientConnection(std::shared_ptr<Client> client)
     {
     	_out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    GD::bl->fileDescriptorManager.unlock();
 }
 
 void RPCServer::mainThread()
@@ -902,8 +900,16 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()
 		timeout.tv_usec = 0;
 		fd_set readFileDescriptor;
 		FD_ZERO(&readFileDescriptor);
+		GD::bl->fileDescriptorManager.lock();
+		int32_t nfds = _serverFileDescriptor->descriptor + 1;
 		FD_SET(_serverFileDescriptor->descriptor, &readFileDescriptor);
-		if(!select(_serverFileDescriptor->descriptor + 1, &readFileDescriptor, NULL, NULL, &timeout)) return fileDescriptor;
+		GD::bl->fileDescriptorManager.unlock();
+		if(nfds <= 0)
+		{
+			GD::out.printError("Error: Server file descriptor is invalid.");
+			return fileDescriptor;
+		}
+		if(!select(nfds, &readFileDescriptor, NULL, NULL, &timeout)) return fileDescriptor;
 
 		struct sockaddr_storage clientInfo;
 		socklen_t addressSize = sizeof(addressSize);

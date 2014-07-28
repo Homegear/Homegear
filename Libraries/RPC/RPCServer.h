@@ -107,7 +107,7 @@ namespace RPC
 			std::thread _mainThread;
 			int32_t _backlog = 10;
 			std::shared_ptr<BaseLib::FileDescriptor> _serverFileDescriptor;
-			int32_t _maxConnections = 100;
+			int32_t _maxConnections = 50;
 			std::mutex _stateMutex;
 			std::map<int32_t, std::shared_ptr<Client>> _clients;
 			std::shared_ptr<std::map<std::string, std::shared_ptr<RPCMethod>>> _rpcMethods;

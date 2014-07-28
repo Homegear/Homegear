@@ -2553,6 +2553,7 @@ void HomeMaticCentral::resetTeam(std::shared_ptr<BidCoSPeer> peer, uint32_t chan
 		else team = getPeer('*' + peer->getSerialNumber());
 		_peersMutex.unlock();
 		peer->setTeamRemoteAddress(team->getAddress());
+		peer->setTeamRemoteID(team->getID());
 		peer->setTeamRemoteSerialNumber(team->getSerialNumber());
 		peer->setTeamChannel(channel);
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator j = team->rpcDevice->channels.begin(); j != team->rpcDevice->channels.end(); ++j)
@@ -2599,6 +2600,7 @@ void HomeMaticCentral::addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t c
 			peer->setTeamRemoteAddress(teamAddress);
 			peer->setTeamChannel(channel);
 			peer->setTeamRemoteChannel(teamChannel);
+			peer->setTeamRemoteID(0);
 			peer->setTeamRemoteSerialNumber("");
 		}
 	}
@@ -2620,20 +2622,15 @@ void HomeMaticCentral::addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t c
 {
 	try
 	{
-		_peersMutex.lock();
-		if(_peersBySerial.find(teamSerialNumber) == _peersBySerial.end() || !_peersBySerial.at(teamSerialNumber))
-		{
-			_peersMutex.unlock();
-			return;
-		}
 		std::shared_ptr<BidCoSPeer> team = getPeer(teamSerialNumber);
-		_peersMutex.unlock();
+		if(!team) return;
 		if(team->rpcDevice->channels.find(teamChannel) == team->rpcDevice->channels.end()) return;
 		if(team->rpcDevice->channels[teamChannel]->teamTag != peer->rpcDevice->channels[channel]->teamTag) return;
 
 		removePeerFromTeam(peer);
 
 		peer->setTeamRemoteAddress(team->getAddress());
+		peer->setTeamRemoteID(team->getID());
 		peer->setTeamRemoteSerialNumber(teamSerialNumber);
 		peer->setTeamChannel(channel);
 		peer->setTeamRemoteChannel(teamChannel);
@@ -2641,17 +2638,14 @@ void HomeMaticCentral::addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t c
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -2660,14 +2654,7 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer)
 {
 	try
 	{
-		_peersMutex.lock();
-		if(peer->getTeamRemoteSerialNumber().empty() || _peersBySerial.find(peer->getTeamRemoteSerialNumber()) == _peersBySerial.end())
-		{
-			_peersMutex.unlock();
-			return;
-		}
 		std::shared_ptr<BidCoSPeer> oldTeam = getPeer(peer->getTeamRemoteSerialNumber());
-		_peersMutex.unlock();
 		//Remove peer from old team
 		for(std::vector<std::pair<std::string, uint32_t>>::iterator i = oldTeam->teamChannels.begin(); i != oldTeam->teamChannels.end(); ++i)
 		{
@@ -2681,27 +2668,41 @@ void HomeMaticCentral::removePeerFromTeam(std::shared_ptr<BidCoSPeer> peer)
 		if(oldTeam->teamChannels.empty())
 		{
 			_peersMutex.lock();
-			_peersBySerial.erase(oldTeam->getSerialNumber());
-			_peersByID.erase(oldTeam->getID());
+			try
+			{
+				_peersBySerial.erase(oldTeam->getSerialNumber());
+				_peersByID.erase(oldTeam->getID());
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
 			_peersMutex.unlock();
 		}
 		peer->setTeamRemoteSerialNumber("");
+		peer->setTeamRemoteID(0);
 		peer->setTeamRemoteAddress(0);
 		peer->setTeamRemoteChannel(0);
+		return;
 	}
 	catch(const std::exception& ex)
     {
-		_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
@@ -3582,7 +3583,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t pe
 				//Team already is default
 				return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 			}
-
 			int32_t newChannel = -1;
 			//Get first channel which has a team
 			for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
@@ -3594,7 +3594,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::setTeam(uint64_t pe
 				}
 			}
 			if(newChannel < 0) return BaseLib::RPC::RPCVariable::createError(-6, "There are no team channels for this device.");
-
 			resetTeam(peer, newChannel);
 		}
 		else //Set new team
@@ -3760,14 +3759,17 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HomeMaticCentral::getDeviceInfo(uint6
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _peersMutex.unlock();
     }
     catch(BaseLib::Exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        _peersMutex.unlock();
     }
     catch(...)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        _peersMutex.unlock();
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }

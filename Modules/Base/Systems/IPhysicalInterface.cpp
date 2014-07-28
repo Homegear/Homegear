@@ -98,6 +98,13 @@ void IPhysicalInterface::raisePacketReceivedThread(std::shared_ptr<Packet> packe
 {
 	try
 	{
+		if(_threadCounter > 10) _bl->out.printWarning("Warning: More than ten packets are queued to be processed. Your packet processing is too slow.");
+		if(_threadCounter > 20)
+		{
+			_bl->out.printError("Error: More than 20 packets are queued to be processed. Your packet processing is too slow. Dropping packet.");
+			return;
+		}
+		_threadCounter++;
 		std::vector<IPhysicalInterfaceEventSink*> eventHandlers;
 		_eventHandlerMutex.lock();
 		//We need to copy all elements. In packetReceived so much can happen, that _homeMaticDevicesMutex might deadlock
@@ -114,20 +121,19 @@ void IPhysicalInterface::raisePacketReceivedThread(std::shared_ptr<Packet> packe
 	}
     catch(const std::exception& ex)
     {
-    	_eventHandlerMutex.unlock();
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(Exception& ex)
     {
-    	_eventHandlerMutex.unlock();
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	_eventHandlerMutex.unlock();
+
         _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-
+    _eventHandlerMutex.unlock();
+    _threadCounter--;
 }
 
 void IPhysicalInterface::setDevicePermission(int32_t userID, int32_t groupID)

@@ -112,6 +112,8 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		void setTeamRemoteAddress(int32_t value) { _team.address = value; saveVariable(8, value); }
 		int32_t getTeamRemoteChannel() { return _team.channel; }
 		void setTeamRemoteChannel(int32_t value) { _team.channel = value; saveVariable(9, value); }
+		uint64_t getTeamRemoteID();
+		void setTeamRemoteID(uint64_t value) { _team.id = value; saveVariable(21, (int32_t)value); }
 		std::string getTeamRemoteSerialNumber() { return _team.serialNumber; }
 		void setTeamRemoteSerialNumber(std::string value) { _team.serialNumber = value; saveVariable(10, value); }
 		std::vector<uint8_t>& getTeamData() { return _team.data; }

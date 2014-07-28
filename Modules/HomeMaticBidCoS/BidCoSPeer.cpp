@@ -254,6 +254,32 @@ BidCoSPeer::~BidCoSPeer()
     }
 }
 
+uint64_t BidCoSPeer::getTeamRemoteID()
+{
+	try
+	{
+		if(_team.serialNumber.length() > 0 && _team.id == 0)
+		{
+			std::shared_ptr<BaseLib::Systems::Peer> peer = getCentral()->logicalDevice()->getPeer(_team.serialNumber);
+			if(peer) setTeamRemoteID(peer->getID());
+		}
+		return _team.id;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
+
 void BidCoSPeer::setAESKeyIndex(int32_t value)
 {
 	try
@@ -1110,6 +1136,7 @@ void BidCoSPeer::saveVariables()
 		}
 		saveVariable(19, _physicalInterfaceID);
 		saveVariable(20, (int32_t)_valuePending);
+		saveVariable(21, (int32_t)_team.id);
 	}
 	catch(const std::exception& ex)
     {
@@ -1312,6 +1339,9 @@ void BidCoSPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::sha
 				break;
 			case 20:
 				_valuePending = row->second.at(3)->intValue;
+				break;
+			case 21:
+				_team.id = row->second.at(3)->intValue;
 				break;
 			}
 		}
@@ -2205,7 +2235,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::getDeviceDescription(int3
 			if(!_team.serialNumber.empty() && rpcChannel->hasTeam)
 			{
 				if(fields.empty() || fields.find("TEAM") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TEAM", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(_team.serialNumber))));
-				if(fields.empty() || fields.find("TEAM_ID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TEAM_ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)_team.id))));
+				if(fields.empty() || fields.find("TEAM_ID") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TEAM_ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)getTeamRemoteID()))));
 				if(fields.empty() || fields.find("TEAM_CHANNEL") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TEAM_CHANNEL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)_team.channel))));
 
 				if(fields.empty() || fields.find("TEAM_TAG") != fields.end()) description->structValue->insert(BaseLib::RPC::RPCStructElement("TEAM_TAG", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(rpcChannel->teamTag))));

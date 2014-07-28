@@ -103,6 +103,7 @@ public:
 protected:
 	BaseLib::Obj* _bl = nullptr;
 	std::shared_ptr<PhysicalInterfaceSettings> _settings;
+	int32_t _threadCounter = 0;
 	std::thread _listenThread;
 	std::thread _callbackThread;
 	bool _stopCallbackThread;
