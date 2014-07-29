@@ -209,6 +209,7 @@ void RPCVariable::print()
 
 void RPCVariable::print(std::shared_ptr<RPCVariable> variable, std::string indent)
 {
+	if(!variable) return;
 	if(variable->type == RPCVariableType::rpcVoid)
 	{
 		std::cout << indent << "(void)" << std::endl;

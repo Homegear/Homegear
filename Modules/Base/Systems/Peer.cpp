@@ -279,11 +279,7 @@ void Peer::setID(uint64_t id)
 	if(_peerID == 0)
 	{
 		_peerID = id;
-		if(serviceMessages)
-		{
-			serviceMessages->setPeerID(id);
-			serviceMessages->load();
-		}
+		if(serviceMessages) serviceMessages->setPeerID(id);
 	}
 	else _bl->out.printError("Cannot reset peer ID");
 }
@@ -468,7 +464,7 @@ void Peer::save(bool savePeer, bool variables, bool centralConfig)
 		{
 			_databaseMutex.lock();
 			uint64_t result = raiseSavePeer();
-			if(_peerID == 0) _peerID = result;
+			if(_peerID == 0 && result > 0) setID(result);
 			_databaseMutex.unlock();
 		}
 		if(variables) saveVariables();

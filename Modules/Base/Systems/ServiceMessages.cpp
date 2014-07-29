@@ -357,6 +357,7 @@ std::shared_ptr<RPC::RPCVariable> ServiceMessages::get(bool returnID)
 	try
 	{
 		std::shared_ptr<RPC::RPCVariable> serviceMessages(new RPC::RPCVariable(RPC::RPCVariableType::rpcArray));
+		if(returnID && _peerID == 0) return serviceMessages;
 		std::shared_ptr<RPC::RPCVariable> array;
 		if(_unreach)
 		{

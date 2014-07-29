@@ -88,8 +88,8 @@ void EventHandler::mainThread()
 				else if(event->recurEvery > 0)
 				{
 					uint64_t nextExecution = getNextExecution(event->eventTime, event->recurEvery);
-					GD::out.printInfo("Info: Next execution for event " + event->name + ": " + std::to_string(nextExecution));
 					_eventsMutex.lock();
+					GD::out.printInfo("Info: Next execution for event " + event->name + ": " + std::to_string(nextExecution));
 					//We don't call removeTimedEvents here, so we don't need to release the lock. Otherwise there is the possibility that the event
 					//is recreated after being deleted.
 					for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
@@ -109,8 +109,8 @@ void EventHandler::mainThread()
 			else if(!_eventsToReset.empty() && _eventsToReset.begin()->first <= currentTime)
 			{
 				std::shared_ptr<Event> event = _eventsToReset.begin()->second;
-				GD::out.printInfo("Info: Resetting event " + event->name + ".");
 				_eventsMutex.unlock();
+				GD::out.printInfo("Info: Resetting event " + event->name + ".");
 				std::shared_ptr<BaseLib::RPC::RPCVariable> result;
 				if(event->enabled) result = GD::rpcServers.begin()->second.callMethod(event->resetMethod, event->resetMethodParameters);
 				if(result && result->errorStruct)
