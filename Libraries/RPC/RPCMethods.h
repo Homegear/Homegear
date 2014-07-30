@@ -265,6 +265,16 @@ public:
 	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
 };
 
+class RPCGetEvent : public RPCMethod
+{
+public:
+	RPCGetEvent()
+	{
+		addSignature(BaseLib::RPC::RPCVariableType::rpcVoid, std::vector<BaseLib::RPC::RPCVariableType>{BaseLib::RPC::RPCVariableType::rpcString});
+	}
+	std::shared_ptr<BaseLib::RPC::RPCVariable> invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters);
+};
+
 class RPCGetInstallMode : public RPCMethod
 {
 public:

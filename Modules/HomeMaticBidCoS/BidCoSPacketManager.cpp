@@ -150,11 +150,11 @@ void BidCoSPacketManager::worker()
     }
 }
 
-void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& packet, int64_t time)
+bool BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& packet, int64_t time)
 {
 	try
 	{
-		if(_disposing) return;
+		if(_disposing) return false;
 		_packetMutex.lock();
 		if(_packets.find(address) != _packets.end())
 		{
@@ -162,7 +162,7 @@ void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& pa
 			if(oldPacket->equals(packet))
 			{
 				_packetMutex.unlock();
-				return;
+				return true;
 			}
 			_packets.erase(_packets.find(address));
 		}
@@ -188,6 +188,7 @@ void BidCoSPacketManager::set(int32_t address, std::shared_ptr<BidCoSPacket>& pa
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _packetMutex.unlock();
+    return false;
 }
 
 void BidCoSPacketManager::deletePacket(int32_t address, uint32_t id)

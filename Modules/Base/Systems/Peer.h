@@ -155,9 +155,9 @@ public:
 
 	//In table variables:
 	virtual int32_t getFirmwareVersion() { return _firmwareVersion; }
-	virtual void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
+	virtual void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(1001, value); }
 	virtual LogicalDeviceType getDeviceType() { return _deviceType; }
-	virtual void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(3, (int32_t)_deviceType.type()); }
+	virtual void setDeviceType(LogicalDeviceType value) { _deviceType = value; saveVariable(1002, (int32_t)_deviceType.type()); }
     virtual std::string getName() { return _name; }
 	virtual void setName(std::string value) { _name = value; saveVariable(1000, _name); }
     //End
@@ -213,7 +213,7 @@ public:
     virtual std::shared_ptr<RPC::RPCVariable> getServiceMessages(bool returnID);
     virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getValue(uint32_t channel, std::string valueKey);
     virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> variables, bool onlyPushing = false) = 0;
-	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value) = 0;
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value);
     //End RPC methods
 protected:
     BaseLib::Obj* _bl = nullptr;

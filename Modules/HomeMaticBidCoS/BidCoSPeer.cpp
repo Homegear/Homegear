@@ -2876,6 +2876,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::setValue(uint32_t channel
 {
 	try
 	{
+		Peer::setValue(channel, valueKey, value); //Ignore result, otherwise setHomegerValue might not be executed
 		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return BaseLib::RPC::RPCVariable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return BaseLib::RPC::RPCVariable::createError(-5, "Value key is empty.");

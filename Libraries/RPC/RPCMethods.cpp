@@ -879,6 +879,30 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetDeviceInfo::invoke(std::shared_
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error. Check the address format.");
 }
 
+std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetEvent::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
+{
+	try
+	{
+		ParameterError::Enum error = checkParameters(parameters, std::vector<BaseLib::RPC::RPCVariableType>({ BaseLib::RPC::RPCVariableType::rpcString }));
+		if(error != ParameterError::Enum::noError) return getError(error);
+
+		return GD::eventHandler.get(parameters->at(0)->stringValue);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> RPCGetInstallMode::invoke(std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> parameters)
 {
 	try

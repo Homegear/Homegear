@@ -1,34 +1,54 @@
 #!/bin/bash
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-rm -Rf /tmp/HomegearDeviceFirmware
-[ $? -ne 0 ] && exit 1
-mkdir /tmp/HomegearDeviceFirmware
-[ $? -ne 0 ] && exit 1
-wget -P /tmp/HomegearDeviceFirmware/ http://www.eq-3.de/Downloads/Software/HM-CCU2-Firmware_Updates/HM-CCU2-2.7.17/HM-CCU2-2.7.17.tar.gz
-[ $? -ne 0 ] && exit 1
-tar -zxf /tmp/HomegearDeviceFirmware/HM-CCU2-2.7.17.tar.gz -C /tmp/HomegearDeviceFirmware
-[ $? -ne 0 ] && exit 1
+FIRMWAREDIR=/tmp/HomegearTemp/rootfs/rootfs.ubi/1045862938/root/firmware
 
-echo "Downloading UBI Reader..."
-echo "(C) 2013 Jason Pruitt (Jason Pruitt), see https://github.com/jrspruitt/ubi_reader"
-wget -P /tmp/HomegearDeviceFirmware/ https://github.com/jrspruitt/ubi_reader/archive/v2_ui.tar.gz
-[ $? -ne 0 ] && exit 1
-tar -zxf /tmp/HomegearDeviceFirmware/v2_ui.tar.gz -C /tmp/HomegearDeviceFirmware
-[ $? -ne 0 ] && exit 1
+if test ! -d $FIRMWAREDIR; then
+	rm -Rf /tmp/HomegearTemp
+	[ $? -ne 0 ] && exit 1
+	mkdir /tmp/HomegearTemp
+	[ $? -ne 0 ] && exit 1
+	wget -P /tmp/HomegearTemp/ http://www.eq-3.de/Downloads/Software/HM-CCU2-Firmware_Updates/HM-CCU2-2.9.10/HM-CCU-2.9.10.tar.gz
+	[ $? -ne 0 ] && exit 1
+	tar -zxf /tmp/HomegearTemp/HM-CCU-2.9.10.tar.gz -C /tmp/HomegearTemp
+	[ $? -ne 0 ] && exit 1
+	rm -f /tmp/HomegearTemp/HM-CCU-2.9.10.tar.gz
+	
+	echo "Downloading UBI Reader..."
+	echo "(C) 2013 Jason Pruitt (Jason Pruitt), see https://github.com/jrspruitt/ubi_reader"
+	wget -P /tmp/HomegearTemp/ https://github.com/jrspruitt/ubi_reader/archive/v2_ui.tar.gz
+	[ $? -ne 0 ] && exit 1
+	tar -zxf /tmp/HomegearTemp/v2_ui.tar.gz -C /tmp/HomegearTemp
+	[ $? -ne 0 ] && exit 1
+	
+	/tmp/HomegearTemp/ubi_reader-2_ui/extract_files.py -o /tmp/HomegearTemp/rootfs /tmp/HomegearTemp/rootfs.ubi
+	[ $? -ne 0 ] && exit 1
+fi
 
-/tmp/HomegearDeviceFirmware/ubi_reader-2_ui/extract_files.py -o /tmp/HomegearDeviceFirmware/rootfs /tmp/HomegearDeviceFirmware/rootfs.ubi
+wget -P $FIRMWAREDIR http://www.eq-3.de/Downloads/Software/Firmware/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz
 [ $? -ne 0 ] && exit 1
-
-FIRMWAREDIR=/tmp/HomegearDeviceFirmware/rootfs/rootfs.ubi/1641085602/root/firmware
+tar -zxf $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz -C $FIRMWAREDIR
+[ $? -ne 0 ] && exit 1
+mv $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.eq3 $SCRIPTDIR/0000.00000022.fw
+[ $? -ne 0 ] && exit 1
+rm $FIRMWAREDIR/HM-LC-Bl1PBU-FM_update_V2_3_0002_131204.tgz
+rm $FIRMWAREDIR/changelog.txt
+rm $FIRMWAREDIR/info
+echo "23" > $SCRIPTDIR/0000.00000022.version
+[ $? -ne 0 ] && exit 1
 
 mv $FIRMWAREDIR/hm-cc-rt-dn_update.eq3 $SCRIPTDIR/0000.00000095.fw
 [ $? -ne 0 ] && exit 1
-echo "12" > $SCRIPTDIR/0000.00000095.version
+echo "13" > $SCRIPTDIR/0000.00000095.version
 [ $? -ne 0 ] && exit 1
 
 mv $FIRMWAREDIR/hm-sen-rd-o_update.eq3 $SCRIPTDIR/0000.000000A7.fw
 [ $? -ne 0 ] && exit 1
 echo "14" > $SCRIPTDIR/0000.000000A7.version
+[ $? -ne 0 ] && exit 1
+
+mv $FIRMWAREDIR/hm-tc-it-wm-w-eu_update.eq3 $SCRIPTDIR/0000.000000AD.fw
+[ $? -ne 0 ] && exit 1
+echo "11" > $SCRIPTDIR/0000.000000AD.version
 [ $? -ne 0 ] && exit 1
 
 mv $FIRMWAREDIR/hmw_io_4_fm_hw0.hex $SCRIPTDIR/0001.00001000.fw
@@ -81,8 +101,7 @@ mv $FIRMWAREDIR/hmw_io12_sw14_dr_hw0.hex $SCRIPTDIR/0001.00001C00.fw
 echo "0100" > $SCRIPTDIR/0001.00001C00.version
 [ $? -ne 0 ] && exit 1
 
-rm -Rf /tmp/HomegearDeviceFirmware
-
+rm -Rf /tmp/HomegearTemp
 
 chown homegear:homegear $SCRIPTDIR/*.fw
 chown homegear:homegear $SCRIPTDIR/*.version

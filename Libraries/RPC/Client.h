@@ -58,8 +58,11 @@ public:
 	void systemListMethods(std::pair<std::string, std::string> address);
 	void listDevices(std::pair<std::string, std::string> address);
 	void broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions);
+	void broadcastNewEvent(std::shared_ptr<BaseLib::RPC::RPCVariable> eventDescription);
 	void broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses, std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo);
+	void broadcastDeleteEvent(std::string id);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
+	void broadcastUpdateEvent(std::string id);
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
 	std::shared_ptr<RemoteRPCServer> addServer(std::pair<std::string, std::string> address, std::string path, std::string id);
 	void removeServer(std::pair<std::string, std::string> address);

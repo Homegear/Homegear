@@ -1359,7 +1359,7 @@ void HomeMaticCentral::updateFirmware(uint64_t id, bool manual)
 		GD::out.printInfo("Info: Peer " + std::to_string(id) + " was successfully updated to firmware version " + versionString + ".");
 		GD::out.printInfo("Info: Disabling update mode.");
 		physicalInterface->disableUpdateMode();
-		if(peer) peer->setPhysicalInterfaceID(oldPhysicalInterfaceID);
+		peer->setPhysicalInterfaceID(oldPhysicalInterfaceID);
 		_updateMutex.unlock();
 		_updateMode = false;
 		std::this_thread::sleep_for(std::chrono::milliseconds(7000));

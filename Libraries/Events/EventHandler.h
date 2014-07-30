@@ -96,6 +96,7 @@ public:
 	void init();
 	void load();
 	std::shared_ptr<BaseLib::RPC::RPCVariable> add(std::shared_ptr<BaseLib::RPC::RPCVariable> eventDescription);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> get(std::string name);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> remove(std::string name);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> list(int32_t type, uint64_t peerID, int32_t peerChannel, std::string variable);
 	std::shared_ptr<BaseLib::RPC::RPCVariable> enable(std::string name, bool enabled);
@@ -125,8 +126,10 @@ protected:
 	void removeEventToReset(uint32_t id);
 	void removeTimeToReset(uint32_t id);
 	void removeTimedEvent(uint32_t id);
+	std::shared_ptr<BaseLib::RPC::RPCVariable> getEventDescription(std::shared_ptr<Event> event);
 	bool eventExists(uint32_t id);
 	bool eventExists(std::string name);
+	std::shared_ptr<Event> getEvent(std::string name);
 	void save(std::shared_ptr<Event>);
 	void postTriggerTasks(std::shared_ptr<Event>& event, std::shared_ptr<BaseLib::RPC::RPCVariable>& rpcResult, uint64_t currentTime);
 };

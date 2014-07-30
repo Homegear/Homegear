@@ -73,7 +73,7 @@ case $1 in
 				chmod 550 $DBPATH/firmware/GetFirmwareUpdates.sh
 				chmod -R 550 $DBPATH/modules
 				
-				if test ! -d $LOGPATH; then 
+				if test ! -d $LOGPATH; then
 					mkdir -p $LOGPATH
 				fi
 				chown -R $RUNASUSER:$RUNASGROUP $LOGPATH

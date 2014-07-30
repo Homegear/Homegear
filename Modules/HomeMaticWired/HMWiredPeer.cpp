@@ -2181,6 +2181,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredPeer::setValue(uint32_t channe
 {
 	try
 	{
+		Peer::setValue(channel, valueKey, value);
 		if(_disposing) return BaseLib::RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		if(!_centralFeatures) return BaseLib::RPC::RPCVariable::createError(-2, "Not a central peer.");
 		if(valueKey.empty()) return BaseLib::RPC::RPCVariable::createError(-5, "Value key is empty.");

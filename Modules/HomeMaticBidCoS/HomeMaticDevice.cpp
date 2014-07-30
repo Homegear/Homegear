@@ -952,7 +952,7 @@ bool HomeMaticDevice::onPacketReceived(std::string& senderID, std::shared_ptr<Ba
 			//Packet we sent was received by another interface
 			return true;
 		}
-		_receivedPackets.set(bidCoSPacket->senderAddress(), bidCoSPacket, bidCoSPacket->timeReceived());
+		if(_receivedPackets.set(bidCoSPacket->senderAddress(), bidCoSPacket, bidCoSPacket->timeReceived())) return true;
 		std::shared_ptr<BidCoSMessage> message = _messages->find(DIRECTIONIN, bidCoSPacket);
 		if(message && message->checkAccess(bidCoSPacket, _bidCoSQueueManager.get(bidCoSPacket->senderAddress())))
 		{

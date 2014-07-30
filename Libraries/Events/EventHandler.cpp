@@ -103,6 +103,7 @@ void EventHandler::mainThread()
 					while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
 					_timedEvents[nextExecution] = event;
 					_eventsMutex.unlock();
+					GD::rpcClient.broadcastUpdateEvent(event->name);
 				}
 				else removeTimedEvent(event->id);
 			}
@@ -121,6 +122,7 @@ void EventHandler::mainThread()
 				removeEventToReset(event->id);
 				event->lastReset = currentTime;
 				save(event);
+				GD::rpcClient.broadcastUpdateEvent(event->name);
 			}
 			else if(!_timesToReset.empty() && _timesToReset.begin()->first <= currentTime)
 			{
@@ -131,6 +133,7 @@ void EventHandler::mainThread()
 				event->lastReset = currentTime;
 				event->currentTime = 0;
 				save(event);
+				GD::rpcClient.broadcastUpdateEvent(event->name);
 			}
 			else
 			{
@@ -266,6 +269,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::add(std::shared_ptr<Bas
 			_mainThreadMutex.unlock();
 		}
 		save(event);
+		GD::rpcClient.broadcastNewEvent(get(event->name));
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -334,60 +338,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::list(int32_t type, uint
 		{
 			//listEvents really needs a lot of resources, so wait a little bit after each event
 			std::this_thread::sleep_for(std::chrono::milliseconds(3));
-			std::shared_ptr<BaseLib::RPC::RPCVariable> event(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-
-			if((*i)->type == Event::Type::timed)
-			{
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)(*i)->type))));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->name))));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("ENABLED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->enabled))));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTTIME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->eventTime / 1000)))));
-				if((*i)->recurEvery > 0)
-				{
-					event->structValue->insert(BaseLib::RPC::RPCStructElement("RECUREVERY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->recurEvery / 1000)))));
-					if((*i)->endTime > 0) event->structValue->insert(BaseLib::RPC::RPCStructElement("ENDTIME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->endTime / 1000)))));
-				}
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTMETHOD", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->eventMethod))));
-				if((*i)->eventMethodParameters) event->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTMETHODPARAMS", (*i)->eventMethodParameters));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("LASTRAISED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->lastRaised / 1000)))));
-			}
-			else
-			{
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)(*i)->type))));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->name))));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("ENABLED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->enabled))));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("PEERID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(*i)->peerID))));
-				if((*i)->peerChannel > -1) event->structValue->insert(BaseLib::RPC::RPCStructElement("PEERCHANNEL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->peerChannel))));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("VARIABLE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->variable))));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("TRIGGER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)(*i)->trigger))));
-				if((*i)->triggerValue) event->structValue->insert(BaseLib::RPC::RPCStructElement("TRIGGERVALUE", (*i)->triggerValue));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTMETHOD", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->eventMethod))));
-				if((*i)->eventMethodParameters) event->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTMETHODPARAMS", (*i)->eventMethodParameters));
-				if((*i)->resetAfter > 0 || (*i)->initialTime > 0)
-				{
-					if((*i)->initialTime > 0)
-					{
-						std::shared_ptr<BaseLib::RPC::RPCVariable> resetStruct(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
-
-						resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("INITIALTIME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->initialTime / 1000)))));
-						resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("RESETAFTER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->resetAfter / 1000)))));
-						resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("OPERATION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)(*i)->operation))));
-						resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("FACTOR", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->factor))));
-						resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("LIMIT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->limit / 1000)))));
-						resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("CURRENTTIME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->currentTime == 0 ? (uint32_t)((*i)->initialTime / 1000) : (uint32_t)((*i)->currentTime / 1000)))));
-
-						event->structValue->insert(BaseLib::RPC::RPCStructElement("RESETAFTER", resetStruct));
-					}
-					else event->structValue->insert(BaseLib::RPC::RPCStructElement("RESETAFTER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->resetAfter / 1000)))));
-					event->structValue->insert(BaseLib::RPC::RPCStructElement("RESETMETHOD", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((*i)->resetMethod))));
-					if((*i)->eventMethodParameters) event->structValue->insert(BaseLib::RPC::RPCStructElement("RESETMETHODPARAMS", (*i)->resetMethodParameters));
-					event->structValue->insert(BaseLib::RPC::RPCStructElement("LASTRESET", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->lastReset / 1000)))));
-				}
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("LASTVALUE", (*i)->lastValue));
-				event->structValue->insert(BaseLib::RPC::RPCStructElement("LASTRAISED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)((*i)->lastRaised / 1000)))));
-			}
-
-			eventList->arrayValue->push_back(event);
+			std::shared_ptr<BaseLib::RPC::RPCVariable> event = getEventDescription(*i);
+			if(event && !event->errorStruct) eventList->arrayValue->push_back(event);
 		}
 		return eventList;
 	}
@@ -404,6 +356,103 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::list(int32_t type, uint
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _eventsMutex.unlock();
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::get(std::string name)
+{
+	try
+	{
+		std::shared_ptr<Event> event = getEvent(name);
+		if(!event) return BaseLib::RPC::RPCVariable::createError(-5, "Event not found.");
+		return getEventDescription(event);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventsMutex.unlock();
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::getEventDescription(std::shared_ptr<Event> event)
+{
+	try
+	{
+		if(!event) return BaseLib::RPC::RPCVariable::createError(-32500, "Event is nullptr.");
+		std::shared_ptr<BaseLib::RPC::RPCVariable> eventDescription(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		if(event->type == Event::Type::timed)
+		{
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)event->type))));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->name))));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("ENABLED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->enabled))));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTTIME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->eventTime / 1000)))));
+			if(event->recurEvery > 0)
+			{
+				eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("RECUREVERY", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->recurEvery / 1000)))));
+				if(event->endTime > 0) eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("ENDTIME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->endTime / 1000)))));
+			}
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTMETHOD", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->eventMethod))));
+			if(event->eventMethodParameters) eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTMETHODPARAMS", event->eventMethodParameters));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("LASTRAISED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->lastRaised / 1000)))));
+		}
+		else
+		{
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("TYPE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)event->type))));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->name))));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("ENABLED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->enabled))));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("PEERID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)event->peerID))));
+			if(event->peerChannel > -1) eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("PEERCHANNEL", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->peerChannel))));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("VARIABLE", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->variable))));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("TRIGGER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)event->trigger))));
+			if(event->triggerValue) eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("TRIGGERVALUE", event->triggerValue));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTMETHOD", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->eventMethod))));
+			if(event->eventMethodParameters) eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("EVENTMETHODPARAMS", event->eventMethodParameters));
+			if(event->resetAfter > 0 || event->initialTime > 0)
+			{
+				if(event->initialTime > 0)
+				{
+					std::shared_ptr<BaseLib::RPC::RPCVariable> resetStruct(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+
+					resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("INITIALTIME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->initialTime / 1000)))));
+					resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("RESETAFTER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->resetAfter / 1000)))));
+					resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("OPERATION", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)event->operation))));
+					resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("FACTOR", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->factor))));
+					resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("LIMIT", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->limit / 1000)))));
+					resetStruct->structValue->insert(BaseLib::RPC::RPCStructElement("CURRENTTIME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->currentTime == 0 ? (uint32_t)(event->initialTime / 1000) : (uint32_t)(event->currentTime / 1000)))));
+
+					eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("RESETAFTER", resetStruct));
+				}
+				else eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("RESETAFTER", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->resetAfter / 1000)))));
+				eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("RESETMETHOD", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(event->resetMethod))));
+				if(event->eventMethodParameters) eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("RESETMETHODPARAMS", event->resetMethodParameters));
+				eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("LASTRESET", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->lastReset / 1000)))));
+			}
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("LASTVALUE", event->lastValue));
+			eventDescription->structValue->insert(BaseLib::RPC::RPCStructElement("LASTRAISED", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((uint32_t)(event->lastRaised / 1000)))));
+		}
+		return eventDescription;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
@@ -457,6 +506,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::remove(std::string name
 		_databaseMutex.lock();
 		GD::db.deleteEvent(name);
 		_databaseMutex.unlock();
+		GD::rpcClient.broadcastDeleteEvent(name);
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -520,6 +570,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::enable(std::string name
 			removeEventToReset(event->id);
 		}
 		save(event);
+		GD::rpcClient.broadcastUpdateEvent(name);
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -763,6 +814,7 @@ void EventHandler::removeTimedEvent(uint32_t id)
 			{
 				_timedEvents.erase(i);
 				_eventsMutex.unlock();
+				GD::rpcClient.broadcastDeleteEvent(i->second->name);
 				return;
 			}
 		}
@@ -876,6 +928,53 @@ bool EventHandler::eventExists(std::string name)
     return false;
 }
 
+std::shared_ptr<Event> EventHandler::getEvent(std::string name)
+{
+	_eventsMutex.lock();
+	try
+	{
+		for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
+		{
+			if(i->second->name == name)
+			{
+				_eventsMutex.unlock();
+				return i->second;
+			}
+		}
+		for(std::map<uint64_t, std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>>::iterator peerID = _triggeredEvents.begin(); peerID != _triggeredEvents.end(); ++peerID)
+		{
+			for(std::map<int32_t, std::map<std::string, std::vector<std::shared_ptr<Event>>>>::iterator channel = peerID->second.begin(); channel != peerID->second.end(); ++channel)
+			{
+				for(std::map<std::string, std::vector<std::shared_ptr<Event>>>::iterator variable = channel->second.begin(); variable != channel->second.end(); ++variable)
+				{
+					for(std::vector<std::shared_ptr<Event>>::iterator event = variable->second.begin(); event != variable->second.end(); ++event)
+					{
+						if((*event)->name == name)
+						{
+							_eventsMutex.unlock();
+							return (*event);
+						}
+					}
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _eventsMutex.unlock();
+    return std::shared_ptr<Event>();
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::trigger(std::string name)
 {
 	try
@@ -920,6 +1019,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::trigger(std::string nam
 
 		postTriggerTasks(event, result, currentTime);
 
+		GD::rpcClient.broadcastUpdateEvent(name);
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -971,7 +1071,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 		for(std::vector<std::shared_ptr<Event>>::iterator i = events->begin(); i !=  events->end(); ++i)
 		{
 			//Don't raise the same event multiple times
-			if(!(*i)->enabled || ((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 5000)) continue;
+			if(!(*i)->enabled || ((*i)->lastValue && *((*i)->lastValue) == *value && currentTime - (*i)->lastRaised < 220)) continue;
 			triggeredEvents.push_back(*i);
 		}
 		_eventsMutex.unlock();
@@ -1102,6 +1202,8 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 				}
 			}
 			postTriggerTasks(*i, result, currentTime);
+
+			GD::rpcClient.broadcastUpdateEvent((*i)->name);
 		}
 	}
 	catch(const std::exception& ex)

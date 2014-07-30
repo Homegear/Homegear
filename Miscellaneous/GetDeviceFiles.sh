@@ -1,5 +1,10 @@
 #!/bin/bash
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+FIRMWAREDIR=/tmp/HomegearTemp/rootfs/rootfs.ubi/1045862938/root/firmware
+NODELETE=0
+if [ "$#" -eq "1" ] && [ "$1" -eq "1" ]; then
+    NODELETE=1
+fi
 #TMPDIR="/tmp"
 #FREESPACE=`df -P $TMPDIR | tail -1 | awk '{print $4}'`
 #if [[ "$FREESPACE" -lt 4000000 ]]; then
@@ -7,44 +12,55 @@ SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #        read TMPDIR;
 #fi
 #echo $TMPDIR;
-rm -Rf /tmp/HomegearDeviceTypes
+rm -Rf /tmp/HomegearTemp
 [ $? -ne 0 ] && exit 1
-mkdir /tmp/HomegearDeviceTypes
+mkdir /tmp/HomegearTemp
 [ $? -ne 0 ] && exit 1
-wget -P /tmp/HomegearDeviceTypes/ http://www.eq-3.de/Downloads/Software/HM-CCU1-Firmware_Updates/1.513/hm-ccu-1513a.zip
+wget -P /tmp/HomegearTemp/ http://www.eq-3.de/Downloads/Software/HM-CCU2-Firmware_Updates/HM-CCU2-2.9.10/HM-CCU-2.9.10.tar.gz
 [ $? -ne 0 ] && exit 1
-unzip -d /tmp/HomegearDeviceTypes /tmp/HomegearDeviceTypes/hm-ccu-1513a.zip hm-ccu-firmware-1.513.img
+tar -zxf /tmp/HomegearTemp/HM-CCU-2.9.10.tar.gz -C /tmp/HomegearTemp
 [ $? -ne 0 ] && exit 1
-tar -zxf /tmp/HomegearDeviceTypes/hm-ccu-firmware-1.513.img -C /tmp/HomegearDeviceTypes
+rm -f /tmp/HomegearTemp/HM-CCU-2.9.10.tar.gz
+
+echo "Downloading UBI Reader..."
+echo "(C) 2013 Jason Pruitt (Jason Pruitt), see https://github.com/jrspruitt/ubi_reader"
+wget -P /tmp/HomegearTemp/ https://github.com/jrspruitt/ubi_reader/archive/v2_ui.tar.gz
 [ $? -ne 0 ] && exit 1
-tar -zxf /tmp/HomegearDeviceTypes/root_fs.tar.gz -C /tmp/HomegearDeviceTypes
+tar -zxf /tmp/HomegearTemp/v2_ui.tar.gz -C /tmp/HomegearTemp
 [ $? -ne 0 ] && exit 1
-rm -f /tmp/HomegearDeviceTypes/firmware/rftypes/rf_cmm.xml
-rm -f /tmp/HomegearDeviceTypes/firmware/hs485types/hmw_central.xml
-rm -f /tmp/HomegearDeviceTypes/firmware/hs485types/hmw_generic.xml
-mv /tmp/HomegearDeviceTypes/firmware/hs485types/* /tmp/HomegearDeviceTypes/firmware/rftypes/
+
+/tmp/HomegearTemp/ubi_reader-2_ui/extract_files.py -o /tmp/HomegearTemp/rootfs /tmp/HomegearTemp/rootfs.ubi
 [ $? -ne 0 ] && exit 1
-for i in /tmp/HomegearDeviceTypes/firmware/rftypes/*.xml; do
+
+rm -f $FIRMWAREDIR/rftypes/rf_cmm.xml
+rm -f $FIRMWAREDIR/hs485types/hmw_central.xml
+rm -f $FIRMWAREDIR/hs485types/hmw_generic.xml
+mv $FIRMWAREDIR/hs485types/* $FIRMWAREDIR/rftypes/
+[ $? -ne 0 ] && exit 1
+for i in $FIRMWAREDIR/rftypes/*.xml; do
 	content=`cat $i`
 	echo $content | xmllint --noblanks - > $i
 	[ $? -ne 0 ] && exit 1
 done
-for i in /tmp/HomegearDeviceTypes/firmware/rftypes/*.xml; do
+for i in $FIRMWAREDIR/rftypes/*.xml; do
 	content=`cat $i`
 	echo $content | xmllint --format - > $i
 	[ $? -ne 0 ] && exit 1
 done
-patch -d /tmp/HomegearDeviceTypes/firmware/rftypes -p1 < $SCRIPTDIR/DeviceTypePatch.patch
+patch -d $FIRMWAREDIR/rftypes -p1 < $SCRIPTDIR/DeviceTypePatch.patch
 [ $? -ne 0 ] && exit 1
 mkdir -p /etc/homegear/devices/0
 [ $? -ne 0 ] && exit 1
 mkdir -p /etc/homegear/devices/1
 [ $? -ne 0 ] && exit 1
-mv /tmp/HomegearDeviceTypes/firmware/rftypes/rf_* /etc/homegear/devices/0
+mv $FIRMWAREDIR/rftypes/rf_* /etc/homegear/devices/0
 [ $? -ne 0 ] && exit 1
-mv /tmp/HomegearDeviceTypes/firmware/rftypes/hmw_* /etc/homegear/devices/1
+mv $FIRMWAREDIR/rftypes/hmw_* /etc/homegear/devices/1
 [ $? -ne 0 ] && exit 1
-rm -Rf /tmp/HomegearDeviceTypes
+
+if [ "$NODELETE" -eq "0" ]; then
+	rm -Rf /tmp/HomegearTemp
+fi
 chown -R root:root /etc/homegear/devices
 chmod 755 /etc/homegear/devices
 chmod 755 /etc/homegear/devices/0

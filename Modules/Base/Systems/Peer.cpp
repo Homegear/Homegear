@@ -2006,6 +2006,68 @@ std::shared_ptr<RPC::RPCVariable> Peer::setLinkInfo(int32_t senderChannel, uint6
 	}
 	return RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
+
+std::shared_ptr<RPC::RPCVariable> Peer::setValue(uint32_t channel, std::string valueKey, std::shared_ptr<RPC::RPCVariable> value)
+{
+	try
+	{
+		//Nothing to do, return to save ressources
+		if(value->stringValue.size() < 3) return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+
+		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
+		if(!_centralFeatures) return RPC::RPCVariable::createError(-2, "Not a central peer.");
+		if(valueKey.empty()) return BaseLib::RPC::RPCVariable::createError(-5, "Value key is empty.");
+		if(channel == 0 && serviceMessages->set(valueKey, value->booleanValue)) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		if(valuesCentral.find(channel) == valuesCentral.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown channel.");
+		if(valuesCentral[channel].find(valueKey) == valuesCentral[channel].end()) return BaseLib::RPC::RPCVariable::createError(-5, "Unknown parameter.");
+		RPCConfigurationParameter* parameter = &valuesCentral[channel][valueKey];
+		std::shared_ptr<BaseLib::RPC::Parameter> rpcParameter = parameter->rpcParameter;
+		if(!rpcParameter) return BaseLib::RPC::RPCVariable::createError(-5, "Unknown parameter.");
+		//Perform operation on value
+		if(value->stringValue.size() > 2 && value->stringValue.at(1) == '='
+				&& (value->stringValue.at(0) == '+' || value->stringValue.at(0) == '-' || value->stringValue.at(0) == '*' || value->stringValue.at(0) == '/'))
+		{
+			if(rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeFloat)
+			{
+				std::shared_ptr<RPC::RPCVariable> currentValue = rpcParameter->convertFromPacket(parameter->data);
+				std::string numberPart = value->stringValue.substr(2);
+				double factor = _bl->hf.getDouble(numberPart);
+				if(factor == 0) return RPC::RPCVariable::createError(-1, "Factor is \"0\" or no valid number.");
+				_bl->out.printError(std::to_string(currentValue->floatValue));
+				if(value->stringValue.at(0) == '+') value->floatValue = currentValue->floatValue + factor;
+				else if(value->stringValue.at(0) == '-') value->floatValue = currentValue->floatValue - factor;
+				else if(value->stringValue.at(0) == '*') value->floatValue = currentValue->floatValue * factor;
+				else if(value->stringValue.at(0) == '/') value->floatValue = currentValue->floatValue / factor;
+				_bl->out.printError(std::to_string(value->floatValue));
+			}
+			else if(rpcParameter->logicalParameter->type == RPC::LogicalParameter::Type::Enum::typeInteger)
+			{
+				std::shared_ptr<RPC::RPCVariable> currentValue = rpcParameter->convertFromPacket(parameter->data);
+				std::string numberPart = value->stringValue.substr(2);
+				int32_t factor = _bl->hf.getNumber(numberPart);
+				if(factor == 0) return RPC::RPCVariable::createError(-1, "Factor is \"0\" or no valid number.");
+				if(value->stringValue.at(0) == '+') value->integerValue = currentValue->integerValue + factor;
+				else if(value->stringValue.at(0) == '-') value->integerValue = currentValue->integerValue - factor;
+				else if(value->stringValue.at(0) == '*') value->integerValue = currentValue->integerValue * factor;
+				else if(value->stringValue.at(0) == '/') value->integerValue = currentValue->integerValue / factor;
+			}
+		}
+		return std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return RPC::RPCVariable::createError(-32500, "Unknown application error. See error log for more details.");
+}
 //End RPC methods
 }
 }
