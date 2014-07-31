@@ -103,7 +103,7 @@ void EventHandler::mainThread()
 					while(_timedEvents.find(nextExecution) != _timedEvents.end()) nextExecution++;
 					_timedEvents[nextExecution] = event;
 					_eventsMutex.unlock();
-					GD::rpcClient.broadcastUpdateEvent(event->name);
+					GD::rpcClient.broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 				}
 				else removeTimedEvent(event->id);
 			}
@@ -122,7 +122,7 @@ void EventHandler::mainThread()
 				removeEventToReset(event->id);
 				event->lastReset = currentTime;
 				save(event);
-				GD::rpcClient.broadcastUpdateEvent(event->name);
+				GD::rpcClient.broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 			}
 			else if(!_timesToReset.empty() && _timesToReset.begin()->first <= currentTime)
 			{
@@ -133,7 +133,7 @@ void EventHandler::mainThread()
 				event->lastReset = currentTime;
 				event->currentTime = 0;
 				save(event);
-				GD::rpcClient.broadcastUpdateEvent(event->name);
+				GD::rpcClient.broadcastUpdateEvent(event->name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 			}
 			else
 			{
@@ -188,6 +188,8 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::add(std::shared_ptr<Bas
 			event->eventMethodParameters = eventDescription->structValue->at("EVENTMETHODPARAMS");
 		}
 
+		if(eventDescription->structValue->find("ENABLED") != eventDescription->structValue->end()) event->enabled = eventDescription->structValue->at("ENABLED")->booleanValue;
+
 		if(event->type == Event::Type::Enum::triggered)
 		{
 			if(eventDescription->structValue->find("PEERID") == eventDescription->structValue->end() || eventDescription->structValue->at("PEERID")->integerValue == 0) return BaseLib::RPC::RPCVariable::createError(-5, "No peer id specified.");
@@ -202,8 +204,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::add(std::shared_ptr<Bas
 			if(eventDescription->structValue->find("TRIGGERVALUE") != eventDescription->structValue->end())
 				event->triggerValue = eventDescription->structValue->at("TRIGGERVALUE");
 			if((int32_t)event->trigger >= (int32_t)Event::Trigger::value && (!event->triggerValue || event->triggerValue->type == BaseLib::RPC::RPCVariableType::rpcVoid)) return BaseLib::RPC::RPCVariable::createError(-5, "No trigger value specified.");
-
-			if(eventDescription->structValue->find("ENABLED") != eventDescription->structValue->end()) event->enabled = eventDescription->structValue->at("ENABLED")->booleanValue;
 
 			if(eventDescription->structValue->find("RESETAFTER") != eventDescription->structValue->end())
 			{
@@ -506,7 +506,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::remove(std::string name
 		_databaseMutex.lock();
 		GD::db.deleteEvent(name);
 		_databaseMutex.unlock();
-		GD::rpcClient.broadcastDeleteEvent(name);
+		GD::rpcClient.broadcastDeleteEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -570,7 +570,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::enable(std::string name
 			removeEventToReset(event->id);
 		}
 		save(event);
-		GD::rpcClient.broadcastUpdateEvent(name);
+		GD::rpcClient.broadcastUpdateEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -814,7 +814,7 @@ void EventHandler::removeTimedEvent(uint32_t id)
 			{
 				_timedEvents.erase(i);
 				_eventsMutex.unlock();
-				GD::rpcClient.broadcastDeleteEvent(i->second->name);
+				GD::rpcClient.broadcastDeleteEvent(i->second->name, (int32_t)i->second->type, i->second->peerID, i->second->peerChannel, i->second->variable);
 				return;
 			}
 		}
@@ -1019,7 +1019,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::trigger(std::string nam
 
 		postTriggerTasks(event, result, currentTime);
 
-		GD::rpcClient.broadcastUpdateEvent(name);
+		GD::rpcClient.broadcastUpdateEvent(name, (int32_t)event->type, event->peerID, event->peerChannel, event->variable);
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	}
 	catch(const std::exception& ex)
@@ -1203,7 +1203,7 @@ void EventHandler::triggerThread(uint64_t peerID, int32_t channel, std::string v
 			}
 			postTriggerTasks(*i, result, currentTime);
 
-			GD::rpcClient.broadcastUpdateEvent((*i)->name);
+			GD::rpcClient.broadcastUpdateEvent((*i)->name, (int32_t)(*i)->type, (*i)->peerID, (*i)->peerChannel, (*i)->variable);
 		}
 	}
 	catch(const std::exception& ex)

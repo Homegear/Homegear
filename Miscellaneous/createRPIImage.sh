@@ -101,7 +101,7 @@ echo "#!/bin/bash
 debconf-set-selections /debconf.set
 rm -f /debconf.set
 apt-get update
-apt-get -y install locales console-common ntp openssh-server git-core binutils curl ca-certificates sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt11 libgcrypt-dev libgpg-error0 libgpg-error-dev libgnutlsxx27 libgnutls-dev
+apt-get -y install locales console-common ntp openssh-server git-core binutils curl ca-certificates sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt11 libgcrypt11-dev libgpg-error0 libgpg-error-dev libgnutlsxx27 libgnutls-dev
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)
@@ -190,7 +190,7 @@ echo \"************* Welcome to your homegear system! *************\"
 echo \"************************************************************\"
 echo \"************************************************************\"
 echo \"Downloading device description files...\"
-/etc/homegear/GetDeviceFiles.sh
+/etc/homegear/GetDeviceFiles.sh 1
 [ $? -ne 0 ] && echo \"Download of device description files failed. Please execute '/etc/homegear/GetDeviceFiles.sh' manually. Homegear won't work until the files are downloaded.\"
 echo \"Downloading firmware updates...\"
 /var/lib/homegear/firmware/GetFirmwareUpdates.sh

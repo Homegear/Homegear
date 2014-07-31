@@ -60,9 +60,9 @@ public:
 	void broadcastNewDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions);
 	void broadcastNewEvent(std::shared_ptr<BaseLib::RPC::RPCVariable> eventDescription);
 	void broadcastDeleteDevices(std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses, std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo);
-	void broadcastDeleteEvent(std::string id);
+	void broadcastDeleteEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
 	void broadcastUpdateDevice(uint64_t id, int32_t channel, std::string address, Hint::Enum hint);
-	void broadcastUpdateEvent(std::string id);
+	void broadcastUpdateEvent(std::string id, int32_t type, uint64_t peerID, int32_t channel, std::string variable);
 	void sendUnknownDevices(std::pair<std::string, std::string> address);
 	std::shared_ptr<RemoteRPCServer> addServer(std::pair<std::string, std::string> address, std::string path, std::string id);
 	void removeServer(std::pair<std::string, std::string> address);
