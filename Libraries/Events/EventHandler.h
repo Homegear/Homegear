@@ -79,7 +79,7 @@ public:
 	uint64_t eventTime = 0;
 	uint64_t endTime = 0;
 	uint64_t recurEvery = 0;
-	std::shared_ptr<BaseLib::RPC::RPCVariable> lastValue;
+	std::shared_ptr<BaseLib::RPC::RPCVariable> lastValue = std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
 	uint64_t lastRaised = 0;
 	uint64_t lastReset = 0;
 

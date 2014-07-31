@@ -98,7 +98,7 @@ std::shared_ptr<std::vector<char>> RPCEncoder::encodeResponse(std::shared_ptr<RP
 	std::shared_ptr<std::vector<char>> packet(new std::vector<char>());
 	try
 	{
-		if(!variable) return packet;
+		if(!variable) variable.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		if(variable->errorStruct) packet->insert(packet->begin(), _packetStartError, _packetStartError + 4);
 		else packet->insert(packet->begin(), _packetStartResponse, _packetStartResponse + 4);
 
@@ -161,6 +161,7 @@ void RPCEncoder::encodeVariable(std::shared_ptr<std::vector<char>>& packet, std:
 {
 	try
 	{
+		if(!variable) variable.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 		if(variable->type == RPCVariableType::rpcVoid)
 		{
 			encodeVoid(packet);
@@ -216,9 +217,9 @@ void RPCEncoder::encodeStruct(std::shared_ptr<std::vector<char>>& packet, std::s
 		_encoder->encodeInteger(packet, variable->structValue->size());
 		for(RPCStruct::iterator i = variable->structValue->begin(); i != variable->structValue->end(); ++i)
 		{
-			if(i->first.empty() || !i->second) continue;
-			std::string name = i->first;
+			std::string name = i->first.empty() ? "UNDEFINED" : i->first;
 			_encoder->encodeString(packet, name);
+			if(!i->second) i->second.reset(new RPC::RPCVariable(RPC::RPCVariableType::rpcVoid));
 			encodeVariable(packet, i->second);
 		}
 	}

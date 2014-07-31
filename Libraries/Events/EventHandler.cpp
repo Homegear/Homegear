@@ -205,7 +205,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::add(std::shared_ptr<Bas
 				event->triggerValue = eventDescription->structValue->at("TRIGGERVALUE");
 			if((int32_t)event->trigger >= (int32_t)Event::Trigger::value && (!event->triggerValue || event->triggerValue->type == BaseLib::RPC::RPCVariableType::rpcVoid)) return BaseLib::RPC::RPCVariable::createError(-5, "No trigger value specified.");
 
-			if(eventDescription->structValue->find("RESETAFTER") != eventDescription->structValue->end())
+			if(eventDescription->structValue->find("RESETAFTER") != eventDescription->structValue->end() && (eventDescription->structValue->at("RESETAFTER")->integerValue > 0 || eventDescription->structValue->at("RESETAFTER")->type == BaseLib::RPC::RPCVariableType::rpcStruct))
 			{
 				if(eventDescription->structValue->find("RESETMETHOD") == eventDescription->structValue->end() || eventDescription->structValue->at("RESETMETHOD")->stringValue.empty()) return BaseLib::RPC::RPCVariable::createError(-5, "No reset method specified.");
 				event->resetMethod = eventDescription->structValue->at("RESETMETHOD")->stringValue;
