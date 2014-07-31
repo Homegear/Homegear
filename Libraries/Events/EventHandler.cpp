@@ -300,7 +300,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::list(int32_t type, uint
 		std::vector<std::shared_ptr<Event>> events;
 		_eventsMutex.lock();
 		//Copy all events first, because listEvents takes very long and we don't want to lock _eventsMutex too long
-		if(type < 0 || type == 1)
+		if(type == 1 || (type < 0 && peerID == 0))
 		{
 			for(std::map<uint64_t, std::shared_ptr<Event>>::iterator i = _timedEvents.begin(); i != _timedEvents.end(); ++i)
 			{
@@ -320,7 +320,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> EventHandler::list(int32_t type, uint
 							if(peerID == 0 && variable.empty()) events.push_back(*iEvent);
 							else if(peerID > 0)
 							{
-								if((*iEvent)->peerID == peerID && (*iEvent)->peerChannel == peerChannel)
+								if((*iEvent)->peerID == peerID && (peerChannel == -1 || (*iEvent)->peerChannel == peerChannel))
 								{
 									if(variable.empty() || (*iEvent)->variable == variable) events.push_back(*iEvent);
 								}
