@@ -39,6 +39,8 @@
 #include <memory>
 #include <unordered_map>
 
+using namespace BaseLib::Systems;
+
 namespace MAX
 {
 class MAXDevice;
@@ -59,7 +61,7 @@ class QueueManager : public BaseLib::IEvents
 {
 public:
 	//Event handling
-	class IBidCoSQueueManagerEventSink : public BaseLib::IEventSinkBase
+	class IQueueManagerEventSink : public BaseLib::IEventSinkBase
 	{
 	public:
 		virtual void onQueueCreateSavepoint(std::string name) = 0;
@@ -70,8 +72,8 @@ public:
 	QueueManager();
 	virtual ~QueueManager();
 
-	std::shared_ptr<BidCoSQueue> get(int32_t address);
-	std::shared_ptr<BidCoSQueue> createQueue(MAXDevice* device, std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, PacketQueueType queueType, int32_t address);
+	std::shared_ptr<PacketQueue> get(int32_t address);
+	std::shared_ptr<PacketQueue> createQueue(MAXDevice* device, std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, PacketQueueType queueType, int32_t address);
 	void resetQueue(int32_t address, uint32_t id);
 	void dispose(bool wait = true);
 protected:

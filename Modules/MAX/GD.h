@@ -53,4 +53,4 @@ private:
 
 }
 
-#endif /* GD_H_ */
+#endif

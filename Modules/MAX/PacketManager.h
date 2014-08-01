@@ -27,44 +27,55 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef PENDINGQUEUES_H_
-#define PENDINGQUEUES_H_
+#ifndef PACKETMANAGER_H_
+#define PACKETMANAGER_H_
 
-#include "PacketQueue.h"
-#include "MAXPeer.h"
+#include "../Base/BaseLib.h"
+#include "MAXPacket.h"
 
-#include <string>
 #include <iostream>
+#include <string>
+#include <chrono>
 #include <memory>
-#include <queue>
+#include <unordered_map>
+#include <thread>
 #include <mutex>
 
 namespace MAX
 {
-class MAXDevice;
-
-class PendingQueues {
+class MAXPacketInfo
+{
 public:
-	PendingQueues();
-	virtual ~PendingQueues() {}
-	void serialize(std::vector<uint8_t>& encodedData);
-	void unserialize(std::shared_ptr<std::vector<char>> serializedData, MAXPeer* peer, MAXDevice* device);
+	MAXPacketInfo();
+	virtual ~MAXPacketInfo() {}
 
-	void push(std::shared_ptr<PacketQueue> queue);
-	void pop();
-	void pop(uint32_t id);
-	bool empty();
-	uint32_t size();
-	std::shared_ptr<PacketQueue> front();
-	void clear();
-	void removeQueue(std::string value, int32_t channel);
-	bool find(PacketQueueType queueType);
-
-	void getInfoString(std::ostringstream& stringStream);
-private:
-	uint32_t _currentID = 0;
-	std::mutex _queuesMutex;
-    std::deque<std::shared_ptr<PacketQueue>> _queues;
+	uint32_t id = 0;
+	int64_t time;
+	std::shared_ptr<MAXPacket> packet;
 };
+
+class PacketManager
+{
+public:
+	PacketManager();
+	virtual ~PacketManager();
+
+	std::shared_ptr<MAXPacket> get(int32_t address);
+	std::shared_ptr<MAXPacketInfo> getInfo(int32_t address);
+	bool set(int32_t address, std::shared_ptr<MAXPacket>& packet, int64_t time = 0);
+	void deletePacket(int32_t address, uint32_t id);
+	void keepAlive(int32_t address);
+	void dispose(bool wait = true);
+protected:
+	bool _disposing = false;
+	bool _stopWorkerThread = false;
+    std::thread _workerThread;
+	uint32_t _id = 0;
+	std::unordered_map<int32_t, std::shared_ptr<MAXPacketInfo>> _packets;
+	std::mutex _packetMutex;
+
+	void worker();
+};
+
 }
 #endif

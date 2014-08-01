@@ -30,10 +30,6 @@
 #ifndef HOMEMATICDEVICE_H
 #define HOMEMATICDEVICE_H
 
-class BidCoSPacket;
-class BidCoSMessages;
-enum class BidCoSQueueType;
-
 #include "../Base/BaseLib.h"
 #include "BidCoSQueue.h"
 #include "BidCoSPeer.h"

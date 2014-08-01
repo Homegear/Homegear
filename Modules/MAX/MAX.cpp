@@ -65,7 +65,8 @@ void MAX::dispose()
 	if(_disposed) return;
 	DeviceFamily::dispose();
 
-	GD::physicalInterface.reset();
+	GD::physicalInterfaces.clear();
+	GD::defaultPhysicalInterface.reset();
 }
 
 std::shared_ptr<BaseLib::Systems::IPhysicalInterface> MAX::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings)
@@ -231,7 +232,7 @@ void MAX::load()
 				_devicesMutex.unlock();
 			}
 		}
-		if(GD::physicalInterface)
+		if(!GD::physicalInterfaces.empty())
 		{
 			if(!spyDeviceExists) createSpyDevice();
 		}

@@ -46,7 +46,7 @@ MAXMessage::MAXMessage(int32_t messageType, MAXDevice* device, int32_t access, i
     _direction = DIRECTIONIN;
 }
 
-MAXMessage::MAXMessage(int32_t messageType, int32_t controlByte, MAXDevice* device, void (MAXDevice::*messageHandler)(int32_t, int32_t, std::shared_ptr<MAXPacket>)) : _messageType(messageType), _controlByte(controlByte), _device(device), _messageHandlerOutgoing(messageHandler)
+MAXMessage::MAXMessage(int32_t messageType, int32_t controlByte, MAXDevice* device, void (MAXDevice::*messageHandler)(int32_t, int32_t, std::shared_ptr<MAXPacket>)) : _messageType(messageType), _messageSubtype(controlByte), _device(device), _messageHandlerOutgoing(messageHandler)
 {
     _direction = DIRECTIONOUT;
 }
@@ -83,7 +83,7 @@ void MAXMessage::invokeMessageHandlerOutgoing(std::shared_ptr<MAXPacket> packet)
 		if(_device == nullptr || _messageHandlerOutgoing == nullptr || packet == nullptr) return;
 		//Actually the message counter implementation is not correct. See https://sathya.de/HMCWiki/index.php/Examples:Message_Counter
 		_device->messageCounter()->at(packet->senderAddress())++;
-		((_device)->*(_messageHandlerOutgoing))(_device->messageCounter()->at(packet->senderAddress()), _controlByte, packet);
+		((_device)->*(_messageHandlerOutgoing))(_device->messageCounter()->at(packet->senderAddress()), _messageSubtype, packet);
 	}
 	catch(const std::exception& ex)
 	{

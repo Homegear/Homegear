@@ -33,7 +33,8 @@ namespace MAX
 {
 	BaseLib::Obj* GD::bl = nullptr;
 	MAX* GD::family = nullptr;
-	std::shared_ptr<BaseLib::Systems::IPhysicalInterface> GD::physicalInterface;
+	std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> GD::physicalInterfaces;
+	std::shared_ptr<BaseLib::Systems::IPhysicalInterface> GD::defaultPhysicalInterface;
 	BaseLib::Output GD::out;
 	BaseLib::RPC::Devices GD::rpcDevices;
 }

@@ -42,6 +42,8 @@
 
 namespace MAX
 {
+class PacketQueue;
+
 enum MessageAccess { NOACCESS = 0x00, ACCESSPAIREDTOSENDER = 0x01, ACCESSDESTISME = 0x02, ACCESSCENTRAL = 0x04, ACCESSUNPAIRING = 0x08, FULLACCESS = 0x80 };
 enum MessageDirection { DIRECTIONIN, DIRECTIONOUT };
 
@@ -56,8 +58,8 @@ class MAXMessage
 
         MessageDirection getDirection() { return _direction; }
         void setDirection(MessageDirection direction) { _direction = direction; }
-        int32_t getControlByte() { return _controlByte; }
-        void setControlByte(int32_t controlByte) { _controlByte = controlByte; }
+        int32_t getMessageSubtype() { return _messageSubtype; }
+        void setMessageSubtype(int32_t messageSubtype) { _messageSubtype = messageSubtype; }
         int32_t getMessageType() { return _messageType; }
         void setMessageType(int32_t messageType) { _messageType = messageType; }
         int32_t getMessageAccess() { return _access; }
@@ -79,7 +81,7 @@ class MAXMessage
     protected:
         MessageDirection _direction = DIRECTIONIN;
         int32_t _messageType = -1;
-        int32_t _controlByte = 0;
+        int32_t _messageSubtype = 0;
         MAXDevice* _device = nullptr;
         int32_t _access = 0;
         int32_t _accessPairing = 0;

@@ -88,6 +88,7 @@ public:
 	void removePeer(int32_t channel, uint64_t id, int32_t remoteChannel);
 	virtual int32_t getChannelGroupedWith(int32_t channel) { return -1; }
 	virtual int32_t getNewFirmwareVersion() { return 0; }
+	virtual std::string getFirmwareVersionString(int32_t firmwareVersion);
     virtual bool firmwareUpdateAvailable() { return false; }
 
 	void getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector<FrameValues>& frameValue);

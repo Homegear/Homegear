@@ -34,6 +34,9 @@
 #include "MAXPeer.h"
 #include "MAXDeviceTypes.h"
 #include "MAXPacket.h"
+#include "QueueManager.h"
+#include "PacketManager.h"
+#include "MAXMessages.h"
 
 #include <string>
 #include <unordered_map>
@@ -45,8 +48,12 @@
 #include <chrono>
 #include "pthread.h"
 
+using namespace BaseLib::Systems;
+
 namespace MAX
 {
+class MAXMessages;
+
 class MAXDevice : public BaseLib::Systems::LogicalDevice
 {
     public:
@@ -56,6 +63,8 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
 		int32_t getCentralAddress() { return _centralAddress; }
 		void setCentralAddress(int32_t value) { _centralAddress = value; saveVariable(1, value); }
 		//End
+
+		std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
 
         MAXDevice(IDeviceEventSink* eventHandler);
         MAXDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
@@ -70,10 +79,14 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
         std::shared_ptr<MAXPeer> getPeer(int32_t address);
 		std::shared_ptr<MAXPeer> getPeer(uint64_t id);
 		std::shared_ptr<MAXPeer> getPeer(std::string serialNumber);
+		virtual bool isInPairingMode() { return _pairing; }
+		virtual std::shared_ptr<MAXMessages> getMessages() { return _messages; }
 
         virtual void loadVariables();
         virtual void saveVariables();
         virtual void savePeers(bool full) {}
+
+        virtual void sendPacket(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, std::shared_ptr<MAXPacket> packet, bool stealthy = false);
     protected:
         //In table variables
         int32_t _firmwareVersion = 0;
@@ -81,7 +94,15 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
         std::unordered_map<int32_t, uint8_t> _messageCounter;
         //End
 
+        bool _pairing = false;
+        QueueManager _queueManager;
+        PacketManager _receivedPackets;
+        PacketManager _sentPackets;
+        std::shared_ptr<MAXMessages> _messages;
+        std::shared_ptr<BaseLib::Systems::IPhysicalInterface> _physicalInterface;
+
         virtual void init();
+        virtual void setUpMAXMessages();
     private:
 };
 }

@@ -106,7 +106,6 @@ class PacketQueue
         std::mutex _pushPendingQueueThreadMutex;
         bool _workingOnPendingQueue = false;
         int64_t _lastPop = 0;
-        int64_t _lastPop = 0;
         void (MAXDevice::*_queueProcessed)() = nullptr;
         void pushPendingQueue();
         void sleepAndPushPendingQueue();
@@ -124,8 +123,6 @@ class PacketQueue
         bool noSending = false;
         MAXDevice* device = nullptr;
         std::shared_ptr<MAXPeer> peer;
-        std::shared_ptr<CallbackFunctionParameter> callbackParameter;
-        delegate<void (std::shared_ptr<CallbackFunctionParameter>)> queueEmptyCallback;
         PacketQueueType getQueueType() { return _queueType; }
         std::list<PacketQueueEntry>* getQueue() { return &_queue; }
         void setQueueType(PacketQueueType queueType) {  _queueType = queueType; }

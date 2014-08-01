@@ -140,7 +140,7 @@ void PacketQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 	{
 		BaseLib::BinaryDecoder decoder(GD::bl);
 		_queueMutex.lock();
-		_queueType = (BidCoSQueueType)decoder.decodeByte(serializedData, position);
+		_queueType = (PacketQueueType)decoder.decodeByte(serializedData, position);
 		uint32_t queueSize = decoder.decodeInteger(serializedData, position);
 		for(uint32_t i = 0; i < queueSize; i++)
 		{
@@ -156,7 +156,7 @@ void PacketQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 				uint32_t dataSize = decoder.decodeByte(serializedData, position);
 				if(position + dataSize <= serializedData->size()) packetData.insert(packetData.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
 				position += dataSize;
-				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetData, false));
+				std::shared_ptr<MAXPacket> packet(new MAXPacket(packetData, false));
 				entry->setPacket(packet, false);
 			}
 			int32_t messageExists = decoder.decodeBoolean(serializedData, position);
@@ -348,7 +348,7 @@ void PacketQueue::resend(uint32_t threadId, bool burst)
 			if(!noSending)
 			{
 				GD::out.printDebug("Sending from resend thread " + std::to_string(threadId) + " of queue " + std::to_string(id) + ".");
-				std::shared_ptr<BidCoSPacket> packet = _queue.front().getPacket();
+				std::shared_ptr<MAXPacket> packet = _queue.front().getPacket();
 				if(!packet) return;
 				if(_queue.front().getType() == QueueEntryType::MESSAGE)
 				{
@@ -837,7 +837,7 @@ void PacketQueue::startResendThread(bool force)
 		uint8_t controlByte = 0;
 		if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage())
 		{
-			controlByte = _queue.front().getMessage()->getControlByte();
+			controlByte = _queue.front().getMessage()->getMessageSubtype();
 		}
 		else if(_queue.front().getPacket())
 		{
@@ -947,8 +947,6 @@ void PacketQueue::pushPendingQueue()
 		_queueMutex.unlock();
 		if(!queue) return; //Not really necessary, as the mutex is locked, but I had a segmentation fault in this function, so just to make
 		_queueType = queue->getQueueType();
-		queueEmptyCallback = queue->queueEmptyCallback;
-		callbackParameter = queue->callbackParameter;
 		retries = queue->retries;
 		pendingQueueID = queue->pendingQueueID;
 		for(std::list<PacketQueueEntry>::iterator i = queue->getQueue()->begin(); i != queue->getQueue()->end(); ++i)
@@ -1035,7 +1033,6 @@ void PacketQueue::nextQueueEntry()
 		if(_disposing) return;
 		_queueMutex.lock();
 		if(_queue.empty()) {
-			if(queueEmptyCallback && callbackParameter) queueEmptyCallback(callbackParameter);
 			if(_workingOnPendingQueue && !_pendingQueues->empty()) _pendingQueues->pop(pendingQueueID);
 			if(!_pendingQueues || (_pendingQueues && _pendingQueues->empty()))
 			{
@@ -1063,7 +1060,7 @@ void PacketQueue::nextQueueEntry()
 			if(!noSending)
 			{
 				bool forceResend = _queue.front().forceResend;
-				std::shared_ptr<BidCoSPacket> packet = _queue.front().getPacket();
+				std::shared_ptr<MAXPacket> packet = _queue.front().getPacket();
 				if(_queue.front().getType() == QueueEntryType::MESSAGE)
 				{
 					MAXMessage* message = _queue.front().getMessage().get();
@@ -1132,7 +1129,7 @@ void PacketQueue::pop()
 		if(GD::bl->debugLevel >= 5 && !_queue.empty())
 		{
 			if(_queue.front().getType() == QueueEntryType::PACKET && _queue.front().getPacket()) GD::out.printDebug("Packet now at front of queue: " + _queue.front().getPacket()->hexString());
-			else if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()) GD::out.printDebug("Message now at front: Message type: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageType()) + " Control byte: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getControlByte()));
+			else if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()) GD::out.printDebug("Message now at front: Message type: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageType()) + " Control byte: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageSubtype()));
 		}
 		_queueMutex.unlock();
 		nextQueueEntry();

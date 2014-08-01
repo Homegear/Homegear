@@ -31,7 +31,7 @@ ifeq ($(config),debug)
   OBJDIR     = obj/Debug/max
   TARGETDIR  = lib/Modules/Debug
   TARGET     = $(TARGETDIR)/libmax.so
-  DEFINES   += -DFORTIFY_SOURCE=2 -DDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -g -fPIC -std=c++11
@@ -53,7 +53,7 @@ ifeq ($(config),release)
   OBJDIR     = obj/Release/max
   TARGETDIR  = lib/Modules/Release
   TARGET     = $(TARGETDIR)/libmax.so
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -fPIC -std=c++11
@@ -75,7 +75,7 @@ ifeq ($(config),profiling)
   OBJDIR     = obj/Profiling/max
   TARGETDIR  = lib/Modules/Profiling
   TARGET     = $(TARGETDIR)/libmax.so
-  DEFINES   += -DFORTIFY_SOURCE=2 -DNDEBUG
+  DEFINES   += -DFORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -DNDEBUG
   INCLUDES  += 
   CPPFLAGS  += -MMD -MP $(DEFINES) $(INCLUDES)
   CFLAGS    += $(CPPFLAGS) $(ARCH) -O2 -g -fPIC -std=c++11 -pg
@@ -102,6 +102,7 @@ OBJECTS := \
 	$(OBJDIR)/MAXPeer.o \
 	$(OBJDIR)/PendingQueues.o \
 	$(OBJDIR)/QueueManager.o \
+	$(OBJDIR)/PacketManager.o \
 	$(OBJDIR)/MAXMessage.o \
 	$(OBJDIR)/Factory.o \
 	$(OBJDIR)/MAX.o \
@@ -194,6 +195,9 @@ $(OBJDIR)/PendingQueues.o: Modules/MAX/PendingQueues.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/QueueManager.o: Modules/MAX/QueueManager.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/PacketManager.o: Modules/MAX/PacketManager.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/MAXMessage.o: Modules/MAX/MAXMessage.cpp

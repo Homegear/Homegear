@@ -35,10 +35,12 @@ namespace MAX
 
 MAXDevice::MAXDevice(IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::MAX, GD::bl, eventHandler)
 {
+	_physicalInterface = GD::defaultPhysicalInterface;
 }
 
 MAXDevice::MAXDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler) : LogicalDevice(BaseLib::Systems::DeviceFamilies::MAX, GD::bl, deviceID, serialNumber, address, eventHandler)
 {
+	_physicalInterface = GD::defaultPhysicalInterface;
 }
 
 MAXDevice::~MAXDevice()
@@ -71,7 +73,7 @@ void MAXDevice::dispose(bool wait)
 		if(_disposing) return;
 		_disposing = true;
 		GD::out.printDebug("Removing device " + std::to_string(_deviceID) + " from physical device's event queue...");
-		if(GD::physicalInterface) GD::physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
+		if(_physicalInterface) _physicalInterface->removeEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		int64_t startTime = BaseLib::HelperFunctions::getTime();
 		//stopThreads();
 		int64_t timeDifference = BaseLib::HelperFunctions::getTime() - startTime;
@@ -100,10 +102,33 @@ void MAXDevice::init()
 	{
 		if(_initialized) return; //Prevent running init two times
 		_initialized = true;
+		_messages = std::shared_ptr<MAXMessages>(new MAXMessages());
 
-		if(GD::physicalInterface) GD::physicalInterface->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
+		if(_physicalInterface) _physicalInterface->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 
 		_messageCounter[0] = 0; //Broadcast message counter
+
+		setUpMAXMessages();
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void MAXDevice::setUpMAXMessages()
+{
+	try
+	{
+
 	}
 	catch(const std::exception& ex)
     {
@@ -342,6 +367,19 @@ bool MAXDevice::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib:
 		if(_disposing) return false;
 		std::shared_ptr<MAXPacket> maxPacket(std::dynamic_pointer_cast<MAXPacket>(packet));
 		if(!maxPacket) return false;
+		if(maxPacket->senderAddress() == _address && GD::physicalInterfaces.size() > 1)
+		{
+			//Packet we sent was received by another interface
+			return true;
+		}
+		if(_receivedPackets.set(maxPacket->senderAddress(), maxPacket, maxPacket->timeReceived())) return true;
+		std::shared_ptr<MAXMessage> message = _messages->find(DIRECTIONIN, maxPacket);
+		if(message && message->checkAccess(maxPacket, _queueManager.get(maxPacket->senderAddress())))
+		{
+			if(_bl->debugLevel >= 6) GD::out.printDebug("Debug: Device " + std::to_string(_deviceID) + ": Access granted for packet " + maxPacket->hexString());
+			message->invokeMessageHandlerIncoming(maxPacket);
+			return true;
+		}
 	}
 	catch(const std::exception& ex)
     {
@@ -356,6 +394,56 @@ bool MAXDevice::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib:
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
+}
+
+void MAXDevice::sendPacket(std::shared_ptr<IPhysicalInterface> physicalInterface, std::shared_ptr<MAXPacket> packet, bool stealthy)
+{
+	try
+	{
+		if(!packet || !physicalInterface) return;
+		uint32_t responseDelay = physicalInterface->responseDelay();
+		std::shared_ptr<MAXPacketInfo> packetInfo = _sentPackets.getInfo(packet->destinationAddress());
+		if(!stealthy) _sentPackets.set(packet->destinationAddress(), packet);
+		if(packetInfo)
+		{
+			int64_t timeDifference = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - packetInfo->time;
+			if(timeDifference < responseDelay)
+			{
+				packetInfo->time += responseDelay - timeDifference; //Set to sending time
+				std::this_thread::sleep_for(std::chrono::milliseconds(responseDelay - timeDifference));
+			}
+		}
+		if(stealthy) _sentPackets.keepAlive(packet->destinationAddress());
+		packetInfo = _receivedPackets.getInfo(packet->destinationAddress());
+		if(packetInfo)
+		{
+			int64_t time = BaseLib::HelperFunctions::getTime();
+			int64_t timeDifference = time - packetInfo->time;
+			if(timeDifference >= 0 && timeDifference < responseDelay)
+			{
+				int64_t sleepingTime = responseDelay - timeDifference;
+				if(sleepingTime > 1) sleepingTime -= 1;
+				packet->setTimeSending(time + sleepingTime + 1);
+				std::this_thread::sleep_for(std::chrono::milliseconds(sleepingTime));
+			}
+			//Set time to now. This is necessary if two packets are sent after each other without a response in between
+			packetInfo->time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		}
+		else if(_bl->debugLevel > 4) GD::out.printDebug("Debug: Sending packet " + packet->hexString() + " immediately, because it seems it is no response (no packet information found).", 7);
+		physicalInterface->sendPacket(packet);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 }

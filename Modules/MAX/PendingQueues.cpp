@@ -27,37 +27,29 @@
  * files in the program, then also delete it here.
  */
 
-#include "PendingBidCoSQueues.h"
+#include "PendingQueues.h"
 #include "GD.h"
+#include "MAXMessage.h"
 
-namespace BidCoS
+namespace MAX
 {
-PendingBidCoSQueues::PendingBidCoSQueues()
+PendingQueues::PendingQueues()
 {
 }
 
-void PendingBidCoSQueues::serialize(std::vector<uint8_t>& encodedData)
+void PendingQueues::serialize(std::vector<uint8_t>& encodedData)
 {
 	try
 	{
 		BaseLib::BinaryEncoder encoder(GD::bl);
 		_queuesMutex.lock();
 		encoder.encodeInteger(encodedData, _queues.size());
-		for(std::deque<std::shared_ptr<BidCoSQueue>>::iterator i = _queues.begin(); i != _queues.end(); ++i)
+		for(std::deque<std::shared_ptr<PacketQueue>>::iterator i = _queues.begin(); i != _queues.end(); ++i)
 		{
 			std::vector<uint8_t> serializedQueue;
 			(*i)->serialize(serializedQueue);
 			encoder.encodeInteger(encodedData, serializedQueue.size());
 			encodedData.insert(encodedData.end(), serializedQueue.begin(), serializedQueue.end());
-			bool hasCallbackFunction = ((*i)->callbackParameter && (*i)->callbackParameter->integers.size() == 3 && (*i)->callbackParameter->strings.size() == 1);
-			encoder.encodeBoolean(encodedData, hasCallbackFunction);
-			if(hasCallbackFunction)
-			{
-				encoder.encodeInteger(encodedData, (*i)->callbackParameter->integers.at(0));
-				encoder.encodeString(encodedData, (*i)->callbackParameter->strings.at(0));
-				encoder.encodeInteger(encodedData, (*i)->callbackParameter->integers.at(1));
-				encoder.encodeInteger(encodedData, (*i)->callbackParameter->integers.at(2) / 1000);
-			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -75,7 +67,7 @@ void PendingBidCoSQueues::serialize(std::vector<uint8_t>& encodedData)
 	_queuesMutex.unlock();
 }
 
-void PendingBidCoSQueues::unserialize(std::shared_ptr<std::vector<char>> serializedData, BidCoSPeer* peer, HomeMaticDevice* device)
+void PendingQueues::unserialize(std::shared_ptr<std::vector<char>> serializedData, MAXPeer* peer, MAXDevice* device)
 {
 	try
 	{
@@ -87,21 +79,10 @@ void PendingBidCoSQueues::unserialize(std::shared_ptr<std::vector<char>> seriali
 		for(uint32_t i = 0; i < pendingQueuesSize; i++)
 		{
 			uint32_t queueLength = decoder.decodeInteger(serializedData, position);
-			std::shared_ptr<BidCoSQueue> queue(new BidCoSQueue());
+			std::shared_ptr<PacketQueue> queue(new PacketQueue());
 			queue->unserialize(serializedData, device, position);
 			position += queueLength;
 			queue->noSending = true;
-			bool hasCallbackFunction = decoder.decodeBoolean(serializedData, position);
-			if(hasCallbackFunction)
-			{
-				std::shared_ptr<CallbackFunctionParameter> parameters(new CallbackFunctionParameter());
-				parameters->integers.push_back(decoder.decodeInteger(serializedData, position));
-				parameters->strings.push_back(decoder.decodeString(serializedData, position));
-				parameters->integers.push_back(decoder.decodeInteger(serializedData, position));
-				parameters->integers.push_back(decoder.decodeInteger(serializedData, position) * 1000);
-				queue->callbackParameter = parameters;
-				queue->queueEmptyCallback = delegate<void (std::shared_ptr<CallbackFunctionParameter>)>::from_method<BidCoSPeer, &BidCoSPeer::addVariableToResetCallback>(peer);
-			}
 			queue->pendingQueueID = _currentID++;
 			_queues.push_back(queue);
 		}
@@ -121,7 +102,7 @@ void PendingBidCoSQueues::unserialize(std::shared_ptr<std::vector<char>> seriali
     _queuesMutex.unlock();
 }
 
-bool PendingBidCoSQueues::empty()
+bool PendingQueues::empty()
 {
 	try
 	{
@@ -146,7 +127,7 @@ bool PendingBidCoSQueues::empty()
     return false;
 }
 
-void PendingBidCoSQueues::push(std::shared_ptr<BidCoSQueue> queue)
+void PendingQueues::push(std::shared_ptr<PacketQueue> queue)
 {
 	try
 	{
@@ -170,7 +151,7 @@ void PendingBidCoSQueues::push(std::shared_ptr<BidCoSQueue> queue)
     _queuesMutex.unlock();
 }
 
-void PendingBidCoSQueues::pop()
+void PendingQueues::pop()
 {
 	try
 	{
@@ -192,7 +173,7 @@ void PendingBidCoSQueues::pop()
     _queuesMutex.unlock();
 }
 
-void PendingBidCoSQueues::pop(uint32_t id)
+void PendingQueues::pop(uint32_t id)
 {
 	try
 	{
@@ -214,7 +195,7 @@ void PendingBidCoSQueues::pop(uint32_t id)
     _queuesMutex.unlock();
 }
 
-void PendingBidCoSQueues::clear()
+void PendingQueues::clear()
 {
 	try
 	{
@@ -236,7 +217,7 @@ void PendingBidCoSQueues::clear()
     _queuesMutex.unlock();
 }
 
-uint32_t PendingBidCoSQueues::size()
+uint32_t PendingQueues::size()
 {
 	try
 	{
@@ -261,11 +242,11 @@ uint32_t PendingBidCoSQueues::size()
     return 0;
 }
 
-std::shared_ptr<BidCoSQueue> PendingBidCoSQueues::front()
+std::shared_ptr<PacketQueue> PendingQueues::front()
 {
 	try
 	{
-		std::shared_ptr<BidCoSQueue> queue;
+		std::shared_ptr<PacketQueue> queue;
 		_queuesMutex.lock();
 		if(!_queues.empty()) queue =_queues.front();
 		_queuesMutex.unlock();
@@ -284,10 +265,10 @@ std::shared_ptr<BidCoSQueue> PendingBidCoSQueues::front()
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     _queuesMutex.unlock();
-    return std::shared_ptr<BidCoSQueue>();
+    return std::shared_ptr<PacketQueue>();
 }
 
-void PendingBidCoSQueues::removeQueue(std::string parameterName, int32_t channel)
+void PendingQueues::removeQueue(std::string parameterName, int32_t channel)
 {
 	try
 	{
@@ -318,12 +299,12 @@ void PendingBidCoSQueues::removeQueue(std::string parameterName, int32_t channel
     _queuesMutex.unlock();
 }
 
-bool PendingBidCoSQueues::find(BidCoSQueueType queueType)
+bool PendingQueues::find(PacketQueueType queueType)
 {
 	try
 	{
 		_queuesMutex.lock();
-		for(std::deque<std::shared_ptr<BidCoSQueue>>::iterator i = _queues.begin(); i != _queues.end(); ++i)
+		for(std::deque<std::shared_ptr<PacketQueue>>::iterator i = _queues.begin(); i != _queues.end(); ++i)
 		{
 			if(*i && (*i)->getQueueType() == queueType)
 			{
@@ -346,5 +327,72 @@ bool PendingBidCoSQueues::find(BidCoSQueueType queueType)
 	}
 	_queuesMutex.unlock();
 	return false;
+}
+
+void PendingQueues::getInfoString(std::ostringstream& stringStream)
+{
+	try
+	{
+		_queuesMutex.lock();
+		stringStream << "Number of Pending queues: " << _queues.size() << std::endl;
+		int32_t j = 1;
+		for(std::deque<std::shared_ptr<PacketQueue>>::iterator i = _queues.begin(); i != _queues.end(); ++i)
+		{
+			stringStream << std::dec << "Queue " << j << ":" << std::endl;
+			std::list<PacketQueueEntry>* queue = (*i)->getQueue();
+			stringStream << "  Number of packets: " << queue->size() << std::endl;
+			int32_t l = 1;
+			for(std::list<PacketQueueEntry>::iterator k = queue->begin(); k != queue->end(); ++k)
+			{
+				stringStream << "  Packet " << l << " (Type: ";
+				if(k->getType() == QueueEntryType::PACKET)
+				{
+					std::shared_ptr<MAXPacket> packet = k->getPacket();
+					stringStream << "Packet): " << (packet ? packet->hexString() : "Nullptr") << std::endl;
+				}
+				else if(k->getType() == QueueEntryType::MESSAGE)
+				{
+					stringStream << "Message): ";
+					std::shared_ptr<MAXMessage> message = k->getMessage();
+					if(message)
+					{
+						stringStream << "Type: " << GD::bl->hf.getHexString(message->getMessageType(), 2) << " Control byte: " << GD::bl->hf.getHexString(message->getMessageSubtype(), 2);
+						if(!message->getSubtypes()->empty())
+						{
+							stringStream << " Subtypes: ";
+							for(std::vector<std::pair<uint32_t, int32_t>>::iterator m = message->getSubtypes()->begin(); m != message->getSubtypes()->end(); ++m)
+							{
+								stringStream << "Index " << m->first << ": " << GD::bl->hf.getHexString(m->second, 2) << "; ";
+							}
+						}
+						stringStream << std::endl;
+					}
+					else
+					{
+						stringStream << "Nullptr" << std::endl;
+					}
+				}
+				else
+				{
+					stringStream << "Unknown)" << std::endl;
+				}
+				l++;
+			}
+			j++;
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	_queuesMutex.unlock();
 }
 }

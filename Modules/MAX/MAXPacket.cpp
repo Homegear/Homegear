@@ -37,6 +37,12 @@ MAXPacket::MAXPacket()
 
 }
 
+MAXPacket::MAXPacket(std::vector<uint8_t>& packet, bool rssiByte, int64_t timeReceived)
+{
+	_timeReceived = timeReceived;
+	import(packet, rssiByte);
+}
+
 MAXPacket::MAXPacket(std::string packet, int64_t timeReceived)
 {
 	_timeReceived = timeReceived;
@@ -45,6 +51,66 @@ MAXPacket::MAXPacket(std::string packet, int64_t timeReceived)
 
 MAXPacket::~MAXPacket()
 {
+}
+
+void MAXPacket::import(std::vector<uint8_t>& packet, bool rssiByte)
+{
+	try
+	{
+		if(packet.size() < 10) return;
+		if(packet.size() > 200)
+		{
+			GD::out.printWarning("Warning: Tried to import MAX packet larger than 200 bytes.");
+			return;
+		}
+		_messageCounter = packet[1];
+		_messageSubtype = packet[2];
+		_messageType = packet[3];
+		_senderAddress = (packet[4] << 16) + (packet[5] << 8) + packet[6];
+		_destinationAddress = (packet[7] << 16) + (packet[8] << 8) + packet[9];
+		_payload.clear();
+		if(packet.size() == 10)
+		{
+			_length = packet.size();
+		}
+		else
+		{
+			if(rssiByte)
+			{
+				_payload.insert(_payload.end(), packet.begin() + 10, packet.end() - 1);
+				int32_t rssiDevice = packet.back();
+				//1) Read the RSSI status register
+				//2) Convert the reading from a hexadecimal
+				//number to a decimal number (RSSI_dec)
+				//3) If RSSI_dec ≥ 128 then RSSI_dBm =
+				//(RSSI_dec - 256)/2 – RSSI_offset
+				//4) Else if RSSI_dec < 128 then RSSI_dBm =
+				//(RSSI_dec)/2 – RSSI_offset
+				if(rssiDevice >= 128) rssiDevice = ((rssiDevice - 256) / 2) - 74;
+				else rssiDevice = (rssiDevice / 2) - 74;
+				_rssiDevice = rssiDevice * -1;
+			}
+			else _payload.insert(_payload.end(), packet.begin() + 10, packet.end());
+			_length = 9 + _payload.size();
+		}
+		if(_length != packet[0])
+		{
+			GD::out.printWarning("Warning: Packet with wrong length byte received.");
+			return;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void MAXPacket::import(std::string& packet, bool removeFirstCharacter)
@@ -130,6 +196,40 @@ std::string MAXPacket::hexString()
     return "";
 }
 
+std::vector<uint8_t> MAXPacket::byteArray()
+{
+	try
+	{
+		std::vector<uint8_t> data;
+		if(_payload.size() > 200) return data;
+		data.push_back(9 + _payload.size());
+		data.push_back(_messageCounter);
+		data.push_back(_messageSubtype);
+		data.push_back(_messageType);
+		data.push_back(_senderAddress >> 16);
+		data.push_back((_senderAddress >> 8) & 0xFF);
+		data.push_back(_senderAddress & 0xFF);
+		data.push_back(_destinationAddress >> 16);
+		data.push_back((_destinationAddress >> 8) & 0xFF);
+		data.push_back(_destinationAddress & 0xFF);
+		data.insert(data.end(), _payload.begin(), _payload.end());
+		return data;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<uint8_t>();
+}
+
 uint8_t MAXPacket::getByte(std::string hexString)
 {
 	try
@@ -176,4 +276,15 @@ int32_t MAXPacket::getInt(std::string hexString)
 	return 0;
 }
 
+bool MAXPacket::equals(std::shared_ptr<MAXPacket>& rhs)
+{
+	if(_messageCounter != rhs->messageCounter()) return false;
+	if(_messageType != rhs->messageType()) return false;
+	if(_messageSubtype != rhs->messageSubtype()) return false;
+	if(_payload.size() != rhs->payload()->size()) return false;
+	if(_senderAddress != rhs->senderAddress()) return false;
+	if(_destinationAddress != rhs->destinationAddress()) return false;
+	if(_payload == (*rhs->payload())) return true;
+	return false;
+}
 }
