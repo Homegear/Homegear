@@ -396,6 +396,30 @@ bool MAXDevice::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib:
     return false;
 }
 
+std::shared_ptr<IPhysicalInterface> MAXDevice::getPhysicalInterface(int32_t peerAddress)
+{
+	try
+	{
+		std::shared_ptr<PacketQueue> queue = _queueManager.get(peerAddress);
+		if(queue) return queue->getPhysicalInterface();
+		std::shared_ptr<MAXPeer> peer = getPeer(peerAddress);
+		return peer ? peer->getPhysicalInterface() : GD::defaultPhysicalInterface;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return GD::defaultPhysicalInterface;
+}
+
 void MAXDevice::sendPacket(std::shared_ptr<IPhysicalInterface> physicalInterface, std::shared_ptr<MAXPacket> packet, bool stealthy)
 {
 	try

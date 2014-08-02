@@ -49,6 +49,7 @@ class MAXPacket : public BaseLib::Systems::Packet
         void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
         uint8_t messageType() { return _messageType; }
         uint8_t messageSubtype() { return _messageSubtype; }
+        uint8_t rssiDevice() { return _rssiDevice; }
         virtual std::string hexString();
         virtual std::vector<uint8_t> byteArray();
 

@@ -30,8 +30,6 @@
 #ifndef MAXCENTRAL_H_
 #define MAXCENTRAL_H_
 
-class MAXPacket;
-
 #include "../MAXDevice.h"
 
 #include <memory>
@@ -47,18 +45,30 @@ public:
 	MAXCentral(IDeviceEventSink* eventHandler);
 	MAXCentral(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
 	virtual ~MAXCentral();
-	void init();
+
 	virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
-	std::string handleCLICommand(std::string command);
-	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<MAXPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
+	virtual std::string handleCLICommand(std::string command);
+	virtual uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<MAXPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
+
+	virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<MAXPacket>);
 
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);
+
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getInstallMode();
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setInstallMode(bool on, uint32_t duration = 60, bool debugOutput = true);
 protected:
+	uint32_t _timeLeftInPairingMode = 0;
+	void pairingModeTimer(int32_t duration, bool debugOutput = true);
+	bool _stopPairingModeThread = false;
+	std::thread _pairingModeThread;
+
 	std::shared_ptr<MAXPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);
-private:
 	std::mutex _peerInitMutex;
+	virtual void setUpMAXMessages();
+	virtual void init();
 };
 
 }

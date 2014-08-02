@@ -30,6 +30,7 @@
 #include "MAX.h"
 #include "PhysicalInterfaces/CUL.h"
 #include "MAXDeviceTypes.h"
+#include "LogicalDevices/MAXCentral.h"
 #include "LogicalDevices/MAXSpyDevice.h"
 #include "GD.h"
 
@@ -211,10 +212,13 @@ void MAX::load()
 			int32_t address = row->second.at(1)->intValue;
 			std::string serialNumber = row->second.at(2)->textValue;
 			uint32_t deviceType = row->second.at(3)->intValue;
-
 			std::shared_ptr<BaseLib::Systems::LogicalDevice> device;
 			switch((DeviceType)deviceType)
 			{
+			case DeviceType::MAXCENTRAL:
+				_central = std::shared_ptr<MAXCentral>(new MAXCentral(deviceID, serialNumber, address, this));
+				device = _central;
+				break;
 			case DeviceType::MAXSD:
 				spyDeviceExists = true;
 				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new MAXSpyDevice(deviceID, serialNumber, address, this));
@@ -234,6 +238,7 @@ void MAX::load()
 		}
 		if(!GD::physicalInterfaces.empty())
 		{
+			if(!_central) createCentral();
 			if(!spyDeviceExists) createSpyDevice();
 		}
 	}
@@ -251,6 +256,34 @@ void MAX::load()
 	}
 }
 
+void MAX::createCentral()
+{
+	try
+	{
+		if(_central) return;
+		uint32_t seed = 0xfd0000 + BaseLib::HelperFunctions::getRandomNumber(1, 32767);
+
+		int32_t address = getUniqueAddress(seed);
+		std::string serialNumber(getUniqueSerialNumber("VMC", BaseLib::HelperFunctions::getRandomNumber(1, 9999999)));
+
+		_central.reset(new MAXCentral(0, serialNumber, address, this));
+		add(_central);
+		GD::out.printMessage("Created MAX central with id " + std::to_string(_central->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void MAX::createSpyDevice()
 {
 	try
@@ -262,7 +295,7 @@ void MAX::createSpyDevice()
 
 		std::shared_ptr<BaseLib::Systems::LogicalDevice> device(new MAXSpyDevice(0, serialNumber, address, this));
 		add(device);
-		GD::out.printMessage("Created spy device with id " + std::to_string(device->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 8) + " and serial number " + serialNumber);
+		GD::out.printMessage("Created spy device with id " + std::to_string(device->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {
@@ -378,6 +411,15 @@ std::string MAX::handleCLICommand(std::string& command)
 
 			switch(deviceType)
 			{
+			case (uint32_t)DeviceType::MAXCENTRAL:
+				if(_central) stringStream << "Cannot create more than one MAX central device." << std::endl;
+				else
+				{
+					_central.reset(new MAXCentral(0, serialNumber, address, this));
+					add(_central);
+					stringStream << "Created MAX Central with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+				}
+				break;
 			case (uint32_t)DeviceType::MAXSD:
 				add(std::shared_ptr<BaseLib::Systems::LogicalDevice>(new MAXSpyDevice(0, serialNumber, address, this)));
 				stringStream << "Created MAX Spy Device with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;

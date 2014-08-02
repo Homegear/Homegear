@@ -516,7 +516,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCServer::callMethod(std::string& me
 		}
 		if(GD::bl->debugLevel >= 4)
 		{
-			_out.printInfo("Info: Method called: " + methodName + " Parameters:");
+			_out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->arrayValue->begin(); i != parameters->arrayValue->end(); ++i)
 			{
 				(*i)->print();
@@ -558,7 +558,7 @@ void RPCServer::callMethod(std::shared_ptr<Client> client, std::string methodNam
 		}
 		if(GD::bl->debugLevel >= 4)
 		{
-			_out.printInfo("Info: Method called: " + methodName + " Parameters:");
+			_out.printInfo("Info: Client number " + std::to_string(client->socketDescriptor->id) + " is calling RPC method: " + methodName + " Parameters:");
 			for(std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>::iterator i = parameters->begin(); i != parameters->end(); ++i)
 			{
 				(*i)->print();
@@ -683,7 +683,7 @@ void RPCServer::readClient(std::shared_ptr<Client> client)
 		PacketType::Enum packetType;
 		HTTP http;
 
-		_out.printDebug("Listening for incoming packets from client number " + std::to_string(client->socketDescriptor->descriptor) + ".");
+		_out.printDebug("Listening for incoming packets from client number " + std::to_string(client->socketDescriptor->id) + ".");
 		while(!_stopServer)
 		{
 			try
@@ -930,7 +930,7 @@ std::shared_ptr<BaseLib::FileDescriptor> RPCServer::getClientSocketDescriptor()
 			inet_ntop(AF_INET6, &s->sin6_addr, ipString, sizeof(ipString));
 		}
 		std::string ipString2(&ipString[0]);
-		_out.printInfo("Info: Connection from " + ipString2 + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(fileDescriptor->descriptor));
+		_out.printInfo("Info: Connection from " + ipString2 + ":" + std::to_string(port) + " accepted. Client number: " + std::to_string(fileDescriptor->id));
 	}
     catch(const std::exception& ex)
     {

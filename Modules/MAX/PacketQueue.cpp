@@ -105,6 +105,7 @@ void PacketQueue::serialize(std::vector<uint8_t>& encodedData)
 				encoder.encodeBoolean(encodedData, true);
 				encoder.encodeByte(encodedData, message->getDirection());
 				encoder.encodeByte(encodedData, message->getMessageType());
+				encoder.encodeByte(encodedData, message->getMessageSubtype());
 				std::vector<std::pair<uint32_t, int32_t>>* subtypes = message->getSubtypes();
 				encoder.encodeByte(encodedData, subtypes->size());
 				for(std::vector<std::pair<uint32_t, int32_t>>::iterator j = subtypes->begin(); j != subtypes->end(); ++j)
@@ -164,13 +165,14 @@ void PacketQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 			{
 				int32_t direction = decoder.decodeByte(serializedData, position);
 				int32_t messageType = decoder.decodeByte(serializedData, position);
+				int32_t messageSubtype = decoder.decodeByte(serializedData, position);
 				uint32_t subtypeSize = decoder.decodeByte(serializedData, position);
 				std::vector<std::pair<uint32_t, int32_t>> subtypes;
 				for(uint32_t j = 0; j < subtypeSize; j++)
 				{
 					subtypes.push_back(std::pair<uint32_t, int32_t>(decoder.decodeByte(serializedData, position), decoder.decodeByte(serializedData, position)));
 				}
-				entry->setMessage(device->getMessages()->find(direction, messageType, subtypes), false);
+				entry->setMessage(device->getMessages()->find(direction, messageType, messageSubtype, subtypes), false);
 			}
 			parameterName = decoder.decodeString(serializedData, position);
 			channel = decoder.decodeInteger(serializedData, position);

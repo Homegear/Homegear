@@ -36,17 +36,17 @@ MAXMessage::MAXMessage()
 {
 }
 
-MAXMessage::MAXMessage(int32_t messageType, MAXDevice* device, int32_t access, void (MAXDevice::*messageHandler)(int32_t, std::shared_ptr<MAXPacket>)) : _messageType(messageType), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
+MAXMessage::MAXMessage(int32_t messageType, int32_t messageSubtype, MAXDevice* device, int32_t access, void (MAXDevice::*messageHandler)(int32_t, std::shared_ptr<MAXPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _access(access), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-MAXMessage::MAXMessage(int32_t messageType, MAXDevice* device, int32_t access, int32_t accessPairing, void (MAXDevice::*messageHandler)(int32_t, std::shared_ptr<MAXPacket>)) : _messageType(messageType), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
+MAXMessage::MAXMessage(int32_t messageType, int32_t messageSubtype, MAXDevice* device, int32_t access, int32_t accessPairing, void (MAXDevice::*messageHandler)(int32_t, std::shared_ptr<MAXPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _access(access), _accessPairing(accessPairing), _messageHandlerIncoming(messageHandler)
 {
     _direction = DIRECTIONIN;
 }
 
-MAXMessage::MAXMessage(int32_t messageType, int32_t controlByte, MAXDevice* device, void (MAXDevice::*messageHandler)(int32_t, int32_t, std::shared_ptr<MAXPacket>)) : _messageType(messageType), _messageSubtype(controlByte), _device(device), _messageHandlerOutgoing(messageHandler)
+MAXMessage::MAXMessage(int32_t messageType, int32_t messageSubtype, MAXDevice* device, void (MAXDevice::*messageHandler)(int32_t, int32_t, std::shared_ptr<MAXPacket>)) : _messageType(messageType), _messageSubtype(messageSubtype), _device(device), _messageHandlerOutgoing(messageHandler)
 {
     _direction = DIRECTIONOUT;
 }
@@ -99,11 +99,11 @@ void MAXMessage::invokeMessageHandlerOutgoing(std::shared_ptr<MAXPacket> packet)
 	}
 }
 
-bool MAXMessage::typeIsEqual(int32_t messageType, std::vector<std::pair<uint32_t, int32_t> >* subtypes)
+bool MAXMessage::typeIsEqual(int32_t messageType, int32_t messageSubtype, std::vector<std::pair<uint32_t, int32_t> >* subtypes)
 {
 	try
 	{
-		if(_messageType != messageType) return false;
+		if(_messageType != messageType || (_messageSubtype > -1 && _messageSubtype != messageSubtype)) return false;
 		if(subtypes->size() != _subtypes.size()) return false;
 		for(uint32_t i = 0; i < subtypes->size(); i++)
 		{
@@ -131,7 +131,7 @@ bool MAXMessage::typeIsEqual(std::shared_ptr<MAXPacket> packet)
 {
 	try
 	{
-		if(_messageType != packet->messageType()) return false;
+		if(_messageType != packet->messageType() || (_messageSubtype > -1 && _messageSubtype != packet->messageSubtype())) return false;
 		std::vector<uint8_t>* payload = packet->payload();
 		if(_subtypes.empty()) return true;
 		for(std::vector<std::pair<uint32_t, int32_t>>::const_iterator i = _subtypes.begin(); i != _subtypes.end(); ++i)

@@ -32,8 +32,11 @@
 
 #include "../Base/BaseLib.h"
 #include "MAXPacket.h"
+#include "PendingQueues.h"
 
 #include <list>
+
+using namespace BaseLib::Systems;
 
 namespace MAX
 {
@@ -72,7 +75,11 @@ public:
 	//In table variables:
 	int32_t getMessageCounter() { return _messageCounter; }
 	void setMessageCounter(int32_t value) { _messageCounter = value; saveVariable(5, value); }
+	std::string getPhysicalInterfaceID() { return _physicalInterfaceID; }
+	void setPhysicalInterfaceID(std::string);
 	//End
+
+	std::shared_ptr<PendingQueues> pendingQueues;
 
 	virtual std::string handleCLICommand(std::string command);
 	void initializeCentralConfig();
@@ -91,6 +98,8 @@ public:
 	virtual std::string getFirmwareVersionString(int32_t firmwareVersion);
     virtual bool firmwareUpdateAvailable() { return false; }
 
+    std::shared_ptr<IPhysicalInterface> getPhysicalInterface() { return _physicalInterface; }
+    void setRSSIDevice(uint8_t rssi);
 	void getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector<FrameValues>& frameValue);
 	void packetReceived(std::shared_ptr<MAXPacket> packet);
 
@@ -101,9 +110,15 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setValue(uint32_t channel, std::string valueKey, std::shared_ptr<BaseLib::RPC::RPCVariable> value) { return BaseLib::RPC::RPCVariable::createError(-32601, "Method not implemented for this peer."); }
 	//End RPC methods
 protected:
+	uint32_t _lastRSSIDevice = 0;
+	std::shared_ptr<IPhysicalInterface> _physicalInterface;
+
 	//In table variables:
 	uint8_t _messageCounter = 0;
+	std::string _physicalInterfaceID;
 	//End
+
+	virtual void setPhysicalInterface(std::shared_ptr<IPhysicalInterface> interface);
 
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::shared_ptr<BaseLib::Systems::LogicalDevice> getDevice(int32_t address);

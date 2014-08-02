@@ -47,7 +47,6 @@ public:
 	HMWiredCentral(IDeviceEventSink* eventHandler);
 	HMWiredCentral(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
 	virtual ~HMWiredCentral();
-	void init();
 	virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 	std::string handleCLICommand(std::string command);
 	uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<HMWiredPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
@@ -71,9 +70,6 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> searchDevices();
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> updateFirmware(std::vector<uint64_t> ids, bool manual);
 protected:
-	std::shared_ptr<HMWiredPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
-	void deletePeer(uint64_t id);
-private:
 	std::mutex _peerInitMutex;
 
 	//Updates:
@@ -81,6 +77,10 @@ private:
 	std::mutex _updateMutex;
 	std::thread _updateFirmwareThread;
 	//End
+
+	std::shared_ptr<HMWiredPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save = true);
+	void deletePeer(uint64_t id);
+	virtual void init();
 };
 
 } /* namespace HMWired */

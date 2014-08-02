@@ -49,6 +49,7 @@
 #include "pthread.h"
 
 using namespace BaseLib::Systems;
+using namespace BaseLib::RPC;
 
 namespace MAX
 {
@@ -86,6 +87,8 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
         virtual void saveVariables();
         virtual void savePeers(bool full) {}
 
+        virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<MAXPacket>) {}
+
         virtual void sendPacket(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, std::shared_ptr<MAXPacket> packet, bool stealthy = false);
     protected:
         //In table variables
@@ -100,6 +103,8 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
         PacketManager _sentPackets;
         std::shared_ptr<MAXMessages> _messages;
         std::shared_ptr<BaseLib::Systems::IPhysicalInterface> _physicalInterface;
+
+        virtual std::shared_ptr<IPhysicalInterface> getPhysicalInterface(int32_t peerAddress);
 
         virtual void init();
         virtual void setUpMAXMessages();

@@ -56,7 +56,7 @@ std::shared_ptr<BidCoSMessage> BidCoSMessages::find(int32_t direction, std::shar
 {
 	try
 	{
-		if(packet == nullptr) return std::shared_ptr<BidCoSMessage>();
+		if(!packet) return std::shared_ptr<BidCoSMessage>();
 		int32_t subtypeMax = -1;
 		std::shared_ptr<BidCoSMessage>* elementToReturn = nullptr;
 		for(uint32_t i = 0; i < _messages.size(); i++)

@@ -77,12 +77,49 @@ std::shared_ptr<BaseLib::Systems::LogicalDevice> MAXPeer::getDevice(int32_t addr
 	return std::shared_ptr<BaseLib::Systems::LogicalDevice>();
 }
 
+void MAXPeer::setPhysicalInterfaceID(std::string id)
+{
+	if(id.empty() || (GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id)))
+	{
+		_physicalInterfaceID = id;
+		setPhysicalInterface(id.empty() ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(_physicalInterfaceID));
+		saveVariable(19, _physicalInterfaceID);
+	}
+}
+
+void MAXPeer::setPhysicalInterface(std::shared_ptr<IPhysicalInterface> interface)
+{
+	try
+	{
+		if(!interface) return;
+		_physicalInterface = interface;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 MAXPeer::MAXPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, parentID, centralFeatures, eventHandler)
 {
+	if(centralFeatures)
+	{
+		pendingQueues.reset(new PendingQueues());
+	}
+	setPhysicalInterface(GD::defaultPhysicalInterface);
 }
 
 MAXPeer::MAXPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
+	setPhysicalInterface(GD::defaultPhysicalInterface);
 }
 
 MAXPeer::~MAXPeer()
@@ -284,6 +321,10 @@ void MAXPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared
 			case 12:
 				unserializePeers(row->second.at(5)->binaryValue);
 				break;
+			case 19:
+				_physicalInterfaceID = row->second.at(4)->textValue;
+				if(!_physicalInterfaceID.empty() && GD::physicalInterfaces.find(_physicalInterfaceID) != GD::physicalInterfaces.end()) setPhysicalInterface(GD::physicalInterfaces.at(_physicalInterfaceID));
+				break;
 			}
 		}
 	}
@@ -344,6 +385,7 @@ void MAXPeer::saveVariables()
 		Peer::saveVariables();
 		saveVariable(5, (int32_t)_messageCounter);
 		savePeers(); //12
+		saveVariable(19, _physicalInterfaceID);
 	}
 	catch(const std::exception& ex)
     {
@@ -525,4 +567,36 @@ std::string MAXPeer::getFirmwareVersionString(int32_t firmwareVersion)
 	return "";
 }
 
+void MAXPeer::setRSSIDevice(uint8_t rssi)
+{
+	try
+	{
+		if(!_centralFeatures || _disposing || rssi == 0) return;
+		uint32_t time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		if(valuesCentral.find(0) != valuesCentral.end() && valuesCentral.at(0).find("RSSI_DEVICE") != valuesCentral.at(0).end() && (time - _lastRSSIDevice) > 10)
+		{
+			_lastRSSIDevice = time;
+			BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral.at(0).at("RSSI_DEVICE");
+			parameter->data.at(0) = rssi;
+
+			std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>({std::string("RSSI_DEVICE")}));
+			std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>> rpcValues(new std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>());
+			rpcValues->push_back(parameter->rpcParameter->convertFromPacket(parameter->data));
+
+			raiseRPCEvent(_peerID, 0, _serialNumber + ":0", valueKeys, rpcValues);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
 }

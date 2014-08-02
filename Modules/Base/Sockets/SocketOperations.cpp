@@ -142,12 +142,12 @@ int32_t SocketOperations::proofread(char* buffer, int32_t bufferSize)
 	int32_t nfds = _socketDescriptor->descriptor + 1;
 	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
 	_bl->fileDescriptorManager.unlock();
-	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
 	int32_t bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead == 0) throw SocketTimeOutException("Reading from socket timed out.");
-	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+	if(bytesRead != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
 	bytesRead = _socketDescriptor->tlsSession ? gnutls_record_recv(_socketDescriptor->tlsSession, buffer, bufferSize) : read(_socketDescriptor->descriptor, buffer, bufferSize);
-	if(bytesRead <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+	if(bytesRead <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
 	return bytesRead;
 }
 
@@ -180,10 +180,10 @@ int32_t SocketOperations::proofwrite(const std::vector<char>& data)
 		int32_t nfds = _socketDescriptor->descriptor + 1;
 		FD_SET(_socketDescriptor->descriptor, &writeFileDescriptor);
 		_bl->fileDescriptorManager.unlock();
-		if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+		if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
 		int32_t readyFds = select(nfds, NULL, &writeFileDescriptor, NULL, &timeout);
 		if(readyFds == 0) throw SocketTimeOutException("Writing to socket timed out.");
-		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+		if(readyFds != 1) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
 
 		int32_t bytesToSend = data.size() - bytesSentSoFar;
 		int32_t bytesSentInStep = _socketDescriptor->tlsSession ? gnutls_record_send(_socketDescriptor->tlsSession, &data.at(bytesSentSoFar), bytesToSend) : send(_socketDescriptor->descriptor, &data.at(bytesSentSoFar), bytesToSend, MSG_NOSIGNAL);
@@ -331,7 +331,7 @@ bool SocketOperations::waitForSocket()
 	int32_t nfds = _socketDescriptor->descriptor + 1;
 	FD_SET(_socketDescriptor->descriptor, &readFileDescriptor);
 	_bl->fileDescriptorManager.unlock();
-	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->descriptor) + " closed.");
+	if(nfds <= 0) throw SocketClosedException("Connection to client number " + std::to_string(_socketDescriptor->id) + " closed.");
 	int32_t bytesRead = select(nfds, &readFileDescriptor, NULL, NULL, &timeout);
 	if(bytesRead != 1) return false;
 	return true;
@@ -483,6 +483,6 @@ void SocketOperations::getConnection()
 			}
 		}
 	}
-	_bl->out.printInfo("Info: Connected to host " + _hostname + " on port " + _port + ". Client number is: " + std::to_string(_socketDescriptor->descriptor));
+	_bl->out.printInfo("Info: Connected to host " + _hostname + " on port " + _port + ". Client number is: " + std::to_string(_socketDescriptor->id));
 }
 }

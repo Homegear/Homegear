@@ -45,7 +45,7 @@ class MAXMessages
         virtual ~MAXMessages() {}
         void add(std::shared_ptr<MAXMessage> message);
         std::shared_ptr<MAXMessage> find(int32_t direction, std::shared_ptr<MAXPacket> packet);
-        std::shared_ptr<MAXMessage> find(int32_t direction, int32_t messageType, std::vector<std::pair<uint32_t, int32_t> > subtypes);
+        std::shared_ptr<MAXMessage> find(int32_t direction, int32_t messageType, int32_t messageSubtype, std::vector<std::pair<uint32_t, int32_t> > subtypes);
     protected:
     private:
         std::vector<std::shared_ptr<MAXMessage>> _messages;

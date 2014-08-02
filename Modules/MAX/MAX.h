@@ -53,6 +53,9 @@ public:
 	virtual std::string handleCLICommand(std::string& command);
 	virtual std::string getName() { return "MAX"; }
 private:
+	std::shared_ptr<MAXCentral> _central;
+
+	void createCentral();
 	void createSpyDevice();
 	uint32_t getUniqueAddress(uint32_t seed);
 	std::string getUniqueSerialNumber(std::string seedPrefix, uint32_t seedNumber);

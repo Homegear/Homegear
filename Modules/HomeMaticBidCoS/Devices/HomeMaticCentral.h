@@ -49,7 +49,6 @@ public:
 	HomeMaticCentral(IDeviceEventSink* eventHandler);
 	HomeMaticCentral(uint32_t deviceType, std::string, int32_t, IDeviceEventSink* eventHandler);
 	virtual ~HomeMaticCentral();
-	void init();
 	virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 	void enablePairingMode() { _pairing = true; }
 	void disablePairingMode() { _pairing = false; }
@@ -104,9 +103,6 @@ public:
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> updateFirmware(std::vector<uint64_t> ids, bool manual);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(uint64_t peerID, std::string interfaceID);
 protected:
-	std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
-	virtual void worker();
-private:
 	uint32_t _timeLeftInPairingMode = 0;
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
 	bool _stopPairingModeThread = false;
@@ -118,6 +114,10 @@ private:
 	std::mutex _updateMutex;
 	std::thread _updateFirmwareThread;
 	//End
+
+	std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
+	virtual void worker();
+	virtual void init();
 };
 
 }

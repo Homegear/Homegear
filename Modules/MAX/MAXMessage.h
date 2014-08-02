@@ -51,9 +51,9 @@ class MAXMessage
 {
     public:
         MAXMessage();
-        MAXMessage(int32_t messageType, MAXDevice* device, int32_t access, void (MAXDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<MAXPacket>));
-        MAXMessage(int32_t messageType, MAXDevice* device, int32_t access, int32_t accessPairing, void (MAXDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<MAXPacket>));
-        MAXMessage(int32_t messageType, int32_t controlByte, MAXDevice* device, void (MAXDevice::*messageHandlerOutgoing)(int32_t, int32_t, std::shared_ptr<MAXPacket>));
+        MAXMessage(int32_t messageType, int32_t messageSubtype, MAXDevice* device, int32_t access, void (MAXDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<MAXPacket>));
+        MAXMessage(int32_t messageType, int32_t messageSubtype, MAXDevice* device, int32_t access, int32_t accessPairing, void (MAXDevice::*messageHandlerIncoming)(int32_t, std::shared_ptr<MAXPacket>));
+        MAXMessage(int32_t messageType, int32_t messageSubtype, MAXDevice* device, void (MAXDevice::*messageHandlerOutgoing)(int32_t, int32_t, std::shared_ptr<MAXPacket>));
         virtual ~MAXMessage();
 
         MessageDirection getDirection() { return _direction; }
@@ -77,11 +77,11 @@ class MAXMessage
         bool typeIsEqual(std::shared_ptr<MAXPacket> packet);
         bool typeIsEqual(std::shared_ptr<MAXMessage> message, std::shared_ptr<MAXPacket> packet);
         bool typeIsEqual(std::shared_ptr<MAXMessage> message);
-        bool typeIsEqual(int32_t messageType, std::vector<std::pair<uint32_t, int32_t>>* subtypes);
+        bool typeIsEqual(int32_t messageType, int32_t messageSubtype, std::vector<std::pair<uint32_t, int32_t>>* subtypes);
     protected:
         MessageDirection _direction = DIRECTIONIN;
         int32_t _messageType = -1;
-        int32_t _messageSubtype = 0;
+        int32_t _messageSubtype = -1;
         MAXDevice* _device = nullptr;
         int32_t _access = 0;
         int32_t _accessPairing = 0;
