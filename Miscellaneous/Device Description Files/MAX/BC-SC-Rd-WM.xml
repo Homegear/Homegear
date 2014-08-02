@@ -5,12 +5,12 @@ Todo:
 -->
 <device version="1">
   <types>
-    <type name="MAX! Plug Adapter" id="HM-TS-Sw-Pl">
-      <parameter index="10.0" size="1.0" cond_op="GE" const_value="0x10"/>
-      <parameter index="11.0" size="1.0" const_value="0x01"/>
+    <type name="MAX! Window Sensor" id="BC-SC-Rd-WM">
+      <parameter index="10.0" size="1.0" cond_op="GE" const_value="0x14"/>
+      <parameter index="11.0" size="1.0" const_value="0x04"/>
     </type>
   </types>
-  <parameters type="MASTER" id="switch_dev_master">
+  <parameters type="MASTER" id="remote_dev_master">
   </parameters>
   <channels>
     <channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
@@ -28,6 +28,10 @@ Todo:
           <logical type="boolean"/>
           <physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
         </parameter>
+        <parameter id="LOWBAT" operations="read,event" ui_flags="service">
+          <logical type="boolean"/>
+          <physical type="integer" interface="internal" value_id="LOWBAT"/>
+        </parameter>
         <parameter id="RSSI_DEVICE" operations="read,event">
           <logical type="integer"/>
           <physical type="integer" interface="internal" value_id="RSSI_DEVICE"/>
@@ -36,7 +40,7 @@ Todo:
           <logical type="integer"/>
           <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
         </parameter>
-		<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
+        <parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
           <logical type="option">
             <option id="UNSET" index="0" default="true"/>
             <option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
@@ -45,34 +49,27 @@ Todo:
         </parameter>
       </parameters>
     </channel>
-    <channel index="1" type="SWITCH">
+    <channel index="1" type="SHUTTER_CONTACT">
       <link_roles>
-        <target name="SWITCH"/>
+        <source name="SWITCH"/>
+        <source name="WINDOW_SWITCH_RECEIVER"/>
       </link_roles>
-      <parameters type="VALUES" id="switch_ch_values">
-        <parameter id="STATE" operations="read,write,event" control="SWITCH.STATE">
-          <logical type="boolean" default="false"/>
+      <parameters type="VALUES" id="sc_ch_values">
+        <parameter id="STATE" operations="read,event" control="DOOR_SENSOR.STATE">
+          <logical type="boolean"/>
           <physical type="integer" interface="command" value_id="STATE">
-            <set request="LEVEL_SET"/>
+            <event frame="EVENT"/>
             <event frame="INFO_LEVEL"/>
             <event frame="ACK_STATUS"/>
           </physical>
-          <conversion type="boolean_integer" threshold="96" false="94" true="114"/>
         </parameter>
       </parameters>
     </channel>
   </channels>
-  <packets>
-    <packet id="LEVEL_SET" direction="to_device" type="0x40" subtype="0x04" subtype_index="1">
-      <parameter type="integer" index="9.0" size="1.0" const_value="1"/>
-      <parameter type="integer" index="10.0" size="1.0" param="STATE"/>
-    </packet>
-    <packet id="INFO_LEVEL" direction="from_device" event="true" type="0x40" subtype="0x06" subtype_index="1">
-      <parameter type="integer" index="10.0" size="1.0" param="STATE"/>
-    </packet>
-    <packet id="ACK_STATUS" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x02" subtype="1" subtype_index="9" channel_field="10">
-      <parameter type="integer" index="11.0" size="1.0" param="STATE"/>
-      <parameter type="integer" index="12.4" size="0.3" param="STATE_FLAGS"/>
-    </packet>
-  </packets>
+  <frames>
+    <frame id="EVENT" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x41" channel_field="9:0.6">
+      <parameter type="integer" index="10.0" size="0.2" param="STATE"/>
+      <parameter type="integer" index="9.7" size="0.1" param="LOWBAT"/><!-- No idea if this really is the LOWBAT bit -->
+    </frame>
+  </frames>
 </device>
