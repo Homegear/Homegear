@@ -2008,7 +2008,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), deviceType, serialNumber, 0, 0, packet, false);
 				if(!queue->peer)
 				{
-					GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress()) + ".");
+					GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
 					return;
 				}
 				peer = queue->peer;
@@ -2017,7 +2017,7 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 
 			if(!peer->rpcDevice)
 			{
-				GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress()) + ".");
+				GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
 				return;
 			}
 

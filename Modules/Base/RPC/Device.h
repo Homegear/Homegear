@@ -175,11 +175,18 @@ protected:
 class DeviceType
 {
 public:
+	struct BooleanOperator
+	{
+		enum Enum { e, g, l, ge, le };
+	};
 	std::string name;
 	std::string id;
 	std::vector<Parameter> parameters;
 	bool updatable = false;
 	int32_t priority = 0;
+	int32_t firmware = -1;
+	int32_t typeID = -1;
+	BooleanOperator::Enum booleanOperator = BooleanOperator::Enum::e;
 	Device* device = nullptr;
 
 	DeviceType(BaseLib::Obj* baseLib);
@@ -189,6 +196,7 @@ public:
 	virtual bool matches(Systems::DeviceFamilies family, std::shared_ptr<Systems::Packet> packet);
 	virtual bool matches(Systems::DeviceFamilies family, std::string typeID);
 	virtual bool matches(Systems::LogicalDeviceType deviceType, uint32_t firmwareVersion);
+	virtual bool checkFirmwareVersion(int32_t version);
 protected:
 	BaseLib::Obj* _bl = nullptr;
 };
@@ -362,8 +370,8 @@ public:
 	bool peeringSysinfoExpectChannel = true;
 	std::shared_ptr<Device> team;
 
-	Device(BaseLib::Obj* baseLib);
-	Device(BaseLib::Obj* baseLib, std::string xmlFilename);
+	Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies family);
+	Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies family, std::string xmlFilename);
 	virtual ~Device();
 	virtual std::shared_ptr<DeviceType> getType(Systems::LogicalDeviceType deviceType, int32_t firmwareVersion);
 	virtual int32_t getCountFromSysinfo() { return _countFromSysinfo; }

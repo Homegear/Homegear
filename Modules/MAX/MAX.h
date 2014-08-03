@@ -49,7 +49,7 @@ public:
 	virtual void load();
 	virtual std::shared_ptr<MAXDevice> getDevice(uint32_t address);
 	virtual std::shared_ptr<MAXDevice> getDevice(std::string serialNumber);
-	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral() { return std::shared_ptr<BaseLib::Systems::Central>(); }
+	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::string handleCLICommand(std::string& command);
 	virtual std::string getName() { return "MAX"; }
 private:

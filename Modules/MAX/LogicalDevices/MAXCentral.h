@@ -49,12 +49,16 @@ public:
 	virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 	virtual std::string handleCLICommand(std::string command);
 	virtual uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<MAXPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
+	void reset(uint64_t id, bool defer);
 
+	virtual void handleAck(int32_t messageCounter, std::shared_ptr<MAXPacket>);
 	virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<MAXPacket>);
 
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);
 
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteDevice(uint64_t peerID, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getInstallMode();
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setInstallMode(bool on, uint32_t duration = 60, bool debugOutput = true);
@@ -68,6 +72,7 @@ protected:
 	void deletePeer(uint64_t id);
 	std::mutex _peerInitMutex;
 	virtual void setUpMAXMessages();
+	virtual void worker();
 	virtual void init();
 };
 

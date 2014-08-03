@@ -81,15 +81,18 @@ public:
 
 	std::shared_ptr<PendingQueues> pendingQueues;
 
+	virtual void worker();
 	virtual std::string handleCLICommand(std::string command);
 	void initializeCentralConfig();
 
 	virtual bool load(BaseLib::Systems::LogicalDevice* device);
+	virtual void save(bool savePeer, bool saveVariables, bool saveCentralConfig);
     void serializePeers(std::vector<uint8_t>& encodedData);
     void unserializePeers(std::shared_ptr<std::vector<char>> serializedData);
     virtual void loadVariables(BaseLib::Systems::LogicalDevice* device = nullptr, std::shared_ptr<BaseLib::Database::DataTable> rows = std::shared_ptr<BaseLib::Database::DataTable>());
     virtual void saveVariables();
 	virtual void savePeers();
+	void savePendingQueues();
 	bool hasPeers(int32_t channel) { if(_peers.find(channel) == _peers.end() || _peers[channel].empty()) return false; else return true; }
 	void addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer);
 	void removePeer(int32_t channel, uint64_t id, int32_t remoteChannel);

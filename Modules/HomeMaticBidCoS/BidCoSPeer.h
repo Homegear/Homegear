@@ -134,7 +134,6 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 
         void worker();
         virtual std::string handleCLICommand(std::string command);
-        void stopThreads();
         void initializeCentralConfig();
         void initializeLinkConfig(int32_t channel, int32_t address, int32_t remoteChannel, bool useConfigFunction);
         void applyConfigFunction(int32_t channel, int32_t address, int32_t remoteChannel);

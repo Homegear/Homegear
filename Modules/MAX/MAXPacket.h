@@ -43,8 +43,11 @@ class MAXPacket : public BaseLib::Systems::Packet
         MAXPacket();
         MAXPacket(std::vector<uint8_t>&, bool rssiByte, int64_t timeReceived = 0);
         MAXPacket(std::string packet, int64_t timeReceived = 0);
+        MAXPacket(uint8_t messageCounter, uint8_t messageType, uint8_t messageSubtype, int32_t senderAddress, int32_t destinationAddress, std::vector<uint8_t> payload, bool burst);
         virtual ~MAXPacket();
 
+        void setBurst(bool value) { _burst = value; }
+        bool getBurst() { return _burst; }
         uint8_t messageCounter() { return _messageCounter; }
         void setMessageCounter(uint8_t counter) { _messageCounter = counter; }
         uint8_t messageType() { return _messageType; }
@@ -55,6 +58,7 @@ class MAXPacket : public BaseLib::Systems::Packet
 
         bool equals(std::shared_ptr<MAXPacket>& rhs);
     protected:
+        bool _burst = false;
         uint8_t _messageCounter = 0;
         uint8_t _messageType = 0;
         uint8_t _messageSubtype = 0;

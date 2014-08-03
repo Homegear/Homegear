@@ -356,7 +356,7 @@ void PendingQueues::getInfoString(std::ostringstream& stringStream)
 					std::shared_ptr<MAXMessage> message = k->getMessage();
 					if(message)
 					{
-						stringStream << "Type: " << GD::bl->hf.getHexString(message->getMessageType(), 2) << " Control byte: " << GD::bl->hf.getHexString(message->getMessageSubtype(), 2);
+						stringStream << "Type: " << GD::bl->hf.getHexString(message->getMessageType(), 2) << " Subtype: " << GD::bl->hf.getHexString(message->getMessageSubtype(), 2);
 						if(!message->getSubtypes()->empty())
 						{
 							stringStream << " Subtypes: ";

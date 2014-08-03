@@ -2,12 +2,13 @@
 <!--
 Todo:
 	- Add cyclic_timeout
+	- Add power on event
 -->
 <device version="1">
   <types>
     <type name="MAX! Window Sensor" id="BC-SC-Rd-WM">
-      <parameter index="10.0" size="1.0" cond_op="GE" const_value="0x14"/>
-      <parameter index="11.0" size="1.0" const_value="0x04"/>
+      <type_id>0x04</type_id>
+      <firmware cond_op="GE">0x14</firmware>
     </type>
   </types>
   <parameters type="MASTER" id="remote_dev_master">

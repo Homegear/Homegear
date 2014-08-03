@@ -124,7 +124,7 @@ MAXPeer::MAXPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t
 
 MAXPeer::~MAXPeer()
 {
-
+	dispose();
 }
 
 void MAXPeer::initializeCentralConfig()
@@ -140,6 +140,21 @@ void MAXPeer::initializeCentralConfig()
 		BaseLib::Systems::RPCConfigurationParameter parameter;
 		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = rpcDevice->channels.begin(); i != rpcDevice->channels.end(); ++i)
 		{
+			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::master) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master])
+			{
+				std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::master];
+				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator j = masterSet->parameters.begin(); j != masterSet->parameters.end(); ++j)
+				{
+					if(!(*j)->id.empty() && configCentral[i->first].find((*j)->id) == configCentral[i->first].end())
+					{
+						parameter = BaseLib::Systems::RPCConfigurationParameter();
+						parameter.rpcParameter = *j;
+						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
+						configCentral[i->first][(*j)->id] = parameter;
+						saveParameter(0, BaseLib::RPC::ParameterSet::Type::master, i->first, (*j)->id, parameter.data);
+					}
+				}
+			}
 			if(i->second->parameterSets.find(BaseLib::RPC::ParameterSet::Type::values) != i->second->parameterSets.end() && i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values])
 			{
 				std::shared_ptr<BaseLib::RPC::ParameterSet> valueSet = i->second->parameterSets[BaseLib::RPC::ParameterSet::Type::values];
@@ -148,9 +163,10 @@ void MAXPeer::initializeCentralConfig()
 					if(!(*j)->id.empty() && valuesCentral[i->first].find((*j)->id) == valuesCentral[i->first].end())
 					{
 						parameter = BaseLib::Systems::RPCConfigurationParameter();
+						parameter.rpcParameter = *j;
 						parameter.data = (*j)->convertToPacket((*j)->logicalParameter->getDefaultValue());
-						saveParameter(0, BaseLib::RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
 						valuesCentral[i->first][(*j)->id] = parameter;
+						saveParameter(0, BaseLib::RPC::ParameterSet::Type::values, i->first, (*j)->id, parameter.data);
 					}
 				}
 			}
@@ -171,6 +187,41 @@ void MAXPeer::initializeCentralConfig()
     raiseReleaseSavepoint("maxPeerConfig" + std::to_string(_peerID));
 }
 
+void MAXPeer::worker()
+{
+	if(!_centralFeatures || _disposing) return;
+	std::vector<uint32_t> positionsToDelete;
+	int32_t wakeUpIndex = 0;
+	int32_t index;
+	int64_t time;
+	try
+	{
+		time = BaseLib::HelperFunctions::getTime();
+		if(rpcDevice) serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
+		if(serviceMessages->getConfigPending())
+		{
+			if(!pendingQueues || pendingQueues->empty()) serviceMessages->setConfigPending(false);
+			else if(_bl->settings.devLog() && (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::wakeUp) && (_bl->hf.getTime() - serviceMessages->getConfigPendingSetTime()) > 360000)
+			{
+				GD::out.printWarning("Devlog warning: Configuration for peer with id " + std::to_string(_peerID) + " supporting wake up is pending since more than 6 minutes.");
+				serviceMessages->resetConfigPendingSetTime();
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 std::string MAXPeer::handleCLICommand(std::string command)
 {
 	try
@@ -182,10 +233,71 @@ std::string MAXPeer::handleCLICommand(std::string command)
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
 			stringStream << "unselect\t\tUnselect this peer" << std::endl;
+			stringStream << "queues info\t\tPrints information about the pending MAX! packet queues" << std::endl;
+			stringStream << "queues clear\t\tClears pending MAX! packet queues" << std::endl;
 			stringStream << "peers list\t\tLists all peers paired to this peer" << std::endl;
 			return stringStream.str();
 		}
-		if(command.compare(0, 10, "peers list") == 0)
+		if(command.compare(0, 11, "queues info") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command prints information about the pending MAX! queues." << std::endl;
+						stringStream << "Usage: queues info" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			pendingQueues->getInfoString(stringStream);
+			return stringStream.str();
+		}
+		else if(command.compare(0, 12, "queues clear") == 0)
+		{
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help")
+					{
+						stringStream << "Description: This command clears all pending BidCoS queues." << std::endl;
+						stringStream << "Usage: queues clear" << std::endl << std::endl;
+						stringStream << "Parameters:" << std::endl;
+						stringStream << "  There are no parameters." << std::endl;
+						return stringStream.str();
+					}
+				}
+				index++;
+			}
+
+			pendingQueues->clear();
+			stringStream << "All pending BidCoSQueues were deleted." << std::endl;
+			return stringStream.str();
+		}
+		else if(command.compare(0, 10, "peers list") == 0)
 		{
 			std::stringstream stream(command);
 			std::string element;
@@ -304,6 +416,27 @@ void MAXPeer::removePeer(int32_t channel, uint64_t id, int32_t remoteChannel)
     _databaseMutex.unlock();
 }
 
+void MAXPeer::save(bool savePeer, bool variables, bool centralConfig)
+{
+	try
+	{
+		Peer::save(savePeer, variables, centralConfig);
+		if(!variables) savePendingQueues();
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void MAXPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared_ptr<BaseLib::Database::DataTable> rows)
 {
 	try
@@ -321,12 +454,20 @@ void MAXPeer::loadVariables(BaseLib::Systems::LogicalDevice* device, std::shared
 			case 12:
 				unserializePeers(row->second.at(5)->binaryValue);
 				break;
+			case 16:
+				if(_centralFeatures && device)
+				{
+					pendingQueues.reset(new PendingQueues());
+					pendingQueues->unserialize(row->second.at(5)->binaryValue, this, (MAXDevice*)device);
+				}
+				break;
 			case 19:
 				_physicalInterfaceID = row->second.at(4)->textValue;
 				if(!_physicalInterfaceID.empty() && GD::physicalInterfaces.find(_physicalInterfaceID) != GD::physicalInterfaces.end()) setPhysicalInterface(GD::physicalInterfaces.at(_physicalInterfaceID));
 				break;
 			}
 		}
+		if(_centralFeatures && !pendingQueues) pendingQueues.reset(new PendingQueues());
 	}
 	catch(const std::exception& ex)
     {
@@ -385,6 +526,7 @@ void MAXPeer::saveVariables()
 		Peer::saveVariables();
 		saveVariable(5, (int32_t)_messageCounter);
 		savePeers(); //12
+		savePendingQueues(); //16
 		saveVariable(19, _physicalInterfaceID);
 	}
 	catch(const std::exception& ex)
@@ -408,6 +550,29 @@ void MAXPeer::savePeers()
 		std::vector<uint8_t> serializedData;
 		serializePeers(serializedData);
 		saveVariable(12, serializedData);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void MAXPeer::savePendingQueues()
+{
+	try
+	{
+		if(!_centralFeatures || !pendingQueues) return;
+		std::vector<uint8_t> serializedData;
+		pendingQueues->serialize(serializedData);
+		saveVariable(16, serializedData);
 	}
 	catch(const std::exception& ex)
     {

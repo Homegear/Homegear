@@ -29,6 +29,7 @@
 
 #include "MAX.h"
 #include "PhysicalInterfaces/CUL.h"
+#include "PhysicalInterfaces/TICC1100.h"
 #include "MAXDeviceTypes.h"
 #include "LogicalDevices/MAXCentral.h"
 #include "LogicalDevices/MAXSpyDevice.h"
@@ -56,7 +57,7 @@ MAX::~MAX()
 bool MAX::init()
 {
 	GD::out.printInfo("Loading XML RPC devices...");
-	GD::rpcDevices.load(_bl->settings.deviceDescriptionPath() + std::to_string((int32_t)BaseLib::Systems::DeviceFamilies::MAX));
+	GD::rpcDevices.load();
 	if(GD::rpcDevices.empty()) return false;
 	return true;
 }
@@ -70,6 +71,8 @@ void MAX::dispose()
 	GD::defaultPhysicalInterface.reset();
 }
 
+std::shared_ptr<BaseLib::Systems::Central> MAX::getCentral() { return _central; }
+
 std::shared_ptr<BaseLib::Systems::IPhysicalInterface> MAX::createPhysicalDevice(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings)
 {
 	try
@@ -78,6 +81,7 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> MAX::createPhysicalDevice(
 		if(!settings) return device;
 		GD::out.printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
 		if(settings->type == "cul") device.reset(new CUL(settings));
+		else if(settings->type == "cc1100") device.reset(new TICC1100(settings));
 		else GD::out.printError("Error: Unsupported physical device type: " + settings->type);
 		if(device)
 		{
@@ -506,8 +510,7 @@ std::string MAX::handleCLICommand(std::string& command)
 				return stringStream.str();
 			}
 
-			//_currentDevice = central ? _central : get(id);
-			_currentDevice = get(id);
+			_currentDevice = central ? _central : get(id);
 			if(!_currentDevice) stringStream << "Device not found." << std::endl;
 			else
 			{

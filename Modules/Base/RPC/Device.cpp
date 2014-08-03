@@ -982,20 +982,28 @@ bool DeviceType::matches(Systems::LogicalDeviceType deviceType, uint32_t firmwar
 {
 	try
 	{
-		if(parameters.empty() || (device && deviceType.family() != device->family)) return false;
-		bool match = true;
-		for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		if((device && deviceType.family() != device->family)) return false;
+		if(firmware != -1 && typeID != -1)
 		{
-			//When the device type is not at index 10 of the pairing packet, the device is not supported
-			//The "priority" attribute is ignored, for the standard devices "priority" seems not important
-			if(i->index == 10.0) { if(i->constValue != deviceType.type()) match = false; }
-			else if(i->index == 9.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
-			else if(i->index == 0) { if((deviceType.type() >> 8) != i->constValue) match = false; }
-			else if(i->index == 1.0) { if((deviceType.type() & 0xFF) != i->constValue) match = false; }
-			else if(i->index == 2.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
-			else match = false; //Unknown index
+			if(deviceType.type() == typeID && checkFirmwareVersion(firmwareVersion)) return true;
 		}
-		if(match) return true;
+		else
+		{
+			if(parameters.empty()) return false;
+			bool match = true;
+			for(std::vector<Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+			{
+				//When the device type is not at index 10 of the pairing packet, the device is not supported
+				//The "priority" attribute is ignored, for the standard devices "priority" seems not important
+				if(i->index == 10.0) { if(i->constValue != deviceType.type()) match = false; }
+				else if(i->index == 9.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
+				else if(i->index == 0) { if((deviceType.type() >> 8) != i->constValue) match = false; }
+				else if(i->index == 1.0) { if((deviceType.type() & 0xFF) != i->constValue) match = false; }
+				else if(i->index == 2.0) { if(!i->checkCondition(firmwareVersion)) match = false; }
+				else match = false; //Unknown index
+			}
+			if(match) return true;
+		}
 	}
 	catch(const std::exception& ex)
 	{
@@ -1063,6 +1071,47 @@ bool DeviceType::matches(Systems::DeviceFamilies family, std::shared_ptr<Systems
     return false;
 }
 
+bool DeviceType::checkFirmwareVersion(int32_t version)
+{
+	try
+	{
+		switch(booleanOperator)
+		{
+		case BooleanOperator::Enum::e:
+			return version == firmware;
+			break;
+		case BooleanOperator::Enum::g:
+			return version > firmware;
+			break;
+		case BooleanOperator::Enum::l:
+			return version < firmware;
+			break;
+		case BooleanOperator::Enum::ge:
+			return version >= firmware;
+			break;
+		case BooleanOperator::Enum::le:
+			return version <= firmware;
+			break;
+		default:
+			_bl->out.printWarning("Warning: Boolean operator is none.");
+			break;
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return false;
+}
+
 DeviceType::DeviceType(BaseLib::Obj* baseLib)
 {
 	_bl = baseLib;
@@ -1084,6 +1133,34 @@ DeviceType::DeviceType(BaseLib::Obj* baseLib, xml_node<>* typeNode) : DeviceType
 	{
 		Parameter parameter(baseLib, parameterNode);
 		parameters.push_back(parameter);
+	}
+	xml_node<>* typeIDNode = typeNode->first_node("type_id");
+	if(typeIDNode)
+	{
+		std::string value(typeIDNode->value());
+		if(!value.empty()) typeID = HelperFunctions::getNumber(value);
+	}
+	xml_node<>* firmwareNode = typeNode->first_node("firmware");
+	if(firmwareNode)
+	{
+		for(xml_attribute<>* attr = firmwareNode->first_attribute(); attr; attr = attr->next_attribute())
+		{
+			std::string attributeName(attr->name());
+			std::string attributeValue(attr->value());
+			if(attributeName == "cond_op")
+			{
+				HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
+				if(attributeValue == "e" || attributeValue == "eq") booleanOperator = BooleanOperator::Enum::e;
+				else if(attributeValue == "g") booleanOperator = BooleanOperator::Enum::g;
+				else if(attributeValue == "l") booleanOperator = BooleanOperator::Enum::l;
+				else if(attributeValue == "ge") booleanOperator = BooleanOperator::Enum::ge;
+				else if(attributeValue == "le") booleanOperator = BooleanOperator::Enum::le;
+				else _bl->out.printWarning("Warning: Unknown attribute value for \"cond_op\" in node \"parameter\": " + attributeValue);
+			}
+			else _bl->out.printWarning("Warning: Unknown attribute for \"firmware\": " + attributeName);
+		}
+		std::string value(firmwareNode->value());
+		if(!value.empty()) firmware = HelperFunctions::getNumber(value);
 	}
 }
 
@@ -1516,13 +1593,14 @@ DeviceChannel::DeviceChannel(BaseLib::Obj* baseLib, xml_node<>* node, uint32_t& 
 	}
 }
 
-Device::Device(BaseLib::Obj* baseLib)
+Device::Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies deviceFamily)
 {
 	_bl = baseLib;
+	family = deviceFamily;
 	parameterSet.reset(new ParameterSet(baseLib));
 }
 
-Device::Device(BaseLib::Obj* baseLib, std::string xmlFilename) : Device(baseLib)
+Device::Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies deviceFamily, std::string xmlFilename) : Device(baseLib, deviceFamily)
 {
 	try
 	{
@@ -1664,12 +1742,6 @@ void Device::parseXML(xml_node<>* node)
 			std::string attributeName(attr->name());
 			std::string attributeValue(attr->value());
 			if(attributeName == "version") version = HelperFunctions::getNumber(attributeValue);
-			else if(attributeName == "family")
-			{
-				HelperFunctions::toLower(HelperFunctions::trim(attributeValue));
-				if(attributeValue == "homematicbidcos") family = Systems::DeviceFamilies::HomeMaticBidCoS;
-				else if(attributeValue == "homematicwired") family = Systems::DeviceFamilies::HomeMaticWired;
-			}
 			else if(attributeName == "rx_modes")
 			{
 				std::stringstream stream(attributeValue);
@@ -1806,7 +1878,7 @@ void Device::parseXML(xml_node<>* node)
 			}
 			else if(nodeName == "team")
 			{
-				team.reset(new Device(_bl));
+				team.reset(new Device(_bl, family));
 				team->parseXML(node);
 			}
 			else _bl->out.printWarning("Warning: Unknown node name for \"device\": " + nodeName);

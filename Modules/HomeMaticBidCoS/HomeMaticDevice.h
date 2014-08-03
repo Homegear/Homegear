@@ -67,13 +67,13 @@ class HomeMaticDevice : public BaseLib::Systems::LogicalDevice, public BidCoSQue
         virtual bool isCentral();
         static bool isDimmer(BaseLib::Systems::LogicalDeviceType type);
         static bool isSwitch(BaseLib::Systems::LogicalDeviceType type);
-        virtual void stopThreads();
         virtual void checkForDeadlock();
         virtual void reset();
 
         HomeMaticDevice(IDeviceEventSink* eventHandler);
         HomeMaticDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~HomeMaticDevice();
+        virtual void stopThreads();
         virtual void dispose(bool wait = true);
         virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
 

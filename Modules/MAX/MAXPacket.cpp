@@ -49,6 +49,18 @@ MAXPacket::MAXPacket(std::string packet, int64_t timeReceived)
     import(packet);
 }
 
+MAXPacket::MAXPacket(uint8_t messageCounter, uint8_t messageType, uint8_t messageSubtype, int32_t senderAddress, int32_t destinationAddress, std::vector<uint8_t> payload, bool burst)
+{
+    _length = 9 + _payload.size();
+    _messageCounter = messageCounter;
+    _messageType = messageType;
+    _messageSubtype = messageSubtype;
+    _senderAddress = senderAddress;
+    _destinationAddress = destinationAddress;
+    _payload = payload;
+    _burst = burst;
+}
+
 MAXPacket::~MAXPacket()
 {
 }

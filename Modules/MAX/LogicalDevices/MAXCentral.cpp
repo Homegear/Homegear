@@ -85,6 +85,86 @@ void MAXCentral::setUpMAXMessages()
 	{
 		//Don't call MAXDevice::setUpMAXMessages!
 		_messages->add(std::shared_ptr<MAXMessage>(new MAXMessage(0x00, 0x04, this, ACCESSPAIREDTOSENDER, FULLACCESS, &MAXDevice::handlePairingRequest)));
+
+		_messages->add(std::shared_ptr<MAXMessage>(new MAXMessage(0x02, 0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &MAXDevice::handleAck)));
+	}
+    catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void MAXCentral::worker()
+{
+	try
+	{
+		std::chrono::milliseconds sleepingTime(10);
+		uint32_t counter = 0;
+		int32_t lastPeer;
+		lastPeer = 0;
+		//One loop on the Raspberry Pi takes about 30Âµs
+		while(!_stopWorkerThread)
+		{
+			try
+			{
+				std::this_thread::sleep_for(sleepingTime);
+				if(_stopWorkerThread) return;
+				if(counter > 10000)
+				{
+					counter = 0;
+					_peersMutex.lock();
+					if(_peers.size() > 0)
+					{
+						int32_t windowTimePerPeer = _bl->settings.workerThreadWindow() / _peers.size();
+						if(windowTimePerPeer > 2) windowTimePerPeer -= 2;
+						sleepingTime = std::chrono::milliseconds(windowTimePerPeer);
+					}
+					_peersMutex.unlock();
+				}
+				_peersMutex.lock();
+				if(!_peers.empty())
+				{
+					if(!_peers.empty())
+					{
+						std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator nextPeer = _peers.find(lastPeer);
+						if(nextPeer != _peers.end())
+						{
+							nextPeer++;
+							if(nextPeer == _peers.end()) nextPeer = _peers.begin();
+						}
+						else nextPeer = _peers.begin();
+						lastPeer = nextPeer->first;
+					}
+				}
+				_peersMutex.unlock();
+				std::shared_ptr<MAXPeer> peer(getPeer(lastPeer));
+				if(peer && !peer->deleting) peer->worker();
+				counter++;
+			}
+			catch(const std::exception& ex)
+			{
+				_peersMutex.unlock();
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				_peersMutex.unlock();
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				_peersMutex.unlock();
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -157,9 +237,92 @@ bool MAXCentral::onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib
     return false;
 }
 
+void MAXCentral::reset(uint64_t id, bool defer)
+{
+	try
+	{
+		std::shared_ptr<MAXPeer> peer(getPeer(id));
+		if(!peer) return;
+		std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, peer->getPhysicalInterface(), PacketQueueType::UNPAIRING, peer->getAddress());
+		std::shared_ptr<PacketQueue> pendingQueue(new PacketQueue(peer->getPhysicalInterface(), PacketQueueType::UNPAIRING));
+		pendingQueue->noSending = true;
+
+		//RESET
+		std::vector<uint8_t> payload;
+		payload.push_back(0);
+		std::shared_ptr<MAXPacket> resetPacket(new MAXPacket(_messageCounter[0], 0xF0, 0, _address, peer->getAddress(), payload, true));
+		pendingQueue->push(resetPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		_messageCounter[0]++;
+
+		if(defer)
+		{
+			while(!peer->pendingQueues->empty()) peer->pendingQueues->pop();
+			peer->pendingQueues->push(pendingQueue);
+			peer->serviceMessages->setConfigPending(true);
+			queue->push(peer->pendingQueues);
+		}
+		else queue->push(pendingQueue, true, true);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void MAXCentral::deletePeer(uint64_t id)
 {
-
+	try
+	{
+		std::shared_ptr<MAXPeer> peer(getPeer(id));
+		if(!peer) return;
+		peer->deleting = true;
+		std::shared_ptr<BaseLib::RPC::RPCVariable> deviceAddresses(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peer->getSerialNumber())));
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		{
+			deviceAddresses->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(peer->getSerialNumber() + ":" + std::to_string(i->first))));
+		}
+		std::shared_ptr<BaseLib::RPC::RPCVariable> deviceInfo(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcStruct));
+		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)peer->getID()))));
+		std::shared_ptr<BaseLib::RPC::RPCVariable> channels(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		deviceInfo->structValue->insert(BaseLib::RPC::RPCStructElement("CHANNELS", channels));
+		for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
+		{
+			channels->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->first)));
+		}
+		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
+		_peersMutex.lock();
+		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+		if(_peersByID.find(id) != _peersByID.end()) _peersByID.erase(id);
+		if(_peers.find(peer->getAddress()) != _peers.end()) _peers.erase(peer->getAddress());
+		_peersMutex.unlock();
+		peer->deleteFromDatabase();
+		GD::out.printMessage("Removed peer " + std::to_string(peer->getID()));
+	}
+	catch(const std::exception& ex)
+    {
+		_peersMutex.unlock();
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	_peersMutex.unlock();
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_peersMutex.unlock();
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 std::string MAXCentral::handleCLICommand(std::string command)
@@ -184,10 +347,9 @@ std::string MAXCentral::handleCLICommand(std::string command)
 			stringStream << "pairing on\t\tEnables pairing mode" << std::endl;
 			stringStream << "pairing off\t\tDisables pairing mode" << std::endl;
 			stringStream << "peers list\t\tList all peers" << std::endl;
-			stringStream << "peers reset\t\tUnpair a peer and reset it to factory defaults" << std::endl;
+			stringStream << "peers remove\t\tRemove a peer (without unpairing)" << std::endl;
 			stringStream << "peers select\t\tSelect a peer" << std::endl;
 			stringStream << "peers unpair\t\tUnpair a peer" << std::endl;
-			stringStream << "peers update\t\tUpdates a peer to the newest firmware version" << std::endl;
 			stringStream << "unselect\t\tUnselect this device" << std::endl;
 			return stringStream.str();
 		}
@@ -255,6 +417,46 @@ std::string MAXCentral::handleCLICommand(std::string command)
 			stringStream << "Pairing mode disabled." << std::endl;
 			return stringStream.str();
 		}
+		else if(command.compare(0, 12, "peers remove") == 0)
+		{
+			uint64_t peerID;
+
+			std::stringstream stream(command);
+			std::string element;
+			int32_t index = 0;
+			while(std::getline(stream, element, ' '))
+			{
+				if(index < 2)
+				{
+					index++;
+					continue;
+				}
+				else if(index == 2)
+				{
+					if(element == "help") break;
+					peerID = BaseLib::HelperFunctions::getNumber(element, false);
+					if(peerID == 0) return "Invalid id.\n";
+				}
+				index++;
+			}
+			if(index == 2)
+			{
+				stringStream << "Description: This command removes a peer without trying to unpair it first." << std::endl;
+				stringStream << "Usage: peers remove PEERID" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  PEERID:\tThe id of the peer to remove. Example: 513" << std::endl;
+				return stringStream.str();
+			}
+
+			if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
+			else
+			{
+				if(_currentPeer && _currentPeer->getID() == peerID) _currentPeer.reset();
+				deletePeer(peerID);
+				stringStream << "Removed peer " << std::to_string(peerID) << "." << std::endl;
+			}
+			return stringStream.str();
+		}
 		else if(command.compare(0, 12, "peers unpair") == 0)
 		{
 			uint64_t peerID;
@@ -291,49 +493,7 @@ std::string MAXCentral::handleCLICommand(std::string command)
 			{
 				if(_currentPeer && _currentPeer->getID() == peerID) _currentPeer.reset();
 				stringStream << "Unpairing peer " << std::to_string(peerID) << std::endl;
-				deletePeer(peerID);
-			}
-			return stringStream.str();
-		}
-		else if(command.compare(0, 11, "peers reset") == 0)
-		{
-			uint64_t peerID;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 2)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 2)
-				{
-					if(element == "help") break;
-					peerID = BaseLib::HelperFunctions::getNumber(element, false);
-					if(peerID == 0) return "Invalid id.\n";
-				}
-				index++;
-			}
-			if(index == 2)
-			{
-				stringStream << "Description: This command resets and unpairs a peer." << std::endl;
-				stringStream << "Usage: peers reset PEERID" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  PEERID:\tThe id of the peer to reset. Example: 513" << std::endl;
-				return stringStream.str();
-			}
-
-			std::shared_ptr<MAXPeer> peer = getPeer(peerID);
-			if(!peer) stringStream << "This peer is not paired to this central." << std::endl;
-			else
-			{
-				if(_currentPeer && _currentPeer->getID() == peerID) _currentPeer.reset();
-				stringStream << "Resetting peer " << std::to_string(peerID) << std::endl;
-				//peer->reset();
-				deletePeer(peerID);
+				reset(peerID, true);
 			}
 			return stringStream.str();
 		}
@@ -392,10 +552,9 @@ std::string MAXCentral::handleCLICommand(std::string command)
 					stringStream << "No peers are paired to this central." << std::endl;
 					return stringStream.str();
 				}
-				bool firmwareUpdates = false;
 				std::string bar(" │ ");
 				const int32_t idWidth = 8;
-				const int32_t addressWidth = 8;
+				const int32_t addressWidth = 7;
 				const int32_t serialWidth = 13;
 				const int32_t typeWidth1 = 4;
 				const int32_t typeWidth2 = 25;
@@ -412,7 +571,7 @@ std::string MAXCentral::handleCLICommand(std::string command)
 					<< std::setw(firmwareWidth) << "Firmware" << bar
 					<< std::setw(unreachWidth) << "Unreach"
 					<< std::endl;
-				stringStream << "─────────┼──────────┼───────────────┼──────┼───────────────────────────┼──────────┼────────" << std::endl;
+				stringStream << "─────────┼─────────┼───────────────┼──────┼───────────────────────────┼──────────┼────────" << std::endl;
 				stringStream << std::setfill(' ')
 					<< std::setw(idWidth) << " " << bar
 					<< std::setw(addressWidth) << " " << bar
@@ -454,7 +613,7 @@ std::string MAXCentral::handleCLICommand(std::string command)
 
 					stringStream
 						<< std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar
-						<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString(i->second->getAddress(), 8) << bar
+						<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString(i->second->getAddress(), 6) << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 4) << bar;
 					if(i->second->rpcDevice)
@@ -469,10 +628,9 @@ std::string MAXCentral::handleCLICommand(std::string command)
 					if(i->second->getFirmwareVersion() == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << "?" << bar;
 					else if(i->second->firmwareUpdateAvailable())
 					{
-						stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + std::to_string(i->second->getFirmwareVersion() & 0xFF)) << bar;
-						firmwareUpdates = true;
+						stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 4) + "." + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0x0F)) << bar;
 					}
-					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << (BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 8) + "." + std::to_string(i->second->getFirmwareVersion() & 0xFF)) << bar;
+					else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << (BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() >> 4) + "." + BaseLib::HelperFunctions::getHexString(i->second->getFirmwareVersion() & 0x0F)) << bar;
 					if(i->second->serviceMessages)
 					{
 						std::string unreachable(i->second->serviceMessages->getUnreach() ? "Yes" : "No");
@@ -481,8 +639,7 @@ std::string MAXCentral::handleCLICommand(std::string command)
 					stringStream << std::endl << std::dec;
 				}
 				_peersMutex.unlock();
-				stringStream << "─────────┴──────────┴───────────────┴──────┴───────────────────────────┴──────────┴────────" << std::endl;
-				if(firmwareUpdates) stringStream << std::endl << "*: Firmware update available." << std::endl;
+				stringStream << "─────────┴─────────┴───────────────┴──────┴───────────────────────────┴──────────┴────────" << std::endl;
 
 				return stringStream.str();
 			}
@@ -501,77 +658,6 @@ std::string MAXCentral::handleCLICommand(std::string command)
 				_peersMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
-		}
-		else if(command.compare(0, 12, "peers update") == 0)
-		{
-			uint64_t peerID;
-			bool all = false;
-
-			std::stringstream stream(command);
-			std::string element;
-			int32_t index = 0;
-			while(std::getline(stream, element, ' '))
-			{
-				if(index < 2)
-				{
-					index++;
-					continue;
-				}
-				else if(index == 2)
-				{
-					if(element == "help") break;
-					else if(element == "all") all = true;
-					else
-					{
-						peerID = BaseLib::HelperFunctions::getNumber(element, false);
-						if(peerID == 0) return "Invalid id.\n";
-					}
-				}
-				index++;
-			}
-			if(index == 2)
-			{
-				stringStream << "Description: This command updates one or all peers to the newest firmware version available in \"" << _bl->settings.firmwarePath() << "\"." << std::endl;
-				stringStream << "Usage: peers update PEERID" << std::endl;
-				stringStream << "       peers update all" << std::endl << std::endl;
-				stringStream << "Parameters:" << std::endl;
-				stringStream << "  PEERID:\tThe id of the peer to update. Example: 513" << std::endl;
-				return stringStream.str();
-			}
-
-			std::shared_ptr<BaseLib::RPC::RPCVariable> result;
-			std::vector<uint64_t> ids;
-			if(all)
-			{
-				_peersMutex.lock();
-				for(std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peersByID.begin(); i != _peersByID.end(); ++i)
-				{
-					if(i->second->firmwareUpdateAvailable()) ids.push_back(i->first);
-				}
-				_peersMutex.unlock();
-				if(ids.empty())
-				{
-					stringStream << "All peers are up to date." << std::endl;
-					return stringStream.str();
-				}
-				result = updateFirmware(ids, false);
-			}
-			else if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
-			else
-			{
-				std::shared_ptr<MAXPeer> peer = getPeer(peerID);
-				if(!peer->firmwareUpdateAvailable())
-				{
-					stringStream << "Peer is up to date." << std::endl;
-					return stringStream.str();
-				}
-				ids.push_back(peerID);
-				result = updateFirmware(ids, false);
-			}
-			if(!result) stringStream << "Unknown error." << std::endl;
-			else if(result->errorStruct) stringStream << result->structValue->at("faultString")->stringValue << std::endl;
-			else stringStream << "Started firmware update(s)... This might take a long time. Use the RPC function \"getUpdateProgress\" or see the log for details." << std::endl;
-			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "peers select") == 0)
 		{
@@ -715,6 +801,90 @@ bool MAXCentral::knowsDevice(uint64_t id)
 }
 
 //Packet handlers
+void MAXCentral::handleAck(int32_t messageCounter, std::shared_ptr<MAXPacket> packet)
+{
+	try
+	{
+		std::shared_ptr<PacketQueue> queue = _queueManager.get(packet->senderAddress());
+		if(!queue) return;
+		std::shared_ptr<MAXPacket> sentPacket(_sentPackets.get(packet->senderAddress()));
+		if(packet->payload()->size() > 1 && (packet->payload()->at(1) & 0x80))
+		{
+			if(_bl->debugLevel >= 2)
+			{
+				if(sentPacket) GD::out.printError("Error: NACK received from 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + " in response to " + sentPacket->hexString() + ".");
+				else GD::out.printError("Error: NACK received from 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6));
+				if(queue->getQueueType() == PacketQueueType::PAIRING) GD::out.printError("Try resetting the device to factory defaults before pairing it to this central.");
+			}
+			if(queue->getQueueType() == PacketQueueType::PAIRING) queue->clear(); //Abort
+			else queue->pop(); //Otherwise the queue might persist forever. NACKS shouldn't be received when not pairing
+			return;
+		}
+		if(queue->getQueueType() == PacketQueueType::PAIRING)
+		{
+			if(sentPacket && sentPacket->messageType() == 0xF1 && sentPacket->messageSubtype() == 0)
+			{
+				if(!peerExists(packet->senderAddress()))
+				{
+					if(!queue->peer) return;
+					try
+					{
+						_peersMutex.lock();
+						_peers[queue->peer->getAddress()] = queue->peer;
+						if(!queue->peer->getSerialNumber().empty()) _peersBySerial[queue->peer->getSerialNumber()] = queue->peer;
+						_peersMutex.unlock();
+						queue->peer->save(true, true, false);
+						queue->peer->initializeCentralConfig();
+						_peersMutex.lock();
+						_peersByID[queue->peer->getID()] = queue->peer;
+						_peersMutex.unlock();
+					}
+					catch(const std::exception& ex)
+					{
+						_peersMutex.unlock();
+						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					}
+					catch(BaseLib::Exception& ex)
+					{
+						_peersMutex.unlock();
+						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+					}
+					catch(...)
+					{
+						_peersMutex.unlock();
+						GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+					}
+					std::shared_ptr<BaseLib::RPC::RPCVariable> deviceDescriptions(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+					deviceDescriptions->arrayValue = queue->peer->getDeviceDescriptions(true, std::map<std::string, bool>());
+					raiseRPCNewDevices(deviceDescriptions);
+					GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(queue->peer->getAddress()) + ".");
+				}
+			}
+		}
+		else if(queue->getQueueType() == PacketQueueType::UNPAIRING)
+		{
+			if(sentPacket && sentPacket->messageType() == 0xF0 && sentPacket->messageSubtype() == 0)
+			{
+				std::shared_ptr<MAXPeer> peer = getPeer(packet->senderAddress());
+				if(peer) deletePeer(peer->getID());
+			}
+		}
+		queue->pop(); //Messages are not popped by default.
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MAXPacket> packet)
 {
 	try
@@ -726,10 +896,8 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 			return;
 		}
 
-		std::string serialNumber;
-		for(uint32_t i = 3; i < 13; i++)
-			serialNumber.push_back((char)packet->payload()->at(i));
-		uint32_t rawType = (packet->payload()->at(1) << 8) + packet->payload()->at(2);
+		std::string serialNumber(&packet->payload()->at(4), &packet->payload()->at(4) + 10);
+		uint32_t rawType = packet->payload()->at(2);
 		LogicalDeviceType deviceType(BaseLib::Systems::DeviceFamilies::MAX, rawType);
 
 		std::shared_ptr<MAXPeer> peer(getPeer(packet->senderAddress()));
@@ -739,135 +907,53 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 			return;
 		}
 
-		GD::out.printError("JUHUU, PAIRING");
-		/*
-		if((packet->controlByte() & 0x20) && packet->destinationAddress() == _address) sendOK(packet->messageCounter(), packet->senderAddress());
-
 		std::vector<uint8_t> payload;
 
-		std::shared_ptr<BidCoSQueue> queue;
+		std::shared_ptr<PacketQueue> queue;
 		if(_pairing)
 		{
-			queue = _bidCoSQueueManager.createQueue(this, getPhysicalInterface(packet->senderAddress()), BidCoSQueueType::PAIRING, packet->senderAddress());
+			queue = _queueManager.createQueue(this, getPhysicalInterface(packet->senderAddress()), PacketQueueType::PAIRING, packet->senderAddress());
 
 			if(!peer)
 			{
+				int32_t firmwareVersion = (packet->payload()->at(0) << 8) + packet->payload()->at(1);
 				//Do not save here
-				queue->peer = createPeer(packet->senderAddress(), packet->payload()->at(0), deviceType, serialNumber, 0, 0, packet, false);
+				queue->peer = createPeer(packet->senderAddress(), firmwareVersion, deviceType, serialNumber, false);
 				if(!queue->peer)
 				{
-					GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress()) + ".");
+					GD::out.printWarning("Warning: Device type " + GD::bl->hf.getHexString(deviceType.type(), 4) + " with firmware version 0x" + BaseLib::HelperFunctions::getHexString(firmwareVersion, 4) + " not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
 					return;
 				}
 				peer = queue->peer;
-				if(peer->getPhysicalInterface()->needsPeers()) peer->getPhysicalInterface()->addPeer(peer->getPeerInfo());
 			}
 
 			if(!peer->rpcDevice)
 			{
-				GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress()) + ".");
+				GD::out.printWarning("Warning: Device type not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
 				return;
 			}
 
-			//CONFIG_START
-			payload.push_back(0);
-			payload.push_back(0x05);
+			//INCLUSION
 			payload.push_back(0);
 			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			payload.push_back(0);
-			std::shared_ptr<BidCoSPacket> configPacket(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
+			std::shared_ptr<MAXPacket> configPacket(new MAXPacket(_messageCounter[0], 0x01, 0, _address, packet->senderAddress(), payload, true));
 			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+			queue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
 			_messageCounter[0]++;
 
-			//CONFIG_WRITE_INDEX
+			//WAKEUP
+			payload.clear();
 			payload.push_back(0);
-			payload.push_back(0x08);
-			payload.push_back(0x02);
-			std::shared_ptr<BaseLib::RPC::Parameter> internalKeysVisible = peer->rpcDevice->parameterSet->getParameter("INTERNAL_KEYS_VISIBLE");
-			if(internalKeysVisible)
-			{
-				std::vector<uint8_t> data;
-				data.push_back(1);
-				internalKeysVisible->adjustBitPosition(data);
-				payload.push_back(data.at(0) | 0x01);
-			}
-			else payload.push_back(0x01);
-			payload.push_back(0x0A);
-			payload.push_back(_address >> 16);
-			payload.push_back(0x0B);
-			payload.push_back((_address >> 8) & 0xFF);
-			payload.push_back(0x0C);
-			payload.push_back(_address & 0xFF);
-			configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
+			payload.push_back(0x3F);
+			configPacket = std::shared_ptr<MAXPacket>(new MAXPacket(_messageCounter[0], 0xF1, 0, _address, packet->senderAddress(), payload, false));
 			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+			queue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
 			_messageCounter[0]++;
-
-			//END_CONFIG
-			payload.push_back(0);
-			payload.push_back(0x06);
-			configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
-			queue->push(configPacket);
-			queue->push(_messages->find(DIRECTIONIN, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-			payload.clear();
-			_messageCounter[0]++;
-
-			//Don't check for rxModes here! All rxModes are allowed.
-			//if(!peerExists(packet->senderAddress())) //Only request config when peer is not already paired to central
-			//{
-				for(std::map<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceChannel>>::iterator i = peer->rpcDevice->channels.begin(); i != peer->rpcDevice->channels.end(); ++i)
-				{
-					std::shared_ptr<BidCoSQueue> pendingQueue;
-					int32_t channel = i->first;
-					//Walk through all lists to request master config if necessary
-					if(peer->rpcDevice->channels.at(channel)->parameterSets.find(BaseLib::RPC::ParameterSet::Type::Enum::master) != peer->rpcDevice->channels.at(channel)->parameterSets.end())
-					{
-						std::shared_ptr<BaseLib::RPC::ParameterSet> masterSet = peer->rpcDevice->channels.at(channel)->parameterSets[BaseLib::RPC::ParameterSet::Type::Enum::master];
-						for(std::map<uint32_t, uint32_t>::iterator k = masterSet->lists.begin(); k != masterSet->lists.end(); ++k)
-						{
-							pendingQueue.reset(new BidCoSQueue(peer->getPhysicalInterface(), BidCoSQueueType::CONFIG));
-							pendingQueue->noSending = true;
-							payload.push_back(channel);
-							payload.push_back(0x04);
-							payload.push_back(0);
-							payload.push_back(0);
-							payload.push_back(0);
-							payload.push_back(0);
-							payload.push_back(k->first);
-							configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
-							pendingQueue->push(configPacket);
-							pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
-							payload.clear();
-							_messageCounter[0]++;
-							peer->pendingBidCoSQueues->push(pendingQueue);
-							peer->serviceMessages->setConfigPending(true);
-						}
-					}
-
-					if(peer->rpcDevice->channels[channel]->linkRoles && (!peer->rpcDevice->channels[channel]->linkRoles->sourceNames.empty() || !peer->rpcDevice->channels[channel]->linkRoles->targetNames.empty()))
-					{
-						pendingQueue.reset(new BidCoSQueue(peer->getPhysicalInterface(), BidCoSQueueType::CONFIG));
-						pendingQueue->noSending = true;
-						payload.push_back(channel);
-						payload.push_back(0x03);
-						configPacket = std::shared_ptr<BidCoSPacket>(new BidCoSPacket(_messageCounter[0], 0xA0, 0x01, _address, packet->senderAddress(), payload));
-						pendingQueue->push(configPacket);
-						pendingQueue->push(_messages->find(DIRECTIONIN, 0x10, std::vector<std::pair<uint32_t, int32_t>>()));
-						payload.clear();
-						_messageCounter[0]++;
-						peer->pendingBidCoSQueues->push(pendingQueue);
-						peer->serviceMessages->setConfigPending(true);
-					}
-				}
-			//}
 		}
 		//not in pairing mode
-		else queue = _bidCoSQueueManager.createQueue(this, peer->getPhysicalInterface(), BidCoSQueueType::DEFAULT, packet->senderAddress());
+		else queue = _queueManager.createQueue(this, peer->getPhysicalInterface(), PacketQueueType::DEFAULT, packet->senderAddress());
 
 		if(!peer)
 		{
@@ -875,9 +961,8 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 			return;
 		}
 
-		if(peer->pendingBidCoSQueues && !peer->pendingBidCoSQueues->empty()) GD::out.printInfo("Info: Pushing pending queues.");
-		queue->push(peer->pendingBidCoSQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
-		*/
+		if(peer->pendingQueues && !peer->pendingQueues->empty()) GD::out.printInfo("Info: Pushing pending queues.");
+		queue->push(peer->pendingQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
 	}
 	catch(const std::exception& ex)
     {
@@ -895,6 +980,77 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 //End packet handlers
 
 //RPC functions
+std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::deleteDevice(std::string serialNumber, int32_t flags)
+{
+	try
+	{
+		if(serialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(serialNumber[0] == '*') return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
+		std::shared_ptr<MAXPeer> peer = getPeer(serialNumber);
+		if(!peer) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		return deleteDevice(peer->getID(), flags);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::deleteDevice(uint64_t peerID, int32_t flags)
+{
+	try
+	{
+		if(peerID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		if(peerID & 0x80000000) return BaseLib::RPC::RPCVariable::createError(-2, "Cannot delete virtual device.");
+		std::shared_ptr<MAXPeer> peer = getPeer(peerID);
+		if(!peer) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+		uint64_t id = peer->getID();
+
+		bool defer = flags & 0x04;
+		bool force = flags & 0x02;
+		std::thread t(&MAXCentral::reset, this, id, defer);
+		t.detach();
+		//Force delete
+		if(force) deletePeer(peer->getID());
+		else
+		{
+			int32_t waitIndex = 0;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			while(_queueManager.get(peer->getAddress()) && peerExists(id) && waitIndex < 20)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				waitIndex++;
+			}
+		}
+
+		if(!defer && !force && peerExists(id)) return BaseLib::RPC::RPCVariable::createError(-1, "No answer from device.");
+
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::getDeviceInfo(uint64_t id, std::map<std::string, bool> fields)
 {
 	try

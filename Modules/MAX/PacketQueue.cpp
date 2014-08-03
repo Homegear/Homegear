@@ -97,6 +97,7 @@ void PacketQueue::serialize(std::vector<uint8_t>& encodedData)
 				std::vector<uint8_t> packet = i->getPacket()->byteArray();
 				encoder.encodeByte(encodedData, packet.size());
 				encodedData.insert(encodedData.end(), packet.begin(), packet.end());
+				encoder.encodeBoolean(encodedData, i->getPacket()->getBurst());
 			}
 			std::shared_ptr<MAXMessage> message = i->getMessage();
 			if(!message) encoder.encodeBoolean(encodedData, false);
@@ -158,6 +159,7 @@ void PacketQueue::unserialize(std::shared_ptr<std::vector<char>> serializedData,
 				if(position + dataSize <= serializedData->size()) packetData.insert(packetData.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
 				position += dataSize;
 				std::shared_ptr<MAXPacket> packet(new MAXPacket(packetData, false));
+				packet->setBurst(decoder.decodeBoolean(serializedData, position));
 				entry->setPacket(packet, false);
 			}
 			int32_t messageExists = decoder.decodeBoolean(serializedData, position);
@@ -282,43 +284,19 @@ void PacketQueue::resend(uint32_t threadId, bool burst)
 		if(_stopResendThread) return;
 		if(_resendCounter < 4)
 		{
-			//Sleep for 200 ms 5 times
+			//Sleep for 500/3000 ms
 			i = 0;
 			if(burst)
 			{
 				longKeepAlive();
-				sleepingTime = std::chrono::milliseconds(100);
+				sleepingTime = std::chrono::milliseconds(300);
 			}
 			else
 			{
 				keepAlive();
-				sleepingTime = std::chrono::milliseconds(25);
+				sleepingTime = std::chrono::milliseconds(50);
 			}
-			while(!_stopResendThread && i < 8)
-			{
-				std::this_thread::sleep_for(sleepingTime);
-				i++;
-			}
-		}
-		else if(_resendCounter >= 4 && _resendCounter < 6)
-		{
-			longKeepAlive();
-			//Sleep for 500 ms
-			i = 0;
-			sleepingTime = std::chrono::milliseconds(50);
 			while(!_stopResendThread && i < 10)
-			{
-				std::this_thread::sleep_for(sleepingTime);
-				i++;
-			}
-		}
-		else if(_resendCounter >= 6 && _resendCounter < 8)
-		{
-			longKeepAlive();
-			//Sleep for 1000 ms
-			i = 0;
-			sleepingTime = std::chrono::milliseconds(50);
-			while(!_stopResendThread && i < 20)
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				i++;
@@ -327,10 +305,10 @@ void PacketQueue::resend(uint32_t threadId, bool burst)
 		else
 		{
 			longKeepAlive();
-			//Sleep for 2000 ms
+			//Sleep for 4000 ms
 			i = 0;
 			sleepingTime = std::chrono::milliseconds(200);
-			while(!_stopResendThread && i < 10)
+			while(!_stopResendThread && i < 20)
 			{
 				std::this_thread::sleep_for(sleepingTime);
 				i++;
@@ -354,7 +332,7 @@ void PacketQueue::resend(uint32_t threadId, bool burst)
 				if(!packet) return;
 				if(_queue.front().getType() == QueueEntryType::MESSAGE)
 				{
-					GD::out.printDebug("Invoking outgoing message handler from BidCoSQueue.");
+					GD::out.printDebug("Invoking outgoing message handler from MAX! queue.");
 					MAXMessage* message = _queue.front().getMessage().get();
 					_queueMutex.unlock();
 					_sendThreadMutex.lock();
@@ -379,6 +357,8 @@ void PacketQueue::resend(uint32_t threadId, bool burst)
 						_sendThreadMutex.unlock();
 						return;
 					}
+					packet->setMessageCounter(packet->messageCounter() + 1);
+					if(burst) packet->setBurst(true);
 					_sendThread = std::thread(&PacketQueue::send, this, packet, stealthy);
 					BaseLib::Threads::setThreadPriority(GD::bl, _sendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
 					_sendThreadMutex.unlock();
@@ -651,7 +631,7 @@ void PacketQueue::pushFront(std::shared_ptr<MAXPacket> packet, bool stealthy, bo
 		keepAlive();
 		if(popBeforePushing)
 		{
-			GD::out.printDebug("Popping from BidCoSQueue and pushing packet at the front: " + std::to_string(id));
+			GD::out.printDebug("Popping from MAX! queue and pushing packet at the front: " + std::to_string(id));
 			if(_popWaitThread.joinable()) _stopPopWaitThread = true;
 			if(_resendThread.joinable()) _stopResendThread = true;
 			_queueMutex.lock();
@@ -836,23 +816,17 @@ void PacketQueue::startResendThread(bool force)
 			_queueMutex.unlock();
 			return;
 		}
-		uint8_t controlByte = 0;
-		if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage())
+		int32_t destinationAddress = 0;
+		if(_queue.front().getPacket())
 		{
-			controlByte = _queue.front().getMessage()->getMessageSubtype();
+			destinationAddress = _queue.front().getPacket()->destinationAddress();
 		}
-		else if(_queue.front().getPacket())
-		{
-			controlByte = _queue.front().getPacket()->controlByte();
-		}
-		else throw BaseLib::Exception("Packet or message pointer of BidCoS queue is empty.");
 
 		_queueMutex.unlock();
-		if((!(controlByte & 0x02) && (controlByte & 0x20)) || force) //Resend when no response?
+		if(destinationAddress != 0 || force) //Resend when no response?
 		{
 			stopResendThread();
-			bool burst = controlByte & 0x10;
-			_resendThread = std::thread(&PacketQueue::resend, this, _resendThreadId++, burst);
+			_resendThread = std::thread(&PacketQueue::resend, this, _resendThreadId++, true);
 			BaseLib::Threads::setThreadPriority(GD::bl, _resendThread.native_handle(), GD::bl->settings.packetQueueThreadPriority(), GD::bl->settings.packetQueueThreadPolicy());
 		}
 	}
@@ -1117,7 +1091,7 @@ void PacketQueue::pop()
 	{
 		if(_disposing) return;
 		keepAlive();
-		GD::out.printDebug("Popping from BidCoSQueue: " + std::to_string(id));
+		GD::out.printDebug("Popping from MAX! queue: " + std::to_string(id));
 		if(_popWaitThread.joinable()) _stopPopWaitThread = true;
 		if(_resendThread.joinable()) _stopResendThread = true;
 		_lastPop = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1131,7 +1105,7 @@ void PacketQueue::pop()
 		if(GD::bl->debugLevel >= 5 && !_queue.empty())
 		{
 			if(_queue.front().getType() == QueueEntryType::PACKET && _queue.front().getPacket()) GD::out.printDebug("Packet now at front of queue: " + _queue.front().getPacket()->hexString());
-			else if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()) GD::out.printDebug("Message now at front: Message type: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageType()) + " Control byte: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageSubtype()));
+			else if(_queue.front().getType() == QueueEntryType::MESSAGE && _queue.front().getMessage()) GD::out.printDebug("Message now at front: Message type: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageType()) + " Message subtype: 0x" + BaseLib::HelperFunctions::getHexString(_queue.front().getMessage()->getMessageSubtype()));
 		}
 		_queueMutex.unlock();
 		nextQueueEntry();

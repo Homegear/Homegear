@@ -35,5 +35,5 @@ namespace HMWired
 	HMWired* GD::family = nullptr;
 	std::shared_ptr<BaseLib::Systems::IPhysicalInterface> GD::physicalInterface;
 	BaseLib::Output GD::out;
-	BaseLib::RPC::Devices GD::rpcDevices;
+	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::HomeMaticWired);
 }

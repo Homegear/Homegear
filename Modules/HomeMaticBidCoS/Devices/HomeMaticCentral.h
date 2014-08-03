@@ -54,8 +54,6 @@ public:
 	void disablePairingMode() { _pairing = false; }
 	void unpair(uint64_t id, bool defer);
 	void reset(uint64_t id, bool defer);
-	void setUpBidCoSMessages();
-	void setUpConfig() {}
 	void deletePeer(uint64_t id);
 	void addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t channel, uint32_t teamChannel, std::string teamSerialNumber);
 	void addPeerToTeam(std::shared_ptr<BidCoSPeer> peer, int32_t channel, int32_t address, uint32_t teamChannel);
@@ -114,6 +112,9 @@ protected:
 	std::mutex _updateMutex;
 	std::thread _updateFirmwareThread;
 	//End
+
+	void setUpBidCoSMessages();
+	void setUpConfig() {}
 
 	std::shared_ptr<BidCoSPeer> createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, int32_t remoteChannel, int32_t messageCounter, std::shared_ptr<BidCoSPacket> packet = std::shared_ptr<BidCoSPacket>(), bool save = true);
 	virtual void worker();

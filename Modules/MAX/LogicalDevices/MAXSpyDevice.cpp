@@ -54,6 +54,11 @@ void MAXSpyDevice::init()
 		MAXDevice::init();
 
 		_deviceType = (uint32_t)DeviceType::MAXSD;
+
+		for(std::map<std::string, std::shared_ptr<IPhysicalInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
+		{
+			i->second->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
+		}
 	}
     catch(const std::exception& ex)
     {
@@ -224,7 +229,7 @@ bool MAXSpyDevice::onPacketReceived(std::string& senderID, std::shared_ptr<BaseL
 			}
 		}
 		if(_filters.size() == 0) printPacket = true;
-		if(printPacket) std::cout << BaseLib::HelperFunctions::getTimeString(maxPacket->timeReceived()) << " MAX packet received: " + maxPacket->hexString() << std::endl;
+		if(printPacket) std::cout << BaseLib::HelperFunctions::getTimeString(maxPacket->timeReceived()) << " MAX packet received (" + senderID + (maxPacket->rssiDevice() ? ", RSSI: 0x" + _bl->hf.getHexString(maxPacket->rssiDevice(), 2) : "") + "): " + maxPacket->hexString() << std::endl;
 	}
     catch(const std::exception& ex)
     {

@@ -60,6 +60,7 @@ class CUL : public BaseLib::Systems::IPhysicalInterface
         void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
         virtual void setup(int32_t userID, int32_t groupID);
     protected:
+        BaseLib::Output _out;
         void openDevice();
         void closeDevice();
         void setupDevice();

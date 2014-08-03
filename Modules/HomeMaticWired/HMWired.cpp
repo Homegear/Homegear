@@ -57,7 +57,7 @@ HMWired::~HMWired()
 bool HMWired::init()
 {
 	GD::out.printInfo("Loading XML RPC devices...");
-	GD::rpcDevices.load(_bl->settings.deviceDescriptionPath() + std::to_string((int32_t)BaseLib::Systems::DeviceFamilies::HomeMaticWired));
+	GD::rpcDevices.load();
 	if(GD::rpcDevices.empty()) return false;
 	return true;
 }

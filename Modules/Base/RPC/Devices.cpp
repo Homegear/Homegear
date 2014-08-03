@@ -35,8 +35,9 @@ namespace BaseLib
 namespace RPC
 {
 
-Devices::Devices()
+Devices::Devices(BaseLib::Systems::DeviceFamilies family)
 {
+	_family = family;
 }
 
 void Devices::init(BaseLib::Obj* baseLib)
@@ -44,10 +45,11 @@ void Devices::init(BaseLib::Obj* baseLib)
 	_bl = baseLib;
 }
 
-void Devices::load(std::string path)
+void Devices::load()
 {
 	try
 	{
+		std::string path = _bl->settings.deviceDescriptionPath() + std::to_string((int32_t)_family);
 		_devices.clear();
 		std::string deviceDir(path);
 		std::vector<std::string> files;
@@ -72,7 +74,7 @@ void Devices::load(std::string path)
 			HelperFunctions::toLower(extension);
 			if(extension != ".xml") continue;
 			_bl->out.printDebug("Loading XML RPC device " + deviceDir + "/" + *i);
-			std::shared_ptr<Device> device(new Device(_bl, deviceDir + "/" + *i));
+			std::shared_ptr<Device> device(new Device(_bl, _family, deviceDir + "/" + *i));
 			if(device && device->loaded()) _devices.push_back(device);
 		}
 
@@ -119,7 +121,7 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(new Device(_bl));
+			std::shared_ptr<Device> newDevice(new Device(_bl, _family));
 			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
@@ -167,7 +169,7 @@ std::shared_ptr<Device> Devices::find(Systems::LogicalDeviceType deviceType, uin
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(new Device(_bl));
+			std::shared_ptr<Device> newDevice(new Device(_bl, _family));
 			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
@@ -212,7 +214,7 @@ std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::strin
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(new Device(_bl));
+			std::shared_ptr<Device> newDevice(new Device(_bl, _family));
 			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);
@@ -257,7 +259,7 @@ std::shared_ptr<Device> Devices::find(Systems::DeviceFamilies family, std::share
 		}
 		if(partialMatch)
 		{
-			std::shared_ptr<Device> newDevice(new Device(_bl));
+			std::shared_ptr<Device> newDevice(new Device(_bl, _family));
 			*newDevice = *partialMatch;
 			newDevice->setCountFromSysinfo(countFromSysinfo);
 			_devices.push_back(newDevice);

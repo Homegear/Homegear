@@ -79,7 +79,7 @@ solution "homegear"
          targetdir "./lib/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
-         
+
 --[[
    project "homematicbidcos"
       kind "SharedLib"
@@ -108,7 +108,7 @@ solution "homegear"
          targetdir "./lib/Modules/Profiling"
          buildoptions { "-std=c++11", "-pg" }
          linkoptions { "-pg" }
-         
+
    project "homematicwired"
       kind "SharedLib"
       language "C++"
