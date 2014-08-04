@@ -383,10 +383,10 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 			//if(bytes > value.size()) bytes = value.size();
 			if(bytes <= value.size())
 			{
-				_payload.at(intByteIndex) = value.at(0) & _bitmask[bitSize];
+				_payload.at(intByteIndex) |= value.at(0) & _bitmask[bitSize];
 				for(uint32_t i = 1; i < bytes; i++)
 				{
-					_payload.at(intByteIndex + i) = value.at(i);
+					_payload.at(intByteIndex + i) |= value.at(i);
 				}
 			}
 			else
@@ -394,7 +394,7 @@ void BidCoSPacket::setPosition(double index, double size, std::vector<uint8_t>& 
 				uint32_t missingBytes = bytes - value.size();
 				for(uint32_t i = 0; i < value.size(); i++)
 				{
-					_payload.at(intByteIndex + missingBytes + i) = value.at(i);
+					_payload.at(intByteIndex + missingBytes + i) |= value.at(i);
 				}
 			}
 		}

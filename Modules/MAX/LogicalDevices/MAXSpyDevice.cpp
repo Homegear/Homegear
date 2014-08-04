@@ -527,8 +527,9 @@ std::string MAXSpyDevice::handleCLICommand(std::string command)
 				return stringStream.str();
 			}
 
-			std::shared_ptr<MAXPacket> packet(new MAXPacket(packetHex));
-			//sendPacket(packet, false);
+			std::shared_ptr<MAXPacket> packet(new MAXPacket());
+			packet->import(packetHex, false);
+			sendPacket(GD::defaultPhysicalInterface, packet, false);
 			stringStream << "Packet sent: " << packet->hexString() << std::endl;
 			return stringStream.str();
 		}

@@ -1973,7 +1973,11 @@ void HomeMaticCentral::handlePairingRequest(int32_t messageCounter, std::shared_
 {
 	try
 	{
-		if(packet->destinationAddress() != 0 && packet->destinationAddress() != _address) return;
+		if(packet->destinationAddress() != 0 && packet->destinationAddress() != _address)
+		{
+			GD::out.printError("Error: Pairing packet rejected, because this peer is already paired to another central.");
+			return;
+		}
 		if(packet->payload()->size() < 17)
 		{
 			GD::out.printError("Error: Pairing packet is too small (payload size has to be at least 17).");

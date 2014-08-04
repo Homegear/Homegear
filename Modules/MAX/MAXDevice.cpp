@@ -225,6 +225,18 @@ bool MAXDevice::isCentral()
 	return _deviceType == (uint32_t)DeviceType::MAXCENTRAL;
 }
 
+bool MAXDevice::isSwitch(BaseLib::Systems::LogicalDeviceType type)
+{
+	switch((DeviceType)type.type())
+	{
+	case DeviceType::BCTSSWPL:
+		return true;
+	default:
+		return false;
+	}
+	return false;
+}
+
 void MAXDevice::loadPeers()
 {
 	try
@@ -703,4 +715,63 @@ void MAXDevice::sendPacket(std::shared_ptr<IPhysicalInterface> physicalInterface
     }
 }
 
+void MAXDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
+{
+	try
+	{
+		std::vector<uint8_t> payload;
+		payload.push_back(0);
+		payload.push_back(0);
+		std::shared_ptr<MAXPacket> ok(new MAXPacket(messageCounter, 0x02, 0, _address, destinationAddress, payload, false));
+		sendPacket(getPhysicalInterface(destinationAddress), ok);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+void MAXDevice::handleTimeRequest(int32_t messageCounter, std::shared_ptr<MAXPacket> packet)
+{
+	try
+	{
+		const auto timePoint = std::chrono::system_clock::now();
+		time_t t = std::chrono::system_clock::to_time_t(timePoint);
+		tm* localTime = std::localtime(&t);
+		t = std::chrono::system_clock::to_time_t(timePoint - std::chrono::seconds(localTime->tm_gmtoff));
+		localTime = std::localtime(&t);
+
+		std::vector<uint8_t> payload;
+		payload.push_back(0);
+		payload.push_back(localTime->tm_year % 100);
+		int32_t gmtOff = localTime->tm_gmtoff / 1800;
+		payload.push_back(localTime->tm_mday + ((gmtOff & 0x38) << 2));
+		payload.push_back(localTime->tm_hour + ((gmtOff & 7) << 5));
+		payload.push_back(localTime->tm_min + (((localTime->tm_mon + 1) & 0x0C) << 4));
+		payload.push_back(localTime->tm_min + (((localTime->tm_mon + 1) & 3) << 6));
+
+		std::shared_ptr<MAXPacket>timePacket(new MAXPacket(_messageCounter[0], 0x03, 0, _address, packet->senderAddress(), payload, false));
+		sendPacket(getPhysicalInterface(packet->senderAddress()), timePacket);
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
 }

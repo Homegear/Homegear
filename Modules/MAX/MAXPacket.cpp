@@ -288,6 +288,182 @@ int32_t MAXPacket::getInt(std::string hexString)
 	return 0;
 }
 
+void MAXPacket::setPosition(double index, double size, std::vector<uint8_t>& value)
+{
+	try
+	{
+		if(size < 0)
+		{
+			GD::out.printError("Error: Negative size not allowed.");
+			return;
+		}
+		if(index < 9)
+		{
+			GD::out.printError("Error: Packet index < 9 requested.");
+			return;
+		}
+		index -= 9;
+		double byteIndex = std::floor(index);
+		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
+		{
+			if(value.empty()) value.push_back(0);
+			int32_t intByteIndex = byteIndex;
+			if(size > 1.0)
+			{
+				GD::out.printError("Error: Can't set partial byte index > 1.");
+				return;
+			}
+			while((signed)_payload.size() - 1 < intByteIndex)
+			{
+				_payload.push_back(0);
+			}
+			_payload.at(intByteIndex) |= value.at(value.size() - 1) << (std::lround(index * 10) % 10);
+		}
+		else
+		{
+			uint32_t intByteIndex = byteIndex;
+			uint32_t bytes = (uint32_t)std::ceil(size);
+			while(_payload.size() < intByteIndex + bytes)
+			{
+				_payload.push_back(0);
+			}
+			if(value.empty()) return;
+			uint32_t bitSize = std::lround(size * 10) % 10;
+			if(bitSize > 8) bitSize = 8;
+			if(bytes == 0) bytes = 1; //size is 0 - assume 1
+			//if(bytes > value.size()) bytes = value.size();
+			if(bytes <= value.size())
+			{
+				_payload.at(intByteIndex) |= value.at(0) & _bitmask[bitSize];
+				for(uint32_t i = 1; i < bytes; i++)
+				{
+					_payload.at(intByteIndex + i) |= value.at(i);
+				}
+			}
+			else
+			{
+				uint32_t missingBytes = bytes - value.size();
+				for(uint32_t i = 0; i < value.size(); i++)
+				{
+					_payload.at(intByteIndex + missingBytes + i) |= value.at(i);
+				}
+			}
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    _length = 9 + _payload.size();
+}
+
+std::vector<uint8_t> MAXPacket::getPosition(double index, double size, int32_t mask)
+{
+	std::vector<uint8_t> result;
+	try
+	{
+		if(size < 0)
+		{
+			GD::out.printError("Error: Negative size not allowed.");
+			result.push_back(0);
+			return result;
+		}
+		if(index < 0)
+		{
+			GD::out.printError("Error: Packet index < 0 requested.");
+			result.push_back(0);
+			return result;
+		}
+		if(index < 9)
+		{
+			if(size > 0.8)
+			{
+				GD::out.printError("Error: Packet index < 9 and size > 1 requested.");
+				result.push_back(0);
+				return result;
+			}
+
+			uint32_t bitSize = std::lround(size * 10);
+			uint32_t intIndex = std::lround(std::floor(index));
+			if(intIndex == 0) result.push_back((_messageCounter >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			else if(intIndex == 1) result.push_back((_messageSubtype >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			else if(intIndex == 2) result.push_back((_messageType >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			else if(intIndex == 3) result.push_back(((_senderAddress >> 16) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			else if(intIndex == 4) result.push_back(((_senderAddress >> 8) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			else if(intIndex == 5) result.push_back((_senderAddress >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			else if(intIndex == 6) result.push_back(((_destinationAddress >> 16) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			else if(intIndex == 7) result.push_back(((_destinationAddress >> 8) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			else if(intIndex == 8) result.push_back((_destinationAddress >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+			return result;
+		}
+		index -= 9;
+		double byteIndex = std::floor(index);
+		int32_t intByteIndex = byteIndex;
+		if(byteIndex >= _payload.size())
+		{
+			result.push_back(0);
+			return result;
+		}
+		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
+		{
+			if(size > 1)
+			{
+				GD::out.printError("Error: Partial byte index > 1 requested.");
+				result.push_back(0);
+				return result;
+			}
+			//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
+			uint32_t bitSize = std::lround(size * 10);
+			if(bitSize > 8) bitSize = 8;
+			result.push_back((_payload.at(intByteIndex) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
+		}
+		else
+		{
+			uint32_t bytes = (uint32_t)std::ceil(size);
+			uint32_t bitSize = std::lround(size * 10) % 10;
+			if(bitSize > 8) bitSize = 8;
+			if(bytes == 0) bytes = 1; //size is 0 - assume 1
+			uint8_t currentByte = _payload.at(intByteIndex) & _bitmask[bitSize];
+			if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - 1) * 8));
+			result.push_back(currentByte);
+			for(uint32_t i = 1; i < bytes; i++)
+			{
+				if((intByteIndex + i) >= _payload.size()) result.push_back(0);
+				else
+				{
+					currentByte = _payload.at(intByteIndex + i);
+					if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - i - 1) * 8));
+					result.push_back(currentByte);
+				}
+			}
+		}
+		if(result.empty()) result.push_back(0);
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    result.push_back(0);
+    return result;
+}
+
 bool MAXPacket::equals(std::shared_ptr<MAXPacket>& rhs)
 {
 	if(_messageCounter != rhs->messageCounter()) return false;

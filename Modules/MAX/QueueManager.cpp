@@ -234,10 +234,10 @@ void QueueManager::resetQueue(int32_t address, uint32_t id)
 			if(queue->queue.use_count() > 1 && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() <= *_queues.at(address)->lastAction + 20000)
 			{
 				_queueMutex.unlock();
-				GD::out.printDebug("Debug: Postponing deletion of queue " + std::to_string(id) + " for BidCoS peer with address 0x" + BaseLib::HelperFunctions::getHexString(address) + ", because it is still in use (" + std::to_string(queue->queue.use_count()) + " referring objects).");
+				GD::out.printDebug("Debug: Postponing deletion of queue " + std::to_string(id) + " for peer with address 0x" + BaseLib::HelperFunctions::getHexString(address) + ", because it is still in use (" + std::to_string(queue->queue.use_count()) + " referring objects).");
 				return;
 			}
-			GD::out.printDebug("Debug: Deleting queue " + std::to_string(id) + " for BidCoS peer with address 0x" + BaseLib::HelperFunctions::getHexString(address));
+			GD::out.printDebug("Debug: Deleting queue " + std::to_string(id) + " for peer with address 0x" + BaseLib::HelperFunctions::getHexString(address));
 			_queues.erase(address);
 			if(!queue->queue->isEmpty() && queue->queue->getQueueType() != PacketQueueType::PAIRING)
 			{

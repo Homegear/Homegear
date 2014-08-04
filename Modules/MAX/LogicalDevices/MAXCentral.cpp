@@ -87,6 +87,8 @@ void MAXCentral::setUpMAXMessages()
 		_messages->add(std::shared_ptr<MAXMessage>(new MAXMessage(0x00, 0x04, this, ACCESSPAIREDTOSENDER, FULLACCESS, &MAXDevice::handlePairingRequest)));
 
 		_messages->add(std::shared_ptr<MAXMessage>(new MAXMessage(0x02, 0x02, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &MAXDevice::handleAck)));
+
+		_messages->add(std::shared_ptr<MAXMessage>(new MAXMessage(0x03, 0x0A, this, ACCESSPAIREDTOSENDER | ACCESSDESTISME, ACCESSPAIREDTOSENDER | ACCESSDESTISME, &MAXDevice::handleTimeRequest)));
 	}
     catch(const std::exception& ex)
     {
@@ -244,16 +246,17 @@ void MAXCentral::reset(uint64_t id, bool defer)
 		std::shared_ptr<MAXPeer> peer(getPeer(id));
 		if(!peer) return;
 		std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, peer->getPhysicalInterface(), PacketQueueType::UNPAIRING, peer->getAddress());
+		queue->peer = peer;
 		std::shared_ptr<PacketQueue> pendingQueue(new PacketQueue(peer->getPhysicalInterface(), PacketQueueType::UNPAIRING));
 		pendingQueue->noSending = true;
 
 		//RESET
 		std::vector<uint8_t> payload;
 		payload.push_back(0);
-		std::shared_ptr<MAXPacket> resetPacket(new MAXPacket(_messageCounter[0], 0xF0, 0, _address, peer->getAddress(), payload, true));
+		std::shared_ptr<MAXPacket> resetPacket(new MAXPacket(_messageCounter[0], 0xF0, 0, _address, peer->getAddress(), payload, false));
 		pendingQueue->push(resetPacket);
 		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
-		_messageCounter[0]++;
+		_messageCounter[0]++; //Count resends in
 
 		if(defer)
 		{
@@ -716,6 +719,32 @@ std::string MAXCentral::handleCLICommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
+void MAXCentral::enqueuePendingQueues(int32_t deviceAddress)
+{
+	try
+	{
+		std::shared_ptr<MAXPeer> peer = getPeer(deviceAddress);
+		if(!peer || !peer->pendingQueues) return;
+		std::shared_ptr<PacketQueue> queue = _queueManager.get(deviceAddress);
+		if(!queue) queue = _queueManager.createQueue(this, peer->getPhysicalInterface(), PacketQueueType::DEFAULT, deviceAddress);
+		if(!queue) return;
+		if(!queue->peer) queue->peer = peer;
+		if(queue->pendingQueuesEmpty()) queue->push(peer->pendingQueues);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 std::shared_ptr<MAXPeer> MAXCentral::createPeer(int32_t address, int32_t firmwareVersion, BaseLib::Systems::LogicalDeviceType deviceType, std::string serialNumber, bool save)
 {
 	try
@@ -889,7 +918,11 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 {
 	try
 	{
-		if(packet->destinationAddress() != 0 && packet->destinationAddress() != _address) return;
+		if(packet->destinationAddress() != 0 && packet->destinationAddress() != _address)
+		{
+			GD::out.printError("Error: Pairing packet rejected, because this peer is already paired to another central.");
+			return;
+		}
 		if(packet->payload()->size() < 14)
 		{
 			GD::out.printError("Error: Pairing packet is too small (payload size has to be at least 14).");
@@ -936,7 +969,7 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 			//INCLUSION
 			payload.push_back(0);
 			payload.push_back(0);
-			std::shared_ptr<MAXPacket> configPacket(new MAXPacket(_messageCounter[0], 0x01, 0, _address, packet->senderAddress(), payload, true));
+			std::shared_ptr<MAXPacket> configPacket(new MAXPacket(_messageCounter[0], 0x01, 0, _address, packet->senderAddress(), payload, peer->getRXModes() & Device::RXModes::burst));
 			queue->push(configPacket);
 			queue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
@@ -951,6 +984,31 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 			queue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 			payload.clear();
 			_messageCounter[0]++;
+
+			if(peer->rpcDevice->needsTime)
+			{
+				//TIME
+				const auto timePoint = std::chrono::system_clock::now();
+				time_t t = std::chrono::system_clock::to_time_t(timePoint);
+				tm* localTime = std::localtime(&t);
+				t = std::chrono::system_clock::to_time_t(timePoint - std::chrono::seconds(localTime->tm_gmtoff));
+				localTime = std::localtime(&t);
+
+				payload.clear();
+				payload.push_back(0);
+				payload.push_back(localTime->tm_year % 100);
+				int32_t gmtOff = localTime->tm_gmtoff / 1800;
+				payload.push_back(localTime->tm_mday + ((gmtOff & 0x38) << 2));
+				payload.push_back(localTime->tm_hour + ((gmtOff & 7) << 5));
+				payload.push_back(localTime->tm_min + (((localTime->tm_mon + 1) & 0x0C) << 4));
+				payload.push_back(localTime->tm_min + (((localTime->tm_mon + 1) & 3) << 6));
+
+				configPacket = std::shared_ptr<MAXPacket>(new MAXPacket(_messageCounter[0], 0x03, 0, _address, packet->senderAddress(), payload, false));
+				queue->push(configPacket);
+				queue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+				payload.clear();
+				_messageCounter[0]++;
+			}
 		}
 		//not in pairing mode
 		else queue = _queueManager.createQueue(this, peer->getPhysicalInterface(), PacketQueueType::DEFAULT, packet->senderAddress());
@@ -1126,6 +1184,78 @@ std::shared_ptr<RPCVariable> MAXCentral::getInstallMode()
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
+std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset)
+{
+	try
+	{
+		std::shared_ptr<MAXPeer> peer(getPeer(serialNumber));
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		uint64_t remoteID = 0;
+		if(!remoteSerialNumber.empty())
+		{
+			std::shared_ptr<MAXPeer> remotePeer(getPeer(remoteSerialNumber));
+			if(!remotePeer)
+			{
+				if(remoteSerialNumber != _serialNumber) return BaseLib::RPC::RPCVariable::createError(-3, "Remote peer is unknown.");
+			}
+			else remoteID = remotePeer->getID();
+		}
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		if(result->errorStruct) return result;
+		int32_t waitIndex = 0;
+		while(_queueManager.get(peer->getAddress()) && waitIndex < 40)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
+		}
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset)
+{
+	try
+	{
+		std::shared_ptr<MAXPeer> peer(getPeer(peerID));
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		std::shared_ptr<BaseLib::RPC::RPCVariable> result = peer->putParamset(channel, type, remoteID, remoteChannel, paramset);
+		if(result->errorStruct) return result;
+		int32_t waitIndex = 0;
+		while(_queueManager.get(peer->getAddress()) && waitIndex < 40)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
+		}
+		return result;
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 void MAXCentral::pairingModeTimer(int32_t duration, bool debugOutput)
 {
 	try
@@ -1173,6 +1303,29 @@ std::shared_ptr<RPCVariable> MAXCentral::setInstallMode(bool on, uint32_t durati
 			_pairingModeThread = std::thread(&MAXCentral::pairingModeTimer, this, duration, debugOutput);
 		}
 		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::setInterface(uint64_t peerID, std::string interfaceID)
+{
+	try
+	{
+		std::shared_ptr<MAXPeer> peer(getPeer(peerID));
+		if(!peer) return BaseLib::RPC::RPCVariable::createError(-2, "Unknown device.");
+		return peer->setInterface(interfaceID);
 	}
 	catch(const std::exception& ex)
     {

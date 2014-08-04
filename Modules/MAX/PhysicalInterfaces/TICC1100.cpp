@@ -312,44 +312,21 @@ void TICC1100::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		}
 		if(maxPacket->getBurst())
 		{
-			//int32_t waitIndex = 0;
-			//while(waitIndex < 200)
-			//{
-				sendCommandStrobe(CommandStrobes::Enum::STX);
-				//if(readRegister(Registers::MARCSTATE) == 0x13) break;
-				//std::this_thread::sleep_for(std::chrono::milliseconds(2));
-				//waitIndex++;
-			//}
-			//if(waitIndex == 200) _out.printError("Error sending MAX! packet. No CCA within 400ms.");
+			sendCommandStrobe(CommandStrobes::Enum::STX);
 			usleep(1000000);
 		}
 		writeRegisters(Registers::Enum::FIFO, packetBytes);
-		if(!maxPacket->getBurst())
-		{
-			//int32_t waitIndex = 0;
-			//while(waitIndex < 200)
-			//{
-				sendCommandStrobe(CommandStrobes::Enum::STX);
-				//if(readRegister(Registers::MARCSTATE) == 0x13) break;
-				//std::this_thread::sleep_for(std::chrono::milliseconds(2));
-				//waitIndex++;
-			//}
-			//if(waitIndex == 200)
-			//{
-				//_out.printError("Error sending MAX! packet. No CCA within 400ms.");
-				//sendCommandStrobe(CommandStrobes::Enum::SFTX);
-			//}
-		}
+		if(!maxPacket->getBurst()) sendCommandStrobe(CommandStrobes::Enum::STX);
 
 		if(_bl->debugLevel > 3)
 		{
 			if(packet->timeSending() > 0)
 			{
-				_out.printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString() + " Planned sending time: " + BaseLib::HelperFunctions::getTimeString(packet->timeSending()));
+				_out.printInfo("Info: Sending (" + _settings->id + ", WOR: " + (maxPacket->getBurst() ? "yes" : "no") + "): " + packet->hexString() + " Planned sending time: " + BaseLib::HelperFunctions::getTimeString(packet->timeSending()));
 			}
 			else
 			{
-				_out.printInfo("Info: Sending (" + _settings->id + "): " + packet->hexString());
+				_out.printInfo("Info: Sending (" + _settings->id + ", WOR: " + (maxPacket->getBurst() ? "yes" : "no") + "): " + packet->hexString());
 			}
 		}
 

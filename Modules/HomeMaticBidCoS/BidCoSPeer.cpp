@@ -1807,7 +1807,7 @@ void BidCoSPeer::getValuesFromPacket(std::shared_ptr<BidCoSPacket> packet, std::
 			if(!frame) continue;
 			if(frame->direction == BaseLib::RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != _address && (!hasTeam() || packet->senderAddress() != _team.address)) continue;
 			if(frame->direction == BaseLib::RPC::DeviceFrame::Direction::Enum::toDevice && packet->destinationAddress() != _address) continue;
-			if(packet->payload()->empty()) continue;
+			if(packet->payload()->empty()) break;
 			if(frame->subtype > -1 && frame->subtypeIndex >= 9 && (signed)packet->payload()->size() > (frame->subtypeIndex - 9) && packet->payload()->at(frame->subtypeIndex - 9) != (unsigned)frame->subtype) continue;
 			int32_t channelIndex = frame->channelField;
 			int32_t channel = -1;
@@ -2465,7 +2465,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			serviceMessages->setConfigPending(true);
 			//if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
 			//{
-				if(!onlyPushing) std::dynamic_pointer_cast<HomeMaticCentral>(getCentral())->enqueuePendingQueues(_address);
+				if(!onlyPushing) central->enqueuePendingQueues(_address);
 			//}
 			//else
 			//{
@@ -2601,7 +2601,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> BidCoSPeer::putParamset(int32_t chann
 			serviceMessages->setConfigPending(true);
 			//if((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst))
 			//{
-				if(!onlyPushing) std::dynamic_pointer_cast<HomeMaticCentral>(getCentral())->enqueuePendingQueues(_address);
+				if(!onlyPushing) central->enqueuePendingQueues(_address);
 			//}
 			//else
 			//{

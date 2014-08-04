@@ -69,6 +69,7 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
 
 		std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
 		virtual bool isCentral();
+		static bool isSwitch(BaseLib::Systems::LogicalDeviceType type);
 
         MAXDevice(IDeviceEventSink* eventHandler);
         MAXDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
@@ -86,6 +87,7 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
 		std::shared_ptr<MAXPeer> getPeer(std::string serialNumber);
 		virtual bool isInPairingMode() { return _pairing; }
 		virtual std::shared_ptr<MAXMessages> getMessages() { return _messages; }
+		std::shared_ptr<MAXPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }
 
         virtual void loadVariables();
         virtual void saveVariables();
@@ -95,10 +97,13 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
         virtual void loadPeers();
         virtual void savePeers(bool full);
 
+        virtual void sendPacket(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, std::shared_ptr<MAXPacket> packet, bool stealthy = false);
+
         virtual void handleAck(int32_t messageCounter, std::shared_ptr<MAXPacket>) {}
         virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<MAXPacket>) {}
+        virtual void handleTimeRequest(int32_t messageCounter, std::shared_ptr<MAXPacket>);
 
-        virtual void sendPacket(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, std::shared_ptr<MAXPacket> packet, bool stealthy = false);
+        virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
     protected:
         //In table variables
         int32_t _firmwareVersion = 0;

@@ -46,6 +46,9 @@ class MAXPacket : public BaseLib::Systems::Packet
         MAXPacket(uint8_t messageCounter, uint8_t messageType, uint8_t messageSubtype, int32_t senderAddress, int32_t destinationAddress, std::vector<uint8_t> payload, bool burst);
         virtual ~MAXPacket();
 
+        virtual void import(std::string& packet, bool removeFirstCharacter = true);
+        virtual void import(std::vector<uint8_t>& packet, bool rssiByte);
+
         void setBurst(bool value) { _burst = value; }
         bool getBurst() { return _burst; }
         uint8_t messageCounter() { return _messageCounter; }
@@ -55,6 +58,8 @@ class MAXPacket : public BaseLib::Systems::Packet
         uint8_t rssiDevice() { return _rssiDevice; }
         virtual std::string hexString();
         virtual std::vector<uint8_t> byteArray();
+        virtual std::vector<uint8_t> getPosition(double index, double size, int32_t mask);
+        virtual void setPosition(double index, double size, std::vector<uint8_t>& value);
 
         bool equals(std::shared_ptr<MAXPacket>& rhs);
     protected:
@@ -64,8 +69,6 @@ class MAXPacket : public BaseLib::Systems::Packet
         uint8_t _messageSubtype = 0;
         uint8_t _rssiDevice = 0;
 
-        virtual void import(std::string& packet, bool removeFirstCharacter = true);
-        virtual void import(std::vector<uint8_t>& packet, bool rssiByte);
         virtual uint8_t getByte(std::string);
         int32_t getInt(std::string);
 };

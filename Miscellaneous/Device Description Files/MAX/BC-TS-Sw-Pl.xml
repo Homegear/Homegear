@@ -56,7 +56,6 @@ Todo:
           <physical type="integer" interface="command" value_id="STATE">
             <set request="LEVEL_SET"/>
             <event frame="INFO_LEVEL"/>
-            <event frame="ACK_STATUS"/>
           </physical>
           <conversion type="boolean_integer" threshold="96" false="94" true="114"/>
         </parameter>
@@ -64,16 +63,12 @@ Todo:
     </channel>
   </channels>
   <packets>
-    <packet id="LEVEL_SET" direction="to_device" type="0x40" subtype="0x04" subtype_index="1">
+    <packet id="LEVEL_SET" direction="to_device" type="0x40" subtype="0x04">
       <parameter type="integer" index="9.0" size="1.0" const_value="1"/>
       <parameter type="integer" index="10.0" size="1.0" param="STATE"/>
     </packet>
-    <packet id="INFO_LEVEL" direction="from_device" event="true" type="0x40" subtype="0x06" subtype_index="1">
+    <packet id="INFO_LEVEL" direction="from_device" event="true" type="0x40" subtype="0x06">
       <parameter type="integer" index="10.0" size="1.0" param="STATE"/>
-    </packet>
-    <packet id="ACK_STATUS" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x02" subtype="1" subtype_index="9" channel_field="10">
-      <parameter type="integer" index="11.0" size="1.0" param="STATE"/>
-      <parameter type="integer" index="12.4" size="0.3" param="STATE_FLAGS"/>
     </packet>
   </packets>
 </device>

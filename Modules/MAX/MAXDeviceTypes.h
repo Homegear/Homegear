@@ -39,7 +39,8 @@ namespace MAX
 		none = 					0xFFFFFFFF,
 		HMRCV50 = 				0x0000,
 		MAXSD = 				0xFFFFFFFE,
-		MAXCENTRAL = 			0xFFFFFFFD
+		MAXCENTRAL = 			0xFFFFFFFD,
+		BCTSSWPL =				0x0001
 	};
 }
 #endif

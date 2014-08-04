@@ -4,7 +4,7 @@ Todo:
 	- Add cyclic_timeout
 	- Add power on event
 -->
-<device version="1">
+<device version="1" rx_modes="BURST">
   <types>
     <type name="MAX! Window Sensor" id="BC-SC-Rd-WM">
       <type_id>0x04</type_id>
@@ -68,7 +68,7 @@ Todo:
     </channel>
   </channels>
   <frames>
-    <frame id="EVENT" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x41" channel_field="9:0.6">
+    <frame id="EVENT" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x30" fixed_channel="1">
       <parameter type="integer" index="10.0" size="0.2" param="STATE"/>
       <parameter type="integer" index="9.7" size="0.1" param="LOWBAT"/><!-- No idea if this really is the LOWBAT bit -->
     </frame>

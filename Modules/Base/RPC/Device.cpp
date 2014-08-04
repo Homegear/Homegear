@@ -1202,6 +1202,32 @@ std::vector<std::shared_ptr<Parameter>> ParameterSet::getIndices(uint32_t startI
 	return filteredParameters;
 }
 
+std::vector<std::shared_ptr<Parameter>> ParameterSet::getList(int32_t list)
+{
+	std::vector<std::shared_ptr<Parameter>> filteredParameters;
+	try
+	{
+		if(list < 0) return filteredParameters;
+		for(std::vector<std::shared_ptr<Parameter>>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		{
+			if((*i)->physicalParameter->list == (unsigned)list) filteredParameters.push_back(*i);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(Exception& ex)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	_bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	return filteredParameters;
+}
+
 std::shared_ptr<Parameter> ParameterSet::getIndex(double index)
 {
 	try
@@ -1779,6 +1805,7 @@ void Device::parseXML(xml_node<>* node)
 			else if(attributeName == "cyclic_timeout") cyclicTimeout = HelperFunctions::getNumber(attributeValue);
 			else if(attributeName == "supports_aes") { if(attributeValue == "true") supportsAES = true; }
 			else if(attributeName == "peering_sysinfo_expect_channel") { if(attributeValue == "false") peeringSysinfoExpectChannel = false; }
+			else if(attributeName == "needs_time") { if(attributeValue == "true") needsTime = true; }
 			else _bl->out.printWarning("Warning: Unknown attribute for \"device\": " + attributeName);
 		}
 

@@ -227,6 +227,7 @@ public:
 	virtual ~ParameterSet() {}
 	virtual void init(xml_node<>* parameterSetNode);
 	virtual std::vector<std::shared_ptr<Parameter>> getIndices(uint32_t startIndex, uint32_t endIndex, int32_t list);
+	virtual std::vector<std::shared_ptr<Parameter>> getList(int32_t list);
 	virtual std::shared_ptr<Parameter> getIndex(double index);
 	virtual std::shared_ptr<Parameter> getParameter(std::string id);
 	virtual std::string typeString();
@@ -368,6 +369,7 @@ public:
 	std::string deviceClass;
 	bool supportsAES = false;
 	bool peeringSysinfoExpectChannel = true;
+	bool needsTime = false;
 	std::shared_ptr<Device> team;
 
 	Device(BaseLib::Obj* baseLib, Systems::DeviceFamilies family);
