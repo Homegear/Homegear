@@ -119,6 +119,7 @@ DeviceFrame::DeviceFrame(BaseLib::Obj* baseLib, xml_node<>* node) : DeviceFrame(
 			if(attributeValue == "*") fixedChannel = -2;
 			else fixedChannel = HelperFunctions::getNumber(attributeValue);
 		}
+		else if(attributeName == "size") size = HelperFunctions::getNumber(attributeValue);
 		else _bl->out.printWarning("Warning: Unknown attribute for \"frame\": " + attributeName);
 	}
 	for(xml_node<>* frameNode = node->first_node("parameter"); frameNode; frameNode = frameNode->next_sibling("parameter"))
@@ -883,6 +884,7 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 				else _bl->out.printWarning("Warning: Unknown ui flag for \"parameter\": " + attributeValue);
 			}
 		}
+		else if(attributeName == "mask") mask = HelperFunctions::getNumber(attributeValue);
 		else _bl->out.printWarning("Warning: Unknown attribute for \"parameter\": " + attributeName);
 	}
 	if(checkForID && id.empty()) _bl->out.printError("Error: Parameter has no id. Index: " + std::to_string(index));

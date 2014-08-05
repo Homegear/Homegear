@@ -829,6 +829,27 @@ bool MAXCentral::knowsDevice(uint64_t id)
 	return false;
 }
 
+void MAXCentral::addHomegearFeatures(std::shared_ptr<MAXPeer> peer)
+{
+	try
+	{
+		if(!peer) return;
+		//if(peer->getDeviceType().type() == (uint32_t)DeviceType::BCRTTRXCYG3) addHomegearFeaturesValveDrive(peer);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 //Packet handlers
 void MAXCentral::handleAck(int32_t messageCounter, std::shared_ptr<MAXPacket> packet)
 {
@@ -887,6 +908,7 @@ void MAXCentral::handleAck(int32_t messageCounter, std::shared_ptr<MAXPacket> pa
 					deviceDescriptions->arrayValue = queue->peer->getDeviceDescriptions(true, std::map<std::string, bool>());
 					raiseRPCNewDevices(deviceDescriptions);
 					GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(queue->peer->getAddress()) + ".");
+					addHomegearFeatures(queue->peer);
 				}
 			}
 		}
@@ -930,7 +952,7 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 		}
 
 		std::string serialNumber(&packet->payload()->at(4), &packet->payload()->at(4) + 10);
-		uint32_t rawType = packet->payload()->at(2);
+		uint32_t rawType = (packet->payload()->at(2) << 8) + packet->payload()->at(3);
 		LogicalDeviceType deviceType(BaseLib::Systems::DeviceFamilies::MAX, rawType);
 
 		std::shared_ptr<MAXPeer> peer(getPeer(packet->senderAddress()));
@@ -954,7 +976,7 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 				queue->peer = createPeer(packet->senderAddress(), firmwareVersion, deviceType, serialNumber, false);
 				if(!queue->peer)
 				{
-					GD::out.printWarning("Warning: Device type " + GD::bl->hf.getHexString(deviceType.type(), 4) + " with firmware version 0x" + BaseLib::HelperFunctions::getHexString(firmwareVersion, 4) + " not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
+					GD::out.printWarning("Warning: Device type 0x" + GD::bl->hf.getHexString(deviceType.type(), 4) + " with firmware version 0x" + BaseLib::HelperFunctions::getHexString(firmwareVersion, 4) + " not supported. Sender address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 6) + ".");
 					return;
 				}
 				peer = queue->peer;
@@ -1011,16 +1033,16 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 			}
 		}
 		//not in pairing mode
-		else queue = _queueManager.createQueue(this, peer->getPhysicalInterface(), PacketQueueType::DEFAULT, packet->senderAddress());
-
-		if(!peer)
+		else
 		{
-			GD::out.printError("Error handling pairing packet: Peer is nullptr. This shouldn't have happened. Something went very wrong.");
-			return;
+			queue = _queueManager.createQueue(this, peer->getPhysicalInterface(), PacketQueueType::DEFAULT, packet->senderAddress());
+			if(peer->pendingQueues && !peer->pendingQueues->empty())
+			{
+				peer->pendingQueues->front()->setWakeOnRadio(false);
+				GD::out.printInfo("Info: Pushing pending queues.");
+			}
+			queue->push(peer->pendingQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
 		}
-
-		if(peer->pendingQueues && !peer->pendingQueues->empty()) GD::out.printInfo("Info: Pushing pending queues.");
-		queue->push(peer->pendingQueues); //This pushes the just generated queue and the already existent pending queue onto the queue
 	}
 	catch(const std::exception& ex)
     {
@@ -1038,6 +1060,164 @@ void MAXCentral::handlePairingRequest(int32_t messageCounter, std::shared_ptr<MA
 //End packet handlers
 
 //RPC functions
+std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex, std::string name, std::string description)
+{
+	try
+	{
+		if(senderSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		std::shared_ptr<MAXPeer> sender = getPeer(senderSerialNumber);
+		std::shared_ptr<MAXPeer> receiver = getPeer(receiverSerialNumber);
+		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		return addLink(sender->getID(), senderChannelIndex, receiver->getID(), receiverChannelIndex, name, description);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::addLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex, std::string name, std::string description)
+{
+	try
+	{
+		if(senderID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Sender id is not set.");
+		if(receiverID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver is not set.");
+		std::shared_ptr<MAXPeer> sender = getPeer(senderID);
+		std::shared_ptr<MAXPeer> receiver = getPeer(receiverID);
+		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(senderChannelIndex < 0) senderChannelIndex = 0;
+		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
+		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Sender channel not found.");
+		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver channel not found.");
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> senderChannel = sender->rpcDevice->channels.at(senderChannelIndex);
+		std::shared_ptr<BaseLib::RPC::DeviceChannel> receiverChannel = receiver->rpcDevice->channels.at(receiverChannelIndex);
+		if(senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) BaseLib::RPC::RPCVariable::createError(-6, "Link not supported.");
+		bool validLink = false;
+		for(std::vector<std::string>::iterator i = senderChannel->linkRoles->sourceNames.begin(); i != senderChannel->linkRoles->sourceNames.end(); ++i)
+		{
+			for(std::vector<std::string>::iterator j = receiverChannel->linkRoles->targetNames.begin(); j != receiverChannel->linkRoles->targetNames.end(); ++j)
+			{
+				if(*i == *j)
+				{
+					validLink = true;
+					break;
+				}
+			}
+			if(validLink) break;
+		}
+
+		std::shared_ptr<BaseLib::Systems::BasicPeer> senderPeer(new BaseLib::Systems::BasicPeer());
+		senderPeer->address = sender->getAddress();
+		senderPeer->channel = senderChannelIndex;
+		senderPeer->id = sender->getID();
+		senderPeer->serialNumber = sender->getSerialNumber();
+		senderPeer->linkDescription = description;
+		senderPeer->linkName = name;
+
+		std::shared_ptr<BaseLib::Systems::BasicPeer> receiverPeer(new BaseLib::Systems::BasicPeer());
+		receiverPeer->address = receiver->getAddress();
+		receiverPeer->channel = receiverChannelIndex;
+		receiverPeer->id = receiver->getID();
+		receiverPeer->serialNumber = receiver->getSerialNumber();
+		receiverPeer->linkDescription = description;
+		receiverPeer->linkName = name;
+
+		sender->addPeer(senderChannelIndex, receiverPeer);
+		receiver->addPeer(receiverChannelIndex, senderPeer);
+
+		std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, sender->getPhysicalInterface(), PacketQueueType::CONFIG, sender->getAddress());
+		queue->peer = sender;
+		std::shared_ptr<PacketQueue> pendingQueue(new PacketQueue(sender->getPhysicalInterface(), PacketQueueType::CONFIG));
+		pendingQueue->noSending = true;
+
+		std::vector<uint8_t> payload;
+
+		payload.clear();
+		//CONFIG_ADD_PEER
+		payload.push_back(0);
+		payload.push_back(receiver->getAddress() >> 16);
+		payload.push_back((receiver->getAddress() >> 8) & 0xFF);
+		payload.push_back(receiver->getAddress() & 0xFF);
+		payload.push_back(senderChannelIndex);
+		std::shared_ptr<MAXPacket> configPacket(new MAXPacket(_messageCounter[0], 0x20, 0, _address, sender->getAddress(), payload, sender->getRXModes() & BaseLib::RPC::Device::RXModes::burst));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		_messageCounter[0]++;
+
+		sender->pendingQueues->push(pendingQueue);
+		sender->serviceMessages->setConfigPending(true);
+		queue->push(sender->pendingQueues);
+		queue.reset();
+
+		raiseRPCUpdateDevice(sender->getID(), senderChannelIndex, sender->getSerialNumber() + ":" + std::to_string(senderChannelIndex), 1);
+
+		int32_t waitIndex = 0;
+		while(_queueManager.get(sender->getAddress()) && waitIndex < 50)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
+		}
+
+		queue = _queueManager.createQueue(this, receiver->getPhysicalInterface(), PacketQueueType::CONFIG, receiver->getAddress());
+		queue->peer = receiver;
+		pendingQueue.reset(new PacketQueue(receiver->getPhysicalInterface(), PacketQueueType::CONFIG));
+		pendingQueue->noSending = true;
+
+		payload.clear();
+		//CONFIG_ADD_PEER
+		payload.push_back(0x00);
+		payload.push_back(sender->getAddress() >> 16);
+		payload.push_back((sender->getAddress() >> 8) & 0xFF);
+		payload.push_back(sender->getAddress() & 0xFF);
+		payload.push_back(receiverChannelIndex);
+		configPacket.reset(new MAXPacket(_messageCounter[0], 0x20, 0, _address, receiver->getAddress(), payload, receiver->getRXModes() & BaseLib::RPC::Device::RXModes::burst));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		_messageCounter[0]++;
+
+		receiver->pendingQueues->push(pendingQueue);
+		receiver->serviceMessages->setConfigPending(true);
+		queue->push(receiver->pendingQueues);
+		queue.reset();
+
+		raiseRPCUpdateDevice(receiver->getID(), receiverChannelIndex, receiver->getSerialNumber() + ":" + std::to_string(receiverChannelIndex), 1);
+
+		waitIndex = 0;
+		while(_queueManager.get(receiver->getAddress()) && waitIndex < 50)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
+		}
+
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
 std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::deleteDevice(std::string serialNumber, int32_t flags)
 {
 	try
@@ -1254,6 +1434,131 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::putParamset(uint64_t peer
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::removeLink(std::string senderSerialNumber, int32_t senderChannelIndex, std::string receiverSerialNumber, int32_t receiverChannelIndex)
+{
+	try
+	{
+		if(senderSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given sender address is empty.");
+		if(receiverSerialNumber.empty()) return BaseLib::RPC::RPCVariable::createError(-2, "Given receiver address is empty.");
+		std::shared_ptr<MAXPeer> sender = getPeer(senderSerialNumber);
+		std::shared_ptr<MAXPeer> receiver = getPeer(receiverSerialNumber);
+		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		return removeLink(sender->getID(), senderChannelIndex, receiver->getID(), receiverChannelIndex);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+std::shared_ptr<BaseLib::RPC::RPCVariable> MAXCentral::removeLink(uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex)
+{
+	try
+	{
+		if(senderID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Sender id is not set.");
+		if(receiverID == 0) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver id is not set.");
+		std::shared_ptr<MAXPeer> sender = getPeer(senderID);
+		std::shared_ptr<MAXPeer> receiver = getPeer(receiverID);
+		if(!sender) return BaseLib::RPC::RPCVariable::createError(-2, "Sender device not found.");
+		if(!receiver) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver device not found.");
+		if(senderChannelIndex < 0) senderChannelIndex = 0;
+		if(receiverChannelIndex < 0) receiverChannelIndex = 0;
+		std::string senderSerialNumber = sender->getSerialNumber();
+		std::string receiverSerialNumber = receiver->getSerialNumber();
+		if(sender->rpcDevice->channels.find(senderChannelIndex) == sender->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Sender channel not found.");
+		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver channel not found.");
+		if(!sender->getPeer(senderChannelIndex, receiver->getAddress()) && !receiver->getPeer(receiverChannelIndex, sender->getAddress())) return BaseLib::RPC::RPCVariable::createError(-6, "Devices are not paired to each other.");
+
+		sender->removePeer(senderChannelIndex, receiver->getAddress(), receiverChannelIndex);
+		receiver->removePeer(receiverChannelIndex, sender->getAddress(), senderChannelIndex);
+
+		std::shared_ptr<PacketQueue> queue = _queueManager.createQueue(this, sender->getPhysicalInterface(), PacketQueueType::CONFIG, sender->getAddress());
+		queue->peer = sender;
+		std::shared_ptr<PacketQueue> pendingQueue(new PacketQueue(sender->getPhysicalInterface(), PacketQueueType::CONFIG));
+		pendingQueue->noSending = true;
+
+		std::vector<uint8_t> payload;
+		payload.push_back(0);
+		payload.push_back(receiver->getAddress() >> 16);
+		payload.push_back((receiver->getAddress() >> 8) & 0xFF);
+		payload.push_back(receiver->getAddress() & 0xFF);
+		payload.push_back(senderChannelIndex);
+		std::shared_ptr<MAXPacket> configPacket(new MAXPacket(_messageCounter[0], 0x21, 0, _address, sender->getAddress(), payload, sender->getRXModes() & BaseLib::RPC::Device::RXModes::burst));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		_messageCounter[0]++;
+
+		sender->pendingQueues->push(pendingQueue);
+		sender->serviceMessages->setConfigPending(true);
+		queue->push(sender->pendingQueues);
+		queue.reset();
+
+		raiseRPCUpdateDevice(sender->getID(), senderChannelIndex, senderSerialNumber + ":" + std::to_string(senderChannelIndex), 1);
+
+		int32_t waitIndex = 0;
+		while(_queueManager.get(sender->getAddress()) && waitIndex < 50)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
+		}
+
+		queue = _queueManager.createQueue(this, receiver->getPhysicalInterface(), PacketQueueType::CONFIG, receiver->getAddress());
+		queue->peer = receiver;
+		pendingQueue.reset(new PacketQueue(receiver->getPhysicalInterface(), PacketQueueType::CONFIG));
+		pendingQueue->noSending = true;
+
+		payload.clear();
+		payload.push_back(0);
+		payload.push_back(sender->getAddress() >> 16);
+		payload.push_back((sender->getAddress() >> 8) & 0xFF);
+		payload.push_back(sender->getAddress() & 0xFF);
+		payload.push_back(receiverChannelIndex);
+		configPacket.reset(new MAXPacket(_messageCounter[0], 0x21, 0, _address, receiver->getAddress(), payload, receiver->getRXModes() & BaseLib::RPC::Device::RXModes::burst));
+		pendingQueue->push(configPacket);
+		pendingQueue->push(_messages->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+		_messageCounter[0]++;
+
+		receiver->pendingQueues->push(pendingQueue);
+		receiver->serviceMessages->setConfigPending(true);
+		queue->push(receiver->pendingQueues);
+		queue.reset();
+
+		raiseRPCUpdateDevice(receiver->getID(), receiverChannelIndex, receiverSerialNumber + ":" + std::to_string(receiverChannelIndex), 1);
+
+		waitIndex = 0;
+		while(_queueManager.get(receiver->getAddress()) && waitIndex < 50)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			waitIndex++;
+		}
+
+		return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcVoid));
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
 }
 
 void MAXCentral::pairingModeTimer(int32_t duration, bool debugOutput)

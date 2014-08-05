@@ -58,12 +58,16 @@ public:
 	virtual bool knowsDevice(std::string serialNumber);
 	virtual bool knowsDevice(uint64_t id);
 
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> addLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> addLink(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteDevice(std::string serialNumber, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> deleteDevice(uint64_t peerID, int32_t flags);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceInfo(uint64_t id, std::map<std::string, bool> fields);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getInstallMode();
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(std::string serialNumber, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> putParamset(uint64_t peerID, int32_t channel, BaseLib::RPC::ParameterSet::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, std::shared_ptr<BaseLib::RPC::RPCVariable> paramset);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> removeLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel);
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> removeLink(uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setInstallMode(bool on, uint32_t duration = 60, bool debugOutput = true);
 	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> setInterface(uint64_t peerID, std::string interfaceID);
 protected:
@@ -78,6 +82,9 @@ protected:
 	virtual void setUpMAXMessages();
 	virtual void worker();
 	virtual void init();
+
+	void addHomegearFeatures(std::shared_ptr<MAXPeer> peer);
+	void addHomegearFeaturesValveDrive(std::shared_ptr<MAXPeer> peer);
 };
 
 }

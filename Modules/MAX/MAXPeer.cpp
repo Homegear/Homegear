@@ -688,7 +688,7 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 			std::shared_ptr<BaseLib::RPC::DeviceFrame> frame(i->second);
 			if(!frame)
 			{
-				GD::out.printDebug("Debug: Found frame is nullptr. Continueing with next frame.");
+				GD::out.printDebug("Debug: Found frame is nullptr. Continuing with next frame.");
 				continue;
 			}
 			if(frame->direction == BaseLib::RPC::DeviceFrame::Direction::Enum::fromDevice && packet->senderAddress() != _address)
@@ -708,7 +708,7 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 			}
 			if(frame->subtype > -1 && packet->messageSubtype() != frame->subtype)
 			{
-				GD::out.printDebug("Debug: Packet has wrong subtype. Continueing with next frame.");
+				GD::out.printDebug("Debug: Packet has wrong subtype. Continuing with next frame.");
 				continue;
 			}
 			int32_t channelIndex = frame->channelField;
@@ -716,6 +716,11 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9) - frame->channelIndexOffset;
 			if(channel > -1 && frame->channelFieldSize < 1.0) channel &= (0xFF >> (8 - std::lround(frame->channelFieldSize * 10) % 10));
 			if(frame->fixedChannel > -1) channel = frame->fixedChannel;
+			if(frame->size > 0 && packet->length() != frame->size)
+			{
+				GD::out.printDebug("Debug: Packet has wrong size. Continuing with next frame.");
+				continue;
+			}
 			currentFrameValues.frameID = frame->id;
 
 			GD::out.printDebug("Debug: Frame with ID \"" + frame->id + "\" matches packet.");
@@ -901,7 +906,7 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 				}
 			}
 		}
-		if(packet->messageType() != 0x02) central->sendOK(packet->messageCounter(), packet->senderAddress());
+		if(packet->messageType() != 0x02 && packet->messageType() != 0x00 && packet->destinationAddress() == central->getAddress()) central->sendOK(packet->messageCounter(), packet->senderAddress());
 
 		//if(!rpcValues.empty() && !resendPacket)
 		if(!rpcValues.empty())
@@ -1368,7 +1373,12 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXPeer::setValue(uint32_t channel, s
 				}
 			}
 			//param sometimes is ambiguous (e. g. LEVEL of HM-CC-TC), so don't search and use the given parameter when possible
-			else if(i->param == rpcParameter->physicalParameter->valueID || i->param == rpcParameter->physicalParameter->id) packet->setPosition(i->index, i->size, valuesCentral[channel][valueKey].data);
+			else if(i->param == rpcParameter->physicalParameter->valueID || i->param == rpcParameter->physicalParameter->id)
+			{
+				std::vector<uint8_t> data = valuesCentral[channel][valueKey].data;
+				if(i->mask != 0 && data.size() == 1) data.at(0) &= i->mask;
+				packet->setPosition(i->index, i->size, data);
+			}
 			//Search for all other parameters
 			else
 			{
@@ -1378,7 +1388,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXPeer::setValue(uint32_t channel, s
 					//Only compare id. Till now looking for value_id was not necessary.
 					if(i->param == j->second.rpcParameter->physicalParameter->id)
 					{
-						packet->setPosition(i->index, i->size, j->second.data);
+						std::vector<uint8_t> data = j->second.data;
+						if(i->mask != 0 && data.size() == 1) data.at(0) &= i->mask;
+						packet->setPosition(i->index, i->size, data);
 						paramFound = true;
 						break;
 					}

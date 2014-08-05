@@ -158,6 +158,7 @@ public:
 	int32_t omitIf = 0;
 	bool loopback = false;
 	bool hasDominoEvents = false;
+	int32_t mask = -1;
 
 	Parameter(BaseLib::Obj* baseLib);
 	Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID = false);
@@ -329,6 +330,7 @@ public:
 	double channelFieldSize = 1.0;
 	int32_t channelIndexOffset = 0;
 	int32_t fixedChannel = -1;
+	int32_t size = -1;
 	std::vector<Parameter> parameters;
 	std::vector<std::shared_ptr<Parameter>> associatedValues;
 

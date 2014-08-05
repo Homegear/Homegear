@@ -769,6 +769,36 @@ void PacketQueue::popWaitThread(uint32_t threadId, uint32_t waitingTime)
     }
 }
 
+void PacketQueue::setWakeOnRadio(bool value)
+{
+	try
+	{
+		_queueMutex.lock();
+		if(_queue.empty())
+		{
+			_queueMutex.unlock();
+			return;
+		}
+		if(_queue.front().getPacket())
+		{
+			_queue.front().getPacket()->setBurst(value);
+		}
+		_queueMutex.unlock();
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void PacketQueue::send(std::shared_ptr<MAXPacket> packet, bool stealthy)
 {
 	try

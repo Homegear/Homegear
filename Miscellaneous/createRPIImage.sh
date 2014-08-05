@@ -102,6 +102,7 @@ debconf-set-selections /debconf.set
 rm -f /debconf.set
 apt-get update
 apt-get -y install locales console-common ntp openssh-server git-core binutils curl ca-certificates sudo parted unzip p7zip-full php5-cli php5-xmlrpc libxml2-utils keyboard-configuration liblzo2-dev python-lzo libgcrypt11 libgcrypt11-dev libgpg-error0 libgpg-error-dev libgnutlsxx27 libgnutls-dev
+update-ca-certificates --fresh
 wget http://goo.gl/1BOfJ -O /usr/bin/rpi-update
 chmod +x /usr/bin/rpi-update
 mkdir -p /lib/modules/$(uname -r)

@@ -142,6 +142,7 @@ class PacketQueue
         bool isEmpty();
         bool pendingQueuesEmpty();
         void clear();
+        void setWakeOnRadio(bool value);
         void send(std::shared_ptr<MAXPacket> packet, bool stealthy);
         void keepAlive();
         void longKeepAlive();

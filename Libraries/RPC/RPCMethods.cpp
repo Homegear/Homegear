@@ -1840,7 +1840,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> RPCListBidcosInterfaces::invoke(std::
 	{
 		if(parameters->size() > 0) return getError(ParameterError::Enum::wrongCount);
 
-		if(GD::deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)) return GD::deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->listBidcosInterfaces();
+		if(GD::deviceFamilies.find(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS) != GD::deviceFamilies.end() && GD::deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)) return GD::deviceFamilies.at(BaseLib::Systems::DeviceFamilies::HomeMaticBidCoS)->listBidcosInterfaces();
 		else return BaseLib::RPC::RPCVariable::createError(-32601, "Family HomeMatic BidCoS does not exist.");
 	}
 	catch(const std::exception& ex)
