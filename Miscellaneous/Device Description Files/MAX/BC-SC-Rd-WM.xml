@@ -2,7 +2,7 @@
 <!--
 Todo:
 	- Add cyclic_timeout
-	- Add power on event
+	- Add LOWBAT
 -->
 <device version="1" rx_modes="BURST">
   <types>

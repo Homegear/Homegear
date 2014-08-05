@@ -128,6 +128,7 @@ PhysicalParameter::PhysicalParameter(BaseLib::Obj* baseLib, xml_node<>* node) : 
 			else if(nodeName == "event")
 			{
 				attr = physicalNode->first_attribute("frame");
+				if(!attr) attr = physicalNode->first_attribute("packet");
 				if(!attr) continue;
 				std::shared_ptr<PhysicalParameterEvent> event(new PhysicalParameterEvent());
 				event->frame = std::string(attr->value());

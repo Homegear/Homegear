@@ -713,7 +713,7 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 			}
 			int32_t channelIndex = frame->channelField;
 			int32_t channel = -1;
-			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9);
+			if(channelIndex >= 9 && (signed)packet->payload()->size() > (channelIndex - 9)) channel = packet->payload()->at(channelIndex - 9) - frame->channelIndexOffset;
 			if(channel > -1 && frame->channelFieldSize < 1.0) channel &= (0xFF >> (8 - std::lround(frame->channelFieldSize * 10) % 10));
 			if(frame->fixedChannel > -1) channel = frame->fixedChannel;
 			currentFrameValues.frameID = frame->id;
