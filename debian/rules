@@ -28,12 +28,15 @@ override_dh_auto_install:
 	cp $(CURDIR)/Miscellaneous/physicalinterfaces.conf $(CURDIR)/debian/homegear/etc/homegear
 	cp $(CURDIR)/Miscellaneous/GetDeviceFiles.sh $(CURDIR)/debian/homegear/etc/homegear
 	cp $(CURDIR)/Miscellaneous/DeviceTypePatch.patch $(CURDIR)/debian/homegear/etc/homegear
-	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices
-	chown -R root:root $(CURDIR)/debian/homegear/etc/homegear
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear
 	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/*
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/GetDeviceFiles.sh
+	mkdir -p $(CURDIR)/debian/homegear/etc/homegear/devices/4
+	cp $(CURDIR)/Miscellaneous/Device\ Description\ Files/MAX/* $(CURDIR)/debian/homegear/etc/homegear/devices/4
 	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices
+	chmod 755 $(CURDIR)/debian/homegear/etc/homegear/devices/4
+	chmod 644 $(CURDIR)/debian/homegear/etc/homegear/devices/4/*
+	chown -R root:root $(CURDIR)/debian/homegear/etc/homegear
 	mkdir -p $(CURDIR)/debian/homegear/etc/init.d
 	cp $(CURDIR)/Miscellaneous/homegear $(CURDIR)/debian/homegear/etc/init.d
 	chown root:root $(CURDIR)/debian/homegear/etc/init.d/homegear

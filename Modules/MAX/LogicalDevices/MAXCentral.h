@@ -50,7 +50,7 @@ public:
 	virtual std::string handleCLICommand(std::string command);
 	virtual uint64_t getPeerIDFromSerial(std::string serialNumber) { std::shared_ptr<MAXPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 	virtual void enqueuePendingQueues(int32_t deviceAddress);
-	void reset(uint64_t id, bool defer);
+	void reset(uint64_t id);
 
 	virtual void handleAck(int32_t messageCounter, std::shared_ptr<MAXPacket>);
 	virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<MAXPacket>);

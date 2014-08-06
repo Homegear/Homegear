@@ -282,7 +282,7 @@ void PacketQueue::resend(uint32_t threadId, bool burst)
 			}
 		}
 		if(_stopResendThread) return;
-		if(_resendCounter < 4)
+		if(_resendCounter < 3)
 		{
 			//Sleep for 200/3000 ms
 			i = 0;

@@ -27,17 +27,18 @@
  * files in the program, then also delete it here.
  */
 
-#include "CUL.h"
+#include "COC.h"
 #include "../MAXPacket.h"
 #include "../GD.h"
 
 namespace MAX
 {
 
-CUL::CUL(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, settings)
+COC::COC(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, settings)
 {
 	_out.init(GD::bl);
-	_out.setPrefix(GD::out.getPrefix() + "CUL \"" + settings->id + "\": ");
+	_out.setPrefix(GD::out.getPrefix() + "COC \"" + settings->id + "\": ");
+
 	if(settings->listenThreadPriority == -1)
 	{
 		settings->listenThreadPriority = 45;
@@ -45,7 +46,7 @@ CUL::CUL(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) 
 	}
 }
 
-CUL::~CUL()
+COC::~COC()
 {
 	try
 	{
@@ -70,7 +71,7 @@ CUL::~CUL()
     }
 }
 
-void CUL::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
+void COC::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
@@ -79,7 +80,7 @@ void CUL::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			_out.printWarning("Warning: Packet was nullptr.");
 			return;
 		}
-		if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
+		if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
 		if(packet->payload()->size() > 54)
 		{
 			if(_bl->debugLevel >= 2) _out.printError("Error: Tried to send packet larger than 64 bytes. That is not supported.");
@@ -88,8 +89,8 @@ void CUL::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 
 		std::shared_ptr<MAXPacket> maxPacket(std::dynamic_pointer_cast<MAXPacket>(packet));
 		if(!maxPacket) return;
-		if(maxPacket->getBurst()) writeToDevice("Zs" + packet->hexString() + "\n", true);
-		else writeToDevice("Zf" + packet->hexString() + "\n", true);
+		if(maxPacket->getBurst()) writeToDevice("Zs" + packet->hexString() + "\nZr\n", true);
+		else writeToDevice("Zf" + packet->hexString() + "\nZr\n", true);
 	}
 	catch(const std::exception& ex)
     {
@@ -105,7 +106,7 @@ void CUL::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
     }
 }
 
-void CUL::openDevice()
+void COC::openDevice()
 {
 	try
 	{
@@ -126,7 +127,7 @@ void CUL::openDevice()
 			lockfileStream >> processID;
 			if(getpid() != processID && kill(processID, 0) == 0)
 			{
-				_out.printCritical("CUL device is in use: " + _settings->device);
+				_out.printCritical("COC device is in use: " + _settings->device);
 				return;
 			}
 			unlink(_lockfile.c_str());
@@ -145,7 +146,7 @@ void CUL::openDevice()
 		_fileDescriptor = _bl->fileDescriptorManager.add(open(_settings->device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY));
 		if(_fileDescriptor->descriptor == -1)
 		{
-			_out.printCritical("Couldn't open CUL device \"" + _settings->device + "\": " + strerror(errno));
+			_out.printCritical("Couldn't open COC device \"" + _settings->device + "\": " + strerror(errno));
 			return;
 		}
 
@@ -165,7 +166,7 @@ void CUL::openDevice()
     }
 }
 
-void CUL::closeDevice()
+void COC::closeDevice()
 {
 	try
 	{
@@ -186,29 +187,29 @@ void CUL::closeDevice()
     }
 }
 
-void CUL::setupDevice()
+void COC::setupDevice()
 {
 	try
 	{
 		if(_fileDescriptor->descriptor == -1) return;
 		struct termios term;
-		term.c_cflag = B9600 | CS8 | CREAD;
+		term.c_cflag = B38400 | CS8 | CREAD;
 		term.c_iflag = 0;
 		term.c_oflag = 0;
 		term.c_lflag = 0;
 		term.c_cc[VMIN] = 1;
 		term.c_cc[VTIME] = 0;
-		cfsetispeed(&term, B9600);
-		cfsetospeed(&term, B9600);
-		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(BaseLib::Exception("Couldn't flush CUL device " + _settings->device));
-		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(BaseLib::Exception("Couldn't set CUL device settings: " + _settings->device));
+		cfsetispeed(&term, B38400);
+		cfsetospeed(&term, B38400);
+		if(tcflush(_fileDescriptor->descriptor, TCIFLUSH) == -1) throw(BaseLib::Exception("Couldn't flush COC device " + _settings->device));
+		if(tcsetattr(_fileDescriptor->descriptor, TCSANOW, &term) == -1) throw(BaseLib::Exception("Couldn't set COC device settings: " + _settings->device));
 
 		int flags = fcntl(_fileDescriptor->descriptor, F_GETFL);
 		if(!(flags & O_NONBLOCK))
 		{
 			if(fcntl(_fileDescriptor->descriptor, F_SETFL, flags | O_NONBLOCK) == -1)
 			{
-				throw(BaseLib::Exception("Couldn't set CUL device to non blocking mode: " + _settings->device));
+				throw(BaseLib::Exception("Couldn't set COC device to non blocking mode: " + _settings->device));
 			}
 		}
 	}
@@ -226,14 +227,14 @@ void CUL::setupDevice()
     }
 }
 
-std::string CUL::readFromDevice()
+std::string COC::readFromDevice()
 {
 	try
 	{
 		if(_stopped) return "";
 		if(_fileDescriptor->descriptor == -1)
 		{
-			_out.printCritical("Couldn't read from CUL device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
+			_out.printCritical("Couldn't read from COC device, because the file descriptor is not valid: " + _settings->device + ". Trying to reopen...");
 			closeDevice();
 			std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 			openDevice();
@@ -261,26 +262,25 @@ std::string CUL::readFromDevice()
 					if(!_stopCallbackThread) continue;
 					else return "";
 				case -1:
-					_out.printError("Error reading from CUL device: " + _settings->device);
+					_out.printError("Error reading from COC device: " + _settings->device);
 					return "";
 				case 1:
 					break;
 				default:
-					_out.printError("Error reading from CUL device: " + _settings->device);
+					_out.printError("Error reading from COC device: " + _settings->device);
 					return "";
 			}
-
 			i = read(_fileDescriptor->descriptor, localBuffer, 1);
 			if(i == -1)
 			{
 				if(errno == EAGAIN) continue;
-				_out.printError("Error reading from CUL device: " + _settings->device);
+				_out.printError("Error reading from COC device: " + _settings->device);
 				return "";
 			}
 			packet.push_back(localBuffer[0]);
 			if(packet.size() > 200)
 			{
-				_out.printError("CUL was disconnected.");
+				_out.printError("COC was disconnected.");
 				closeDevice();
 				return "";
 			}
@@ -298,15 +298,15 @@ std::string CUL::readFromDevice()
 	return "";
 }
 
-void CUL::writeToDevice(std::string data, bool printSending)
+void COC::writeToDevice(std::string data, bool printSending)
 {
     try
     {
     	if(_stopped) return;
-        if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to CUL device, because the file descriptor is not valid: " + _settings->device));
+        if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
         int32_t bytesWritten = 0;
         int32_t i;
-        if(_bl->debugLevel > 3 && printSending) _out.printInfo("Info: Sending (" + _settings->id + ", WOR: " + (data.at(1) == 's' ? "yes" : "no") + "): " + data.substr(2, data.size() - 3));
+        if(_bl->debugLevel > 3 && printSending) _out.printInfo("Info: Sending (" + _settings->id + ", WOR: " + (data.at(1) == 's' ? "yes" : "no") + "): " + data.substr(2, data.size() - 6));
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
         {
@@ -314,7 +314,7 @@ void CUL::writeToDevice(std::string data, bool printSending)
             if(i == -1)
             {
                 if(errno == EAGAIN) continue;
-                throw(BaseLib::Exception("Error writing to CUL device (3, " + std::to_string(errno) + "): " + _settings->device));
+                throw(BaseLib::Exception("Error writing to COC device (3, " + std::to_string(errno) + "): " + _settings->device));
             }
             bytesWritten += i;
         }
@@ -335,17 +335,32 @@ void CUL::writeToDevice(std::string data, bool printSending)
     _lastPacketSent = BaseLib::HelperFunctions::getTime();
 }
 
-void CUL::startListening()
+void COC::startListening()
 {
 	try
 	{
 		stopListening();
 		openDevice();
 		if(_fileDescriptor->descriptor == -1) return;
+		if(gpioDefined(2))
+		{
+			openGPIO(2, false);
+			setGPIO(2, true);
+			closeGPIO(2);
+		}
+		if(gpioDefined(1))
+		{
+			openGPIO(1, false);
+			setGPIO(1, false);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			setGPIO(1, true);
+			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+			closeGPIO(1);
+		}
 		_stopped = false;
 		writeToDevice("X21\nZr\n", false);
-		std::this_thread::sleep_for(std::chrono::milliseconds(400));
-		_listenThread = std::thread(&CUL::listen, this);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		_listenThread = std::thread(&COC::listen, this);
 		BaseLib::Threads::setThreadPriority(_bl, _listenThread.native_handle(), _settings->listenThreadPriority, _settings->listenThreadPolicy);
 	}
     catch(const std::exception& ex)
@@ -362,7 +377,7 @@ void CUL::startListening()
     }
 }
 
-void CUL::stopListening()
+void COC::stopListening()
 {
 	try
 	{
@@ -395,7 +410,7 @@ void CUL::stopListening()
     }
 }
 
-void CUL::listen()
+void COC::listen()
 {
     try
     {
@@ -408,14 +423,14 @@ void CUL::listen()
         		continue;
         	}
         	std::string packetHex = readFromDevice();
-        	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + CUL "Z")
+        	if(packetHex.size() > 21) //21 is minimal packet length (=10 Byte + COC "Z")
         	{
 				std::shared_ptr<MAXPacket> packet(new MAXPacket(packetHex, BaseLib::HelperFunctions::getTime()));
 				raisePacketReceived(packet);
         	}
         	else if(!packetHex.empty())
         	{
-        		if(packetHex == "LOVF") _out.printWarning("Warning: CUL with id " + _settings->id + " reached 1% limit. You need to wait, before sending is allowed again.");
+        		if(packetHex == "LOVF") _out.printWarning("Warning: COC with id " + _settings->id + " reached 1% limit. You need to wait, before sending is allowed again.");
         		else _out.printWarning("Warning: Too short packet received: " + packetHex);
         	}
         }
@@ -434,11 +449,17 @@ void CUL::listen()
     }
 }
 
-void CUL::setup(int32_t userID, int32_t groupID)
+void COC::setup(int32_t userID, int32_t groupID)
 {
     try
     {
     	setDevicePermission(userID, groupID);
+    	exportGPIO(1);
+		setGPIOPermission(1, userID, groupID, false);
+		setGPIODirection(1, GPIODirection::OUT);
+		exportGPIO(2);
+		setGPIOPermission(2, userID, groupID, false);
+		setGPIODirection(2, GPIODirection::OUT);
     }
     catch(const std::exception& ex)
     {

@@ -510,7 +510,6 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 		std::vector<uint8_t> value;
 		if(physicalParameter->endian == PhysicalParameter::Endian::Enum::little) value = reverseData(data);
 		else value = data;
-
 		if(logicalParameter->type == LogicalParameter::Type::Enum::typeEnum && conversion.empty())
 		{
 			int32_t integerValue = 0;
@@ -550,17 +549,20 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 			int32_t integerValue;
 			_bl->hf.memcpyBigEndian(integerValue, value);
 			std::shared_ptr<RPCVariable> variable(new RPCVariable(integerValue));
-			if(isSigned && value.size() <= 4)
+			if(isSigned && !value.empty() && value.size() <= 4)
 			{
 				int32_t byteIndex = value.size() - std::lround(std::ceil(physicalParameter->size));
-				int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
-				int32_t signPosition = 0;
-				if(bitSize == 0) signPosition = 7;
-				else signPosition = bitSize - 1;
-				if(value.at(byteIndex) & (1 << signPosition))
+				if(byteIndex >= 0 && byteIndex < value.size())
 				{
-					int32_t bits = (std::lround(std::floor(physicalParameter->size)) * 8) + bitSize;
-					variable->integerValue -= (1 << bits);
+					int32_t bitSize = std::lround(physicalParameter->size * 10) % 10;
+					int32_t signPosition = 0;
+					if(bitSize == 0) signPosition = 7;
+					else signPosition = bitSize - 1;
+					if(value.at(byteIndex) & (1 << signPosition))
+					{
+						int32_t bits = (std::lround(std::floor(physicalParameter->size)) * 8) + bitSize;
+						variable->integerValue -= (1 << bits);
+					}
 				}
 			}
 			for(std::vector<std::shared_ptr<ParameterConversion>>::reverse_iterator i = conversion.rbegin(); i != conversion.rend(); ++i)
@@ -569,9 +571,6 @@ std::shared_ptr<RPCVariable> Parameter::convertFromPacket(const std::vector<uint
 			}
 			return variable;
 		}
-		int32_t integerValue;
-		_bl->hf.memcpyBigEndian(integerValue, value);
-		return std::shared_ptr<RPC::RPCVariable>(new RPCVariable(integerValue));
 	}
 	catch(const std::exception& ex)
     {
@@ -813,6 +812,9 @@ Parameter::Parameter(BaseLib::Obj* baseLib, xml_node<>* node, bool checkForID) :
 		std::string attributeValue(attr->value());
 		if(attributeName == "index") index = std::stod(attributeValue);
 		else if(attributeName == "size") size = std::stod(attributeValue);
+		else if(attributeName == "index2") index2 = std::stod(attributeValue);
+		else if(attributeName == "size2") size2 = std::stod(attributeValue);
+		else if(attributeName == "index2_offset") index2Offset = HelperFunctions::getNumber(attributeValue);
 		else if(attributeName == "signed") { if(attributeValue == "true") isSigned = true; }
 		else if(attributeName == "cond_op")
 		{

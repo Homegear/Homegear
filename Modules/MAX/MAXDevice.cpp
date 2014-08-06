@@ -722,7 +722,7 @@ void MAXDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
 		std::vector<uint8_t> payload;
 		payload.push_back(0);
 		payload.push_back(0);
-		std::shared_ptr<MAXPacket> ok(new MAXPacket(messageCounter, 0x02, 0, _address, destinationAddress, payload, false));
+		std::shared_ptr<MAXPacket> ok(new MAXPacket(messageCounter, 0x02, 0x02, _address, destinationAddress, payload, false));
 		sendPacket(getPhysicalInterface(destinationAddress), ok);
 	}
 	catch(const std::exception& ex)
@@ -739,7 +739,7 @@ void MAXDevice::sendOK(int32_t messageCounter, int32_t destinationAddress)
     }
 }
 
-void MAXDevice::handleTimeRequest(int32_t messageCounter, std::shared_ptr<MAXPacket> packet)
+std::shared_ptr<MAXPacket> MAXDevice::getTimePacket(uint8_t messageCounter, int32_t receiverAddress, bool burst)
 {
 	try
 	{
@@ -758,8 +758,28 @@ void MAXDevice::handleTimeRequest(int32_t messageCounter, std::shared_ptr<MAXPac
 		payload.push_back(localTime->tm_min + (((localTime->tm_mon + 1) & 0x0C) << 4));
 		payload.push_back(localTime->tm_min + (((localTime->tm_mon + 1) & 3) << 6));
 
-		std::shared_ptr<MAXPacket>timePacket(new MAXPacket(_messageCounter[0], 0x03, 0, _address, packet->senderAddress(), payload, false));
-		sendPacket(getPhysicalInterface(packet->senderAddress()), timePacket);
+		return std::shared_ptr<MAXPacket>(new MAXPacket(messageCounter, 0x03, 0, _address, receiverAddress, payload, burst));
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::shared_ptr<MAXPacket>();
+}
+
+void MAXDevice::handleTimeRequest(int32_t messageCounter, std::shared_ptr<MAXPacket> packet)
+{
+	try
+	{
+		sendPacket(getPhysicalInterface(packet->senderAddress()), getTimePacket(messageCounter, packet->senderAddress(), false));
 	}
 	catch(const std::exception& ex)
     {

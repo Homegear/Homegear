@@ -103,7 +103,7 @@ bool MAXMessage::typeIsEqual(int32_t messageType, int32_t messageSubtype, std::v
 {
 	try
 	{
-		if(_messageType != messageType || (_messageSubtype > -1 && _messageSubtype != messageSubtype)) return false;
+		if(_messageType != messageType || (_messageSubtype > -1 && messageSubtype > -1 && _messageSubtype != messageSubtype)) return false;
 		if(subtypes->size() != _subtypes.size()) return false;
 		for(uint32_t i = 0; i < subtypes->size(); i++)
 		{
@@ -131,7 +131,7 @@ bool MAXMessage::typeIsEqual(std::shared_ptr<MAXPacket> packet)
 {
 	try
 	{
-		if(_messageType != packet->messageType() || (_messageSubtype > -1 && _messageSubtype != packet->messageSubtype())) return false;
+		if(_messageType != packet->messageType() || (_messageSubtype > -1 && packet->messageSubtype() > -1 && _messageSubtype != packet->messageSubtype())) return false;
 		std::vector<uint8_t>* payload = packet->payload();
 		if(_subtypes.empty()) return true;
 		for(std::vector<std::pair<uint32_t, int32_t>>::const_iterator i = _subtypes.begin(); i != _subtypes.end(); ++i)
@@ -161,6 +161,7 @@ bool MAXMessage::typeIsEqual(std::shared_ptr<MAXMessage> message)
 	try
 	{
 		if(_messageType != message->getMessageType()) return false;
+		if(message->getMessageSubtype() > -1 && _messageSubtype > -1 && message->getMessageSubtype() != _messageSubtype) return false;
 		if(_subtypes.empty()) return true;
 		if(message->subtypeCount() != _subtypes.size()) return false;
 		std::vector<std::pair<uint32_t, int32_t> >* subtypes = message->getSubtypes();
@@ -190,6 +191,7 @@ bool MAXMessage::typeIsEqual(std::shared_ptr<MAXMessage> message, std::shared_pt
 	try
 	{
 		if(message->getMessageType() != packet->messageType()) return false;
+		if(message->getMessageSubtype() > -1 && packet->messageSubtype() > -1 && message->getMessageSubtype() != packet->messageSubtype()) return false;
 		std::vector<std::pair<uint32_t, int32_t>>* subtypes = message->getSubtypes();
 		std::vector<uint8_t>* payload = packet->payload();
 		if(subtypes == nullptr || subtypes->size() == 0) return true;
@@ -225,9 +227,11 @@ bool MAXMessage::checkAccess(std::shared_ptr<MAXPacket> packet, std::shared_ptr<
 		if(access == NOACCESS) return false;
 		if(queue && !queue->isEmpty() && packet->destinationAddress() == _device->getAddress())
 		{
-			if(queue->front()->getType() == QueueEntryType::PACKET || (queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())))
+			if(queue->front()->getType() == QueueEntryType::PACKET)
 			{
+				std::shared_ptr<MAXPacket> backup = queue->front()->getPacket();
 				queue->pop(); //Popping takes place here to be able to process resent messages.
+				if(queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())) queue->pushFront(backup, false, false, false);
 				if(!queue->isEmpty() && queue->front()->getType() == QueueEntryType::MESSAGE && !typeIsEqual(queue->front()->getMessage())) return false;
 			}
 		}

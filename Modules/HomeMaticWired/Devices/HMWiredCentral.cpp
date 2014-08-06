@@ -1147,7 +1147,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::addLink(uint64_t send
 		if(receiver->rpcDevice->channels.find(receiverChannelIndex) == receiver->rpcDevice->channels.end()) return BaseLib::RPC::RPCVariable::createError(-2, "Receiver channel not found.");
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> senderChannel = sender->rpcDevice->channels.at(senderChannelIndex);
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> receiverChannel = receiver->rpcDevice->channels.at(receiverChannelIndex);
-		if(senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) BaseLib::RPC::RPCVariable::createError(-6, "Link not supported.");
+		if(senderChannel->linkRoles->sourceNames.size() == 0 || receiverChannel->linkRoles->targetNames.size() == 0) return BaseLib::RPC::RPCVariable::createError(-6, "Link not supported.");
 		if(sender->getPeer(senderChannelIndex, receiver->getID(), receiverChannelIndex) || receiver->getPeer(receiverChannelIndex, sender->getID(), senderChannelIndex)) return BaseLib::RPC::RPCVariable::createError(-6, "Link already exists.");
 		bool validLink = false;
 		for(std::vector<std::string>::iterator i = senderChannel->linkRoles->sourceNames.begin(); i != senderChannel->linkRoles->sourceNames.end(); ++i)
@@ -1162,6 +1162,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> HMWiredCentral::addLink(uint64_t send
 			}
 			if(validLink) break;
 		}
+		if(!validLink) return BaseLib::RPC::RPCVariable::createError(-6, "Link not supported.");
 
 		std::shared_ptr<BaseLib::Systems::BasicPeer> senderPeer(new BaseLib::Systems::BasicPeer());
 		senderPeer->isSender = true;

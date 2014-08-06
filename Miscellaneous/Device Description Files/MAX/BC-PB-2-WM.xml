@@ -3,11 +3,10 @@
 Todo:
 	- Add LOWBAT
 -->
-<!-- The sensor sends one status packet every hour -->
-<device version="1" rx_modes="WAKEUP" cyclic_timeout="12000">
+<device version="1" rx_modes="WAKEUP">
   <types>
-    <type name="MAX! Window Sensor" id="BC-SC-Rd-WM">
-      <type_id>0x040F</type_id>
+    <type name="MAX! Eco Switch" id="BC-PB-2-WM">
+      <type_id>0x050F</type_id>
       <firmware cond_op="GE">0x10</firmware>
     </type>
   </types>
@@ -50,31 +49,31 @@ Todo:
         </parameter>
       </parameters>
     </channel>
-    <channel index="1" type="SHUTTER_CONTACT">
-      <link_roles>
-        <source name="WINDOW_SWITCH_RECEIVER"/>
-      </link_roles>
-      <parameters type="VALUES" id="sc_ch_values">
-        <parameter id="STATE" operations="read,event" control="DOOR_SENSOR.STATE">
-          <logical type="boolean"/>
-          <physical type="integer" interface="command" value_id="STATE">
-            <event packet="EVENT"/>
-            <event packet="INFO_LEVEL"/>
-            <event packet="ACK_STATUS"/>
-          </physical>
-        </parameter>
+    <channel index="1" physical_index_offset="-1" type="KEY">
+      <parameters type="VALUES" id="key_valueset">
+        <subset ref="key_valueset"/>
       </parameters>
     </channel>
-	<channel index="3" type="SHUTTER_CONTACT">
-      <link_roles>
-        <source name="WINDOW_SWITCH_RECEIVER_2"/>
-      </link_roles>
+	<channel index="2" physical_index_offset="-1" type="KEY">
+      <parameters type="VALUES" id="key_valueset">
+        <subset ref="key_valueset"/>
+      </parameters>
     </channel>
   </channels>
+  <paramset_defs>
+    <parameters id="key_valueset">
+	  <parameter id="PRESS" operations="event" control="BUTTON.SHORT">
+        <logical type="action"/>
+        <physical type="integer" interface="command" value_id="PRESS">
+          <event packet="KEY_EVENT" />
+        </physical>
+      </parameter>
+	</parameters>	
+  </paramset_defs>
   <packets>
-    <packet id="EVENT" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x30" fixed_channel="1">
-      <parameter type="integer" index="10.0" size="0.2" param="STATE"/>
-      <parameter type="integer" index="9.7" size="0.1" param="LOWBAT"/><!-- No idea if this really is the LOWBAT bit -->
+    <packet id="KEY_EVENT" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x50" channel_field="11">
+	  <parameter type="integer" index="9.7" size="0.1" param="LOWBAT"/><!-- No idea if this really is the LOWBAT bit -->
+      <parameter type="integer" index="10.0" size="1.0" param="PRESS"/>
     </packet>
   </packets>
 </device>

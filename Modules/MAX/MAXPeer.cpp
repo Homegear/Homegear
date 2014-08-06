@@ -115,11 +115,13 @@ MAXPeer::MAXPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* eventH
 		pendingQueues.reset(new PendingQueues());
 	}
 	setPhysicalInterface(GD::defaultPhysicalInterface);
+	_lastTimePacket = BaseLib::HelperFunctions::getTime() + (BaseLib::HelperFunctions::getRandomNumber(1, 1000) * 10000);
 }
 
 MAXPeer::MAXPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
 	setPhysicalInterface(GD::defaultPhysicalInterface);
+	_lastTimePacket = BaseLib::HelperFunctions::getTime() + (BaseLib::HelperFunctions::getRandomNumber(1, 1000) * 10000);
 }
 
 MAXPeer::~MAXPeer()
@@ -197,7 +199,26 @@ void MAXPeer::worker()
 	try
 	{
 		time = BaseLib::HelperFunctions::getTime();
-		if(rpcDevice) serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
+		if(rpcDevice)
+		{
+			serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
+			if(rpcDevice->needsTime && (time - _lastTimePacket) > 43200000)
+			{
+				_lastTimePacket = time;
+				std::shared_ptr<MAXCentral> central = std::dynamic_pointer_cast<MAXCentral>(getCentral());
+				std::shared_ptr<PacketQueue> queue(new PacketQueue(_physicalInterface, PacketQueueType::PEER));
+				queue->peer = central->getPeer(_peerID);
+				queue->noSending = true;
+
+				queue->push(central->getTimePacket(central->messageCounter()->at(0)++, _address, getRXModes() & Device::RXModes::burst));
+				queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
+				queue->parameterName = "CURRENT_TIME";
+				queue->channel = 0;
+				pendingQueues->removeQueue("CURRENT_TIME", 0);
+				pendingQueues->push(queue);
+				if((getRXModes() & Device::RXModes::always) || (getRXModes() & Device::RXModes::burst)) central->enqueuePendingQueues(_address);
+			}
+		}
 		if(serviceMessages->getConfigPending())
 		{
 			if(!pendingQueues || pendingQueues->empty()) serviceMessages->setConfigPending(false);
@@ -738,6 +759,30 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 						_bl->hf.memcpyBigEndian(intValue, data);
 						if(intValue != j->constValue) break; else continue;
 					}
+
+					//Process split data
+					if(j->size2 > 0 && j->index2 > 0 && j->index2Offset > 0) //Only
+					{
+						if(j->size2 > 1.0) GD::out.printWarning("Warning: size2 of frame parameter is larger than 1 byte. That is not supported.");
+						else if(((int32_t)j->index2) - 9 < (signed)packet->payload()->size())
+						{
+							std::vector<uint8_t> data2 = packet->getPosition(j->index2, j->size2, -1);
+							int32_t byteIndex = j->index2Offset / 8;
+							int32_t bitIndex = j->index2Offset % 8;
+							if(data2.size() == 1)
+							{
+								if(byteIndex < data.size())
+								{
+									data.at(byteIndex) |= (data2.at(0) << bitIndex);
+								}
+								else
+								{
+									data2.insert(data2.end(), data.begin(), data.end());
+									data = data2;
+								}
+							}
+						}
+					}
 				}
 				else if(j->constValue > -1)
 				{
@@ -886,7 +931,7 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 					BaseLib::Systems::RPCConfigurationParameter* parameter = &valuesCentral[*j][i->first];
 					parameter->data = i->second.value;
 					saveParameter(parameter->databaseID, parameter->data);
-					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of MAX! peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
+					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + i->first + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(*j) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + ".");
 
 					 //Process service messages
 					if(parameter->rpcParameter && (parameter->rpcParameter->uiFlags & BaseLib::RPC::Parameter::UIFlags::Enum::service) && !i->second.value.empty())
@@ -906,7 +951,28 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 				}
 			}
 		}
-		if(packet->messageType() != 0x02 && packet->messageType() != 0x00 && packet->destinationAddress() == central->getAddress()) central->sendOK(packet->messageCounter(), packet->senderAddress());
+
+		if(packet->senderAddress() == _address && pendingQueues && !pendingQueues->empty())
+		{
+			if(packet->destinationAddress() == central->getAddress())
+			{
+				pendingQueues->front()->setWakeOnRadio(false);
+
+				std::vector<uint8_t> payload;
+				payload.push_back(0);
+				payload.push_back(0);
+				std::shared_ptr<MAXPacket> wakeUpPacket(new MAXPacket(packet->messageCounter(), 0x02, 0x00, central->getAddress(), _address, payload, false));
+				central->sendPacket(_physicalInterface, wakeUpPacket, false);
+
+				if(packet->messageSubtype() & 2) central->enqueuePendingQueues(_address);
+			}
+			else if(packet->messageSubtype() & 2) //Wait for the last packet and then enqueue
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(60)); //Wait for the response from the receiving device. 80ms is maximum, 55ms is minimum => With 60ms buffer of 20ms
+				central->enqueuePendingQueues(_address);
+			}
+		}
+		else if(packet->messageType() != 0x02 && packet->messageType() != 0x00 && packet->destinationAddress() == central->getAddress()) central->sendOK(packet->messageCounter(), packet->senderAddress());
 
 		//if(!rpcValues.empty() && !resendPacket)
 		if(!rpcValues.empty())
@@ -1334,7 +1400,9 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXPeer::setValue(uint32_t channel, s
 		saveParameter(parameter->databaseID, data);
 		if(_bl->debugLevel > 4) GD::out.printDebug("Debug: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to " + BaseLib::HelperFunctions::getHexString(data) + ".");
 
+		std::shared_ptr<MAXCentral> central = std::dynamic_pointer_cast<MAXCentral>(getCentral());
 		std::shared_ptr<PacketQueue> queue(new PacketQueue(_physicalInterface, PacketQueueType::PEER));
+		queue->peer = central->getPeer(_peerID);
 		queue->noSending = true;
 
 		std::vector<uint8_t> payload;
@@ -1423,7 +1491,6 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> MAXPeer::setValue(uint32_t channel, s
 		queue->parameterName = valueKey;
 		queue->channel = channel;
 		queue->push(packet);
-		std::shared_ptr<MAXCentral> central = std::dynamic_pointer_cast<MAXCentral>(getCentral());
 		queue->push(central->getMessages()->find(DIRECTIONIN, 0x02, 0x02, std::vector<std::pair<uint32_t, int32_t>>()));
 		pendingQueues->removeQueue(valueKey, channel);
 		pendingQueues->push(queue);

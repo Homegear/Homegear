@@ -117,6 +117,7 @@ public:
 protected:
 	uint32_t _lastRSSIDevice = 0;
 	std::shared_ptr<IPhysicalInterface> _physicalInterface;
+	int64_t _lastTimePacket = 0;
 
 	//In table variables:
 	uint8_t _messageCounter = 0;

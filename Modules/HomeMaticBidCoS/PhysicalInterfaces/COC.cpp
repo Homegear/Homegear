@@ -358,10 +358,7 @@ void COC::writeToDevice(std::string data, bool printSending)
         if(_fileDescriptor->descriptor == -1) throw(BaseLib::Exception("Couldn't write to COC device, because the file descriptor is not valid: " + _settings->device));
         int32_t bytesWritten = 0;
         int32_t i;
-        if(_bl->debugLevel > 3 && printSending)
-        {
-            _out.printInfo("Info: Sending (" + _settings->id + "): " + data.substr(2, data.size() - 4));
-        }
+        if(_bl->debugLevel > 3 && printSending) _out.printInfo("Info: Sending (" + _settings->id + "): " + data.substr(2, data.size() - 6));
         _sendMutex.lock();
         while(bytesWritten < (signed)data.length())
         {
@@ -483,7 +480,11 @@ void COC::listen()
 				std::shared_ptr<BidCoSPacket> packet(new BidCoSPacket(packetHex, BaseLib::HelperFunctions::getTime()));
 				raisePacketReceived(packet);
         	}
-        	else if(!packetHex.empty()) _out.printWarning("Warning: Too short packet received: " + packetHex);
+        	else if(!packetHex.empty())
+        	{
+        		if(packetHex == "LOVF") _out.printWarning("Warning: COC with id " + _settings->id + " reached 1% limit. You need to wait, before sending is allowed again.");
+        		else _out.printWarning("Warning: Too short packet received: " + packetHex);
+        	}
         }
     }
     catch(const std::exception& ex)

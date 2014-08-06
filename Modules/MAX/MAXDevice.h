@@ -88,6 +88,7 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
 		virtual bool isInPairingMode() { return _pairing; }
 		virtual std::shared_ptr<MAXMessages> getMessages() { return _messages; }
 		std::shared_ptr<MAXPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }
+		std::shared_ptr<MAXPacket> getTimePacket(uint8_t messageCounter, int32_t receiverAddress, bool burst);
 
         virtual void loadVariables();
         virtual void saveVariables();
@@ -99,9 +100,9 @@ class MAXDevice : public BaseLib::Systems::LogicalDevice
 
         virtual void sendPacket(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, std::shared_ptr<MAXPacket> packet, bool stealthy = false);
 
-        virtual void handleAck(int32_t messageCounter, std::shared_ptr<MAXPacket>) {}
-        virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<MAXPacket>) {}
-        virtual void handleTimeRequest(int32_t messageCounter, std::shared_ptr<MAXPacket>);
+        virtual void handleAck(int32_t messageCounter, std::shared_ptr<MAXPacket> packet) {}
+        virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<MAXPacket> packet) {}
+        virtual void handleTimeRequest(int32_t messageCounter, std::shared_ptr<MAXPacket> packet);
 
         virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
     protected:

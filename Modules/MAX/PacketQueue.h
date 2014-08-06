@@ -116,7 +116,7 @@ class PacketQueue
         void stopPopWaitThread();
         void nextQueueEntry();
     public:
-        uint32_t retries = 4;
+        uint32_t retries = 3;
         uint32_t id = 0;
         uint32_t pendingQueueID = 0;
         std::shared_ptr<int64_t> lastAction;

@@ -109,6 +109,7 @@ OBJECTS := \
 	$(OBJDIR)/MAXCentral.o \
 	$(OBJDIR)/MAXSpyDevice.o \
 	$(OBJDIR)/TICC1100.o \
+	$(OBJDIR)/COC.o \
 	$(OBJDIR)/CUL.o \
 
 RESOURCES := \
@@ -217,6 +218,9 @@ $(OBJDIR)/MAXSpyDevice.o: Modules/MAX/LogicalDevices/MAXSpyDevice.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/TICC1100.o: Modules/MAX/PhysicalInterfaces/TICC1100.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
+$(OBJDIR)/COC.o: Modules/MAX/PhysicalInterfaces/COC.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(CXXFLAGS) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 $(OBJDIR)/CUL.o: Modules/MAX/PhysicalInterfaces/CUL.cpp

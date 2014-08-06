@@ -139,6 +139,9 @@ public:
 	ParameterSet* parentParameterSet = nullptr;
 	double index = 0;
 	double size = 0;
+	double index2 = 0;
+	double size2 = 0;
+	int32_t index2Offset = -1;
 	bool isSigned = false;
 	bool hidden = false;
 	BooleanOperator::Enum booleanOperator = BooleanOperator::Enum::e;

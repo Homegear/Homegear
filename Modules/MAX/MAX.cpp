@@ -29,6 +29,7 @@
 
 #include "MAX.h"
 #include "PhysicalInterfaces/CUL.h"
+#include "PhysicalInterfaces/COC.h"
 #include "PhysicalInterfaces/TICC1100.h"
 #include "MAXDeviceTypes.h"
 #include "LogicalDevices/MAXCentral.h"
@@ -81,6 +82,7 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> MAX::createPhysicalDevice(
 		if(!settings) return device;
 		GD::out.printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
 		if(settings->type == "cul") device.reset(new CUL(settings));
+		else if(settings->type == "coc") device.reset(new COC(settings));
 		else if(settings->type == "cc1100") device.reset(new TICC1100(settings));
 		else GD::out.printError("Error: Unsupported physical device type: " + settings->type);
 		if(device)
