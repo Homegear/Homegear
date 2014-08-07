@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
-<device version="1" rx_modes="BURST" cyclic_timeout="600" needs_time="true">
+<!-- Sends no cyclic status packets, so cyclic_timeout is not settable -->
+<device version="1" rx_modes="BURST" needs_time="true">
 	<types>
-		<type name="MAX! Thermostat" id="BC-TC-C-WM-4">
-			<type_id>0x03FF</type_id>
+		<type name="MAX! Radiator Thermostat" id="BC-RT-TRX-CyG">
+			<type_id>0x01FF</type_id>
 			<firmware cond_op="GE">0x10</firmware>
 		</type>
 	</types>
@@ -529,9 +530,6 @@
 			</parameters>
 		</channel>
 		<channel index="1" type="CLIMATECONTROL_TRANSCEIVER">
-			<link_roles>
-				<source name="THERMALCONTROL_TC"/>
-			</link_roles>
 			<parameters type="VALUES" id="switch_ch_values">
 				<parameter id="BOOT" operations="read,event">
 					<logical type="action"/>
@@ -543,7 +541,6 @@
 					<logical type="float" min="-10.0" max="50.0" unit="°C"/>
 					<physical type="integer" interface="command" value_id="ACTUAL_TEMPERATURE">
 						<event frame="INFO_LEVEL"/>
-						<event frame="INFO_LEVEL3"/>
 					</physical>
 					<conversion type="float_integer_scale" factor="10.0"/>
 				</parameter>
@@ -556,8 +553,7 @@
 						<set request="MANU_MODE"/>
 						<event frame="INFO_LEVEL"/>
 						<event frame="INFO_LEVEL2"/>
-						<event frame="INFO_LEVEL3"/>
-						<event frame="INFO_LEVEL3_PARTY"/>
+						<event frame="INFO_LEVEL_PARTY"/>
 						<event frame="ACK_STATUS"/>
 					</physical>
 					<conversion type="float_integer_scale" factor="2"/>
@@ -633,15 +629,6 @@
 						<set request="BOOST_MODE"/>
 					</physical>
 				</parameter>
-				<parameter id="SHOW_SET_TEMPERATURE" operations="read,write">
-					<logical type="option">
-						<option id="SET_TEMPERATURE" default="true"/>
-						<option id="ACTUAL_TEMPERATURE"/>
-					</logical>
-					<physical type="integer" interface="command" value_id="SHOW_SET_TEMPERATURE">
-						<set request="CONFIG_SET"/>
-					</physical>
-				</parameter>
 				<parameter id="CONTROL_MODE" operations="read,event" control="HEATING_CONTROL.CONTROL_MODE">
 					<logical type="option">
 						<option id="AUTO-MODE"/>
@@ -652,10 +639,38 @@
 					<physical type="integer" interface="command" value_id="CONTROL_MODE">
 						<event frame="INFO_LEVEL"/>
 						<event frame="INFO_LEVEL2"/>
-						<event frame="INFO_LEVEL3"/>
-						<event frame="INFO_LEVEL3_PARTY"/>
+						<event frame="INFO_LEVEL_PARTY"/>
 						<event frame="ACK_STATUS"/>
 					</physical>
+				</parameter>
+				<parameter id="VALVE_STATE" operations="read,event" control="NONE">
+					<logical type="integer" min="0" max="99" default="0" unit="%"/>
+					<physical type="integer" interface="command" value_id="VALVE_STATE">
+						<event frame="INFO_LEVEL"/>
+						<event frame="INFO_LEVEL_PARTY"/>
+						<event frame="ACK_STATUS"/>
+					</physical>
+				</parameter>
+				<parameter id="DECALCIFICATION_WEEKDAY">
+					<logical type="option">
+						<option id="SATURDAY" default="true"/>
+						<option id="SUNDAY"/>
+						<option id="MONDAY"/>
+						<option id="TUESDAY"/>
+						<option id="WEDNESDAY"/>
+						<option id="THURSDAY"/>
+						<option id="FRIDAY"/>
+					</logical>
+					<physical type="integer" interface="command" id="DECALCIFICATION_WEEKDAY">
+						<set request="CONFIG_SET"/>
+					</physical>
+				</parameter>
+				<parameter id="DECALCIFICATION_TIME">
+					<logical type="integer" min="0" max="1410" default="660" unit="minutes"/>
+					<physical type="integer" interface="command" id="DECALCIFICATION_TIME">
+						<set request="CONFIG_SET"/>
+					</physical>
+					<conversion type="integer_integer_scale" div="30"/>
 				</parameter>
 				<parameter id="BOOST_TIME_PERIOD">
 					<logical type="option">
@@ -669,8 +684,15 @@
 						<option id="60 min"/>
 					</logical>
 					<physical type="integer" interface="command" id="BOOST_TIME_PERIOD">
-						<set request="CONFIG_SET2"/>
+						<set request="CONFIG_SET"/>
 					</physical>
+				</parameter>
+				<parameter id="BOOST_POSITION">
+					<logical type="integer" min="0" max="100" default="80" unit="%"/>
+					<physical type="integer" interface="command" id="BOOST_POSITION">
+						<set request="CONFIG_SET"/>
+					</physical>
+					<conversion type="integer_integer_scale" div="5"/>
 				</parameter>
 				<parameter id="PARTY_TEMPERATURE" operations="write" control="HEATING_CONTROL.PARTY_TEMP">
 					<logical type="float" min="5.0" max="30.0" default="20.0" unit="°C"/>
@@ -685,7 +707,7 @@
 						<set request="PARTY_MODE_SET"/>
 						<event frame="ACK_STATUS"/>
 						<event frame="INFO_LEVEL2"/>
-						<event frame="INFO_LEVEL3_PARTY"/>
+						<event frame="INFO_LEVEL_PARTY"/>
 					</physical>
 					<conversion type="integer_integer_scale" div="30"/>
 				</parameter>
@@ -695,7 +717,7 @@
 						<set request="PARTY_MODE_SET"/>
 						<event frame="ACK_STATUS"/>
 						<event frame="INFO_LEVEL2"/>
-						<event frame="INFO_LEVEL3_PARTY"/>
+						<event frame="INFO_LEVEL_PARTY"/>
 					</physical>
 				</parameter>
 				<parameter id="PARTY_STOP_MONTH" operations="read,write,event" control="HEATING_CONTROL.PARTY_STOP_MONTH">
@@ -704,7 +726,7 @@
 						<set request="PARTY_MODE_SET"/>
 						<event frame="ACK_STATUS"/>
 						<event frame="INFO_LEVEL2"/>
-						<event frame="INFO_LEVEL3_PARTY"/>
+						<event frame="INFO_LEVEL_PARTY"/>
 					</physical>
 				</parameter>
 				<parameter id="PARTY_STOP_YEAR" operations="read,write,event" control="HEATING_CONTROL.PARTY_STOP_YEAR">
@@ -713,14 +735,19 @@
 						<set request="PARTY_MODE_SET"/>
 						<event frame="ACK_STATUS"/>
 						<event frame="INFO_LEVEL2"/>
-						<event frame="INFO_LEVEL3_PARTY"/>
+						<event frame="INFO_LEVEL_PARTY"/>
 					</physical>
 				</parameter>
 			</parameters>
 		</channel>
+		<channel index="3" type="CLIMATECONTROL_RECEIVER">
+			<link_roles>
+				<target name="THERMALCONTROL_TC"/>
+			</link_roles>
+		</channel>
 		<channel index="4" type="WINDOW_SWITCH_RECEIVER">
 			<link_roles>
-				<target name="WINDOW_SWITCH_RECEIVER_2"/>
+				<target name="WINDOW_SWITCH_RECEIVER"/>
 			</link_roles>
 		</channel>
 	</channels>
@@ -743,11 +770,24 @@
 			<parameter type="integer" index="10.0" size="0.6" param="SET_TEMPERATURE"/>
 			<parameter type="integer" index="10.6" size="0.2" const_value="3"/>
 		</packet>
-		<packet id="INFO_LEVEL" direction="from_device" event="true" type="0x42" subtype="0x04" fixed_channel="1">
-			<parameter type="integer" index="10.0" size="0.6" param="SET_TEMPERATURE"/>
-			<parameter type="integer" index="11.0" size="1.0" index2="10.7" size2="0.1" index2_offset="8" param="ACTUAL_TEMPERATURE"/>
+		<packet id="INFO_LEVEL" direction="from_device" event="true" type="0x60" subtype="0x04" size="15" fixed_channel="1">
+			<parameter type="integer" index="10.7" size="0.1" param="LOWBAT"/>
+			<parameter type="integer" index="10.0" size="0.2" param="CONTROL_MODE"/>
+			<parameter type="integer" index="11.0" size="0.7" param="VALVE_STATE"/>
+			<parameter type="integer" index="12.0" size="0.6" param="SET_TEMPERATURE"/>
+			<parameter type="integer" index="13.0" size="1.2" param="ACTUAL_TEMPERATURE"/>
 		</packet>
-		<packet id="INFO_LEVEL2" direction="from_device" event="true" type="0x40" subtype="0x00" fixed_channel="1">
+		<packet id="INFO_LEVEL_PARTY" direction="from_device" event="true" type="0x60" subtype="0x04" size="16" fixed_channel="1">
+			<parameter type="integer" index="10.7" size="0.1" param="LOWBAT"/>
+			<parameter type="integer" index="10.0" size="0.2" param="CONTROL_MODE"/>
+			<parameter type="integer" index="11.0" size="0.7" param="VALVE_STATE"/>
+			<parameter type="integer" index="12.0" size="0.6" param="SET_TEMPERATURE"/>
+			<parameter type="integer" index="13.0" size="0.5" param="PARTY_STOP_DAY"/>
+			<parameter type="integer" index="14.7" size="0.1" index2="13.5" size2="0.3" index2_offset="1" param="PARTY_STOP_MONTH"/>
+			<parameter type="integer" index="14.0" size="0.7" param="PARTY_STOP_YEAR"/>
+			<parameter type="integer" index="15.0" size="1.0" param="PARTY_STOP_TIME"/>
+		</packet>
+		<packet id="INFO_LEVEL2" direction="from_device" event="true" type="0x40" subtype="0x04" fixed_channel="1">
 			<parameter type="integer" index="10.0" size="0.6" param="SET_TEMPERATURE"/>
 			<parameter type="integer" index="10.6" size="0.2" param="CONTROL_MODE"/>
 			<parameter type="integer" index="11.0" size="0.5" param="PARTY_STOP_DAY"/>
@@ -755,27 +795,10 @@
 			<parameter type="integer" index="12.0" size="0.7" param="PARTY_STOP_YEAR"/>
 			<parameter type="integer" index="13.0" size="1.0" param="PARTY_STOP_TIME"/>
 		</packet>
-		<packet id="INFO_LEVEL3" direction="from_device" event="true" type="0x70" subtype="0x04" size="15" fixed_channel="1">
-			<parameter type="integer" index="10.7" size="0.1" param="LOWBAT"/>
-			<parameter type="integer" index="10.0" size="0.2" param="CONTROL_MODE"/>
-			<!-- index 11 would be VALVE_STATE -->
-			<parameter type="integer" index="12.0" size="0.6" param="SET_TEMPERATURE"/>
-			<parameter type="integer" index="13.0" size="1.2" param="ACTUAL_TEMPERATURE"/>
-		</packet>
-		<packet id="INFO_LEVEL3_PARTY" direction="from_device" event="true" type="0x70" subtype="0x04" size="16" fixed_channel="1">
-			<parameter type="integer" index="10.7" size="0.1" param="LOWBAT"/>
-			<parameter type="integer" index="10.0" size="0.2" param="CONTROL_MODE"/>
-			<!-- index 11 would be VALVE_STATE -->
-			<parameter type="integer" index="12.0" size="0.6" param="SET_TEMPERATURE"/>
-			<parameter type="integer" index="13.0" size="0.5" param="PARTY_STOP_DAY"/>
-			<parameter type="integer" index="14.7" size="0.1" index2="13.5" size2="0.3" index2_offset="1" param="PARTY_STOP_MONTH"/>
-			<parameter type="integer" index="14.0" size="0.7" param="PARTY_STOP_YEAR"/>
-			<parameter type="integer" index="15.0" size="1.0" param="PARTY_STOP_TIME"/>
-		</packet>
 		<packet id="ACK_STATUS" direction="from_device" event="true" type="0x02" subtype="0x02" fixed_channel="1">
 			<parameter type="integer" index="11.7" size="0.1" param="LOWBAT"/>
 			<parameter type="integer" index="11.0" size="0.2" param="CONTROL_MODE"/>
-			<!-- index 12 would be VALVE_STATE -->
+			<parameter type="integer" index="12.0" size="0.7" param="VALVE_STATE"/>
 			<parameter type="integer" index="13.0" size="0.6" param="SET_TEMPERATURE"/>
 			<parameter type="integer" index="14.0" size="0.5" param="PARTY_STOP_DAY"/>
 			<parameter type="integer" index="15.7" size="0.1" index2="14.5" size2="0.3" index2_offset="1" param="PARTY_STOP_MONTH"/>
@@ -792,15 +815,12 @@
 			<parameter type="integer" index="15.0" size="1.0" param="WINDOW_OPEN_TEMPERATURE"/>
 			<parameter type="integer" index="16.0" size="1.0" const_value="0x03"/>
 		</packet>
-		<packet id="CONFIG_SET" direction="to_device" type="0x82" subtype="0x00">
+		<packet id="CONFIG_SET" direction="to_device" type="0x12" subtype="0x00">
 			<parameter type="integer" index="9.0" size="1.0" const_value="0"/>
-			<parameter type="integer" index="10.2" size="0.1" param="SHOW_SET_TEMPERATURE"/>
-		</packet>
-		<packet id="CONFIG_SET2" direction="to_device" type="0x12" subtype="0x00">
-			<parameter type="integer" index="9.0" size="1.0" const_value="0"/>
-			<parameter type="integer" index="10.0" size="0.5" const_value="16"/>
+			<parameter type="integer" index="10.0" size="0.5" param="BOOST_POSITION"/>
 			<parameter type="integer" index="10.5" size="0.3" param="BOOST_TIME_PERIOD"/>
-			<parameter type="integer" index="11.0" size="1.0" const_value="0"/>
+			<parameter type="integer" index="11.0" size="0.5" param="DECALCIFICATION_TIME"/>
+			<parameter type="integer" index="11.5" size="0.3" param="DECALCIFICATION_WEEKDAY"/>
 			<parameter type="integer" index="12.0" size="1.0" const_value="0xFF"/>
 			<parameter type="integer" index="13.0" size="1.0" const_value="0x00"/>
 		</packet>

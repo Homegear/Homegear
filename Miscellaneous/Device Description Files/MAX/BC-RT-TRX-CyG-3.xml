@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- Todo: cyclic_timeout, LOWBAT -->
+<!-- Sends no cyclic status packets, so cyclic_timeout is not settable -->
 <device version="1" rx_modes="BURST" needs_time="true">
 	<types>
 		<type name="MAX! Radiator Thermostat" id="BC-RT-TRX-CyG-3">
@@ -515,6 +515,10 @@
 					<logical type="boolean"/>
 					<physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
 				</parameter>
+				<parameter id="LOWBAT" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="LOWBAT"/>
+				</parameter>
 				<parameter id="RSSI_DEVICE" operations="read,event">
 					<logical type="integer"/>
 					<physical type="integer" interface="internal" value_id="RSSI_DEVICE"/>
@@ -541,8 +545,11 @@
 					<conversion type="float_integer_scale" factor="10.0"/>
 				</parameter>
 				<parameter id="SET_TEMPERATURE" operations="read,write,event" control="HEATING_CONTROL.SETPOINT">
-					<logical type="float" min="5.0" max="30.0" default="20.0" unit="°C"/>
-					<physical type="integer" interface="command" value_id="SET_TEMPERATURE">
+					<logical type="float" min="5.0" max="30.0" default="20.0" unit="°C">
+						<special_value id="OFF" value="4.5"/>
+						<special_value id="ON" value="30.5"/>
+					</logical>
+					<physical type="integer" interface="command" id="SET_TEMPERATURE" value_id="SET_TEMPERATURE">
 						<set request="MANU_MODE"/>
 						<event frame="INFO_LEVEL"/>
 						<event frame="INFO_LEVEL2"/>
@@ -616,10 +623,16 @@
 					</physical>
 					<conversion type="float_integer_scale" factor="2"/>
 				</parameter>
+				<parameter id="BOOST_MODE" operations="write">
+					<logical type="action"/>
+					<physical type="integer" interface="command">
+						<set request="BOOST_MODE"/>
+					</physical>
+				</parameter>
 				<parameter id="CONTROL_MODE" operations="read,event" control="HEATING_CONTROL.CONTROL_MODE">
 					<logical type="option">
-						<option id="AUTO-MODE" default="true"/>
-						<option id="MANU-MODE"/>
+						<option id="AUTO-MODE"/>
+						<option id="MANU-MODE" default="true"/>
 						<option id="PARTY-MODE"/>
 						<option id="BOOST-MODE"/>
 					</logical>
@@ -743,20 +756,29 @@
 			<!-- Index 9 is the room/group index -->
 			<parameter type="integer" index="9.0" size="1.0" const_value="1"/>
 			<parameter type="integer" index="10.0" size="0.6" param="SET_TEMPERATURE"/>
-			<parameter type="integer" index="10.6" size="0.1" const_value="1"/>
+			<parameter type="integer" index="10.6" size="0.2" const_value="1"/>
 		</packet>
 		<packet id="AUTO_MODE" direction="to_device" type="0x40" subtype="0x04">
 			<!-- Index 9 is the room/group index -->
 			<parameter type="integer" index="9.0" size="1.0" const_value="1"/>
-			<parameter type="integer" index="10.0" size="1.0" const_value="0"/>
+			<parameter type="integer" index="10.0" size="0.6" const_value="0"/>
+			<parameter type="integer" index="10.6" size="0.2" const_value="0"/>
+		</packet>
+		<packet id="BOOST_MODE" direction="to_device" type="0x40" subtype="0x04">
+			<!-- Index 9 is the room/group index -->
+			<parameter type="integer" index="9.0" size="1.0" const_value="1"/>
+			<parameter type="integer" index="10.0" size="0.6" param="SET_TEMPERATURE"/>
+			<parameter type="integer" index="10.6" size="0.2" const_value="3"/>
 		</packet>
 		<packet id="INFO_LEVEL" direction="from_device" event="true" type="0x60" subtype="0x04" size="15" fixed_channel="1">
+			<parameter type="integer" index="10.7" size="0.1" param="LOWBAT"/>
 			<parameter type="integer" index="10.0" size="0.2" param="CONTROL_MODE"/>
 			<parameter type="integer" index="11.0" size="0.7" param="VALVE_STATE"/>
 			<parameter type="integer" index="12.0" size="0.6" param="SET_TEMPERATURE"/>
 			<parameter type="integer" index="13.0" size="1.2" param="ACTUAL_TEMPERATURE"/>
 		</packet>
 		<packet id="INFO_LEVEL_PARTY" direction="from_device" event="true" type="0x60" subtype="0x04" size="16" fixed_channel="1">
+			<parameter type="integer" index="10.7" size="0.1" param="LOWBAT"/>
 			<parameter type="integer" index="10.0" size="0.2" param="CONTROL_MODE"/>
 			<parameter type="integer" index="11.0" size="0.7" param="VALVE_STATE"/>
 			<parameter type="integer" index="12.0" size="0.6" param="SET_TEMPERATURE"/>
@@ -774,6 +796,7 @@
 			<parameter type="integer" index="13.0" size="1.0" param="PARTY_STOP_TIME"/>
 		</packet>
 		<packet id="ACK_STATUS" direction="from_device" event="true" type="0x02" subtype="0x02" fixed_channel="1">
+			<parameter type="integer" index="11.7" size="0.1" param="LOWBAT"/>
 			<parameter type="integer" index="11.0" size="0.2" param="CONTROL_MODE"/>
 			<parameter type="integer" index="12.0" size="0.7" param="VALVE_STATE"/>
 			<parameter type="integer" index="13.0" size="0.6" param="SET_TEMPERATURE"/>

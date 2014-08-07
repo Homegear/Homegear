@@ -8,490 +8,495 @@
 		</type>
 	</types>
 	<parameters type="MASTER" id="switch_dev_master">
-		<parameter id="TEMPERATURE_SATURDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SATURDAY_1">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="0" index="11.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SATURDAY_1">
 			<logical type="integer" min="5" max="1440" default="360" unit="minutes"/>
 			<physical type="integer" interface="config" list="0" index="12.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SATURDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_SATURDAY_2">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="0" index="13.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SATURDAY_2">
 			<logical type="integer" min="5" max="1440" default="1320" unit="minutes"/>
 			<physical type="integer" interface="config" list="0" index="14.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SATURDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SATURDAY_3">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="0" index="15.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SATURDAY_3">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="0" index="16.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SATURDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SATURDAY_4">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="0" index="17.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SATURDAY_4">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="0" index="18.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SATURDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SATURDAY_5">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="0" index="19.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SATURDAY_5">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="0" index="20.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SATURDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SATURDAY_6">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="0" index="21.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SATURDAY_6">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="0" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SATURDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SATURDAY_7">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="0" index="23.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SATURDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="0" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SUNDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SUNDAY_1">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="1" index="11.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SUNDAY_1">
 			<logical type="integer" min="5" max="1440" default="360" unit="minutes"/>
 			<physical type="integer" interface="config" list="1" index="12.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SUNDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_SUNDAY_2">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="1" index="13.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SUNDAY_2">
 			<logical type="integer" min="5" max="1440" default="1320" unit="minutes"/>
 			<physical type="integer" interface="config" list="1" index="14.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SUNDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SUNDAY_3">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="1" index="15.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SUNDAY_3">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="1" index="16.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SUNDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SUNDAY_4">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="1" index="17.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SUNDAY_4">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="1" index="18.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SUNDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SUNDAY_5">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="1" index="19.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SUNDAY_5">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="1" index="20.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SUNDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SUNDAY_6">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="1" index="21.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SUNDAY_6">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="1" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_SUNDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_SUNDAY_7">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="1" index="23.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_SUNDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="1" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_MONDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_MONDAY_1">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="2" index="11.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_MONDAY_1">
 			<logical type="integer" min="5" max="1440" default="360" unit="minutes"/>
 			<physical type="integer" interface="config" list="2" index="12.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_MONDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_MONDAY_2">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="2" index="13.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_MONDAY_2">
 			<logical type="integer" min="5" max="1440" default="540" unit="minutes"/>
 			<physical type="integer" interface="config" list="2" index="14.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_MONDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_MONDAY_3">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="2" index="15.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_MONDAY_3">
 			<logical type="integer" min="5" max="1440" default="1020" unit="minutes"/>
 			<physical type="integer" interface="config" list="2" index="16.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_MONDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_MONDAY_4">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="2" index="17.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_MONDAY_4">
 			<logical type="integer" min="5" max="1440" default="1380" unit="minutes"/>
 			<physical type="integer" interface="config" list="2" index="18.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_MONDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_MONDAY_5">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="2" index="19.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_MONDAY_5">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="2" index="20.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_MONDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_MONDAY_6">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="2" index="21.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_MONDAY_6">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="2" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_MONDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_MONDAY_7">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="2" index="23.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_MONDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="2" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_TUESDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_TUESDAY_1">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="3" index="11.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_TUESDAY_1">
 			<logical type="integer" min="5" max="1440" default="360" unit="minutes"/>
 			<physical type="integer" interface="config" list="3" index="12.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_TUESDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_TUESDAY_2">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="3" index="13.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_TUESDAY_2">
 			<logical type="integer" min="5" max="1440" default="540" unit="minutes"/>
 			<physical type="integer" interface="config" list="3" index="14.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_TUESDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_TUESDAY_3">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="3" index="15.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_TUESDAY_3">
 			<logical type="integer" min="5" max="1440" default="1020" unit="minutes"/>
 			<physical type="integer" interface="config" list="3" index="16.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_TUESDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_TUESDAY_4">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="3" index="17.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_TUESDAY_4">
 			<logical type="integer" min="5" max="1440" default="1380" unit="minutes"/>
 			<physical type="integer" interface="config" list="3" index="18.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_TUESDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_TUESDAY_5">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="3" index="19.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_TUESDAY_5">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="3" index="20.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_TUESDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_TUESDAY_6">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="3" index="21.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_TUESDAY_6">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="3" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_TUESDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_TUESDAY_7">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="3" index="23.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_TUESDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="3" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_WEDNESDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_WEDNESDAY_1">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="4" index="11.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="STATE_WEDNESDAY_1">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="4" index="11.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_WEDNESDAY_1">
 			<logical type="integer" min="5" max="1440" default="360" unit="minutes"/>
 			<physical type="integer" interface="config" list="4" index="12.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_WEDNESDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_WEDNESDAY_2">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="4" index="13.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_WEDNESDAY_2">
 			<logical type="integer" min="5" max="1440" default="540" unit="minutes"/>
 			<physical type="integer" interface="config" list="4" index="14.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_WEDNESDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_WEDNESDAY_3">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="4" index="15.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_WEDNESDAY_3">
 			<logical type="integer" min="5" max="1440" default="1020" unit="minutes"/>
 			<physical type="integer" interface="config" list="4" index="16.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_WEDNESDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_WEDNESDAY_4">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="4" index="17.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_WEDNESDAY_4">
 			<logical type="integer" min="5" max="1440" default="1380" unit="minutes"/>
 			<physical type="integer" interface="config" list="4" index="18.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_WEDNESDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_WEDNESDAY_5">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="4" index="19.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_WEDNESDAY_5">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="4" index="20.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_WEDNESDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_WEDNESDAY_6">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="4" index="21.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_WEDNESDAY_6">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="4" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_WEDNESDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_WEDNESDAY_7">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="4" index="23.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_WEDNESDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="4" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_THURSDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_THURSDAY_2">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="5" index="11.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_THURSDAY_1">
 			<logical type="integer" min="5" max="1440" default="360" unit="minutes"/>
 			<physical type="integer" interface="config" list="5" index="12.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_THURSDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_THURSDAY_2">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="5" index="13.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_THURSDAY_2">
 			<logical type="integer" min="5" max="1440" default="540" unit="minutes"/>
 			<physical type="integer" interface="config" list="5" index="14.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_THURSDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_THURSDAY_3">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="5" index="15.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_THURSDAY_3">
 			<logical type="integer" min="5" max="1440" default="1020" unit="minutes"/>
 			<physical type="integer" interface="config" list="5" index="16.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_THURSDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_THURSDAY_4">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="5" index="17.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_THURSDAY_4">
 			<logical type="integer" min="5" max="1440" default="1380" unit="minutes"/>
 			<physical type="integer" interface="config" list="5" index="18.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_THURSDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_THURSDAY_5">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="5" index="19.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_THURSDAY_5">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="5" index="20.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_THURSDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_THURSDAY_6">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="5" index="21.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_THURSDAY_6">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="5" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_THURSDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_THURSDAY_7">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="5" index="23.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_THURSDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="5" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_FRIDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_FRIDAY_1">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="6" index="11.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_FRIDAY_1">
 			<logical type="integer" min="5" max="1440" default="360" unit="minutes"/>
 			<physical type="integer" interface="config" list="6" index="12.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_FRIDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_FRIDAY_2">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="6" index="13.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_FRIDAY_2">
 			<logical type="integer" min="5" max="1440" default="540" unit="minutes"/>
 			<physical type="integer" interface="config" list="6" index="14.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_FRIDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_FRIDAY_3">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="6" index="15.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_FRIDAY_3">
 			<logical type="integer" min="5" max="1440" default="1020" unit="minutes"/>
 			<physical type="integer" interface="config" list="6" index="16.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_FRIDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+		<parameter id="STATE_FRIDAY_4">
+			<logical type="boolean" default="true" />
 			<physical type="integer" interface="config" list="6" index="17.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_FRIDAY_4">
 			<logical type="integer" min="5" max="1440" default="1380" unit="minutes"/>
 			<physical type="integer" interface="config" list="6" index="18.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_FRIDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_FRIDAY_5">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="6" index="19.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_FRIDAY_5">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="6" index="20.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_FRIDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_FRIDAY_6">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="6" index="21.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_FRIDAY_6">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="6" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="TEMPERATURE_FRIDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+		<parameter id="STATE_FRIDAY_7">
+			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="6" index="23.1" size="0.6"/>
-			<conversion type="float_integer_scale" factor="2"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
 		</parameter>
 		<parameter id="ENDTIME_FRIDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
@@ -541,32 +546,40 @@
 					<physical type="integer" interface="command" value_id="STATE" id="STATE">
 						<set request="LEVEL_SET"/>
 						<event packet="INFO_LEVEL"/>
-						<event packet="INFO_LEVEL2"/>
+						<event frame="INFO_LEVEL2"/>
+						<event frame="ACK_STATUS"/>
 					</physical>
 					<!-- Value is actually a temperature -->
 					<conversion type="boolean_integer" threshold="40" false="10" true="60"/>
 				</parameter>
-				<parameter id="MANU_MODE" operations="read,write,event">
-					<logical type="boolean" default="true"/>
+				<parameter id="MANU_MODE" operations="write">
+					<logical type="action" />
 					<physical type="integer" interface="command" value_id="MANU_MODE" id="MANU_MODE">
 						<set request="LEVEL_SET"/>
-						<event packet="INFO_LEVEL"/>
 					</physical>
-					<conversion type="boolean_integer" threshold="1" false="0" true="1"/>
 				</parameter>
-				<parameter id="AUTO_MODE" operations="write,event">
-					<logical type="boolean" default="false" />
+				<parameter id="AUTO_MODE" operations="write">
+					<logical type="action" />
 					<physical type="integer" interface="command" id="AUTO_MODE">
 						<set request="AUTO_MODE"/>
 					</physical>
-					<conversion type="boolean_integer" false="30" true="0"/>
 				</parameter>
-				<parameter id="ECO_STATE" operations="read,write,event">
+				<parameter id="CONTROL_MODE" operations="read,event">
+					<logical type="option">
+						<option id="AUTO-MODE"/>
+						<option id="MANU-MODE" default="true"/>
+					</logical>
+					<physical type="integer" interface="command" value_id="CONTROL_MODE">
+						<event frame="INFO_LEVEL"/>
+						<event frame="INFO_LEVEL2"/>
+						<event frame="ACK_STATUS"/>
+					</physical>
+				</parameter>
+				<!--parameter id="ECO_STATE" operations="read,write,event">
 					<logical type="boolean" default="false"/>
 					<physical type="integer" interface="command" id="ECO_STATE">
 						<set request="ACTION_SET"/>
 					</physical>
-					<!-- This is a temperature again -->
 					<conversion type="boolean_integer" threshold="40" false="10" true="60"/>
 				</parameter>
 				<parameter id="COMFORT_STATE" operations="read,write,event">
@@ -574,9 +587,8 @@
 					<physical type="integer" interface="command" id="COMFORT_STATE">
 						<set request="ACTION_SET"/>
 					</physical>
-					<!-- This is a temperature again, too -->
 					<conversion type="boolean_integer" threshold="40" false="10" true="60"/>
-				</parameter>
+				</parameter>-->
 			</parameters>
 		</channel>
 	</channels>
@@ -584,35 +596,38 @@
 		<packet id="LEVEL_SET" direction="to_device" type="0x40" subtype="0x04">
 			<!-- Index 9 is the room/group index -->
 			<parameter type="integer" index="9.0" size="1.0" const_value="1"/>
+			<parameter type="integer" index="10.6" size="0.1" const_value="1"/>
 			<parameter type="integer" index="10.0" size="0.6" param="STATE"/>
-			<parameter type="integer" index="10.6" size="0.1" param="MANU_MODE"/>
 		</packet>
 		<packet id="AUTO_MODE" direction="to_device" type="0x40" subtype="0x04">
 			<!-- Index 9 is the room/group index -->
 			<parameter type="integer" index="9.0" size="1.0" const_value="1"/>
-			<parameter type="integer" index="10.0" size="1.0" param="AUTO_MODE"/>
+			<parameter type="integer" index="10.0" size="1.0" const_value="0" />
 		</packet>
-		<packet id="INFO_LEVEL" direction="from_device" event="true" type="0x40" subtype="0x06" fixed_channel="1">
+		<packet id="INFO_LEVEL" direction="from_device" event="true" type="0x40" fixed_channel="1">
 			<parameter type="integer" index="10.0" size="0.6" param="STATE"/>
-			<parameter type="integer" index="10.6" size="0.1" param="MANU_MODE"/>
+			<parameter type="integer" index="10.6" size="0.2" param="CONTROL_MODE"/>
 		</packet>
-		<packet id="ACTION_SET" direction="to_device" type="0x11" subtype="0x00">
+		<packet id="ACK_STATUS" direction="from_device" event="true" type="0x02" subtype="0x02" fixed_channel="1">
+			<parameter type="integer" index="11.0" size="0.2" param="CONTROL_MODE"/>
+			<!-- index 12 would be VALVE_STATE -->
+			<parameter type="integer" index="13.0" size="0.6" param="STATE"/>
+		</packet>
+		<!--<packet id="ACTION_SET" direction="to_device" type="0x11" subtype="0x00">
 			<parameter type="integer" index="9.0" size="1.0" const_value="0"/>
 			<parameter type="integer" index="10.0" size="1.0" param="COMFORT_STATE"/>
 			<parameter type="integer" index="11.0" size="1.0" param="ECO_STATE"/>
-			<!-- Maximum temperature -->
 			<parameter type="integer" index="12.0" size="1.0" const_value="0x3D"/>
 			<parameter type="integer" index="13.0" size="1.0" const_value="0x09"/>
-			<!-- Temperature offset -->
 			<parameter type="integer" index="14.0" size="1.0" const_value="0x07"/>
-			<!-- Window open temperature -->
 			<parameter type="integer" index="15.0" size="1.0" const_value="0x18"/>
 			<parameter type="integer" index="16.0" size="1.0" const_value="0x03"/>
-		</packet>
+		</packet>-->
 		<!-- Commented, because sometimes INFO_LEVEL2 is sent with STATE="true" immediately after setting STATE to "false" -->
-		<!--<packet id="INFO_LEVEL2" direction="from_device" event="true" type="0x60" subtype="0x04" fixed_channel="1">
-      <parameter type="integer" index="14.0" size="1.0" param="STATE"/>
-    </packet>-->
+		<packet id="INFO_LEVEL2" direction="from_device" event="true" type="0x60" subtype="0x04" fixed_channel="1">
+			<parameter type="integer" index="10.0" size="0.2" param="CONTROL_MODE"/>
+			<parameter type="integer" index="12.0" size="0.6" param="STATE"/>
+		</packet>
 		<packet id="INFO_POWERON" direction="from_device" event="true" type="0x03" subtype="0x0A" fixed_channel="*">
 			<parameter type="integer" index="9.0" size="1.0" param="BOOT"/>
 		</packet>

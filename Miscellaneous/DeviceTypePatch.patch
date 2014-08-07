@@ -1,14 +1,12 @@
 diff -Naur Original/hmw_io_12_fm.xml Patched/hmw_io_12_fm.xml
 --- Original/hmw_io_12_fm.xml	2014-07-30 21:47:39.517053697 +0200
-+++ Patched/hmw_io_12_fm.xml	2014-07-30 22:30:36.529131801 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_io_12_fm.xml	2014-08-06 19:37:26.798964485 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device eep_size="1024" version="7">
 +<?xml version="1.0"?>
-+<device eep_size="1024" version="7" family="homematicwired">
+ <device eep_size="1024" version="7">
    <supported_types>
      <type id="HMW-IO-12-FM" name="RS485 I/O module 12-channel (flush-mount)" priority="2">
-       <parameter const_value="27" index="0" size="1"/>
 @@ -124,25 +124,7 @@
            <physical interface="internal" type="integer" value_id="BEHAVIOUR"/>
          </parameter>
@@ -68,26 +66,22 @@ diff -Naur Original/hmw_io_12_fm.xml Patched/hmw_io_12_fm.xml
                <option id="MINIMAL"/>
 diff -Naur Original/hmw_io12_sw14_dr.xml Patched/hmw_io12_sw14_dr.xml
 --- Original/hmw_io12_sw14_dr.xml	2014-07-30 21:47:39.521053698 +0200
-+++ Patched/hmw_io12_sw14_dr.xml	2014-07-30 22:30:36.533131801 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_io12_sw14_dr.xml	2014-08-06 19:37:14.470964118 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="12" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="12" eep_size="1024" family="homematicwired">
+ <device version="12" eep_size="1024">
    <supported_types>
      <type name="RS485 I/O module 12-channel in and switch actuator 14-channel (DIN rails)" id="HMW-IO-12-Sw14-DR" priority="2">
-       <parameter index="0" size="1" const_value="28"/>
 diff -Naur Original/hmw_io12_sw7_dr_V3_02.xml Patched/hmw_io12_sw7_dr_V3_02.xml
 --- Original/hmw_io12_sw7_dr_V3_02.xml	2014-07-30 21:47:39.525053698 +0200
-+++ Patched/hmw_io12_sw7_dr_V3_02.xml	2014-07-30 22:30:36.537131800 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_io12_sw7_dr_V3_02.xml	2014-08-06 19:37:08.802963933 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="7" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="7" eep_size="1024" family="homematicwired">
+ <device version="7" eep_size="1024">
    <supported_types>
      <type name="RS485 I/O module 12-channel in and switch actuator 7-channel (DIN rails)" id="HMW-IO-12-Sw7-DR" priority="2">
-       <parameter index="0" size="1" const_value="18"/>
 @@ -109,25 +109,7 @@
            </conversion>
          </parameter>
@@ -147,15 +141,13 @@ diff -Naur Original/hmw_io12_sw7_dr_V3_02.xml Patched/hmw_io12_sw7_dr_V3_02.xml
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_io12_sw7_dr.xml Patched/hmw_io12_sw7_dr.xml
 --- Original/hmw_io12_sw7_dr.xml	2014-07-30 21:47:39.533053698 +0200
-+++ Patched/hmw_io12_sw7_dr.xml	2014-07-30 22:30:36.545131802 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_io12_sw7_dr.xml	2014-08-06 19:36:56.766963602 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="11" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="11" eep_size="1024" family="homematicwired">
+ <device version="11" eep_size="1024">
    <supported_types>
      <type name="RS485 I/O module 12-channel in and switch actuator 7-channel (DIN rails)" id="HMW-IO-12-Sw7-DR" priority="2">
-       <parameter index="0" size="1" const_value="18"/>
 @@ -112,25 +112,7 @@
            </conversion>
          </parameter>
@@ -215,15 +207,13 @@ diff -Naur Original/hmw_io12_sw7_dr.xml Patched/hmw_io12_sw7_dr.xml
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_io_4_fm_V3_02.xml Patched/hmw_io_4_fm_V3_02.xml
 --- Original/hmw_io_4_fm_V3_02.xml	2014-07-30 21:47:39.541053697 +0200
-+++ Patched/hmw_io_4_fm_V3_02.xml	2014-07-30 22:30:36.549131802 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_io_4_fm_V3_02.xml	2014-08-06 19:37:22.802964369 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="7" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="7" eep_size="1024" family="homematicwired">
+ <device version="7" eep_size="1024">
    <supported_types>
      <type name="RS485 I/O module 4-channel (flush-mount)" id="HMW-IO-4-FM" priority="2">
-       <parameter index="0" size="1" const_value="16"/>
 @@ -122,25 +122,7 @@
            <physical type="integer" interface="internal" value_id="BEHAVIOUR"/>
          </parameter>
@@ -283,15 +273,13 @@ diff -Naur Original/hmw_io_4_fm_V3_02.xml Patched/hmw_io_4_fm_V3_02.xml
                <option id="MINIMAL"/>
 diff -Naur Original/hmw_io_4_fm.xml Patched/hmw_io_4_fm.xml
 --- Original/hmw_io_4_fm.xml	2014-07-30 21:47:39.545053698 +0200
-+++ Patched/hmw_io_4_fm.xml	2014-07-30 22:30:36.553131802 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_io_4_fm.xml	2014-08-06 19:37:18.722964291 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="11" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="11" eep_size="1024" family="homematicwired">
+ <device version="11" eep_size="1024">
    <supported_types>
      <type name="RS485 I/O module 4-channel (flush-mount)" id="HMW-IO-4-FM" priority="2">
-       <parameter index="0" size="1" const_value="16"/>
 @@ -125,25 +125,7 @@
            <physical type="integer" interface="internal" value_id="BEHAVIOUR"/>
          </parameter>
@@ -351,15 +339,13 @@ diff -Naur Original/hmw_io_4_fm.xml Patched/hmw_io_4_fm.xml
                <option id="MINIMAL"/>
 diff -Naur Original/hmw_io_sr_fm.xml Patched/hmw_io_sr_fm.xml
 --- Original/hmw_io_sr_fm.xml	2014-07-30 21:47:39.549053699 +0200
-+++ Patched/hmw_io_sr_fm.xml	2014-07-30 22:30:36.561131802 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_io_sr_fm.xml	2014-08-06 19:37:30.846964601 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="5" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="5" eep_size="1024" family="homematicwired">
+ <device version="5" eep_size="1024">
    <supported_types>
      <type name="RS485 I/O SR" id="HMW-IO-SR-FM" priority="2">
-       <parameter index="0" size="1" const_value="22"/>
 @@ -112,25 +112,7 @@
            </conversion>
          </parameter>
@@ -419,15 +405,13 @@ diff -Naur Original/hmw_io_sr_fm.xml Patched/hmw_io_sr_fm.xml
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_lc_bl1_dr_V3_02.xml Patched/hmw_lc_bl1_dr_V3_02.xml
 --- Original/hmw_lc_bl1_dr_V3_02.xml	2014-07-30 21:47:39.557053699 +0200
-+++ Patched/hmw_lc_bl1_dr_V3_02.xml	2014-07-30 22:30:36.565131802 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_lc_bl1_dr_V3_02.xml	2014-08-06 19:37:39.162964851 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="8" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="8" eep_size="1024" family="homematicwired">
+ <device version="8" eep_size="1024">
    <supported_types>
      <type name="RS485 blind actuator 1-channel (DIN rails)" id="HMW-LC-Bl1-DR" priority="2">
-       <parameter index="0" size="1" const_value="21"/>
 @@ -112,25 +112,7 @@
            </conversion>
          </parameter>
@@ -487,15 +471,13 @@ diff -Naur Original/hmw_lc_bl1_dr_V3_02.xml Patched/hmw_lc_bl1_dr_V3_02.xml
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_lc_bl1_dr.xml Patched/hmw_lc_bl1_dr.xml
 --- Original/hmw_lc_bl1_dr.xml	2014-07-30 21:47:39.565053699 +0200
-+++ Patched/hmw_lc_bl1_dr.xml	2014-07-30 22:30:36.573131802 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_lc_bl1_dr.xml	2014-08-06 19:37:35.174964724 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="14" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="14" eep_size="1024" family="homematicwired">
+ <device version="14" eep_size="1024">
    <supported_types>
      <type name="RS485 blind actuator 1-channel (DIN rails)" id="HMW-LC-Bl1-DR" priority="2">
-       <parameter index="0" size="1" const_value="21"/>
 @@ -115,25 +115,7 @@
            </conversion>
          </parameter>
@@ -555,15 +537,13 @@ diff -Naur Original/hmw_lc_bl1_dr.xml Patched/hmw_lc_bl1_dr.xml
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_lc_dim1l_dr.xml Patched/hmw_lc_dim1l_dr.xml
 --- Original/hmw_lc_dim1l_dr.xml	2014-07-30 21:47:39.573053698 +0200
-+++ Patched/hmw_lc_dim1l_dr.xml	2014-07-30 22:30:36.581131803 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_lc_dim1l_dr.xml	2014-08-06 19:37:43.338964795 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="11" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="11" eep_size="1024" family="homematicwired">
+ <device version="11" eep_size="1024">
    <supported_types>
      <type name="RS485 dimming actuator 1-channel leading edge (DIN rails)" id="HMW-LC-Dim1L-DR" priority="2">
-       <parameter index="0" size="1" const_value="20"/>
 @@ -112,25 +112,7 @@
            </conversion>
          </parameter>
@@ -623,15 +603,13 @@ diff -Naur Original/hmw_lc_dim1l_dr.xml Patched/hmw_lc_dim1l_dr.xml
              <option id="ABSOLUTE" default="true"/>
 diff -Naur Original/hmw_lc_sw2_dr_V3_02.xml Patched/hmw_lc_sw2_dr_V3_02.xml
 --- Original/hmw_lc_sw2_dr_V3_02.xml	2014-07-30 21:47:39.581053700 +0200
-+++ Patched/hmw_lc_sw2_dr_V3_02.xml	2014-07-30 22:30:36.585131803 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_lc_sw2_dr_V3_02.xml	2014-08-06 19:37:50.338965185 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="7" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="7" eep_size="1024" family="homematicwired">
+ <device version="7" eep_size="1024">
    <supported_types>
      <type name="RS485 switch actuator 2-channel (DIN rails)" id="HMW-LC-Sw2-DR" priority="2">
-       <parameter index="0" size="1" const_value="17"/>
 @@ -109,25 +109,7 @@
            </conversion>
          </parameter>
@@ -691,15 +669,13 @@ diff -Naur Original/hmw_lc_sw2_dr_V3_02.xml Patched/hmw_lc_sw2_dr_V3_02.xml
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_lc_sw2_dr.xml Patched/hmw_lc_sw2_dr.xml
 --- Original/hmw_lc_sw2_dr.xml	2014-07-30 21:47:39.585053700 +0200
-+++ Patched/hmw_lc_sw2_dr.xml	2014-07-30 22:30:36.593131803 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_lc_sw2_dr.xml	2014-08-06 19:37:46.354965044 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="12" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="12" eep_size="1024" family="homematicwired">
+ <device version="12" eep_size="1024">
    <supported_types>
      <type name="RS485 switch actuator 2-channel (DIN rails)" id="HMW-LC-Sw2-DR" priority="2">
-       <parameter index="0" size="1" const_value="17"/>
 @@ -112,25 +112,7 @@
            </conversion>
          </parameter>
@@ -759,19 +735,23 @@ diff -Naur Original/hmw_lc_sw2_dr.xml Patched/hmw_lc_sw2_dr.xml
              <option id="MINIMAL"/>
 diff -Naur Original/hmw_sen_sc_12_dr.xml Patched/hmw_sen_sc_12_dr.xml
 --- Original/hmw_sen_sc_12_dr.xml	2014-07-30 21:47:39.589053700 +0200
-+++ Patched/hmw_sen_sc_12_dr.xml	2014-07-30 22:30:36.593131803 +0200
-@@ -1,5 +1,5 @@
++++ Patched/hmw_sen_sc_12_dr.xml	2014-08-06 19:37:53.582965253 +0200
+@@ -1,4 +1,4 @@
 -<?xml version="1.0" encoding="ISO-8859-1"?>
--<device version="7" eep_size="1024">
 +<?xml version="1.0"?>
-+<device version="7" eep_size="1024" family="homematicwired">
+ <device version="7" eep_size="1024">
    <supported_types>
      <type name="RS485 shutter contact 12-channel (DIN rails)" id="HMW-Sen-SC-12-DR" priority="2">
-       <parameter index="0" size="1" const_value="25"/>
 diff -Naur Original/rf_4dis.xml Patched/rf_4dis.xml
 --- Original/rf_4dis.xml	2014-07-30 21:47:39.593053700 +0200
-+++ Patched/rf_4dis.xml	2014-07-30 22:30:36.597131803 +0200
-@@ -55,6 +55,13 @@
++++ Patched/rf_4dis.xml	2014-08-07 14:05:28.298020828 +0200
+@@ -1,4 +1,5 @@
+ <?xml version="1.0" encoding="ISO-8859-1"?>
++<!-- Modified from original Changes: Modified frames, so PRESS_LONG_RELEASE is working -->
+ <device version="31" rx_modes="CONFIG" peering_sysinfo_expect_channel="false" supports_aes="true">
+   <supported_types>
+     <type name="HM Remote Display 4 buttons" id="HM-PB-4Dis-WM" priority="2">
+@@ -55,6 +56,13 @@
            <logical type="integer"/>
            <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
          </parameter>
@@ -785,6 +765,27 @@ diff -Naur Original/rf_4dis.xml Patched/rf_4dis.xml
          <parameter id="AES_KEY" operations="read" ui_flags="invisible">
            <logical type="integer" min="0" max="127"/>
            <physical type="integer" interface="internal" value_id="AES_KEY"/>
+@@ -81,17 +89,19 @@
+   </channels>
+   <frames>
+     <frame id="KEY_EVENT_SHORT" direction="from_device" allowed_receivers="CENTRAL,BROADCAST,OTHER" event="true" type="0x40" channel_field="9:0.6">
++      <parameter type="integer" index="1.2" size="0.1" const_value="1"/>
+       <parameter type="integer" index="9.6" size="0.1" const_value="0"/>
+       <parameter type="integer" index="10.0" size="1.0" param="COUNTER"/>
+       <parameter type="integer" index="10.0" size="1.0" param="TEST_COUNTER"/>
+     </frame>
+     <frame id="KEY_EVENT_LONG" direction="from_device" allowed_receivers="CENTRAL,BROADCAST,OTHER" event="true" type="0x40" channel_field="9:0.6">
++      <parameter type="integer" index="1.2" size="0.1" const_value="1"/>
+       <parameter type="integer" index="9.6" size="0.1" const_value="1"/>
+       <parameter type="integer" index="10.0" size="1.0" param="COUNTER"/>
+       <parameter type="integer" index="10.0" size="1.0" param="TEST_COUNTER"/>
+     </frame>
+     <frame id="KEY_EVENT_LONG_BIDI" direction="from_device" allowed_receivers="CENTRAL,BROADCAST,OTHER" event="true" type="0x40" channel_field="9:0.6">
+-      <parameter type="integer" index="1.5" size="0.1" const_value="1"/>
++      <parameter type="integer" index="1.2" size="0.1" const_value="0"/>
+       <parameter type="integer" index="9.6" size="0.1" const_value="1"/>
+       <parameter type="integer" index="10.0" size="1.0" param="COUNTER"/>
+       <parameter type="integer" index="10.0" size="1.0" param="TEST_COUNTER"/>
 diff -Naur Original/rf_ash550.xml Patched/rf_ash550.xml
 --- Original/rf_ash550.xml	2014-07-30 21:47:39.593053700 +0200
 +++ Patched/rf_ash550.xml	2014-07-30 22:30:36.601131802 +0200

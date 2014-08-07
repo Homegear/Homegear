@@ -138,6 +138,8 @@ void PhysicalInterfaces::load(std::string filename)
 				}
 				else if(name == "devicetype")
 				{
+					if(settings->type.length() > 0) GD::out.printWarning("Warning: deviceType in \"physicalinterfaces.conf\" is set multiple times within one device block. Is the the family header missing (e. g. \"[HomeMaticBidCoS]\")?");
+					if(settings->family == BaseLib::Systems::DeviceFamilies::none) GD::out.printWarning("Warning: deviceType is set in \"physicalinterfaces.conf\" without defining the device family. Is the family header missing (e. g. \"[HomeMaticBidCoS]\")?");
 					BaseLib::HelperFunctions::toLower(value);
 					settings->type = value;
 					GD::out.printDebug("Debug: deviceType of family " + GD::deviceFamilies.at(settings->family)->getName() + " set to " + settings->type);

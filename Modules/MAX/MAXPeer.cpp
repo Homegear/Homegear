@@ -789,6 +789,18 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 					_bl->hf.memcpyBigEndian(data, j->constValue);
 				}
 				else continue;
+
+				//Check for low battery
+				if(j->param == "LOWBAT")
+				{
+					if(data.size() > 0 && data.at(0))
+					{
+						serviceMessages->set("LOWBAT", true);
+						if(_bl->debugLevel >= 4) GD::out.printInfo("Info: LOWBAT of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " was set to \"true\".");
+					}
+					else serviceMessages->set("LOWBAT", false);
+				}
+
 				for(std::vector<std::shared_ptr<BaseLib::RPC::Parameter>>::iterator k = frame->associatedValues.begin(); k != frame->associatedValues.end(); ++k)
 				{
 					if((*k)->physicalParameter->valueID != j->param) continue;
@@ -909,13 +921,6 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 					getValuesFromPacket(sentPacket, sentFrameValues);
 				}
 			}
-			//Check for low battery
-			//If values is not empty, packet is valid
-			/*if(rpcDevice->hasBattery && !a->values.empty() && !packet->payload()->empty() && frame && hasLowbatBit(frame))
-			{
-				if(packet->payload()->at(0) & 0x80) serviceMessages->set("LOWBAT", true);
-				else serviceMessages->set("LOWBAT", false);
-			}*/
 
 			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
 			{

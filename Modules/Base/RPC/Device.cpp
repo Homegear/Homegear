@@ -937,7 +937,7 @@ void Parameter::adjustBitPosition(std::vector<uint8_t>& data)
 {
 	try
 	{
-		if(data.size() > 4 || data.empty()) return;
+		if(data.size() > 4 || data.empty() || logicalParameter->type == LogicalParameter::Type::Enum::typeString) return;
 		int32_t value = 0;
 		_bl->hf.memcpyBigEndian(value, data);
 		if(physicalParameter->size < 0)

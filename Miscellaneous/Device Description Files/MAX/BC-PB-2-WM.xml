@@ -1,79 +1,80 @@
 <?xml version="1.0"?>
-<!--
-Todo:
-	- Add LOWBAT
--->
 <device version="1" rx_modes="WAKEUP">
-  <types>
-    <type name="MAX! Eco Switch" id="BC-PB-2-WM">
-      <type_id>0x050F</type_id>
-      <firmware cond_op="GE">0x10</firmware>
-    </type>
-  </types>
-  <parameters type="MASTER" id="remote_dev_master">
-  </parameters>
-  <channels>
-    <channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
-      <parameters type="MASTER" id="maint_ch_master"/>
-      <parameters type="VALUES" id="maint_ch_values">
-        <parameter id="UNREACH" operations="read,event" ui_flags="service">
-          <logical type="boolean"/>
-          <physical type="integer" interface="internal" value_id="UNREACH"/>
-        </parameter>
-        <parameter id="STICKY_UNREACH" operations="read,write,event" ui_flags="service,sticky">
-          <logical type="boolean"/>
-          <physical type="integer" interface="internal" value_id="STICKY_UNREACH"/>
-        </parameter>
-        <parameter id="CONFIG_PENDING" operations="read,event" ui_flags="service">
-          <logical type="boolean"/>
-          <physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
-        </parameter>
-        <parameter id="LOWBAT" operations="read,event" ui_flags="service">
-          <logical type="boolean"/>
-          <physical type="integer" interface="internal" value_id="LOWBAT"/>
-        </parameter>
-        <parameter id="RSSI_DEVICE" operations="read,event">
-          <logical type="integer"/>
-          <physical type="integer" interface="internal" value_id="RSSI_DEVICE"/>
-        </parameter>
-        <parameter id="RSSI_PEER" operations="read,event">
-          <logical type="integer"/>
-          <physical type="integer" interface="internal" value_id="RSSI_PEER"/>
-        </parameter>
-        <parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
-          <logical type="option">
-            <option id="UNSET" index="0" default="true"/>
-            <option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
-          </logical>
-          <physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED"/>
-        </parameter>
-      </parameters>
-    </channel>
-    <channel index="1" physical_index_offset="-1" type="KEY">
-      <parameters type="VALUES" id="key_valueset">
-        <subset ref="key_valueset"/>
-      </parameters>
-    </channel>
-	<channel index="2" physical_index_offset="-1" type="KEY">
-      <parameters type="VALUES" id="key_valueset">
-        <subset ref="key_valueset"/>
-      </parameters>
-    </channel>
-  </channels>
-  <paramset_defs>
-    <parameters id="key_valueset">
-	  <parameter id="PRESS" operations="event" control="BUTTON.SHORT">
-        <logical type="action"/>
-        <physical type="integer" interface="command" value_id="PRESS">
-          <event packet="KEY_EVENT" />
-        </physical>
-      </parameter>
-	</parameters>	
-  </paramset_defs>
-  <packets>
-    <packet id="KEY_EVENT" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x50" channel_field="11">
-	  <parameter type="integer" index="9.7" size="0.1" param="LOWBAT"/><!-- No idea if this really is the LOWBAT bit -->
-      <parameter type="integer" index="10.0" size="1.0" param="PRESS"/>
-    </packet>
-  </packets>
+	<types>
+		<type name="MAX! Eco Switch" id="BC-PB-2-WM">
+			<type_id>0x050F</type_id>
+			<firmware cond_op="GE">0x10</firmware>
+		</type>
+	</types>
+	<parameters type="MASTER" id="remote_dev_master">
+	</parameters>
+	<channels>
+		<channel index="0" type="MAINTENANCE" ui_flags="internal" class="maintenance" count="1">
+			<parameters type="MASTER" id="maint_ch_master"/>
+			<parameters type="VALUES" id="maint_ch_values">
+				<parameter id="UNREACH" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="UNREACH"/>
+				</parameter>
+				<parameter id="STICKY_UNREACH" operations="read,write,event" ui_flags="service,sticky">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="STICKY_UNREACH"/>
+				</parameter>
+				<parameter id="CONFIG_PENDING" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="CONFIG_PENDING"/>
+				</parameter>
+				<parameter id="LOWBAT" operations="read,event" ui_flags="service">
+					<logical type="boolean"/>
+					<physical type="integer" interface="internal" value_id="LOWBAT"/>
+				</parameter>
+				<parameter id="RSSI_DEVICE" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="internal" value_id="RSSI_DEVICE"/>
+				</parameter>
+				<parameter id="RSSI_PEER" operations="read,event">
+					<logical type="integer"/>
+					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
+				</parameter>
+				<parameter id="CENTRAL_ADDRESS_SPOOFED" operations="read,write,event" ui_flags="service,sticky" control="NONE">
+					<logical type="option">
+						<option id="UNSET" index="0" default="true"/>
+						<option id="CENTRAL_ADDRESS_SPOOFED" index="1"/>
+					</logical>
+					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED"/>
+				</parameter>
+			</parameters>
+		</channel>
+		<channel index="1" physical_index_offset="-1" type="KEY">
+			<parameters type="VALUES" id="key_valueset">
+				<subset ref="key_valueset"/>
+			</parameters>
+		</channel>
+		<channel index="2" physical_index_offset="-1" type="KEY">
+			<parameters type="VALUES" id="key_valueset">
+				<subset ref="key_valueset"/>
+			</parameters>
+		</channel>
+	</channels>
+	<paramset_defs>
+		<parameters id="key_valueset">
+			<parameter id="PRESS" operations="event" control="BUTTON.SHORT">
+				<logical type="action"/>
+				<physical type="integer" interface="command" value_id="PRESS">
+					<event packet="KEY_EVENT" />
+					<event packet="ACK_STATUS"/>
+				</physical>
+			</parameter>
+		</parameters>	
+	</paramset_defs>
+	<packets>
+		<packet id="KEY_EVENT" direction="from_device" allowed_receivers="BROADCAST,CENTRAL,OTHER" event="true" type="0x50" channel_field="11">
+			<parameter type="integer" index="10.7" size="0.1" param="LOWBAT"/>
+			<parameter type="integer" index="10.0" size="1.0" param="PRESS"/>
+		</packet>
+		<packet id="ACK_STATUS" direction="from_device" event="true" type="0x02" subtype="0x02" fixed_channel="1">
+			<parameter type="integer" index="11.7" size="0.1" param="LOWBAT"/>
+			<parameter type="integer" index="11.0" size="0.2" param="PRESS"/>
+		</packet>
+	</packets>
 </device>
