@@ -8,7 +8,7 @@
 	</types>
 	<parameters type="MASTER" id="switch_dev_master">
 		<parameter id="TEMPERATURE_SATURDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="0" index="11.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -18,7 +18,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SATURDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="0" index="13.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -28,7 +28,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SATURDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="0" index="15.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -38,7 +38,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SATURDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="0" index="17.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -48,7 +48,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SATURDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="0" index="19.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -58,7 +58,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SATURDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="0" index="21.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -68,7 +68,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SATURDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="0" index="23.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -78,7 +78,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SUNDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="1" index="11.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -88,7 +88,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SUNDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="1" index="13.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -98,7 +98,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SUNDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="1" index="15.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -108,7 +108,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SUNDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="1" index="17.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -118,7 +118,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SUNDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="1" index="19.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -128,7 +128,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SUNDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="1" index="21.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -138,7 +138,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SUNDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="1" index="23.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -148,7 +148,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_MONDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="2" index="11.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -158,7 +158,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_MONDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="2" index="13.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -168,7 +168,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_MONDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="2" index="15.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -178,7 +178,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_MONDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="2" index="17.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -188,7 +188,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_MONDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="2" index="19.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -198,7 +198,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_MONDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="2" index="21.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -208,7 +208,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_MONDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="2" index="23.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -218,7 +218,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_TUESDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="3" index="11.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -228,7 +228,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_TUESDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="3" index="13.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -238,7 +238,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_TUESDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="3" index="15.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -248,7 +248,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_TUESDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="3" index="17.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -258,7 +258,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_TUESDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="3" index="19.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -268,7 +268,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_TUESDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="3" index="21.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -278,7 +278,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_TUESDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="3" index="23.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -288,7 +288,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_WEDNESDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="4" index="11.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -298,7 +298,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_WEDNESDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="4" index="13.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -308,7 +308,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_WEDNESDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="4" index="15.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -318,7 +318,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_WEDNESDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="4" index="17.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -328,7 +328,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_WEDNESDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="4" index="19.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -338,7 +338,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_WEDNESDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="4" index="21.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -348,7 +348,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_WEDNESDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="4" index="23.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -358,7 +358,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_THURSDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="5" index="11.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -368,7 +368,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_THURSDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="5" index="13.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -378,7 +378,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_THURSDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="5" index="15.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -388,7 +388,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_THURSDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="5" index="17.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -398,7 +398,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_THURSDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="5" index="19.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -408,7 +408,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_THURSDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="5" index="21.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -418,7 +418,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_THURSDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="5" index="23.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -428,7 +428,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_FRIDAY_1">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="6" index="11.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -438,7 +438,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_FRIDAY_2">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="6" index="13.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -448,7 +448,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_FRIDAY_3">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="6" index="15.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -458,7 +458,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_FRIDAY_4">
-			<logical type="float" min="6.0" max="30.0" default="21.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 			<physical type="integer" interface="config" list="6" index="17.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -468,7 +468,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_FRIDAY_5">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="6" index="19.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -478,7 +478,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_FRIDAY_6">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="6" index="21.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -488,7 +488,7 @@
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_FRIDAY_7">
-			<logical type="float" min="6.0" max="30.0" default="17.0" unit="°C"/>
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="6" index="23.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
 		</parameter>
@@ -526,6 +526,12 @@
 					<logical type="integer"/>
 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
 				</parameter>
+				<parameter id="BOOT" operations="read,event">
+					<logical type="action"/>
+					<physical type="integer" interface="command" value_id="BOOT">
+						<event packet="INFO_POWERON"/>
+					</physical>
+				</parameter>
 			</parameters>
 		</channel>
 		<channel index="1" type="CLIMATECONTROL_TRANSCEIVER">
@@ -533,12 +539,6 @@
 				<source name="THERMALCONTROL_TC"/>
 			</link_roles>
 			<parameters type="VALUES" id="switch_ch_values">
-				<parameter id="BOOT" operations="read,event">
-					<logical type="action"/>
-					<physical type="integer" interface="command" value_id="BOOT">
-						<event packet="INFO_POWERON"/>
-					</physical>
-				</parameter>
 				<parameter id="ACTUAL_TEMPERATURE" operations="read, event" control="HEATING_CONTROL.TEMPERATURE">
 					<logical type="float" min="-10.0" max="50.0" unit="°C"/>
 					<physical type="integer" interface="command" value_id="ACTUAL_TEMPERATURE">
@@ -563,14 +563,14 @@
 					<conversion type="float_integer_scale" factor="2"/>
 				</parameter>
 				<parameter id="COMFORT_TEMPERATURE" operations="read,write,event">
-					<logical type="float" min="5.0" max="30.0" default="21.5" unit="°C"/>
+					<logical type="float" min="5.0" max="30.0" default="21.0" unit="°C"/>
 					<physical type="integer" interface="command" id="COMFORT_TEMPERATURE">
 						<set request="TEMPERATURES_SET"/>
 					</physical>
 					<conversion type="float_integer_scale" factor="2"/>
 				</parameter>
 				<parameter id="ECO_TEMPERATURE" operations="read,write,event">
-					<logical type="float" min="5.0" max="30.0" default="16.5" unit="°C"/>
+					<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 					<physical type="integer" interface="command" id="ECO_TEMPERATURE">
 						<set request="TEMPERATURES_SET"/>
 					</physical>
@@ -621,7 +621,10 @@
 					</physical>
 				</parameter>
 				<parameter id="MANU_MODE" operations="write" control="HEATING_CONTROL.MANU">
-					<logical type="float" min="5.0" max="30.0" default="20.0" unit="°C"/>
+					<logical type="float" min="5.0" max="30.0" default="20.0" unit="°C">
+						<special_value id="OFF" value="4.5"/>
+						<special_value id="ON" value="30.5"/>
+					</logical>
 					<physical type="integer" interface="command" value_id="SET_TEMPERATURE">
 						<set request="MANU_MODE"/>
 					</physical>
@@ -814,7 +817,7 @@
 			<parameter type="integer" index="12.7" size="0.1" param="PARTY_STOP_MONTH" mask="0x1"/>
 			<parameter type="integer" index="13.0" size="1.0" param="PARTY_STOP_TIME"/>
 		</packet>
-		<packet id="INFO_POWERON" direction="from_device" event="true" type="0x03" subtype="0x0A" fixed_channel="*">
+		<packet id="INFO_POWERON" direction="from_device" event="true" type="0xFF" subtype="0x00" fixed_channel="0">
 			<parameter type="integer" index="9.0" size="1.0" param="BOOT"/>
 		</packet>
 	</packets>

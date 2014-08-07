@@ -44,6 +44,12 @@
 					</logical>
 					<physical type="integer" interface="internal" value_id="CENTRAL_ADDRESS_SPOOFED"/>
 				</parameter>
+				<parameter id="BOOT" operations="read,event">
+					<logical type="action"/>
+					<physical type="integer" interface="command" value_id="BOOT">
+						<event packet="INFO_POWERON"/>
+					</physical>
+				</parameter>
 			</parameters>
 		</channel>
 		<channel index="1" type="SHUTTER_CONTACT">
@@ -74,6 +80,9 @@
 		<packet id="ACK_STATUS" direction="from_device" event="true" type="0x02" subtype="0x02" fixed_channel="1">
 			<parameter type="integer" index="11.7" size="0.1" param="LOWBAT"/>
 			<parameter type="integer" index="11.0" size="0.2" param="STATE"/>
+		</packet>
+		<packet id="INFO_POWERON" direction="from_device" event="true" type="0xFF" subtype="0x00" fixed_channel="0">
+			<parameter type="integer" index="9.0" size="1.0" param="BOOT"/>
 		</packet>
 	</packets>
 </device>

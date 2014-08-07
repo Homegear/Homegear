@@ -528,6 +528,12 @@
 					<logical type="integer"/>
 					<physical type="integer" interface="internal" value_id="RSSI_PEER"/>
 				</parameter>
+				<parameter id="BOOT" operations="read,event">
+					<logical type="action"/>
+					<physical type="integer" interface="command" value_id="BOOT">
+						<event packet="INFO_POWERON"/>
+					</physical>
+				</parameter>
 			</parameters>
 		</channel>
 		<channel index="1" type="SWITCH">
@@ -535,12 +541,6 @@
 				<target name="SWITCH"/>
 			</link_roles>
 			<parameters type="VALUES" id="switch_ch_values">
-				<parameter id="BOOT" operations="read,event">
-					<logical type="action"/>
-					<physical type="integer" interface="command" value_id="BOOT">
-						<event packet="INFO_POWERON"/>
-					</physical>
-				</parameter>
 				<parameter id="STATE" operations="read,write,event" control="SWITCH.STATE">
 					<logical type="boolean" default="false"/>
 					<physical type="integer" interface="command" value_id="STATE" id="STATE">
@@ -628,7 +628,7 @@
 			<parameter type="integer" index="10.0" size="0.2" param="CONTROL_MODE"/>
 			<parameter type="integer" index="12.0" size="0.6" param="STATE"/>
 		</packet>
-		<packet id="INFO_POWERON" direction="from_device" event="true" type="0x03" subtype="0x0A" fixed_channel="*">
+		<packet id="INFO_POWERON" direction="from_device" event="true" type="0xFF" subtype="0x00" fixed_channel="0">
 			<parameter type="integer" index="9.0" size="1.0" param="BOOT"/>
 		</packet>
 	</packets>

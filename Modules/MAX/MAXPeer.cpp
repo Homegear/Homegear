@@ -698,7 +698,8 @@ void MAXPeer::getValuesFromPacket(std::shared_ptr<MAXPacket> packet, std::vector
 	{
 		if(!rpcDevice) return;
 		//equal_range returns all elements with "0" or an unknown element as argument
-		if(packet->messageType() == 0 || rpcDevice->framesByMessageType.find(packet->messageType()) == rpcDevice->framesByMessageType.end()) return;
+		if(packet->messageType() == 0) packet->setMessageType(0xFF);
+		if(rpcDevice->framesByMessageType.find(packet->messageType()) == rpcDevice->framesByMessageType.end()) return;
 		std::pair<std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator,std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator> range = rpcDevice->framesByMessageType.equal_range((uint32_t)packet->messageType());
 		if(range.first == rpcDevice->framesByMessageType.end()) return;
 		std::multimap<uint32_t, std::shared_ptr<BaseLib::RPC::DeviceFrame>>::iterator i = range.first;
@@ -900,7 +901,6 @@ void MAXPeer::packetReceived(std::shared_ptr<MAXPacket> packet)
 		serviceMessages->endUnreach();
 		std::vector<FrameValues> frameValues;
 		getValuesFromPacket(packet, frameValues);
-		//bool resendPacket = false;
 		std::shared_ptr<MAXPacket> sentPacket;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
 		std::map<uint32_t, std::shared_ptr<std::vector<std::shared_ptr<BaseLib::RPC::RPCVariable>>>> rpcValues;
