@@ -616,6 +616,7 @@ std::shared_ptr<BaseLib::RPC::RPCVariable> FamilyController::listFamilies()
 
 			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("ID", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable((int32_t)i->first))));
 			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("NAME", std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(i->second->getName()))));
+			familyDescription->structValue->insert(BaseLib::RPC::RPCStructElement("PAIRING_METHODS", i->second->getPairingMethods()));
 			array->arrayValue->push_back(familyDescription);
 		}
 		_rpcCache = array;

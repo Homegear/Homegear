@@ -7,7 +7,7 @@
 		</type>
 	</types>
 	<parameters type="MASTER" id="switch_dev_master">
-		<parameter id="TEMPERATURE_SATURDAY_1">
+				<parameter id="TEMPERATURE_SATURDAY_1">
 			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="0" index="11.1" size="0.6"/>
 			<conversion type="float_integer_scale" factor="2"/>
@@ -75,6 +75,66 @@
 		<parameter id="ENDTIME_SATURDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="0" index="24.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SATURDAY_8">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="16" index="11.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SATURDAY_9">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="16" index="13.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SATURDAY_10">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="16" index="15.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SATURDAY_11">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="16" index="17.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SATURDAY_12">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="16" index="19.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SATURDAY_13">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="16" index="21.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_SUNDAY_1">
@@ -147,6 +207,66 @@
 			<physical type="integer" interface="config" list="1" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
+		<parameter id="TEMPERATURE_SUNDAY_8">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="17" index="11.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SUNDAY_9">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="17" index="13.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SUNDAY_10">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="17" index="15.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SUNDAY_11">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="17" index="17.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SUNDAY_12">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="17" index="19.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_SUNDAY_13">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="17" index="21.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="22.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
 		<parameter id="TEMPERATURE_MONDAY_1">
 			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="2" index="11.1" size="0.6"/>
@@ -215,6 +335,66 @@
 		<parameter id="ENDTIME_MONDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="2" index="24.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_MONDAY_8">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="18" index="11.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_MONDAY_9">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="18" index="13.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_MONDAY_10">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="18" index="15.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_MONDAY_11">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="18" index="17.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_MONDAY_12">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="18" index="19.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_MONDAY_13">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="18" index="21.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_TUESDAY_1">
@@ -287,6 +467,66 @@
 			<physical type="integer" interface="config" list="3" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
+		<parameter id="TEMPERATURE_TUESDAY_8">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="19" index="11.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_TUESDAY_9">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="19" index="13.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_TUESDAY_10">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="19" index="15.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_TUESDAY_11">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="19" index="17.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_TUESDAY_12">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="19" index="19.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_TUESDAY_13">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="19" index="21.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="22.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
 		<parameter id="TEMPERATURE_WEDNESDAY_1">
 			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="4" index="11.1" size="0.6"/>
@@ -355,6 +595,66 @@
 		<parameter id="ENDTIME_WEDNESDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="4" index="24.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_WEDNESDAY_8">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="20" index="11.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_WEDNESDAY_9">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="20" index="13.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_WEDNESDAY_10">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="20" index="15.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_WEDNESDAY_11">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="20" index="17.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_WEDNESDAY_12">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="20" index="19.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_WEDNESDAY_13">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="20" index="21.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="TEMPERATURE_THURSDAY_1">
@@ -427,6 +727,66 @@
 			<physical type="integer" interface="config" list="5" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
+		<parameter id="TEMPERATURE_THURSDAY_8">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="21" index="11.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_THURSDAY_9">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="21" index="13.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_THURSDAY_10">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="21" index="15.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_THURSDAY_11">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="21" index="17.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_THURSDAY_12">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="21" index="19.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_THURSDAY_13">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="21" index="21.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="22.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
 		<parameter id="TEMPERATURE_FRIDAY_1">
 			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
 			<physical type="integer" interface="config" list="6" index="11.1" size="0.6"/>
@@ -495,6 +855,66 @@
 		<parameter id="ENDTIME_FRIDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="6" index="24.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_FRIDAY_8">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="22" index="11.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_FRIDAY_9">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="22" index="13.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_FRIDAY_10">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="22" index="15.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_FRIDAY_11">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="22" index="17.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_FRIDAY_12">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="22" index="19.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="TEMPERATURE_FRIDAY_13">
+			<logical type="float" min="5.0" max="30.0" default="17.0" unit="°C"/>
+			<physical type="integer" interface="config" list="22" index="21.1" size="0.6"/>
+			<conversion type="float_integer_scale" factor="2"/>
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 	</parameters>

@@ -329,6 +329,8 @@ bool HomeMaticDevice::isSwitch(BaseLib::Systems::LogicalDeviceType type)
 		return true;
 	case DeviceType::HMLCSW4SMATMEGA168:
 		return true;
+	case DeviceType::HMMODRE8:
+		return true;
 	default:
 		return false;
 	}

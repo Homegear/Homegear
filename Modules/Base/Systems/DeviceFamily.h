@@ -115,6 +115,7 @@ public:
 	virtual std::vector<std::shared_ptr<LogicalDevice>> getDevices();
 	virtual std::shared_ptr<Central> getCentral() = 0;
 	virtual std::string getName() = 0;
+	virtual std::shared_ptr<RPC::RPCVariable> getPairingMethods() = 0;
 	virtual std::string handleCLICommand(std::string& command) = 0;
 	virtual bool deviceSelected() { return (bool)_currentDevice; }
 protected:

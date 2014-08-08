@@ -53,8 +53,8 @@ public:
 	virtual int32_t physicalAddress();
 	virtual uint64_t getPeerIDFromSerial(std::string serialNumber) { return 0; }
 
-	virtual bool knowsDevice(std::string serialNumber) { return false; }
-	virtual bool knowsDevice(uint64_t id) { return false; }
+	virtual bool knowsDevice(std::string serialNumber) = 0;
+	virtual bool knowsDevice(uint64_t id) = 0;
 
 	virtual std::shared_ptr<RPC::RPCVariable> addDevice(std::string serialNumber) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }
 	virtual std::shared_ptr<RPC::RPCVariable> addLink(std::string senderSerialNumber, int32_t senderChannel, std::string receiverSerialNumber, int32_t receiverChannel, std::string name, std::string description) { return RPC::RPCVariable::createError(-32601, "Method not implemented for this central."); }

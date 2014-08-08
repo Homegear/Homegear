@@ -53,6 +53,7 @@ public:
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::string handleCLICommand(std::string& command);
 	virtual std::string getName() { return "HomeMatic BidCoS"; }
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getPairingMethods();
 private:
 	std::shared_ptr<HomeMaticCentral> _central;
 

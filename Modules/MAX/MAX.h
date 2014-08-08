@@ -51,7 +51,8 @@ public:
 	virtual std::shared_ptr<MAXDevice> getDevice(std::string serialNumber);
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::string handleCLICommand(std::string& command);
-	virtual std::string getName() { return "MAX"; }
+	virtual std::string getName() { return "MAX!"; }
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getPairingMethods();
 private:
 	std::shared_ptr<MAXCentral> _central;
 

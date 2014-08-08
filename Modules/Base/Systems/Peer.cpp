@@ -1185,7 +1185,7 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceDescription(int32_t channel, st
 
 		if(channel == -1) //Base device
 		{
-			if(fields.empty() || fields.find("FAMILYID") != fields.end()) description->structValue->insert(RPC::RPCStructElement("FAMILY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)_deviceType.family()))));
+			if(fields.empty() || fields.find("FAMILY") != fields.end()) description->structValue->insert(RPC::RPCStructElement("FAMILY", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)_deviceType.family()))));
 			if(fields.empty() || fields.find("ID") != fields.end()) description->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((uint32_t)_peerID))));
 			if(fields.empty() || fields.find("ADDRESS") != fields.end()) description->structValue->insert(RPC::RPCStructElement("ADDRESS", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_serialNumber))));
 
@@ -1401,6 +1401,8 @@ std::shared_ptr<RPC::RPCVariable> Peer::getDeviceInfo(std::map<std::string, bool
 	{
 		if(_disposing) return RPC::RPCVariable::createError(-32500, "Peer is disposing.");
 		std::shared_ptr<RPC::RPCVariable> info(new RPC::RPCVariable(RPC::RPCVariableType::rpcStruct));
+
+		info->structValue->insert(RPC::RPCStructElement("ID", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable((int32_t)_peerID))));
 
 		if(fields.empty() || fields.find("NAME") != fields.end()) info->structValue->insert(RPC::RPCStructElement("NAME", std::shared_ptr<RPC::RPCVariable>(new RPC::RPCVariable(_name))));
 

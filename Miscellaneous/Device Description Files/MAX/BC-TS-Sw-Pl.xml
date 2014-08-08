@@ -78,6 +78,66 @@
 			<physical type="integer" interface="config" list="0" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
+		<parameter id="STATE_SATURDAY_8">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="16" index="11.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SATURDAY_9">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="16" index="13.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SATURDAY_10">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="16" index="15.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SATURDAY_11">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="16" index="17.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SATURDAY_12">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="16" index="19.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SATURDAY_13">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="16" index="21.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SATURDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="16" index="22.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
 		<parameter id="STATE_SUNDAY_1">
 			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="1" index="11.1" size="0.6"/>
@@ -146,6 +206,66 @@
 		<parameter id="ENDTIME_SUNDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="1" index="24.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SUNDAY_8">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="17" index="11.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SUNDAY_9">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="17" index="13.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SUNDAY_10">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="17" index="15.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SUNDAY_11">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="17" index="17.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SUNDAY_12">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="17" index="19.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_SUNDAY_13">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="17" index="21.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_SUNDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="17" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="STATE_MONDAY_1">
@@ -218,6 +338,66 @@
 			<physical type="integer" interface="config" list="2" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
+		<parameter id="STATE_MONDAY_8">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="18" index="11.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_MONDAY_9">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="18" index="13.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_MONDAY_10">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="18" index="15.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_MONDAY_11">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="18" index="17.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_MONDAY_12">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="18" index="19.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_MONDAY_13">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="18" index="21.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_MONDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="18" index="22.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
 		<parameter id="STATE_TUESDAY_1">
 			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="3" index="11.1" size="0.6"/>
@@ -286,6 +466,66 @@
 		<parameter id="ENDTIME_TUESDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="3" index="24.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_TUESDAY_8">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="19" index="11.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_TUESDAY_9">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="19" index="13.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_TUESDAY_10">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="19" index="15.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_TUESDAY_11">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="19" index="17.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_TUESDAY_12">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="19" index="19.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_TUESDAY_13">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="19" index="21.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_TUESDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="19" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="STATE_WEDNESDAY_1">
@@ -363,7 +603,67 @@
 			<physical type="integer" interface="config" list="4" index="24.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
-		<parameter id="STATE_THURSDAY_2">
+		<parameter id="STATE_WEDNESDAY_8">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="20" index="11.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_WEDNESDAY_9">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="20" index="13.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_WEDNESDAY_10">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="20" index="15.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_WEDNESDAY_11">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="20" index="17.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_WEDNESDAY_12">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="20" index="19.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_WEDNESDAY_13">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="20" index="21.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_WEDNESDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="20" index="22.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_THURSDAY_1">
 			<logical type="boolean" default="false" />
 			<physical type="integer" interface="config" list="5" index="11.1" size="0.6"/>
 			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
@@ -431,6 +731,66 @@
 		<parameter id="ENDTIME_THURSDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="5" index="24.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_THURSDAY_8">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="21" index="11.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_THURSDAY_9">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="21" index="13.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_THURSDAY_10">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="21" index="15.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_THURSDAY_11">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="21" index="17.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_THURSDAY_12">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="21" index="19.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_THURSDAY_13">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="21" index="21.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_THURSDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="21" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 		<parameter id="STATE_FRIDAY_1">
@@ -501,6 +861,66 @@
 		<parameter id="ENDTIME_FRIDAY_7">
 			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
 			<physical type="integer" interface="config" list="6" index="24.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_FRIDAY_8">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="22" index="11.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_8">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="12.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_FRIDAY_9">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="22" index="13.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_9">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="14.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_FRIDAY_10">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="22" index="15.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_10">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="16.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_FRIDAY_11">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="22" index="17.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_11">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="18.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_FRIDAY_12">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="22" index="19.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_12">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="20.0" size="1.1"/>
+			<conversion type="integer_integer_scale" div="5"/>
+		</parameter>
+		<parameter id="STATE_FRIDAY_13">
+			<logical type="boolean" default="false" />
+			<physical type="integer" interface="config" list="22" index="21.1" size="0.6"/>
+			<conversion type="boolean_integer" threshold="40" false="9" true="61" />
+		</parameter>
+		<parameter id="ENDTIME_FRIDAY_13">
+			<logical type="integer" min="5" max="1440" default="1440" unit="minutes"/>
+			<physical type="integer" interface="config" list="22" index="22.0" size="1.1"/>
 			<conversion type="integer_integer_scale" div="5"/>
 		</parameter>
 	</parameters>
