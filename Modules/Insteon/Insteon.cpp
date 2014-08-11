@@ -30,8 +30,8 @@
 #include "Insteon.h"
 #include "PhysicalDevices/Insteon_Hub_X10.h"
 #include "InsteonDeviceTypes.h"
-//#include "Devices/InsteonCentral.h"
-#include "Devices/Insteon-SD.h"
+#include "LogicalDevices/InsteonCentral.h"
+#include "LogicalDevices/Insteon-SD.h"
 #include "GD.h"
 
 namespace Insteon
@@ -55,9 +55,9 @@ Insteon::~Insteon()
 
 bool Insteon::init()
 {
-	//GD::out.printInfo("Loading XML RPC devices...");
-	//GD::rpcDevices.load(_bl->settings.deviceDescriptionPath() + std::to_string((int32_t)BaseLib::Systems::DeviceFamilies::Insteon));
-	//if(GD::rpcDevices.empty()) return false;
+	GD::out.printInfo("Loading XML RPC devices...");
+	GD::rpcDevices.load();
+	if(GD::rpcDevices.empty()) return false;
 	return true;
 }
 
@@ -66,7 +66,8 @@ void Insteon::dispose()
 	if(_disposed) return;
 	DeviceFamily::dispose();
 
-	GD::physicalInterface.reset();
+	GD::physicalInterfaces.clear();
+	GD::defaultPhysicalInterface.reset();
 }
 
 std::shared_ptr<BaseLib::Systems::Central> Insteon::getCentral() { return std::shared_ptr<BaseLib::Systems::Central>(); /*return _central;*/ }
@@ -75,13 +76,17 @@ std::shared_ptr<BaseLib::Systems::IPhysicalInterface> Insteon::createPhysicalDev
 {
 	try
 	{
-		if(!settings) return std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
+		std::shared_ptr<BaseLib::Systems::IPhysicalInterface> device;
+		if(!settings) return device;
 		GD::out.printDebug("Debug: Creating physical device. Type defined in physicalinterfaces.conf is: " + settings->type);
-		GD::physicalInterface = std::shared_ptr<BaseLib::Systems::IPhysicalInterface>();
-		if(!settings) return GD::physicalInterface;
-		if(settings->type == "insteonhubx10") GD::physicalInterface.reset(new InsteonHubX10(settings));
-		else GD::out.printError("Error: Unsupported physical device type for family Insteon: " + settings->type);
-		return GD::physicalInterface;
+		if(settings->type == "insteonhubx10") device.reset(new InsteonHubX10(settings));
+		else GD::out.printError("Error: Unsupported physical device type: " + settings->type);
+		if(device)
+		{
+			GD::physicalInterfaces[settings->id] = device;
+			if(settings->isDefault || !GD::defaultPhysicalInterface) GD::defaultPhysicalInterface = device;
+		}
+		return device;
 	}
 	catch(const std::exception& ex)
 	{
@@ -213,10 +218,10 @@ void Insteon::load()
 			std::shared_ptr<BaseLib::Systems::LogicalDevice> device;
 			switch((DeviceType)deviceType)
 			{
-			/*case DeviceType::HMWIREDCENTRAL:
-				_central = std::shared_ptr<InsteonDevice>(new InsteonDevice(deviceID, serialNumber, address));
+			case DeviceType::INSTEONCENTRAL:
+				_central = std::shared_ptr<InsteonDevice>(new InsteonCentral(deviceID, serialNumber, address));
 				device = _central;
-				break;*/
+				break;
 			case DeviceType::INSTEONSD:
 				spyDeviceExists = true;
 				device = std::shared_ptr<BaseLib::Systems::LogicalDevice>(new Insteon_SD(deviceID, serialNumber, address, this));
@@ -234,9 +239,9 @@ void Insteon::load()
 				_devicesMutex.unlock();
 			}
 		}
-		if(GD::physicalInterface->isOpen())
+		if(!GD::physicalInterfaces.empty())
 		{
-			//if(!_central) createCentral();
+			if(!_central) createCentral();
 			if(!spyDeviceExists) createSpyDevice();
 		}
 	}
@@ -285,13 +290,15 @@ void Insteon::createCentral()
 {
 	try
 	{
-		/*if(_central) return;
+		if(_central) return;
+		uint32_t seed = 0xfd0000 + BaseLib::HelperFunctions::getRandomNumber(1, 32767);
 
-		std::string serialNumber(getUniqueSerialNumber("VWC", BaseLib::HelperFunctions::getRandomNumber(1, 9999999)));
+		int32_t address = getUniqueAddress(seed);
+		std::string serialNumber(getUniqueSerialNumber("VIC", BaseLib::HelperFunctions::getRandomNumber(1, 9999999)));
 
-		_central.reset(new HMWiredCentral(0, serialNumber, 1));
+		_central.reset(new InsteonCentral(0, serialNumber, address, this));
 		add(_central);
-		GD::out.printMessage("Created HomeMatic Wired central with address 0x" + BaseLib::HelperFunctions::getHexString(1, 8) + " and serial number " + serialNumber);*/
+		GD::out.printMessage("Created Insteon central with id " + std::to_string(_central->getID()) + ", address 0x" + BaseLib::HelperFunctions::getHexString(address, 6) + " and serial number " + serialNumber);
 	}
 	catch(const std::exception& ex)
     {
@@ -326,22 +333,39 @@ std::string Insteon::handleCLICommand(std::string& command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the indivual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "devices list\t\tList all Insteon devices" << std::endl;
+			stringStream << "devices create\t\tCreate a virtual Insteon device" << std::endl;
+			stringStream << "devices remove\t\tRemove a virtual Insteon device" << std::endl;
+			stringStream << "devices select\t\tSelect a virtual Insteon device" << std::endl;
 			stringStream << "unselect\t\tUnselect this device family" << std::endl;
-			stringStream << "devices list\t\tList all HomeMatic Wired devices" << std::endl;
-			stringStream << "devices create\t\tCreate a virtual HomeMatic Wired device" << std::endl;
-			stringStream << "devices remove\t\tRemove a virtual HomeMatic Wired device" << std::endl;
-			stringStream << "devices select\t\tSelect a virtual HomeMatic Wired device" << std::endl;
 			return stringStream.str();
 		}
 		else if(command == "devices list")
 		{
+			std::string bar(" │ ");
+			const int32_t idWidth = 8;
+			const int32_t addressWidth = 7;
+			const int32_t serialWidth = 13;
+			const int32_t typeWidth = 8;
+			stringStream << std::setfill(' ')
+				<< std::setw(idWidth) << "ID" << bar
+				<< std::setw(addressWidth) << "Address" << bar
+				<< std::setw(serialWidth) << "Serial Number" << bar
+				<< std::setw(typeWidth) << "Type"
+				<< std::endl;
+			stringStream << "─────────┼─────────┼───────────────┼─────────" << std::endl;
+
 			_devicesMutex.lock();
-			std::vector<std::shared_ptr<BaseLib::Systems::LogicalDevice>> devices;
 			for(std::vector<std::shared_ptr<BaseLib::Systems::LogicalDevice>>::iterator i = _devices.begin(); i != _devices.end(); ++i)
 			{
-				stringStream << "ID: " << std::setw(6) << std::setfill(' ') << (*i)->getID() << "\tAddress: 0x" << std::hex << std::setw(8) << std::setfill('0') << (*i)->getAddress() << "\tSerial number: " << (*i)->getSerialNumber() << "\tDevice type: " << (*i)->getDeviceType() << std::endl << std::dec;
+				stringStream
+					<< std::setw(idWidth) << std::setfill(' ') << (*i)->getID() << bar
+					<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString((*i)->getAddress(), 6) << bar
+					<< std::setw(serialWidth) << (*i)->getSerialNumber() << bar
+					<< std::setw(typeWidth) << BaseLib::HelperFunctions::getHexString((*i)->getDeviceType()) << std::endl;
 			}
 			_devicesMutex.unlock();
+			stringStream << "─────────┴─────────┴───────────────┴─────────" << std::endl;
 			return stringStream.str();
 		}
 		else if(command.compare(0, 14, "devices create") == 0)
@@ -379,10 +403,10 @@ std::string Insteon::handleCLICommand(std::string& command)
 				stringStream << "Description: This command creates a new virtual device." << std::endl;
 				stringStream << "Usage: devices create ADDRESS SERIALNUMBER DEVICETYPE" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
-				stringStream << "  ADDRESS:\tAny unused 4 byte address in hexadecimal format. Example: 101A03FC" << std::endl;
+				stringStream << "  ADDRESS:\tAny unused 3 byte address in hexadecimal format. Example: 1A03FC" << std::endl;
 				stringStream << "  SERIALNUMBER:\tAny unused serial number with a maximum size of 10 characters. Don't use special characters. Example: VSW9179403" << std::endl;
 				stringStream << "  DEVICETYPE:\tThe type of the device to create. Example: FEFFFFFD" << std::endl << std::endl;
-				stringStream << "Currently supported HomeMatic Wired virtual device id's:" << std::endl;
+				stringStream << "Currently supported MAX virtual device id's:" << std::endl;
 				stringStream << "  FEFFFFFD:\tCentral device" << std::endl;
 				stringStream << "  FEFFFFFE:\tSpy device" << std::endl;
 				return stringStream.str();
@@ -390,17 +414,18 @@ std::string Insteon::handleCLICommand(std::string& command)
 
 			switch(deviceType)
 			{
-			/*case (uint32_t)DeviceType::HMWIREDCENTRAL:
-				if(_central) stringStream << "Cannot create more than one HomeMatic Wired central device." << std::endl;
+			case (uint32_t)DeviceType::INSTEONCENTRAL:
+				if(_central) stringStream << "Cannot create more than one MAX central device." << std::endl;
 				else
 				{
-					add(std::shared_ptr<LogicalDevice>(new HMWiredCentral(0, serialNumber, address)));
-					stringStream << "Created HomeMatic Wired Central with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+					_central.reset(new InsteonCentral(0, serialNumber, address, this));
+					add(_central);
+					stringStream << "Created MAX Central with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				}
-				break;*/
+				break;
 			case (uint32_t)DeviceType::INSTEONSD:
 				add(std::shared_ptr<BaseLib::Systems::LogicalDevice>(new Insteon_SD(0, serialNumber, address, this)));
-				stringStream << "Created HomeMatic Wired Spy Device with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
+				stringStream << "Created MAX Spy Device with address 0x" << std::hex << address << std::dec << " and serial number " << serialNumber << std::endl;
 				break;
 			default:
 				return "Unknown device type.\n";
@@ -424,7 +449,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 				else if(index == 2)
 				{
 					if(element == "help") break;
-					id = BaseLib::HelperFunctions::getNumber(element, true);
+					id = BaseLib::HelperFunctions::getNumber(element, false);
 					if(id == 0) return "Invalid id.\n";
 				}
 				index++;
@@ -441,7 +466,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 			if(_currentDevice && _currentDevice->getID() == id) _currentDevice.reset();
 			if(get(id))
 			{
-				//if(_central && address == _central->getAddress()) _central.reset();
+				if(_central && id == _central->getID()) _central.reset();
 				remove(id);
 				stringStream << "Removing device." << std::endl;
 			}
@@ -469,7 +494,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 					if(element == "central") central = true;
 					else
 					{
-						id = BaseLib::HelperFunctions::getNumber(element, true);
+						id = BaseLib::HelperFunctions::getNumber(element, false);
 						if(id == 0) return "Invalid id.\n";
 					}
 				}
@@ -484,7 +509,7 @@ std::string Insteon::handleCLICommand(std::string& command)
 				return stringStream.str();
 			}
 
-			_currentDevice = get(id); // = central ? _central : get(address);
+			_currentDevice = central ? _central : get(id);
 			if(!_currentDevice) stringStream << "Device not found." << std::endl;
 			else
 			{
@@ -511,4 +536,29 @@ std::string Insteon::handleCLICommand(std::string& command)
     return "Error executing command. See log file for more details.\n";
 }
 
-} /* namespace HMWired */
+std::shared_ptr<BaseLib::RPC::RPCVariable> Insteon::getPairingMethods()
+{
+	try
+	{
+		if(!_central) return std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		std::shared_ptr<BaseLib::RPC::RPCVariable> array(new BaseLib::RPC::RPCVariable(BaseLib::RPC::RPCVariableType::rpcArray));
+		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("setInstallMode"))));
+		array->arrayValue->push_back(std::shared_ptr<BaseLib::RPC::RPCVariable>(new BaseLib::RPC::RPCVariable(std::string("addDevice"))));
+		return array;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return BaseLib::RPC::RPCVariable::createError(-32500, "Unknown application error.");
+}
+
+}

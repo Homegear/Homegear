@@ -27,32 +27,55 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef INSTEON_SD_H
-#define INSTEON_SD_H
+#ifndef PACKETMANAGER_H_
+#define PACKETMANAGER_H_
 
-#include "../InsteonDevice.h"
+#include "../Base/BaseLib.h"
+#include "InsteonPacket.h"
 
-#include <list>
+#include <iostream>
+#include <string>
+#include <chrono>
+#include <memory>
+#include <unordered_map>
+#include <thread>
+#include <mutex>
 
 namespace Insteon
 {
-class Insteon_SD : public InsteonDevice
+class InsteonPacketInfo
 {
-    public:
-        Insteon_SD(IDeviceEventSink* eventHandler);
-        Insteon_SD(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
-        virtual ~Insteon_SD();
-        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
-        std::string handleCLICommand(std::string command);
-        void loadVariables();
-        void saveVariables();
-    protected:
-    private:
-        //In table variables
-        bool _enabled = true;
-        //End
+public:
+	InsteonPacketInfo();
+	virtual ~InsteonPacketInfo() {}
 
-        virtual void init();
+	uint32_t id = 0;
+	int64_t time;
+	std::shared_ptr<InsteonPacket> packet;
 };
+
+class PacketManager
+{
+public:
+	PacketManager();
+	virtual ~PacketManager();
+
+	std::shared_ptr<InsteonPacket> get(int32_t address);
+	std::shared_ptr<InsteonPacketInfo> getInfo(int32_t address);
+	bool set(int32_t address, std::shared_ptr<InsteonPacket>& packet, int64_t time = 0);
+	void deletePacket(int32_t address, uint32_t id);
+	void keepAlive(int32_t address);
+	void dispose(bool wait = true);
+protected:
+	bool _disposing = false;
+	bool _stopWorkerThread = false;
+    std::thread _workerThread;
+	uint32_t _id = 0;
+	std::unordered_map<int32_t, std::shared_ptr<InsteonPacketInfo>> _packets;
+	std::mutex _packetMutex;
+
+	void worker();
+};
+
 }
-#endif // INSTEON_SD_H
+#endif

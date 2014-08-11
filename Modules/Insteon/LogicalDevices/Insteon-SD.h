@@ -27,14 +27,32 @@
  * files in the program, then also delete it here.
  */
 
-#include "GD.h"
+#ifndef INSTEON_SD_H
+#define INSTEON_SD_H
+
+#include "../InsteonDevice.h"
+
+#include <list>
 
 namespace Insteon
 {
-	BaseLib::Obj* GD::bl = nullptr;
-	Insteon* GD::family = nullptr;
-	std::map<std::string, std::shared_ptr<BaseLib::Systems::IPhysicalInterface>> GD::physicalInterfaces;
-	std::shared_ptr<BaseLib::Systems::IPhysicalInterface> GD::defaultPhysicalInterface;
-	BaseLib::Output GD::out;
-	BaseLib::RPC::Devices GD::rpcDevices(BaseLib::Systems::DeviceFamilies::Insteon);
+class Insteon_SD : public InsteonDevice
+{
+    public:
+        Insteon_SD(IDeviceEventSink* eventHandler);
+        Insteon_SD(uint32_t deviceType, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
+        virtual ~Insteon_SD();
+        virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
+        std::string handleCLICommand(std::string command);
+        void loadVariables();
+        void saveVariables();
+    protected:
+    private:
+        //In table variables
+        bool _enabled = true;
+        //End
+
+        virtual void init();
+};
 }
+#endif // INSTEON_SD_H

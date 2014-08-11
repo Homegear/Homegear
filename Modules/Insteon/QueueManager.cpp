@@ -31,7 +31,7 @@
 #include "../Base/BaseLib.h"
 #include "GD.h"
 
-namespace MAX
+namespace Insteon
 {
 QueueData::QueueData(std::shared_ptr<IPhysicalInterface> physicalInterface)
 {
@@ -145,7 +145,7 @@ void QueueManager::worker()
     }
 }
 
-std::shared_ptr<PacketQueue> QueueManager::createQueue(MAXDevice* device, std::shared_ptr<IPhysicalInterface> physicalInterface, PacketQueueType queueType, int32_t address)
+std::shared_ptr<PacketQueue> QueueManager::createQueue(InsteonDevice* device, std::shared_ptr<IPhysicalInterface> physicalInterface, PacketQueueType queueType, int32_t address)
 {
 	try
 	{
@@ -226,7 +226,7 @@ void QueueManager::resetQueue(int32_t address, uint32_t id)
 		}
 
 		std::shared_ptr<QueueData> queue;
-		std::shared_ptr<MAXPeer> peer;
+		std::shared_ptr<InsteonPeer> peer;
 		bool setUnreach = false;
 		if(_queues.find(address) != _queues.end() && _queues.at(address) && _queues.at(address)->id == id)
 		{

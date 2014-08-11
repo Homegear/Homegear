@@ -180,14 +180,44 @@ void InsteonDevice::loadVariables()
     }
 }
 
+void InsteonDevice::savePeers(bool full)
+{
+	try
+	{
+		_peersMutex.lock();
+		for(std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = _peers.begin(); i != _peers.end(); ++i)
+		{
+			//Necessary, because peers can be assigned to multiple virtual devices
+			if(i->second->getParentID() != _deviceID) continue;
+			//We are always printing this, because the init script needs it
+			GD::out.printMessage("(Shutdown) => Saving MAX! peer " + std::to_string(i->second->getID()));
+			i->second->save(full, full, full);
+		}
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+	_peersMutex.unlock();
+}
+
 void InsteonDevice::saveVariables()
 {
 	try
 	{
 		if(_deviceID == 0) return;
-		//saveVariable(0, _firmwareVersion);
-		//saveVariable(1, _centralAddress);
-		//saveMessageCounters(); //2
+		saveVariable(0, _firmwareVersion);
+		saveVariable(1, _centralAddress);
+		saveMessageCounters(); //2
+		saveVariable(4, _physicalInterfaceID);
 	}
 	catch(const std::exception& ex)
     {

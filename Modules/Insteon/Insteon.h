@@ -52,8 +52,9 @@ public:
 	virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
 	virtual std::string handleCLICommand(std::string& command);
 	virtual std::string getName() { return "Insteon"; }
+	virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getPairingMethods();
 private:
-	//std::shared_ptr<InsteonCentral> _central;
+	std::shared_ptr<InsteonCentral> _central;
 
 	void createCentral();
 	void createSpyDevice();

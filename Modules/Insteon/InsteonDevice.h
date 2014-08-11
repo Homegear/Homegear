@@ -27,12 +27,16 @@
  * files in the program, then also delete it here.
  */
 
-#ifndef INSTEONDEVICE_H
-#define INSTEONDEVICE_H
+#ifndef DEVICE_H
+#define DEVICE_H
 
 #include "../Base/BaseLib.h"
+#include "InsteonPeer.h"
 #include "InsteonDeviceTypes.h"
 #include "InsteonPacket.h"
+#include "QueueManager.h"
+#include "PacketManager.h"
+#include "InsteonMessages.h"
 
 #include <string>
 #include <unordered_map>
@@ -44,26 +48,87 @@
 #include <chrono>
 #include "pthread.h"
 
+using namespace BaseLib::Systems;
+using namespace BaseLib::RPC;
+
 namespace Insteon
 {
+class InsteonMessages;
+
 class InsteonDevice : public BaseLib::Systems::LogicalDevice
 {
     public:
+		//In table variables
+		int32_t getFirmwareVersion() { return _firmwareVersion; }
+		void setFirmwareVersion(int32_t value) { _firmwareVersion = value; saveVariable(0, value); }
+		int32_t getCentralAddress() { return _centralAddress; }
+		void setCentralAddress(int32_t value) { _centralAddress = value; saveVariable(1, value); }
+		std::string getPhysicalInterfaceID() { return _physicalInterfaceID; }
+		void setPhysicalInterfaceID(std::string);
+		//End
+
+		std::unordered_map<int32_t, uint8_t>* messageCounter() { return &_messageCounter; }
 		virtual bool isCentral();
+		static bool isSwitch(BaseLib::Systems::LogicalDeviceType type);
 
         InsteonDevice(IDeviceEventSink* eventHandler);
         InsteonDevice(uint32_t deviceID, std::string serialNumber, int32_t address, IDeviceEventSink* eventHandler);
         virtual ~InsteonDevice();
+        virtual void stopThreads();
         virtual void dispose(bool wait = true);
+
         virtual bool onPacketReceived(std::string& senderID, std::shared_ptr<BaseLib::Systems::Packet> packet);
+        virtual bool peerSelected() { return (bool)_currentPeer; }
+        bool peerExists(int32_t address);
+		bool peerExists(uint64_t id);
+        virtual std::shared_ptr<BaseLib::Systems::Central> getCentral();
+        std::shared_ptr<InsteonPeer> getPeer(int32_t address);
+		std::shared_ptr<InsteonPeer> getPeer(uint64_t id);
+		std::shared_ptr<InsteonPeer> getPeer(std::string serialNumber);
+		virtual bool isInPairingMode() { return _pairing; }
+		virtual std::shared_ptr<InsteonMessages> getMessages() { return _messages; }
+		std::shared_ptr<InsteonPacket> getSentPacket(int32_t address) { return _sentPackets.get(address); }
+		std::shared_ptr<InsteonPacket> getTimePacket(uint8_t messageCounter, int32_t receiverAddress, bool burst);
 
         virtual void loadVariables();
         virtual void saveVariables();
+        virtual void saveMessageCounters();
+        virtual void serializeMessageCounters(std::vector<uint8_t>& encodedData);
+        virtual void unserializeMessageCounters(std::shared_ptr<std::vector<char>> serializedData);
+        virtual void loadPeers();
+        virtual void savePeers(bool full);
 
-        virtual void sendPacket(std::shared_ptr<InsteonPacket> packet);
+        virtual void sendPacket(std::shared_ptr<BaseLib::Systems::IPhysicalInterface> physicalInterface, std::shared_ptr<InsteonPacket> packet, bool stealthy = false);
+
+        virtual void handleAck(int32_t messageCounter, std::shared_ptr<InsteonPacket> packet) {}
+        virtual void handlePairingRequest(int32_t messageCounter, std::shared_ptr<InsteonPacket> packet) {}
+        virtual void handleTimeRequest(int32_t messageCounter, std::shared_ptr<InsteonPacket> packet);
+
+        virtual void sendOK(int32_t messageCounter, int32_t destinationAddress);
     protected:
+        //In table variables
+        int32_t _firmwareVersion = 0;
+        int32_t _centralAddress = 0;
+        std::unordered_map<int32_t, uint8_t> _messageCounter;
+        std::string _physicalInterfaceID;
+        //End
+
+        bool _stopWorkerThread = false;
+        std::thread _workerThread;
+
+        bool _pairing = false;
+        QueueManager _queueManager;
+        PacketManager _receivedPackets;
+        PacketManager _sentPackets;
+        std::shared_ptr<InsteonMessages> _messages;
+        std::shared_ptr<BaseLib::Systems::IPhysicalInterface> _physicalInterface;
+
+        virtual std::shared_ptr<IPhysicalInterface> getPhysicalInterface(int32_t peerAddress);
+        virtual void worker();
+
         virtual void init();
+        virtual void setUpInsteonMessages();
     private:
 };
 }
-#endif // HMWIREDDEVICE_H
+#endif

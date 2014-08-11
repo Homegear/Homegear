@@ -312,5 +312,5 @@ void BidCoSQueueManager::raiseReleaseSavepoint(std::string name)
 {
 	if(_eventHandler) ((IBidCoSQueueManagerEventSink*)_eventHandler)->onQueueReleaseSavepoint(name);
 }
-//End event hantlind
+//End event handling
 }
