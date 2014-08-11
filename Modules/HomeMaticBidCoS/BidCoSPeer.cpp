@@ -353,6 +353,7 @@ BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* 
 			pendingBidCoSQueues.reset(new PendingBidCoSQueues());
 		}
 		setPhysicalInterface(GD::defaultPhysicalInterface);
+		_lastPing = BaseLib::HelperFunctions::getTime() - (BaseLib::HelperFunctions::getRandomNumber(1, 60) * 10000);
 	}
 	catch(const std::exception& ex)
     {
@@ -371,6 +372,7 @@ BidCoSPeer::BidCoSPeer(uint32_t parentID, bool centralFeatures, IPeerEventSink* 
 BidCoSPeer::BidCoSPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, bool centralFeatures, IPeerEventSink* eventHandler) : Peer(GD::bl, id, address, serialNumber, parentID, centralFeatures, eventHandler)
 {
 	setPhysicalInterface(GD::defaultPhysicalInterface);
+	_lastPing = BaseLib::HelperFunctions::getTime() - (BaseLib::HelperFunctions::getRandomNumber(1, 60) * 10000);
 }
 
 void BidCoSPeer::worker()
@@ -426,7 +428,19 @@ void BidCoSPeer::worker()
 			positionsToDelete.clear();
 			variablesToReset.clear();
 		}
-		if(rpcDevice) serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
+		if(rpcDevice)
+		{
+			serviceMessages->checkUnreach(rpcDevice->cyclicTimeout, getLastPacketReceived());
+			if(serviceMessages->getUnreach())
+			{
+				if(time - _lastPing > 600000 && ((getRXModes() & BaseLib::RPC::Device::RXModes::Enum::always) || (getRXModes() & BaseLib::RPC::Device::RXModes::Enum::burst)))
+				{
+					_lastPing = time;
+					ping(); //Ping every 10 minutes
+				}
+			}
+			else _lastPing = time; //Set _lastUnreachCheck, so there is a delay of 10 minutes before the first ping.
+		}
 		if(serviceMessages->getConfigPending())
 		{
 			if(!pendingBidCoSQueues || pendingBidCoSQueues->empty()) serviceMessages->setConfigPending(false);
@@ -678,6 +692,32 @@ std::string BidCoSPeer::handleCLICommand(std::string command)
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return "Error executing command. See log file for more details.\n";
+}
+
+void BidCoSPeer::ping()
+{
+	try
+	{
+		std::shared_ptr<HomeMaticCentral> central = std::dynamic_pointer_cast<HomeMaticCentral>(getCentral());
+		if(!central) return;
+		std::vector<uint8_t> payload;
+		payload.push_back(0x00);
+		payload.push_back(0x06);
+		std::shared_ptr<BidCoSPacket> ping(new BidCoSPacket(_messageCounter++, 0xA0, 0x01, central->getAddress(), _address, payload));
+		central->sendPacket(getPhysicalInterface(), ping);
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void BidCoSPeer::addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer)

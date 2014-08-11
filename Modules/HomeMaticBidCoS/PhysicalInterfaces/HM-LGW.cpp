@@ -374,6 +374,7 @@ void HM_LGW::sendPeer(PeerInfo& peerInfo)
 {
 	try
 	{
+		if(GD::bl->debugLevel > 4) GD::out.printDebug("Debug: Sending peer to LGW \"" + _settings->id + "\": Address " + GD::bl->hf.getHexString(peerInfo.address, 6) + ", AES enabled " + std::to_string(peerInfo.aesEnabled) + ", AES map " + GD::bl->hf.getHexString(peerInfo.getAESChannelMap()) + ".");
 		for(int32_t i = 0; i < 2; i++) //The CCU sends this packet two times, I don't know why
 		{
 			//Get current config

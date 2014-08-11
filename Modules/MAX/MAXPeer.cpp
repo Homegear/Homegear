@@ -865,7 +865,7 @@ std::shared_ptr<BaseLib::RPC::ParameterSet> MAXPeer::getParameterSet(int32_t cha
 		std::shared_ptr<BaseLib::RPC::DeviceChannel> rpcChannel = rpcDevice->channels.at(channel);
 		if(rpcChannel->parameterSets.find(type) == rpcChannel->parameterSets.end())
 		{
-			GD::out.printWarning("Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
+			GD::out.printDebug("Debug: Parameter set of type " + std::to_string(type) + " not found for channel " + std::to_string(channel));
 			return std::shared_ptr<BaseLib::RPC::ParameterSet>();
 		}
 		return rpcChannel->parameterSets[type];

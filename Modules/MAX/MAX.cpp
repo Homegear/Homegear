@@ -469,7 +469,7 @@ std::string MAX::handleCLICommand(std::string& command)
 			if(_currentDevice && _currentDevice->getID() == id) _currentDevice.reset();
 			if(get(id))
 			{
-				//if(_central && id == _central->getID()) _central.reset();
+				if(_central && id == _central->getID()) _central.reset();
 				remove(id);
 				stringStream << "Removing device." << std::endl;
 			}

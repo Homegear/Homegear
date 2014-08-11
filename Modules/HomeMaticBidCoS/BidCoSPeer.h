@@ -179,6 +179,7 @@ class BidCoSPeer : public BaseLib::Systems::Peer
         virtual bool firmwareUpdateAvailable();
         std::string printConfig();
         virtual IBidCoSInterface::PeerInfo getPeerInfo();
+        virtual void ping();
 
         //RPC methods
         virtual std::shared_ptr<BaseLib::RPC::RPCVariable> getDeviceDescription(int32_t channel, std::map<std::string, bool> fields);
@@ -207,6 +208,8 @@ class BidCoSPeer : public BaseLib::Systems::Peer
 		std::string _physicalInterfaceID;
 		bool _valuePending = false;
 		//End
+
+		int64_t _lastPing = 0;
 
 		virtual void setPhysicalInterface(std::shared_ptr<IBidCoSInterface> interface);
 
